@@ -162,8 +162,8 @@ int ad_film_height_stress_source(int mode,
       dgamma[a][b] = gamma[a][b].val();
     }
   }
-  ADType mup = ad_viscosity(ve[mode]->gn, gamma);
-  dbl lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
+  ADType mup = ad_viscosity(goma_ctx->fem.ve[mode]->gn, gamma);
+  dbl lambda = polymer_time_const(goma_ctx->fem.ve[mode]->time_const_st, dgamma, NULL);
 
   for (int ii = 0; ii < 3; ii++) {
     for (int jj = 0; jj < 3; jj++) {
@@ -171,7 +171,7 @@ int ad_film_height_stress_source(int mode,
     }
   }
 
-  switch (vn->ConstitutiveEquation) {
+  switch (goma_ctx->fem.vn->ConstitutiveEquation) {
   case OLDROYDB: {
     for (int ii = 0; ii < 3; ii++) {
       for (int jj = 0; jj < 3; jj++) {
@@ -192,11 +192,11 @@ int ad_film_height_stress_source(int mode,
     ADType dZ_dtrace = 0;
 
     // PTT exponent
-    eps = ve[mode]->eps;
+    eps = goma_ctx->fem.ve[mode]->eps;
 
-    if (vn->ptt_type == PTT_LINEAR) {
+    if (goma_ctx->fem.vn->ptt_type == PTT_LINEAR) {
       Z = 1 + eps * lambda / mup * trace;
-    } else if (vn->ptt_type == PTT_EXPONENTIAL) {
+    } else if (goma_ctx->fem.vn->ptt_type == PTT_EXPONENTIAL) {
       const double exp_max = 700;
       ADType inner = eps * lambda / mup * trace;
       if ((inner > exp_max) || (inner < -exp_max)) {
@@ -205,7 +205,7 @@ int ad_film_height_stress_source(int mode,
       }
       Z = exp(inner);
     } else {
-      GOMA_EH(GOMA_ERROR, "Unrecognized PTT Form %d", vn->ptt_type);
+      GOMA_EH(GOMA_ERROR, "Unrecognized PTT Form %d", goma_ctx->fem.vn->ptt_type);
     }
 
     for (int ii = 0; ii < 3; ii++) {
@@ -226,7 +226,7 @@ int ad_sqrt_conf_source(int mode, ADType b[DIM][DIM], ADType source_term[DIM][DI
   ADType binv[DIM][DIM];
   ADType d_binv_db[DIM][DIM][DIM][DIM];
   int sdim = VIM;
-  if (pd->gv[FILM_HEIGHT]) {
+  if (goma_ctx->fem.pd->gv[FILM_HEIGHT]) {
     sdim = 3;
   }
   if (sdim == 2) {
@@ -263,7 +263,7 @@ int ad_sqrt_conf_source(int mode, ADType b[DIM][DIM], ADType source_term[DIM][DI
     GOMA_EH(GOMA_ERROR, "Unknown sdim = %d for SQRT conformation tensor", sdim);
   }
 
-  switch (vn->ConstitutiveEquation) {
+  switch (goma_ctx->fem.vn->ConstitutiveEquation) {
   case OLDROYDB: {
     for (int ii = 0; ii < sdim; ii++) {
       for (int jj = 0; jj < sdim; jj++) {
@@ -284,11 +284,11 @@ int ad_sqrt_conf_source(int mode, ADType b[DIM][DIM], ADType source_term[DIM][DI
     ADType dZ_dtrace = 0;
 
     // PTT exponent
-    eps = ve[mode]->eps;
+    eps = goma_ctx->fem.ve[mode]->eps;
 
-    if (vn->ptt_type == PTT_LINEAR) {
+    if (goma_ctx->fem.vn->ptt_type == PTT_LINEAR) {
       Z = 1 + eps * (trace - (double)sdim);
-    } else if (vn->ptt_type == PTT_EXPONENTIAL) {
+    } else if (goma_ctx->fem.vn->ptt_type == PTT_EXPONENTIAL) {
       const double exp_max = 700;
       ADType inner = eps * (trace - (double)sdim);
       if ((inner > exp_max) || (inner < -exp_max)) {
@@ -297,7 +297,7 @@ int ad_sqrt_conf_source(int mode, ADType b[DIM][DIM], ADType source_term[DIM][DI
       }
       Z = exp(eps * (trace - (double)sdim));
     } else {
-      GOMA_EH(GOMA_ERROR, "Unrecognized PTT Form %d", vn->ptt_type);
+      GOMA_EH(GOMA_ERROR, "Unrecognized PTT Form %d", goma_ctx->fem.vn->ptt_type);
     }
 
     for (int ii = 0; ii < sdim; ii++) {
@@ -327,13 +327,13 @@ void ad_load_modal_pointers(
 
   /* put stress in a nice working array */
   int sdim = VIM;
-  if (pd->gv[FILM_HEIGHT])
+  if (goma_ctx->fem.pd->gv[FILM_HEIGHT])
     sdim = 3;
 
   for (a = 0; a < sdim; a++) {
     for (b = 0; b < sdim; b++) {
       s[a][b] = ad_fv->S[ve_mode][a][b];
-      if (pd->TimeIntegration != STEADY) {
+      if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         s_dot[a][b] = ad_fv->S_dot[ve_mode][a][b];
       } else {
         s_dot[a][b] = 0.;
@@ -416,9 +416,9 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
   ADType b_dot_g[DIM][DIM];
 
-  const bool saramitoEnabled =
-      (vn->ConstitutiveEquation == SARAMITO_OLDROYDB || vn->ConstitutiveEquation == SARAMITO_PTT ||
-       vn->ConstitutiveEquation == SARAMITO_GIESEKUS);
+  const bool saramitoEnabled = (goma_ctx->fem.vn->ConstitutiveEquation == SARAMITO_OLDROYDB ||
+                                goma_ctx->fem.vn->ConstitutiveEquation == SARAMITO_PTT ||
+                                goma_ctx->fem.vn->ConstitutiveEquation == SARAMITO_GIESEKUS);
 
   if (saramitoEnabled) {
     GOMA_EH(GOMA_ERROR, "Saramito not available for SQRT_CONF");
@@ -435,7 +435,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   /* SUPG variables */
   dbl supg = 0;
 
-  if (vn->evssModel == EVSS_GRADV) {
+  if (goma_ctx->fem.vn->evssModel == EVSS_GRADV) {
     evss_gradv = 1;
   }
 
@@ -447,7 +447,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
    * Bail out fast if there's nothing to do...
    */
 
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (status);
   }
 
@@ -455,13 +455,13 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
    * Unpack variables from structures for local convenience...
    */
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
-  wt = fv->wt;
+  wt = goma_ctx->fem.fv->wt;
 
   det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
 
-  h3 = fv->h3; /* Differential volume element (scales). */
+  h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
 
   /* load eqn and variable number in tensor form */
   (void)stress_eqn_pointer(v_s);
@@ -475,7 +475,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
     /* note, these are zero for steady calculations */
     x_dot[a] = 0.0;
-    if (pd->TimeIntegration != STEADY && pd->gv[MESH_DISPLACEMENT1 + a]) {
+    if (goma_ctx->fem.pd->TimeIntegration != STEADY &&
+        goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1 + a]) {
       x_dot[a] = ad_fv->x_dot[a];
     }
   }
@@ -501,7 +502,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   for (int a = 0; a < VIM; a++) {
     for (int b = 0; b < VIM; b++) {
       gamma[a][b] = ad_fv->grad_v[a][b] + ad_fv->grad_v[b][a];
-      dgamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+      dgamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
 
@@ -517,10 +518,10 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
     }
   }
 
-  if (vn->wt_funcModel == GALERKIN) {
+  if (goma_ctx->fem.vn->wt_funcModel == GALERKIN) {
     supg = 0.;
-  } else if (vn->wt_funcModel == SUPG) {
-    supg = vn->wt_func;
+  } else if (goma_ctx->fem.vn->wt_funcModel == SUPG) {
+    supg = goma_ctx->fem.vn->wt_func;
   }
 
   ADType supg_tau;
@@ -530,21 +531,23 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   /* end Petrov-Galerkin addition */
   dbl yzbeta_factor = 0.0;
   dbl beta[2] = {1.0, 2.0};
-  if (vn->shockcaptureModel == SC_YZBETA) {
-    yzbeta_factor = vn->shockcapture;
-  } else if (vn->shockcaptureModel == SC_DCDD) {
-  } else if (vn->shockcaptureModel != SC_NONE) {
+  if (goma_ctx->fem.vn->shockcaptureModel == SC_YZBETA) {
+    yzbeta_factor = goma_ctx->fem.vn->shockcapture;
+  } else if (goma_ctx->fem.vn->shockcaptureModel == SC_DCDD) {
+  } else if (goma_ctx->fem.vn->shockcaptureModel != SC_NONE) {
     GOMA_EH(GOMA_ERROR, "Unknown shock capture model, only YZBETA supported for SQRT_CONF");
   }
 
   /*  shift factor  */
-  if (pd->gv[TEMPERATURE]) {
-    if (vn->shiftModel == CONSTANT) {
-      at = vn->shift[0];
-    } else if (vn->shiftModel == MODIFIED_WLF) {
-      wlf_denom = vn->shift[1] + fv->T - mp->reference[TEMPERATURE];
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    if (goma_ctx->fem.vn->shiftModel == CONSTANT) {
+      at = goma_ctx->fem.vn->shift[0];
+    } else if (goma_ctx->fem.vn->shiftModel == MODIFIED_WLF) {
+      wlf_denom = goma_ctx->fem.vn->shift[1] + goma_ctx->fem.fv->T -
+                  goma_ctx->fem.mp->reference[TEMPERATURE];
       if (wlf_denom != 0.) {
-        at = exp(vn->shift[0] * (mp->reference[TEMPERATURE] - fv->T) / wlf_denom);
+        at = exp(goma_ctx->fem.vn->shift[0] *
+                 (goma_ctx->fem.mp->reference[TEMPERATURE] - goma_ctx->fem.fv->T) / wlf_denom);
       } else {
         at = 1.;
       }
@@ -554,7 +557,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   }
 
   /* Begin loop over modes */
-  for (mode = 0; mode < vn->modes; mode++) {
+  for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
 
     ad_load_modal_pointers(mode, tt, dt, b, b_dot, grad_b);
 
@@ -580,12 +583,12 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
     double d_alpha_dF[MDE];
     /* get Geisekus mobility parameter */
-    if (ve[mode]->alphaModel == CONSTANT) {
-      alpha = ve[mode]->alpha;
-    } else if (ls != NULL && ve[mode]->alphaModel == VE_LEVEL_SET) {
-      double pos_alpha = ve[mode]->pos_ls.alpha;
-      double neg_alpha = ve[mode]->alpha;
-      double width = ls->Length_Scale;
+    if (goma_ctx->fem.ve[mode]->alphaModel == CONSTANT) {
+      alpha = goma_ctx->fem.ve[mode]->alpha;
+    } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ve[mode]->alphaModel == VE_LEVEL_SET) {
+      double pos_alpha = goma_ctx->fem.ve[mode]->pos_ls.alpha;
+      double neg_alpha = goma_ctx->fem.ve[mode]->alpha;
+      double width = goma_ctx->fem.ls->Length_Scale;
       err = level_set_property(neg_alpha, pos_alpha, width, &alpha, d_alpha_dF);
       GOMA_EH(err, "level_set_property() failed for mobility parameter.");
     } else {
@@ -593,15 +596,15 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
     }
 
     /* get time constant */
-    lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
+    lambda = polymer_time_const(goma_ctx->fem.ve[mode]->time_const_st, dgamma, NULL);
 
     xi = 0;
-    if (ve[mode]->xiModel == CONSTANT) {
-      xi = ve[mode]->xi;
-    } else if (ls != NULL && ve[mode]->xiModel == VE_LEVEL_SET) {
-      double pos_xi = ve[mode]->pos_ls.xi;
-      double neg_xi = ve[mode]->xi;
-      double width = ls->Length_Scale;
+    if (goma_ctx->fem.ve[mode]->xiModel == CONSTANT) {
+      xi = goma_ctx->fem.ve[mode]->xi;
+    } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ve[mode]->xiModel == VE_LEVEL_SET) {
+      double pos_xi = goma_ctx->fem.ve[mode]->pos_ls.xi;
+      double neg_xi = goma_ctx->fem.ve[mode]->xi;
+      double width = goma_ctx->fem.ls->Length_Scale;
       err = level_set_property(neg_xi, pos_xi, width, &xi, d_xi_dF);
       GOMA_EH(err, "level_set_property() failed for ptt xi parameter.");
     } else {
@@ -612,12 +615,12 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
       GOMA_EH(GOMA_ERROR, "PTT Xi parameter currently required to be 0 for SQRT_CONF");
     }
 
-    if (ve[mode]->epsModel == CONSTANT) {
-      eps = ve[mode]->eps;
-    } else if (ls != NULL && ve[mode]->epsModel == VE_LEVEL_SET) {
-      double pos_eps = ve[mode]->pos_ls.eps;
-      double neg_eps = ve[mode]->eps;
-      double width = ls->Length_Scale;
+    if (goma_ctx->fem.ve[mode]->epsModel == CONSTANT) {
+      eps = goma_ctx->fem.ve[mode]->eps;
+    } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ve[mode]->epsModel == VE_LEVEL_SET) {
+      double pos_eps = goma_ctx->fem.ve[mode]->pos_ls.eps;
+      double neg_eps = goma_ctx->fem.ve[mode]->eps;
+      double width = goma_ctx->fem.ls->Length_Scale;
       err = level_set_property(neg_eps, pos_eps, width, &eps, d_eps_dF);
       GOMA_EH(err, "level_set_property() failed for ptt epsilon parameter.");
     } else {
@@ -639,8 +642,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
     for (int a = 0; a < VIM; a++) {
       resid[a].resize(VIM);
       for (int b = 0; b < VIM; b++) {
-        resid[a][b].resize(ei[pg->imtrx]->dof[v_s[mode][a][b]]);
-        for (i = 0; i < ei[pg->imtrx]->dof[v_s[mode][a][b]]; i++) {
+        resid[a][b].resize(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v_s[mode][a][b]]);
+        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v_s[mode][a][b]]; i++) {
           resid[a][b][i] = 0;
         }
       }
@@ -649,7 +652,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
      * Residuals_________________________________________________________________
      */
 
-    if (af->Assemble_Residual) {
+    if (goma_ctx->fem.af->Assemble_Residual) {
       /*
        * Assemble each component "ab" of the polymer stress equation...
        */
@@ -665,8 +668,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
              * based on the number of degrees of freedom...
              */
 
-            for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-              ADType wt_func = bf[eqn]->phi[i];
+            for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+              ADType wt_func = goma_ctx->fem.bf[eqn]->phi[i];
               /* add Petrov-Galerkin terms as necessary */
               if (supg != 0.) {
                 for (w = 0; w < dim; w++) {
@@ -677,30 +680,31 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
               ADType mass = 0.;
 
-              if (pd->TimeIntegration != STEADY) {
-                if (pd->e[pg->imtrx][eqn] & T_MASS) {
+              if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+                if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
                   mass = b_dot[ii][jj];
                   mass *= wt_func * at * lambda * det_J * wt;
                   mass *= h3;
-                  mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+                  mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
                 }
               }
 
               ADType advection = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
                 if (DOUBLE_NONZERO(lambda)) {
 
                   advection += v_dot_del_b[ii][jj] - x_dot_del_b[ii][jj];
                   advection -= b_dot_g[ii][jj];
                   advection -= a_dot_b[ii][jj];
                   advection *= wt_func * at * lambda * det_J * wt * h3;
-                  advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+                  advection *=
+                      goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
                 }
               }
 
               ADType diffusion = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                if (vn->shockcaptureModel == SC_YZBETA) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
+                if (goma_ctx->fem.vn->shockcaptureModel == SC_YZBETA) {
                   ADType Z = b_dot[ii][jj];
                   Z += 1e-32 + v_dot_del_b[ii][jj] - x_dot_del_b[ii][jj];
                   Z -= b_dot_g[ii][jj];
@@ -711,7 +715,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   ADType Y_inv = 1.0;
                   ADType hdc = 0;
                   ADType js = 0;
-                  for (int k = 0; k < ei[pg->imtrx]->dof[eqn]; k++) {
+                  for (int k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; k++) {
                     for (int p = 0; p < VIM; p++) {
                       js += fabs(grad_b[p][ii][jj] * ad_fv->basis[eqn].grad_phi[k][p]);
                     }
@@ -739,9 +743,10 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   }
 
                   diffusion *= yzbeta_factor * det_J * wt * h3;
-                  diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-                } else if (vn->shockcaptureModel == SC_DCDD) {
-                  dbl dcdd_factor = vn->shockcapture;
+                  diffusion *=
+                      goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                } else if (goma_ctx->fem.vn->shockcaptureModel == SC_DCDD) {
+                  dbl dcdd_factor = goma_ctx->fem.vn->shockcapture;
                   ADType tmp = 0.0;
                   ADType s[DIM] = {0.0};
                   ADType r[DIM] = {0.0};
@@ -762,7 +767,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   }
 
                   ADType he = 0.0;
-                  for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
+                  for (int q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; q++) {
                     ADType tmp = 0;
                     for (int w = 0; w < dim; w++) {
                       tmp += ad_fv->basis[eqn].grad_phi[q][w] * ad_fv->basis[eqn].grad_phi[q][w];
@@ -771,7 +776,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   }
 
                   tmp = 0;
-                  for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
+                  for (int q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; q++) {
                     for (int w = 0; w < dim; w++) {
                       tmp += fabs(r[w] * ad_fv->basis[eqn].grad_phi[q][w]);
                     }
@@ -832,12 +837,12 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                */
 
               ADType source = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
                 // consider whether saramitoCoeff should multiply here
                 source = source_term[ii][jj];
                 source *= wt_func * det_J * h3 * wt;
 
-                source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
               }
 
               /*
@@ -845,7 +850,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                * locally into an accumulator)
                */
 
-              lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][eqn], i)] +=
+              goma_ctx->fem.lec
+                  ->R[LEC_R_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn], i)] +=
                   mass.val() + advection.val() + diffusion.val() + source.val();
               resid[ii][jj][i] += mass + advection + diffusion + source;
             }
@@ -858,20 +864,20 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
      * Jacobian terms...
      */
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
       for (int ii = 0; ii < VIM; ii++) {
         for (int jj = 0; jj < VIM; jj++) {
           if (ii <= jj) /* since the stress tensor is symmetric, only assemble the upper half */
           {
             eqn = R_s[mode][ii][jj];
-            peqn = upd->ep[pg->imtrx][eqn];
+            peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-            for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+            for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
               for (int var = V_FIRST; var < V_LAST; var++) {
-                if (pd->v[pg->imtrx][var]) {
-                  pvar = upd->vp[pg->imtrx][var];
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                    lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                    goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
                         resid[ii][jj][i].dx(ad_fv->offset[var] + j);
                   }
                 }
@@ -957,9 +963,9 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
   ADType g_dot_S[DIM][DIM];
   ADType gt_dot_S[DIM][DIM];
 
-  const bool saramitoEnabled =
-      (vn->ConstitutiveEquation == SARAMITO_OLDROYDB || vn->ConstitutiveEquation == SARAMITO_PTT ||
-       vn->ConstitutiveEquation == SARAMITO_GIESEKUS);
+  const bool saramitoEnabled = (goma_ctx->fem.vn->ConstitutiveEquation == SARAMITO_OLDROYDB ||
+                                goma_ctx->fem.vn->ConstitutiveEquation == SARAMITO_PTT ||
+                                goma_ctx->fem.vn->ConstitutiveEquation == SARAMITO_GIESEKUS);
 
   if (saramitoEnabled) {
     GOMA_EH(GOMA_ERROR, "Saramito not available for SQRT_CONF");
@@ -984,7 +990,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
    * Bail out fast if there's nothing to do...
    */
 
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (status);
   }
 
@@ -992,13 +998,13 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
    * Unpack variables from structures for local convenience...
    */
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
-  wt = fv->wt;
+  wt = goma_ctx->fem.fv->wt;
 
   det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
 
-  h3 = fv->h3; /* Differential volume element (scales). */
+  h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
 
   /* load eqn and variable number in tensor form */
   (void)stress_eqn_pointer(v_s);
@@ -1012,7 +1018,8 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
 
     /* note, these are zero for steady calculations */
     x_dot[a] = 0.0;
-    if (pd->TimeIntegration != STEADY && pd->gv[MESH_DISPLACEMENT1 + a]) {
+    if (goma_ctx->fem.pd->TimeIntegration != STEADY &&
+        goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1 + a]) {
       x_dot[a] = ad_fv->x_dot[a];
     }
   }
@@ -1053,10 +1060,10 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
     }
   }
 
-  if (vn->wt_funcModel == GALERKIN) {
+  if (goma_ctx->fem.vn->wt_funcModel == GALERKIN) {
     supg = 0.;
-  } else if (vn->wt_funcModel == SUPG) {
-    supg = vn->wt_func;
+  } else if (goma_ctx->fem.vn->wt_funcModel == SUPG) {
+    supg = goma_ctx->fem.vn->wt_func;
   }
 
   ADType supg_tau;
@@ -1065,13 +1072,15 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
   }
 
   /*  shift factor  */
-  if (pd->gv[TEMPERATURE]) {
-    if (vn->shiftModel == CONSTANT) {
-      at = vn->shift[0];
-    } else if (vn->shiftModel == MODIFIED_WLF) {
-      wlf_denom = vn->shift[1] + fv->T - mp->reference[TEMPERATURE];
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    if (goma_ctx->fem.vn->shiftModel == CONSTANT) {
+      at = goma_ctx->fem.vn->shift[0];
+    } else if (goma_ctx->fem.vn->shiftModel == MODIFIED_WLF) {
+      wlf_denom = goma_ctx->fem.vn->shift[1] + goma_ctx->fem.fv->T -
+                  goma_ctx->fem.mp->reference[TEMPERATURE];
       if (wlf_denom != 0.) {
-        at = exp(vn->shift[0] * (mp->reference[TEMPERATURE] - fv->T) / wlf_denom);
+        at = exp(goma_ctx->fem.vn->shift[0] *
+                 (goma_ctx->fem.mp->reference[TEMPERATURE] - goma_ctx->fem.fv->T) / wlf_denom);
       } else {
         at = 1.;
       }
@@ -1081,7 +1090,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
   }
 
   /* Begin loop over modes */
-  for (mode = 0; mode < vn->modes; mode++) {
+  for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
 
     ad_load_modal_pointers(mode, tt, dt, S, S_dot, grad_S);
 
@@ -1107,12 +1116,12 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
 
     double d_alpha_dF[MDE];
     /* get Geisekus mobility parameter */
-    if (ve[mode]->alphaModel == CONSTANT) {
-      alpha = ve[mode]->alpha;
-    } else if (ls != NULL && ve[mode]->alphaModel == VE_LEVEL_SET) {
-      double pos_alpha = ve[mode]->pos_ls.alpha;
-      double neg_alpha = ve[mode]->alpha;
-      double width = ls->Length_Scale;
+    if (goma_ctx->fem.ve[mode]->alphaModel == CONSTANT) {
+      alpha = goma_ctx->fem.ve[mode]->alpha;
+    } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ve[mode]->alphaModel == VE_LEVEL_SET) {
+      double pos_alpha = goma_ctx->fem.ve[mode]->pos_ls.alpha;
+      double neg_alpha = goma_ctx->fem.ve[mode]->alpha;
+      double width = goma_ctx->fem.ls->Length_Scale;
       err = level_set_property(neg_alpha, pos_alpha, width, &alpha, d_alpha_dF);
       GOMA_EH(err, "level_set_property() failed for mobility parameter.");
     } else {
@@ -1120,15 +1129,15 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
     }
 
     /* get time constant */
-    lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
+    lambda = polymer_time_const(goma_ctx->fem.ve[mode]->time_const_st, dgamma, NULL);
 
     xi = 0;
-    if (ve[mode]->xiModel == CONSTANT) {
-      xi = ve[mode]->xi;
-    } else if (ls != NULL && ve[mode]->xiModel == VE_LEVEL_SET) {
-      double pos_xi = ve[mode]->pos_ls.xi;
-      double neg_xi = ve[mode]->xi;
-      double width = ls->Length_Scale;
+    if (goma_ctx->fem.ve[mode]->xiModel == CONSTANT) {
+      xi = goma_ctx->fem.ve[mode]->xi;
+    } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ve[mode]->xiModel == VE_LEVEL_SET) {
+      double pos_xi = goma_ctx->fem.ve[mode]->pos_ls.xi;
+      double neg_xi = goma_ctx->fem.ve[mode]->xi;
+      double width = goma_ctx->fem.ls->Length_Scale;
       err = level_set_property(neg_xi, pos_xi, width, &xi, d_xi_dF);
       GOMA_EH(err, "level_set_property() failed for ptt xi parameter.");
     } else {
@@ -1138,12 +1147,12 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
     dbl ucwt = 1.0 - xi / 2.0;
     dbl lcwt = xi / 2.0;
 
-    if (ve[mode]->epsModel == CONSTANT) {
-      eps = ve[mode]->eps;
-    } else if (ls != NULL && ve[mode]->epsModel == VE_LEVEL_SET) {
-      double pos_eps = ve[mode]->pos_ls.eps;
-      double neg_eps = ve[mode]->eps;
-      double width = ls->Length_Scale;
+    if (goma_ctx->fem.ve[mode]->epsModel == CONSTANT) {
+      eps = goma_ctx->fem.ve[mode]->eps;
+    } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ve[mode]->epsModel == VE_LEVEL_SET) {
+      double pos_eps = goma_ctx->fem.ve[mode]->pos_ls.eps;
+      double neg_eps = goma_ctx->fem.ve[mode]->eps;
+      double width = goma_ctx->fem.ls->Length_Scale;
       err = level_set_property(neg_eps, pos_eps, width, &eps, d_eps_dF);
       GOMA_EH(err, "level_set_property() failed for ptt epsilon parameter.");
     } else {
@@ -1164,8 +1173,8 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
     for (int a = 0; a < 3; a++) {
       resid[a].resize(3);
       for (int b = 0; b < 3; b++) {
-        resid[a][b].resize(ei[pg->imtrx]->dof[v_s[mode][a][b]]);
-        for (i = 0; i < ei[pg->imtrx]->dof[v_s[mode][a][b]]; i++) {
+        resid[a][b].resize(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v_s[mode][a][b]]);
+        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v_s[mode][a][b]]; i++) {
           resid[a][b][i] = 0;
         }
       }
@@ -1174,7 +1183,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
      * Residuals_________________________________________________________________
      */
 
-    if (af->Assemble_Residual) {
+    if (goma_ctx->fem.af->Assemble_Residual) {
       /*
        * Assemble each component "ab" of the polymer stress equation...
        */
@@ -1192,8 +1201,8 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
              * based on the number of degrees of freedom...
              */
 
-            for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-              ADType wt_func = bf[eqn]->phi[i];
+            for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+              ADType wt_func = goma_ctx->fem.bf[eqn]->phi[i];
               /* add Petrov-Galerkin terms as necessary */
               if (supg != 0.) {
                 for (w = 0; w < dim; w++) {
@@ -1205,17 +1214,17 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
 
               ADType mass = 0.;
 
-              if (pd->TimeIntegration != STEADY) {
-                if (pd->e[pg->imtrx][eqn] & T_MASS) {
+              if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+                if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
                   mass = S_dot[ii][jj];
                   mass *= wt_func * at * lambda * det_J * wt;
                   mass *= h3;
-                  mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+                  mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
                 }
               }
 
               ADType advection = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
                 if (DOUBLE_NONZERO(lambda)) {
 
                   advection += v_dot_del_S[ii][jj] - x_dot_del_S[ii][jj];
@@ -1225,18 +1234,20 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
                     advection += lcwt * (S_dot_gt[ii][jj] + g_dot_S[ii][jj]);
 
                   advection *= wt_func * at * lambda * det_J * wt * h3;
-                  advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+                  advection *=
+                      goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
                 }
               }
 
               ADType diffusion = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                if (vn->shockcaptureModel == SC_CONSTANT) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
+                if (goma_ctx->fem.vn->shockcaptureModel == SC_CONSTANT) {
                   for (int w = 0; w < dim; w++) {
                     diffusion += grad_S[w][ii][jj] * ad_fv->basis[eqn].grad_phi[i][w];
                   }
-                  diffusion *= vn->shockcapture * det_J * wt * h3;
-                  diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                  diffusion *= goma_ctx->fem.vn->shockcapture * det_J * wt * h3;
+                  diffusion *=
+                      goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
                 }
               }
 
@@ -1245,12 +1256,12 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
                */
 
               ADType source = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
                 // consider whether saramitoCoeff should multiply here
                 source = source_term[ii][jj];
                 source *= wt_func * det_J * h3 * wt;
 
-                source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
               }
 
               /*
@@ -1258,7 +1269,8 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
                * locally into an accumulator)
                */
 
-              lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][eqn], i)] +=
+              goma_ctx->fem.lec
+                  ->R[LEC_R_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn], i)] +=
                   mass.val() + advection.val() + diffusion.val() + source.val();
               resid[ii][jj][i] += mass + advection + diffusion + source;
             }
@@ -1271,7 +1283,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
      * Jacobian terms...
      */
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
       for (int ii = 0; ii < 3; ii++) {
         for (int jj = 0; jj < 3; jj++) {
           if ((ii == 2 || jj == 2) && ii != jj)
@@ -1279,14 +1291,14 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
           if (ii <= jj) /* since the stress tensor is symmetric, only assemble the upper half */
           {
             eqn = R_s[mode][ii][jj];
-            peqn = upd->ep[pg->imtrx][eqn];
+            peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-            for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+            for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
               for (int var = V_FIRST; var < V_LAST; var++) {
-                if (pd->v[pg->imtrx][var]) {
-                  pvar = upd->vp[pg->imtrx][var];
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                    lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                    goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
                         resid[ii][jj][i].dx(ad_fv->offset[var] + j);
                   }
                 }
@@ -1369,9 +1381,9 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
 
   ADType b_dot_g[DIM][DIM];
 
-  const bool saramitoEnabled =
-      (vn->ConstitutiveEquation == SARAMITO_OLDROYDB || vn->ConstitutiveEquation == SARAMITO_PTT ||
-       vn->ConstitutiveEquation == SARAMITO_GIESEKUS);
+  const bool saramitoEnabled = (goma_ctx->fem.vn->ConstitutiveEquation == SARAMITO_OLDROYDB ||
+                                goma_ctx->fem.vn->ConstitutiveEquation == SARAMITO_PTT ||
+                                goma_ctx->fem.vn->ConstitutiveEquation == SARAMITO_GIESEKUS);
 
   if (saramitoEnabled) {
     GOMA_EH(GOMA_ERROR, "Saramito not available for SQRT_CONF");
@@ -1388,7 +1400,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
   /* SUPG variables */
   dbl supg = 0;
 
-  if (vn->evssModel == EVSS_GRADV) {
+  if (goma_ctx->fem.vn->evssModel == EVSS_GRADV) {
     evss_gradv = 1;
   }
 
@@ -1400,7 +1412,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
    * Bail out fast if there's nothing to do...
    */
 
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (status);
   }
 
@@ -1408,13 +1420,13 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
    * Unpack variables from structures for local convenience...
    */
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
-  wt = fv->wt;
+  wt = goma_ctx->fem.fv->wt;
 
   det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
 
-  h3 = fv->h3; /* Differential volume element (scales). */
+  h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
 
   /* load eqn and variable number in tensor form */
   (void)stress_eqn_pointer(v_s);
@@ -1428,7 +1440,8 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
 
     /* note, these are zero for steady calculations */
     x_dot[a] = 0.0;
-    if (pd->TimeIntegration != STEADY && pd->gv[MESH_DISPLACEMENT1 + a]) {
+    if (goma_ctx->fem.pd->TimeIntegration != STEADY &&
+        goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1 + a]) {
       x_dot[a] = ad_fv->x_dot[a];
     }
   }
@@ -1471,10 +1484,10 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
     }
   }
 
-  if (vn->wt_funcModel == GALERKIN) {
+  if (goma_ctx->fem.vn->wt_funcModel == GALERKIN) {
     supg = 0.;
-  } else if (vn->wt_funcModel == SUPG) {
-    supg = vn->wt_func;
+  } else if (goma_ctx->fem.vn->wt_funcModel == SUPG) {
+    supg = goma_ctx->fem.vn->wt_func;
   }
 
   ADType supg_tau;
@@ -1484,21 +1497,24 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
   /* end Petrov-Galerkin addition */
   dbl yzbeta_factor = 0.0;
   dbl beta[2] = {1.0, 2.0};
-  if (vn->shockcaptureModel == SC_YZBETA) {
-    yzbeta_factor = vn->shockcapture;
-  } else if (vn->shockcaptureModel == SC_DCDD || vn->shockcaptureModel == SC_CONSTANT) {
-  } else if (vn->shockcaptureModel != SC_NONE) {
+  if (goma_ctx->fem.vn->shockcaptureModel == SC_YZBETA) {
+    yzbeta_factor = goma_ctx->fem.vn->shockcapture;
+  } else if (goma_ctx->fem.vn->shockcaptureModel == SC_DCDD ||
+             goma_ctx->fem.vn->shockcaptureModel == SC_CONSTANT) {
+  } else if (goma_ctx->fem.vn->shockcaptureModel != SC_NONE) {
     GOMA_EH(GOMA_ERROR, "Unknown shock capture model, only YZBETA supported for SQRT_CONF");
   }
 
   /*  shift factor  */
-  if (pd->gv[TEMPERATURE]) {
-    if (vn->shiftModel == CONSTANT) {
-      at = vn->shift[0];
-    } else if (vn->shiftModel == MODIFIED_WLF) {
-      wlf_denom = vn->shift[1] + fv->T - mp->reference[TEMPERATURE];
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    if (goma_ctx->fem.vn->shiftModel == CONSTANT) {
+      at = goma_ctx->fem.vn->shift[0];
+    } else if (goma_ctx->fem.vn->shiftModel == MODIFIED_WLF) {
+      wlf_denom = goma_ctx->fem.vn->shift[1] + goma_ctx->fem.fv->T -
+                  goma_ctx->fem.mp->reference[TEMPERATURE];
       if (wlf_denom != 0.) {
-        at = exp(vn->shift[0] * (mp->reference[TEMPERATURE] - fv->T) / wlf_denom);
+        at = exp(goma_ctx->fem.vn->shift[0] *
+                 (goma_ctx->fem.mp->reference[TEMPERATURE] - goma_ctx->fem.fv->T) / wlf_denom);
       } else {
         at = 1.;
       }
@@ -1508,7 +1524,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
   }
 
   /* Begin loop over modes */
-  for (mode = 0; mode < vn->modes; mode++) {
+  for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
 
     ad_load_modal_pointers(mode, tt, dt, b, b_dot, grad_b);
 
@@ -1534,12 +1550,12 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
 
     double d_alpha_dF[MDE];
     /* get Geisekus mobility parameter */
-    if (ve[mode]->alphaModel == CONSTANT) {
-      alpha = ve[mode]->alpha;
-    } else if (ls != NULL && ve[mode]->alphaModel == VE_LEVEL_SET) {
-      double pos_alpha = ve[mode]->pos_ls.alpha;
-      double neg_alpha = ve[mode]->alpha;
-      double width = ls->Length_Scale;
+    if (goma_ctx->fem.ve[mode]->alphaModel == CONSTANT) {
+      alpha = goma_ctx->fem.ve[mode]->alpha;
+    } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ve[mode]->alphaModel == VE_LEVEL_SET) {
+      double pos_alpha = goma_ctx->fem.ve[mode]->pos_ls.alpha;
+      double neg_alpha = goma_ctx->fem.ve[mode]->alpha;
+      double width = goma_ctx->fem.ls->Length_Scale;
       err = level_set_property(neg_alpha, pos_alpha, width, &alpha, d_alpha_dF);
       GOMA_EH(err, "level_set_property() failed for mobility parameter.");
     } else {
@@ -1547,15 +1563,15 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
     }
 
     /* get time constant */
-    lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
+    lambda = polymer_time_const(goma_ctx->fem.ve[mode]->time_const_st, dgamma, NULL);
 
     xi = 0;
-    if (ve[mode]->xiModel == CONSTANT) {
-      xi = ve[mode]->xi;
-    } else if (ls != NULL && ve[mode]->xiModel == VE_LEVEL_SET) {
-      double pos_xi = ve[mode]->pos_ls.xi;
-      double neg_xi = ve[mode]->xi;
-      double width = ls->Length_Scale;
+    if (goma_ctx->fem.ve[mode]->xiModel == CONSTANT) {
+      xi = goma_ctx->fem.ve[mode]->xi;
+    } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ve[mode]->xiModel == VE_LEVEL_SET) {
+      double pos_xi = goma_ctx->fem.ve[mode]->pos_ls.xi;
+      double neg_xi = goma_ctx->fem.ve[mode]->xi;
+      double width = goma_ctx->fem.ls->Length_Scale;
       err = level_set_property(neg_xi, pos_xi, width, &xi, d_xi_dF);
       GOMA_EH(err, "level_set_property() failed for ptt xi parameter.");
     } else {
@@ -1566,12 +1582,12 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
       GOMA_EH(GOMA_ERROR, "PTT Xi parameter currently required to be 0 for SQRT_CONF");
     }
 
-    if (ve[mode]->epsModel == CONSTANT) {
-      eps = ve[mode]->eps;
-    } else if (ls != NULL && ve[mode]->epsModel == VE_LEVEL_SET) {
-      double pos_eps = ve[mode]->pos_ls.eps;
-      double neg_eps = ve[mode]->eps;
-      double width = ls->Length_Scale;
+    if (goma_ctx->fem.ve[mode]->epsModel == CONSTANT) {
+      eps = goma_ctx->fem.ve[mode]->eps;
+    } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ve[mode]->epsModel == VE_LEVEL_SET) {
+      double pos_eps = goma_ctx->fem.ve[mode]->pos_ls.eps;
+      double neg_eps = goma_ctx->fem.ve[mode]->eps;
+      double width = goma_ctx->fem.ls->Length_Scale;
       err = level_set_property(neg_eps, pos_eps, width, &eps, d_eps_dF);
       GOMA_EH(err, "level_set_property() failed for ptt epsilon parameter.");
     } else {
@@ -1593,8 +1609,8 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
     for (int a = 0; a < 3; a++) {
       resid[a].resize(3);
       for (int b = 0; b < 3; b++) {
-        resid[a][b].resize(ei[pg->imtrx]->dof[v_s[mode][a][b]]);
-        for (i = 0; i < ei[pg->imtrx]->dof[v_s[mode][a][b]]; i++) {
+        resid[a][b].resize(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v_s[mode][a][b]]);
+        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v_s[mode][a][b]]; i++) {
           resid[a][b][i] = 0;
         }
       }
@@ -1603,7 +1619,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
      * Residuals_________________________________________________________________
      */
 
-    if (af->Assemble_Residual) {
+    if (goma_ctx->fem.af->Assemble_Residual) {
       /*
        * Assemble each component "ab" of the polymer stress equation...
        */
@@ -1619,8 +1635,8 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
              * based on the number of degrees of freedom...
              */
 
-            for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-              ADType wt_func = bf[eqn]->phi[i];
+            for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+              ADType wt_func = goma_ctx->fem.bf[eqn]->phi[i];
               /* add Petrov-Galerkin terms as necessary */
               if (supg != 0.) {
                 for (w = 0; w < dim; w++) {
@@ -1631,30 +1647,31 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
 
               ADType mass = 0.;
 
-              if (pd->TimeIntegration != STEADY) {
-                if (pd->e[pg->imtrx][eqn] & T_MASS) {
+              if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+                if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
                   mass = b_dot[ii][jj];
                   mass *= wt_func * at * lambda * det_J * wt;
                   mass *= h3;
-                  mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+                  mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
                 }
               }
 
               ADType advection = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
                 if (DOUBLE_NONZERO(lambda)) {
 
                   advection += v_dot_del_b[ii][jj] - x_dot_del_b[ii][jj];
                   advection -= b_dot_g[ii][jj];
                   advection -= a_dot_b[ii][jj];
                   advection *= wt_func * at * lambda * det_J * wt * h3;
-                  advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+                  advection *=
+                      goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
                 }
               }
 
               ADType diffusion = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                if (vn->shockcaptureModel == SC_YZBETA) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
+                if (goma_ctx->fem.vn->shockcaptureModel == SC_YZBETA) {
                   ADType Z = b_dot[ii][jj];
                   Z += 1e-32 + v_dot_del_b[ii][jj] - x_dot_del_b[ii][jj];
                   Z -= b_dot_g[ii][jj];
@@ -1665,7 +1682,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                   ADType Y_inv = 1.0;
                   ADType hdc = 0;
                   ADType js = 0;
-                  for (int k = 0; k < ei[pg->imtrx]->dof[eqn]; k++) {
+                  for (int k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; k++) {
                     for (int p = 0; p < 3; p++) {
                       js += fabs(grad_b[p][ii][jj] * ad_fv->basis[eqn].grad_phi[k][p]);
                     }
@@ -1693,9 +1710,10 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                   }
 
                   diffusion *= yzbeta_factor * det_J * wt * h3;
-                  diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-                } else if (vn->shockcaptureModel == SC_DCDD) {
-                  dbl dcdd_factor = vn->shockcapture;
+                  diffusion *=
+                      goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                } else if (goma_ctx->fem.vn->shockcaptureModel == SC_DCDD) {
+                  dbl dcdd_factor = goma_ctx->fem.vn->shockcapture;
                   ADType tmp = 0.0;
                   ADType s[DIM] = {0.0};
                   ADType r[DIM] = {0.0};
@@ -1716,7 +1734,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                   }
 
                   ADType he = 0.0;
-                  for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
+                  for (int q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; q++) {
                     ADType tmp = 0;
                     for (int w = 0; w < dim; w++) {
                       tmp += ad_fv->basis[eqn].grad_phi[q][w] * ad_fv->basis[eqn].grad_phi[q][w];
@@ -1725,7 +1743,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                   }
 
                   tmp = 0;
-                  for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
+                  for (int q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; q++) {
                     for (int w = 0; w < dim; w++) {
                       tmp += fabs(r[w] * ad_fv->basis[eqn].grad_phi[q][w]);
                     }
@@ -1778,12 +1796,13 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                     diffusion += tau_dcdd * gs_inner_dot[w] * ad_fv->basis[eqn].grad_phi[i][w];
                   }
                   diffusion *= dcdd_factor * det_J * wt * h3;
-                } else if (vn->shockcaptureModel == SC_CONSTANT) {
+                } else if (goma_ctx->fem.vn->shockcaptureModel == SC_CONSTANT) {
                   for (int w = 0; w < dim; w++) {
                     diffusion += grad_b[w][ii][jj] * ad_fv->basis[eqn].grad_phi[i][w];
                   }
-                  diffusion *= vn->shockcapture * det_J * wt * h3;
-                  diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                  diffusion *= goma_ctx->fem.vn->shockcapture * det_J * wt * h3;
+                  diffusion *=
+                      goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
                 }
               }
 
@@ -1792,12 +1811,12 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                */
 
               ADType source = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
                 // consider whether saramitoCoeff should multiply here
                 source = source_term[ii][jj];
                 source *= wt_func * det_J * h3 * wt;
 
-                source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
               }
 
               /*
@@ -1805,7 +1824,8 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                * locally into an accumulator)
                */
 
-              lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][eqn], i)] +=
+              goma_ctx->fem.lec
+                  ->R[LEC_R_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn], i)] +=
                   mass.val() + advection.val() + diffusion.val() + source.val();
               resid[ii][jj][i] += mass + advection + diffusion + source;
             }
@@ -1818,20 +1838,20 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
      * Jacobian terms...
      */
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
       for (int ii = 0; ii < 3; ii++) {
         for (int jj = 0; jj < 3; jj++) {
           if (ii <= jj) /* since the stress tensor is symmetric, only assemble the upper half */
           {
             eqn = R_s[mode][ii][jj];
-            peqn = upd->ep[pg->imtrx][eqn];
+            peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-            for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+            for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
               for (int var = V_FIRST; var < V_LAST; var++) {
-                if (pd->v[pg->imtrx][var]) {
-                  pvar = upd->vp[pg->imtrx][var];
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                    lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                    goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
                         resid[ii][jj][i].dx(ad_fv->offset[var] + j);
                   }
                 }

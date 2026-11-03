@@ -203,7 +203,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 #endif
 
   /* Set step_fix only if parallel run and only if fix freq is enabled*/
-  if (goma_ctx->num_proc > 1 && cont->fix_freq > 0) {
+  if (goma_ctx->num_proc > 1 && goma_ctx->fem.cont->fix_freq > 0) {
     step_fix = 1; /* Always fix on the first timestep to match print frequency */
   }
 
@@ -335,13 +335,13 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
   num_total_nodes = dpi->num_universe_nodes;
 
-  numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
+  numProcUnknowns = NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
 
   /* allocate memory for Volume Constraint Jacobian. ACS 2/99 */
 
   if (nAC > 0) {
     for (iAC = 0; iAC < nAC; iAC++) {
-      augc[iAC].d_evol_dx = (double *)malloc(numProcUnknowns * sizeof(double));
+      goma_ctx->fem.augc[iAC].d_evol_dx = (double *)malloc(numProcUnknowns * sizeof(double));
     }
   }
 
@@ -419,19 +419,19 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
   alqALC = 1;
 
   delta_t = 0.0;
-  tran->delta_t = 0.0; /*for Newmark-Beta terms in Lagrangian Solid*/
+  goma_ctx->fem.tran->delta_t = 0.0; /*for Newmark-Beta terms in Lagrangian Solid*/
 
   nprint = 0;
 
-  MaxPathSteps = cont->MaxPathSteps;
-  eps = cont->eps;
+  MaxPathSteps = goma_ctx->fem.cont->MaxPathSteps;
+  eps = goma_ctx->fem.cont->eps;
 
   for (iHC = 0; iHC < nHC; iHC++) {
 
     const_delta_s[iHC] = 0;
 
-    lambda[iHC] = hunt[iHC].BegParameterValue;
-    lambdaEnd[iHC] = hunt[iHC].EndParameterValue;
+    lambda[iHC] = goma_ctx->fem.hunt[iHC].BegParameterValue;
+    lambdaEnd[iHC] = goma_ctx->fem.hunt[iHC].EndParameterValue;
     lambdaDelta[iHC] = lambdaEnd[iHC] - lambda[iHC];
     if (lambda[iHC] > 0. && lambdaEnd[iHC] > 0.0) {
       lambdaLog[iHC] = log10(lambda[iHC]);
@@ -442,7 +442,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
       lambdaRatio[iHC] = lambdaEnd[iHC] / lambda[iHC];
       lambdaDeltaLog[iHC] = fabs(log10(lambdaRatio[iHC]));
     }
-    if (hunt[iHC].ramp == 2) {
+    if (goma_ctx->fem.hunt[iHC].ramp == 2) {
       if (log_ID == -1)
         log_ID = iHC;
     }
@@ -453,14 +453,14 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
       aldALC[iHC] = -1;
     }
 
-    if (hunt[iHC].ramp == 1) {
-      hunt[iHC].Delta_s0 = fabs(lambdaDelta[iHC]) / ((double)(MaxPathSteps - 1));
+    if (goma_ctx->fem.hunt[iHC].ramp == 1) {
+      goma_ctx->fem.hunt[iHC].Delta_s0 = fabs(lambdaDelta[iHC]) / ((double)(MaxPathSteps - 1));
       const_delta_s[iHC] = 1;
     }
 
-    hDelta_s0[iHC] = hunt[iHC].Delta_s0;
-    hDelta_s_min[iHC] = hunt[iHC].Delta_s_min;
-    hDelta_s_max[iHC] = hunt[iHC].Delta_s_max;
+    hDelta_s0[iHC] = goma_ctx->fem.hunt[iHC].Delta_s0;
+    hDelta_s_min[iHC] = goma_ctx->fem.hunt[iHC].Delta_s_min;
+    hDelta_s_max[iHC] = goma_ctx->fem.hunt[iHC].Delta_s_max;
 
     path[iHC] = path1[iHC] = lambda[iHC];
 
@@ -492,16 +492,16 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
   if (DOUBLE_ZERO(lambdaDelta[iHC])) {
     hunt_par = 1.0;
   } else {
-    if (hunt[iHC].ramp == 2) {
+    if (goma_ctx->fem.hunt[iHC].ramp == 2) {
       hunt_par = fabs(log10(fabs(path1[iHC])) - lambdaLog[iHC]) / lambdaDeltaLog[iHC];
       dhunt_par_min = log10(1.0 + hDelta_s_min[iHC] / fabs(lambda[iHC])) / lambdaDeltaLog[iHC];
       dhunt_par_max = log10(1.0 + hDelta_s_max[iHC] / fabs(lambda[iHC])) / lambdaDeltaLog[iHC];
       dhunt_par_0 = log10(1.0 + hDelta_s0[iHC] / fabs(lambda[iHC])) / lambdaDeltaLog[iHC];
     } else {
       hunt_par = (path1[iHC] - lambda[iHC]) / lambdaDelta[iHC];
-      dhunt_par_min = aldALC[iHC] * hunt[iHC].Delta_s_min / lambdaDelta[iHC];
-      dhunt_par_max = aldALC[iHC] * hunt[iHC].Delta_s_max / lambdaDelta[iHC];
-      dhunt_par_0 = aldALC[iHC] * hunt[iHC].Delta_s0 / lambdaDelta[iHC];
+      dhunt_par_min = aldALC[iHC] * goma_ctx->fem.hunt[iHC].Delta_s_min / lambdaDelta[iHC];
+      dhunt_par_max = aldALC[iHC] * goma_ctx->fem.hunt[iHC].Delta_s_max / lambdaDelta[iHC];
+      dhunt_par_0 = aldALC[iHC] * goma_ctx->fem.hunt[iHC].Delta_s0 / lambdaDelta[iHC];
     }
     hunt_par = fabs(hunt_par);
   }
@@ -531,16 +531,16 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     x_sens_p = NULL;
   }
 
-  pg->matrices = malloc(sizeof(struct Matrix_Data));
-  pg->matrices[pg->imtrx].ams = ams[JAC];
-  pg->matrices[pg->imtrx].x = x;
-  pg->matrices[pg->imtrx].x_old = x_old;
-  pg->matrices[pg->imtrx].x_older = x_older;
-  pg->matrices[pg->imtrx].xdot = xdot;
-  pg->matrices[pg->imtrx].xdot_old = xdot_old;
-  pg->matrices[pg->imtrx].x_update = x_update;
-  pg->matrices[pg->imtrx].scale = scale;
-  pg->matrices[pg->imtrx].resid_vector = resid_vector;
+  goma_ctx->fem.pg->matrices = malloc(sizeof(struct Matrix_Data));
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].ams = ams[JAC];
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x = x;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old = x_old;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_older = x_older;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot = xdot;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot_old = xdot_old;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_update = x_update;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].scale = scale;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].resid_vector = resid_vector;
 
   /* Allocate sparse matrix */
 
@@ -556,15 +556,17 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
     int local_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
                       goma_ctx->mesh.num_external_nodes;
-    err = GomaSparseMatrix_SetProblemGraph(
-        goma_matrix, num_internal_dofs[pg->imtrx], num_boundary_dofs[pg->imtrx],
-        num_external_dofs[pg->imtrx], local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,
-        dpi, cx, pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
+    err = GomaSparseMatrix_SetProblemGraph(goma_matrix, num_internal_dofs[goma_ctx->fem.pg->imtrx],
+                                           num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+                                           num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes,
+                                           Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo, dpi, cx,
+                                           goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
     GOMA_EH(err, "GomaSparseMatrix_SetProblemGraph");
 
     ams[JAC]->GomaMatrixData = goma_matrix;
-    ams[JAC]->npu = num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx];
-    ams[JAC]->npu_plus = num_universe_dofs[pg->imtrx];
+    ams[JAC]->npu =
+        num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+    ams[JAC]->npu_plus = num_universe_dofs[goma_ctx->fem.pg->imtrx];
 
 #ifdef GOMA_ENABLE_PETSC
 #if PETSC_USE_COMPLEX
@@ -572,20 +574,22 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
-    pg->imtrx = 0;
+    goma_ctx->fem.pg->imtrx = 0;
     goma_error err = goma_setup_petsc_matrix_complex(
-        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[pg->imtrx],
-        num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx], pg->imtrx);
+        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[goma_ctx->fem.pg->imtrx],
+        num_boundary_dofs[goma_ctx->fem.pg->imtrx], num_external_dofs[goma_ctx->fem.pg->imtrx],
+        goma_ctx->fem.pg->imtrx);
     GOMA_EH(err, "goma_setup_petsc_matrix");
 #else
   } else if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
-    pg->imtrx = 0;
+    goma_ctx->fem.pg->imtrx = 0;
     goma_error err = goma_setup_petsc_matrix(
-        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[pg->imtrx],
-        num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx], pg->imtrx);
+        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[goma_ctx->fem.pg->imtrx],
+        num_boundary_dofs[goma_ctx->fem.pg->imtrx], num_external_dofs[goma_ctx->fem.pg->imtrx],
+        goma_ctx->fem.pg->imtrx);
     GOMA_EH(err, "goma_setup_petsc_matrix");
 #endif
 #endif
@@ -596,9 +600,10 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
      * An attic to store external dofs column names is needed when
      * running in parallel.
      */
-    alloc_extern_ija_buffer(num_universe_dofs[pg->imtrx],
-                            num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx], ija,
-                            &ija_attic);
+    alloc_extern_ija_buffer(num_universe_dofs[goma_ctx->fem.pg->imtrx],
+                            num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                                num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+                            ija, &ija_attic);
 
     /*
      * Any necessary one time initialization of the linear
@@ -623,11 +628,14 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     ams[JAC]->npn_plus =
         dpi->num_internal_nodes + dpi->num_boundary_nodes + dpi->num_external_nodes;
 
-    ams[JAC]->npu = num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx];
-    ams[JAC]->npu_plus = num_universe_dofs[pg->imtrx];
+    ams[JAC]->npu =
+        num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+    ams[JAC]->npu_plus = num_universe_dofs[goma_ctx->fem.pg->imtrx];
 
-    ams[JAC]->nnz = ija[num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]] - 1;
-    ams[JAC]->nnz_plus = ija[num_universe_dofs[pg->imtrx]];
+    ams[JAC]->nnz = ija[num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                        num_boundary_dofs[goma_ctx->fem.pg->imtrx]] -
+                    1;
+    ams[JAC]->nnz_plus = ija[num_universe_dofs[goma_ctx->fem.pg->imtrx]];
 
   } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
     log_msg("alloc_VBR_sparse_arrays...");
@@ -657,7 +665,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
   /*  if read ACs, update data floats */
   if (nAC > 0) {
-    if (augc[0].iread == 1) {
+    if (goma_ctx->fem.augc[0].iread == 1) {
       for (iAC = 0; iAC < nAC; iAC++) {
         update_parameterAC(iAC, x, xdot, x_AC, cx, exo, dpi);
       }
@@ -670,7 +678,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
   find_and_set_Dirichlet(x, xdot, exo, dpi);
 
-  exchange_dof(cx, dpi, x, pg->imtrx);
+  exchange_dof(cx, dpi, x, goma_ctx->fem.pg->imtrx);
 
   dcopy1(numProcUnknowns, x, x_old);
   dcopy1(numProcUnknowns, x_old, x_older);
@@ -763,7 +771,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     if (DOUBLE_ZERO(lambdaDelta[iHC])) {
       hunt_par = 1.0;
     } else {
-      if (hunt[iHC].ramp == 2) {
+      if (goma_ctx->fem.hunt[iHC].ramp == 2) {
         hunt_par = fabs(log10(fabs(path1[iHC])) - lambdaLog[iHC]) / lambdaDeltaLog[iHC];
         if (n > 0) {
           dhunt_par = fabs(log10(fabs(path1[iHC])) - log10(fabs(path[iHC]))) / lambdaDeltaLog[iHC];
@@ -778,7 +786,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
       }
     }
     for (iHC = 0; iHC < nHC; iHC++) {
-      if (hunt[iHC].ramp == 2) {
+      if (goma_ctx->fem.hunt[iHC].ramp == 2) {
         delta_s[iHC] = -fabs(lambda[iHC]) * pow(lambdaRatio[iHC], hunt_par - dhunt_par);
         delta_s[iHC] += fabs(lambda[iHC]) * pow(lambdaRatio[iHC], hunt_par);
       } else {
@@ -816,7 +824,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
     find_and_set_Dirichlet(x, xdot, exo, dpi);
 
-    exchange_dof(cx, dpi, x, pg->imtrx);
+    exchange_dof(cx, dpi, x, goma_ctx->fem.pg->imtrx);
 
     if (goma_ctx->proc_id == 0) {
       DPRINTF(stdout, "\n\t----------------------------------");
@@ -831,15 +839,18 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
       DPRINTF(stdout, "\n\tStep number: %4d of %4d (max)", n + 1, MaxPathSteps);
       DPRINTF(stdout, "\n\tAttempting solution at: theta = %g ;  step = %g", hunt_par, dhunt_par);
       for (iHC = 0; iHC < nHC; iHC++) {
-        switch (hunt[iHC].Type) {
+        switch (goma_ctx->fem.hunt[iHC].Type) {
         case 1: /* BC */
-          DPRINTF(stdout, "\n\tBCID=%3d DFID=%5d", hunt[iHC].BCID, hunt[iHC].DFID);
+          DPRINTF(stdout, "\n\tBCID=%3d DFID=%5d", goma_ctx->fem.hunt[iHC].BCID,
+                  goma_ctx->fem.hunt[iHC].DFID);
           break;
         case 2: /* MT */
-          DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d", hunt[iHC].MTID + 1, hunt[iHC].MPID);
+          DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d", goma_ctx->fem.hunt[iHC].MTID + 1,
+                  goma_ctx->fem.hunt[iHC].MPID);
           break;
         case 3: /* AC */
-          DPRINTF(stdout, "\n\tACID=%3d DFID=%5d", hunt[iHC].BCID, hunt[iHC].DFID);
+          DPRINTF(stdout, "\n\tACID=%3d DFID=%5d", goma_ctx->fem.hunt[iHC].BCID,
+                  goma_ctx->fem.hunt[iHC].DFID);
           break;
         }
         DPRINTF(stdout, " Parameter= % 10.6e delta_s= %10.6e", path1[iHC], delta_s[iHC]);
@@ -880,34 +891,40 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
           DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
 
           for (iAC = 0; iAC < nAC; iAC++) {
-            evol_local = augc[iAC].evol;
+            evol_local = goma_ctx->fem.augc[iAC].evol;
 #ifdef PARALLEL
-            if (goma_ctx->num_proc > 1 &&
-                (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
-                 augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
+            if (goma_ctx->num_proc > 1 && (goma_ctx->fem.augc[iAC].Type == AC_VOLUME ||
+                                           goma_ctx->fem.augc[iAC].Type == AC_POSITION ||
+                                           goma_ctx->fem.augc[iAC].Type == AC_ANGLE ||
+                                           goma_ctx->fem.augc[iAC].Type == AC_POSITION_MT)) {
               MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
               evol_local = evol_global;
             }
 #endif
-            if (augc[iAC].Type == AC_USERBC) {
-              DPRINTF(stdout, "\tAC[%4d] DF[%4d] = %10.6e\n", augc[iAC].BCID, augc[iAC].DFID,
+            if (goma_ctx->fem.augc[iAC].Type == AC_USERBC) {
+              DPRINTF(stdout, "\tAC[%4d] DF[%4d] = %10.6e\n", goma_ctx->fem.augc[iAC].BCID,
+                      goma_ctx->fem.augc[iAC].DFID, x_AC[iAC]);
+            } else if (goma_ctx->fem.augc[iAC].Type == AC_USERMAT ||
+                       goma_ctx->fem.augc[iAC].Type == AC_FLUX_MAT) {
+              DPRINTF(stdout, "\n MT[%4d] MP[%4d] = %10.6e\n", goma_ctx->fem.augc[iAC].MTID,
+                      goma_ctx->fem.augc[iAC].MPID, x_AC[iAC]);
+            } else if (goma_ctx->fem.augc[iAC].Type == AC_VOLUME) {
+              DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n",
+                      goma_ctx->fem.augc[iAC].MTID, goma_ctx->fem.augc[iAC].VOLID, evol_local,
                       x_AC[iAC]);
-            } else if (augc[iAC].Type == AC_USERMAT || augc[iAC].Type == AC_FLUX_MAT) {
-              DPRINTF(stdout, "\n MT[%4d] MP[%4d] = %10.6e\n", augc[iAC].MTID, augc[iAC].MPID,
+            } else if (goma_ctx->fem.augc[iAC].Type == AC_POSITION ||
+                       goma_ctx->fem.augc[iAC].Type == AC_POSITION_MT) {
+              DPRINTF(stdout, "\tMT[%4d] XY[%4d]=%10.6e Param=%10.6e\n",
+                      goma_ctx->fem.augc[iAC].MTID, goma_ctx->fem.augc[iAC].VOLID, evol_local,
                       x_AC[iAC]);
-            } else if (augc[iAC].Type == AC_VOLUME) {
-              DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
-                      augc[iAC].VOLID, evol_local, x_AC[iAC]);
-            } else if (augc[iAC].Type == AC_POSITION || augc[iAC].Type == AC_POSITION_MT) {
-              DPRINTF(stdout, "\tMT[%4d] XY[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
-                      augc[iAC].VOLID, evol_local, x_AC[iAC]);
-            } else if (augc[iAC].Type == AC_ANGLE) {
-              evol_local = augc[iAC].lm_resid + augc[iAC].CONSTV;
+            } else if (goma_ctx->fem.augc[iAC].Type == AC_ANGLE) {
+              evol_local = goma_ctx->fem.augc[iAC].lm_resid + goma_ctx->fem.augc[iAC].CONSTV;
               DPRINTF(stdout, "\tNodeSet[%4d]_Ang = %g F_bal = %6.3e VC[%4d] Param=%6.3e\n",
-                      augc[iAC].MTID, evol_local, augc[iAC].lm_resid, augc[iAC].VOLID, x_AC[iAC]);
-            } else if (augc[iAC].Type == AC_FLUX) {
-              DPRINTF(stdout, "\tBC[%4d] DF[%4d]=%10.6e\n", augc[iAC].BCID, augc[iAC].DFID,
-                      x_AC[iAC]);
+                      goma_ctx->fem.augc[iAC].MTID, evol_local, goma_ctx->fem.augc[iAC].lm_resid,
+                      goma_ctx->fem.augc[iAC].VOLID, x_AC[iAC]);
+            } else if (goma_ctx->fem.augc[iAC].Type == AC_FLUX) {
+              DPRINTF(stdout, "\tBC[%4d] DF[%4d]=%10.6e\n", goma_ctx->fem.augc[iAC].BCID,
+                      goma_ctx->fem.augc[iAC].DFID, x_AC[iAC]);
             }
           }
         }
@@ -986,9 +1003,9 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
           dhunt_par *= 0.5;
           hunt_par = hunt_par_old + dhunt_par;
           for (iHC = 0; iHC < nHC; iHC++) {
-            if (hunt[iHC].ramp == 2) {
+            if (goma_ctx->fem.hunt[iHC].ramp == 2) {
               path1[iHC] = lambda[iHC] * pow(lambdaRatio[iHC], hunt_par);
-            } else if (hunt[iHC].ramp == 1) {
+            } else if (goma_ctx->fem.hunt[iHC].ramp == 1) {
               delta_s[iHC] *= 0.5;
               path1[iHC] = path[iHC] - ((double)aldALC[iHC]) * delta_s[iHC];
             } else {
@@ -1026,7 +1043,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
           if (DOUBLE_ZERO(lambdaDelta[iHC])) {
             hunt_par = 1.0;
           } else {
-            if (hunt[iHC].ramp == 2) {
+            if (goma_ctx->fem.hunt[iHC].ramp == 2) {
               hunt_par = fabs(log10(fabs(path1[iHC])) - lambdaLog[iHC]) / lambdaDeltaLog[iHC];
             } else {
               hunt_par = (path1[iHC] - lambda[iHC]) / lambdaDelta[iHC];
@@ -1053,7 +1070,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
            */
           find_and_set_Dirichlet(x, xdot, exo, dpi);
 
-          exchange_dof(cx, dpi, x, pg->imtrx);
+          exchange_dof(cx, dpi, x, goma_ctx->fem.pg->imtrx);
 
           if (nAC > 0) {
             dcopy1(nAC, x_AC_old, x_AC);
@@ -1066,7 +1083,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
           if (DOUBLE_ZERO(lambdaDelta[iHC])) {
             hunt_par = 1.0;
           } else {
-            if (hunt[iHC].ramp == 2) {
+            if (goma_ctx->fem.hunt[iHC].ramp == 2) {
               hunt_par = fabs(log10(fabs(path1[iHC])) - lambdaLog[iHC]) / lambdaDeltaLog[iHC];
             } else {
               hunt_par = (path1[iHC] - lambda[iHC]) / lambdaDelta[iHC];
@@ -1095,7 +1112,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
            */
           find_and_set_Dirichlet(x, xdot, exo, dpi);
 
-          exchange_dof(cx, dpi, x, pg->imtrx);
+          exchange_dof(cx, dpi, x, goma_ctx->fem.pg->imtrx);
 
           if (nAC > 0) {
             dcopy1(nAC, x_AC_old, x_AC);
@@ -1110,7 +1127,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
           if ((goma_ctx->solver.damp_factor1 <= 1. && goma_ctx->solver.damp_factor1 >= 0.) &&
               (goma_ctx->solver.damp_factor2 <= 1. && goma_ctx->solver.damp_factor2 >= 0.) &&
               (goma_ctx->solver.damp_factor3 <= 1. && goma_ctx->solver.damp_factor3 >= 0.)) {
-            if (hunt[0].BCID == -1) {
+            if (goma_ctx->fem.hunt[0].BCID == -1) {
               if (goma_ctx->write_intermediate_solutions == 0) {
                 write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot,
                                xdot_old, tev, tev_post, gv, rd, gvec, gvec_elem, &nprint,
@@ -1124,7 +1141,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
             DPRINTF(stdout, "  custom tolerances %g %g %g  \n", goma_ctx->solver.custom_tol1,
                     goma_ctx->solver.custom_tol2, goma_ctx->solver.custom_tol3);
           } else {
-            if (hunt[0].BCID == -1) {
+            if (goma_ctx->fem.hunt[0].BCID == -1) {
               if (goma_ctx->write_intermediate_solutions == 0) {
                 DPRINTF(stdout, "  writing solution %g  \n", goma_ctx->solver.damp_factor1);
                 write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot,
@@ -1153,15 +1170,18 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     goma_ctx->solver.damp_factor1 = 1.0;
     DPRINTF(stdout, "\n\tStep accepted, theta (proportion complete) = %10.6e\n", hunt_par);
     for (iHC = 0; iHC < nHC; iHC++) {
-      switch (hunt[iHC].Type) {
+      switch (goma_ctx->fem.hunt[iHC].Type) {
       case 1: /* BC */
-        DPRINTF(stdout, "\tStep accepted, BCID=%3d DFID=%5d", hunt[iHC].BCID, hunt[iHC].DFID);
+        DPRINTF(stdout, "\tStep accepted, BCID=%3d DFID=%5d", goma_ctx->fem.hunt[iHC].BCID,
+                goma_ctx->fem.hunt[iHC].DFID);
         break;
       case 2: /* MT */
-        DPRINTF(stdout, "\tStep accepted, MTID=%3d MPID=%5d", hunt[iHC].MTID + 1, hunt[iHC].MPID);
+        DPRINTF(stdout, "\tStep accepted, MTID=%3d MPID=%5d", goma_ctx->fem.hunt[iHC].MTID + 1,
+                goma_ctx->fem.hunt[iHC].MPID);
         break;
       case 3: /* AC */
-        DPRINTF(stdout, "\tStep accepted, ACID=%3d DFID=%5d", hunt[iHC].BCID, hunt[iHC].DFID);
+        DPRINTF(stdout, "\tStep accepted, ACID=%3d DFID=%5d", goma_ctx->fem.hunt[iHC].BCID,
+                goma_ctx->fem.hunt[iHC].DFID);
         break;
       }
       DPRINTF(stdout, " Parameter= % 10.6e\n", path1[iHC]);
@@ -1174,7 +1194,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     iHC = MAX(0, log_ID);
     if ((ni == 1) && (n != 0) && (!const_delta_s[iHC])) {
       dhunt_par_new = path_step_control(num_total_nodes, dhunt_par, dhunt_par_old, x, eps,
-                                        &success_ds, cont->use_var_norm, inewton);
+                                        &success_ds, goma_ctx->fem.cont->use_var_norm, inewton);
       if (dhunt_par_new > dhunt_par_max) {
         dhunt_par_new = dhunt_par_max;
       }
@@ -1190,7 +1210,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     i_print = 0;
     if (nt == step_print) {
       i_print = 1;
-      step_print += cont->print_freq;
+      step_print += goma_ctx->fem.cont->print_freq;
     }
 
     if (alqALC == -1) {
@@ -1208,7 +1228,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
                        tev, tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_s[0], theta, exo_time,
                        NULL, exo, dpi);
         nprint++;
-        if (goma_ctx->anneal_mesh && cont->anneal_on_print) {
+        if (goma_ctx->anneal_mesh && goma_ctx->fem.cont->anneal_on_print) {
           err = anneal_mesh(x, tev, tev_post, NULL, rd, path1[0], exo, dpi);
           GOMA_EH(err, "anneal_mesh() bad return.");
         }
@@ -1229,7 +1249,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
       MPI_Barrier(MPI_COMM_WORLD);
       fix_output();
       /* Fix step is relative to print step */
-      step_fix += cont->fix_freq * cont->print_freq;
+      step_fix += goma_ctx->fem.cont->fix_freq * goma_ctx->fem.cont->print_freq;
     }
 #endif
 
@@ -1263,7 +1283,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
       hunt_par = 1.0;
     }
     for (iHC = 0; iHC < nHC; iHC++) {
-      if (hunt[iHC].ramp == 2) {
+      if (goma_ctx->fem.hunt[iHC].ramp == 2) {
         path1[iHC] = lambda[iHC] * pow(lambdaRatio[iHC], hunt_par);
         path[iHC] = lambda[iHC] * pow(lambdaRatio[iHC], hunt_par - dhunt_par);
       } else {
@@ -1374,11 +1394,11 @@ free_and_clear:
 
   for (i = 0; i < MAX_NUMBER_MATLS; i++) {
     for (n = 0; n < MAX_MODES; n++) {
-      safer_free((void **)&(ve_glob[i][n]->gn));
-      safer_free((void **)&(ve_glob[i][n]->time_const_st));
-      safer_free((void **)&(ve_glob[i][n]));
+      safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]->gn));
+      safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]->time_const_st));
+      safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]));
     }
-    safer_free((void **)&(vn_glob[i]));
+    safer_free((void **)&(goma_ctx->fem.vn_glob[i]));
   }
 
   sl_free(matrix_systems_mask, ams);
@@ -1437,7 +1457,7 @@ free_and_clear:
   }
 
   free(gv);
-  free(pg->matrices);
+  free(goma_ctx->fem.pg->matrices);
 
   return;
 

@@ -955,10 +955,10 @@ void shell_p_open_user_surf(double *func,
 
   if (!first_time) {
     if (goma_ctx->porous_liq_inventory <= u_bc[1]) {
-      *func = fv->sh_p_open - u_bc[0];
+      *func = goma_ctx->fem.fv->sh_p_open - u_bc[0];
       d_func[SHELL_PRESS_OPEN] = 1.;
     } else {
-      *func = fv->sh_p_open - u_bc[0];
+      *func = goma_ctx->fem.fv->sh_p_open - u_bc[0];
       d_func[SHELL_PRESS_OPEN] = 1.;
       first_time = 1;
       time_off = time;
@@ -966,7 +966,7 @@ void shell_p_open_user_surf(double *func,
     }
   } else {
     if (time <= (time_off + u_bc[2])) {
-      *func = (fv->sh_p_open - u_bc[0]) * (1. - (time - time_off) / u_bc[2]);
+      *func = (goma_ctx->fem.fv->sh_p_open - u_bc[0]) * (1. - (time - time_off) / u_bc[2]);
       d_func[SHELL_PRESS_OPEN] = (1. - (time - time_off) / u_bc[2]);
     } else {
       *func = 0.;
@@ -1293,12 +1293,13 @@ int user_gibbs_criterion(const double fsnormal[MAX_PDIM], /* Vector of free surf
     /***********************************/
     /* Compute distance from sharpe edge */
 
-    pos = fabs(r_circ) - sqrt(SQUARE(fv->x[0] - circ_center_x) + SQUARE(fv->x[1] - circ_center_y) +
-                              SQUARE(fv->x[2] - circ_center_z));
+    pos = fabs(r_circ) - sqrt(SQUARE(goma_ctx->fem.fv->x[0] - circ_center_x) +
+                              SQUARE(goma_ctx->fem.fv->x[1] - circ_center_y) +
+                              SQUARE(goma_ctx->fem.fv->x[2] - circ_center_z));
 
     /* 2D only for now */
 
-    if (pd->Num_Dim < 3)
+    if (goma_ctx->fem.pd->Num_Dim < 3)
       GOMA_EH(GOMA_ERROR, "USE CA_OR_FIX instead of CA_EDGE_OR_FIX");
 
     /* N.B. In the distance function is encoded the original
@@ -1329,14 +1330,14 @@ int user_gibbs_criterion(const double fsnormal[MAX_PDIM], /* Vector of free surf
          be fixed now.  Evaluate Gibbs Criterion */
 
       dot_prod = 0.;
-      for (a = 0; a < pd->Num_Dim; a++) {
+      for (a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
         dot_prod += fsnormal[a] * ssnormal[a];
       }
       actual_angle = 180. * acos(dot_prod) / M_PIE;
       /* evaluate gibbs criterion here */
       if (actual_angle >= (contact_angle + 1.e-3)) {
-        printf("Unpinning node actual angle = %f at pos %f %f %f\n", actual_angle, fv->x[0],
-               fv->x[1], fv->x[2]);
+        printf("Unpinning node actual angle = %f at pos %f %f %f\n", actual_angle,
+               goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2]);
 
         *ipin = 0;
         return (1);
@@ -1490,22 +1491,22 @@ void volt_user_surf(double func[DIM],
   T = p[6];
 
   RTF = R * T / F;
-  cH2 = fv->c[0];
+  cH2 = goma_ctx->fem.fv->c[0];
   if (cH2 < 0.0)
     cH2 = 0.0;
   if (cH2 == 0)
     cH2 = cH2ref;
   cratio = pow(cH2ref / cH2, 0.5);
-  PHI = fv->V;
+  PHI = goma_ctx->fem.fv->V;
 
   *func = PHI + (i / i0) * cratio * (2.0 / (aa + ac)) * RTF;
 
   /* J_s_c --- sensitivity wrt species concentrations */
   var = MASS_FRACTION;
-  for (j_id = 0; j_id < ei[pg->imtrx]->dof[var]; j_id++) {
-    phi_j = bf[var]->phi[j_id];
+  for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
+    phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
-    for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+    for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
       d_func[0][MAX_VARIABLE_TYPES + w1][j_id] = 0.0;
     }
 
@@ -1514,10 +1515,10 @@ void volt_user_surf(double func[DIM],
 
   /* J_s_T --- sensitivity wrt electrolyte solution temperature */
   var = TEMPERATURE;
-  if (pd->v[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       j_id = j;
-      phi_j = bf[var]->phi[j_id];
+      phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
       d_func[0][var][j_id] = 0.0;
     }
@@ -1525,10 +1526,10 @@ void volt_user_surf(double func[DIM],
 
   /* J_s_V --- sensitivity wrt electrolyte potential */
   var = VOLTAGE;
-  if (pd->v[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       j_id = j;
-      phi_j = bf[var]->phi[j_id];
+      phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
       d_func[0][var][j_id] = phi_j;
     }

@@ -150,9 +150,9 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
   int num_dofs;
 
   /* Determine if Lagrange multiplier unknowns are in augmenting conditions */
-  if (Do_Overlap && augc[nAC - 1].lm_eb == augc[nAC - 1].solid_eb)
+  if (Do_Overlap && goma_ctx->fem.augc[nAC - 1].lm_eb == goma_ctx->fem.augc[nAC - 1].solid_eb)
     ac_lm = 1;
-  else if (Do_Overlap && augc[nAC - 1].lm_eb == augc[nAC - 1].fluid_eb)
+  else if (Do_Overlap && goma_ctx->fem.augc[nAC - 1].lm_eb == goma_ctx->fem.augc[nAC - 1].fluid_eb)
     ac_lm = 2;
   else
     ac_lm = 0;
@@ -176,24 +176,25 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
 
   id_side = elem_side_bc->id_side;
 
-  if (Do_Overlap && ls->CrossMeshQuadPoints > 0)
-    ip_total = ls->CrossMeshQuadPoints;
+  if (Do_Overlap && goma_ctx->fem.ls->CrossMeshQuadPoints > 0)
+    ip_total = goma_ctx->fem.ls->CrossMeshQuadPoints;
   else
     ip_total = elem_info(NQUAD_SURF, ielem_type);
 
   for (ip = 0; ip < ip_total; ip++) {
 
-    if (Do_Overlap && ls->CrossMeshQuadPoints > 0) {
-      find_subsurf_st_wt(ip, ls->CrossMeshQuadPoints, ielem_type, id_side, pd->Num_Dim, xi, &wt);
+    if (Do_Overlap && goma_ctx->fem.ls->CrossMeshQuadPoints > 0) {
+      find_subsurf_st_wt(ip, goma_ctx->fem.ls->CrossMeshQuadPoints, ielem_type, id_side,
+                         goma_ctx->fem.pd->Num_Dim, xi, &wt);
     } else {
       /* find the quadrature point locations (s, t) for current ip */
-      find_surf_st(ip, ielem_type, id_side, pd->Num_Dim, xi, &s, &t, &u);
+      find_surf_st(ip, ielem_type, id_side, goma_ctx->fem.pd->Num_Dim, xi, &s, &t, &u);
 
       /* find the quadrature weight for current surface ip */
       wt = Gq_surf_weight(ip, ielem_type);
     }
 
-    err = load_basis_functions(xi, bfd);
+    err = load_basis_functions(xi, goma_ctx->fem.bfd);
     GOMA_EH(err, "problem from load_basis_functions");
 
     err = beer_belly();
@@ -237,16 +238,20 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
     /*
      * Load up porous media variables and properties, if needed
      */
-    if (mp->PorousMediaType == POROUS_UNSATURATED || mp->PorousMediaType == POROUS_SATURATED ||
-        mp->PorousMediaType == POROUS_TWO_PHASE) {
+    if (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+        goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED ||
+        goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) {
       err = load_porous_properties();
       GOMA_EH(err, "load_porous_properties");
     }
 
-    if (TimeIntegration != STEADY && pd->e[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (TimeIntegration != STEADY &&
+        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (icount = 0; icount < ielem_dim; icount++) {
-        x_dot[icount] = (1 + 2. * theta) * (fv->x[icount] - fv_old->x[icount]) / delta_t -
-                        2. * theta * fv_dot->x[icount];
+        x_dot[icount] = (1 + 2. * theta) *
+                            (goma_ctx->fem.fv->x[icount] - goma_ctx->fem.fv_old->x[icount]) /
+                            delta_t -
+                        2. * theta * goma_ctx->fem.fv_dot->x[icount];
         /* calculate surface position for wall repulsion/no penetration condition */
       }
 
@@ -334,25 +339,25 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
 
           /* Save the fluid domain variables */
           for (aa = 0; aa < ielem_dim; aa++) {
-            fluid_velocity[aa] = fv->v[aa];
+            fluid_velocity[aa] = goma_ctx->fem.fv->v[aa];
             if (ac_lm) {
               if (apply_AC)
-                lm_fluid[aa] = augc[ioffset + aa].lm_value;
+                lm_fluid[aa] = goma_ctx->fem.augc[ioffset + aa].lm_value;
               dof_l[aa] = 1;
               phi_l[aa][0] = 1.0;
-            } else if (pd->v[pg->imtrx][LAGR_MULT1]) {
-              lm_fluid[aa] = fv->lm[aa];
-              dof_l[aa] = ei[pg->imtrx]->dof[LAGR_MULT1 + aa];
+            } else if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][LAGR_MULT1]) {
+              lm_fluid[aa] = goma_ctx->fem.fv->lm[aa];
+              dof_l[aa] = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[LAGR_MULT1 + aa];
               for (j = 0; j < dof_l[aa]; j++) {
-                phi_l[aa][j] = bf[LAGR_MULT1 + aa]->phi[j];
+                phi_l[aa][j] = goma_ctx->fem.bf[LAGR_MULT1 + aa]->phi[j];
               }
             }
 
             if (apply_AC) {
               var = VELOCITY1 + aa;
-              dof_q[aa] = ei[pg->imtrx]->dof[var];
+              dof_q[aa] = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
               for (j = 0; j < dof_q[aa]; j++) {
-                phi_q[aa][j] = bf[var]->phi[j];
+                phi_q[aa][j] = goma_ctx->fem.bf[var]->phi[j];
                 nu = lookup_active_dof(var, j, iconn_ptr);
                 nunk[aa][j] = nu;
               }
@@ -385,17 +390,17 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
           /* Save the fluid domain variables */
           for (aa = 0; aa < ielem_dim; aa++) {
             if (ac_lm) {
-              lagrange_mult[aa] = augc[ioffset + aa].lm_value;
-            } else if (pd->v[pg->imtrx][LAGR_MULT1]) {
-              lagrange_mult[aa] = fv->lm[aa];
+              lagrange_mult[aa] = goma_ctx->fem.augc[ioffset + aa].lm_value;
+            } else if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][LAGR_MULT1]) {
+              lagrange_mult[aa] = goma_ctx->fem.fv->lm[aa];
             }
 
             if (apply_AC) {
               var = LAGR_MULT1 + aa;
-              if (pd->e[pg->imtrx][var] && !ac_lm) {
-                dof_l[aa] = ei[pg->imtrx]->dof[var];
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var] && !ac_lm) {
+                dof_l[aa] = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
                 for (j = 0; j < dof_l[aa]; j++) {
-                  phi_l[aa][j] = bf[var]->phi[j];
+                  phi_l[aa][j] = goma_ctx->fem.bf[var]->phi[j];
                 }
               } else {
                 dof_l[aa] = 1;
@@ -442,14 +447,14 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
 
           /* This call just evaluated fv->v for us. Let us store it
              so we don't lose it going back to the base state */
-          for (aa = 0; aa < pd->Num_Dim; aa++) {
-            fluid_velocity[aa] = fv->v[aa];
+          for (aa = 0; aa < goma_ctx->fem.pd->Num_Dim; aa++) {
+            fluid_velocity[aa] = goma_ctx->fem.fv->v[aa];
 
             if (apply_AC) {
               var = VELOCITY1 + aa;
-              dof_q[aa] = ei[pg->imtrx]->dof[var];
+              dof_q[aa] = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
               for (j = 0; j < dof_q[aa]; j++) {
-                phi_q[aa][j] = bf[var]->phi[j];
+                phi_q[aa][j] = goma_ctx->fem.bf[var]->phi[j];
                 nu = lookup_active_dof(var, j, iconn_ptr);
                 nunk[aa][j] = nu;
               }
@@ -467,15 +472,15 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
           if (ac_lm == 0) {
             setup_shop_at_point(ielem, xi, exo);
 
-            for (aa = 0; aa < pd->Num_Dim; aa++) {
-              func[aa] += fv->lm[aa];
+            for (aa = 0; aa < goma_ctx->fem.pd->Num_Dim; aa++) {
+              func[aa] += goma_ctx->fem.fv->lm[aa];
             }
-            if (af->Assemble_Jacobian) {
-              for (bb = 0; bb < pd->Num_Dim; bb++) {
+            if (goma_ctx->fem.af->Assemble_Jacobian) {
+              for (bb = 0; bb < goma_ctx->fem.pd->Num_Dim; bb++) {
                 var = LAGR_MULT1 + bb;
 
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                  d_func[bb][var][j] += bf[var]->phi[j];
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                  d_func[bb][var][j] += goma_ctx->fem.bf[var]->phi[j];
                 }
               }
             }
@@ -513,16 +518,17 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
               setup_shop_at_point(ielem, xi, exo);
               if (ioffset == -1) {
                 printf("Fluid element %d at point (%g,%g,%g) has no zero crossing\n",
-                       fluid_mesh_elem_id, fv->x[0], fv->x[1], fv->x[2]);
+                       fluid_mesh_elem_id, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
+                       goma_ctx->fem.fv->x[2]);
                 continue;
               }
             }
 
-            for (aa = 0; aa < pd->Num_Dim; aa++) {
-              func[aa] += augc[ioffset + aa].lm_value;
+            for (aa = 0; aa < goma_ctx->fem.pd->Num_Dim; aa++) {
+              func[aa] += goma_ctx->fem.augc[ioffset + aa].lm_value;
             }
-            if (af->Assemble_Jacobian) {
-              for (bb = 0; bb < pd->Num_Dim; bb++) {
+            if (goma_ctx->fem.af->Assemble_Jacobian) {
+              for (bb = 0; bb < goma_ctx->fem.pd->Num_Dim; bb++) {
                 var = LAGR_MULT1 + bb;
 
                 d_func[bb][var][0] += 1.0;
@@ -574,10 +580,13 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
              *   applying this condition, eqn
              */
             index_eq =
-                bc_eqn_index(id, I, bc_input_id, ei[pg->imtrx]->mn, p, &eqn, &matID_apply, &vd);
-            if (index_eq >= 0 || (((BC_Types[bc_input_id].BC_Name == LAGRANGE_NO_SLIP_BC) ||
-                                   (BC_Types[bc_input_id].BC_Name == SOLID_LAGRANGE_MULT_BC)) &&
-                                  ((ac_lm == 1) || (pd->i[pg->imtrx][R_LAGR_MULT1] == I_P0)))) {
+                bc_eqn_index(id, I, bc_input_id, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn, p,
+                             &eqn, &matID_apply, &vd);
+            if (index_eq >= 0 ||
+                (((BC_Types[bc_input_id].BC_Name == LAGRANGE_NO_SLIP_BC) ||
+                  (BC_Types[bc_input_id].BC_Name == SOLID_LAGRANGE_MULT_BC)) &&
+                 ((ac_lm == 1) ||
+                  (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][R_LAGR_MULT1] == I_P0)))) {
               /*
                * Obtain the first local variable degree of freedom
                * at the current node, whether or not it actually an
@@ -586,14 +595,15 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
 
               if ((BC_Types[bc_input_id].BC_Name == LAGRANGE_NO_SLIP_BC ||
                    BC_Types[bc_input_id].BC_Name == SOLID_LAGRANGE_MULT_BC) &&
-                  (ac_lm == 1 || pd->i[pg->imtrx][R_LAGR_MULT1] == I_P0)) {
+                  (ac_lm == 1 ||
+                   goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][R_LAGR_MULT1] == I_P0)) {
                 /* Sorry, but this is special compensation for boundary
                    integral conditions weigted by a piecewise constant
                    basis function.  bc_eqn_index above does not handle this */
                 ldof_eqn = 0;
                 eqn = R_LAGR_MULT1 + p;
               } else {
-                ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
+                ldof_eqn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[eqn][id];
               }
 
               /*
@@ -612,9 +622,10 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                    basis function.  bc_eqn_index above does not handle this */
                 if ((BC_Types[bc_input_id].BC_Name == LAGRANGE_NO_SLIP_BC ||
                      BC_Types[bc_input_id].BC_Name == SOLID_LAGRANGE_MULT_BC) &&
-                    (ac_lm == 1 || pd->i[pg->imtrx][R_LAGR_MULT1] == I_P0)) {
-                  if (bf[R_LAGR_MULT1 + p] != NULL) {
-                    phi_i = bf[R_LAGR_MULT1 + p]->phi[ldof_eqn];
+                    (ac_lm == 1 ||
+                     goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][R_LAGR_MULT1] == I_P0)) {
+                  if (goma_ctx->fem.bf[R_LAGR_MULT1 + p] != NULL) {
+                    phi_i = goma_ctx->fem.bf[R_LAGR_MULT1 + p]->phi[ldof_eqn];
                   } else {
                     phi_i = 1.;
                   }
@@ -622,7 +633,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
 
                 } else {
                   /* normal way */
-                  phi_i = bf[eqn]->phi[ldof_eqn];
+                  phi_i = goma_ctx->fem.bf[eqn]->phi[ldof_eqn];
                   weight *= phi_i;
                 }
               }
@@ -646,7 +657,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
               if (BC_Types[bc_input_id].desc->method == WEAK_INT_SURF &&
                   BC_Types[bc_input_id].BC_Name != PSPG_BC &&
                   BC_Types[bc_input_id].BC_Name != VELO_SLIP_SOLID_BC) {
-                weight *= pd->etm[pg->imtrx][eqn][(LOG2_BOUNDARY)];
+                weight *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_BOUNDARY)];
               }
 
               /*
@@ -674,8 +685,8 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                 case LAGRANGE_NO_SLIP_BC:
                   eqn = R_LAGR_MULT1 + p;
                   res = func[p];
-                  res *= weight * fv->sdet;
-                  augc[iAC].lm_resid += res;
+                  res *= weight * goma_ctx->fem.fv->sdet;
+                  goma_ctx->fem.augc[iAC].lm_resid += res;
                   break;
                 default:
                   break;
@@ -695,7 +706,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                   res = func[p];
 
                   /* Solid LM residuals (assembled on first pass) */
-                  gAC[iAC] = augc[iAC].lm_resid;
+                  gAC[iAC] = goma_ctx->fem.augc[iAC].lm_resid;
 
                   /* Sensitivities to fluid velocity (cross-mesh term) */
                   for (j = 0; j < dof_q[p]; j++) {
@@ -705,17 +716,17 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                     jac = (d_func[p][var][j] * weight * fv->sdet
                           + res * weight * fv->dsurfdet_dx[p][j]);
                     */
-                    jac = d_func[p][var][j] * weight * fv->sdet;
+                    jac = d_func[p][var][j] * weight * goma_ctx->fem.fv->sdet;
                     if (nu >= 0)
                       cAC[iAC][nu] += jac;
                   }
 
                   /* Sensitivities to solid displacement */
                   var = MESH_DISPLACEMENT1 + p;
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     nu = lookup_active_dof(var, j, iconnect_ptr);
-                    jac = (d_func[p][var][j] * weight * fv->sdet +
-                           res * weight * fv->dsurfdet_dx[p][j]);
+                    jac = (d_func[p][var][j] * weight * goma_ctx->fem.fv->sdet +
+                           res * weight * goma_ctx->fem.fv->dsurfdet_dx[p][j]);
                     if (nu >= 0)
                       cAC[iAC][nu] += jac;
                   }
@@ -730,7 +741,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
 
                   /* Sensitivities to fluid Lagrange multiplier
                      (cross-mesh term) */
-                  jac = d_func[p][var][0] * weight * fv->sdet;
+                  jac = d_func[p][var][0] * weight * goma_ctx->fem.fv->sdet;
                   nu = index_eq;
                   if (nu < 0)
                     GOMA_EH(GOMA_ERROR, "Bad variable index");
@@ -746,7 +757,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                     var = LAGR_MULT1 + p;
 
                     /* Sensitivities to solid Lagrangeo multiplier */
-                    jac = d_func[p][var][0] * weight * fv->sdet;
+                    jac = d_func[p][var][0] * weight * goma_ctx->fem.fv->sdet;
                     nu = index_eq;
                     if (nu < 0)
                       GOMA_EH(GOMA_ERROR, "Bad variable index");
@@ -768,7 +779,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
               if (eqn == R_MASS) {
                 ieqn = MAX_PROB_EQN + BC_Types[bc_input_id].species_eq;
               } else {
-                ieqn = upd->ep[pg->imtrx][eqn];
+                ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
               }
 
               /*
@@ -776,16 +787,16 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                *  residual vector (first pass only)
                */
               if (pass == 1 && ieqn != -1 && ldof_eqn != -1) {
-                res = weight * fv->sdet * func[p];
-                lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += res;
+                res = weight * goma_ctx->fem.fv->sdet * func[p];
+                goma_ctx->fem.lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += res;
 #ifdef DEBUG_BC
                 if (IFPD == NULL)
                   IFPD = fopen("darcy.txt", "a");
                 fprintf(IFPD,
                         "ielem = %d: BC_index = %d, lec->R[LEC_R_INDEX(%d,%d)] += weight"
                         "* fv->sdet * func[p]: weight = %g, fv->sdet = %g, func[%d] = %g\n",
-                        ei[pg->imtrx]->ielem, bc_input_id, ieqn, ldof_eqn, weight, fv->sdet, p,
-                        func[p]);
+                        goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, bc_input_id, ieqn,
+                        ldof_eqn, weight, goma_ctx->fem.fv->sdet, p, func[p]);
                 fflush(IFPD);
 #endif
                 /*
@@ -796,7 +807,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                  *  - add into matrix
                  */
 
-                if (af->Assemble_Jacobian) {
+                if (goma_ctx->fem.af->Assemble_Jacobian) {
 
                   /*regrab this from bc_integ when you need to do these terms, although
                     it is not going to be easy as these are nonlocal and so mush involve
@@ -809,14 +820,14 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                    * this first term b/c it doesn't involve any
                    * primary time derivative variables.
                    */
-                  if (!af->Assemble_LSA_Mass_Matrix) {
-                    for (q = 0; q < pd->Num_Dim; q++) {
+                  if (!goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
+                    for (q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
                       var = MESH_DISPLACEMENT1 + q;
-                      pvar = upd->vp[pg->imtrx][var];
+                      pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                       if (pvar != -1) {
-                        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                          jac = weight * func[p] * fv->dsurfdet_dx[q][j];
-                          lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] += jac;
+                        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                          jac = weight * func[p] * goma_ctx->fem.fv->dsurfdet_dx[q][j];
+                          goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] += jac;
                         }
                       }
                     }
@@ -826,11 +837,11 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                    * variables
                    */
                   for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-                    pvar = upd->vp[pg->imtrx][var];
+                    pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                     if (pvar != -1) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                        jac = weight * fv->sdet * d_func[p][var][j];
-                        lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] += jac;
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                        jac = weight * goma_ctx->fem.fv->sdet * d_func[p][var][j];
+                        goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] += jac;
                       }
                     } /* end of variable exists and BC is sensitive to it */
                   } /* end of var loop over variable types */
@@ -886,25 +897,28 @@ int jump_down_to_fluid(const Exo_DB *exo, /* Ptr to Exodus database */
 
   /* Note this last arg is the fluid block id, which is the
    * only one you want to search */
-  fluid_mesh_elem_id = find_id_elem(fv->x[0], fv->x[1], fv->x[2], x, exo, e_start, e_end);
-  load_ei(fluid_mesh_elem_id, exo, 0, pg->imtrx);
+  fluid_mesh_elem_id = find_id_elem(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
+                                    goma_ctx->fem.fv->x[2], x, exo, e_start, e_end);
+  load_ei(fluid_mesh_elem_id, exo, 0, goma_ctx->fem.pg->imtrx);
 
   /* make sure this element has velocity defined */
-  if (pd_glob[ei[pg->imtrx]->mn]->i[pg->imtrx][VELOCITY1] <= 0) {
+  if (goma_ctx->fem.pd_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]
+          ->i[goma_ctx->fem.pg->imtrx][VELOCITY1] <= 0) {
     GOMA_EH(-1, "Element block specified in contact bc does not contain velocity!.");
   }
 
   /* Find basis functions associated with velocity variables */
   for (j = 0; j < Num_Basis_Functions; j++) {
-    if (pd_glob[ei[pg->imtrx]->mn]->i[pg->imtrx][VELOCITY1] == bfd[j]->interpolation) {
+    if (goma_ctx->fem.pd_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]
+            ->i[goma_ctx->fem.pg->imtrx][VELOCITY1] == goma_ctx->fem.bfd[j]->interpolation) {
       velo_interp = j;
     }
   }
 
   /* Now determine the local isoparametric  coordinates in the new element */
   /* First load up current coordinates */
-  for (j = 0; j < pd->Num_Dim; j++)
-    coordinates[j] = fv->x[j];
+  for (j = 0; j < goma_ctx->fem.pd->Num_Dim; j++)
+    coordinates[j] = goma_ctx->fem.fv->x[j];
 
   /* Now find the local coordinates on the fluid mesh */
   /* PRS fix: this routine core-dumps if the regions don't
@@ -915,14 +929,14 @@ int jump_down_to_fluid(const Exo_DB *exo, /* Ptr to Exodus database */
 
   /* noble hack here, this should be fixed eventually */
   /* currently, it is assumed that the fluid is on positive side of interface */
-  sign = ls->Elem_Sign;
-  ls->Elem_Sign = 1;
+  sign = goma_ctx->fem.ls->Elem_Sign;
+  goma_ctx->fem.ls->Elem_Sign = 1;
 
   /* Now evaluate lm_fluid and/or fluid velocity with calls to load_fv, etc. */
   /* For now use kitchen sink approach */
   setup_shop_at_point(fluid_mesh_elem_id, xi_2, exo);
 
-  ls->Elem_Sign = sign;
+  goma_ctx->fem.ls->Elem_Sign = sign;
   /*
    * NOTE: Original element must be restored by calling function upon
    *       return from here (with a new call to setup_shop_at_point)!
@@ -960,11 +974,13 @@ void contact_fn_dot_T(double func[DIM],
   /***************************** EXECUTION BEGINS ******************************/
   /* Based on current element id_side, choose the correct curvature sign */
 
-  DeformingMesh = pd->e[pg->imtrx][R_MESH1]; /* Use to catch bad references to moving */
-                                             /* mesh which isn't. */
+  DeformingMesh =
+      goma_ctx->fem.pd
+          ->e[goma_ctx->fem.pg->imtrx][R_MESH1]; /* Use to catch bad references to moving */
+                                                 /* mesh which isn't. */
 
   if (DeformingMesh) {
-    for (a = 0; a < pd->Num_Dim; a++) {
+    for (a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
 
       /* Residuals */
       func[a] += lagrange_mult[a]; /* remember to change back */
@@ -972,7 +988,7 @@ void contact_fn_dot_T(double func[DIM],
 
     /* Fluid Lagrange multiplier sensitivities (cross-mesh terms) */
     if (cross) {
-      for (jvar = 0; jvar < pd->Num_Dim; jvar++) {
+      for (jvar = 0; jvar < goma_ctx->fem.pd->Num_Dim; jvar++) {
         var = LAGR_MULT1 + jvar;
         for (j = 0; j < dof_l[jvar]; j++) {
           d_func[jvar][var][j] += phi_l[jvar][j];
@@ -1018,8 +1034,10 @@ void Lagrange_mult_equation(double func[DIM],
   /***************************** EXECUTION BEGINS ******************************/
   /* Based on current element id_side, choose the correct curvature sign */
 
-  DeformingMesh = pd->e[pg->imtrx][R_MESH1]; /* Use to catch bad references to moving */
-                                             /* mesh which isn't. */
+  DeformingMesh =
+      goma_ctx->fem.pd
+          ->e[goma_ctx->fem.pg->imtrx][R_MESH1]; /* Use to catch bad references to moving */
+                                                 /* mesh which isn't. */
 
   /* h_elem_avg = 0.03; */
   if (DeformingMesh) {
@@ -1030,18 +1048,18 @@ void Lagrange_mult_equation(double func[DIM],
     // }
 
     /* Residuals */
-    for (a = 0; a < pd->Num_Dim; a++) {
+    for (a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
       /*func[a] += (fv->lm[a] - lm_fluid[a]*(1.0 - A))*penalty; */
       func[a] += (x_dot[a] - fluid_velocity[a]) * penalty;
     }
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
 
       /* Solid displacement sensitivities */
-      for (jvar = 0; jvar < pd->Num_Dim; jvar++) {
+      for (jvar = 0; jvar < goma_ctx->fem.pd->Num_Dim; jvar++) {
         var = MESH_DISPLACEMENT1 + jvar;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          phi_j = bf[var]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          phi_j = goma_ctx->fem.bf[var]->phi[j];
 
           jac = penalty * (1. - 2. * tt) * phi_j / dt;
           d_func[jvar][var][j] += jac;
@@ -1049,9 +1067,9 @@ void Lagrange_mult_equation(double func[DIM],
       }
 
       /* Fluid Lagrange multiplier sensitivities (disabled for now) */
-      for (jvar = 0; jvar < pd->Num_Dim; jvar++) {
+      for (jvar = 0; jvar < goma_ctx->fem.pd->Num_Dim; jvar++) {
         var = LAGR_MULT1 + jvar;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           /*d_func[jvar][var][j] += bf[var]->phi[j] * 1.e6;*/
         }
       }
@@ -1059,7 +1077,7 @@ void Lagrange_mult_equation(double func[DIM],
 
     /* Fluid velocity sensitivities (cross-mesh terms) */
     if (cross) {
-      for (jvar = 0; jvar < pd->Num_Dim; jvar++) {
+      for (jvar = 0; jvar < goma_ctx->fem.pd->Num_Dim; jvar++) {
         var = VELOCITY1 + jvar;
         for (j = 0; j < dof_u[jvar]; j++) {
           jac = phi_u[jvar][j] * penalty;
@@ -1102,17 +1120,17 @@ void solid_kinematic_bc(double func[DIM],
   /* Based on current element id_side, choose the correct curvature sign */
 
   /* Residuals */
-  for (a = 0; a < pd->Num_Dim; a++) {
+  for (a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
     res = x_dot[a] - fluid_velocity[a];
     res *= penalty;
     func[a] += res;
   }
 
   /* Solid displacement sensitivities */
-  for (jvar = 0; jvar < pd->Num_Dim; jvar++) {
+  for (jvar = 0; jvar < goma_ctx->fem.pd->Num_Dim; jvar++) {
     var = MESH_DISPLACEMENT1 + jvar;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      phi_j = bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      phi_j = goma_ctx->fem.bf[var]->phi[j];
       jac = (1. + 2. * tt) * phi_j / dt;
       jac *= penalty;
       d_func[jvar][var][j] += jac;
@@ -1121,7 +1139,7 @@ void solid_kinematic_bc(double func[DIM],
 
   /* Fluid velocity sensitivities (cross-mesh terms) */
   if (cross) {
-    for (jvar = 0; jvar < pd->Num_Dim; jvar++) {
+    for (jvar = 0; jvar < goma_ctx->fem.pd->Num_Dim; jvar++) {
       var = VELOCITY1 + jvar;
       for (j = 0; j < dof_u[jvar]; j++) {
         jac = phi_u[jvar][j];
@@ -1165,10 +1183,10 @@ int apply_embedded_bc(int ielem,    /* element number */
   /* finite difference for path dependencies */
   double fplus, fminus, fmax, fmin;
   double h_elem;
-  dbl ls_F[MDE], ad_wt[10]; /*  adaptive integration weights  */
-  int dim = pd->Num_Dim;    /* Number of dimensions. */
+  dbl ls_F[MDE], ad_wt[10];            /*  adaptive integration weights  */
+  int dim = goma_ctx->fem.pd->Num_Dim; /* Number of dimensions. */
 
-  if (!ls->elem_overlap_state)
+  if (!goma_ctx->fem.ls->elem_overlap_state)
     return (0);
 
   /* calc dphi */
@@ -1184,11 +1202,11 @@ int apply_embedded_bc(int ielem,    /* element number */
 
   fmin = 0.;
   fmax = 0.;
-  for (i = 0; i < ei[pg->imtrx]->dof[LS]; i++) {
-    if (*esp->F[i] < fmin)
-      fmin = *esp->F[i];
-    if (*esp->F[i] > fmax)
-      fmax = *esp->F[i];
+  for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[LS]; i++) {
+    if (*goma_ctx->fem.esp->F[i] < fmin)
+      fmin = *goma_ctx->fem.esp->F[i];
+    if (*goma_ctx->fem.esp->F[i] > fmax)
+      fmax = *goma_ctx->fem.esp->F[i];
   }
 
   fplus = 0.8 * fmax;
@@ -1215,19 +1233,19 @@ int apply_embedded_bc(int ielem,    /* element number */
   DPRINTF(stderr,"FINITEDIFF: ielem+1=%d, fmin=%g, fmax=%g, fminus=%g, fplus=%g\n",ielem+1,fmin,fmax,fminus,fplus);
 #endif
 
-  old_elem_sign = ls->Elem_Sign;
+  old_elem_sign = goma_ctx->fem.ls->Elem_Sign;
   if (xfem != NULL) {
     num_elem_passes = 2;
   }
 
   /* on sharp interface */
-  ls->on_sharp_surf = 1;
+  goma_ctx->fem.ls->on_sharp_surf = 1;
 
   Subgrid_Int.active = FALSE; /* this is for the volume */
 
   /* finite difference method for forming path dependencies of source terms */
-  if (ls->SubElemIntegration && !ls->Ignore_F_deps) {
-    ls->CalcSurfDependencies = TRUE;
+  if (goma_ctx->fem.ls->SubElemIntegration && !goma_ctx->fem.ls->Ignore_F_deps) {
+    goma_ctx->fem.ls->CalcSurfDependencies = TRUE;
 
     /* LS = fminus */
     Subgrid_Int.ip_total = get_subelement_integration_pts(&Subgrid_Int.s, &Subgrid_Int.wt,
@@ -1241,17 +1259,17 @@ int apply_embedded_bc(int ielem,    /* element number */
 
       for (ipass = 0; ipass < num_elem_passes; ipass++) {
         if (num_elem_passes == 2)
-          ls->Elem_Sign = -1 + 2 * ipass;
+          goma_ctx->fem.ls->Elem_Sign = -1 + 2 * ipass;
 
         setup_shop_at_point(ielem, xi, exo);
 
-        if (fv->h3 == 0.) {
-          fv->h3 = 1.;
-          fv->sdet = 1.;
-          fv->wt = wt / (fplus - fminus);
+        if (goma_ctx->fem.fv->h3 == 0.) {
+          goma_ctx->fem.fv->h3 = 1.;
+          goma_ctx->fem.fv->sdet = 1.;
+          goma_ctx->fem.fv->wt = wt / (fplus - fminus);
         } else {
-          fv->sdet = 1.;
-          fv->wt = wt / fv->h3 / (fplus - fminus);
+          goma_ctx->fem.fv->sdet = 1.;
+          goma_ctx->fem.fv->wt = wt / goma_ctx->fem.fv->h3 / (fplus - fminus);
         }
 
         assemble_embedded_bc(ielem, x, dt, theta, time_value, oAC, gAC, bAC, cAC, exo, xi);
@@ -1270,39 +1288,40 @@ int apply_embedded_bc(int ielem,    /* element number */
 
       for (ipass = 0; ipass < num_elem_passes; ipass++) {
         if (num_elem_passes == 2)
-          ls->Elem_Sign = -1 + 2 * ipass;
+          goma_ctx->fem.ls->Elem_Sign = -1 + 2 * ipass;
 
         setup_shop_at_point(ielem, xi, exo);
 
-        if (fv->h3 == 0.) {
-          fv->h3 = 1.;
-          fv->sdet = 1.;
-          fv->wt = -wt / (fplus - fminus);
+        if (goma_ctx->fem.fv->h3 == 0.) {
+          goma_ctx->fem.fv->h3 = 1.;
+          goma_ctx->fem.fv->sdet = 1.;
+          goma_ctx->fem.fv->wt = -wt / (fplus - fminus);
         } else {
-          fv->sdet = 1.;
-          fv->wt = -wt / fv->h3 / (fplus - fminus);
+          goma_ctx->fem.fv->sdet = 1.;
+          goma_ctx->fem.fv->wt = -wt / goma_ctx->fem.fv->h3 / (fplus - fminus);
         }
 
         assemble_embedded_bc(ielem, x, dt, theta, time_value, oAC, gAC, bAC, cAC, exo, xi);
       }
     } /* loop over gauss points */
 
-    ls->CalcSurfDependencies = FALSE;
+    goma_ctx->fem.ls->CalcSurfDependencies = FALSE;
   }
 
   /* now form the source terms themselves. Note that we want to do subelement for overset grid
      cases, which can only be using the phase-field struct */
-  if (ls->SubElemIntegration || ls->Evolution == LS_EVOLVE_SLAVE) {
+  if (goma_ctx->fem.ls->SubElemIntegration || goma_ctx->fem.ls->Evolution == LS_EVOLVE_SLAVE) {
     Subgrid_Int.ip_total = get_subelement_integration_pts(&Subgrid_Int.s, &Subgrid_Int.wt,
                                                           &Subgrid_Int.ip_sign, 0., -1, 0);
-  } else if (ls->AdaptIntegration) {
+  } else if (goma_ctx->fem.ls->AdaptIntegration) {
     int i;
-    Subgrid_Int.ip_total = elem_info(NQUAD, ei[pg->imtrx]->ielem_type);
-    for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-      ls_F[i] = *esp->F[i];
+    Subgrid_Int.ip_total = elem_info(NQUAD, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+      ls_F[i] = *goma_ctx->fem.esp->F[i];
     }
-    i = adaptive_weight(ad_wt, Subgrid_Int.ip_total, ei[pg->imtrx]->ielem_dim, ls_F,
-                        ls->Length_Scale, 3, ei[pg->imtrx]->ielem_type);
+    i = adaptive_weight(
+        ad_wt, Subgrid_Int.ip_total, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim, ls_F,
+        goma_ctx->fem.ls->Length_Scale, 3, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
     GOMA_WH(i, "problem with adaptive weight routine");
   } else {
     Subgrid_Int.ip_total = get_facet_integration_pts(&Subgrid_Int.s, &Subgrid_Int.wt, exo);
@@ -1310,8 +1329,9 @@ int apply_embedded_bc(int ielem,    /* element number */
 
   for (ip = 0; ip < Subgrid_Int.ip_total; ip++) {
 
-    if (ls->AdaptIntegration) {
-      find_stu(ip, ei[pg->imtrx]->ielem_type, &(xi[0]), &(xi[1]), &(xi[2]));
+    if (goma_ctx->fem.ls->AdaptIntegration) {
+      find_stu(ip, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, &(xi[0]), &(xi[1]),
+               &(xi[2]));
       wt = ad_wt[Subgrid_Int.ip_total - 1 - ip];
     } else {
       xi[0] = Subgrid_Int.s[ip][0];
@@ -1322,50 +1342,54 @@ int apply_embedded_bc(int ielem,    /* element number */
 
 #define DEBUG_LS_INTEGRATION 0
 #if DEBUG_LS_INTEGRATION
-    ls->Surface_Area += wt * fv->h3;
+    goma_ctx->fem.ls->Surface_Area += wt * goma_ctx->fem.fv->h3;
 #endif
 
     for (ipass = 0; ipass < num_elem_passes; ipass++) {
       if (num_elem_passes == 2)
-        ls->Elem_Sign = -1 + 2 * ipass;
+        goma_ctx->fem.ls->Elem_Sign = -1 + 2 * ipass;
 
       setup_shop_at_point(ielem, xi, exo);
 
-      if (fv->h3 == 0.) {
-        fv->h3 = 1.;
-        fv->sdet = 1.;
-        fv->wt = wt;
+      if (goma_ctx->fem.fv->h3 == 0.) {
+        goma_ctx->fem.fv->h3 = 1.;
+        goma_ctx->fem.fv->sdet = 1.;
+        goma_ctx->fem.fv->wt = wt;
       } else {
-        fv->sdet = 1.;
-        fv->wt = wt / fv->h3;
+        goma_ctx->fem.fv->sdet = 1.;
+        goma_ctx->fem.fv->wt = wt / goma_ctx->fem.fv->h3;
       }
       assemble_embedded_bc(ielem, x, dt, theta, time_value, oAC, gAC, bAC, cAC, exo, xi);
 
       /* equation path dependence terms, but ONLY if calling from volume assembly matrix_fill*/
       if (oAC != 0) {
-        if (pd->e[pg->imtrx][R_FILL] && ipass == 0) {
-          if (tran->Fill_Equation == FILL_EQN_EIKONAL) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_FILL] && ipass == 0) {
+          if (goma_ctx->fem.tran->Fill_Equation == FILL_EQN_EIKONAL) {
             assemble_fill_path_dependence();
           }
         }
-        if (!ls->Ignore_F_deps) {
-          if (pd->e[pg->imtrx][R_FILL] && ipass == 0) {
-            if (tran->Fill_Equation == FILL_EQN_EXT_V) {
+        if (!goma_ctx->fem.ls->Ignore_F_deps) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_FILL] && ipass == 0) {
+            if (goma_ctx->fem.tran->Fill_Equation == FILL_EQN_EXT_V) {
               err = assemble_extension_velocity_path_dependence();
             }
           }
-          if (pd->e[pg->imtrx][R_MOMENTUM1] && !ls->AdaptIntegration) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] &&
+              !goma_ctx->fem.ls->AdaptIntegration) {
             err = assemble_momentum_path_dependence(time_value, theta, dt, pg_data);
             GOMA_EH(err, "assemble_momentum_path_dependence");
           }
-          if (pd->e[pg->imtrx][R_PRESSURE] && !ls->AdaptIntegration) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_PRESSURE] &&
+              !goma_ctx->fem.ls->AdaptIntegration) {
             err = assemble_continuity_path_dependence(time_value, theta, dt, pg_data);
             GOMA_EH(err, "assemble_continuity_path_dependence");
           }
-          if (pd->e[pg->imtrx][R_ENERGY] && !ls->AdaptIntegration) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENERGY] &&
+              !goma_ctx->fem.ls->AdaptIntegration) {
             assemble_energy_path_dependence(time_value, theta, dt, pg_data);
           }
-          if (pd->e[pg->imtrx][R_MASS] && !ls->AdaptIntegration) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS] &&
+              !goma_ctx->fem.ls->AdaptIntegration) {
             assemble_mass_transport_path_dependence(time_value, theta, dt, pg_data->hsquared,
                                                     pg_data->hhv, pg_data->dhv_dxnode,
                                                     pg_data->v_avg, pg_data->dv_dnode);
@@ -1377,8 +1401,8 @@ int apply_embedded_bc(int ielem,    /* element number */
   } /* loop over gauss points */
 
   /* leave the place as tidy as it was before you came */
-  ls->Elem_Sign = old_elem_sign;
-  ls->on_sharp_surf = 0;
+  goma_ctx->fem.ls->Elem_Sign = old_elem_sign;
+  goma_ctx->fem.ls->on_sharp_surf = 0;
 
   return (status);
 } /* END of routine apply_embedded_bc */
@@ -1425,38 +1449,39 @@ int assemble_embedded_bc(int ielem,    /* element number */
   int eqn, peqn, pvar;
   int ac_lm = FALSE;
   int pass;
-  double wt = fv->wt;
+  double wt = goma_ctx->fem.fv->wt;
 
   /***************************** EXECUTION BEGINS ******************************/
 
   /* perform any additional setup not done is setup_shop_at_point */
 
-  load_lsi(ls->Length_Scale);
+  load_lsi(goma_ctx->fem.ls->Length_Scale);
   load_lsi_derivs();
 
   /*
    * Load up commonly used physical properties such as density at
    * the current quadrature point using the material state vector.
    */
-  load_properties(mp, time_value);
+  load_properties(goma_ctx->fem.mp, time_value);
 
   /*
    * Load up porous media variables and properties, if needed
    */
-  if (mp->PorousMediaType == POROUS_UNSATURATED || mp->PorousMediaType == POROUS_SATURATED ||
-      mp->PorousMediaType == POROUS_TWO_PHASE) {
+  if (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+      goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED ||
+      goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) {
     err = load_porous_properties();
     GOMA_EH(err, "load_porous_properties");
   }
 
-  if (mp->SurfaceTensionModel != CONSTANT) {
+  if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
     load_surface_tension(dsigma_dx);
   }
 
   /* Determine if Lagrange multiplier unknowns are in augmenting conditions */
-  if (Do_Overlap && augc[nAC - 1].lm_eb == augc[nAC - 1].solid_eb)
+  if (Do_Overlap && goma_ctx->fem.augc[nAC - 1].lm_eb == goma_ctx->fem.augc[nAC - 1].solid_eb)
     ac_lm = 1;
-  else if (Do_Overlap && augc[nAC - 1].lm_eb == augc[nAC - 1].fluid_eb)
+  else if (Do_Overlap && goma_ctx->fem.augc[nAC - 1].lm_eb == goma_ctx->fem.augc[nAC - 1].fluid_eb)
     ac_lm = 2;
   else
     ac_lm = 0;
@@ -1464,21 +1489,21 @@ int assemble_embedded_bc(int ielem,    /* element number */
   /* Determine if this is the augmenting condition pass */
   pass = ((Do_Overlap && oAC >= 0) ? 2 : 1);
 
-  if (ls->var == FILL) {
-    bcref = ls->embedded_bc;
+  if (goma_ctx->fem.ls->var == FILL) {
+    bcref = goma_ctx->fem.ls->embedded_bc;
   } else {
-    bcref = pfd->ls[ls->var - PHASE1]->embedded_bc;
+    bcref = goma_ctx->fem.pfd->ls[goma_ctx->fem.ls->var - PHASE1]->embedded_bc;
   }
 
   while (bcref) {
     bc = BC_Types + bcref->bc_input_id;
 
-    if (xfem != NULL && bc->BC_ID != 0 && ls->Elem_Sign != bc->BC_ID) {
+    if (xfem != NULL && bc->BC_ID != 0 && goma_ctx->fem.ls->Elem_Sign != bc->BC_ID) {
       bcref = bcref->next;
       continue;
     }
-    if ((ls->var == LS && strcmp(bc->Set_Type, "LS")) ||
-        (ls->var == PHASE1 && strcmp(bc->Set_Type, "PF"))) {
+    if ((goma_ctx->fem.ls->var == LS && strcmp(bc->Set_Type, "LS")) ||
+        (goma_ctx->fem.ls->var == PHASE1 && strcmp(bc->Set_Type, "PF"))) {
       bcref = bcref->next;
       continue;
     }
@@ -1525,7 +1550,7 @@ int assemble_embedded_bc(int ielem,    /* element number */
       assemble_cap_hysing(dt, bc->BC_Data_Float[0]);
       break;
     case LS_CAP_DENNER_DIFF_BC:
-      if (pd->gv[R_NORMAL1]) {
+      if (goma_ctx->fem.pd->gv[R_NORMAL1]) {
         assemble_cap_denner_diffusion_n(dt, bc->BC_Data_Float[0]);
       } else {
         assemble_cap_denner_diffusion(dt, bc->BC_Data_Float[0]);
@@ -1564,7 +1589,7 @@ int assemble_embedded_bc(int ielem,    /* element number */
       assemble_div_s_n_source();
       break;
     case LS_CAP_CURVE_BC:
-      if (pd->gv[R_NORMAL1])
+      if (goma_ctx->fem.pd->gv[R_NORMAL1])
         assemble_curvature_with_normals_source();
       else
         assemble_curvature_source();
@@ -1573,10 +1598,11 @@ int assemble_embedded_bc(int ielem,    /* element number */
     case FLUID_SOLID_CONTACT_BC: {
 
       if (ac_lm) {
-        if ((ls->Evolution == LS_EVOLVE_SLAVE) && (ls->init_surf_list->start->type == LS_SURF_SS)) {
+        if ((goma_ctx->fem.ls->Evolution == LS_EVOLVE_SLAVE) &&
+            (goma_ctx->fem.ls->init_surf_list->start->type == LS_SURF_SS)) {
           struct LS_Surf *ss_surf;
           struct LS_Surf_Closest_Point *cp;
-          ss_surf = closest_surf(ls->init_surf_list, x, exo, fv->x);
+          ss_surf = closest_surf(goma_ctx->fem.ls->init_surf_list, x, exo, goma_ctx->fem.fv->x);
           cp = ss_surf->closest_point;
           if (cp->elem == -1)
             GOMA_EH(GOMA_ERROR, "Invalid element at closest_point");
@@ -1588,37 +1614,39 @@ int assemble_embedded_bc(int ielem,    /* element number */
           if (ioffset == -1)
             GOMA_EH(GOMA_ERROR, "Bad AC index");
 
-          for (a = 0; a < pd->Num_Dim; a++) {
-            lagrange_mult[a] = augc[ioffset + a].lm_value;
+          for (a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
+            lagrange_mult[a] = goma_ctx->fem.augc[ioffset + a].lm_value;
           }
         } else {
           GOMA_EH(GOMA_ERROR, "Level set must be slave SS for this BC!");
         }
       } else {
-        for (a = 0; a < pd->Num_Dim; a++) {
-          lagrange_mult[a] = fv->lm[a];
+        for (a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
+          lagrange_mult[a] = goma_ctx->fem.fv->lm[a];
         }
       }
 
-      for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
+      for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
         eqn = R_MOMENTUM1 + a;
-        peqn = upd->ep[pg->imtrx][eqn];
+        peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-        for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-          phi_i = bf[eqn]->phi[i];
+        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+          phi_i = goma_ctx->fem.bf[eqn]->phi[i];
 
-          res = fv->wt * phi_i * lagrange_mult[a] * fv->sdet * fv->h3;
+          res = goma_ctx->fem.fv->wt * phi_i * lagrange_mult[a] * goma_ctx->fem.fv->sdet *
+                goma_ctx->fem.fv->h3;
           if (pass == 1)
-            lec->R[LEC_R_INDEX(peqn, i)] -= res;
+            goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] -= res;
 
-          if (af->Assemble_Jacobian) {
+          if (goma_ctx->fem.af->Assemble_Jacobian) {
             v = LAGR_MULT1 + a;
-            pvar = upd->vp[pg->imtrx][v];
-            ldof = ((ac_lm) ? 1 : ei[pg->imtrx]->dof[v]);
+            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
+            ldof = ((ac_lm) ? 1 : goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v]);
 
             for (j = 0; j < ldof; j++) {
-              phi_j = ((ac_lm) ? 1.0 : bf[v]->phi[j]);
-              jac = fv->wt * phi_i * phi_j * fv->sdet * fv->h3;
+              phi_j = ((ac_lm) ? 1.0 : goma_ctx->fem.bf[v]->phi[j]);
+              jac = goma_ctx->fem.fv->wt * phi_i * phi_j * goma_ctx->fem.fv->sdet *
+                    goma_ctx->fem.fv->h3;
 
               if (ac_lm && pass == 2) {
                 iAC = ioffset + a;
@@ -1626,7 +1654,7 @@ int assemble_embedded_bc(int ielem,    /* element number */
                 if (nu >= 0)
                   bAC[iAC][nu] -= jac;
               } else if (!ac_lm && pass == 1) {
-                lec->J[LEC_J_INDEX(peqn, pvar, i, j)] -= jac;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] -= jac;
               }
             }
           }
@@ -1636,7 +1664,7 @@ int assemble_embedded_bc(int ielem,    /* element number */
     case LS_NO_SLIP_BC: {
       double x_dot[3] = {0., 0., 0.};
 
-      if (ls->CalcSurfDependencies) {
+      if (goma_ctx->fem.ls->CalcSurfDependencies) {
         bcref = bcref->next;
         continue;
       }
@@ -1651,11 +1679,12 @@ int assemble_embedded_bc(int ielem,    /* element number */
        * or from the rs motion (if rs is defined)
        * or zero (otherwise)
        */
-      if ((ls->Evolution == LS_EVOLVE_SLAVE) && (ls->init_surf_list->start->type == LS_SURF_SS)) {
+      if ((goma_ctx->fem.ls->Evolution == LS_EVOLVE_SLAVE) &&
+          (goma_ctx->fem.ls->init_surf_list->start->type == LS_SURF_SS)) {
         struct LS_Surf *ss_surf;
         struct LS_Surf_Closest_Point *cp;
 
-        ss_surf = closest_surf(ls->init_surf_list, x, exo, fv->x);
+        ss_surf = closest_surf(goma_ctx->fem.ls->init_surf_list, x, exo, goma_ctx->fem.fv->x);
         cp = ss_surf->closest_point;
 
         /* use kitchen sink approach for now at solids location */
@@ -1665,10 +1694,12 @@ int assemble_embedded_bc(int ielem,    /* element number */
 
         setup_shop_at_point(cp->elem, cp->xi, exo);
 
-        for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
-          if (pd->TimeIntegration != STEADY && pd->v[pg->imtrx][MESH_DISPLACEMENT1 + a]) {
+        for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
+          if (goma_ctx->fem.pd->TimeIntegration != STEADY &&
+              goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1 + a]) {
             x_dot[a] =
-                (1. + 2. * theta) * (fv->x[a] - fv_old->x[a]) / dt - 2. * theta * fv_dot->x[a];
+                (1. + 2. * theta) * (goma_ctx->fem.fv->x[a] - goma_ctx->fem.fv_old->x[a]) / dt -
+                2. * theta * goma_ctx->fem.fv_dot->x[a];
           } else {
             x_dot[a] = 0.;
           }
@@ -1676,9 +1707,9 @@ int assemble_embedded_bc(int ielem,    /* element number */
           /* Grab some things for cross-mesh sensitivities */
           if (pass == 2) {
             v = MESH_DISPLACEMENT1 + a;
-            dof_q[a] = ei[pg->imtrx]->dof[v];
+            dof_q[a] = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
             for (j = 0; j < dof_q[a]; j++) {
-              phi_q[a][j] = bf[v]->phi[j];
+              phi_q[a][j] = goma_ctx->fem.bf[v]->phi[j];
               nu = lookup_active_dof(v, j, iconn_sptr);
               nunk[a][j] = nu;
             }
@@ -1689,7 +1720,7 @@ int assemble_embedded_bc(int ielem,    /* element number */
          * Now go back to the original element
          */
         setup_shop_at_point(ielem, xi, exo);
-      } else if (pd->e[pg->imtrx][R_SOLID1]) {
+      } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SOLID1]) {
         /* need to add x_dot calculation for rs */
       }
 
@@ -1702,27 +1733,28 @@ int assemble_embedded_bc(int ielem,    /* element number */
           GOMA_EH(GOMA_ERROR, "Bad AC index");
       }
 
-      for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
+      for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
         eqn = R_LAGR_MULT1 + a;
 
         /* forced to P0 for now */
         /*phi_i = bf[eqn]->phi[i];*/
 
         /* Fluid Lagrange multiplier residuals */
-        res = wt * (x_dot[a] - fv->v[a]) * fv->sdet * fv->h3;
+        res = wt * (x_dot[a] - goma_ctx->fem.fv->v[a]) * goma_ctx->fem.fv->sdet *
+              goma_ctx->fem.fv->h3;
 
         if (ac_lm) {
           iAC = ioffset + a;
           if (pass == 1) {
-            augc[iAC].lm_resid += res;
+            goma_ctx->fem.augc[iAC].lm_resid += res;
           } else if (pass == 2) {
-            gAC[iAC] = augc[iAC].lm_resid;
+            gAC[iAC] = goma_ctx->fem.augc[iAC].lm_resid;
             /* Sensitivities to fluid velocity */
             v = VELOCITY1 + a;
-            for (j = 0; j < ei[pg->imtrx]->dof[v]; j++) {
-              phi_j = bf[v]->phi[j];
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v]; j++) {
+              phi_j = goma_ctx->fem.bf[v]->phi[j];
               nu = lookup_active_dof(v, j, iconn_fptr);
-              jac = -wt * phi_j * fv->sdet * fv->h3;
+              jac = -wt * phi_j * goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->h3;
               if (nu >= 0)
                 cAC[iAC][nu] += jac;
             }
@@ -1732,24 +1764,24 @@ int assemble_embedded_bc(int ielem,    /* element number */
             v = MESH_DISPLACEMENT1 + a;
             for (j = 0; j < dof_q[a]; j++) {
               phi_j = phi_q[a][j] * (1.0 + 2.0 * theta) / dt;
-              jac = wt * phi_j * fv->sdet * fv->h3;
+              jac = wt * phi_j * goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->h3;
               nu = nunk[a][j];
               if (nu >= 0)
                 cAC[iAC][nu] += jac;
             }
           }
         } else {
-          peqn = upd->ep[pg->imtrx][eqn];
+          peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
           /* hard coded to P0 for now */
-          lec->R[LEC_R_INDEX(peqn, 0)] += res;
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, 0)] += res;
 
           /* Sensitivities to fluid velocity */
           v = VELOCITY1 + a;
-          pvar = upd->vp[pg->imtrx][v];
-          for (j = 0; j < ei[pg->imtrx]->dof[v]; j++) {
-            phi_j = bf[v]->phi[j];
-            jac = -wt * phi_j * fv->sdet * fv->h3;
-            lec->J[LEC_J_INDEX(peqn, pvar, 0, j)] += jac;
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v]; j++) {
+            phi_j = goma_ctx->fem.bf[v]->phi[j];
+            jac = -wt * phi_j * goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->h3;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, 0, j)] += jac;
           }
         }
       }
@@ -1757,15 +1789,15 @@ int assemble_embedded_bc(int ielem,    /* element number */
 
     case BAAIJENS_FLUID_SOLID_BC: {
 
-      if (ls->CalcSurfDependencies) {
+      if (goma_ctx->fem.ls->CalcSurfDependencies) {
         bcref = bcref->next;
         continue;
       }
 
       if (ac_lm == 0) {
         /* local lagrange multiplier */
-        for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
-          lagrange_mult[a] = fv->lm[a];
+        for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
+          lagrange_mult[a] = goma_ctx->fem.fv->lm[a];
         }
       } else {
         if (ac_lm == 1) {
@@ -1774,7 +1806,7 @@ int assemble_embedded_bc(int ielem,    /* element number */
           struct LS_Surf *ss_surf;
           struct LS_Surf_Closest_Point *cp;
 
-          ss_surf = closest_surf(ls->init_surf_list, x, exo, fv->x);
+          ss_surf = closest_surf(goma_ctx->fem.ls->init_surf_list, x, exo, goma_ctx->fem.fv->x);
           cp = ss_surf->closest_point;
 
           /* use kitchen sink approach for now at solids location */
@@ -1792,34 +1824,34 @@ int assemble_embedded_bc(int ielem,    /* element number */
             GOMA_EH(GOMA_ERROR, "Bad AC index");
         }
 
-        for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
+        for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
           iAC = ioffset + a;
-          lagrange_mult[a] = augc[iAC].lm_value;
+          lagrange_mult[a] = goma_ctx->fem.augc[iAC].lm_value;
           dof_l[a] = 1;
           phi_l[a][0] = 1.0;
         }
       }
 
-      for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
+      for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
         eqn = R_MOMENTUM1 + a;
-        peqn = upd->ep[pg->imtrx][eqn];
+        peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-        for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-          phi_i = bf[eqn]->phi[i];
+        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+          phi_i = goma_ctx->fem.bf[eqn]->phi[i];
 
-          res = -wt * phi_i * lagrange_mult[a] * fv->sdet * fv->h3;
+          res = -wt * phi_i * lagrange_mult[a] * goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->h3;
           if (pass == 1)
-            lec->R[LEC_R_INDEX(peqn, i)] += res;
+            goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += res;
 
-          if (ac_lm == 0 && af->Assemble_Jacobian) {
+          if (ac_lm == 0 && goma_ctx->fem.af->Assemble_Jacobian) {
             v = LAGR_MULT1 + a;
-            pvar = upd->vp[pg->imtrx][v];
+            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
 
-            for (j = 0; j < ei[pg->imtrx]->dof[v]; j++) {
-              phi_j = bf[v]->phi[j];
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v]; j++) {
+              phi_j = goma_ctx->fem.bf[v]->phi[j];
 
-              jac = -wt * phi_i * phi_j * fv->sdet * fv->h3;
-              lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += jac;
+              jac = -wt * phi_i * phi_j * goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->h3;
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += jac;
             }
           } else if (pass == 2) {
             /* Sensitivities to solid Lagrange multiplier
@@ -1829,7 +1861,7 @@ int assemble_embedded_bc(int ielem,    /* element number */
             nu = lookup_active_dof(eqn, i, iconn_fptr);
 
             for (j = 0; j < dof_l[a]; j++) {
-              jac = -wt * phi_i * phi_l[a][j] * fv->sdet * fv->h3;
+              jac = -wt * phi_i * phi_l[a][j] * goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->h3;
               if (nu >= 0)
                 bAC[iAC][nu] += jac;
             }
@@ -1867,10 +1899,11 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
 
   /* Bail out fast if there's nothing to do */
 
-  if ((ls == NULL) || (ls->embedded_bc == NULL) || (xfem == NULL) || (xfem->elem_state == 0))
+  if ((goma_ctx->fem.ls == NULL) || (goma_ctx->fem.ls->embedded_bc == NULL) || (xfem == NULL) ||
+      (xfem->elem_state == 0))
     return (0);
 
-  bc = BC_Types + ls->embedded_bc->bc_input_id;
+  bc = BC_Types + goma_ctx->fem.ls->embedded_bc->bc_input_id;
 
   /* Bail out for the special case of LS_CAPILLARY the only embedded_bc.  Don't need to process
    * anything here....
@@ -1883,7 +1916,7 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
 
   /* loop over embedded bc's */
 
-  bcref = ls->embedded_bc;
+  bcref = goma_ctx->fem.ls->embedded_bc;
 
   while (bcref) {
     bc = BC_Types + bcref->bc_input_id;
@@ -1894,20 +1927,25 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
     case LS_W_BC:
     case LS_T_BC: {
       eqn = bc->desc->equation;
-      peqn = upd->ep[pg->imtrx][eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      if (pd->i[pg->imtrx][eqn] == I_Q1_G || pd->i[pg->imtrx][eqn] == I_Q2_G ||
-          pd->i[pg->imtrx][eqn] == I_Q1_GP || pd->i[pg->imtrx][eqn] == I_Q2_GP ||
-          pd->i[pg->imtrx][eqn] == I_Q1_GN || pd->i[pg->imtrx][eqn] == I_Q2_GN ||
-          pd->i[pg->imtrx][eqn] == I_Q1_XG || pd->i[pg->imtrx][eqn] == I_Q2_XG ||
-          pd->i[pg->imtrx][eqn] == I_Q1_XV || pd->i[pg->imtrx][eqn] == I_Q2_XV) {
+      if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_G ||
+          goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_G ||
+          goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_GP ||
+          goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_GP ||
+          goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_GN ||
+          goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_GN ||
+          goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_XG ||
+          goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_XG ||
+          goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_XV ||
+          goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_XV) {
         break; /* nothing needs to be done here */
       } else {
         GOMA_EH(GOMA_ERROR,
                 "LS_UVW expects XFEM interpolation Q1_XV, Q2_XV, Q1_XG, Q2_XG, Q1_G, or Q2_G\n");
       }
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i += 2) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i += 2) {
         ln = i / 2;
         if (TRUE) {
           is_neg = lnn_distance(ln) < 0.;
@@ -1918,17 +1956,18 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
           idof_to = i;
           idof_from = i + 1;
 
-          if (af->Assemble_Residual) {
-            lec->R[LEC_R_INDEX(peqn, idof_to)] += bc->BC_ID * lec->R[LEC_R_INDEX(peqn, idof_from)];
+          if (goma_ctx->fem.af->Assemble_Residual) {
+            goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, idof_to)] +=
+                bc->BC_ID * goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, idof_from)];
           }
 
-          if (af->Assemble_Jacobian) {
+          if (goma_ctx->fem.af->Assemble_Jacobian) {
             for (var = V_FIRST; var < V_LAST; var++) {
-              pvar = upd->vp[pg->imtrx][var];
-              if (pvar != -1 && (Inter_Mask[pg->imtrx][eqn][var])) {
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                  lec->J[LEC_J_INDEX(peqn, pvar, idof_to, j)] +=
-                      bc->BC_ID * lec->J[LEC_J_INDEX(peqn, pvar, idof_from, j)];
+              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+              if (pvar != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][eqn][var])) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                  goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, idof_to, j)] +=
+                      bc->BC_ID * goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, idof_from, j)];
                 }
               }
             }
@@ -1938,16 +1977,18 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
     } break;
     case LS_CONT_FLUX_BC: {
       eqn = R_ENERGY;
-      peqn = upd->ep[pg->imtrx][eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      if (pd->i[pg->imtrx][eqn] == I_P0_G || pd->i[pg->imtrx][eqn] == I_P1_G ||
-          pd->i[pg->imtrx][eqn] == I_Q1_G || pd->i[pg->imtrx][eqn] == I_Q2_G) {
+      if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_P0_G ||
+          goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_P1_G ||
+          goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_G ||
+          goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_G) {
         break;
       } else {
         GOMA_EH(GOMA_ERROR, "LS_CONT_FLUX expects XFEM interpolation P0_G, P1_G, Q1_G, or Q2_G\n");
       }
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i += 2) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i += 2) {
         ln = i / 2;
         if (xfem->node_var_state[ln] == 1) {
           is_neg = lnn_distance(ln) < 0.;
@@ -1958,17 +1999,18 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
             idof_from = i;
             idof_to = i + 1;
           }
-          if (af->Assemble_Residual) {
-            lec->R[LEC_R_INDEX(peqn, idof_to)] += lec->R[LEC_R_INDEX(peqn, idof_from)];
+          if (goma_ctx->fem.af->Assemble_Residual) {
+            goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, idof_to)] +=
+                goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, idof_from)];
           }
 
-          if (af->Assemble_Jacobian) {
+          if (goma_ctx->fem.af->Assemble_Jacobian) {
             for (var = V_FIRST; var < V_LAST; var++) {
-              pvar = upd->vp[pg->imtrx][var];
-              if (pvar != -1 && (Inter_Mask[pg->imtrx][eqn][var])) {
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                  lec->J[LEC_J_INDEX(peqn, pvar, idof_to, j)] +=
-                      lec->J[LEC_J_INDEX(peqn, pvar, idof_from, j)];
+              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+              if (pvar != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][eqn][var])) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                  goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, idof_to, j)] +=
+                      goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, idof_from, j)];
                 }
               }
             }
@@ -1978,19 +2020,21 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
     } break;
 #if 1
     case LS_CONT_TRACTION_BC: {
-      for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
+      for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
         eqn = R_MOMENTUM1 + a;
-        peqn = upd->ep[pg->imtrx][eqn];
+        peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-        if (pd->i[pg->imtrx][eqn] == I_P0_G || pd->i[pg->imtrx][eqn] == I_P1_G ||
-            pd->i[pg->imtrx][eqn] == I_Q1_G || pd->i[pg->imtrx][eqn] == I_Q2_G) {
+        if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_P0_G ||
+            goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_P1_G ||
+            goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_G ||
+            goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_G) {
           break;
         } else {
           GOMA_EH(GOMA_ERROR,
                   "LS_CONT_TRACTION_BC expects XFEM interpolation P0_G, P1_G, Q1_G, or Q2_G\n");
         }
 
-        for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i += 2) {
+        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i += 2) {
           ln = i / 2;
           if (xfem->node_var_state[ln] == 1) {
             is_neg = lnn_distance(ln) < 0.;
@@ -2001,17 +2045,18 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
               idof_from = i;
               idof_to = i + 1;
             }
-            if (af->Assemble_Residual) {
-              lec->R[LEC_R_INDEX(peqn, idof_to)] += lec->R[LEC_R_INDEX(peqn, idof_from)];
+            if (goma_ctx->fem.af->Assemble_Residual) {
+              goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, idof_to)] +=
+                  goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, idof_from)];
             }
 
-            if (af->Assemble_Jacobian) {
+            if (goma_ctx->fem.af->Assemble_Jacobian) {
               for (var = V_FIRST; var < V_LAST; var++) {
-                pvar = upd->vp[pg->imtrx][var];
-                if (pvar != -1 && (Inter_Mask[pg->imtrx][eqn][var])) {
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                    lec->J[LEC_J_INDEX(peqn, pvar, idof_to, j)] +=
-                        lec->J[LEC_J_INDEX(peqn, pvar, idof_from, j)];
+                pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+                if (pvar != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][eqn][var])) {
+                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                    goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, idof_to, j)] +=
+                        goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, idof_from, j)];
                   }
                 }
               }
@@ -2027,12 +2072,12 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
             for ( a=0; a<VIM; a++ )
               {
                 eqn = R_MOMENTUM1 + a;
-                peqn = upd->ep[pg->imtrx][eqn];
+                peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-                if ( pd->i[pg->imtrx][eqn] == I_P0_G ||
-		     pd->i[pg->imtrx][eqn] == I_P1_G ||
-		     pd->i[pg->imtrx][eqn] == I_Q1_G ||
-		     pd->i[pg->imtrx][eqn] == I_Q2_G )
+                if ( goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_P0_G ||
+		     goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_P1_G ||
+		     goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_G ||
+		     goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_G )
                   {
 		    break;
                   }
@@ -2041,7 +2086,7 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
                     GOMA_EH(GOMA_ERROR,"LS_CONT_TRACTION_BC expects XFEM interpolation P0_G, P1_G, Q1_G, or Q2_G\n");
                   }
 
-                for ( i = 0; i < ei[pg->imtrx]->dof[eqn]; i+=2 )
+                for ( i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i+=2 )
                   {
                     ln = i/2;
                     if ( xfem->active_node[ln] )
@@ -2058,23 +2103,23 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
                             idof_from = i;
                             idof_to = i+1;
                           }
-                        if (af->Assemble_Residual)
+                        if (goma_ctx->fem.af->Assemble_Residual)
                           {
-                            lec->R[LEC_R_INDEX(peqn,idof_to)] += lec->R[LEC_R_INDEX(peqn,idof_from)];
-                            lec->R[LEC_R_INDEX(peqn,idof_from)] = lec->R[LEC_R_INDEX(peqn,idof_to)];
+                            goma_ctx->fem.lec->R[LEC_R_INDEX(peqn,idof_to)] += goma_ctx->fem.lec->R[LEC_R_INDEX(peqn,idof_from)];
+                            goma_ctx->fem.lec->R[LEC_R_INDEX(peqn,idof_from)] = goma_ctx->fem.lec->R[LEC_R_INDEX(peqn,idof_to)];
                           }
 
-                        if (af->Assemble_Jacobian)
+                        if (goma_ctx->fem.af->Assemble_Jacobian)
                           {
                             for (var=V_FIRST; var<V_LAST; var++)
                               {
-                                pvar = upd->vp[pg->imtrx][var];
-                                if (pvar != -1 && (Inter_Mask[pg->imtrx][eqn][var]))
+                                pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+                                if (pvar != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][eqn][var]))
                                   {
-                                    for ( j = 0; j< ei[pg->imtrx]->dof[var]; j++ )
+                                    for ( j = 0; j< goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++ )
                                       {
-                                        lec->J[LEC_J_INDEX(peqn,pvar,idof_to,j)] += lec->J[LEC_J_INDEX(peqn,pvar,idof_from,j)];
-                                        lec->J[LEC_J_INDEX(peqn,pvar,idof_from,j)] = lec->J[LEC_J_INDEX(peqn,pvar,idof_to,j)];
+                                        goma_ctx->fem.lec->J[LEC_J_INDEX(peqn,pvar,idof_to,j)] += goma_ctx->fem.lec->J[LEC_J_INDEX(peqn,pvar,idof_from,j)];
+                                        goma_ctx->fem.lec->J[LEC_J_INDEX(peqn,pvar,idof_from,j)] = goma_ctx->fem.lec->J[LEC_J_INDEX(peqn,pvar,idof_to,j)];
                                       }
                                   }
                               }
@@ -2204,55 +2249,64 @@ void find_segment_s_wt(const int iquad, /* current GQ index */
 }
 
 double dof_distance(int var_type, int lvdof) {
-  int ln = ei[pd->mi[var_type]]->dof_list[var_type][lvdof];
-  int F_dof = ei[pd->mi[ls->var]]->ln_to_dof[ls->var][ln];
+  int ln = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[var_type]]->dof_list[var_type][lvdof];
+  int F_dof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[goma_ctx->fem.ls->var]]
+                  ->ln_to_dof[goma_ctx->fem.ls->var][ln];
 
   if (F_dof != -1) {
-    if (ls->var == LS)
-      return *esp->F[F_dof];
+    if (goma_ctx->fem.ls->var == LS)
+      return *goma_ctx->fem.esp->F[F_dof];
     else
-      return *(esp->pF[ls->var - PHASE1][F_dof]);
+      return *(goma_ctx->fem.esp->pF[goma_ctx->fem.ls->var - PHASE1][F_dof]);
   }
 
   /* LS must be defined at the node except for discontinuous vars */
   /* This rules out Q1 LS and Q2 velocity !! */
-  if (pd->i[pg->imtrx][var_type] != I_P0 && pd->i[pg->imtrx][var_type] != I_P1 &&
-      pd->i[pg->imtrx][var_type] != I_P0_GP && pd->i[pg->imtrx][var_type] != I_P1_GP &&
-      pd->i[pg->imtrx][var_type] != I_P0_GN && pd->i[pg->imtrx][var_type] != I_P1_GN &&
-      pd->i[pg->imtrx][var_type] != I_P0_XV && pd->i[pg->imtrx][var_type] != I_P1_XV &&
-      pd->i[pg->imtrx][var_type] != I_P0_G && pd->i[pg->imtrx][var_type] != I_P1_G) {
+  if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_type] != I_P0 &&
+      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_type] != I_P1 &&
+      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_type] != I_P0_GP &&
+      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_type] != I_P1_GP &&
+      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_type] != I_P0_GN &&
+      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_type] != I_P1_GN &&
+      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_type] != I_P0_XV &&
+      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_type] != I_P1_XV &&
+      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_type] != I_P0_G &&
+      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_type] != I_P1_G) {
     GOMA_EH(GOMA_ERROR, "This combination of LS and var interpolations is not supported!");
   }
 
   /* define element var distance to be distance to node 0 */
-  F_dof = ei[pd->mi[ls->var]]->ln_to_dof[ls->var][0];
+  F_dof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[goma_ctx->fem.ls->var]]
+              ->ln_to_dof[goma_ctx->fem.ls->var][0];
   if (F_dof < 0) {
     GOMA_EH(GOMA_ERROR, "dof_distance expect LS var to be define at local node 0");
   }
-  if (ls->var == LS)
-    return *esp->F[F_dof];
+  if (goma_ctx->fem.ls->var == LS)
+    return *goma_ctx->fem.esp->F[F_dof];
   else
-    return *(esp->pF[ls->var - PHASE1][F_dof]);
+    return *(goma_ctx->fem.esp->pF[goma_ctx->fem.ls->var - PHASE1][F_dof]);
 }
 
 double lnn_distance(int ln) {
-  int F_dof = ei[pd->mi[ls->var]]->ln_to_dof[ls->var][ln];
+  int F_dof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[goma_ctx->fem.ls->var]]
+                  ->ln_to_dof[goma_ctx->fem.ls->var][ln];
 
   if (F_dof != -1) {
-    if (ls->var == LS)
-      return *esp->F[F_dof];
+    if (goma_ctx->fem.ls->var == LS)
+      return *goma_ctx->fem.esp->F[F_dof];
     else
-      return *(esp->pF[ls->var - PHASE1][F_dof]);
+      return *(goma_ctx->fem.esp->pF[goma_ctx->fem.ls->var - PHASE1][F_dof]);
   }
   /* define element var distance to be distance to node 0 */
-  F_dof = ei[pd->mi[ls->var]]->ln_to_dof[ls->var][0];
+  F_dof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[goma_ctx->fem.ls->var]]
+              ->ln_to_dof[goma_ctx->fem.ls->var][0];
   if (F_dof < 0) {
     GOMA_EH(GOMA_ERROR, "dof_distance expect LS var to be define at local node 0");
   }
-  if (ls->var == LS)
-    return *esp->F[F_dof];
+  if (goma_ctx->fem.ls->var == LS)
+    return *goma_ctx->fem.esp->F[F_dof];
   else
-    return *(esp->pF[ls->var - PHASE1][F_dof]);
+    return *(goma_ctx->fem.esp->pF[goma_ctx->fem.ls->var - PHASE1][F_dof]);
 }
 
 /* determine distance at global node I */
@@ -2263,7 +2317,7 @@ void gnn_distance(const int I,
                   double *F,
                   double *Fold,
                   double *Fprev) {
-  int ie = Index_Solution(I, ls->var, 0, 0, -1, ls->MatrixNum);
+  int ie = Index_Solution(I, goma_ctx->fem.ls->var, 0, 0, -1, goma_ctx->fem.ls->MatrixNum);
 
   if (ie == -1) {
     /* assume we are dealing with a discontinuous variable (like P0) */
@@ -2273,7 +2327,7 @@ void gnn_distance(const int I,
     if (elem != -1) {
       /* use local node 0 from element */
       int I0 = exo->elem_node_list[exo->elem_node_pntr[elem] + 0];
-      ie = Index_Solution(I0, ls->var, 0, 0, -1, ls->MatrixNum);
+      ie = Index_Solution(I0, goma_ctx->fem.ls->var, 0, 0, -1, goma_ctx->fem.ls->MatrixNum);
     }
 
     if (elem == -1 || ie == -1) {
@@ -2286,7 +2340,8 @@ void gnn_distance(const int I,
     *Fold = xold[ie];
   if (Fprev != NULL)
     *Fprev = x[ie] + goma_ctx->solver.damp_factor *
-                         goma_ctx->solver.var_damp[idv[pg->imtrx][ie][0]] * delta_x[ie];
+                         goma_ctx->solver.var_damp[idv[goma_ctx->fem.pg->imtrx][ie][0]] *
+                         delta_x[ie];
 }
 
 int find_2d_side_id(double x0, double x1)
@@ -2355,8 +2410,8 @@ int first_overlap_ac(int ielem, int side)
   int i = 0, iAC = -1;
 
   while (iAC == -1 && i < nAC) {
-    if (augc[i].Type == AC_OVERLAP && augc[i].lm_elem == ielem &&
-        (side == -1 || augc[i].lm_side == side))
+    if (goma_ctx->fem.augc[i].Type == AC_OVERLAP && goma_ctx->fem.augc[i].lm_elem == ielem &&
+        (side == -1 || goma_ctx->fem.augc[i].lm_side == side))
       iAC = i;
     i++;
   }
@@ -2375,13 +2430,13 @@ int lookup_active_dof(int var, int j, int eptr)
   NODAL_VARS_STRUCT *nv;
 
   /* Get unknown index */
-  node = ei[pg->imtrx]->dof_list[var][j];
+  node = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[var][j];
   index = goma_ctx->mesh.proc_elem_connect[eptr + node];
   /* DRN: XFEM is duped by Index_Solution, use gun_list */
   /*
     nu = Index_Solution(index, var, 0, 0, -1, pg->imtrx);
   */
-  nu = ei[pg->imtrx]->gun_list[var][j];
+  nu = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j];
 
   GOMA_EH(nu, "Bad unknown index!");
 
@@ -2390,24 +2445,33 @@ int lookup_active_dof(int var, int j, int eptr)
    * set nu to -2 to signal this.
    */
   nn = Nodes[index];
-  nv = nn->Nodal_Vars_Info[pg->imtrx];
+  nv = nn->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
   noffset = get_nodal_unknown_offset(nv, var, -2, 0, NULL);
-  if (nn->DBC[pg->imtrx] != NULL) {
+  if (nn->DBC[goma_ctx->fem.pg->imtrx] != NULL) {
     /* dirichlet bc's only apply to natural dofs for xfem */
-    if (pd->i[pg->imtrx][var] == I_P0_G || pd->i[pg->imtrx][var] == I_P1_G ||
-        pd->i[pg->imtrx][var] == I_P0_GP || pd->i[pg->imtrx][var] == I_P1_GP ||
-        pd->i[pg->imtrx][var] == I_P0_GN || pd->i[pg->imtrx][var] == I_P1_GN ||
-        pd->i[pg->imtrx][var] == I_P0_XV || pd->i[pg->imtrx][var] == I_P1_XV ||
-        pd->i[pg->imtrx][var] == I_P1_XG || pd->i[pg->imtrx][var] == I_Q1_G ||
-        pd->i[pg->imtrx][var] == I_Q2_G || pd->i[pg->imtrx][var] == I_Q1_GP ||
-        pd->i[pg->imtrx][var] == I_Q2_GP || pd->i[pg->imtrx][var] == I_Q1_GN ||
-        pd->i[pg->imtrx][var] == I_Q2_GN || pd->i[pg->imtrx][var] == I_Q1_XV ||
-        pd->i[pg->imtrx][var] == I_Q2_XV || pd->i[pg->imtrx][var] == I_Q1_XG ||
-        pd->i[pg->imtrx][var] == I_Q2_XG) {
-      if (j % 2 == 0 && nn->DBC[pg->imtrx][noffset] >= 0)
+    if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_P0_G ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_P1_G ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_P0_GP ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_P1_GP ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_P0_GN ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_P1_GN ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_P0_XV ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_P1_XV ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_P1_XG ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_G ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_G ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_GP ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_GP ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_GN ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_GN ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_XV ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_XV ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_XG ||
+        goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_XG) {
+      if (j % 2 == 0 && nn->DBC[goma_ctx->fem.pg->imtrx][noffset] >= 0)
         nu = -2;
     } else {
-      if (nn->DBC[pg->imtrx][noffset] >= 0)
+      if (nn->DBC[goma_ctx->fem.pg->imtrx][noffset] >= 0)
         nu = -2;
     }
   }
@@ -2436,11 +2500,11 @@ void setup_shop_at_point(int ielem, double *xi, const Exo_DB *exo)
    * check if this is a new element.
    * If this is not a new element, don't redo dofptrs
    */
-  if (ielem != ei[pg->imtrx]->ielem) {
+  if (ielem != goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem) {
     err = load_elem_dofptr(ielem, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
     GOMA_EH(err, "load_elem_dofptr");
 
-    err = bf_mp_init(pd);
+    err = bf_mp_init(goma_ctx->fem.pd);
     GOMA_EH(err, "bf_mp_init");
   }
 
@@ -2448,9 +2512,9 @@ void setup_shop_at_point(int ielem, double *xi, const Exo_DB *exo)
    * This may not be a gauss point, so minimize chance someone will use this
    * wrong by putting in ridiculous value
    */
-  fv->wt = 1.e30;
+  goma_ctx->fem.fv->wt = 1.e30;
 
-  err = load_basis_functions(xi, bfd);
+  err = load_basis_functions(xi, goma_ctx->fem.bfd);
   GOMA_EH(err, "problem from load_basis_functions");
 
   err = beer_belly();
@@ -2467,8 +2531,10 @@ void setup_shop_at_point(int ielem, double *xi, const Exo_DB *exo)
    *  actually has mesh equations associated with it before calculation
    *  d basis function d mesh equations.
    */
-  if (ei[pg->imtrx]->deforming_mesh && (pd->e[pg->imtrx][R_MESH1] || pd->v[pg->imtrx][R_MESH1])) {
-    if (!pd->e[pg->imtrx][R_MESH1]) {
+  if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->deforming_mesh &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] ||
+       goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][R_MESH1])) {
+    if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
       // printf(" We are here\n");
     }
     err = load_bf_mesh_derivs();
@@ -2486,7 +2552,7 @@ void setup_shop_at_point(int ielem, double *xi, const Exo_DB *exo)
   err = load_fv_grads();
   GOMA_EH(err, "load_fv_grads");
 
-  if (upd->AutoDiff) {
+  if (goma_ctx->fem.upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
     fill_ad_field_variables();
 #else
@@ -2498,8 +2564,10 @@ void setup_shop_at_point(int ielem, double *xi, const Exo_DB *exo)
    *  actually has mesh equations associated with it before calculation
    *  d value d mesh equations.
    */
-  if (ei[pg->imtrx]->deforming_mesh && (pd->e[pg->imtrx][R_MESH1] || pd->v[pg->imtrx][R_MESH1])) {
-    if (!pd->e[pg->imtrx][R_MESH1]) {
+  if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->deforming_mesh &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] ||
+       goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][R_MESH1])) {
+    if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
       //	printf(" We are here2\n");
     }
     err = load_fv_mesh_derivs(0);
@@ -2511,23 +2579,27 @@ void setup_shop_at_point(int ielem, double *xi, const Exo_DB *exo)
   //   GOMA_EH( err, "load_fv_mesh_derivs");
   //  }
 
-  if (mp->PorousMediaType != CONTINUOUS) {
+  if (goma_ctx->fem.mp->PorousMediaType != CONTINUOUS) {
     err = load_porous_properties();
     GOMA_EH(err, "load_porous_properties");
   }
 
   do_LSA_mods(LSA_VOLUME);
-  computeCommonMaterialProps_gp(tran->time_value);
+  computeCommonMaterialProps_gp(goma_ctx->fem.tran->time_value);
 }
 
 double fv_at_point(double *xi, int var) {
   int i;
   double *esp, val, phi_i;
 
-  for (i = 0, val = 0.; i < ei[pg->imtrx]->dof[var]; i++) {
-    phi_i = newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ei[pg->imtrx]->dof_list[var][i],
-                     ei[pg->imtrx]->ielem_shape, pd->i[pg->imtrx][var], i);
-    esp = x_static + ei[pg->imtrx]->ieqn_ledof[ei[pg->imtrx]->lvdof_to_ledof[var][i]];
+  for (i = 0, val = 0.; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
+    phi_i = newshape(xi, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, PSI,
+                     goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[var][i],
+                     goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
+                     goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var], i);
+    esp = x_static +
+          goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
+              ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][i]];
     val += phi_i * *esp;
   }
   return val;
@@ -2537,10 +2609,14 @@ double fv_old_at_point(double *xi, int var) {
   int i;
   double *esp, val, phi_i;
 
-  for (i = 0, val = 0.; i < ei[pg->imtrx]->dof[var]; i++) {
-    phi_i = newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ei[pg->imtrx]->dof_list[var][i],
-                     ei[pg->imtrx]->ielem_shape, pd->i[pg->imtrx][var], i);
-    esp = x_old_static + ei[pg->imtrx]->ieqn_ledof[ei[pg->imtrx]->lvdof_to_ledof[var][i]];
+  for (i = 0, val = 0.; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
+    phi_i = newshape(xi, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, PSI,
+                     goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[var][i],
+                     goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
+                     goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var], i);
+    esp = x_old_static +
+          goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
+              ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][i]];
     val += phi_i * *esp;
   }
   return val;
@@ -2550,14 +2626,18 @@ double fv_and_phi_at_point(double *xi, int var, double *phi, int sign) {
   int i;
   double *esp, val;
   int old_sign;
-  old_sign = ls->Elem_Sign;
-  ls->Elem_Sign = sign;
-  for (i = 0, val = 0.; i < ei[pg->imtrx]->dof[var]; i++) {
-    phi[i] = newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ei[pg->imtrx]->dof_list[var][i],
-                      ei[pg->imtrx]->ielem_shape, pd->i[pg->imtrx][var], i);
-    esp = x_static + ei[pg->imtrx]->ieqn_ledof[ei[pg->imtrx]->lvdof_to_ledof[var][i]];
+  old_sign = goma_ctx->fem.ls->Elem_Sign;
+  goma_ctx->fem.ls->Elem_Sign = sign;
+  for (i = 0, val = 0.; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
+    phi[i] = newshape(xi, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, PSI,
+                      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[var][i],
+                      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
+                      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var], i);
+    esp = x_static +
+          goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
+              ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][i]];
     val += phi[i] * *esp;
   }
-  ls->Elem_Sign = old_sign;
+  goma_ctx->fem.ls->Elem_Sign = old_sign;
   return val;
 }

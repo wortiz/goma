@@ -104,7 +104,7 @@ int num_varType_at_node(const int inode, const int varType)
  *******************************************************************/
 {
   NODE_INFO_STRUCT *node = Nodes[inode];
-  int num = get_nv_ndofs(node->Nodal_Vars_Info[pg->imtrx], varType);
+  int num = get_nv_ndofs(node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx], varType);
   return num;
 }
 /************************************************************************/
@@ -148,8 +148,8 @@ int get_nv_ndofs_modMF(NODAL_VARS_STRUCT *nv, const int varType)
 {
   int ndofs = get_nv_ndofs(nv, varType);
   if (varType == MASS_FRACTION) {
-    if (upd->Max_Num_Species_Eqn > 0) {
-      return ndofs / upd->Max_Num_Species_Eqn;
+    if (goma_ctx->fem.upd->Max_Num_Species_Eqn > 0) {
+      return ndofs / goma_ctx->fem.upd->Max_Num_Species_Eqn;
     }
   }
   return ndofs;
@@ -553,7 +553,7 @@ static void rearrange_mat_increasing(int var_type,
    */
   num = nv_old->Num_Var_Desc_Per_Type[var_type];
   if (var_type == MASS_FRACTION) {
-    num = nv_old->Num_Var_Desc_Per_Type[var_type] / upd->Max_Num_Species_Eqn;
+    num = nv_old->Num_Var_Desc_Per_Type[var_type] / goma_ctx->fem.upd->Max_Num_Species_Eqn;
   }
 
   for (j = 0; j < num; j++) {
@@ -631,7 +631,7 @@ NODAL_VARS_STRUCT *copy_and_rearrange_nv(NODAL_VARS_STRUCT *nv_old)
   rec_used = alloc_int_1(nv_old->Num_Var_Desc, 0);
   for (var_type = V_FIRST; var_type < V_LAST; var_type++) {
     if (var_type == MASS_FRACTION) {
-      for (subvarIndex = 0; subvarIndex < upd->Max_Num_Species_Eqn; subvarIndex++) {
+      for (subvarIndex = 0; subvarIndex < goma_ctx->fem.upd->Max_Num_Species_Eqn; subvarIndex++) {
         rearrange_mat_increasing(var_type, subvarIndex, nv_old, nv_new, rec_used);
       }
     } else {

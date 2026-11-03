@@ -141,7 +141,7 @@ void usr_out_hkm(int status MAYBE_UNUSED,
     return;
 
   /* Number of unknowns owned by this processor -- rf_fem.h */
-  num_owned_unknowns = NumUnknowns[pg->imtrx];
+  num_owned_unknowns = NumUnknowns[goma_ctx->fem.pg->imtrx];
 
 #ifdef PARALLEL
   (void)MPI_Barrier(MPI_COMM_WORLD);
@@ -158,9 +158,9 @@ void usr_out_hkm(int status MAYBE_UNUSED,
    * Loop over the number of materials
    *      -> We will print out totals for each material
    */
-  for (mn = 0; mn < upd->Num_Mat; mn++) {
-    pd_local = pd_glob[mn];
-    matID_prop = mp_glob[mn];
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+    pd_local = goma_ctx->fem.pd_glob[mn];
+    matID_prop = goma_ctx->fem.mp_glob[mn];
 
     /************** Fluid Mechanics Printouts  *****************************/
     var = VELOCITY1;
@@ -422,7 +422,8 @@ static void SOLN_VALUES(int var_type,
                *   so there are additional complications
                */
               ndof = 0;
-              if ((i_eqn = Index_Solution(i, var_type, sub_index, ndof, mn, pg->imtrx)) >= 0) {
+              if ((i_eqn = Index_Solution(i, var_type, sub_index, ndof, mn,
+                                          goma_ctx->fem.pg->imtrx)) >= 0) {
                 num_nodes_mn++;
                 s = soln[i_eqn];
                 s_sum += fabs(s);
@@ -515,7 +516,7 @@ static void SOLN_TO_MOLES(double soln[],
   int num_owned_nodes = (DPI_ptr->num_internal_nodes + DPI_ptr->num_boundary_nodes);
   mn = matID_prop->MatID;
   for (node = 0; node < num_owned_nodes; node++) {
-    if ((i_eqn = Index_Solution(node, MASS_FRACTION, 0, ndof, mn, pg->imtrx)) >= 0) {
+    if ((i_eqn = Index_Solution(node, MASS_FRACTION, 0, ndof, mn, goma_ctx->fem.pg->imtrx)) >= 0) {
       for (k = 0, sumwt = 0.0; k < matID_prop->Num_Species_Eqn; k++) {
         sumwt += soln[i_eqn + k] / matID_prop->molecular_weight[k];
       }
@@ -539,10 +540,12 @@ static void SOLN_TO_MOLES(double soln[],
    */
 
   var = TEMPERATURE;
-  if (pd_glob[mn]->v[pg->imtrx][var]) {
+  if (goma_ctx->fem.pd_glob[mn]->v[goma_ctx->fem.pg->imtrx][var]) {
     for (node = 0; node < num_owned_nodes; node++) {
-      if ((i_eqn = Index_Solution(node, MASS_FRACTION, 0, ndof, mn, pg->imtrx)) >= 0) {
-        if ((j_eqn = Index_Solution(node, TEMPERATURE, 0, ndof, mn, pg->imtrx)) >= 0) {
+      if ((i_eqn = Index_Solution(node, MASS_FRACTION, 0, ndof, mn, goma_ctx->fem.pg->imtrx)) >=
+          0) {
+        if ((j_eqn = Index_Solution(node, TEMPERATURE, 0, ndof, mn, goma_ctx->fem.pg->imtrx)) >=
+            0) {
           for (k = 0, sumwt = 0.0; k < matID_prop->Num_Species_Eqn; k++) {
             sumwt += soln_mole[i_eqn + k];
           }
@@ -578,7 +581,8 @@ GET_SOLN_LASTSPECIES(double soln[], double soln_lastSpecies[], MATRL_PROP_STRUCT
     return;
   if (matID_prop->Num_Species_Eqn < matID_prop->Num_Species) {
     for (node = 0; node < num_owned_nodes; node++) {
-      if ((i_eqn = Index_Solution(node, MASS_FRACTION, 0, ndof, mn, pg->imtrx)) >= 0) {
+      if ((i_eqn = Index_Solution(node, MASS_FRACTION, 0, ndof, mn, goma_ctx->fem.pg->imtrx)) >=
+          0) {
         soln_lastSpecies[i_eqn] = 1.0;
         for (k = 0; k < matID_prop->Num_Species_Eqn; k++) {
           soln_lastSpecies[i_eqn] -= soln[i_eqn + k];
@@ -587,7 +591,8 @@ GET_SOLN_LASTSPECIES(double soln[], double soln_lastSpecies[], MATRL_PROP_STRUCT
     }
   } else {
     for (node = 0; node < num_owned_nodes; node++) {
-      if ((i_eqn = Index_Solution(node, MASS_FRACTION, 0, ndof, mn, pg->imtrx)) >= 0) {
+      if ((i_eqn = Index_Solution(node, MASS_FRACTION, 0, ndof, mn, goma_ctx->fem.pg->imtrx)) >=
+          0) {
         soln_lastSpecies[i_eqn] = soln[i_eqn];
       }
     }
@@ -681,14 +686,15 @@ static void WRITE_SENKIN_FILE(int status,
 
   VOL = 1.0;
 
-  if ((indx_MF = Index_Solution(node, MASS_FRACTION, 0, ndof, mn, pg->imtrx)) < 0) {
+  if ((indx_MF = Index_Solution(node, MASS_FRACTION, 0, ndof, mn, goma_ctx->fem.pg->imtrx)) < 0) {
     (void)fprintf(stderr, "error indx_MF is bad\n");
     exit(-1);
   }
 
   var = TEMPERATURE;
-  if (pd_glob[0]->v[pg->imtrx][var]) {
-    if ((indx_T = Index_Solution(mesh_id, node, TEMPERATURE, 0, mn, pg->imtrx)) >= 0) {
+  if (goma_ctx->fem.pd_glob[0]->v[goma_ctx->fem.pg->imtrx][var]) {
+    if ((indx_T = Index_Solution(mesh_id, node, TEMPERATURE, 0, mn, goma_ctx->fem.pg->imtrx)) >=
+        0) {
       T = soln[indx_T];
     }
   } else {

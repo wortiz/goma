@@ -62,27 +62,29 @@ void setup_element_storage(void)
 {
   int eb_index, do_malloc, mn;
   ELEM_BLK_STRUCT *eb_ptr;
-  pg->imtrx = 0; // TODO: UCK
+  goma_ctx->fem.pg->imtrx = 0; // TODO: UCK
   for (eb_index = 0; eb_index < EXO_ptr->num_elem_blocks; eb_index++) {
     do_malloc = FALSE;
     mn = Matilda[eb_index];
     if (mn < 0) {
       continue;
     }
-    pd = pd_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     eb_ptr = Element_Blocks + eb_index;
-    if (pd->e[pg->imtrx][R_POR_LIQ_PRES]) {
-      if (pd->TimeIntegration == TRANSIENT) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES]) {
+      if (goma_ctx->fem.pd->TimeIntegration == TRANSIENT) {
         do_malloc = TRUE;
       }
     }
-    if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN] || pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2]) {
-      if (pd->TimeIntegration == TRANSIENT) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN] ||
+        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) {
+      if (goma_ctx->fem.pd->TimeIntegration == TRANSIENT) {
         do_malloc = TRUE;
       }
     }
-    if (pd->e[pg->imtrx][R_MESH1] && pd->MeshMotion == LAGRANGIAN) {
-      if (pd->TimeIntegration == TRANSIENT) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] &&
+        goma_ctx->fem.pd->MeshMotion == LAGRANGIAN) {
+      if (goma_ctx->fem.pd->TimeIntegration == TRANSIENT) {
         do_malloc = TRUE;
       }
     }
@@ -120,7 +122,7 @@ void init_element_storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
   double *d_ptr;
   double *base_ptr = NULL;
 
-  if (upd->Total_Num_Matrices > 1) {
+  if (goma_ctx->fem.upd->Total_Num_Matrices > 1) {
     GOMA_EH(GOMA_ERROR, "Element storage not setup to work with multiple matrices.");
   }
 
@@ -144,8 +146,8 @@ void init_element_storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
      *  values at the nodes onto the end of the regular volumetric
      *  quadrature points.
      */
-    mp = eb_ptr->MatlProp_ptr;
-    if (mp->Porous_Mass_Lump) {
+    goma_ctx->fem.mp = eb_ptr->MatlProp_ptr;
+    if (goma_ctx->fem.mp->Porous_Mass_Lump) {
       numStorage = ip_total + eb_ptr->Num_Nodes_Per_Elem;
     } else {
       numStorage = ip_total;
@@ -156,12 +158,14 @@ void init_element_storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
      * Argg. See PRS comment in rf_element_storage_struct.h
      */
     if (eb_ptr->Num_Elems_In_Block > 0) {
-      if (pd->e[pg->imtrx][R_POR_LIQ_PRES]) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES]) {
         base_ptr = alloc_dbl_1(4 * numStorage * eb_ptr->Num_Elems_In_Block, DBL_NOINIT);
-      } else if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN] || pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2]) {
+      } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN] ||
+                 goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) {
         base_ptr = alloc_dbl_1(4 * numStorage * eb_ptr->Num_Elems_In_Block, DBL_NOINIT);
-      } else if (pd->e[pg->imtrx][R_MESH1] && pd->MeshMotion == LAGRANGIAN &&
-                 elc_glob[mn]->thermal_expansion_model == SHRINKAGE) {
+      } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] &&
+                 goma_ctx->fem.pd->MeshMotion == LAGRANGIAN &&
+                 goma_ctx->fem.elc_glob[mn]->thermal_expansion_model == SHRINKAGE) {
 
         /* This is for shrinkage stress model for thermexp */
         base_ptr = alloc_dbl_1(numStorage * eb_ptr->Num_Elems_In_Block, DBL_NOINIT);
@@ -175,8 +179,9 @@ void init_element_storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
     d_ptr = base_ptr;
     eb_ptr->ElemStorage = s_ptr;
     for (i = 0; i < eb_ptr->Num_Elems_In_Block; i++, s_ptr++) {
-      if (pd->e[pg->imtrx][R_POR_LIQ_PRES] || pd->e[pg->imtrx][R_SHELL_SAT_OPEN] ||
-          pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2]) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] ||
+          goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN] ||
+          goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) {
         s_ptr->Sat_QP_tn = d_ptr;
         d_ptr += numStorage;
         s_ptr->p_cap_QP = d_ptr;
@@ -185,8 +190,9 @@ void init_element_storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
         d_ptr += numStorage;
         s_ptr->sat_curve_type_old = d_ptr;
         d_ptr += numStorage;
-      } else if (pd->e[pg->imtrx][R_MESH1] && pd->MeshMotion == LAGRANGIAN &&
-                 elc_glob[mn]->thermal_expansion_model == SHRINKAGE) {
+      } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] &&
+                 goma_ctx->fem.pd->MeshMotion == LAGRANGIAN &&
+                 goma_ctx->fem.elc_glob[mn]->thermal_expansion_model == SHRINKAGE) {
         s_ptr->solidified = d_ptr;
         d_ptr += numStorage;
       }
@@ -231,9 +237,9 @@ void set_init_Element_Storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
 
   /*Quick return if model is not hysteretic in nature */
 
-  if (mp_glob[mn]->SaturationModel == TANH_HYST) {
+  if (goma_ctx->fem.mp_glob[mn]->SaturationModel == TANH_HYST) {
     ip_total = eb_ptr->IP_total;
-    Draining_curve = mp_glob[mn]->u_saturation[8];
+    Draining_curve = goma_ctx->fem.mp_glob[mn]->u_saturation[8];
     if (goma_ctx->solver.guess_flag == 4 || goma_ctx->solver.guess_flag == 5) {
       GOMA_EH(GOMA_ERROR, "Not a smooth restart for hysteretic saturation function. If you really "
                           "want to do this use read_exoII_file or call us");
@@ -350,13 +356,13 @@ void set_init_Element_Storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
     {
 
       if (Draining_curve == 1.0) {
-        sat_switch = mp->u_saturation[0];
+        sat_switch = goma_ctx->fem.mp->u_saturation[0];
         pc_switch = 1.e-12;
       } else if (Draining_curve == 0.0) {
-        sat_max = mp->u_saturation[0];
-        sat_min = mp->u_saturation[4];
-        alpha_w = mp->u_saturation[3];
-        beta_w = mp->u_saturation[2];
+        sat_max = goma_ctx->fem.mp->u_saturation[0];
+        sat_min = goma_ctx->fem.mp->u_saturation[4];
+        alpha_w = goma_ctx->fem.mp->u_saturation[3];
+        beta_w = goma_ctx->fem.mp->u_saturation[2];
 
         pc_switch = 1.e12 * alpha_w;
         sat_switch =
@@ -375,7 +381,7 @@ void set_init_Element_Storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
     }
   }
 
-  if (elc_glob[mn]->thermal_expansion_model == SHRINKAGE) {
+  if (goma_ctx->fem.elc_glob[mn]->thermal_expansion_model == SHRINKAGE) {
     ip_total = eb_ptr->IP_total;
     if (goma_ctx->solver.guess_flag == 4 || goma_ctx->solver.guess_flag == 5) {
       GOMA_EH(
@@ -479,7 +485,7 @@ double get_nodalSat_tnm1_FromES(int lnn)
  *        values of  Current_EB_ptr and ei being correct!
  *****************************************************************/
 {
-  int ielem = ei[pg->imtrx]->ielem;
+  int ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
   int ip_total = Current_EB_ptr->IP_total;
   ELEMENT_STORAGE_STRUCT *es = Current_EB_ptr->ElemStorage + ielem;
   return (es->Sat_QP_tn[ip_total + lnn]);
@@ -499,7 +505,7 @@ double get_Sat_tnm1_FromES(int ip)
  *
  *****************************************************************/
 {
-  int ielem = ei[pg->imtrx]->ielem;
+  int ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
   ELEMENT_STORAGE_STRUCT *es = Current_EB_ptr->ElemStorage + ielem;
   return (es->Sat_QP_tn[ip]);
 }
@@ -518,7 +524,7 @@ void put_nodalSat_tn_IntoES(int lnn, double sat)
  *
  *****************************************************************/
 {
-  int ielem = ei[pg->imtrx]->ielem;
+  int ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
   int ip_total = Current_EB_ptr->IP_total;
   ELEMENT_STORAGE_STRUCT *es = Current_EB_ptr->ElemStorage + ielem;
   es->Sat_QP_tn[ip_total + lnn] = sat;
@@ -539,7 +545,7 @@ void put_Sat_tn_IntoES(int ip, double sat)
  *
  *****************************************************************/
 {
-  int ielem = ei[pg->imtrx]->ielem;
+  int ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
   ELEMENT_STORAGE_STRUCT *es = Current_EB_ptr->ElemStorage + ielem;
   es->Sat_QP_tn[ip] = sat;
 }

@@ -32,9 +32,9 @@
 ADType sst_viscosity(const ADType &Omega, const ADType &F2) {
   ADType omega = std::max(1e-20, ad_fv->turb_omega);
   ADType k = std::max(1e-20, ad_fv->turb_k);
-  dbl rho = density(NULL, tran->time_value);
+  dbl rho = density(NULL, goma_ctx->fem.tran->time_value);
   dbl a1 = 0.31;
-  ADType mu_turb = mp->viscosity + rho * a1 * k / (std::max(a1 * omega, Omega * F2));
+  ADType mu_turb = goma_ctx->fem.mp->viscosity + rho * a1 * k / (std::max(a1 * omega, Omega * F2));
   return mu_turb;
 }
 
@@ -43,14 +43,14 @@ ADType ad_sa_viscosity(struct Generalized_Newtonian *gn_local) {
   dbl scale = 1.0;
   DENSITY_DEPENDENCE_STRUCT d_rho;
   if (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) {
-    scale = density(&d_rho, tran->time_value);
+    scale = density(&d_rho, goma_ctx->fem.tran->time_value);
   }
   int negative_mu_e = FALSE;
-  if (fv_old->eddy_nu < 0) {
+  if (goma_ctx->fem.fv_old->eddy_nu < 0) {
     negative_mu_e = TRUE;
   }
 
-  double mu_newt = mp->viscosity;
+  double mu_newt = goma_ctx->fem.mp->viscosity;
   if (negative_mu_e) {
     mu = mu_newt;
   } else {
@@ -75,14 +75,14 @@ extern "C" dbl ad_sa_viscosity(struct Generalized_Newtonian *gn_local,
   dbl scale = 1.0;
   DENSITY_DEPENDENCE_STRUCT d_rho;
   if (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) {
-    scale = density(&d_rho, tran->time_value);
+    scale = density(&d_rho, goma_ctx->fem.tran->time_value);
   }
   int negative_mu_e = FALSE;
-  if (fv_old->eddy_nu < 0) {
+  if (goma_ctx->fem.fv_old->eddy_nu < 0) {
     negative_mu_e = TRUE;
   }
 
-  double mu_newt = mp->viscosity;
+  double mu_newt = goma_ctx->fem.mp->viscosity;
   if (negative_mu_e) {
     mu = mu_newt;
   } else {
@@ -98,7 +98,7 @@ extern "C" dbl ad_sa_viscosity(struct Generalized_Newtonian *gn_local,
     }
 
     if (d_mu != NULL) {
-      for (int j = 0; j < ei[pg->imtrx]->dof[EDDY_NU]; j++) {
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EDDY_NU]; j++) {
         d_mu->eddy_nu[j] = mu.dx(ad_fv->offset[EDDY_NU] + j);
       }
     }
@@ -124,7 +124,7 @@ ADType ad_numerical_viscosity(ADType s[DIM][DIM], /* total stress */
 
   ADType mun;
 
-  eps = vn->eps;
+  eps = goma_ctx->fem.vn->eps;
 
   eps2 = eps / 2.;
 
@@ -165,12 +165,12 @@ ADType ad_ls_modulate_property(
   load_lsi(width);
 
   /* Calculate the material property. */
-  if (ls->Elem_Sign == -1)
+  if (goma_ctx->fem.ls->Elem_Sign == -1)
     p = p_minus;
-  else if (ls->Elem_Sign == 1)
+  else if (goma_ctx->fem.ls->Elem_Sign == 1)
     p = p_plus;
   else
-    p = p_minus + (p_plus - p_minus) * lsi->H;
+    p = p_minus + (p_plus - p_minus) * goma_ctx->fem.lsi->H;
 
   return (p);
 }
@@ -224,15 +224,15 @@ ADType ad_bingham_viscosity(struct Generalized_Newtonian *gn_local,
   }
   fexp = gn_local->fexp;
 
-  if (pd->gv[TEMPERATURE]) {
-    temp = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    temp = goma_ctx->fem.fv->T;
   } else {
-    temp = upd->Process_Temperature;
+    temp = goma_ctx->fem.upd->Process_Temperature;
   }
 
-  if (DOUBLE_NONZERO(temp) && DOUBLE_NONZERO(mp->reference[TEMPERATURE])) {
+  if (DOUBLE_NONZERO(temp) && DOUBLE_NONZERO(goma_ctx->fem.mp->reference[TEMPERATURE])) {
     /* normal, non-melting version */
-    at_shift = exp(atexp * (1. / temp - 1. / mp->reference[TEMPERATURE]));
+    at_shift = exp(atexp * (1. / temp - 1. / goma_ctx->fem.mp->reference[TEMPERATURE]));
     if (!isfinite(at_shift)) {
       at_shift = DBL_MAX;
     }
@@ -267,7 +267,7 @@ extern "C" dbl ad_viscosity_wrap(struct Generalized_Newtonian *gn_local) {
     }
   }
 
-  auto mu = ad_viscosity(gn, gamma);
+  auto mu = ad_viscosity(goma_ctx->fem.gn, gamma);
   return mu.val();
 }
 ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]) {
@@ -276,20 +276,20 @@ ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM
 
   /* this section is for all Newtonian models */
   if (gn_local->ConstitutiveEquation == NEWTONIAN) {
-    if (mp->ViscosityModel == CONSTANT) {
+    if (goma_ctx->fem.mp->ViscosityModel == CONSTANT) {
       /*  mu   = gn_local->mu0; corrected for auto continuation 3/01 */
       if (gn_local->ConstitutiveEquation == CONSTANT) {
         mu = gn_local->mu0;
       } else {
-        mu = mp->viscosity;
+        mu = goma_ctx->fem.mp->viscosity;
       }
-      mp_old->viscosity = mu.val();
+      goma_ctx->fem.mp_old->viscosity = mu.val();
     } else {
       GOMA_EH(GOMA_ERROR, "Unrecognized viscosity model for Newtonian fluid");
     }
   } else if (gn_local->ConstitutiveEquation == CONSTANT) {
     mu = gn_local->mu0;
-    mp_old->viscosity = mu.val();
+    goma_ctx->fem.mp_old->viscosity = mu.val();
     /*Sensitivities were already set to zero */
   } else if (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA) {
     ADType W[DIM][DIM];
@@ -325,12 +325,15 @@ ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM
     GOMA_EH(GOMA_ERROR, "Unrecognized viscosity model for non-Newtonian fluid");
   }
 
-  if (ls != NULL && gn_local->ConstitutiveEquation != VE_LEVEL_SET &&
-      mp->ViscosityModel != LEVEL_SET && mp->ViscosityModel != LS_QUADRATIC && mp->mp2nd != NULL &&
-      (mp->mp2nd->ViscosityModel == CONSTANT || mp->mp2nd->ViscosityModel == RATIO)) {
-    err = ad_ls_modulate_viscosity(mu, mp->mp2nd->viscosity, ls->Length_Scale,
-                                   (double)mp->mp2nd->viscositymask[0],
-                                   (double)mp->mp2nd->viscositymask[1], mp->mp2nd->ViscosityModel);
+  if (goma_ctx->fem.ls != NULL && gn_local->ConstitutiveEquation != VE_LEVEL_SET &&
+      goma_ctx->fem.mp->ViscosityModel != LEVEL_SET &&
+      goma_ctx->fem.mp->ViscosityModel != LS_QUADRATIC && goma_ctx->fem.mp->mp2nd != NULL &&
+      (goma_ctx->fem.mp->mp2nd->ViscosityModel == CONSTANT ||
+       goma_ctx->fem.mp->mp2nd->ViscosityModel == RATIO)) {
+    err = ad_ls_modulate_viscosity(
+        mu, goma_ctx->fem.mp->mp2nd->viscosity, goma_ctx->fem.ls->Length_Scale,
+        (double)goma_ctx->fem.mp->mp2nd->viscositymask[0],
+        (double)goma_ctx->fem.mp->mp2nd->viscositymask[1], goma_ctx->fem.mp->mp2nd->ViscosityModel);
     GOMA_EH(err, "ls_modulate_viscosity");
   }
   return (mu);

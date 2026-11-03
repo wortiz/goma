@@ -85,23 +85,6 @@ int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwrite  *
 struct Variable_Initialization Var_init[MAX_VARIABLE_TYPES + MAX_CONC];
 
 struct Variable_Initialization Var_init_mat[MAX_NUMBER_MATLS][MAX_VARIABLE_TYPES + MAX_CONC];
-extern struct AC_Information *augc;
-
-struct HC_Information *hunt;
-
-extern struct Eigensolver_Info *eigen;
-
-struct Continuation_Conditions *cpcc;
-
-struct Continuation_Conditions *tpcc;
-
-struct User_Continuation_Info *cpuc;
-
-struct User_Continuation_Info *tpuc;
-
-struct Level_Set_Data *ls;
-struct Level_Set_Interface *lsi;
-struct Phase_Function_Data *pfd;
 
 static char aprepro_command[1024];
 
@@ -205,7 +188,7 @@ void read_input_file(struct Command_line_command **clc, int nclc) {
    * BEGIN EXECUTION
    */
   nAC = 0;
-  augc = NULL;
+  goma_ctx->fem.augc = NULL;
 
   if (!goma_ctx->new_parser_flag) {
     if ((ifp = fopen(goma_ctx->input_file, "r")) != NULL) {
@@ -214,7 +197,7 @@ void read_input_file(struct Command_line_command **clc, int nclc) {
 
       rd_genl_specs(ifp, input);
 
-      memset(tran->use_var_norm, 0, sizeof(int) * 9);
+      memset(goma_ctx->fem.tran->use_var_norm, 0, sizeof(int) * 9);
       rd_timeint_specs(ifp, input);
 
       rd_levelset_specs(ifp, input);
@@ -1096,24 +1079,24 @@ void rd_genl_specs(FILE *ifp, char *input) {
   goma_ctx->num_var_external_pix = 0;
   Num_Import_NV = 0;
   Num_Import_EV = 0;
-  efv->ev = T_NOTHING;
+  goma_ctx->fem.efv->ev = T_NOTHING;
 
-  memset(efv->ipix, 0, sizeof(int) * MAX_EXTERNAL_FIELD);
+  memset(goma_ctx->fem.efv->ipix, 0, sizeof(int) * MAX_EXTERNAL_FIELD);
 
   while ((iread = look_forward_optional(ifp, "External Field", input, '=')) == 1 ||
          (iread = look_forward_optional(ifp, "External Pixel Field", input, '=')) == 1 ||
          (iread = look_forward_optional(ifp, "External Pixel Field_fast", input, '=')) == 1) {
-    efv->ev = T_SOMETHING;
+    goma_ctx->fem.efv->ev = T_SOMETHING;
 
     tmp = strstr(input, StringToSearch);
     if (tmp != NULL) {
       strcpy(echo_string, "External Pixel Field = ");
       goma_ctx->num_var_external_pix++;
-      efv->ipix[goma_ctx->num_var_external] = 1;
+      goma_ctx->fem.efv->ipix[goma_ctx->num_var_external] = 1;
       if (strstr(input, "Field_fast") != NULL) {
         strcpy(echo_string, "External Pixel Field_fast = ");
         goma_ctx->num_var_external_pix++;
-        efv->ipix[goma_ctx->num_var_external] = 2;
+        goma_ctx->fem.efv->ipix[goma_ctx->num_var_external] = 2;
       }
     } else {
       strcpy(echo_string, "External Field = ");
@@ -1125,7 +1108,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
       GOMA_EH(GOMA_ERROR, "Error reading variable for initialization");
     }
 
-    (void)strcpy(efv->name[goma_ctx->num_var_external], input);
+    (void)strcpy(goma_ctx->fem.efv->name[goma_ctx->num_var_external], input);
 
     strcat(echo_string, input);
     strcat(echo_string, "  ");
@@ -1144,32 +1127,32 @@ void rd_genl_specs(FILE *ifp, char *input) {
      */
 
     if (!strcmp(input, "Q1")) {
-      efv->i[goma_ctx->num_var_external] = I_Q1;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_Q1;
     } else if (!strcmp(input, "Q2")) {
-      efv->i[goma_ctx->num_var_external] = I_Q2;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_Q2;
     } else if (!strcmp(input, "Q2_LSA")) {
-      efv->i[goma_ctx->num_var_external] = I_Q2_LSA;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_Q2_LSA;
     } else if (!strcmp(input, "Q1_D")) {
-      efv->i[goma_ctx->num_var_external] = I_Q1_D;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_Q1_D;
     } else if (!strcmp(input, "Q2_D")) {
-      efv->i[goma_ctx->num_var_external] = I_Q2_D;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_Q2_D;
     } else if (!strcmp(input, "Q2_D_LSA")) {
-      efv->i[goma_ctx->num_var_external] = I_Q2_D_LSA;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_Q2_D_LSA;
     } else if (!strcmp(input, "PQ1")) {
-      efv->i[goma_ctx->num_var_external] = I_PQ1;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_PQ1;
     } else if (!strcmp(input, "PQ2")) {
-      efv->i[goma_ctx->num_var_external] = I_PQ2;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_PQ2;
     } else if (!strcmp(input, "P0")) {
-      efv->i[goma_ctx->num_var_external] = I_P0;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_P0;
     } else if (!strcmp(input, "P1")) {
-      efv->i[goma_ctx->num_var_external] = I_P1;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_P1;
     } else if (!strcmp(input, "SP")) {
-      efv->i[goma_ctx->num_var_external] = I_SP;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_SP;
     } else if (!strcmp(input, "TABLE")) {
-      efv->i[goma_ctx->num_var_external] = I_TABLE;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_TABLE;
       num_ext_Tables++;
     } else if (!strcmp(input, "N1")) {
-      efv->i[goma_ctx->num_var_external] = I_N1;
+      goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_N1;
       num_ext_Tables++;
     } else {
       sprintf(err_msg, "??? interpolation \"%s\" for external field var", input);
@@ -1189,7 +1172,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
     }
     strip(input);
 
-    (void)strcpy(efv->file_nm[goma_ctx->num_var_external], input);
+    (void)strcpy(goma_ctx->fem.efv->file_nm[goma_ctx->num_var_external], input);
 
     strcat(echo_string, input);
 
@@ -1229,7 +1212,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
 
     strip(input);
 
-    (void)strcpy(efv->field_type[goma_ctx->num_var_external], ftype);
+    (void)strcpy(goma_ctx->fem.efv->field_type[goma_ctx->num_var_external], ftype);
 
     strcat(echo_string, ftype);
 
@@ -1245,8 +1228,8 @@ void rd_genl_specs(FILE *ifp, char *input) {
           MAX_EXTERNAL_FIELD);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    if (efv->ipix[goma_ctx->num_var_external]) {
-      if (fscanf(ifp, "%d", &efv->ipix_matid[goma_ctx->num_var_external]) != 1) {
+    if (goma_ctx->fem.efv->ipix[goma_ctx->num_var_external]) {
+      if (fscanf(ifp, "%d", &goma_ctx->fem.efv->ipix_matid[goma_ctx->num_var_external]) != 1) {
         GOMA_EH(GOMA_ERROR, "Must specify a material ID for external pix field");
       }
 
@@ -1255,8 +1238,8 @@ void rd_genl_specs(FILE *ifp, char *input) {
        * Default to 1.0 (0 can cause issues for e.g. conductivities).
        * DSB 7/30/2013
        */
-      if (fscanf(ifp, "%lf", &efv->empty_value[goma_ctx->num_var_external]) != 1) {
-        efv->empty_value[goma_ctx->num_var_external] = 1.0;
+      if (fscanf(ifp, "%lf", &goma_ctx->fem.efv->empty_value[goma_ctx->num_var_external]) != 1) {
+        goma_ctx->fem.efv->empty_value[goma_ctx->num_var_external] = 1.0;
       }
     }
 
@@ -1265,22 +1248,22 @@ void rd_genl_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
-  efv->Num_external_field = goma_ctx->num_var_external;
-  efv->Num_external_pixel_field = goma_ctx->num_var_external_pix;
+  goma_ctx->fem.efv->Num_external_field = goma_ctx->num_var_external;
+  goma_ctx->fem.efv->Num_external_pixel_field = goma_ctx->num_var_external_pix;
 
   iread = look_forward_optional(ifp, "Exit after pixel map", input, '=');
   if (iread == 1) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0) {
-      efv->exit_after_pixel_map = false;
+      goma_ctx->fem.efv->exit_after_pixel_map = false;
     } else if (strcmp(input, "yes") == 0) {
-      efv->exit_after_pixel_map = true;
+      goma_ctx->fem.efv->exit_after_pixel_map = true;
     } else {
       GOMA_EH(GOMA_ERROR, "Bad specification for Exit after pixel map");
     }
   } else {
-    efv->exit_after_pixel_map = false;
+    goma_ctx->fem.efv->exit_after_pixel_map = false;
   }
 
   /*
@@ -1319,7 +1302,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
 #endif
 
   /* XFEM turned off by default */
-  upd->XFEM = FALSE;
+  goma_ctx->fem.upd->XFEM = FALSE;
 
   while ((iread = look_forward_optional(ifp, "User Initialize", input, '=')) == 1) {
     int curr_var = goma_ctx->num_var_init, var;
@@ -1378,7 +1361,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
    *        (conversion factor is to an exact standard atm)
    *
    */
-  upd->Pressure_Datum = 1.0132500000E6;
+  goma_ctx->fem.upd->Pressure_Datum = 1.0132500000E6;
 
   iread = look_for_optional(ifp, "Pressure Datum", input, '=');
 
@@ -1387,71 +1370,75 @@ void rd_genl_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
 
-    upd->Pressure_Datum = parse_press_datum_input(input);
+    goma_ctx->fem.upd->Pressure_Datum = parse_press_datum_input(input);
 
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "Pressure Datum", upd->Pressure_Datum);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "Pressure Datum",
+             goma_ctx->fem.upd->Pressure_Datum);
     ECHO(echo_string, echo_file);
   }
 
-  upd->Acoustic_Frequency = 2 * M_PIE * 20000.;
+  goma_ctx->fem.upd->Acoustic_Frequency = 2 * M_PIE * 20000.;
   iread = look_for_optional(ifp, "Acoustic Frequency", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le", &upd->Acoustic_Frequency) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->fem.upd->Acoustic_Frequency) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Acoustic Frequency");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "Acoustic Frequency",
-             upd->Acoustic_Frequency);
+             goma_ctx->fem.upd->Acoustic_Frequency);
     ECHO(echo_string, echo_file);
   }
 
-  upd->EM_Frequency = upd->Acoustic_Frequency; // Initialize for backwards compatibility
+  goma_ctx->fem.upd->EM_Frequency =
+      goma_ctx->fem.upd->Acoustic_Frequency; // Initialize for backwards compatibility
   iread = look_for_optional(ifp, "EM Frequency", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%lf", &upd->EM_Frequency) != 1) {
+    if (fscanf(ifp, "%lf", &goma_ctx->fem.upd->EM_Frequency) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading EM Frequency");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "EM Frequency", upd->EM_Frequency);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "EM Frequency",
+             goma_ctx->fem.upd->EM_Frequency);
     ECHO(echo_string, echo_file);
   }
 
   iread = look_for_optional(ifp, "EM Free Space Permittivity", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%lf", &upd->Free_Space_Permittivity) != 1) {
+    if (fscanf(ifp, "%lf", &goma_ctx->fem.upd->Free_Space_Permittivity) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading EM Free Space Permittivity");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "EM Free Space Permittivity",
-             upd->Free_Space_Permittivity);
+             goma_ctx->fem.upd->Free_Space_Permittivity);
     ECHO(echo_string, echo_file);
   }
 
   iread = look_for_optional(ifp, "EM Free Space Permeability", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%lf", &upd->Free_Space_Permeability) != 1) {
+    if (fscanf(ifp, "%lf", &goma_ctx->fem.upd->Free_Space_Permeability) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading EM Free Space Permeability");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "EM Free Space Permeability",
-             upd->Free_Space_Permeability);
+             goma_ctx->fem.upd->Free_Space_Permeability);
     ECHO(echo_string, echo_file);
   }
 
-  upd->Process_Temperature = 25.0;
+  goma_ctx->fem.upd->Process_Temperature = 25.0;
   iread = look_for_optional(ifp, "Process Temperature", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le", &upd->Process_Temperature) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->fem.upd->Process_Temperature) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Process Temperature");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "Process Temperature",
-             upd->Process_Temperature);
+             goma_ctx->fem.upd->Process_Temperature);
     ECHO(echo_string, echo_file);
   }
 
-  upd->Light_Cosmu = 1.0;
+  goma_ctx->fem.upd->Light_Cosmu = 1.0;
   iread = look_for_optional(ifp, "Light Cosmu", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le", &upd->Light_Cosmu) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->fem.upd->Light_Cosmu) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Light Incident Cos(Angle)");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "Light Cosmu", upd->Light_Cosmu);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "Light Cosmu",
+             goma_ctx->fem.upd->Light_Cosmu);
     ECHO(echo_string, echo_file);
   }
 
@@ -1526,18 +1513,18 @@ void rd_timeint_specs(FILE *ifp, char *input) {
   ECHO(echo_string, echo_file);
 
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    pd_glob[mn]->TimeIntegration = TimeIntegration;
+    goma_ctx->fem.pd_glob[mn]->TimeIntegration = TimeIntegration;
   }
 
   /* An initialization needed to avoid umrs for linear
      stab problems.  Needed once PRS started using tran
      structure as a global variable for poroelastic probs */
-  tran->theta = 0.0;
+  goma_ctx->fem.tran->theta = 0.0;
 
   /* set default frequency to 0 */
-  tran->fix_freq = 0;
+  goma_ctx->fem.tran->fix_freq = 0;
 
-  if (pd_glob[0]->TimeIntegration != STEADY) {
+  if (goma_ctx->fem.pd_glob[0]->TimeIntegration != STEADY) {
     double delta_t0;
     double delta_t_min;
     double delta_t_max;
@@ -1548,37 +1535,40 @@ void rd_timeint_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%le", &delta_t0) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading delta_t");
     }
-    tran->Delta_t0 = delta_t0;
+    goma_ctx->fem.tran->Delta_t0 = delta_t0;
 
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "delta_t", tran->Delta_t0);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "delta_t",
+             goma_ctx->fem.tran->Delta_t0);
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "Maximum number of time steps", input, '=');
     if (fscanf(ifp, "%d", &max_time_steps) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading max time steps");
     }
-    tran->MaxTimeSteps = max_time_steps;
+    goma_ctx->fem.tran->MaxTimeSteps = max_time_steps;
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Maximum number of time steps",
-             tran->MaxTimeSteps);
+             goma_ctx->fem.tran->MaxTimeSteps);
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "Maximum time", input, '=');
     if (fscanf(ifp, "%le", &time_max) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading maximum time");
     }
-    tran->TimeMax = time_max;
+    goma_ctx->fem.tran->TimeMax = time_max;
 
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Maximum time", tran->TimeMax);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Maximum time",
+             goma_ctx->fem.tran->TimeMax);
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "Minimum time step", input, '=');
     if (fscanf(ifp, "%le", &delta_t_min) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading minimum time step");
     }
-    tran->Delta_t_min = delta_t_min;
+    goma_ctx->fem.tran->Delta_t_min = delta_t_min;
 
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Minimum time step", tran->Delta_t_min);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Minimum time step",
+             goma_ctx->fem.tran->Delta_t_min);
     ECHO(echo_string, echo_file);
 
     delta_t_max = 1.e12;
@@ -1592,50 +1582,55 @@ void rd_timeint_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    tran->Delta_t_max = delta_t_max;
+    goma_ctx->fem.tran->Delta_t_max = delta_t_max;
 
     look_for(ifp, "Time step parameter", input, '=');
-    if (fscanf(ifp, "%le", &(tran->theta)) != 1) {
+    if (fscanf(ifp, "%le", &(goma_ctx->fem.tran->theta)) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading time step parameter");
     }
 
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Time step parameter", tran->theta);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Time step parameter",
+             goma_ctx->fem.tran->theta);
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "Time step error", input, '=');
     if (fscanf(ifp, "%le", &eps) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Time step error, expected at least one float");
     }
-    tran->eps = eps;
+    goma_ctx->fem.tran->eps = eps;
 
     /* initialize norm indicators */
     for (i = 0; i <= 10; i++)
-      tran->use_var_norm[i] = 1;
+      goma_ctx->fem.tran->use_var_norm[i] = 1;
     /*tran->use_var_norm[9] = 1;  for backwards Compatibility */
     read_line(ifp, input, FALSE);
 
-    if (sscanf(input, "%d %d %d %d %d %d %d %d %d %d", &tran->use_var_norm[0],
-               &tran->use_var_norm[1], &tran->use_var_norm[2], &tran->use_var_norm[3],
-               &tran->use_var_norm[4], &tran->use_var_norm[5], &tran->use_var_norm[6],
-               &tran->use_var_norm[7], &tran->use_var_norm[8], &tran->use_var_norm[9]) < 10) {
+    if (sscanf(input, "%d %d %d %d %d %d %d %d %d %d", &goma_ctx->fem.tran->use_var_norm[0],
+               &goma_ctx->fem.tran->use_var_norm[1], &goma_ctx->fem.tran->use_var_norm[2],
+               &goma_ctx->fem.tran->use_var_norm[3], &goma_ctx->fem.tran->use_var_norm[4],
+               &goma_ctx->fem.tran->use_var_norm[5], &goma_ctx->fem.tran->use_var_norm[6],
+               &goma_ctx->fem.tran->use_var_norm[7], &goma_ctx->fem.tran->use_var_norm[8],
+               &goma_ctx->fem.tran->use_var_norm[9]) < 10) {
       GOMA_WH(GOMA_ERROR, "Defaulting on Time step error norm indicators\n");
     }
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g %d %d %d %d %d %d %d %d %d %d",
-             "Time step error", tran->eps, tran->use_var_norm[0], tran->use_var_norm[1],
-             tran->use_var_norm[2], tran->use_var_norm[3], tran->use_var_norm[4],
-             tran->use_var_norm[5], tran->use_var_norm[5], tran->use_var_norm[7],
-             tran->use_var_norm[8], tran->use_var_norm[9]);
+             "Time step error", goma_ctx->fem.tran->eps, goma_ctx->fem.tran->use_var_norm[0],
+             goma_ctx->fem.tran->use_var_norm[1], goma_ctx->fem.tran->use_var_norm[2],
+             goma_ctx->fem.tran->use_var_norm[3], goma_ctx->fem.tran->use_var_norm[4],
+             goma_ctx->fem.tran->use_var_norm[5], goma_ctx->fem.tran->use_var_norm[5],
+             goma_ctx->fem.tran->use_var_norm[7], goma_ctx->fem.tran->use_var_norm[8],
+             goma_ctx->fem.tran->use_var_norm[9]);
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "Printing Frequency", input, '=');
     print_freq = read_int(ifp, "Printing Frequency");
-    tran->print_freq = print_freq;
+    goma_ctx->fem.tran->print_freq = print_freq;
     if (print_freq == 0) {
       if (fscanf(ifp, "%le", &print_delt) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Printing delta time");
       }
-      tran->print_delt = print_delt;
+      goma_ctx->fem.tran->print_delt = print_delt;
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d %.4g", "Printing Frequency", print_freq,
                print_delt);
@@ -1653,11 +1648,12 @@ void rd_timeint_specs(FILE *ifp, char *input) {
                  print_delt2_time, print_delt2);
         ECHO(echo_string, echo_file);
       }
-      tran->print_delt2 = print_delt2;
-      tran->print_delt2_time = print_delt2_time;
+      goma_ctx->fem.tran->print_delt2 = print_delt2;
+      goma_ctx->fem.tran->print_delt2_time = print_delt2_time;
 
     } else {
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Printing Frequency", tran->print_freq);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Printing Frequency",
+               goma_ctx->fem.tran->print_freq);
       ECHO(echo_string, echo_file);
     }
 
@@ -1667,40 +1663,41 @@ void rd_timeint_specs(FILE *ifp, char *input) {
     if (goma_ctx->num_proc > 1 && !goma_ctx->skip_fix) {
       iread = look_for_optional(ifp, "Fix Frequency", input, '=');
       if (iread == 1) {
-        tran->fix_freq = read_int(ifp, "Fix Frequency");
-        if (tran->fix_freq < 0) {
+        goma_ctx->fem.tran->fix_freq = read_int(ifp, "Fix Frequency");
+        if (goma_ctx->fem.tran->fix_freq < 0) {
           GOMA_EH(GOMA_ERROR, "Expected Fix Frequency > 0");
         }
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Fix Frequency", tran->fix_freq);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Fix Frequency",
+                 goma_ctx->fem.tran->fix_freq);
         ECHO(echo_string, echo_file);
         GOMA_WH(GOMA_ERROR, "Warning fix frequency tends to slow down printing over time as exodus "
                             "files become large");
       }
     }
 
-    tran->resolved_delta_t_min = 0.;
+    goma_ctx->fem.tran->resolved_delta_t_min = 0.;
     iread = look_for_optional(ifp, "Minimum Resolved Time Step", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%le", &tran->resolved_delta_t_min) != 1) {
+      if (fscanf(ifp, "%le", &goma_ctx->fem.tran->resolved_delta_t_min) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Minimum Resolved Time Step");
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Minimum Resolved Time Step",
-               tran->resolved_delta_t_min);
+               goma_ctx->fem.tran->resolved_delta_t_min);
       ECHO(echo_string, echo_file);
     }
 
-    tran->Courant_Limit = 0.;
+    goma_ctx->fem.tran->Courant_Limit = 0.;
     iread = look_for_optional(ifp, "Courant Number Limit", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%le", &tran->Courant_Limit) != 1) {
+      if (fscanf(ifp, "%le", &goma_ctx->fem.tran->Courant_Limit) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Courant Number Limit");
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Courant Number Limit",
-               tran->Courant_Limit);
+               goma_ctx->fem.tran->Courant_Limit);
       ECHO(echo_string, echo_file);
     }
 
-    tran->Restart_Time_Integ_After_Renorm = TRUE;
+    goma_ctx->fem.tran->Restart_Time_Integ_After_Renorm = TRUE;
     iread = look_for_optional(ifp, "Restart Time Integration After Renormalization", input, '=');
     if (iread == 1) {
       if (fscanf(ifp, "%s", input) != 1) {
@@ -1709,10 +1706,10 @@ void rd_timeint_specs(FILE *ifp, char *input) {
       strip(input);
       stringup(input);
       if (strcmp(input, "ON") == 0 || strcmp(input, "YES") == 0 || strcmp(input, "TRUE") == 0) {
-        tran->Restart_Time_Integ_After_Renorm = TRUE;
+        goma_ctx->fem.tran->Restart_Time_Integ_After_Renorm = TRUE;
       } else if (strcmp(input, "OFF") == 0 || strcmp(input, "NO") == 0 ||
                  strcmp(input, "FALSE") == 0) {
-        tran->Restart_Time_Integ_After_Renorm = FALSE;
+        goma_ctx->fem.tran->Restart_Time_Integ_After_Renorm = FALSE;
       }
       /* Sanity check while we're here. */
       else {
@@ -1720,19 +1717,20 @@ void rd_timeint_specs(FILE *ifp, char *input) {
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d",
                "Restart Time Integration After Renormalization",
-               tran->Restart_Time_Integ_After_Renorm);
+               goma_ctx->fem.tran->Restart_Time_Integ_After_Renorm);
       ECHO(echo_string, echo_file);
     }
 
-    tran->init_time = 0.0;
+    goma_ctx->fem.tran->init_time = 0.0;
     iread = look_for_optional(ifp, "Initial Time", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%le", &(tran->init_time)) != 1) {
+      if (fscanf(ifp, "%le", &(goma_ctx->fem.tran->init_time)) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Initial Time");
       }
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Initial Time", tran->init_time);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Initial Time",
+               goma_ctx->fem.tran->init_time);
       ECHO(echo_string, echo_file);
-      if ((time_max - tran->init_time) <= 0.0) {
+      if ((time_max - goma_ctx->fem.tran->init_time) <= 0.0) {
         GOMA_EH(
             -1,
             "Your maximum time is less than or equal to your initial time!"); // a condition which
@@ -1742,14 +1740,15 @@ void rd_timeint_specs(FILE *ifp, char *input) {
       }
     }
 
-    tran->const_dt_after_failure = 0.;
+    goma_ctx->fem.tran->const_dt_after_failure = 0.;
     iread = look_for_optional(ifp, "Steps of constant delta_t after failure", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%d", &tran->const_dt_after_failure) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->fem.tran->const_dt_after_failure) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Steps of constant delta_t after failure");
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d",
-               "Steps of constant delta_t after failure", tran->const_dt_after_failure);
+               "Steps of constant delta_t after failure",
+               goma_ctx->fem.tran->const_dt_after_failure);
       ECHO(echo_string, echo_file);
     }
 
@@ -1757,19 +1756,19 @@ void rd_timeint_specs(FILE *ifp, char *input) {
      * If a time step fails to converge, then the time step is multiplied
      * by this factor (to make it smaller) for the next attempt.
      */
-    tran->time_step_decelerator = 0.5;
+    goma_ctx->fem.tran->time_step_decelerator = 0.5;
     iread = look_for_optional(ifp, "Time step decelerator", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%le", &tran->time_step_decelerator) != 1) {
+      if (fscanf(ifp, "%le", &goma_ctx->fem.tran->time_step_decelerator) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Time step decelerator");
       }
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Time step decelerator",
-               tran->time_step_decelerator);
+               goma_ctx->fem.tran->time_step_decelerator);
       ECHO(echo_string, echo_file);
     }
 
-    tran->Fill_Weight_Fcn = FILL_WEIGHT_TG;
+    goma_ctx->fem.tran->Fill_Weight_Fcn = FILL_WEIGHT_TG;
 
     iread = look_for_optional(ifp, "Fill Weight Function", input, '=');
 
@@ -1779,22 +1778,22 @@ void rd_timeint_specs(FILE *ifp, char *input) {
       }
 
       if (strcmp(input, "Galerkin") == 0) {
-        tran->Fill_Weight_Fcn = FILL_WEIGHT_G;
+        goma_ctx->fem.tran->Fill_Weight_Fcn = FILL_WEIGHT_G;
       } else if (strcmp(input, "Taylor-Galerkin") == 0) {
-        tran->Fill_Weight_Fcn = FILL_WEIGHT_TG;
+        goma_ctx->fem.tran->Fill_Weight_Fcn = FILL_WEIGHT_TG;
       } else if (strcmp(input, "SUPG") == 0) {
-        tran->Fill_Weight_Fcn = FILL_WEIGHT_SUPG;
+        goma_ctx->fem.tran->Fill_Weight_Fcn = FILL_WEIGHT_SUPG;
       } else if (strcmp(input, "GLS") == 0) {
-        tran->Fill_Weight_Fcn = FILL_WEIGHT_GLS;
+        goma_ctx->fem.tran->Fill_Weight_Fcn = FILL_WEIGHT_GLS;
       } else if (strcmp(input, "SC") == 0) {
-        tran->Fill_Weight_Fcn = FILL_WEIGHT_SC;
+        goma_ctx->fem.tran->Fill_Weight_Fcn = FILL_WEIGHT_SC;
         GOMA_WH(-1, "This option only works for extension velocity.\n");
       } else if (strcmp(input, "Explicit") == 0) {
-        tran->Fill_Weight_Fcn = FILL_WEIGHT_EXPLICIT;
+        goma_ctx->fem.tran->Fill_Weight_Fcn = FILL_WEIGHT_EXPLICIT;
       } else if (strcmp(input, "SUPG_GP") == 0) {
-        tran->Fill_Weight_Fcn = FILL_WEIGHT_SUPG_GP;
+        goma_ctx->fem.tran->Fill_Weight_Fcn = FILL_WEIGHT_SUPG_GP;
       } else if (strcmp(input, "SUPG_SHAKIB") == 0) {
-        tran->Fill_Weight_Fcn = FILL_WEIGHT_SUPG_SHAKIB;
+        goma_ctx->fem.tran->Fill_Weight_Fcn = FILL_WEIGHT_SUPG_SHAKIB;
       } else {
         GOMA_EH(GOMA_ERROR, "Fill Weight Function not known.\n");
       }
@@ -1802,7 +1801,7 @@ void rd_timeint_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    tran->Fill_Equation = FILL_EQN_ADVECT;
+    goma_ctx->fem.tran->Fill_Equation = FILL_EQN_ADVECT;
     strcpy(input, "Advection");
 
     iread = look_for_optional(ifp, "Fill Equation", input, '=');
@@ -1813,12 +1812,12 @@ void rd_timeint_specs(FILE *ifp, char *input) {
       }
 
       if (strcmp(input, "Advection") == 0) {
-        tran->Fill_Equation = FILL_EQN_ADVECT;
+        goma_ctx->fem.tran->Fill_Equation = FILL_EQN_ADVECT;
       } else if (strcmp(input, "Extension") == 0) {
-        tran->Fill_Equation = FILL_EQN_EXT_V;
+        goma_ctx->fem.tran->Fill_Equation = FILL_EQN_EXT_V;
         GOMA_WH(-1, "This option needs an extension velocity eqn.\n");
       } else if (strcmp(input, "Eikonal") == 0) {
-        tran->Fill_Equation = FILL_EQN_EIKONAL;
+        goma_ctx->fem.tran->Fill_Equation = FILL_EQN_EIKONAL;
       } else {
         GOMA_EH(GOMA_ERROR, "Fill Equation not known.\n");
       }
@@ -1828,16 +1827,16 @@ void rd_timeint_specs(FILE *ifp, char *input) {
     }
   } /*   if(pd_glob[0]->TimeIntegration != STEADY) */
 
-  tran->march_to_steady_state = 0;
+  goma_ctx->fem.tran->march_to_steady_state = 0;
 
   iread = look_for_optional(ifp, "March to Steady State", input, '=');
   if (iread == 1) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0) {
-      tran->march_to_steady_state = 0;
+      goma_ctx->fem.tran->march_to_steady_state = 0;
     } else if (strcmp(input, "yes") == 0) {
-      tran->march_to_steady_state = 1;
+      goma_ctx->fem.tran->march_to_steady_state = 1;
       TimeIntegration = TRANSIENT;
     } else {
 
@@ -1850,31 +1849,31 @@ void rd_timeint_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Steady State Tolerance", input, '=');
   if (iread == 1) {
-    tran->march_to_steady_state = 1;
-    tran->steady_state_tolerance = read_dbl(ifp, "Steady State Tolerance");
-    if (tran->steady_state_tolerance < 0) {
+    goma_ctx->fem.tran->march_to_steady_state = 1;
+    goma_ctx->fem.tran->steady_state_tolerance = read_dbl(ifp, "Steady State Tolerance");
+    if (goma_ctx->fem.tran->steady_state_tolerance < 0) {
       GOMA_EH(GOMA_ERROR, "Expected Steady State Tolerance >= 0");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "Steady State Tolerance",
-             tran->steady_state_tolerance);
+             goma_ctx->fem.tran->steady_state_tolerance);
     ECHO(echo_string, echo_file);
   }
 
-  tran->MaxSteadyStateSteps = 2;
+  goma_ctx->fem.tran->MaxSteadyStateSteps = 2;
 
   iread = look_for_optional(ifp, "Maximum steady state steps", input, '=');
   if (iread == 1) {
     strip(input);
-    tran->MaxSteadyStateSteps = read_int(ifp, "Maximum steady state steps");
-    if (tran->MaxSteadyStateSteps < 2) {
+    goma_ctx->fem.tran->MaxSteadyStateSteps = read_int(ifp, "Maximum steady state steps");
+    if (goma_ctx->fem.tran->MaxSteadyStateSteps < 2) {
       GOMA_EH(GOMA_ERROR, "error reading max steady state steps expected value > 1");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Maximum steady state steps",
-             tran->MaxSteadyStateSteps);
+             goma_ctx->fem.tran->MaxSteadyStateSteps);
     ECHO(echo_string, echo_file);
   }
 
-  tran->ale_adapt = 0;
+  goma_ctx->fem.tran->ale_adapt = 0;
 
   iread = look_for_optional(ifp, "ALE Adapt", input, '=');
   if (iread == 1) {
@@ -1883,9 +1882,9 @@ void rd_timeint_specs(FILE *ifp, char *input) {
     stringup(input);
 
     if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-      tran->ale_adapt = 1;
+      goma_ctx->fem.tran->ale_adapt = 1;
     } else if ((strcmp(input, "OFF") == 0) || (strcmp(input, "NO") == 0)) {
-      tran->ale_adapt = 0;
+      goma_ctx->fem.tran->ale_adapt = 0;
     } else {
       GOMA_EH(GOMA_ERROR, "Expected either yes or no for ALE Adapt");
     }
@@ -1895,27 +1894,28 @@ void rd_timeint_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "ALE Adapt Frequency", input, '=');
   if (iread == 1) {
-    tran->ale_adapt_freq = read_int(ifp, "ALE Adapt Frequency");
-    if (tran->ale_adapt_freq <= 0) {
-      GOMA_EH(GOMA_ERROR, "Expected ALE Adapt Frequency > 0, got %d", tran->ale_adapt_freq);
+    goma_ctx->fem.tran->ale_adapt_freq = read_int(ifp, "ALE Adapt Frequency");
+    if (goma_ctx->fem.tran->ale_adapt_freq <= 0) {
+      GOMA_EH(GOMA_ERROR, "Expected ALE Adapt Frequency > 0, got %d",
+              goma_ctx->fem.tran->ale_adapt_freq);
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "ALE Adapt Frequency",
-             tran->ale_adapt_freq);
+             goma_ctx->fem.tran->ale_adapt_freq);
     ECHO(echo_string, echo_file);
-  } else if (tran->ale_adapt) {
+  } else if (goma_ctx->fem.tran->ale_adapt) {
     GOMA_EH(GOMA_ERROR, "Expected ALE Adapt Frequency card since ALE Adapt = yes");
   }
 
   iread = look_for_optional(ifp, "ALE Adapt ISO Size", input, '=');
   if (iread == 1) {
-    tran->ale_adapt_iso_size = read_dbl(ifp, "ALE Adapt ISO Size");
-    if (tran->ale_adapt_iso_size < 0) {
+    goma_ctx->fem.tran->ale_adapt_iso_size = read_dbl(ifp, "ALE Adapt ISO Size");
+    if (goma_ctx->fem.tran->ale_adapt_iso_size < 0) {
       GOMA_EH(GOMA_ERROR, "Expected ALE Adapt ISO Size >= 0");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "ALE Adapt ISO Size",
-             tran->ale_adapt_iso_size);
+             goma_ctx->fem.tran->ale_adapt_iso_size);
     ECHO(echo_string, echo_file);
-  } else if (tran->ale_adapt) {
+  } else if (goma_ctx->fem.tran->ale_adapt) {
     GOMA_EH(GOMA_ERROR, "Expected ALE Adapt ISO Size card since ALE Adapt = yes");
   }
 }
@@ -1940,8 +1940,8 @@ void rd_levelset_specs(FILE *ifp, char *input) {
   /* Level Set interface tracking parameters */
 
   iread = look_for_optional(ifp, "Level Set Interface Tracking", input, '=');
-  ls = NULL;
-  lsi = NULL;
+  goma_ctx->fem.ls = NULL;
+  goma_ctx->fem.lsi = NULL;
   if (iread == 1) {
 
     if (fscanf(ifp, "%s", input) != 1) {
@@ -1952,26 +1952,26 @@ void rd_levelset_specs(FILE *ifp, char *input) {
     stringup(input);
 
     if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-      ls = alloc_struct_1(struct Level_Set_Data, 1);
-      ls->var = FILL;
-      ls->MatrixNum = 0;
-      ls->embedded_bc = NULL;
-      ls->init_surf_list = NULL;
-      ls->last_surf_list = NULL;
-      ls->sm_object_name = NULL;
-      ls->sm_object_type = NULL;
-      lsi = alloc_struct_1(struct Level_Set_Interface, 1);
-      ls->Use_Level_Set = Use_Level_Set = TRUE;
+      goma_ctx->fem.ls = alloc_struct_1(struct Level_Set_Data, 1);
+      goma_ctx->fem.ls->var = FILL;
+      goma_ctx->fem.ls->MatrixNum = 0;
+      goma_ctx->fem.ls->embedded_bc = NULL;
+      goma_ctx->fem.ls->init_surf_list = NULL;
+      goma_ctx->fem.ls->last_surf_list = NULL;
+      goma_ctx->fem.ls->sm_object_name = NULL;
+      goma_ctx->fem.ls->sm_object_type = NULL;
+      goma_ctx->fem.lsi = alloc_struct_1(struct Level_Set_Interface, 1);
+      goma_ctx->fem.ls->Use_Level_Set = Use_Level_Set = TRUE;
       zero_lsi();
       zero_lsi_derivs();
-      ls->Elem_Sign = 0;
-      ls->on_sharp_surf = 0;
-      ls->Extension_Velocity = FALSE;
-      ls->CalcSurfDependencies = FALSE;
-      ls->Integration_Depth = 0;
-      ls->AdaptIntegration = FALSE;
-      ls->Sat_Hyst_Renorm_Lockout = 0;
-      ls->ghost_stress = FALSE;
+      goma_ctx->fem.ls->Elem_Sign = 0;
+      goma_ctx->fem.ls->on_sharp_surf = 0;
+      goma_ctx->fem.ls->Extension_Velocity = FALSE;
+      goma_ctx->fem.ls->CalcSurfDependencies = FALSE;
+      goma_ctx->fem.ls->Integration_Depth = 0;
+      goma_ctx->fem.ls->AdaptIntegration = FALSE;
+      goma_ctx->fem.ls->Sat_Hyst_Renorm_Lockout = 0;
+      goma_ctx->fem.ls->ghost_stress = FALSE;
     }
 
     ECHO("\n***Level Set Interface Tracking***\n", echo_file);
@@ -1979,19 +1979,19 @@ void rd_levelset_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     /* for steady-state level set problems */
-    if (pd_glob[0]->TimeIntegration == STEADY) {
+    if (goma_ctx->fem.pd_glob[0]->TimeIntegration == STEADY) {
       GOMA_WH(-1, "Steady state level set problem.  Using Eikonal equation!\n");
-      tran->Fill_Equation = FILL_EQN_EIKONAL;
+      goma_ctx->fem.tran->Fill_Equation = FILL_EQN_EIKONAL;
     }
 
     /* Need to read in initialization data for fields that may be initially index wrt LS
      *  Also need to run this first.   */
 
-    ls->Num_Var_Init = 0;
+    goma_ctx->fem.ls->Num_Var_Init = 0;
     while ((iread = look_forward_optional(ifp, "Level Set Initialize", input, '=')) == 1) {
-      int index = goma_ctx->num_var_init + ls->Num_Var_Init;
+      int index = goma_ctx->num_var_init + goma_ctx->fem.ls->Num_Var_Init;
       if (fscanf(ifp, "%80s", input) != 1) {
         GOMA_EH(GOMA_ERROR, "Error reading LS initialization field data \n");
       }
@@ -2011,24 +2011,25 @@ void rd_levelset_specs(FILE *ifp, char *input) {
                Var_init[index].init_val_plus);
       ECHO(echo_string, echo_file);
 
-      ls->Num_Var_Init++;
+      goma_ctx->fem.ls->Num_Var_Init++;
     }
 
-    goma_ctx->num_var_ls_init = ls->Num_Var_Init;
+    goma_ctx->num_var_ls_init = goma_ctx->fem.ls->Num_Var_Init;
 
-    ls->Length_Scale = -1.0;
+    goma_ctx->fem.ls->Length_Scale = -1.0;
     iread = look_for_optional(ifp, "Level Set Length Scale", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%lf", &(ls->Length_Scale)) != 1) {
+      if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Length_Scale)) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Level Set Length Scale");
       }
-      if (fabs(ls->Length_Scale) == 0.0)
+      if (fabs(goma_ctx->fem.ls->Length_Scale) == 0.0)
         GOMA_WH(-1, "Possible Syntax error.  Level set length scale is zero.");
 
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, ls->Length_Scale);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+               goma_ctx->fem.ls->Length_Scale);
     } else {
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %f) %s", "Level Set Length Scale",
-               ls->Length_Scale, default_string);
+               goma_ctx->fem.ls->Length_Scale, default_string);
     }
 
     ECHO(echo_string, echo_file);
@@ -2044,7 +2045,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        ls->adapt = TRUE;
+        goma_ctx->fem.ls->adapt = TRUE;
       }
 
       ECHO("\n***Level Set Adaptive Mesh***\n", echo_file);
@@ -2052,76 +2053,79 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    if (ls->adapt) {
+    if (goma_ctx->fem.ls->adapt) {
 
-      ls->adapt_width = 3.0 * ls->Length_Scale;
+      goma_ctx->fem.ls->adapt_width = 3.0 * goma_ctx->fem.ls->Length_Scale;
       iread = look_for_optional(ifp, "Level Set Adapt Width", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%lf", &(ls->adapt_width)) != 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->adapt_width)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading Level Set Adapt Width");
         }
-        if (fabs(ls->adapt_width) <= 0.0)
+        if (fabs(goma_ctx->fem.ls->adapt_width) <= 0.0)
           GOMA_WH(-1, "Possible Syntax error.  Level set adapt width <= 0");
 
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, ls->adapt_width);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+                 goma_ctx->fem.ls->adapt_width);
       } else {
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %f) %s", "Level Set Adapt Width",
-                 ls->adapt_width, default_string);
+                 goma_ctx->fem.ls->adapt_width, default_string);
       }
 
       ECHO(echo_string, echo_file);
-      ls->adapt_inner_size = -1.0;
+      goma_ctx->fem.ls->adapt_inner_size = -1.0;
       iread = look_for_optional(ifp, "Level Set Adapt Inner Size", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%lf", &(ls->adapt_inner_size)) != 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->adapt_inner_size)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading Level Set Adapt Inner Size");
         }
-        if (fabs(ls->adapt_inner_size) <= 0.0)
+        if (fabs(goma_ctx->fem.ls->adapt_inner_size) <= 0.0)
           GOMA_WH(-1, "Possible Syntax error.  Level set adapt inner size <= 0");
 
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, ls->adapt_inner_size);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+                 goma_ctx->fem.ls->adapt_inner_size);
       } else {
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %f) %s", "Level Set Adapt Inner Size",
-                 ls->adapt_inner_size, default_string);
+                 goma_ctx->fem.ls->adapt_inner_size, default_string);
       }
 
       ECHO(echo_string, echo_file);
 
-      ls->adapt_outer_size = -1.0;
+      goma_ctx->fem.ls->adapt_outer_size = -1.0;
       iread = look_for_optional(ifp, "Level Set Adapt Outer Size", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%lf", &(ls->adapt_outer_size)) != 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->adapt_outer_size)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading Level Set Adapt Outer Size");
         }
 
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, ls->adapt_outer_size);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+                 goma_ctx->fem.ls->adapt_outer_size);
       } else {
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %f) %s", "Level Set Adapt Outer Size",
-                 ls->adapt_outer_size, default_string);
+                 goma_ctx->fem.ls->adapt_outer_size, default_string);
       }
-      if (fabs(ls->adapt_outer_size) <= 0.0)
+      if (fabs(goma_ctx->fem.ls->adapt_outer_size) <= 0.0)
         GOMA_EH(GOMA_ERROR, "Possible Syntax error.  Level set adapt outer size <= 0");
 
       ECHO(echo_string, echo_file);
-      ls->adapt_freq = 3;
+      goma_ctx->fem.ls->adapt_freq = 3;
       iread = look_for_optional(ifp, "Level Set Adapt Frequency", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%d", &(ls->adapt_freq)) != 1) {
+        if (fscanf(ifp, "%d", &(goma_ctx->fem.ls->adapt_freq)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading Level Set Adapt Frequency");
         }
-        if (ls->adapt_freq <= 0)
+        if (goma_ctx->fem.ls->adapt_freq <= 0)
           GOMA_EH(GOMA_ERROR, "Syntax error.  Level set adapt freq <= 0");
 
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, ls->adapt_freq);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->fem.ls->adapt_freq);
       } else {
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %d) %s", "Level Set Adapt Outer Size",
-                 ls->adapt_freq, default_string);
+                 goma_ctx->fem.ls->adapt_freq, default_string);
       }
 
       ECHO(echo_string, echo_file);
     }
 
-    ls->Init_Method = -1;
+    goma_ctx->fem.ls->Init_Method = -1;
     iread = look_for_optional(ifp, "Level Set Initialization Method", input, '=');
     if (iread == 1) {
       if (fscanf(ifp, "%s", input) != 1) {
@@ -2129,22 +2133,22 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       }
 
       if (strcmp(input, "Projection") == 0) {
-        ls->Init_Method = PROJECT;
+        goma_ctx->fem.ls->Init_Method = PROJECT;
         ECHO("Level Set Initialization Method = Projection", echo_file);
       } else if (strcmp(input, "Exodus") == 0) {
-        ls->Init_Method = EXO_READ;
+        goma_ctx->fem.ls->Init_Method = EXO_READ;
         ECHO("Level Set Initialization Method = Exodus", echo_file);
       } else if (strcmp(input, "Nodeset") == 0) {
         struct LS_Surf *surf;
         struct LS_Surf_NS_Data *s;
-        ls->Init_Method = SURFACES;
+        goma_ctx->fem.ls->Init_Method = SURFACES;
 
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Level Set Initialization Method",
                  input);
 
-        ls->init_surf_list = create_surf_list();
+        goma_ctx->fem.ls->init_surf_list = create_surf_list();
         surf = create_surf(LS_SURF_NS);
-        append_surf(ls->init_surf_list, surf);
+        append_surf(goma_ctx->fem.ls->init_surf_list, surf);
         s = (struct LS_Surf_NS_Data *)surf->data;
 
         if (fscanf(ifp, "%s %d %s %d", input, &(s->ns_id), input, &(s->PosEB_id)) != 4) {
@@ -2159,7 +2163,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       } else if ((strcmp(input, "Surfaces") == 0)) {
         int num_surf;
 
-        ls->Init_Method = SURFACES;
+        goma_ctx->fem.ls->Init_Method = SURFACES;
 
         if (fscanf(ifp, "%d", &num_surf) != 1) {
           GOMA_EH(GOMA_ERROR, "Surfaces initialization method needs number of surfaces specified.");
@@ -2169,56 +2173,60 @@ void rd_levelset_specs(FILE *ifp, char *input) {
                  num_surf);
         ECHO(echo_string, echo_file);
 
-        ls->init_surf_list = create_surf_list();
-        read_surface_objects(ifp, input, ls->init_surf_list, num_surf);
+        goma_ctx->fem.ls->init_surf_list = create_surf_list();
+        read_surface_objects(ifp, input, goma_ctx->fem.ls->init_surf_list, num_surf);
       } else if (!strcmp(input, "SM_object")) {
         GOMA_EH(GOMA_ERROR, "CGM not supported, SM_object");
       } else
         GOMA_WH(-1, "Level Set Initialization method undefined");
     }
 
-    ls->Periodic_Planes = FALSE;
+    goma_ctx->fem.ls->Periodic_Planes = FALSE;
     for (i = 0; i < 6; i++)
-      ls->Periodic_Plane_Loc[i] = 0.;
+      goma_ctx->fem.ls->Periodic_Plane_Loc[i] = 0.;
     iread = look_for_optional(ifp, "Level Set Periodic Planes", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf", &(ls->Periodic_Plane_Loc[0]),
-                 &(ls->Periodic_Plane_Loc[1]), &(ls->Periodic_Plane_Loc[2]),
-                 &(ls->Periodic_Plane_Loc[3]), &(ls->Periodic_Plane_Loc[4]),
-                 &(ls->Periodic_Plane_Loc[5])) != 6) {
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf", &(goma_ctx->fem.ls->Periodic_Plane_Loc[0]),
+                 &(goma_ctx->fem.ls->Periodic_Plane_Loc[1]),
+                 &(goma_ctx->fem.ls->Periodic_Plane_Loc[2]),
+                 &(goma_ctx->fem.ls->Periodic_Plane_Loc[3]),
+                 &(goma_ctx->fem.ls->Periodic_Plane_Loc[4]),
+                 &(goma_ctx->fem.ls->Periodic_Plane_Loc[5])) != 6) {
         GOMA_EH(GOMA_ERROR, "error reading Level Set Periodic Planes");
       }
-      ls->Periodic_Planes = TRUE;
+      goma_ctx->fem.ls->Periodic_Planes = TRUE;
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT,
                "Level Set Periodic Planes = %.4g %.4g %.4g %.4g %.4g %.4g",
-               ls->Periodic_Plane_Loc[0], ls->Periodic_Plane_Loc[1], ls->Periodic_Plane_Loc[2],
-               ls->Periodic_Plane_Loc[2], ls->Periodic_Plane_Loc[3], ls->Periodic_Plane_Loc[3]);
+               goma_ctx->fem.ls->Periodic_Plane_Loc[0], goma_ctx->fem.ls->Periodic_Plane_Loc[1],
+               goma_ctx->fem.ls->Periodic_Plane_Loc[2], goma_ctx->fem.ls->Periodic_Plane_Loc[2],
+               goma_ctx->fem.ls->Periodic_Plane_Loc[3], goma_ctx->fem.ls->Periodic_Plane_Loc[3]);
       ECHO(echo_string, echo_file);
     }
 
-    ls->Control_Width = 1.0;
+    goma_ctx->fem.ls->Control_Width = 1.0;
 
     iread = look_for_optional(ifp, "Level Set Control Width", input, '=');
 
     if (iread == 1) {
-      if (fscanf(ifp, "%lf", &(ls->Control_Width)) != 1) {
+      if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Control_Width)) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Level Set Length Scale");
       }
 
-      if (ls->Control_Width > 10.0)
+      if (goma_ctx->fem.ls->Control_Width > 10.0)
         GOMA_WH(-1, "That's an awfully large Level Set Control Width.\n");
 
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, ls->Control_Width);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+               goma_ctx->fem.ls->Control_Width);
       ECHO(echo_string, echo_file);
 
     } else
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %f) %s", "Level Set Control Width",
-               ls->Control_Width, default_string);
+               goma_ctx->fem.ls->Control_Width, default_string);
 
     ECHO(echo_string, echo_file);
 
-    tran->use_var_norm[8] = 0;
+    goma_ctx->fem.tran->use_var_norm[8] = 0;
 
     iread = look_for_optional(ifp, "Level Set Timestep Control", input, '=');
 
@@ -2228,32 +2236,32 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       }
       stringup(input);
       if (!strcmp(input, "YES") || !strcmp(input, "ON"))
-        tran->use_var_norm[8] = 1;
+        goma_ctx->fem.tran->use_var_norm[8] = 1;
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Level Set Timestep Control", input);
       ECHO(echo_string, echo_file);
     }
 
-    ls->Renorm_Tolerance = 0.5;
+    goma_ctx->fem.ls->Renorm_Tolerance = 0.5;
 
     iread = look_for_optional(ifp, "Level Set Renormalization Tolerance", input, '=');
 
     if (iread == 1) {
-      if (fscanf(ifp, "%lf", &(ls->Renorm_Tolerance)) != 1) {
+      if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Renorm_Tolerance)) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Level Set Renormalization tolerance");
       }
-      if (ls->Renorm_Tolerance > 1.0)
+      if (goma_ctx->fem.ls->Renorm_Tolerance > 1.0)
         GOMA_WH(-1, "That's an awfully large Level Set Renormalization Tolerance.\n");
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Level Set Renormalization Tolerance",
-               ls->Renorm_Tolerance);
+               goma_ctx->fem.ls->Renorm_Tolerance);
     } else
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %f) ",
-               "Level Set Renormalization Tolerance", ls->Renorm_Tolerance);
+               "Level Set Renormalization Tolerance", goma_ctx->fem.ls->Renorm_Tolerance);
 
     ECHO(echo_string, echo_file);
 
-    ls->Renorm_Method = FALSE;
+    goma_ctx->fem.ls->Renorm_Method = FALSE;
 
     iread = look_for_optional(ifp, "Level Set Renormalization Method", input, '=');
 
@@ -2265,194 +2273,194 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = ", "Level Set Renormalization Method");
 
       if (strcmp(input, "Correction") == 0) {
-        ls->Renorm_Method = CORRECT;
+        goma_ctx->fem.ls->Renorm_Method = CORRECT;
 
         strcat(echo_string, "Correction");
       } else if (strcmp(input, "Huygens") == 0) {
-        ls->Renorm_Method = HUYGENS;
+        goma_ctx->fem.ls->Renorm_Method = HUYGENS;
         strcat(echo_string, "Huygens");
       } else if (strcmp(input, "Facet_Based") == 0) {
-        ls->Renorm_Method = FACET_BASED;
+        goma_ctx->fem.ls->Renorm_Method = FACET_BASED;
         strcat(echo_string, "Facet_Based");
       } else if (strcmp(input, "Huygens_Constrained") == 0) {
 
-        ls->Renorm_Method = HUYGENS_C;
+        goma_ctx->fem.ls->Renorm_Method = HUYGENS_C;
 
         strcat(echo_string, "Huygens_Constrained");
 
-        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Mass_Value)) == 1) {
           char *s = endofstring(echo_string);
 
-          ls->Mass_Sign = ls->Mass_Value <= 0 ? I_NEG_FILL : I_POS_FILL;
-          ls->Mass_Value = fabs(ls->Mass_Value);
+          goma_ctx->fem.ls->Mass_Sign = goma_ctx->fem.ls->Mass_Value <= 0 ? I_NEG_FILL : I_POS_FILL;
+          goma_ctx->fem.ls->Mass_Value = fabs(goma_ctx->fem.ls->Mass_Value);
 
-          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+          SPF(s, " %.4g", goma_ctx->fem.ls->Mass_Sign * goma_ctx->fem.ls->Mass_Value);
         } else {
-          ls->Mass_Value = 0.0;
-          ls->Mass_Sign = I_NEG_FILL;
+          goma_ctx->fem.ls->Mass_Value = 0.0;
+          goma_ctx->fem.ls->Mass_Sign = I_NEG_FILL;
         }
       } else if (strcmp(input, "Huygens_Constrained_Mass_Negative") == 0) {
-        ls->Renorm_Method = HUYGENS_C;
+        goma_ctx->fem.ls->Renorm_Method = HUYGENS_C;
 
         strcat(echo_string, "Huygens_Constrained_Mass_Negative");
 
-        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Mass_Value)) == 1) {
           char *s = endofstring(echo_string);
 
-          ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
-          ls->Mass_Value = fabs(ls->Mass_Value);
+          goma_ctx->fem.ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
+          goma_ctx->fem.ls->Mass_Value = fabs(goma_ctx->fem.ls->Mass_Value);
 
-          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+          SPF(s, " %.4g", goma_ctx->fem.ls->Mass_Sign * goma_ctx->fem.ls->Mass_Value);
         } else {
-          ls->Mass_Value = 0.0;
-          ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
+          goma_ctx->fem.ls->Mass_Value = 0.0;
+          goma_ctx->fem.ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
         }
       } else if (strcmp(input, "Huygens_Constrained_Mass_Positive") == 0) {
-        ls->Renorm_Method = HUYGENS_C;
+        goma_ctx->fem.ls->Renorm_Method = HUYGENS_C;
 
         strcat(echo_string, "Huygens_Constrained_Mass_Positive");
 
-        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Mass_Value)) == 1) {
           char *s = endofstring(echo_string);
 
-          ls->Mass_Sign = I_MASS_POSITIVE_FILL;
-          ls->Mass_Value = fabs(ls->Mass_Value);
+          goma_ctx->fem.ls->Mass_Sign = I_MASS_POSITIVE_FILL;
+          goma_ctx->fem.ls->Mass_Value = fabs(goma_ctx->fem.ls->Mass_Value);
 
-          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+          SPF(s, " %.4g", goma_ctx->fem.ls->Mass_Sign * goma_ctx->fem.ls->Mass_Value);
         } else {
-          ls->Mass_Value = 0.0;
-          ls->Mass_Sign = I_MASS_POSITIVE_FILL;
+          goma_ctx->fem.ls->Mass_Value = 0.0;
+          goma_ctx->fem.ls->Mass_Sign = I_MASS_POSITIVE_FILL;
         }
       } else if (strcmp(input, "Smolianski_Like_Mass_Negative") == 0) {
-        ls->Renorm_Method = HUYGENS_MASS_ITER;
+        goma_ctx->fem.ls->Renorm_Method = HUYGENS_MASS_ITER;
 
         strcat(echo_string, "Smolianski_Like_Mass_Negative");
 
-        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Mass_Value)) == 1) {
           char *s = endofstring(echo_string);
 
-          ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
-          ls->Mass_Value = ls->Mass_Value;
+          goma_ctx->fem.ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
+          goma_ctx->fem.ls->Mass_Value = goma_ctx->fem.ls->Mass_Value;
 
-          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+          SPF(s, " %.4g", goma_ctx->fem.ls->Mass_Sign * goma_ctx->fem.ls->Mass_Value);
         } else {
-          ls->Mass_Value = 0.0;
-          ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
+          goma_ctx->fem.ls->Mass_Value = 0.0;
+          goma_ctx->fem.ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
         }
       } else if (strcmp(input, "Smolianski_Like_Mass_Positive") == 0) {
-        ls->Renorm_Method = HUYGENS_MASS_ITER;
+        goma_ctx->fem.ls->Renorm_Method = HUYGENS_MASS_ITER;
 
         strcat(echo_string, "Smolianski_Like_Mass_Positive");
 
-        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Mass_Value)) == 1) {
           char *s = endofstring(echo_string);
 
-          ls->Mass_Sign = I_MASS_POSITIVE_FILL;
-          ls->Mass_Value = ls->Mass_Value;
+          goma_ctx->fem.ls->Mass_Sign = I_MASS_POSITIVE_FILL;
+          goma_ctx->fem.ls->Mass_Value = goma_ctx->fem.ls->Mass_Value;
 
-          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+          SPF(s, " %.4g", goma_ctx->fem.ls->Mass_Sign * goma_ctx->fem.ls->Mass_Value);
         } else {
-          ls->Mass_Value = 0.0;
-          ls->Mass_Sign = I_MASS_POSITIVE_FILL;
+          goma_ctx->fem.ls->Mass_Value = 0.0;
+          goma_ctx->fem.ls->Mass_Sign = I_MASS_POSITIVE_FILL;
         }
       } else if (strcmp(input, "Smolianski_Like_Negative") == 0) {
-        ls->Renorm_Method = HUYGENS_MASS_ITER;
+        goma_ctx->fem.ls->Renorm_Method = HUYGENS_MASS_ITER;
 
         strcat(echo_string, "Smolianski_Like_Negative");
 
-        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Mass_Value)) == 1) {
           char *s = endofstring(echo_string);
 
-          ls->Mass_Sign = I_NEG_FILL;
-          ls->Mass_Value = ls->Mass_Value;
+          goma_ctx->fem.ls->Mass_Sign = I_NEG_FILL;
+          goma_ctx->fem.ls->Mass_Value = goma_ctx->fem.ls->Mass_Value;
 
-          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+          SPF(s, " %.4g", goma_ctx->fem.ls->Mass_Sign * goma_ctx->fem.ls->Mass_Value);
         } else {
-          ls->Mass_Value = 0.0;
-          ls->Mass_Sign = I_NEG_FILL;
+          goma_ctx->fem.ls->Mass_Value = 0.0;
+          goma_ctx->fem.ls->Mass_Sign = I_NEG_FILL;
         }
       } else if (strcmp(input, "Smolianski_Like_Positive") == 0) {
-        ls->Renorm_Method = HUYGENS_MASS_ITER;
+        goma_ctx->fem.ls->Renorm_Method = HUYGENS_MASS_ITER;
 
         strcat(echo_string, "Smolianski_Like_Positive");
 
-        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Mass_Value)) == 1) {
           char *s = endofstring(echo_string);
 
-          ls->Mass_Sign = I_POS_FILL;
-          ls->Mass_Value = ls->Mass_Value;
+          goma_ctx->fem.ls->Mass_Sign = I_POS_FILL;
+          goma_ctx->fem.ls->Mass_Value = goma_ctx->fem.ls->Mass_Value;
 
-          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+          SPF(s, " %.4g", goma_ctx->fem.ls->Mass_Sign * goma_ctx->fem.ls->Mass_Value);
         } else {
-          ls->Mass_Value = 0.0;
-          ls->Mass_Sign = I_POS_FILL;
+          goma_ctx->fem.ls->Mass_Value = 0.0;
+          goma_ctx->fem.ls->Mass_Sign = I_POS_FILL;
         }
       } else if (strcmp(input, "Smolianski_Only_Mass_Negative") == 0) {
-        ls->Renorm_Method = SMOLIANSKI_ONLY;
+        goma_ctx->fem.ls->Renorm_Method = SMOLIANSKI_ONLY;
 
         strcat(echo_string, "Smolianski_Only_Mass_Negative");
 
-        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Mass_Value)) == 1) {
           char *s = endofstring(echo_string);
 
-          ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
-          ls->Mass_Value = ls->Mass_Value;
+          goma_ctx->fem.ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
+          goma_ctx->fem.ls->Mass_Value = goma_ctx->fem.ls->Mass_Value;
 
-          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+          SPF(s, " %.4g", goma_ctx->fem.ls->Mass_Sign * goma_ctx->fem.ls->Mass_Value);
         } else {
-          ls->Mass_Value = 0.0;
-          ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
+          goma_ctx->fem.ls->Mass_Value = 0.0;
+          goma_ctx->fem.ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
         }
       } else if (strcmp(input, "Smolianski_Only_Mass_Positive") == 0) {
-        ls->Renorm_Method = SMOLIANSKI_ONLY;
+        goma_ctx->fem.ls->Renorm_Method = SMOLIANSKI_ONLY;
 
         strcat(echo_string, "Smolianski_Only_Mass_Positive");
 
-        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Mass_Value)) == 1) {
           char *s = endofstring(echo_string);
 
-          ls->Mass_Sign = I_MASS_POSITIVE_FILL;
-          ls->Mass_Value = ls->Mass_Value;
+          goma_ctx->fem.ls->Mass_Sign = I_MASS_POSITIVE_FILL;
+          goma_ctx->fem.ls->Mass_Value = goma_ctx->fem.ls->Mass_Value;
 
-          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+          SPF(s, " %.4g", goma_ctx->fem.ls->Mass_Sign * goma_ctx->fem.ls->Mass_Value);
         } else {
-          ls->Mass_Value = 0.0;
-          ls->Mass_Sign = I_MASS_POSITIVE_FILL;
+          goma_ctx->fem.ls->Mass_Value = 0.0;
+          goma_ctx->fem.ls->Mass_Sign = I_MASS_POSITIVE_FILL;
         }
       } else if (strcmp(input, "Smolianski_Only_Negative") == 0) {
-        ls->Renorm_Method = SMOLIANSKI_ONLY;
+        goma_ctx->fem.ls->Renorm_Method = SMOLIANSKI_ONLY;
 
         strcat(echo_string, "Smolianski_Only_Negative");
 
-        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Mass_Value)) == 1) {
           char *s = endofstring(echo_string);
 
-          ls->Mass_Sign = I_NEG_FILL;
-          ls->Mass_Value = ls->Mass_Value;
+          goma_ctx->fem.ls->Mass_Sign = I_NEG_FILL;
+          goma_ctx->fem.ls->Mass_Value = goma_ctx->fem.ls->Mass_Value;
 
-          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+          SPF(s, " %.4g", goma_ctx->fem.ls->Mass_Sign * goma_ctx->fem.ls->Mass_Value);
         } else {
-          ls->Mass_Value = 0.0;
-          ls->Mass_Sign = I_NEG_FILL;
+          goma_ctx->fem.ls->Mass_Value = 0.0;
+          goma_ctx->fem.ls->Mass_Sign = I_NEG_FILL;
         }
       } else if (strcmp(input, "Smolianski_Only_Positive") == 0) {
-        ls->Renorm_Method = SMOLIANSKI_ONLY;
+        goma_ctx->fem.ls->Renorm_Method = SMOLIANSKI_ONLY;
 
         strcat(echo_string, "Smolianski_Only_Positive");
 
-        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Mass_Value)) == 1) {
           char *s = endofstring(echo_string);
 
-          ls->Mass_Sign = I_POS_FILL;
-          ls->Mass_Value = ls->Mass_Value;
+          goma_ctx->fem.ls->Mass_Sign = I_POS_FILL;
+          goma_ctx->fem.ls->Mass_Value = goma_ctx->fem.ls->Mass_Value;
 
-          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+          SPF(s, " %.4g", goma_ctx->fem.ls->Mass_Sign * goma_ctx->fem.ls->Mass_Value);
         } else {
-          ls->Mass_Value = 0.0;
-          ls->Mass_Sign = I_POS_FILL;
+          goma_ctx->fem.ls->Mass_Value = 0.0;
+          goma_ctx->fem.ls->Mass_Sign = I_POS_FILL;
         }
       } else if ((strcmp(input, "None") == 0) || (strcmp(input, "No") == 0)) {
-        ls->Renorm_Method = FALSE;
+        goma_ctx->fem.ls->Renorm_Method = FALSE;
         strcat(echo_string, "None");
       } else {
         GOMA_EH(GOMA_ERROR, "Level Set Renorm Method not known.\n");
@@ -2461,7 +2469,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->Ignore_F_deps = FALSE;
+    goma_ctx->fem.ls->Ignore_F_deps = FALSE;
     iread = look_for_optional(ifp, "Ignore Level Set Dependencies", input, '=');
     if (iread == 1) {
       if (fscanf(ifp, "%s", input) != 1) {
@@ -2471,19 +2479,19 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        if (tran->Fill_Equation == FILL_EQN_ADVECT &&
-            tran->Fill_Weight_Fcn != FILL_WEIGHT_EXPLICIT) {
+        if (goma_ctx->fem.tran->Fill_Equation == FILL_EQN_ADVECT &&
+            goma_ctx->fem.tran->Fill_Weight_Fcn != FILL_WEIGHT_EXPLICIT) {
           GOMA_EH(GOMA_ERROR, "Maybe I should let you ignore LS dependencies even with implicit "
                               "LS, but I won't!\n");
         }
-        ls->Ignore_F_deps = TRUE;
+        goma_ctx->fem.ls->Ignore_F_deps = TRUE;
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Ignore Level Set Dependencies", input);
       ECHO(echo_string, echo_file);
     }
 
-    ls->Interface_Output = FALSE;
-    ls->output_file = NULL;
+    goma_ctx->fem.ls->Interface_Output = FALSE;
+    goma_ctx->fem.ls->output_file = NULL;
 
     iread = look_for_optional(ifp, "Level Set Output Filename", input, '=');
 
@@ -2492,46 +2500,47 @@ void rd_levelset_specs(FILE *ifp, char *input) {
         GOMA_EH(GOMA_ERROR, "Need string parameter for level set output filename .\n");
       }
 
-      ls->output_file = smalloc(sizeof(char) * (strlen(input) + 1));
+      goma_ctx->fem.ls->output_file = smalloc(sizeof(char) * (strlen(input) + 1));
 
-      strcpy(ls->output_file, input);
+      strcpy(goma_ctx->fem.ls->output_file, input);
 
-      ls->Interface_Output = TRUE;
+      goma_ctx->fem.ls->Interface_Output = TRUE;
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Level Set Output Filename", input);
       ECHO(echo_string, echo_file);
     }
 
-    ls->Renorm_Freq = ls->Renorm_Countdown = -1; /* Default is never to renormalize */
+    goma_ctx->fem.ls->Renorm_Freq = goma_ctx->fem.ls->Renorm_Countdown =
+        -1; /* Default is never to renormalize */
 
     iread = look_for_optional(ifp, "Level Set Renormalization Frequency", input, '=');
 
     if (iread == 1) {
-      if (fscanf(ifp, "%d", &(ls->Renorm_Freq)) != 1) {
+      if (fscanf(ifp, "%d", &(goma_ctx->fem.ls->Renorm_Freq)) != 1) {
         GOMA_EH(GOMA_ERROR, "Error reading renormalization frequency.\n");
       }
-      ls->Renorm_Countdown = ls->Renorm_Freq;
+      goma_ctx->fem.ls->Renorm_Countdown = goma_ctx->fem.ls->Renorm_Freq;
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Level Set Renormalization Frequency",
-               ls->Renorm_Freq);
+               goma_ctx->fem.ls->Renorm_Freq);
       ECHO(echo_string, echo_file);
     }
 
-    ls->SubcyclesAfterRenorm = 1;
+    goma_ctx->fem.ls->SubcyclesAfterRenorm = 1;
 
     iread = look_for_optional(ifp, "Level Set Renormalization Subcycles", input, '=');
 
     if (iread == 1) {
-      if (fscanf(ifp, "%d", &(ls->SubcyclesAfterRenorm)) != 1) {
+      if (fscanf(ifp, "%d", &(goma_ctx->fem.ls->SubcyclesAfterRenorm)) != 1) {
         GOMA_EH(GOMA_ERROR, "Error reading renormalization subcycles.\n");
       }
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Level Set Renormalization Subcycles",
-               ls->SubcyclesAfterRenorm);
+               goma_ctx->fem.ls->SubcyclesAfterRenorm);
       ECHO(echo_string, echo_file);
     }
 
-    ls->Force_Initial_Renorm = FALSE;
+    goma_ctx->fem.ls->Force_Initial_Renorm = FALSE;
     iread = look_for_optional(ifp, "Force Initial Level Set Renormalization", input, '=');
     if (iread == 1) {
       if (fscanf(ifp, "%s", input) != 1) {
@@ -2541,7 +2550,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        ls->Force_Initial_Renorm = TRUE;
+        goma_ctx->fem.ls->Force_Initial_Renorm = TRUE;
       }
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat,
@@ -2549,19 +2558,19 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->Initial_LS_Displacement = 0.;
+    goma_ctx->fem.ls->Initial_LS_Displacement = 0.;
     iread = look_for_optional(ifp, "Initial Level Set Displacement", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%lf", &(ls->Initial_LS_Displacement)) != 1) {
+      if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Initial_LS_Displacement)) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Initial Level Set Displacement");
       }
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Initial Level Set Displacement",
-               ls->Initial_LS_Displacement);
+               goma_ctx->fem.ls->Initial_LS_Displacement);
       ECHO(echo_string, echo_file);
     }
 
-    ls->Isosurface_Subsurf_Type = LS_SURF_POINT;
+    goma_ctx->fem.ls->Isosurface_Subsurf_Type = LS_SURF_POINT;
     iread = look_for_optional(ifp, "Level Set Reconstruction Method", input, '=');
     if (iread == 1) {
       if (fscanf(ifp, "%s", input) != 1) {
@@ -2571,9 +2580,9 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if (strcmp(input, "POINTS") == 0) {
-        ls->Isosurface_Subsurf_Type = LS_SURF_POINT;
+        goma_ctx->fem.ls->Isosurface_Subsurf_Type = LS_SURF_POINT;
       } else if (strcmp(input, "FACETS") == 0) {
-        ls->Isosurface_Subsurf_Type = LS_SURF_FACET;
+        goma_ctx->fem.ls->Isosurface_Subsurf_Type = LS_SURF_FACET;
       } else {
         GOMA_EH(GOMA_ERROR, "Level Set Reconstruction Method not known.\n");
       }
@@ -2582,7 +2591,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->Contact_Inflection = FALSE;
+    goma_ctx->fem.ls->Contact_Inflection = FALSE;
     iread = look_for_optional(ifp, "Level Set Contact Extension", input, '=');
     if (iread == 1) {
       if (fscanf(ifp, "%s", input) != 1) {
@@ -2592,7 +2601,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        ls->Contact_Inflection = TRUE;
+        goma_ctx->fem.ls->Contact_Inflection = TRUE;
       }
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Level Set Contact Extension", input);
@@ -2600,7 +2609,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
     }
 
     /* set default evolution scheme based on compiler flag */
-    ls->Evolution = LS_EVOLVE_ADVECT_COUPLED;
+    goma_ctx->fem.ls->Evolution = LS_EVOLVE_ADVECT_COUPLED;
 
     iread = look_for_optional(ifp, "Level Set Slave Surface", input, '=');
     if (iread == 1) {
@@ -2611,9 +2620,9 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        ls->Evolution = LS_EVOLVE_SLAVE;
-        ls->Renorm_Method = FALSE;
-        if (ls->Init_Method != SURFACES)
+        goma_ctx->fem.ls->Evolution = LS_EVOLVE_SLAVE;
+        goma_ctx->fem.ls->Renorm_Method = FALSE;
+        if (goma_ctx->fem.ls->Init_Method != SURFACES)
           GOMA_EH(GOMA_ERROR, "Must define Level Set Initialization method to be SURFACES or "
                               "NODESET for slave surfaces");
       }
@@ -2622,20 +2631,20 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->Contact_Tolerance = 0.0;
+    goma_ctx->fem.ls->Contact_Tolerance = 0.0;
     iread = look_for_optional(ifp, "Level Set Contact Tolerance", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%lf", &(ls->Contact_Tolerance)) != 1) {
+      if (fscanf(ifp, "%lf", &(goma_ctx->fem.ls->Contact_Tolerance)) != 1) {
         GOMA_EH(GOMA_ERROR, "Error reading Level Set Contact Tolerance.");
       }
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %lf", "Level Set Contact Tolerance",
-               ls->Contact_Tolerance);
+               goma_ctx->fem.ls->Contact_Tolerance);
       ECHO(echo_string, echo_file);
     }
 
     /* Check if this is a fluid/solid interaction problem. */
-    ls->Fluid_Solid = FALSE;
+    goma_ctx->fem.ls->Fluid_Solid = FALSE;
     iread = look_for_optional(ifp, "Level Set Fluid Solid", input, '=');
     if (iread == 1) {
       if (fscanf(ifp, "%s", input) != 1) {
@@ -2645,7 +2654,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if (strcmp(input, "ON") == 0 || strcmp(input, "YES") == 0 || strcmp(input, "TRUE") == 0) {
-        ls->Fluid_Solid = TRUE;
+        goma_ctx->fem.ls->Fluid_Solid = TRUE;
       }
       /* Sanity check while we're here. */
       else if (strcmp(input, "OFF") != 0 && strcmp(input, "NO") != 0 &&
@@ -2662,21 +2671,22 @@ void rd_levelset_specs(FILE *ifp, char *input) {
      * the zero level set is the solid phase.  Note that Level Set Fluid
      * Solid must be specified for this to be used.
      */
-    ls->Fluid_Sign = 0;
-    ls->Solid_Sign = 0;
-    if (ls->Fluid_Solid) {
+    goma_ctx->fem.ls->Fluid_Sign = 0;
+    goma_ctx->fem.ls->Solid_Sign = 0;
+    if (goma_ctx->fem.ls->Fluid_Solid) {
       look_for(ifp, "Level Set Solid Sign", input, '=');
-      ls->Solid_Sign = read_int(ifp, "Level Set Solid Sign");
-      if (ls->Solid_Sign > 0)
-        ls->Solid_Sign = 1;
-      else if (ls->Solid_Sign < 0)
-        ls->Solid_Sign = -1;
+      goma_ctx->fem.ls->Solid_Sign = read_int(ifp, "Level Set Solid Sign");
+      if (goma_ctx->fem.ls->Solid_Sign > 0)
+        goma_ctx->fem.ls->Solid_Sign = 1;
+      else if (goma_ctx->fem.ls->Solid_Sign < 0)
+        goma_ctx->fem.ls->Solid_Sign = -1;
       else
         GOMA_EH(GOMA_ERROR, "Level Set Solid Sign requires a non-zero integer parameter.");
 
-      ls->Fluid_Sign = -ls->Solid_Sign;
+      goma_ctx->fem.ls->Fluid_Sign = -goma_ctx->fem.ls->Solid_Sign;
 
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Level Set Solid Sign", ls->Solid_Sign);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Level Set Solid Sign",
+               goma_ctx->fem.ls->Solid_Sign);
       ECHO(echo_string, echo_file);
     }
 
@@ -2695,8 +2705,8 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->Search_Option = SEGMENT_SEARCH;
-    ls->Grid_Search_Depth = 0;
+    goma_ctx->fem.ls->Search_Option = SEGMENT_SEARCH;
+    goma_ctx->fem.ls->Grid_Search_Depth = 0;
 
     iread = look_for_optional(ifp, "Level Set Search Option", input, '=');
     if (iread == 1) {
@@ -2714,15 +2724,15 @@ void rd_levelset_specs(FILE *ifp, char *input) {
         GOMA_EH(GOMA_ERROR,
                 "The Level Set Search Option : GRID_SEARCH is not functioning at this time.\n");
 
-        ls->Search_Option = GRID_SEARCH;
-        err = fscanf(ifp, "%d", &(ls->Grid_Search_Depth));
+        goma_ctx->fem.ls->Search_Option = GRID_SEARCH;
+        err = fscanf(ifp, "%d", &(goma_ctx->fem.ls->Grid_Search_Depth));
         if (err != 1) {
           GOMA_EH(GOMA_ERROR, "Expected to read one int for GRID_SEARCH");
         }
 
-        SPF(endofstring(echo_string), " %d", ls->Grid_Search_Depth);
+        SPF(endofstring(echo_string), " %d", goma_ctx->fem.ls->Grid_Search_Depth);
       } else if (strcmp(input, "SEGMENT") == 0) {
-        ls->Search_Option = SEGMENT_SEARCH;
+        goma_ctx->fem.ls->Search_Option = SEGMENT_SEARCH;
       } else {
         GOMA_EH(GOMA_ERROR, " Allowable choices for Search Option are: SEGMENT or GRID_SEARCH");
       }
@@ -2730,22 +2740,22 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->Integration_Depth = 0;
+    goma_ctx->fem.ls->Integration_Depth = 0;
 
     iread = look_for_optional(ifp, "Level Set Subgrid Integration Depth", input, '=');
 
     if (iread == 1) {
-      if (fscanf(ifp, "%d", &(ls->Integration_Depth)) != 1) {
+      if (fscanf(ifp, "%d", &(goma_ctx->fem.ls->Integration_Depth)) != 1) {
         GOMA_EH(
             GOMA_ERROR,
             "Subgrid Integration Depth for Level Set needs a single positive integer parameter.");
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Level Set Subgrid Integration Depth",
-               ls->Integration_Depth);
+               goma_ctx->fem.ls->Integration_Depth);
       ECHO(echo_string, echo_file);
     }
 
-    ls->SubElemIntegration = FALSE;
+    goma_ctx->fem.ls->SubElemIntegration = FALSE;
     iread = look_for_optional(ifp, "Level Set Subelement Integration", input, '=');
     if (iread == 1) {
       if (fscanf(ifp, "%s", input) != 1) {
@@ -2755,11 +2765,11 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        ls->SubElemIntegration = TRUE;
-        if (ls->Integration_Depth > 0)
+        goma_ctx->fem.ls->SubElemIntegration = TRUE;
+        if (goma_ctx->fem.ls->Integration_Depth > 0)
           GOMA_EH(GOMA_ERROR,
                   "Combination of Subgrid and Subelement integration is not supported.");
-        if (ls->Length_Scale > 0.)
+        if (goma_ctx->fem.ls->Length_Scale > 0.)
           GOMA_EH(GOMA_ERROR, "I don't think it makes sense to have subelement integration and "
                               "non-zero length scale.");
       }
@@ -2769,7 +2779,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->AdaptIntegration = FALSE;
+    goma_ctx->fem.ls->AdaptIntegration = FALSE;
     iread = look_for_optional(ifp, "Level Set Adaptive Integration", input, '=');
     if (iread == 1) {
       if (fscanf(ifp, "%s", input) != 1) {
@@ -2779,13 +2789,13 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        ls->AdaptIntegration = TRUE;
-        if (ls->Integration_Depth > 0)
+        goma_ctx->fem.ls->AdaptIntegration = TRUE;
+        if (goma_ctx->fem.ls->Integration_Depth > 0)
           GOMA_EH(GOMA_ERROR, "Combination of Subgrid and Adaptive integration is not supported.");
-        if (ls->Length_Scale > 0.)
+        if (goma_ctx->fem.ls->Length_Scale > 0.)
           GOMA_EH(GOMA_ERROR, "Currently, Adaptive integration applies only to sharp interfaces "
                               "(zero LS length scale).");
-        if (ls->SubElemIntegration)
+        if (goma_ctx->fem.ls->SubElemIntegration)
           GOMA_EH(GOMA_ERROR,
                   "Combination of Subelement and Adaptive integration is not supported.");
       }
@@ -2793,29 +2803,29 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->Adaptive_Order = 3;
+    goma_ctx->fem.ls->Adaptive_Order = 3;
 
     iread = look_for_optional(ifp, "Level Set Adaptive Order", input, '=');
 
     if (iread == 1) {
-      if (fscanf(ifp, "%d", &(ls->Adaptive_Order)) != 1) {
+      if (fscanf(ifp, "%d", &(goma_ctx->fem.ls->Adaptive_Order)) != 1) {
         GOMA_EH(
             GOMA_ERROR,
             "Adaptive Integration Order for Level Set needs a single positive integer parameter.");
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Level Set Adaptive Order",
-               ls->Adaptive_Order);
+               goma_ctx->fem.ls->Adaptive_Order);
       ECHO(echo_string, echo_file);
     }
 
-    ls->CrossMeshQuadPoints = 0;
+    goma_ctx->fem.ls->CrossMeshQuadPoints = 0;
     iread = look_for_optional(ifp, "Overlap Quadrature Points", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%d", &(ls->CrossMeshQuadPoints)) != 1) {
+      if (fscanf(ifp, "%d", &(goma_ctx->fem.ls->CrossMeshQuadPoints)) != 1) {
         GOMA_EH(GOMA_ERROR, "Overlap Quadrature Points needs a single positive integer parameter.");
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Overlap Quadrature Points",
-               ls->CrossMeshQuadPoints);
+               goma_ctx->fem.ls->CrossMeshQuadPoints);
       ECHO(echo_string, echo_file);
     }
 
@@ -2826,7 +2836,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
      * affected
      */
 
-    ls->PSPP_filter = FALSE;
+    goma_ctx->fem.ls->PSPP_filter = FALSE;
 
     iread = look_for_optional(ifp, "Level Set PSPP filtering", input, '=');
     if (iread == 1) {
@@ -2837,7 +2847,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        ls->PSPP_filter = TRUE;
+        goma_ctx->fem.ls->PSPP_filter = TRUE;
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Level Set PSPP filtering", "yes");
         ECHO(echo_string, echo_file);
 
@@ -2847,7 +2857,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       }
     }
 
-    ls->ghost_stress = LS_OFF;
+    goma_ctx->fem.ls->ghost_stress = LS_OFF;
 
     iread = look_for_optional(ifp, "Level Set Ghost Stress", input, '=');
     if (iread == 1) {
@@ -2859,11 +2869,11 @@ void rd_levelset_specs(FILE *ifp, char *input) {
 
       if ((strcmp(input, "POSITIVE") == 0)) {
 
-        ls->ghost_stress = LS_POSITIVE;
+        goma_ctx->fem.ls->ghost_stress = LS_POSITIVE;
       } else if (strcmp(input, "NEGATIVE") == 0) {
-        ls->ghost_stress = LS_NEGATIVE;
+        goma_ctx->fem.ls->ghost_stress = LS_NEGATIVE;
       } else if ((strcmp(input, "no") == 0) || (strcmp(input, "off")) == 0) {
-        ls->ghost_stress = LS_OFF;
+        goma_ctx->fem.ls->ghost_stress = LS_OFF;
       } else {
         GOMA_EH(GOMA_ERROR, "Unknown value for Level Set Ghost Stress");
       }
@@ -2872,7 +2882,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->Toure_Penalty = FALSE;
+    goma_ctx->fem.ls->Toure_Penalty = FALSE;
 
     iread = look_for_optional(ifp, "Level Set Toure Penalty", input, '=');
     if (iread == 1) {
@@ -2883,9 +2893,9 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        ls->Toure_Penalty = TRUE;
+        goma_ctx->fem.ls->Toure_Penalty = TRUE;
       } else if ((strcmp(input, "OFF") == 0) || (strcmp(input, "NO") == 0)) {
-        ls->Toure_Penalty = FALSE;
+        goma_ctx->fem.ls->Toure_Penalty = FALSE;
       } else {
         GOMA_EH(GOMA_ERROR, "Error unknown value for Level Set Toure Penalty");
       }
@@ -2893,7 +2903,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->Freeze_Interface_Nodes = FALSE;
+    goma_ctx->fem.ls->Freeze_Interface_Nodes = FALSE;
 
     iread = look_for_optional(ifp, "Huygens Freeze Nodes", input, '=');
     if (iread == 1) {
@@ -2904,9 +2914,9 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        ls->Freeze_Interface_Nodes = TRUE;
+        goma_ctx->fem.ls->Freeze_Interface_Nodes = TRUE;
       } else if ((strcmp(input, "OFF") == 0) || (strcmp(input, "NO") == 0)) {
-        ls->Freeze_Interface_Nodes = FALSE;
+        goma_ctx->fem.ls->Freeze_Interface_Nodes = FALSE;
       } else {
         GOMA_EH(GOMA_ERROR, "Error unknown value for Huygens Freeze Nodes");
       }
@@ -2923,9 +2933,9 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        ls->Freeze_Interface_Nodes = TRUE;
+        goma_ctx->fem.ls->Freeze_Interface_Nodes = TRUE;
       } else if ((strcmp(input, "OFF") == 0) || (strcmp(input, "NO") == 0)) {
-        ls->Freeze_Interface_Nodes = FALSE;
+        goma_ctx->fem.ls->Freeze_Interface_Nodes = FALSE;
       } else {
         GOMA_EH(GOMA_ERROR, "Error unknown value for Level Set Freeze Interface Nodes");
       }
@@ -2934,7 +2944,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->Enable_Div_Term = FALSE;
+    goma_ctx->fem.ls->Enable_Div_Term = FALSE;
 
     iread = look_for_optional(ifp, "Level Set Enable Div Term", input, '=');
     if (iread == 1) {
@@ -2945,9 +2955,9 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        ls->Enable_Div_Term = TRUE;
+        goma_ctx->fem.ls->Enable_Div_Term = TRUE;
       } else if ((strcmp(input, "OFF") == 0) || (strcmp(input, "NO") == 0)) {
-        ls->Enable_Div_Term = FALSE;
+        goma_ctx->fem.ls->Enable_Div_Term = FALSE;
       } else {
         GOMA_EH(GOMA_ERROR, "Error unknown value for Level Set Enable Div Term");
       }
@@ -2955,7 +2965,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->Semi_Implicit_Integration = FALSE;
+    goma_ctx->fem.ls->Semi_Implicit_Integration = FALSE;
 
     iread = look_for_optional(ifp, "Level Set Semi-Implicit Time Integration", input, '=');
     if (iread == 1) {
@@ -2966,9 +2976,9 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-        ls->Semi_Implicit_Integration = TRUE;
+        goma_ctx->fem.ls->Semi_Implicit_Integration = TRUE;
       } else if ((strcmp(input, "OFF") == 0) || (strcmp(input, "NO") == 0)) {
-        ls->Semi_Implicit_Integration = FALSE;
+        goma_ctx->fem.ls->Semi_Implicit_Integration = FALSE;
       } else {
         GOMA_EH(GOMA_ERROR, "Error unknown value for Level Set Semi-Implicit Time Integration");
       }
@@ -2977,8 +2987,8 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
     }
 
-    ls->YZbeta = SC_NONE;
-    ls->YZbeta_scale = 0;
+    goma_ctx->fem.ls->YZbeta = SC_NONE;
+    goma_ctx->fem.ls->YZbeta_scale = 0;
 
     iread = look_for_optional(ifp, "Level Set YZbeta", input, '=');
     if (iread == 1) {
@@ -2990,15 +3000,15 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ONE") == 0)) {
-        ls->YZbeta = YZBETA_ONE;
+        goma_ctx->fem.ls->YZbeta = YZBETA_ONE;
       } else if ((strcmp(input, "TWO") == 0)) {
-        ls->YZbeta = YZBETA_TWO;
+        goma_ctx->fem.ls->YZbeta = YZBETA_TWO;
       } else if ((strcmp(input, "MIXED") == 0)) {
-        ls->YZbeta = YZBETA_MIXED;
+        goma_ctx->fem.ls->YZbeta = YZBETA_MIXED;
       } else {
         GOMA_EH(GOMA_ERROR, "Error unknown value for Level Set Toure Penalty");
       }
-      ls->YZbeta_scale = scale;
+      goma_ctx->fem.ls->YZbeta_scale = scale;
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s %g", "Level Set YZbeta", input, scale);
       ECHO(echo_string, echo_file);
     }
@@ -3011,86 +3021,87 @@ void rd_levelset_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Number of phase functions", input, '=');
 
-  pfd = NULL;
+  goma_ctx->fem.pfd = NULL;
   if (iread == 1) {
     if (fscanf(ifp, "%d", &i) != 1) {
       GOMA_EH(GOMA_ERROR, "Error scanning number of phase functions\n");
     }
 
     if (i > 0) {
-      pfd = alloc_struct_1(struct Phase_Function_Data, 1);
-      pfd->num_phase_funcs = i;
-      pfd->Use_Phase_Field = Use_Phase_Field = i;
+      goma_ctx->fem.pfd = alloc_struct_1(struct Phase_Function_Data, 1);
+      goma_ctx->fem.pfd->num_phase_funcs = i;
+      goma_ctx->fem.pfd->Use_Phase_Field = Use_Phase_Field = i;
 
-      pfd->ls = (struct Level_Set_Data **)alloc_ptr_1(pfd->num_phase_funcs);
-      for (i = 0; i < pfd->num_phase_funcs; i++) {
-        pfd->ls[i] = alloc_struct_1(struct Level_Set_Data, 1);
-        pfd->ls[i]->var = PHASE1 + i;
-        pfd->ls[i]->embedded_bc = NULL;
-        pfd->ls[i]->Renorm_Method = FALSE;
-        pfd->ls[i]->init_surf_list = NULL;
-        pfd->ls[i]->last_surf_list = NULL;
-        pfd->ls[i]->sm_object_name = NULL;
-        pfd->ls[i]->sm_object_type = NULL;
+      goma_ctx->fem.pfd->ls =
+          (struct Level_Set_Data **)alloc_ptr_1(goma_ctx->fem.pfd->num_phase_funcs);
+      for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
+        goma_ctx->fem.pfd->ls[i] = alloc_struct_1(struct Level_Set_Data, 1);
+        goma_ctx->fem.pfd->ls[i]->var = PHASE1 + i;
+        goma_ctx->fem.pfd->ls[i]->embedded_bc = NULL;
+        goma_ctx->fem.pfd->ls[i]->Renorm_Method = FALSE;
+        goma_ctx->fem.pfd->ls[i]->init_surf_list = NULL;
+        goma_ctx->fem.pfd->ls[i]->last_surf_list = NULL;
+        goma_ctx->fem.pfd->ls[i]->sm_object_name = NULL;
+        goma_ctx->fem.pfd->ls[i]->sm_object_type = NULL;
 
-        if (ls) {
-          pfd->ls[i]->Control_Width = ls->Control_Width;
-          pfd->ls[i]->Renorm_Freq = ls->Renorm_Freq;
-          pfd->ls[i]->Renorm_Countdown = ls->Renorm_Countdown;
-          pfd->ls[i]->Renorm_Tolerance = ls->Renorm_Tolerance;
-          pfd->ls[i]->Force_Initial_Renorm = ls->Force_Initial_Renorm;
+        if (goma_ctx->fem.ls) {
+          goma_ctx->fem.pfd->ls[i]->Control_Width = goma_ctx->fem.ls->Control_Width;
+          goma_ctx->fem.pfd->ls[i]->Renorm_Freq = goma_ctx->fem.ls->Renorm_Freq;
+          goma_ctx->fem.pfd->ls[i]->Renorm_Countdown = goma_ctx->fem.ls->Renorm_Countdown;
+          goma_ctx->fem.pfd->ls[i]->Renorm_Tolerance = goma_ctx->fem.ls->Renorm_Tolerance;
+          goma_ctx->fem.pfd->ls[i]->Force_Initial_Renorm = goma_ctx->fem.ls->Force_Initial_Renorm;
         } else {
-          pfd->ls[i]->Control_Width = 1.0;
-          pfd->ls[i]->Renorm_Freq = -1;
-          pfd->ls[i]->Renorm_Countdown = -1;
-          pfd->ls[i]->Renorm_Tolerance = 0.5;
-          pfd->ls[i]->Force_Initial_Renorm = FALSE;
+          goma_ctx->fem.pfd->ls[i]->Control_Width = 1.0;
+          goma_ctx->fem.pfd->ls[i]->Renorm_Freq = -1;
+          goma_ctx->fem.pfd->ls[i]->Renorm_Countdown = -1;
+          goma_ctx->fem.pfd->ls[i]->Renorm_Tolerance = 0.5;
+          goma_ctx->fem.pfd->ls[i]->Force_Initial_Renorm = FALSE;
         }
-        pfd->ls[i]->Init_Method = -1;
-        pfd->ls[i]->Elem_Sign = 0;
-        pfd->ls[i]->on_sharp_surf = 0;
-        pfd->ls[i]->Extension_Velocity = FALSE;
+        goma_ctx->fem.pfd->ls[i]->Init_Method = -1;
+        goma_ctx->fem.pfd->ls[i]->Elem_Sign = 0;
+        goma_ctx->fem.pfd->ls[i]->on_sharp_surf = 0;
+        goma_ctx->fem.pfd->ls[i]->Extension_Velocity = FALSE;
 
-        pfd->ls[i]->CalcSurfDependencies = FALSE;
-        pfd->ls[i]->Ghost_Integ_Active = FALSE;
-        pfd->ls[i]->Periodic_Planes = FALSE;
-        pfd->ls[i]->Num_Var_Init = 0;
-        if (ls) {
-          pfd->ls[i]->Integration_Depth = ls->Integration_Depth;
-          pfd->ls[i]->SubElemIntegration = ls->SubElemIntegration;
-          pfd->ls[i]->AdaptIntegration = ls->AdaptIntegration;
-          pfd->ls[i]->Contact_Inflection = ls->Contact_Inflection;
-          pfd->ls[i]->Ignore_F_deps = ls->Ignore_F_deps;
-          pfd->ls[i]->Interface_Output = ls->Interface_Output;
-          pfd->ls[i]->output_file = ls->output_file;
+        goma_ctx->fem.pfd->ls[i]->CalcSurfDependencies = FALSE;
+        goma_ctx->fem.pfd->ls[i]->Ghost_Integ_Active = FALSE;
+        goma_ctx->fem.pfd->ls[i]->Periodic_Planes = FALSE;
+        goma_ctx->fem.pfd->ls[i]->Num_Var_Init = 0;
+        if (goma_ctx->fem.ls) {
+          goma_ctx->fem.pfd->ls[i]->Integration_Depth = goma_ctx->fem.ls->Integration_Depth;
+          goma_ctx->fem.pfd->ls[i]->SubElemIntegration = goma_ctx->fem.ls->SubElemIntegration;
+          goma_ctx->fem.pfd->ls[i]->AdaptIntegration = goma_ctx->fem.ls->AdaptIntegration;
+          goma_ctx->fem.pfd->ls[i]->Contact_Inflection = goma_ctx->fem.ls->Contact_Inflection;
+          goma_ctx->fem.pfd->ls[i]->Ignore_F_deps = goma_ctx->fem.ls->Ignore_F_deps;
+          goma_ctx->fem.pfd->ls[i]->Interface_Output = goma_ctx->fem.ls->Interface_Output;
+          goma_ctx->fem.pfd->ls[i]->output_file = goma_ctx->fem.ls->output_file;
         } else {
-          pfd->ls[i]->Integration_Depth = 0;
-          pfd->ls[i]->SubElemIntegration = FALSE;
-          pfd->ls[i]->AdaptIntegration = FALSE;
-          pfd->ls[i]->Contact_Inflection = FALSE;
-          pfd->ls[i]->Ignore_F_deps = FALSE;
-          pfd->ls[i]->Interface_Output = FALSE;
-          pfd->ls[i]->output_file = NULL;
+          goma_ctx->fem.pfd->ls[i]->Integration_Depth = 0;
+          goma_ctx->fem.pfd->ls[i]->SubElemIntegration = FALSE;
+          goma_ctx->fem.pfd->ls[i]->AdaptIntegration = FALSE;
+          goma_ctx->fem.pfd->ls[i]->Contact_Inflection = FALSE;
+          goma_ctx->fem.pfd->ls[i]->Ignore_F_deps = FALSE;
+          goma_ctx->fem.pfd->ls[i]->Interface_Output = FALSE;
+          goma_ctx->fem.pfd->ls[i]->output_file = NULL;
         }
-        pfd->ls[i]->Ghost_Integ = FALSE;
+        goma_ctx->fem.pfd->ls[i]->Ghost_Integ = FALSE;
 
-        if (ls != NULL)
-          pfd->ls[i]->CrossMeshQuadPoints = ls->CrossMeshQuadPoints;
+        if (goma_ctx->fem.ls != NULL)
+          goma_ctx->fem.pfd->ls[i]->CrossMeshQuadPoints = goma_ctx->fem.ls->CrossMeshQuadPoints;
         else
-          pfd->ls[i]->CrossMeshQuadPoints = 0.;
+          goma_ctx->fem.pfd->ls[i]->CrossMeshQuadPoints = 0.;
 
 #ifdef PHASE_COUPLED_FILL
-        pfd->ls[i]->Evolution = LS_EVOLVE_ADVECT_COUPLED;
+        goma_ctx->fem.pfd->ls[i]->Evolution = LS_EVOLVE_ADVECT_COUPLED;
 #else
-        pfd->ls[i]->Evolution = LS_EVOLVE_ADVECT_EXPLICIT;
+        goma_ctx->fem.pfd->ls[i]->Evolution = LS_EVOLVE_ADVECT_EXPLICIT;
 #endif
       }
 
-      lsi = alloc_struct_1(struct Level_Set_Interface, 1);
+      goma_ctx->fem.lsi = alloc_struct_1(struct Level_Set_Interface, 1);
 
       ECHO("\n***Phase Function Section***\n", echo_file);
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of phase functions",
-               pfd->num_phase_funcs);
+               goma_ctx->fem.pfd->num_phase_funcs);
       ECHO(echo_string, echo_file);
     } else {
       ECHO("\n***Phase Function Section***\n", echo_file);
@@ -3099,7 +3110,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
     }
   }
 
-  if (pfd != NULL) {
+  if (goma_ctx->fem.pfd != NULL) {
 
     iread = look_for_optional(ifp, "Phase Function Slave Surface", input, '=');
     if (iread == 1) {
@@ -3114,17 +3125,17 @@ void rd_levelset_specs(FILE *ifp, char *input) {
         GOMA_EH(GOMA_ERROR,
                 "Phase function slave surfaces not currently supported for PHASE_COUPLED_FILL.");
 #endif
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
-          pfd->ls[i]->Evolution = LS_EVOLVE_SLAVE;
-          pfd->ls[i]->Renorm_Method = FALSE;
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
+          goma_ctx->fem.pfd->ls[i]->Evolution = LS_EVOLVE_SLAVE;
+          goma_ctx->fem.pfd->ls[i]->Renorm_Method = FALSE;
         }
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Phase Function Slave Surface", input);
       ECHO(echo_string, echo_file);
     }
 
-    if (pfd != NULL) {
-      if (pfd->ls[0]->Evolution != LS_EVOLVE_SLAVE) {
+    if (goma_ctx->fem.pfd != NULL) {
+      if (goma_ctx->fem.pfd->ls[0]->Evolution != LS_EVOLVE_SLAVE) {
 #ifndef PHASE_COUPLED_FILL
         GOMA_EH(GOMA_ERROR, "Must have PHASE_COUPLED_FILL compile flag for phase-field functions "
                             "that are not SLAVED");
@@ -3134,29 +3145,29 @@ void rd_levelset_specs(FILE *ifp, char *input) {
 
     iread = look_for_optional(ifp, "Phase Function Initialization Method", input, '=');
     if (iread == 1) {
-      for (i = 0; i < pfd->num_phase_funcs; i++) {
+      for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
 
         if (fscanf(ifp, "%s", input) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading Phase Function Initialization string");
         }
 
         if (strcmp(input, "Projection") == 0) {
-          pfd->ls[i]->Init_Method = PROJECT;
+          goma_ctx->fem.pfd->ls[i]->Init_Method = PROJECT;
           ECHO("Phase Function Initialization Method = Projection", echo_file);
         } else if (strcmp(input, "Exodus") == 0) {
-          pfd->ls[i]->Init_Method = EXO_READ;
+          goma_ctx->fem.pfd->ls[i]->Init_Method = EXO_READ;
           ECHO("Phase Function Initialization Method = Exodus", echo_file);
         } else if (strcmp(input, "Nodeset") == 0) {
           struct LS_Surf *surf;
           struct LS_Surf_NS_Data *s;
-          pfd->ls[i]->Init_Method = SURFACES;
+          goma_ctx->fem.pfd->ls[i]->Init_Method = SURFACES;
 
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat,
                    "Phase Function Initialization Method", input);
 
-          pfd->ls[i]->init_surf_list = create_surf_list();
+          goma_ctx->fem.pfd->ls[i]->init_surf_list = create_surf_list();
           surf = create_surf(LS_SURF_NS);
-          append_surf(pfd->ls[i]->init_surf_list, surf);
+          append_surf(goma_ctx->fem.pfd->ls[i]->init_surf_list, surf);
           s = (struct LS_Surf_NS_Data *)surf->data;
 
           if (fscanf(ifp, "%s %d %s %d", input, &(s->ns_id), input, &(s->PosEB_id)) != 4) {
@@ -3170,7 +3181,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
         } else if ((strcmp(input, "Surfaces") == 0)) {
           int num_surf;
 
-          pfd->ls[i]->Init_Method = SURFACES;
+          goma_ctx->fem.pfd->ls[i]->Init_Method = SURFACES;
 
           if (fscanf(ifp, "%d", &num_surf) != 1) {
             GOMA_EH(GOMA_ERROR, "Surfaces initialization method for phase function needs number of "
@@ -3181,8 +3192,8 @@ void rd_levelset_specs(FILE *ifp, char *input) {
                    "Phase Function Initialization Method", input, num_surf);
           ECHO(echo_string, echo_file);
 
-          pfd->ls[i]->init_surf_list = create_surf_list();
-          read_surface_objects(ifp, input, pfd->ls[i]->init_surf_list, num_surf);
+          goma_ctx->fem.pfd->ls[i]->init_surf_list = create_surf_list();
+          read_surface_objects(ifp, input, goma_ctx->fem.pfd->ls[i]->init_surf_list, num_surf);
         }
       }
     }
@@ -3195,8 +3206,8 @@ void rd_levelset_specs(FILE *ifp, char *input) {
         GOMA_EH(GOMA_ERROR, "error reading Phase Function Initialization string");
       }
 
-      for (i = 0; i < pfd->num_phase_funcs; i++)
-        pfd->ls[i]->Length_Scale = length_scale;
+      for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++)
+        goma_ctx->fem.pfd->ls[i]->Length_Scale = length_scale;
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Phase Function Length Scale",
                length_scale);
@@ -3213,8 +3224,8 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       if (tolerance > 1.0)
         GOMA_WH(-1, "That's an awfully large Level Set Renormalization Tolerance.\n");
 
-      for (i = 0; i < pfd->num_phase_funcs; i++)
-        pfd->ls[i]->Renorm_Tolerance = tolerance;
+      for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++)
+        goma_ctx->fem.pfd->ls[i]->Renorm_Tolerance = tolerance;
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g",
                "Phase Function Renormalization Tolerance", tolerance);
@@ -3245,10 +3256,10 @@ void rd_levelset_specs(FILE *ifp, char *input) {
         GOMA_EH(GOMA_ERROR, "Unknown Phase Function Renorm method. n");
       }
 
-      for (i = 0; i < pfd->num_phase_funcs; i++) {
-        pfd->ls[i]->Renorm_Method = method;
-        pfd->ls[i]->Mass_Value = Mass_Value;
-        pfd->ls[i]->Mass_Sign = Mass_Sign;
+      for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
+        goma_ctx->fem.pfd->ls[i]->Renorm_Method = method;
+        goma_ctx->fem.pfd->ls[i]->Mass_Value = Mass_Value;
+        goma_ctx->fem.pfd->ls[i]->Mass_Sign = Mass_Sign;
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Phase Function Renormalization Method",
                input);
@@ -3268,36 +3279,38 @@ void rd_levelset_specs(FILE *ifp, char *input) {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Phase Function Constraint Method", input);
 
     if ((strcmp(input, "NO") == 0) || (strcmp(input, "NONE") == 0)) {
-      pfd->Constraint_Method = FALSE;
+      goma_ctx->fem.pfd->Constraint_Method = FALSE;
     } else if ((strcmp(input, "LM") == 0)) {
-      pfd->Constraint_Method = LAGR_MULT;
+      goma_ctx->fem.pfd->Constraint_Method = LAGR_MULT;
     } else {
       GOMA_EH(GOMA_ERROR, "Phase function Constraint Method not recognized.\n");
     }
 
-    if (pfd->Constraint_Method == LAGR_MULT) {
+    if (goma_ctx->fem.pfd->Constraint_Method == LAGR_MULT) {
 
-      pfd->Use_Constraint = TRUE;
+      goma_ctx->fem.pfd->Use_Constraint = TRUE;
 
-      if (augc == NULL) {
-        pfd->Constraint_Method = FALSE;
-        pfd->Use_Constraint = FALSE;
-        pfd->jac_info = NULL;
+      if (goma_ctx->fem.augc == NULL) {
+        goma_ctx->fem.pfd->Constraint_Method = FALSE;
+        goma_ctx->fem.pfd->Use_Constraint = FALSE;
+        goma_ctx->fem.pfd->jac_info = NULL;
       } else {
         GOMA_EH(GOMA_ERROR,
                 "LM phase function constraint method must be first augmenting condition.\n");
       }
 
-      augc[nAC - 1].Type = AC_PF_CONSTRAINT;
+      goma_ctx->fem.augc[nAC - 1].Type = AC_PF_CONSTRAINT;
 
-      pfd->jac_info = (PF_JAC_INFO *)array_alloc(1, 1, sizeof(PF_JAC_INFO));
+      goma_ctx->fem.pfd->jac_info = (PF_JAC_INFO *)array_alloc(1, 1, sizeof(PF_JAC_INFO));
 
-      if (fscanf(ifp, "%d %lf", &(augc[nAC - 1].MTID), &(augc[nAC - 1].CONSTV)) != 2) {
+      if (fscanf(ifp, "%d %lf", &(goma_ctx->fem.augc[nAC - 1].MTID),
+                 &(goma_ctx->fem.augc[nAC - 1].CONSTV)) != 2) {
         GOMA_EH(GOMA_ERROR,
                 "LM constraint type for phase function needs integer and double arguments.\n");
       }
 
-      SPF(endofstring(echo_string), " %d %.4g", augc[nAC - 1].MTID, augc[nAC - 1].CONSTV);
+      SPF(endofstring(echo_string), " %d %.4g", goma_ctx->fem.augc[nAC - 1].MTID,
+          goma_ctx->fem.augc[nAC - 1].CONSTV);
       ECHO(echo_string, echo_file);
     }
   }
@@ -3306,17 +3319,17 @@ void rd_levelset_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     double *tmp;
 
-    if ((read_constants(ifp, &tmp, 0) != pfd->num_phase_funcs)) {
+    if ((read_constants(ifp, &tmp, 0) != goma_ctx->fem.pfd->num_phase_funcs)) {
       GOMA_EH(GOMA_ERROR, "Inconsistent number of phase function shift values \n.");
     }
 
-    for (i = 0; i < pfd->num_phase_funcs; i++)
-      pfd->shift[i] = tmp[i];
+    for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++)
+      goma_ctx->fem.pfd->shift[i] = tmp[i];
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = ", "Phase Function Initial Shift");
 
-    for (i = 0; i < pfd->num_phase_funcs; i++) {
-      SPF(endofstring(echo_string), "%.4g ", pfd->shift[i]);
+    for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
+      SPF(endofstring(echo_string), "%.4g ", goma_ctx->fem.pfd->shift[i]);
     }
 
     ECHO(echo_string, echo_file);
@@ -3331,8 +3344,8 @@ void rd_turbulent_specs(FILE *ifp, char *input) {
 
   int iread;
 
-  upd->turbulent_info = calloc(1, sizeof(turbulent_information));
-  upd->turbulent_info->use_internal_wall_distance = false;
+  goma_ctx->fem.upd->turbulent_info = calloc(1, sizeof(turbulent_information));
+  goma_ctx->fem.upd->turbulent_info->use_internal_wall_distance = false;
   iread = look_for_optional(ifp, "Turbulence Calculate Wall Distance", input, '=');
   if (iread == 1) {
 
@@ -3344,7 +3357,7 @@ void rd_turbulent_specs(FILE *ifp, char *input) {
     stringup(input);
 
     if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
-      upd->turbulent_info->use_internal_wall_distance = true;
+      goma_ctx->fem.upd->turbulent_info->use_internal_wall_distance = true;
     }
 
     ECHO("\n***Turbulence Information***\n", echo_file);
@@ -3353,21 +3366,21 @@ void rd_turbulent_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
-  if (upd->turbulent_info->use_internal_wall_distance) {
+  if (goma_ctx->fem.upd->turbulent_info->use_internal_wall_distance) {
     bool read_internal_sides = false;
 
     iread = look_for_optional(ifp, "Turbulence Wall Side Sets", input, '=');
     if (iread == 1) {
       read_internal_sides = true;
-      upd->turbulent_info->num_side_sets =
-          read_constants_int(ifp, &upd->turbulent_info->side_set_ids);
-      if (upd->turbulent_info->num_side_sets < 1) {
+      goma_ctx->fem.upd->turbulent_info->num_side_sets =
+          read_constants_int(ifp, &goma_ctx->fem.upd->turbulent_info->side_set_ids);
+      if (goma_ctx->fem.upd->turbulent_info->num_side_sets < 1) {
         GOMA_EH(GOMA_ERROR, "Error reading Turbulence Wall Side Sets");
       }
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s", "Turbulence Wall Side Sets");
-      for (int i = 0; i < upd->turbulent_info->num_side_sets; i++) {
-        SPF(endofstring(echo_string), " %d", upd->turbulent_info->side_set_ids[i]);
+      for (int i = 0; i < goma_ctx->fem.upd->turbulent_info->num_side_sets; i++) {
+        SPF(endofstring(echo_string), " %d", goma_ctx->fem.upd->turbulent_info->side_set_ids[i]);
       }
       ECHO(echo_string, echo_file);
     }
@@ -3375,15 +3388,15 @@ void rd_turbulent_specs(FILE *ifp, char *input) {
     iread = look_for_optional(ifp, "Turbulence Wall Node Sets", input, '=');
     if (iread == 1) {
       read_internal_sides = true;
-      upd->turbulent_info->num_node_sets =
-          read_constants_int(ifp, &upd->turbulent_info->node_set_ids);
-      if (upd->turbulent_info->num_node_sets < 1) {
+      goma_ctx->fem.upd->turbulent_info->num_node_sets =
+          read_constants_int(ifp, &goma_ctx->fem.upd->turbulent_info->node_set_ids);
+      if (goma_ctx->fem.upd->turbulent_info->num_node_sets < 1) {
         GOMA_EH(GOMA_ERROR, "Error reading Turbulence Wall Node Sets");
       }
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s", "Turbulence Wall Node Sets");
-      for (int i = 0; i < upd->turbulent_info->num_node_sets; i++) {
-        SPF(endofstring(echo_string), " %d", upd->turbulent_info->node_set_ids[i]);
+      for (int i = 0; i < goma_ctx->fem.upd->turbulent_info->num_node_sets; i++) {
+        SPF(endofstring(echo_string), " %d", goma_ctx->fem.upd->turbulent_info->node_set_ids[i]);
       }
       ECHO(echo_string, echo_file);
     }
@@ -3397,28 +3410,28 @@ void rd_turbulent_specs(FILE *ifp, char *input) {
   iread = look_for_optional(ifp, "Turbulent k infinity", input, '=');
   if (iread == 1) {
 
-    if (fscanf(ifp, "%lf", &(upd->turbulent_info->k_inf)) != 1) {
+    if (fscanf(ifp, "%lf", &(goma_ctx->fem.upd->turbulent_info->k_inf)) != 1) {
       GOMA_EH(GOMA_ERROR, "Error reading Turbulence k infinity");
     }
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %f", "Turbulence k infinity",
-             upd->turbulent_info->k_inf);
+             goma_ctx->fem.upd->turbulent_info->k_inf);
     ECHO(echo_string, echo_file);
   } else {
-    upd->turbulent_info->k_inf = 0.0;
+    goma_ctx->fem.upd->turbulent_info->k_inf = 0.0;
   }
   iread = look_for_optional(ifp, "Turbulent omega infinity", input, '=');
   if (iread == 1) {
 
-    if (fscanf(ifp, "%lf", &(upd->turbulent_info->omega_inf)) != 1) {
+    if (fscanf(ifp, "%lf", &(goma_ctx->fem.upd->turbulent_info->omega_inf)) != 1) {
       GOMA_EH(GOMA_ERROR, "Error reading Turbulence omega infinity");
     }
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %lf", "Turbulence omega infinity",
-             upd->turbulent_info->omega_inf);
+             goma_ctx->fem.upd->turbulent_info->omega_inf);
     ECHO(echo_string, echo_file);
   } else {
-    upd->turbulent_info->omega_inf = 0.0;
+    goma_ctx->fem.upd->turbulent_info->omega_inf = 0.0;
   }
 }
 /*
@@ -3436,55 +3449,55 @@ void rd_elem_quality_specs(FILE *ifp, char *input) {
 
   /* Element quality specifications */
 
-  eqm->do_jac = FALSE;
-  eqm->wt_jac = 0.0;
+  goma_ctx->fem.eqm->do_jac = FALSE;
+  goma_ctx->fem.eqm->wt_jac = 0.0;
   iread = look_for_optional(ifp, "Jacobian quality weight", input, '=');
   if (iread == 1) {
     nEQM++;
-    eqm->do_jac = TRUE;
-    if (fscanf(ifp, "%lf", &(eqm->wt_jac)) != 1) {
+    goma_ctx->fem.eqm->do_jac = TRUE;
+    if (fscanf(ifp, "%lf", &(goma_ctx->fem.eqm->wt_jac)) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Jacobian quality weight");
     }
   }
 
-  eqm->do_vol = FALSE;
-  eqm->wt_vol = 0.0;
+  goma_ctx->fem.eqm->do_vol = FALSE;
+  goma_ctx->fem.eqm->wt_vol = 0.0;
   iread = look_for_optional(ifp, "Volume change quality weight", input, '=');
   if (iread == 1) {
     nEQM++;
-    eqm->do_vol = TRUE;
-    if (fscanf(ifp, "%lf", &(eqm->wt_vol)) != 1) {
+    goma_ctx->fem.eqm->do_vol = TRUE;
+    if (fscanf(ifp, "%lf", &(goma_ctx->fem.eqm->wt_vol)) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Volume change quality weight");
     }
   }
 
-  eqm->do_ang = FALSE;
-  eqm->wt_ang = 0.0;
+  goma_ctx->fem.eqm->do_ang = FALSE;
+  goma_ctx->fem.eqm->wt_ang = 0.0;
   iread = look_for_optional(ifp, "Angle quality weight", input, '=');
   if (iread == 1) {
     nEQM++;
-    eqm->do_ang = TRUE;
-    if (fscanf(ifp, "%lf", &(eqm->wt_ang)) != 1) {
+    goma_ctx->fem.eqm->do_ang = TRUE;
+    if (fscanf(ifp, "%lf", &(goma_ctx->fem.eqm->wt_ang)) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Angle quality weight");
     }
   }
 
-  eqm->do_tri = FALSE;
-  eqm->wt_tri = 0.0;
+  goma_ctx->fem.eqm->do_tri = FALSE;
+  goma_ctx->fem.eqm->wt_tri = 0.0;
   iread = look_for_optional(ifp, "Triangle quality weight", input, '=');
   if (iread == 1) {
     nEQM++;
-    eqm->do_tri = TRUE;
-    if (fscanf(ifp, "%lf", &(eqm->wt_tri)) != 1) {
+    goma_ctx->fem.eqm->do_tri = TRUE;
+    if (fscanf(ifp, "%lf", &(goma_ctx->fem.eqm->wt_tri)) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Triangle quality weight");
     }
   }
 
-  eqm->eq_tol = 0.0;
+  goma_ctx->fem.eqm->eq_tol = 0.0;
   iread = look_for_optional(ifp, "Element quality tolerance", input, '=');
   if (iread == 1) {
-    eqm->do_jac = TRUE;
-    if (fscanf(ifp, "%lf", &(eqm->eq_tol)) != 1) {
+    goma_ctx->fem.eqm->do_jac = TRUE;
+    if (fscanf(ifp, "%lf", &(goma_ctx->fem.eqm->eq_tol)) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Element quality tolerance");
     }
   }
@@ -3498,42 +3511,42 @@ void rd_elem_quality_specs(FILE *ifp, char *input) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tMinimum Jacobian quality tolerance\n", yo);
       }
-      eqm->tol_type = EQM_JAC;
+      goma_ctx->fem.eqm->tol_type = EQM_JAC;
     } else if (strcmp(input, "vol") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tMinimum Volume change quality tolerance\n", yo);
       }
-      eqm->tol_type = EQM_VOL;
+      goma_ctx->fem.eqm->tol_type = EQM_VOL;
     } else if (strcmp(input, "ang") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tMinimum Angle quality tolerance\n", yo);
       }
-      eqm->tol_type = EQM_ANG;
+      goma_ctx->fem.eqm->tol_type = EQM_ANG;
     } else if (strcmp(input, "tri") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tMinimum Triangle quality tolerance\n", yo);
       }
-      eqm->tol_type = EQM_TRI;
+      goma_ctx->fem.eqm->tol_type = EQM_TRI;
     } else if (strcmp(input, "min") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tMinimum overall quality tolerance\n", yo);
       }
-      eqm->tol_type = EQM_MIN;
+      goma_ctx->fem.eqm->tol_type = EQM_MIN;
     } else if (strcmp(input, "avg") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tWeighted average quality tolerance\n", yo);
       }
-      eqm->tol_type = EQM_AVG;
+      goma_ctx->fem.eqm->tol_type = EQM_AVG;
     } else if (strcmp(input, "wtmin") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tWeighted minimum quality tolerance\n", yo);
       }
-      eqm->tol_type = EQM_WTMIN;
+      goma_ctx->fem.eqm->tol_type = EQM_WTMIN;
     } else {
       GOMA_EH(GOMA_ERROR, "error reading Element quality tolerance type");
     }
   } else {
-    eqm->tol_type = EQM_MIN;
+    goma_ctx->fem.eqm->tol_type = EQM_MIN;
   }
 }
 
@@ -3570,16 +3583,16 @@ void rd_track_specs(FILE *ifp, char *input) {
   }
 
   Continuation = ALC_NONE;
-  loca_in->Cont_Alg = ALC_NONE;
-  loca_in->Cont_Order = 0;
+  goma_ctx->fem.loca_in->Cont_Alg = ALC_NONE;
+  goma_ctx->fem.loca_in->Cont_Order = 0;
   nCC = 0;
   nTC = 0;
-  cont->eps = 0.0;
+  goma_ctx->fem.cont->eps = 0.0;
 
   /*  initialize sensivity vector id for first order continuation  */
 
-  cont->sensvec_id = -1;
-  loca_in->NVSave = FALSE;
+  goma_ctx->fem.cont->sensvec_id = -1;
+  goma_ctx->fem.loca_in->NVSave = FALSE;
 
   iread = look_for_optional(ifp, "Continuation", input, '=');
 
@@ -3629,7 +3642,7 @@ void rd_track_specs(FILE *ifp, char *input) {
     SPF(endofstring(echo_string), " %s", input);
     ECHO(echo_string, echo_file);
 
-    ContType = cont->upType = -1;
+    ContType = goma_ctx->fem.cont->upType = -1;
     look_for(ifp, "Continuation Type", input, '=');
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = ", input);
@@ -3678,10 +3691,10 @@ void rd_track_specs(FILE *ifp, char *input) {
     SPF(endofstring(echo_string), " %s", input);
     ECHO(echo_string, echo_file);
 
-    cont->upType = ContType;
+    goma_ctx->fem.cont->upType = ContType;
 
     for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-      pd_glob[mn]->Continuation = Continuation;
+      goma_ctx->fem.pd_glob[mn]->Continuation = Continuation;
     }
 
     /* Get number of user-defined continuation condition functions */
@@ -3696,11 +3709,11 @@ void rd_track_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
 
       /* Allocate the structure cpuc for each function */
-      cpuc = (struct User_Continuation_Info *)array_alloc(1, nUC,
-                                                          sizeof(struct User_Continuation_Info));
+      goma_ctx->fem.cpuc = (struct User_Continuation_Info *)array_alloc(
+          1, nUC, sizeof(struct User_Continuation_Info));
     }
 
-    cont->upBCID = -1;
+    goma_ctx->fem.cont->upBCID = -1;
     iread = look_for_optional(ifp, "Boundary condition ID", input, '=');
     if (iread == 1) {
       if (fscanf(ifp, "%d", &BdyCondID) != 1) {
@@ -3709,7 +3722,7 @@ void rd_track_specs(FILE *ifp, char *input) {
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, BdyCondID);
       ECHO(echo_string, echo_file);
     }
-    cont->upBCID = BdyCondID;
+    goma_ctx->fem.cont->upBCID = BdyCondID;
 
     look_for(ifp, "Boundary condition data float tag", input, '=');
     if (fscanf(ifp, "%d", &DataFltID) != 1) {
@@ -3718,14 +3731,14 @@ void rd_track_specs(FILE *ifp, char *input) {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, DataFltID);
     ECHO(echo_string, echo_file);
 
-    cont->upDFID = DataFltID;
+    goma_ctx->fem.cont->upDFID = DataFltID;
 
     look_for(ifp, "Material id", input, '=');
     if (fscanf(ifp, "%d", &MatID) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Material id");
     }
 
-    cont->upMTID = MatID - 1;
+    goma_ctx->fem.cont->upMTID = MatID - 1;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, MatID);
     ECHO(echo_string, echo_file);
 
@@ -3733,7 +3746,7 @@ void rd_track_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%d", &MatPropID) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Material property tag id");
     }
-    cont->upMPID = MatPropID;
+    goma_ctx->fem.cont->upMPID = MatPropID;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, MatPropID);
     ECHO(echo_string, echo_file);
 
@@ -3741,7 +3754,7 @@ void rd_track_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%d", &MatPropSIID) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Material property tag subindex id");
     }
-    cont->upMDID = MatPropSIID;
+    goma_ctx->fem.cont->upMDID = MatPropSIID;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, MatPropSIID);
     ECHO(echo_string, echo_file);
 
@@ -3750,7 +3763,7 @@ void rd_track_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%le", &BegParameterValue) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading BegParameterValue");
     }
-    cont->BegParameterValue = BegParameterValue;
+    goma_ctx->fem.cont->BegParameterValue = BegParameterValue;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, BegParameterValue);
     ECHO(echo_string, echo_file);
 
@@ -3759,7 +3772,7 @@ void rd_track_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%le", &EndParameterValue) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading EndParameterValue");
     }
-    cont->EndParameterValue = EndParameterValue;
+    goma_ctx->fem.cont->EndParameterValue = EndParameterValue;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, EndParameterValue);
     ECHO(echo_string, echo_file);
 
@@ -3767,7 +3780,7 @@ void rd_track_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%le", &Delta_s0) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading delta_s");
     }
-    cont->Delta_s0 = Delta_s0;
+    goma_ctx->fem.cont->Delta_s0 = Delta_s0;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, Delta_s0);
     ECHO(echo_string, echo_file);
 
@@ -3775,7 +3788,7 @@ void rd_track_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%d", &MaxPathSteps) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading maximum number of path steps");
     }
-    cont->MaxPathSteps = MaxPathSteps;
+    goma_ctx->fem.cont->MaxPathSteps = MaxPathSteps;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, MaxPathSteps);
     ECHO(echo_string, echo_file);
 
@@ -3783,7 +3796,7 @@ void rd_track_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%le", &Delta_s_min) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading minimum path step");
     }
-    cont->Delta_s_min = Delta_s_min;
+    goma_ctx->fem.cont->Delta_s_min = Delta_s_min;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, Delta_s_min);
     ECHO(echo_string, echo_file);
 
@@ -3792,7 +3805,7 @@ void rd_track_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%le", &Delta_s_max) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Maximum path step");
     }
-    cont->Delta_s_max = Delta_s_max;
+    goma_ctx->fem.cont->Delta_s_max = Delta_s_max;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, Delta_s_max);
     ECHO(echo_string, echo_file);
 
@@ -3800,34 +3813,34 @@ void rd_track_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%d", &print_freq) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Continuation Printing Frequency");
     }
-    cont->print_freq = print_freq;
+    goma_ctx->fem.cont->print_freq = print_freq;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, print_freq);
     ECHO(echo_string, echo_file);
 
-    cont->fix_freq = 0;
+    goma_ctx->fem.cont->fix_freq = 0;
     if (goma_ctx->num_proc > 1) {
       iread = look_for_optional(ifp, "Continuation Fix Frequency", input, '=');
       if (iread == 1) {
-        cont->fix_freq = read_int(ifp, "Continuation Fix Frequency");
-        if (cont->fix_freq < 0) {
+        goma_ctx->fem.cont->fix_freq = read_int(ifp, "Continuation Fix Frequency");
+        if (goma_ctx->fem.cont->fix_freq < 0) {
           GOMA_EH(GOMA_ERROR, "Expected Fix Frequency > 0");
         }
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Continuation Fix Frequency",
-                 cont->fix_freq);
+                 goma_ctx->fem.cont->fix_freq);
         ECHO(echo_string, echo_file);
       }
     }
 
-    cont->anneal_on_print = 0;
+    goma_ctx->fem.cont->anneal_on_print = 0;
     iread = look_for_optional(ifp, "Continuation Anneal on Print", input, '=');
     if (iread == 1) {
       (void)read_string(ifp, input, '\n');
       strip(input);
       if (!strcasecmp(input, "no") || !strcasecmp(input, "false")) {
-        cont->anneal_on_print = FALSE;
+        goma_ctx->fem.cont->anneal_on_print = FALSE;
         ECHO("Continuation Anneal on Print = no", echo_file);
       } else if (!strcasecmp(input, "yes") || !strcasecmp(input, "true")) {
-        cont->anneal_on_print = TRUE;
+        goma_ctx->fem.cont->anneal_on_print = TRUE;
         if (goma_ctx->anneal_mesh == FALSE) {
           goma_ctx->anneal_mesh = TRUE;
           GOMA_WH(GOMA_ERROR, "Turning on Anneal Mesh for Continuation Anneal on Print");
@@ -3840,7 +3853,7 @@ void rd_track_specs(FILE *ifp, char *input) {
 
     if (Continuation == LOCA) {
 
-      loca_in->Cont_Alg = CONTINUATION;
+      goma_ctx->fem.loca_in->Cont_Alg = CONTINUATION;
       iread = look_for_optional(ifp, "LOCA method", input, '=');
       if (iread == 1) {
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", input);
@@ -3855,13 +3868,13 @@ void rd_track_specs(FILE *ifp, char *input) {
 
           SPF(endofstring(echo_string), " %s", input);
 
-          loca_in->Cont_Alg = CONTINUATION;
+          goma_ctx->fem.loca_in->Cont_Alg = CONTINUATION;
           iread = look_for_optional(ifp, "Continuation order", input, '=');
           if (iread == 1) {
-            if (fscanf(ifp, "%d", &(loca_in->Cont_Order)) != 1) {
+            if (fscanf(ifp, "%d", &(goma_ctx->fem.loca_in->Cont_Order)) != 1) {
               GOMA_EH(GOMA_ERROR, "error reading continuation order");
             }
-            SPF(endofstring(echo_string), "/n%s = %d", input, loca_in->Cont_Order);
+            SPF(endofstring(echo_string), "/n%s = %d", input, goma_ctx->fem.loca_in->Cont_Order);
           }
         }
 
@@ -3876,7 +3889,7 @@ void rd_track_specs(FILE *ifp, char *input) {
           if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
             printf("%s:\tzero order continuation\n", yo);
           }
-          loca_in->Cont_Order = 1;
+          goma_ctx->fem.loca_in->Cont_Order = 1;
           SPF(endofstring(echo_string), " %s", input);
         }
 
@@ -3884,7 +3897,7 @@ void rd_track_specs(FILE *ifp, char *input) {
           if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
             printf("%s:\tarc length continuation\n", yo);
           }
-          loca_in->Cont_Order = 2;
+          goma_ctx->fem.loca_in->Cont_Order = 2;
           SPF(endofstring(echo_string), " %s", input);
         }
 
@@ -3892,7 +3905,7 @@ void rd_track_specs(FILE *ifp, char *input) {
           if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
             printf("%s:\tturning point continuation\n", yo);
           }
-          loca_in->Cont_Alg = TP_CONTINUATION;
+          goma_ctx->fem.loca_in->Cont_Alg = TP_CONTINUATION;
           SPF(endofstring(echo_string), " %s", input);
         }
 
@@ -3900,7 +3913,7 @@ void rd_track_specs(FILE *ifp, char *input) {
           if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
             printf("%s:\tpitchfork continuation\n", yo);
           }
-          loca_in->Cont_Alg = PF_CONTINUATION;
+          goma_ctx->fem.loca_in->Cont_Alg = PF_CONTINUATION;
           SPF(endofstring(echo_string), " %s", input);
         }
 
@@ -3908,7 +3921,7 @@ void rd_track_specs(FILE *ifp, char *input) {
           if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
             printf("%s:\tHopf continuation\n", yo);
           }
-          loca_in->Cont_Alg = HP_CONTINUATION;
+          goma_ctx->fem.loca_in->Cont_Alg = HP_CONTINUATION;
           SPF(endofstring(echo_string), " %s", input);
         }
 
@@ -3919,81 +3932,87 @@ void rd_track_specs(FILE *ifp, char *input) {
 
       ECHO(echo_string, echo_file);
 
-      loca_in->StepAggr = 0.0;
+      goma_ctx->fem.loca_in->StepAggr = 0.0;
       iread = look_for_optional(ifp, "Step control aggressiveness", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%lf", &(loca_in->StepAggr)) != 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.loca_in->StepAggr)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading step control aggressiveness");
         }
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, loca_in->StepAggr);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+                 goma_ctx->fem.loca_in->StepAggr);
         ECHO(echo_string, echo_file);
       }
 
       /* Use negative input for constant step size = range / (MaxSteps-1) */
-      if (loca_in->StepAggr < -1.0e-6) {
-        loca_in->StepAggr = 0.0;
-        if (loca_in->Cont_Order != 2)
-          cont->Delta_s0 = (cont->EndParameterValue - cont->BegParameterValue) /
-                           ((double)(cont->MaxPathSteps - 1));
+      if (goma_ctx->fem.loca_in->StepAggr < -1.0e-6) {
+        goma_ctx->fem.loca_in->StepAggr = 0.0;
+        if (goma_ctx->fem.loca_in->Cont_Order != 2)
+          goma_ctx->fem.cont->Delta_s0 =
+              (goma_ctx->fem.cont->EndParameterValue - goma_ctx->fem.cont->BegParameterValue) /
+              ((double)(goma_ctx->fem.cont->MaxPathSteps - 1));
       }
 
-      loca_in->perturb = 1.0e-9;
+      goma_ctx->fem.loca_in->perturb = 1.0e-9;
       iread = look_for_optional(ifp, "Perturbation magnitude", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%lf", &(loca_in->perturb)) != 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.loca_in->perturb)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading Perturbation magnitude");
         }
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, loca_in->perturb);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+                 goma_ctx->fem.loca_in->perturb);
         ECHO(echo_string, echo_file);
       }
 
-      loca_in->debug = 5;
+      goma_ctx->fem.loca_in->debug = 5;
       iread = look_for_optional(ifp, "LOCA print level", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%d", &(loca_in->debug)) != 1) {
+        if (fscanf(ifp, "%d", &(goma_ctx->fem.loca_in->debug)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading LOCA print level");
         }
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, loca_in->debug);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->fem.loca_in->debug);
         ECHO(echo_string, echo_file);
       }
 
-      loca_in->DpDs2 = 0.5;
+      goma_ctx->fem.loca_in->DpDs2 = 0.5;
       iread = look_for_optional(ifp, "ALC Desired solution fraction", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%lf", &(loca_in->DpDs2)) != 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.loca_in->DpDs2)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading ALC Desired solution fraction");
         }
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, loca_in->DpDs2);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+                 goma_ctx->fem.loca_in->DpDs2);
         ECHO(echo_string, echo_file);
       }
 
-      loca_in->DpDsHi = 1.0;
+      goma_ctx->fem.loca_in->DpDsHi = 1.0;
       iread = look_for_optional(ifp, "ALC Max. parameter sensitivity", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%lf", &(loca_in->DpDsHi)) != 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.loca_in->DpDsHi)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading ALC Max. parameter sensitivity");
         }
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, loca_in->DpDsHi);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+                 goma_ctx->fem.loca_in->DpDsHi);
         ECHO(echo_string, echo_file);
       }
 
-      loca_in->Texp = 0.0;
+      goma_ctx->fem.loca_in->Texp = 0.0;
       iread = look_for_optional(ifp, "ALC Tangent factor exponent", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%lf", &(loca_in->Texp)) != 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.loca_in->Texp)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading ALC Tangent factor exponent");
         }
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, loca_in->Texp);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, goma_ctx->fem.loca_in->Texp);
         ECHO(echo_string, echo_file);
       }
 
-      loca_in->MaxTS = 0.0;
+      goma_ctx->fem.loca_in->MaxTS = 0.0;
       iread = look_for_optional(ifp, "ALC Tangent factor step limit", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%lf", &(loca_in->MaxTS)) != 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.loca_in->MaxTS)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading ALC Tangent factor step limit");
         }
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, loca_in->MaxTS);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+                 goma_ctx->fem.loca_in->MaxTS);
         ECHO(echo_string, echo_file);
       }
 
@@ -4024,7 +4043,7 @@ void rd_track_specs(FILE *ifp, char *input) {
       /*
        *  For angular continuation, ensure at least one angular CC is specified
        */
-      if (cont->upType == 6 && nCC < 2) {
+      if (goma_ctx->fem.cont->upType == 6 && nCC < 2) {
         GOMA_EH(GOMA_ERROR, "Angular continuation requires at least one CC card!");
       }
 
@@ -4033,7 +4052,7 @@ void rd_track_specs(FILE *ifp, char *input) {
        */
       if (nCC != -2) {
 
-        cpcc =
+        goma_ctx->fem.cpcc =
             (struct Continuation_Conditions *)calloc(nCC, sizeof(struct Continuation_Conditions));
 
         if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
@@ -4046,31 +4065,31 @@ void rd_track_specs(FILE *ifp, char *input) {
          *  Load up cpcc[0] with inputs from above
          *  For angular continuation, also get angle range in radians
          */
-        cpcc[0].nCC = nCC;
-        cpcc[0].ratio = 1.0;
-        cpcc[0].Type = cont->upType;
-        cpcc[0].BCID = cont->upBCID;
-        cpcc[0].DFID = cont->upDFID;
-        cpcc[0].MTID = cont->upMTID;
-        cpcc[0].MPID = cont->upMPID;
-        cpcc[0].MDID = cont->upMDID;
-        cpcc[0].Beg_CC_Value = cont->BegParameterValue;
-        cpcc[0].End_CC_Value = cont->EndParameterValue;
-        range = cpcc[0].End_CC_Value - cpcc[0].Beg_CC_Value;
-        if (cont->upType == 6) {
+        goma_ctx->fem.cpcc[0].nCC = nCC;
+        goma_ctx->fem.cpcc[0].ratio = 1.0;
+        goma_ctx->fem.cpcc[0].Type = goma_ctx->fem.cont->upType;
+        goma_ctx->fem.cpcc[0].BCID = goma_ctx->fem.cont->upBCID;
+        goma_ctx->fem.cpcc[0].DFID = goma_ctx->fem.cont->upDFID;
+        goma_ctx->fem.cpcc[0].MTID = goma_ctx->fem.cont->upMTID;
+        goma_ctx->fem.cpcc[0].MPID = goma_ctx->fem.cont->upMPID;
+        goma_ctx->fem.cpcc[0].MDID = goma_ctx->fem.cont->upMDID;
+        goma_ctx->fem.cpcc[0].Beg_CC_Value = goma_ctx->fem.cont->BegParameterValue;
+        goma_ctx->fem.cpcc[0].End_CC_Value = goma_ctx->fem.cont->EndParameterValue;
+        range = goma_ctx->fem.cpcc[0].End_CC_Value - goma_ctx->fem.cpcc[0].Beg_CC_Value;
+        if (goma_ctx->fem.cont->upType == 6) {
           beg_angle = BegParameterValue * M_PIE / 180.0;
           end_angle = EndParameterValue * M_PIE / 180.0;
         }
-        cpcc[0].fn_flag = 0;
-        cpcc[0].old_value = cpcc[0].Beg_CC_Value;
-        cpcc[0].value = cpcc[0].Beg_CC_Value;
+        goma_ctx->fem.cpcc[0].fn_flag = 0;
+        goma_ctx->fem.cpcc[0].old_value = goma_ctx->fem.cpcc[0].Beg_CC_Value;
+        goma_ctx->fem.cpcc[0].value = goma_ctx->fem.cpcc[0].Beg_CC_Value;
 
         /*
          *  Read in continuation parameter conditions and load up cpcc
          */
 
         /* First check for UF/CC conflict (UF has priority) */
-        if (nCC > 1 && cont->upType == 5) {
+        if (nCC > 1 && goma_ctx->fem.cont->upType == 5) {
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s)",
                    "UF continuation overrides CC cards!");
           ECHO(echo_string, echo_file);
@@ -4090,13 +4109,13 @@ void rd_track_specs(FILE *ifp, char *input) {
               exit(-1);
             }
             if (!strcmp(input, "BC")) {
-              cpcc[iCC].Type = 1;
+              goma_ctx->fem.cpcc[iCC].Type = 1;
             } else if (!strcmp(input, "MT")) {
-              cpcc[iCC].Type = 2;
+              goma_ctx->fem.cpcc[iCC].Type = 2;
             } else if (!strcmp(input, "AC")) {
-              cpcc[iCC].Type = 3;
+              goma_ctx->fem.cpcc[iCC].Type = 3;
             } else if (!strcmp(input, "UM")) {
-              cpcc[iCC].Type = 4;
+              goma_ctx->fem.cpcc[iCC].Type = 4;
             } else {
               DPRINTF(stderr, "%s:\tImproper CC set type - %s\n", yo, input);
               if (!strcmp(input, "UF"))
@@ -4107,12 +4126,12 @@ void rd_track_specs(FILE *ifp, char *input) {
             }
             SPF(endofstring(echo_string), " %s", input);
 
-            cpcc[iCC].nCC = nCC;
+            goma_ctx->fem.cpcc[iCC].nCC = nCC;
             /*
              *  Read in three required integers (four if type is UM)
              */
 
-            if (cpcc[iCC].Type == 4) {
+            if (goma_ctx->fem.cpcc[iCC].Type == 4) {
               if (fscanf(ifp, "%d %d %d %d", &id1, &id2, &id3, &iflag) != 4) {
                 DPRINTF(stderr, "%s:\tError reading integer inputs, ", yo);
                 DPRINTF(stderr, "for CC[%d]\n", iCC + 1);
@@ -4125,13 +4144,13 @@ void rd_track_specs(FILE *ifp, char *input) {
               if (fscanf(ifp, "%d %d %d", &id1, &id2, &iflag) != 3) {
                 DPRINTF(stderr, "%s:\tError reading integer inputs ", yo);
                 DPRINTF(stderr, "for CC[%d]\n", iCC + 1);
-                if (cpcc[iCC].Type == 1) {
+                if (goma_ctx->fem.cpcc[iCC].Type == 1) {
                   DPRINTF(stderr, "\tFormat: CC = BC BCID DFID FLAG ...\n");
                 }
-                if (cpcc[iCC].Type == 2) {
+                if (goma_ctx->fem.cpcc[iCC].Type == 2) {
                   DPRINTF(stderr, "\tFormat: CC = MT MTID MPID FLAG ...\n");
                 }
-                if (cpcc[iCC].Type == 3) {
+                if (goma_ctx->fem.cpcc[iCC].Type == 3) {
                   DPRINTF(stderr, "\tFormat: CC = AC ACID DFID FLAG ...\n");
                 }
                 exit(-1);
@@ -4149,63 +4168,66 @@ void rd_track_specs(FILE *ifp, char *input) {
              *        value = coeff_0 + coeff_1 * lambda^coeff_2
              */
 
-            if (cont->upType != 6 && iflag == 0) {
-              cpcc[iCC].ratio = 1.0;
-              cpcc[iCC].Beg_CC_Value = cpcc[0].Beg_CC_Value;
-              cpcc[iCC].End_CC_Value = cpcc[0].End_CC_Value;
+            if (goma_ctx->fem.cont->upType != 6 && iflag == 0) {
+              goma_ctx->fem.cpcc[iCC].ratio = 1.0;
+              goma_ctx->fem.cpcc[iCC].Beg_CC_Value = goma_ctx->fem.cpcc[0].Beg_CC_Value;
+              goma_ctx->fem.cpcc[iCC].End_CC_Value = goma_ctx->fem.cpcc[0].End_CC_Value;
             } else if (iflag == 3) /* Three floats required */
             {
-              if (fscanf(ifp, "%lf %lf %lf", &cpcc[iCC].coeff_0, &cpcc[iCC].coeff_1,
-                         &cpcc[iCC].coeff_2) != 3) {
+              if (fscanf(ifp, "%lf %lf %lf", &goma_ctx->fem.cpcc[iCC].coeff_0,
+                         &goma_ctx->fem.cpcc[iCC].coeff_1, &goma_ctx->fem.cpcc[iCC].coeff_2) != 3) {
                 DPRINTF(stderr, "%s:\tError reading CC[%d] floats\n", yo, iCC + 1);
                 DPRINTF(stderr, "\tThree floats are required!\n");
                 exit(-1);
               }
-              SPF(endofstring(echo_string), " %.4g %.4g %.4g", cpcc[iCC].coeff_0, cpcc[iCC].coeff_1,
-                  cpcc[iCC].coeff_2);
+              SPF(endofstring(echo_string), " %.4g %.4g %.4g", goma_ctx->fem.cpcc[iCC].coeff_0,
+                  goma_ctx->fem.cpcc[iCC].coeff_1, goma_ctx->fem.cpcc[iCC].coeff_2);
             } else /* Two floats are required */
             {
-              if (fscanf(ifp, "%lf %lf", &cpcc[iCC].coeff_0, &cpcc[iCC].coeff_1) != 2) {
+              if (fscanf(ifp, "%lf %lf", &goma_ctx->fem.cpcc[iCC].coeff_0,
+                         &goma_ctx->fem.cpcc[iCC].coeff_1) != 2) {
                 DPRINTF(stderr, "%s:\tError reading CC[%d] floats\n", yo, iCC + 1);
                 DPRINTF(stderr, "\tFormat: ...start end/range\n");
                 exit(-1);
               }
-              SPF(endofstring(echo_string), " %.4g %.4g", cpcc[iCC].coeff_0, cpcc[iCC].coeff_1);
+              SPF(endofstring(echo_string), " %.4g %.4g", goma_ctx->fem.cpcc[iCC].coeff_0,
+                  goma_ctx->fem.cpcc[iCC].coeff_1);
             }
 
             ECHO(echo_string, echo_file);
 
-            switch (cpcc[iCC].Type) {
+            switch (goma_ctx->fem.cpcc[iCC].Type) {
 
             case 1: /* BC */
-              cpcc[iCC].BCID = id1;
-              cpcc[iCC].DFID = id2;
+              goma_ctx->fem.cpcc[iCC].BCID = id1;
+              goma_ctx->fem.cpcc[iCC].DFID = id2;
               snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t( %3d. BC: BCID=%3d DFID=%5d)", iCC + 1,
-                       cpcc[iCC].BCID, cpcc[iCC].DFID);
+                       goma_ctx->fem.cpcc[iCC].BCID, goma_ctx->fem.cpcc[iCC].DFID);
               break;
 
             case 2: /* MT */
-              cpcc[iCC].MTID = id1;
-              cpcc[iCC].MPID = id2;
+              goma_ctx->fem.cpcc[iCC].MTID = id1;
+              goma_ctx->fem.cpcc[iCC].MPID = id2;
               snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t( %3d. MT: MTID=%3d MPID=%5d)", iCC + 1,
-                       cpcc[iCC].MTID, cpcc[iCC].MPID);
-              cpcc[iCC].MTID--;
+                       goma_ctx->fem.cpcc[iCC].MTID, goma_ctx->fem.cpcc[iCC].MPID);
+              goma_ctx->fem.cpcc[iCC].MTID--;
               break;
 
             case 3: /* AC */
-              cpcc[iCC].BCID = id1;
-              cpcc[iCC].DFID = id2;
+              goma_ctx->fem.cpcc[iCC].BCID = id1;
+              goma_ctx->fem.cpcc[iCC].DFID = id2;
               snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t( %3d. AC: ACID=%3d DFID=%5d)", iCC + 1,
-                       cpcc[iCC].BCID, cpcc[iCC].DFID);
+                       goma_ctx->fem.cpcc[iCC].BCID, goma_ctx->fem.cpcc[iCC].DFID);
               break;
 
             case 4: /* UM */
-              cpcc[iCC].MTID = id1;
-              cpcc[iCC].MPID = id2;
-              cpcc[iCC].MDID = id3;
+              goma_ctx->fem.cpcc[iCC].MTID = id1;
+              goma_ctx->fem.cpcc[iCC].MPID = id2;
+              goma_ctx->fem.cpcc[iCC].MDID = id3;
               snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t( %3d. UM: MTID=%3d MPID=%5d MDID=%3d)",
-                       iCC + 1, cpcc[iCC].MTID, cpcc[iCC].MPID, cpcc[iCC].MDID);
-              cpcc[iCC].MTID--;
+                       iCC + 1, goma_ctx->fem.cpcc[iCC].MTID, goma_ctx->fem.cpcc[iCC].MPID,
+                       goma_ctx->fem.cpcc[iCC].MDID);
+              goma_ctx->fem.cpcc[iCC].MTID--;
               break;
             }
 
@@ -4221,29 +4243,45 @@ void rd_track_specs(FILE *ifp, char *input) {
              * SPECIAL CASE:
              *    fn_flag = 3:   value = coeff_0 + coeff_1 * sin(theta) + coeff_2 * cos(theta)
              */
-            cpcc[iCC].fn_flag = iflag;
+            goma_ctx->fem.cpcc[iCC].fn_flag = iflag;
 
-            if (cont->upType == 6) {
-              cpcc[iCC].ratio = -1.0;
+            if (goma_ctx->fem.cont->upType == 6) {
+              goma_ctx->fem.cpcc[iCC].ratio = -1.0;
 
               switch (iflag) {
               case 0:
-                cpcc[iCC].Beg_CC_Value = cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * sin(beg_angle);
-                cpcc[iCC].End_CC_Value = cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * sin(end_angle);
+                goma_ctx->fem.cpcc[iCC].Beg_CC_Value =
+                    goma_ctx->fem.cpcc[iCC].coeff_0 +
+                    goma_ctx->fem.cpcc[iCC].coeff_1 * sin(beg_angle);
+                goma_ctx->fem.cpcc[iCC].End_CC_Value =
+                    goma_ctx->fem.cpcc[iCC].coeff_0 +
+                    goma_ctx->fem.cpcc[iCC].coeff_1 * sin(end_angle);
                 break;
               case 1:
-                cpcc[iCC].Beg_CC_Value = cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * cos(beg_angle);
-                cpcc[iCC].End_CC_Value = cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * cos(end_angle);
+                goma_ctx->fem.cpcc[iCC].Beg_CC_Value =
+                    goma_ctx->fem.cpcc[iCC].coeff_0 +
+                    goma_ctx->fem.cpcc[iCC].coeff_1 * cos(beg_angle);
+                goma_ctx->fem.cpcc[iCC].End_CC_Value =
+                    goma_ctx->fem.cpcc[iCC].coeff_0 +
+                    goma_ctx->fem.cpcc[iCC].coeff_1 * cos(end_angle);
                 break;
               case 2:
-                cpcc[iCC].Beg_CC_Value = cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * tan(beg_angle);
-                cpcc[iCC].End_CC_Value = cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * tan(end_angle);
+                goma_ctx->fem.cpcc[iCC].Beg_CC_Value =
+                    goma_ctx->fem.cpcc[iCC].coeff_0 +
+                    goma_ctx->fem.cpcc[iCC].coeff_1 * tan(beg_angle);
+                goma_ctx->fem.cpcc[iCC].End_CC_Value =
+                    goma_ctx->fem.cpcc[iCC].coeff_0 +
+                    goma_ctx->fem.cpcc[iCC].coeff_1 * tan(end_angle);
                 break;
               case 3:
-                cpcc[iCC].Beg_CC_Value = cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * sin(beg_angle) +
-                                         cpcc[iCC].coeff_2 * cos(beg_angle);
-                cpcc[iCC].End_CC_Value = cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * sin(end_angle) +
-                                         cpcc[iCC].coeff_2 * cos(end_angle);
+                goma_ctx->fem.cpcc[iCC].Beg_CC_Value =
+                    goma_ctx->fem.cpcc[iCC].coeff_0 +
+                    goma_ctx->fem.cpcc[iCC].coeff_1 * sin(beg_angle) +
+                    goma_ctx->fem.cpcc[iCC].coeff_2 * cos(beg_angle);
+                goma_ctx->fem.cpcc[iCC].End_CC_Value =
+                    goma_ctx->fem.cpcc[iCC].coeff_0 +
+                    goma_ctx->fem.cpcc[iCC].coeff_1 * sin(end_angle) +
+                    goma_ctx->fem.cpcc[iCC].coeff_2 * cos(end_angle);
                 break;
               default:
                 DPRINTF(stderr, "%s:\tCC[%d] flag must be 0-3\n", yo, iCC + 1);
@@ -4256,27 +4294,31 @@ void rd_track_specs(FILE *ifp, char *input) {
             else {
               switch (iflag) {
               case 0:
-                cpcc[iCC].Beg_CC_Value = cpcc[iCC].coeff_0;
-                cpcc[iCC].End_CC_Value = cpcc[iCC].coeff_1;
+                goma_ctx->fem.cpcc[iCC].Beg_CC_Value = goma_ctx->fem.cpcc[iCC].coeff_0;
+                goma_ctx->fem.cpcc[iCC].End_CC_Value = goma_ctx->fem.cpcc[iCC].coeff_1;
                 break;
               case 1:
-                cpcc[iCC].Beg_CC_Value = cpcc[iCC].coeff_0;
-                cpcc[iCC].End_CC_Value = cpcc[iCC].coeff_1;
-                cpcc[iCC].ratio = (cpcc[iCC].coeff_1 - cpcc[iCC].coeff_0) / range;
+                goma_ctx->fem.cpcc[iCC].Beg_CC_Value = goma_ctx->fem.cpcc[iCC].coeff_0;
+                goma_ctx->fem.cpcc[iCC].End_CC_Value = goma_ctx->fem.cpcc[iCC].coeff_1;
+                goma_ctx->fem.cpcc[iCC].ratio =
+                    (goma_ctx->fem.cpcc[iCC].coeff_1 - goma_ctx->fem.cpcc[iCC].coeff_0) / range;
                 break;
               case 2:
-                cpcc[iCC].Beg_CC_Value = cpcc[iCC].coeff_0;
-                cpcc[iCC].ratio = cpcc[iCC].coeff_1;
-                cpcc[iCC].End_CC_Value = cpcc[iCC].Beg_CC_Value + cpcc[iCC].ratio * range;
+                goma_ctx->fem.cpcc[iCC].Beg_CC_Value = goma_ctx->fem.cpcc[iCC].coeff_0;
+                goma_ctx->fem.cpcc[iCC].ratio = goma_ctx->fem.cpcc[iCC].coeff_1;
+                goma_ctx->fem.cpcc[iCC].End_CC_Value =
+                    goma_ctx->fem.cpcc[iCC].Beg_CC_Value + goma_ctx->fem.cpcc[iCC].ratio * range;
                 break;
               case 3:
-                cpcc[iCC].ratio = -1.0;
-                cpcc[iCC].Beg_CC_Value =
-                    cpcc[iCC].coeff_0 +
-                    cpcc[iCC].coeff_1 * pow(BegParameterValue, cpcc[iCC].coeff_2);
-                cpcc[iCC].End_CC_Value =
-                    cpcc[iCC].coeff_0 +
-                    cpcc[iCC].coeff_1 * pow(EndParameterValue, cpcc[iCC].coeff_2);
+                goma_ctx->fem.cpcc[iCC].ratio = -1.0;
+                goma_ctx->fem.cpcc[iCC].Beg_CC_Value =
+                    goma_ctx->fem.cpcc[iCC].coeff_0 +
+                    goma_ctx->fem.cpcc[iCC].coeff_1 *
+                        pow(BegParameterValue, goma_ctx->fem.cpcc[iCC].coeff_2);
+                goma_ctx->fem.cpcc[iCC].End_CC_Value =
+                    goma_ctx->fem.cpcc[iCC].coeff_0 +
+                    goma_ctx->fem.cpcc[iCC].coeff_1 *
+                        pow(EndParameterValue, goma_ctx->fem.cpcc[iCC].coeff_2);
                 FALLTHROUGH;
               default:
                 DPRINTF(stderr, "%s:\tCC[%d] flag must be 0, 1, or 2\n", yo, iCC + 1);
@@ -4286,8 +4328,8 @@ void rd_track_specs(FILE *ifp, char *input) {
 
             } /* End of else block (cont->upType == 6) */
 
-            cpcc[iCC].old_value = cpcc[iCC].Beg_CC_Value;
-            cpcc[iCC].value = cpcc[iCC].Beg_CC_Value;
+            goma_ctx->fem.cpcc[iCC].old_value = goma_ctx->fem.cpcc[iCC].Beg_CC_Value;
+            goma_ctx->fem.cpcc[iCC].value = goma_ctx->fem.cpcc[iCC].Beg_CC_Value;
           } /* End of iCC loop */
 
         } /* End of continuation condition if block */
@@ -4296,9 +4338,9 @@ void rd_track_specs(FILE *ifp, char *input) {
 
     } /* End of continuation=LOCA if block */
 
-    if (Continuation == LOCA &&
-        (loca_in->Cont_Alg == TP_CONTINUATION || loca_in->Cont_Alg == PF_CONTINUATION ||
-         loca_in->Cont_Alg == HP_CONTINUATION)) {
+    if (Continuation == LOCA && (goma_ctx->fem.loca_in->Cont_Alg == TP_CONTINUATION ||
+                                 goma_ctx->fem.loca_in->Cont_Alg == PF_CONTINUATION ||
+                                 goma_ctx->fem.loca_in->Cont_Alg == HP_CONTINUATION)) {
 
       look_for(ifp, "TP Continuation Type", input, '=');
 
@@ -4342,7 +4384,7 @@ void rd_track_specs(FILE *ifp, char *input) {
         GOMA_EH(GOMA_ERROR, "unknown TP ContType option (one of BC, MT, AC, UM, AN, or UF)");
       }
 
-      loca_in->TPupType = TPContType;
+      goma_ctx->fem.loca_in->TPupType = TPContType;
 
       SPF(endofstring(echo_string), " %s", input);
       ECHO(echo_string, echo_file);
@@ -4356,14 +4398,14 @@ void rd_track_specs(FILE *ifp, char *input) {
         }
 
         /* Allocate the structure tpuc for each function */
-        tpuc = (struct User_Continuation_Info *)array_alloc(1, nUTC,
-                                                            sizeof(struct User_Continuation_Info));
+        goma_ctx->fem.tpuc = (struct User_Continuation_Info *)array_alloc(
+            1, nUTC, sizeof(struct User_Continuation_Info));
 
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, nUTC);
         ECHO(echo_string, echo_file);
       }
 
-      loca_in->TPupBCID = -1;
+      goma_ctx->fem.loca_in->TPupBCID = -1;
       iread = look_for_optional(ifp, "TP Boundary condition ID", input, '=');
       if (iread == 1) {
         if (fscanf(ifp, "%d", &TPBdyCondID) != 1) {
@@ -4372,13 +4414,13 @@ void rd_track_specs(FILE *ifp, char *input) {
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, TPBdyCondID);
         ECHO(echo_string, echo_file);
       }
-      loca_in->TPupBCID = TPBdyCondID;
+      goma_ctx->fem.loca_in->TPupBCID = TPBdyCondID;
 
       look_for(ifp, "TP BC data float tag", input, '=');
       if (fscanf(ifp, "%d", &TPDataFltID) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading TP BC data float tag id");
       }
-      loca_in->TPupDFID = TPDataFltID;
+      goma_ctx->fem.loca_in->TPupDFID = TPDataFltID;
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, TPDataFltID);
       ECHO(echo_string, echo_file);
 
@@ -4386,7 +4428,7 @@ void rd_track_specs(FILE *ifp, char *input) {
       if (fscanf(ifp, "%d", &TPMatID) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading TP parameter material id");
       }
-      loca_in->TPupMTID = TPMatID - 1;
+      goma_ctx->fem.loca_in->TPupMTID = TPMatID - 1;
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, TPMatID);
       ECHO(echo_string, echo_file);
 
@@ -4394,7 +4436,7 @@ void rd_track_specs(FILE *ifp, char *input) {
       if (fscanf(ifp, "%d", &TPMatPropID) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading TP parameter material property tag id");
       }
-      loca_in->TPupMPID = TPMatPropID;
+      goma_ctx->fem.loca_in->TPupMPID = TPMatPropID;
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, TPMatPropID);
       ECHO(echo_string, echo_file);
 
@@ -4402,67 +4444,70 @@ void rd_track_specs(FILE *ifp, char *input) {
       if (fscanf(ifp, "%d", &TPMatPropSIID) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading TP Material property tag subindex id");
       }
-      loca_in->TPupMDID = TPMatPropSIID;
+      goma_ctx->fem.loca_in->TPupMDID = TPMatPropSIID;
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, TPMatPropSIID);
       ECHO(echo_string, echo_file);
 
-      loca_in->TPGuess = 0.0;
+      goma_ctx->fem.loca_in->TPGuess = 0.0;
       iread = look_for_optional(ifp, "Initial guess of TP parameter", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%lf", &(loca_in->TPGuess)) != 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.loca_in->TPGuess)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading initial guess of TP parameter");
         }
       }
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, loca_in->TPGuess);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+               goma_ctx->fem.loca_in->TPGuess);
       ECHO(echo_string, echo_file);
 
-      loca_in->TPFinal = 1.0;
+      goma_ctx->fem.loca_in->TPFinal = 1.0;
       iread = look_for_optional(ifp, "TP parameter final value", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%lf", &(loca_in->TPFinal)) != 1) {
+        if (fscanf(ifp, "%lf", &(goma_ctx->fem.loca_in->TPFinal)) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading TP parameter final value");
         }
       }
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, loca_in->TPFinal);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+               goma_ctx->fem.loca_in->TPFinal);
       ECHO(echo_string, echo_file);
 
-      loca_in->NVRestart = FALSE;
+      goma_ctx->fem.loca_in->NVRestart = FALSE;
       iread = look_for_optional(ifp, "Null vector restart file", input, '=');
       if (iread == 1) {
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", input);
         (void)read_string(ifp, input, '\n');
         strip(input);
-        (void)strcpy(loca_in->NV_exoII_infile, input);
+        (void)strcpy(goma_ctx->fem.loca_in->NV_exoII_infile, input);
 
-        loca_in->NVRestart = TRUE;
-        SPF(endofstring(echo_string), " %s", loca_in->NV_exoII_infile);
+        goma_ctx->fem.loca_in->NVRestart = TRUE;
+        SPF(endofstring(echo_string), " %s", goma_ctx->fem.loca_in->NV_exoII_infile);
         ECHO(echo_string, echo_file);
       } else {
-        if (loca_in->Cont_Alg == PF_CONTINUATION) {
+        if (goma_ctx->fem.loca_in->Cont_Alg == PF_CONTINUATION) {
           GOMA_EH(GOMA_ERROR, "Pitchfork algorithm requires null vector input!");
         }
-        if (loca_in->Cont_Alg == HP_CONTINUATION) {
+        if (goma_ctx->fem.loca_in->Cont_Alg == HP_CONTINUATION) {
           GOMA_EH(GOMA_ERROR, "Hopf algorithm requires null vector input!");
         }
       }
 
       /* These two cards pertain only to Hopf continuation */
-      if (loca_in->Cont_Alg == HP_CONTINUATION) {
+      if (goma_ctx->fem.loca_in->Cont_Alg == HP_CONTINUATION) {
         look_for(ifp, "Null vector imaginary restart file", input, '=');
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", input);
 
         (void)read_string(ifp, input, '\n');
         strip(input);
-        (void)strcpy(loca_in->NV_imag_infile, input);
+        (void)strcpy(goma_ctx->fem.loca_in->NV_imag_infile, input);
 
-        SPF(endofstring(echo_string), " %s", loca_in->NV_imag_infile);
+        SPF(endofstring(echo_string), " %s", goma_ctx->fem.loca_in->NV_imag_infile);
         ECHO(echo_string, echo_file);
 
         look_for(ifp, "Initial Hopf frequency", input, '=');
-        if (fscanf(ifp, "%le", &loca_in->omega) != 1) {
+        if (fscanf(ifp, "%le", &goma_ctx->fem.loca_in->omega) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading initial Hopf frequency");
         }
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, loca_in->omega);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+                 goma_ctx->fem.loca_in->omega);
         ECHO(echo_string, echo_file);
       }
 
@@ -4471,20 +4516,20 @@ void rd_track_specs(FILE *ifp, char *input) {
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", input);
         (void)read_string(ifp, input, '\n');
         strip(input);
-        (void)strcpy(loca_in->NV_exoII_outfile, input);
-        SPF(endofstring(echo_string), " %s", loca_in->NV_exoII_outfile);
+        (void)strcpy(goma_ctx->fem.loca_in->NV_exoII_outfile, input);
+        SPF(endofstring(echo_string), " %s", goma_ctx->fem.loca_in->NV_exoII_outfile);
         ECHO(echo_string, echo_file);
-        loca_in->NVSave = TRUE;
+        goma_ctx->fem.loca_in->NVSave = TRUE;
       }
 
-      if (loca_in->Cont_Alg == HP_CONTINUATION && loca_in->NVSave) {
+      if (goma_ctx->fem.loca_in->Cont_Alg == HP_CONTINUATION && goma_ctx->fem.loca_in->NVSave) {
         iread = look_for_optional(ifp, "Null vector imaginary save file", input, '=');
         if (iread == 1) {
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", input);
           (void)read_string(ifp, input, '\n');
           strip(input);
-          (void)strcpy(loca_in->NV_imag_outfile, input);
-          SPF(endofstring(echo_string), " %s", loca_in->NV_imag_outfile);
+          (void)strcpy(goma_ctx->fem.loca_in->NV_imag_outfile, input);
+          SPF(endofstring(echo_string), " %s", goma_ctx->fem.loca_in->NV_imag_outfile);
           ECHO(echo_string, echo_file);
         }
       }
@@ -4522,8 +4567,8 @@ void rd_track_specs(FILE *ifp, char *input) {
        *  Allocate space for the vector tpcc
        */
 
-      tpcc = (struct Continuation_Conditions *)array_alloc(1, nTC,
-                                                           sizeof(struct Continuation_Conditions));
+      goma_ctx->fem.tpcc = (struct Continuation_Conditions *)array_alloc(
+          1, nTC, sizeof(struct Continuation_Conditions));
 
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tallocated %d copies of the %lu sized\n", yo, nTC,
@@ -4535,31 +4580,31 @@ void rd_track_specs(FILE *ifp, char *input) {
        *  Load up tpcc[0] with inputs from above
        *  For angular continuation, also get angle range in radians
        */
-      tpcc[0].nCC = nTC;
-      tpcc[0].ratio = 1.0;
-      tpcc[0].Type = loca_in->TPupType;
-      tpcc[0].BCID = loca_in->TPupBCID;
-      tpcc[0].DFID = loca_in->TPupDFID;
-      tpcc[0].MTID = loca_in->TPupMTID;
-      tpcc[0].MPID = loca_in->TPupMPID;
-      tpcc[0].MDID = loca_in->TPupMDID;
-      tpcc[0].Beg_CC_Value = loca_in->TPGuess;
-      tpcc[0].End_CC_Value = loca_in->TPFinal;
-      range = tpcc[0].End_CC_Value - tpcc[0].Beg_CC_Value;
+      goma_ctx->fem.tpcc[0].nCC = nTC;
+      goma_ctx->fem.tpcc[0].ratio = 1.0;
+      goma_ctx->fem.tpcc[0].Type = goma_ctx->fem.loca_in->TPupType;
+      goma_ctx->fem.tpcc[0].BCID = goma_ctx->fem.loca_in->TPupBCID;
+      goma_ctx->fem.tpcc[0].DFID = goma_ctx->fem.loca_in->TPupDFID;
+      goma_ctx->fem.tpcc[0].MTID = goma_ctx->fem.loca_in->TPupMTID;
+      goma_ctx->fem.tpcc[0].MPID = goma_ctx->fem.loca_in->TPupMPID;
+      goma_ctx->fem.tpcc[0].MDID = goma_ctx->fem.loca_in->TPupMDID;
+      goma_ctx->fem.tpcc[0].Beg_CC_Value = goma_ctx->fem.loca_in->TPGuess;
+      goma_ctx->fem.tpcc[0].End_CC_Value = goma_ctx->fem.loca_in->TPFinal;
+      range = goma_ctx->fem.tpcc[0].End_CC_Value - goma_ctx->fem.tpcc[0].Beg_CC_Value;
       if (TPContType == 6) {
-        beg_angle = tpcc[0].Beg_CC_Value * M_PIE / 180.0;
-        end_angle = tpcc[0].End_CC_Value * M_PIE / 180.0;
+        beg_angle = goma_ctx->fem.tpcc[0].Beg_CC_Value * M_PIE / 180.0;
+        end_angle = goma_ctx->fem.tpcc[0].End_CC_Value * M_PIE / 180.0;
       }
-      tpcc[0].fn_flag = 0;
-      tpcc[0].old_value = tpcc[0].Beg_CC_Value;
-      tpcc[0].value = tpcc[0].Beg_CC_Value;
+      goma_ctx->fem.tpcc[0].fn_flag = 0;
+      goma_ctx->fem.tpcc[0].old_value = goma_ctx->fem.tpcc[0].Beg_CC_Value;
+      goma_ctx->fem.tpcc[0].value = goma_ctx->fem.tpcc[0].Beg_CC_Value;
 
       /*
        *  Read in TP parameter conditions and load up rest of tpcc
        */
 
       /* First check for UF/TC conflict (UF has priority) */
-      if (nTC > 1 && loca_in->TPupType == 5) {
+      if (nTC > 1 && goma_ctx->fem.loca_in->TPupType == 5) {
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s)", "UF continuation overrides TC cards!");
         ECHO(echo_string, echo_file);
         nTC = 1;
@@ -4569,7 +4614,7 @@ void rd_track_specs(FILE *ifp, char *input) {
 
         for (iTC = 1; iTC < nTC; iTC++) {
 
-          tpcc[iTC].nCC = nTC;
+          goma_ctx->fem.tpcc[iTC].nCC = nTC;
 
           look_for(ifp, "TC", input, '=');
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", input);
@@ -4579,13 +4624,13 @@ void rd_track_specs(FILE *ifp, char *input) {
             exit(-1);
           }
           if (!strcmp(input, "BC")) {
-            tpcc[iTC].Type = 1;
+            goma_ctx->fem.tpcc[iTC].Type = 1;
           } else if (!strcmp(input, "MT")) {
-            tpcc[iTC].Type = 2;
+            goma_ctx->fem.tpcc[iTC].Type = 2;
           } else if (!strcmp(input, "AC")) {
-            tpcc[iTC].Type = 3;
+            goma_ctx->fem.tpcc[iTC].Type = 3;
           } else if (!strcmp(input, "UM")) {
-            tpcc[iTC].Type = 4;
+            goma_ctx->fem.tpcc[iTC].Type = 4;
           } else {
             fprintf(stderr, "%s:\tImproper TC set type - %s\n", yo, input);
             if (!strcmp(input, "UF"))
@@ -4599,7 +4644,7 @@ void rd_track_specs(FILE *ifp, char *input) {
            *  Read in three required integers (four if type is UM)
            */
 
-          if (tpcc[iTC].Type == 4) {
+          if (goma_ctx->fem.tpcc[iTC].Type == 4) {
             if (fscanf(ifp, "%d %d %d %d", &id1, &id2, &id3, &iflag) != 4) {
               fprintf(stderr, "%s:\tError reading integer inputs, ", yo);
               fprintf(stderr, "for TC[%d]\n", iTC + 1);
@@ -4612,13 +4657,13 @@ void rd_track_specs(FILE *ifp, char *input) {
             if (fscanf(ifp, "%d %d %d", &id1, &id2, &iflag) != 3) {
               fprintf(stderr, "%s:\tError reading integer inputs ", yo);
               fprintf(stderr, "for TC[%d]\n", iTC + 1);
-              if (tpcc[iTC].Type == 1) {
+              if (goma_ctx->fem.tpcc[iTC].Type == 1) {
                 fprintf(stderr, "\tFormat: TC = BC BCID DFID FLAG ...\n");
               }
-              if (tpcc[iTC].Type == 2) {
+              if (goma_ctx->fem.tpcc[iTC].Type == 2) {
                 fprintf(stderr, "\tFormat: TC = MT MTID MPID FLAG ...\n");
               }
-              if (tpcc[iTC].Type == 3) {
+              if (goma_ctx->fem.tpcc[iTC].Type == 3) {
                 fprintf(stderr, "\tFormat: TC = AC ACID DFID FLAG ...\n");
               }
 
@@ -4639,66 +4684,69 @@ void rd_track_specs(FILE *ifp, char *input) {
            */
 
           if (TPContType != 6 && iflag == 0) {
-            tpcc[iTC].ratio = 1.0;
-            tpcc[iTC].Beg_CC_Value = tpcc[0].Beg_CC_Value;
-            tpcc[iTC].End_CC_Value = tpcc[0].End_CC_Value;
+            goma_ctx->fem.tpcc[iTC].ratio = 1.0;
+            goma_ctx->fem.tpcc[iTC].Beg_CC_Value = goma_ctx->fem.tpcc[0].Beg_CC_Value;
+            goma_ctx->fem.tpcc[iTC].End_CC_Value = goma_ctx->fem.tpcc[0].End_CC_Value;
           } else if (iflag == 3) /* Three floats required */
           {
-            if (fscanf(ifp, "%lf %lf %lf", &tpcc[iTC].coeff_0, &tpcc[iTC].coeff_1,
-                       &tpcc[iTC].coeff_2) != 3) {
+            if (fscanf(ifp, "%lf %lf %lf", &goma_ctx->fem.tpcc[iTC].coeff_0,
+                       &goma_ctx->fem.tpcc[iTC].coeff_1, &goma_ctx->fem.tpcc[iTC].coeff_2) != 3) {
               fprintf(stderr, "%s:\tError reading TC[%d] floats\n", yo, iTC + 1);
               fprintf(stderr, "\tThree floats are required!\n");
               exit(-1);
             }
-            SPF(endofstring(echo_string), " %.4g %.4g %.4g", tpcc[iTC].coeff_0, tpcc[iTC].coeff_1,
-                tpcc[iTC].coeff_2);
+            SPF(endofstring(echo_string), " %.4g %.4g %.4g", goma_ctx->fem.tpcc[iTC].coeff_0,
+                goma_ctx->fem.tpcc[iTC].coeff_1, goma_ctx->fem.tpcc[iTC].coeff_2);
           } else /* Two floats are required */
           {
-            if (fscanf(ifp, "%lf %lf", &tpcc[iTC].coeff_0, &tpcc[iTC].coeff_1) != 2) {
+            if (fscanf(ifp, "%lf %lf", &goma_ctx->fem.tpcc[iTC].coeff_0,
+                       &goma_ctx->fem.tpcc[iTC].coeff_1) != 2) {
               fprintf(stderr, "%s:\tError reading TC[%d] floats\n", yo, iTC + 1);
               fprintf(stderr, "\tFormat: ...start end/range\n");
               exit(-1);
             }
-            SPF(endofstring(echo_string), " %.4g %.4g", tpcc[iTC].coeff_0, tpcc[iTC].coeff_1);
+            SPF(endofstring(echo_string), " %.4g %.4g", goma_ctx->fem.tpcc[iTC].coeff_0,
+                goma_ctx->fem.tpcc[iTC].coeff_1);
           }
 
           ECHO(echo_string, echo_file);
 
-          switch (tpcc[iTC].Type) {
+          switch (goma_ctx->fem.tpcc[iTC].Type) {
 
           case 1:
             /* BC */
-            tpcc[iTC].BCID = id1;
-            tpcc[iTC].DFID = id2;
+            goma_ctx->fem.tpcc[iTC].BCID = id1;
+            goma_ctx->fem.tpcc[iTC].DFID = id2;
             snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t( %3d. BC: BCID=%3d DFID=%5d)", iTC + 1,
-                     tpcc[iTC].BCID, tpcc[iTC].DFID);
+                     goma_ctx->fem.tpcc[iTC].BCID, goma_ctx->fem.tpcc[iTC].DFID);
             break;
 
           case 2:
             /* MT */
-            tpcc[iTC].MTID = id1;
-            tpcc[iTC].MPID = id2;
+            goma_ctx->fem.tpcc[iTC].MTID = id1;
+            goma_ctx->fem.tpcc[iTC].MPID = id2;
             snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t( %3d. MT: MTID=%3d MPID=%5d)", iTC + 1,
-                     tpcc[iTC].MTID, tpcc[iTC].MPID);
-            tpcc[iTC].MTID--;
+                     goma_ctx->fem.tpcc[iTC].MTID, goma_ctx->fem.tpcc[iTC].MPID);
+            goma_ctx->fem.tpcc[iTC].MTID--;
             break;
 
           case 3:
             /* AC */
-            tpcc[iTC].BCID = id1;
-            tpcc[iTC].DFID = id2;
+            goma_ctx->fem.tpcc[iTC].BCID = id1;
+            goma_ctx->fem.tpcc[iTC].DFID = id2;
             snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t( %3d. AC: ACID=%3d DFID=%5d)", iTC + 1,
-                     tpcc[iTC].BCID, tpcc[iTC].DFID);
+                     goma_ctx->fem.tpcc[iTC].BCID, goma_ctx->fem.tpcc[iTC].DFID);
             break;
 
           case 4:
             /* UM */
-            tpcc[iTC].MTID = id1;
-            tpcc[iTC].MPID = id2;
-            tpcc[iTC].MDID = id3;
+            goma_ctx->fem.tpcc[iTC].MTID = id1;
+            goma_ctx->fem.tpcc[iTC].MPID = id2;
+            goma_ctx->fem.tpcc[iTC].MDID = id3;
             snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t( %3d. MT: MTID=%3d MPID=%5d MDID=%3d)",
-                     iTC + 1, tpcc[iTC].MTID, tpcc[iTC].MPID, tpcc[iTC].MDID);
-            tpcc[iTC].MTID--;
+                     iTC + 1, goma_ctx->fem.tpcc[iTC].MTID, goma_ctx->fem.tpcc[iTC].MPID,
+                     goma_ctx->fem.tpcc[iTC].MDID);
+            goma_ctx->fem.tpcc[iTC].MTID--;
             break;
           }
 
@@ -4708,29 +4756,45 @@ void rd_track_specs(FILE *ifp, char *input) {
            * The two floats have different purposes in angular continuation,
            * see comments above for CC cards.
            */
-          tpcc[iTC].fn_flag = iflag;
+          goma_ctx->fem.tpcc[iTC].fn_flag = iflag;
 
           if (TPContType == 6) {
-            tpcc[iTC].ratio = -1.0;
+            goma_ctx->fem.tpcc[iTC].ratio = -1.0;
 
             switch (iflag) {
             case 0:
-              tpcc[iTC].Beg_CC_Value = tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * sin(beg_angle);
-              tpcc[iTC].End_CC_Value = tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * sin(end_angle);
+              goma_ctx->fem.tpcc[iTC].Beg_CC_Value =
+                  goma_ctx->fem.tpcc[iTC].coeff_0 +
+                  goma_ctx->fem.tpcc[iTC].coeff_1 * sin(beg_angle);
+              goma_ctx->fem.tpcc[iTC].End_CC_Value =
+                  goma_ctx->fem.tpcc[iTC].coeff_0 +
+                  goma_ctx->fem.tpcc[iTC].coeff_1 * sin(end_angle);
               break;
             case 1:
-              tpcc[iTC].Beg_CC_Value = tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * cos(beg_angle);
-              tpcc[iTC].End_CC_Value = tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * cos(end_angle);
+              goma_ctx->fem.tpcc[iTC].Beg_CC_Value =
+                  goma_ctx->fem.tpcc[iTC].coeff_0 +
+                  goma_ctx->fem.tpcc[iTC].coeff_1 * cos(beg_angle);
+              goma_ctx->fem.tpcc[iTC].End_CC_Value =
+                  goma_ctx->fem.tpcc[iTC].coeff_0 +
+                  goma_ctx->fem.tpcc[iTC].coeff_1 * cos(end_angle);
               break;
             case 2:
-              tpcc[iTC].Beg_CC_Value = tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * tan(beg_angle);
-              tpcc[iTC].End_CC_Value = tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * tan(end_angle);
+              goma_ctx->fem.tpcc[iTC].Beg_CC_Value =
+                  goma_ctx->fem.tpcc[iTC].coeff_0 +
+                  goma_ctx->fem.tpcc[iTC].coeff_1 * tan(beg_angle);
+              goma_ctx->fem.tpcc[iTC].End_CC_Value =
+                  goma_ctx->fem.tpcc[iTC].coeff_0 +
+                  goma_ctx->fem.tpcc[iTC].coeff_1 * tan(end_angle);
               break;
             case 3:
-              tpcc[iTC].Beg_CC_Value = tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * sin(beg_angle) +
-                                       tpcc[iTC].coeff_2 * cos(beg_angle);
-              tpcc[iTC].End_CC_Value = tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * sin(end_angle) +
-                                       tpcc[iTC].coeff_2 * cos(beg_angle);
+              goma_ctx->fem.tpcc[iTC].Beg_CC_Value =
+                  goma_ctx->fem.tpcc[iTC].coeff_0 +
+                  goma_ctx->fem.tpcc[iTC].coeff_1 * sin(beg_angle) +
+                  goma_ctx->fem.tpcc[iTC].coeff_2 * cos(beg_angle);
+              goma_ctx->fem.tpcc[iTC].End_CC_Value =
+                  goma_ctx->fem.tpcc[iTC].coeff_0 +
+                  goma_ctx->fem.tpcc[iTC].coeff_1 * sin(end_angle) +
+                  goma_ctx->fem.tpcc[iTC].coeff_2 * cos(beg_angle);
               break;
             default:
               fprintf(stderr, "%s:\tCC[%d] flag must be 0, 1, or 2\n", yo, iTC + 1);
@@ -4743,25 +4807,31 @@ void rd_track_specs(FILE *ifp, char *input) {
           else {
             switch (iflag) {
             case 0:
-              tpcc[iTC].Beg_CC_Value = tpcc[iTC].coeff_0;
-              tpcc[iTC].End_CC_Value = tpcc[iTC].coeff_1;
+              goma_ctx->fem.tpcc[iTC].Beg_CC_Value = goma_ctx->fem.tpcc[iTC].coeff_0;
+              goma_ctx->fem.tpcc[iTC].End_CC_Value = goma_ctx->fem.tpcc[iTC].coeff_1;
               break;
             case 1:
-              tpcc[iTC].Beg_CC_Value = tpcc[iTC].coeff_0;
-              tpcc[iTC].End_CC_Value = tpcc[iTC].coeff_1;
-              tpcc[iTC].ratio = (tpcc[iTC].coeff_1 - tpcc[iTC].coeff_0) / range;
+              goma_ctx->fem.tpcc[iTC].Beg_CC_Value = goma_ctx->fem.tpcc[iTC].coeff_0;
+              goma_ctx->fem.tpcc[iTC].End_CC_Value = goma_ctx->fem.tpcc[iTC].coeff_1;
+              goma_ctx->fem.tpcc[iTC].ratio =
+                  (goma_ctx->fem.tpcc[iTC].coeff_1 - goma_ctx->fem.tpcc[iTC].coeff_0) / range;
               break;
             case 2:
-              tpcc[iTC].Beg_CC_Value = tpcc[iTC].coeff_0;
-              tpcc[iTC].ratio = tpcc[iTC].coeff_1;
-              tpcc[iTC].End_CC_Value = tpcc[iTC].Beg_CC_Value + tpcc[iTC].ratio * range;
+              goma_ctx->fem.tpcc[iTC].Beg_CC_Value = goma_ctx->fem.tpcc[iTC].coeff_0;
+              goma_ctx->fem.tpcc[iTC].ratio = goma_ctx->fem.tpcc[iTC].coeff_1;
+              goma_ctx->fem.tpcc[iTC].End_CC_Value =
+                  goma_ctx->fem.tpcc[iTC].Beg_CC_Value + goma_ctx->fem.tpcc[iTC].ratio * range;
               break;
             case 3:
-              tpcc[iTC].ratio = -1.0;
-              tpcc[iTC].Beg_CC_Value =
-                  tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * pow(BegParameterValue, tpcc[iTC].coeff_2);
-              tpcc[iTC].End_CC_Value =
-                  tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * pow(EndParameterValue, tpcc[iTC].coeff_2);
+              goma_ctx->fem.tpcc[iTC].ratio = -1.0;
+              goma_ctx->fem.tpcc[iTC].Beg_CC_Value =
+                  goma_ctx->fem.tpcc[iTC].coeff_0 +
+                  goma_ctx->fem.tpcc[iTC].coeff_1 *
+                      pow(BegParameterValue, goma_ctx->fem.tpcc[iTC].coeff_2);
+              goma_ctx->fem.tpcc[iTC].End_CC_Value =
+                  goma_ctx->fem.tpcc[iTC].coeff_0 +
+                  goma_ctx->fem.tpcc[iTC].coeff_1 *
+                      pow(EndParameterValue, goma_ctx->fem.tpcc[iTC].coeff_2);
               break;
             default:
               fprintf(stderr, "%s:\tTC[%d] flag must be 0-3\n", yo, iTC + 1);
@@ -4771,8 +4841,8 @@ void rd_track_specs(FILE *ifp, char *input) {
 
           } /* End of else block (TPContType == 6) */
 
-          tpcc[iTC].old_value = tpcc[iTC].Beg_CC_Value;
-          tpcc[iTC].value = tpcc[iTC].Beg_CC_Value;
+          goma_ctx->fem.tpcc[iTC].old_value = goma_ctx->fem.tpcc[iTC].Beg_CC_Value;
+          goma_ctx->fem.tpcc[iTC].value = goma_ctx->fem.tpcc[iTC].Beg_CC_Value;
         } /* End of iTC loop */
 
       } /* End of TP continuation condition if block */
@@ -4854,7 +4924,7 @@ void rd_hunt_specs(FILE *ifp, char *input) {
     return;
   }
 
-  hunt = (struct HC_Information *)array_alloc(1, nHC, sizeof(struct HC_Information));
+  goma_ctx->fem.hunt = (struct HC_Information *)array_alloc(1, nHC, sizeof(struct HC_Information));
 
   if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
     printf("%s:\tallocated %d copies of the %lu sized\n", yo, nHC,
@@ -4862,11 +4932,11 @@ void rd_hunt_specs(FILE *ifp, char *input) {
     printf("%s:\tHC structure.\n", yo);
   }
 
-  hunt[0].nHC = nHC;
+  goma_ctx->fem.hunt[0].nHC = nHC;
 
   for (iHC = 0; iHC < nHC; iHC++) {
 
-    hunt[iHC].nHC = nHC;
+    goma_ctx->fem.hunt[iHC].nHC = nHC;
 
     look_for(ifp, "HC", input, '=');
 
@@ -4878,13 +4948,13 @@ void rd_hunt_specs(FILE *ifp, char *input) {
     }
 
     if (!strcmp(input, "BC")) {
-      hunt[iHC].Type = 1;
+      goma_ctx->fem.hunt[iHC].Type = 1;
     } else if (!strcmp(input, "MT")) {
-      hunt[iHC].Type = 2;
+      goma_ctx->fem.hunt[iHC].Type = 2;
     } else if (!strcmp(input, "AC")) {
-      hunt[iHC].Type = 3;
+      goma_ctx->fem.hunt[iHC].Type = 3;
     } else if (!strcmp(input, "UM")) {
-      hunt[iHC].Type = 4;
+      goma_ctx->fem.hunt[iHC].Type = 4;
     } else {
       fprintf(stderr, "%s:\tImproper set_type for hunting condition - %s\n", yo, input);
       exit(-1);
@@ -4892,51 +4962,60 @@ void rd_hunt_specs(FILE *ifp, char *input) {
 
     SPF(endofstring(echo_string), " %s", input);
 
-    switch (hunt[iHC].Type) {
+    switch (goma_ctx->fem.hunt[iHC].Type) {
     case 3:
     case 1:
       /* AC */
       /* BC */
-      if (fscanf(ifp, "%d %d %d %le %le %le %le %le", &hunt[iHC].BCID, &hunt[iHC].DFID,
-                 &hunt[iHC].ramp, &hunt[iHC].BegParameterValue, &hunt[iHC].EndParameterValue,
-                 &hunt[iHC].Delta_s0, &hunt[iHC].Delta_s_min, &hunt[iHC].Delta_s_max) != 8) {
+      if (fscanf(ifp, "%d %d %d %le %le %le %le %le", &goma_ctx->fem.hunt[iHC].BCID,
+                 &goma_ctx->fem.hunt[iHC].DFID, &goma_ctx->fem.hunt[iHC].ramp,
+                 &goma_ctx->fem.hunt[iHC].BegParameterValue,
+                 &goma_ctx->fem.hunt[iHC].EndParameterValue, &goma_ctx->fem.hunt[iHC].Delta_s0,
+                 &goma_ctx->fem.hunt[iHC].Delta_s_min, &goma_ctx->fem.hunt[iHC].Delta_s_max) != 8) {
         fprintf(stderr, "%s:\tError reading hunt[%d].BCID hunt[%d].DFID\n", yo, iHC, iHC);
         fprintf(stderr, "%s:\tRecall Format: HC = BCID DFID RAMP from to step step_min step_max\n",
                 yo);
         exit(-1);
       }
-      SPF(endofstring(echo_string), " %d %d %d %.4g %.4g %.4g %.4g %.4g", hunt[iHC].BCID,
-          hunt[iHC].DFID, hunt[iHC].ramp, hunt[iHC].BegParameterValue, hunt[iHC].EndParameterValue,
-          hunt[iHC].Delta_s0, hunt[iHC].Delta_s_min, hunt[iHC].Delta_s_max);
-      SPF(endofstring(echo_string), "\n\t( %3d. BC: BCID=%3d DFID=%5d)", iHC + 1, hunt[iHC].BCID,
-          hunt[iHC].DFID);
+      SPF(endofstring(echo_string), " %d %d %d %.4g %.4g %.4g %.4g %.4g",
+          goma_ctx->fem.hunt[iHC].BCID, goma_ctx->fem.hunt[iHC].DFID, goma_ctx->fem.hunt[iHC].ramp,
+          goma_ctx->fem.hunt[iHC].BegParameterValue, goma_ctx->fem.hunt[iHC].EndParameterValue,
+          goma_ctx->fem.hunt[iHC].Delta_s0, goma_ctx->fem.hunt[iHC].Delta_s_min,
+          goma_ctx->fem.hunt[iHC].Delta_s_max);
+      SPF(endofstring(echo_string), "\n\t( %3d. BC: BCID=%3d DFID=%5d)", iHC + 1,
+          goma_ctx->fem.hunt[iHC].BCID, goma_ctx->fem.hunt[iHC].DFID);
       break;
 
     case 2:
       /* MT */
-      if (fscanf(ifp, "%d %d %d %le %le %le %le %le", &hunt[iHC].MTID, &hunt[iHC].MPID,
-                 &hunt[iHC].ramp, &hunt[iHC].BegParameterValue, &hunt[iHC].EndParameterValue,
-                 &hunt[iHC].Delta_s0, &hunt[iHC].Delta_s_min, &hunt[iHC].Delta_s_max) != 8) {
+      if (fscanf(ifp, "%d %d %d %le %le %le %le %le", &goma_ctx->fem.hunt[iHC].MTID,
+                 &goma_ctx->fem.hunt[iHC].MPID, &goma_ctx->fem.hunt[iHC].ramp,
+                 &goma_ctx->fem.hunt[iHC].BegParameterValue,
+                 &goma_ctx->fem.hunt[iHC].EndParameterValue, &goma_ctx->fem.hunt[iHC].Delta_s0,
+                 &goma_ctx->fem.hunt[iHC].Delta_s_min, &goma_ctx->fem.hunt[iHC].Delta_s_max) != 8) {
         fprintf(stderr, "%s:\tError reading hunt[%d].MTID hunt[%d].MPID\n", yo, iHC, iHC);
         fprintf(stderr, "%s:\tRecall Format: HC = MTID MPID RAMP from to step step_min step_max\n",
                 yo);
         exit(-1);
       }
 
-      SPF(endofstring(echo_string), " %d %d %d %.4g %.4g %.4g %.4g %.4g", hunt[iHC].MTID,
-          hunt[iHC].MPID, hunt[iHC].ramp, hunt[iHC].BegParameterValue, hunt[iHC].EndParameterValue,
-          hunt[iHC].Delta_s0, hunt[iHC].Delta_s_min, hunt[iHC].Delta_s_max);
-      SPF(endofstring(echo_string), "\n\t( %3d. MT: MTID=%3d MPID=%5d)", iHC + 1, hunt[iHC].MTID,
-          hunt[iHC].MPID);
-      hunt[iHC].MTID--;
+      SPF(endofstring(echo_string), " %d %d %d %.4g %.4g %.4g %.4g %.4g",
+          goma_ctx->fem.hunt[iHC].MTID, goma_ctx->fem.hunt[iHC].MPID, goma_ctx->fem.hunt[iHC].ramp,
+          goma_ctx->fem.hunt[iHC].BegParameterValue, goma_ctx->fem.hunt[iHC].EndParameterValue,
+          goma_ctx->fem.hunt[iHC].Delta_s0, goma_ctx->fem.hunt[iHC].Delta_s_min,
+          goma_ctx->fem.hunt[iHC].Delta_s_max);
+      SPF(endofstring(echo_string), "\n\t( %3d. MT: MTID=%3d MPID=%5d)", iHC + 1,
+          goma_ctx->fem.hunt[iHC].MTID, goma_ctx->fem.hunt[iHC].MPID);
+      goma_ctx->fem.hunt[iHC].MTID--;
       break;
 
     case 4:
       /* UM */
-      if (fscanf(ifp, "%d %d %d %d %le %le %le %le %le", &hunt[iHC].MTID, &hunt[iHC].MPID,
-                 &hunt[iHC].MDID, &hunt[iHC].ramp, &hunt[iHC].BegParameterValue,
-                 &hunt[iHC].EndParameterValue, &hunt[iHC].Delta_s0, &hunt[iHC].Delta_s_min,
-                 &hunt[iHC].Delta_s_max) != 9) {
+      if (fscanf(ifp, "%d %d %d %d %le %le %le %le %le", &goma_ctx->fem.hunt[iHC].MTID,
+                 &goma_ctx->fem.hunt[iHC].MPID, &goma_ctx->fem.hunt[iHC].MDID,
+                 &goma_ctx->fem.hunt[iHC].ramp, &goma_ctx->fem.hunt[iHC].BegParameterValue,
+                 &goma_ctx->fem.hunt[iHC].EndParameterValue, &goma_ctx->fem.hunt[iHC].Delta_s0,
+                 &goma_ctx->fem.hunt[iHC].Delta_s_min, &goma_ctx->fem.hunt[iHC].Delta_s_max) != 9) {
         fprintf(stderr, "%s:\tError reading hunt[%d].MTID hunt[%d].MPID hunt[%d].MDID\n", yo, iHC,
                 iHC, iHC);
         fprintf(stderr,
@@ -4944,21 +5023,24 @@ void rd_hunt_specs(FILE *ifp, char *input) {
                 yo);
         exit(-1);
       }
-      SPF(endofstring(echo_string), " %d %d %d %d %.4g %.4g %.4g %.4g %.4g", hunt[iHC].MTID,
-          hunt[iHC].MPID, hunt[iHC].MDID, hunt[iHC].ramp, hunt[iHC].BegParameterValue,
-          hunt[iHC].EndParameterValue, hunt[iHC].Delta_s0, hunt[iHC].Delta_s_min,
-          hunt[iHC].Delta_s_max);
+      SPF(endofstring(echo_string), " %d %d %d %d %.4g %.4g %.4g %.4g %.4g",
+          goma_ctx->fem.hunt[iHC].MTID, goma_ctx->fem.hunt[iHC].MPID, goma_ctx->fem.hunt[iHC].MDID,
+          goma_ctx->fem.hunt[iHC].ramp, goma_ctx->fem.hunt[iHC].BegParameterValue,
+          goma_ctx->fem.hunt[iHC].EndParameterValue, goma_ctx->fem.hunt[iHC].Delta_s0,
+          goma_ctx->fem.hunt[iHC].Delta_s_min, goma_ctx->fem.hunt[iHC].Delta_s_max);
       SPF(endofstring(echo_string), "\n\t( %3d. MT: MTID=%3d MPID=%5d MDID=%3d)", iHC + 1,
-          hunt[iHC].MTID, hunt[iHC].MPID, hunt[iHC].MDID);
-      hunt[iHC].MTID--;
+          goma_ctx->fem.hunt[iHC].MTID, goma_ctx->fem.hunt[iHC].MPID, goma_ctx->fem.hunt[iHC].MDID);
+      goma_ctx->fem.hunt[iHC].MTID--;
       break;
     }
 
     ECHO(echo_string, echo_file);
-    if (hunt[iHC].ramp == 2) {
-      if ((hunt[iHC].BegParameterValue == hunt[iHC].EndParameterValue) ||
-          (hunt[iHC].BegParameterValue * hunt[iHC].EndParameterValue <= 0.0)) {
-        hunt[iHC].ramp = 0;
+    if (goma_ctx->fem.hunt[iHC].ramp == 2) {
+      if ((goma_ctx->fem.hunt[iHC].BegParameterValue ==
+           goma_ctx->fem.hunt[iHC].EndParameterValue) ||
+          (goma_ctx->fem.hunt[iHC].BegParameterValue * goma_ctx->fem.hunt[iHC].EndParameterValue <=
+           0.0)) {
+        goma_ctx->fem.hunt[iHC].ramp = 0;
         fprintf(stderr, "%s:\tImproper Log ramp for hunting condition %d\n", yo, iHC);
       }
     }
@@ -4969,8 +5051,8 @@ void rd_hunt_specs(FILE *ifp, char *input) {
 
     /* Allocate cpcc for specified number of HC's here.*/
     nCC = nHC;
-    cpcc = (struct Continuation_Conditions *)array_alloc(1, nCC,
-                                                         sizeof(struct Continuation_Conditions));
+    goma_ctx->fem.cpcc = (struct Continuation_Conditions *)array_alloc(
+        1, nCC, sizeof(struct Continuation_Conditions));
     if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
       printf("%s:\tallocated %d new copies of the %lu sized\n", yo, nCC,
              (long unsigned int)sizeof(struct Continuation_Conditions));
@@ -4978,49 +5060,49 @@ void rd_hunt_specs(FILE *ifp, char *input) {
     }
 
     /* Transfer needed inputs from hunt to cpcc */
-    range_0 = hunt[0].EndParameterValue - hunt[0].BegParameterValue;
-    if (hunt[0].ramp == 1) {
-      hunt[0].Delta_s0 = range_0 / ((double)(cont->MaxPathSteps - 1));
-      loca_in->StepAggr = 0.0;
+    range_0 = goma_ctx->fem.hunt[0].EndParameterValue - goma_ctx->fem.hunt[0].BegParameterValue;
+    if (goma_ctx->fem.hunt[0].ramp == 1) {
+      goma_ctx->fem.hunt[0].Delta_s0 = range_0 / ((double)(goma_ctx->fem.cont->MaxPathSteps - 1));
+      goma_ctx->fem.loca_in->StepAggr = 0.0;
     }
     for (iHC = 0; iHC < nHC; iHC++) {
-      cpcc[iHC].nCC = nHC;
-      cpcc[iHC].Type = hunt[iHC].Type;
-      switch (hunt[iHC].Type) {
+      goma_ctx->fem.cpcc[iHC].nCC = nHC;
+      goma_ctx->fem.cpcc[iHC].Type = goma_ctx->fem.hunt[iHC].Type;
+      switch (goma_ctx->fem.hunt[iHC].Type) {
       case 3: /* AC */
       case 1: /* BC */
-        cpcc[iHC].BCID = hunt[iHC].BCID;
-        cpcc[iHC].DFID = hunt[iHC].DFID;
+        goma_ctx->fem.cpcc[iHC].BCID = goma_ctx->fem.hunt[iHC].BCID;
+        goma_ctx->fem.cpcc[iHC].DFID = goma_ctx->fem.hunt[iHC].DFID;
         break;
       case 2: /* MT */
-        cpcc[iHC].MTID = hunt[iHC].MTID;
-        cpcc[iHC].MPID = hunt[iHC].MPID;
+        goma_ctx->fem.cpcc[iHC].MTID = goma_ctx->fem.hunt[iHC].MTID;
+        goma_ctx->fem.cpcc[iHC].MPID = goma_ctx->fem.hunt[iHC].MPID;
         break;
       case 4: /* UM */
-        cpcc[iHC].MTID = hunt[iHC].MTID;
-        cpcc[iHC].MPID = hunt[iHC].MPID;
-        cpcc[iHC].MDID = hunt[iHC].MDID;
+        goma_ctx->fem.cpcc[iHC].MTID = goma_ctx->fem.hunt[iHC].MTID;
+        goma_ctx->fem.cpcc[iHC].MPID = goma_ctx->fem.hunt[iHC].MPID;
+        goma_ctx->fem.cpcc[iHC].MDID = goma_ctx->fem.hunt[iHC].MDID;
         break;
       }
-      cpcc[iHC].Beg_CC_Value = hunt[iHC].BegParameterValue;
-      cpcc[iHC].End_CC_Value = hunt[iHC].EndParameterValue;
-      range = hunt[iHC].EndParameterValue - hunt[iHC].BegParameterValue;
-      cpcc[iHC].ratio = range / range_0;
+      goma_ctx->fem.cpcc[iHC].Beg_CC_Value = goma_ctx->fem.hunt[iHC].BegParameterValue;
+      goma_ctx->fem.cpcc[iHC].End_CC_Value = goma_ctx->fem.hunt[iHC].EndParameterValue;
+      range = goma_ctx->fem.hunt[iHC].EndParameterValue - goma_ctx->fem.hunt[iHC].BegParameterValue;
+      goma_ctx->fem.cpcc[iHC].ratio = range / range_0;
     }
 
     /* Fill in cont-> entries from hunt[0]. entries */
-    hunt[0].Delta_s0 *= SGN(range_0);
-    cont->upType = hunt[0].Type;
-    cont->upBCID = hunt[0].BCID;
-    cont->upDFID = hunt[0].DFID;
-    cont->upMTID = hunt[0].MTID;
-    cont->upMPID = hunt[0].MPID;
-    cont->upMDID = hunt[0].MDID;
-    cont->BegParameterValue = hunt[0].BegParameterValue;
-    cont->EndParameterValue = hunt[0].EndParameterValue;
-    cont->Delta_s0 = hunt[0].Delta_s0;
-    cont->Delta_s_min = hunt[0].Delta_s_min;
-    cont->Delta_s_max = hunt[0].Delta_s_max;
+    goma_ctx->fem.hunt[0].Delta_s0 *= SGN(range_0);
+    goma_ctx->fem.cont->upType = goma_ctx->fem.hunt[0].Type;
+    goma_ctx->fem.cont->upBCID = goma_ctx->fem.hunt[0].BCID;
+    goma_ctx->fem.cont->upDFID = goma_ctx->fem.hunt[0].DFID;
+    goma_ctx->fem.cont->upMTID = goma_ctx->fem.hunt[0].MTID;
+    goma_ctx->fem.cont->upMPID = goma_ctx->fem.hunt[0].MPID;
+    goma_ctx->fem.cont->upMDID = goma_ctx->fem.hunt[0].MDID;
+    goma_ctx->fem.cont->BegParameterValue = goma_ctx->fem.hunt[0].BegParameterValue;
+    goma_ctx->fem.cont->EndParameterValue = goma_ctx->fem.hunt[0].EndParameterValue;
+    goma_ctx->fem.cont->Delta_s0 = goma_ctx->fem.hunt[0].Delta_s0;
+    goma_ctx->fem.cont->Delta_s_min = goma_ctx->fem.hunt[0].Delta_s_min;
+    goma_ctx->fem.cont->Delta_s_max = goma_ctx->fem.hunt[0].Delta_s_max;
   }
 }
 /* rd_hunt_specs -- read input file for hunting specifications */
@@ -5070,8 +5152,8 @@ void rd_ac_specs(FILE *ifp, char *input) {
 
   /* initialize volume and LSvelocity integral cards */
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    pd_glob[mn]->VolumeIntegral = -1;
-    pd_glob[mn]->LSVelocityIntegral = -1;
+    goma_ctx->fem.pd_glob[mn]->VolumeIntegral = -1;
+    goma_ctx->fem.pd_glob[mn]->LSVelocityIntegral = -1;
   }
 
   /* Read in Augmenting Conditions Specifications */
@@ -5105,7 +5187,7 @@ void rd_ac_specs(FILE *ifp, char *input) {
    */
 
   nAC1 = nAC;
-  if (nAC > 0 && loca_in->Cont_Order == 2) {
+  if (nAC > 0 && goma_ctx->fem.loca_in->Cont_Order == 2) {
     do_alc = TRUE;
     nAC++;
   }
@@ -5146,7 +5228,7 @@ void rd_ac_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
-  augc = alloc_struct_1(struct AC_Information, nAC);
+  goma_ctx->fem.augc = alloc_struct_1(struct AC_Information, nAC);
 
   if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
     printf("%s:\tallocated %d copies of the %lu sized\n", yo, nAC,
@@ -5154,25 +5236,25 @@ void rd_ac_specs(FILE *ifp, char *input) {
     printf("%s:\tAC structure.\n", yo);
   }
 
-  augc[0].nAC = nAC;
+  goma_ctx->fem.augc[0].nAC = nAC;
 
   for (iAC = 0; iAC < nAC1; iAC++) /* Begin loop over ACs */
   {
 
-    augc[iAC].nAC = nAC;
-    augc[iAC].BCID = -99;
-    augc[iAC].MTID = -99;
-    augc[iAC].VOLID = -99;
-    augc[iAC].MFID = -99;
-    augc[iAC].iread = 0;
-    augc[iAC].Aprepro_lib_string_len = 0;
+    goma_ctx->fem.augc[iAC].nAC = nAC;
+    goma_ctx->fem.augc[iAC].BCID = -99;
+    goma_ctx->fem.augc[iAC].MTID = -99;
+    goma_ctx->fem.augc[iAC].VOLID = -99;
+    goma_ctx->fem.augc[iAC].MFID = -99;
+    goma_ctx->fem.augc[iAC].iread = 0;
+    goma_ctx->fem.augc[iAC].Aprepro_lib_string_len = 0;
     if (AC_rd_file == 1) {
-      augc[iAC].iread = 1;
+      goma_ctx->fem.augc[iAC].iread = 1;
     }
     if (AC_rd_file == 2) {
-      augc[iAC].iread = 2;
+      goma_ctx->fem.augc[iAC].iread = 2;
     }
-    augc[iAC].tmp3 = augc_initial_value[iAC];
+    goma_ctx->fem.augc[iAC].tmp3 = augc_initial_value[iAC];
 
     look_for(ifp, "AC", input, '=');
 
@@ -5185,30 +5267,30 @@ void rd_ac_specs(FILE *ifp, char *input) {
     stringup(input);
 
     if (!strcmp(input, "BC") || !strcmp(input, "USERBC")) {
-      augc[iAC].Type = AC_USERBC;
+      goma_ctx->fem.augc[iAC].Type = AC_USERBC;
     } else if (!strcmp(input, "MT") || !strcmp(input, "USERMAT")) {
-      augc[iAC].Type = AC_USERMAT;
+      goma_ctx->fem.augc[iAC].Type = AC_USERMAT;
     } else if (!strcmp(input, "VC") || !strcmp(input, "VOLUME")) {
-      augc[iAC].Type = AC_VOLUME;
+      goma_ctx->fem.augc[iAC].Type = AC_VOLUME;
     } else if (!strcmp(input, "XY") || !strcmp(input, "POSITION")) {
-      augc[iAC].Type = AC_POSITION;
+      goma_ctx->fem.augc[iAC].Type = AC_POSITION;
     } else if (!strcmp(input, "XY") || !strcmp(input, "POSITION_MT")) {
-      augc[iAC].Type = AC_POSITION_MT;
+      goma_ctx->fem.augc[iAC].Type = AC_POSITION_MT;
     } else if (!strcmp(input, "XY") || !strcmp(input, "ANGLE")) {
-      augc[iAC].Type = AC_ANGLE;
+      goma_ctx->fem.augc[iAC].Type = AC_ANGLE;
     } else if (!strcmp(input, "LSV") || !strcmp(input, "LS_VELOCITY")) {
-      augc[iAC].Type = AC_LS_VEL;
+      goma_ctx->fem.augc[iAC].Type = AC_LS_VEL;
 
     } else if (!strcmp(input, "FC") || !strcmp(input, "FLUX")) {
-      augc[iAC].Type = AC_FLUX;
+      goma_ctx->fem.augc[iAC].Type = AC_FLUX;
     } else if (!strcmp(input, "LM") || !strcmp(input, "LGR")) {
-      augc[iAC].Type = AC_LGRM;
+      goma_ctx->fem.augc[iAC].Type = AC_LGRM;
     } else if (!strcmp(input, "OV") || !strcmp(input, "OVERLAP")) {
-      augc[iAC].Type = AC_OVERLAP;
+      goma_ctx->fem.augc[iAC].Type = AC_OVERLAP;
     } else if (!strcmp(input, "PBC") || !strcmp(input, "PERIODIC")) {
-      augc[iAC].Type = AC_PERIODIC;
+      goma_ctx->fem.augc[iAC].Type = AC_PERIODIC;
     } else if (!strcmp(input, "FCM") || !strcmp(input, "FLUXMAT")) {
-      augc[iAC].Type = AC_FLUX_MAT;
+      goma_ctx->fem.augc[iAC].Type = AC_FLUX_MAT;
     } else {
       fprintf(stderr, "%s:\tImproper set_type for augmenting condition - %s\n", yo, input);
       exit(-1);
@@ -5216,44 +5298,49 @@ void rd_ac_specs(FILE *ifp, char *input) {
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "AC", input);
 
-    augc[iAC].len_AC = 0;
-    augc[iAC].LewisNum = 0.0;
+    goma_ctx->fem.augc[iAC].len_AC = 0;
+    goma_ctx->fem.augc[iAC].LewisNum = 0.0;
 
-    switch (augc[iAC].Type) {
+    switch (goma_ctx->fem.augc[iAC].Type) {
 
     case AC_USERBC: /* BC */
-      if (fscanf(ifp, "%d %d", &augc[iAC].BCID, &augc[iAC].DFID) != 2) {
+      if (fscanf(ifp, "%d %d", &goma_ctx->fem.augc[iAC].BCID, &goma_ctx->fem.augc[iAC].DFID) != 2) {
         fprintf(stderr, "%s:\tError reading augc[%d].BCID augc[%d].DFID\n", yo, iAC, iAC);
         fprintf(stderr, "%s:\tRecall Format: AC = BCID DFID\n", yo);
         exit(-1);
       }
-      SPF(endofstring(echo_string), " %d %d", augc[iAC].BCID, augc[iAC].DFID);
+      SPF(endofstring(echo_string), " %d %d", goma_ctx->fem.augc[iAC].BCID,
+          goma_ctx->fem.augc[iAC].DFID);
 
-      if (goma_ctx->num_proc != 1 && augc[iAC].BCID == APREPRO_AC_BCID) {
+      if (goma_ctx->num_proc != 1 && goma_ctx->fem.augc[iAC].BCID == APREPRO_AC_BCID) {
         GOMA_EH(GOMA_ERROR, "Aprepro parameter AC not ready for parallel");
       }
       break;
 
     case AC_USERMAT: /* MT */
-      if (fscanf(ifp, "%d %d", &augc[iAC].MTID, &augc[iAC].MPID) != 2) {
+      if (fscanf(ifp, "%d %d", &goma_ctx->fem.augc[iAC].MTID, &goma_ctx->fem.augc[iAC].MPID) != 2) {
         fprintf(stderr, "%s:\tError reading augc[%d].MTID augc[%d].MPID\n", yo, iAC, iAC);
         fprintf(stderr, "%s:\tRecall Format: AC = MTID MPID\n", yo);
         exit(-1);
       }
-      SPF(endofstring(echo_string), " %d %d", augc[iAC].MTID, augc[iAC].MPID);
+      SPF(endofstring(echo_string), " %d %d", goma_ctx->fem.augc[iAC].MTID,
+          goma_ctx->fem.augc[iAC].MPID);
 
       break;
 
     case AC_VOLUME: /* VC */
-      if (fscanf(ifp, "%d %d %d %d %d %lf", &augc[iAC].MTID, &augc[iAC].VOLID, &augc[iAC].BCID,
-                 &augc[iAC].DFID, &augc[iAC].COMPID, &augc[iAC].CONSTV) != 6) {
+      if (fscanf(ifp, "%d %d %d %d %d %lf", &goma_ctx->fem.augc[iAC].MTID,
+                 &goma_ctx->fem.augc[iAC].VOLID, &goma_ctx->fem.augc[iAC].BCID,
+                 &goma_ctx->fem.augc[iAC].DFID, &goma_ctx->fem.augc[iAC].COMPID,
+                 &goma_ctx->fem.augc[iAC].CONSTV) != 6) {
         fprintf(stderr, "%s:\tError reading MTID, VOLID, BCID, DFID, COMPID, CONSTV\n", yo);
         fprintf(stderr, "%s:\tRecall Format:AC=MTID VOLID BCID DFID COMPID CONSTV\n", yo);
         exit(-1);
       }
 
-      SPF(endofstring(echo_string), " %d %d %d %d %d %.4g", augc[iAC].MTID, augc[iAC].VOLID,
-          augc[iAC].BCID, augc[iAC].DFID, augc[iAC].COMPID, augc[iAC].CONSTV);
+      SPF(endofstring(echo_string), " %d %d %d %d %d %.4g", goma_ctx->fem.augc[iAC].MTID,
+          goma_ctx->fem.augc[iAC].VOLID, goma_ctx->fem.augc[iAC].BCID, goma_ctx->fem.augc[iAC].DFID,
+          goma_ctx->fem.augc[iAC].COMPID, goma_ctx->fem.augc[iAC].CONSTV);
 
       break;
 
@@ -5268,16 +5355,19 @@ void rd_ac_specs(FILE *ifp, char *input) {
        *  6th   flt  - Value of the coordinate position
        */
       // read_line(ifp, input, FALSE);
-      augc[iAC].LewisNum = 0.0;
-      if (fscanf(ifp, "%d %d %d %d %d %lf", &augc[iAC].MTID, &augc[iAC].VOLID, &augc[iAC].BCID,
-                 &augc[iAC].DFID, &augc[iAC].COMPID, &augc[iAC].CONSTV) < 6) {
+      goma_ctx->fem.augc[iAC].LewisNum = 0.0;
+      if (fscanf(ifp, "%d %d %d %d %d %lf", &goma_ctx->fem.augc[iAC].MTID,
+                 &goma_ctx->fem.augc[iAC].VOLID, &goma_ctx->fem.augc[iAC].BCID,
+                 &goma_ctx->fem.augc[iAC].DFID, &goma_ctx->fem.augc[iAC].COMPID,
+                 &goma_ctx->fem.augc[iAC].CONSTV) < 6) {
         fprintf(stderr, "%s:\tError reading NSID, CoordID, BCID, DFID, FORMID, CONSTV\n", yo);
         fprintf(stderr, "%s:\tRecall Format:AC=NSID CoordID BCID DFID FORMID CONSTV\n", yo);
         exit(-1);
       }
 
-      SPF(endofstring(echo_string), " %d %d %d %d %d %.4g", augc[iAC].MTID, augc[iAC].VOLID,
-          augc[iAC].BCID, augc[iAC].DFID, augc[iAC].COMPID, augc[iAC].CONSTV);
+      SPF(endofstring(echo_string), " %d %d %d %d %d %.4g", goma_ctx->fem.augc[iAC].MTID,
+          goma_ctx->fem.augc[iAC].VOLID, goma_ctx->fem.augc[iAC].BCID, goma_ctx->fem.augc[iAC].DFID,
+          goma_ctx->fem.augc[iAC].COMPID, goma_ctx->fem.augc[iAC].CONSTV);
 
       break;
 
@@ -5293,70 +5383,74 @@ void rd_ac_specs(FILE *ifp, char *input) {
        * I GUESS WE'RE GOING TO HAVE TO MESS THINGS UP
        */
       read_line(ifp, input, FALSE);
-      augc[iAC].LewisNum = 0.0;
-      if (sscanf(input, "%d %d %d %d %d %lf %lf", &augc[iAC].DHID, &augc[iAC].VOLID,
-                 &augc[iAC].MTID, &augc[iAC].MPID, &augc[iAC].COMPID, &augc[iAC].CONSTV,
-                 &augc[iAC].LewisNum) < 6) {
+      goma_ctx->fem.augc[iAC].LewisNum = 0.0;
+      if (sscanf(input, "%d %d %d %d %d %lf %lf", &goma_ctx->fem.augc[iAC].DHID,
+                 &goma_ctx->fem.augc[iAC].VOLID, &goma_ctx->fem.augc[iAC].MTID,
+                 &goma_ctx->fem.augc[iAC].MPID, &goma_ctx->fem.augc[iAC].COMPID,
+                 &goma_ctx->fem.augc[iAC].CONSTV, &goma_ctx->fem.augc[iAC].LewisNum) < 6) {
         fprintf(stderr, "%s:\tError reading NSID, CoordID, BCID, DFID, FORMID, CONSTV\n", yo);
         fprintf(stderr, "%s:\tRecall Format:AC=NSID CoordID BCID DFID FORMID CONSTV\n", yo);
         exit(-1);
-        DPRINTF(stdout, "NSID %i, CoordID%i, MTID%i, MPID%i, form%i, Value%f", augc[iAC].DHID,
-                augc[iAC].VOLID, augc[iAC].MTID, augc[iAC].MPID, augc[iAC].COMPID,
-                augc[iAC].CONSTV);
+        DPRINTF(stdout, "NSID %i, CoordID%i, MTID%i, MPID%i, form%i, Value%f",
+                goma_ctx->fem.augc[iAC].DHID, goma_ctx->fem.augc[iAC].VOLID,
+                goma_ctx->fem.augc[iAC].MTID, goma_ctx->fem.augc[iAC].MPID,
+                goma_ctx->fem.augc[iAC].COMPID, goma_ctx->fem.augc[iAC].CONSTV);
       }
 
-      SPF(endofstring(echo_string), " %d %d %d %d %d %.4g", augc[iAC].MTID, augc[iAC].VOLID,
-          augc[iAC].BCID, augc[iAC].DFID, augc[iAC].COMPID, augc[iAC].CONSTV);
+      SPF(endofstring(echo_string), " %d %d %d %d %d %.4g", goma_ctx->fem.augc[iAC].MTID,
+          goma_ctx->fem.augc[iAC].VOLID, goma_ctx->fem.augc[iAC].BCID, goma_ctx->fem.augc[iAC].DFID,
+          goma_ctx->fem.augc[iAC].COMPID, goma_ctx->fem.augc[iAC].CONSTV);
 
       break;
     case AC_LS_VEL: /* LSV */
-      if (fscanf(ifp, "%d %d %d %d %s", &augc[iAC].MTID, &augc[iAC].BCID, &augc[iAC].DFID,
-                 &augc[iAC].LSPHASE, input) != 5) {
+      if (fscanf(ifp, "%d %d %d %d %s", &goma_ctx->fem.augc[iAC].MTID,
+                 &goma_ctx->fem.augc[iAC].BCID, &goma_ctx->fem.augc[iAC].DFID,
+                 &goma_ctx->fem.augc[iAC].LSPHASE, input) != 5) {
         fprintf(stderr, "%s:\tError reading MTID, BCID, DFID, PHASE, DIR \n", yo);
         fprintf(stderr, "%s:\tRecall Format:AC=LSV MTID BCID DFID PHASE DIR \n", yo);
         exit(-1);
       }
 
       if (strcmp(input, "VX") == 0) {
-        if (augc[iAC].LSPHASE > 0) {
-          augc[iAC].LSPHASE = I_POS_FILL;
-          augc[iAC].DIR = I_POS_VX;
-        } else if (augc[iAC].LSPHASE < 0) {
-          augc[iAC].LSPHASE = I_NEG_FILL;
-          augc[iAC].DIR = I_NEG_VX;
+        if (goma_ctx->fem.augc[iAC].LSPHASE > 0) {
+          goma_ctx->fem.augc[iAC].LSPHASE = I_POS_FILL;
+          goma_ctx->fem.augc[iAC].DIR = I_POS_VX;
+        } else if (goma_ctx->fem.augc[iAC].LSPHASE < 0) {
+          goma_ctx->fem.augc[iAC].LSPHASE = I_NEG_FILL;
+          goma_ctx->fem.augc[iAC].DIR = I_NEG_VX;
         } else {
           GOMA_EH(GOMA_ERROR, "Error in reading LSV:PHASE; it can not equal zero.");
         }
 
-        if (fscanf(ifp, "%lf", &augc[iAC].CONSTV) != 1) {
+        if (fscanf(ifp, "%lf", &goma_ctx->fem.augc[iAC].CONSTV) != 1) {
           GOMA_EH(GOMA_ERROR, "Error in reading LS_VEL - VX augmenting condition");
         }
       } else if (strcmp(input, "VY") == 0) {
-        if (augc[iAC].LSPHASE > 0) {
-          augc[iAC].LSPHASE = I_POS_FILL;
-          augc[iAC].DIR = I_POS_VY;
-        } else if (augc[iAC].LSPHASE < 0) {
-          augc[iAC].LSPHASE = I_NEG_FILL;
-          augc[iAC].DIR = I_NEG_VY;
+        if (goma_ctx->fem.augc[iAC].LSPHASE > 0) {
+          goma_ctx->fem.augc[iAC].LSPHASE = I_POS_FILL;
+          goma_ctx->fem.augc[iAC].DIR = I_POS_VY;
+        } else if (goma_ctx->fem.augc[iAC].LSPHASE < 0) {
+          goma_ctx->fem.augc[iAC].LSPHASE = I_NEG_FILL;
+          goma_ctx->fem.augc[iAC].DIR = I_NEG_VY;
         } else {
           GOMA_EH(GOMA_ERROR, "Error in reading LSV:PHASE; it can not equal zero.");
         }
 
-        if (fscanf(ifp, "%lf", &augc[iAC].CONSTV) != 1) {
+        if (fscanf(ifp, "%lf", &goma_ctx->fem.augc[iAC].CONSTV) != 1) {
           GOMA_EH(GOMA_ERROR, "Error in reading LS_VEL - VY augmenting condition");
         }
       } else if (strcmp(input, "VZ") == 0) {
-        if (augc[iAC].LSPHASE > 0) {
-          augc[iAC].LSPHASE = I_POS_FILL;
-          augc[iAC].DIR = I_POS_VZ;
-        } else if (augc[iAC].LSPHASE < 0) {
-          augc[iAC].LSPHASE = I_NEG_FILL;
-          augc[iAC].DIR = I_NEG_VZ;
+        if (goma_ctx->fem.augc[iAC].LSPHASE > 0) {
+          goma_ctx->fem.augc[iAC].LSPHASE = I_POS_FILL;
+          goma_ctx->fem.augc[iAC].DIR = I_POS_VZ;
+        } else if (goma_ctx->fem.augc[iAC].LSPHASE < 0) {
+          goma_ctx->fem.augc[iAC].LSPHASE = I_NEG_FILL;
+          goma_ctx->fem.augc[iAC].DIR = I_NEG_VZ;
         } else {
           GOMA_EH(GOMA_ERROR, "Error in reading LSV:PHASE; it can not equal zero.");
         }
 
-        if (fscanf(ifp, "%lf", &augc[iAC].CONSTV) != 1) {
+        if (fscanf(ifp, "%lf", &goma_ctx->fem.augc[iAC].CONSTV) != 1) {
           GOMA_EH(GOMA_ERROR, "Error in reading LS_VEL - VZ augmenting condition");
         }
       } else {
@@ -5365,8 +5459,9 @@ void rd_ac_specs(FILE *ifp, char *input) {
             "Must specify the velocity component for LS_VEL augmenting condition as VX, VY or VZ.");
       }
 
-      SPF(endofstring(echo_string), " %d %d %d %d %s %.4g", augc[iAC].MTID, augc[iAC].BCID,
-          augc[iAC].DFID, augc[iAC].LSPHASE, input, augc[iAC].CONSTV);
+      SPF(endofstring(echo_string), " %d %d %d %d %s %.4g", goma_ctx->fem.augc[iAC].MTID,
+          goma_ctx->fem.augc[iAC].BCID, goma_ctx->fem.augc[iAC].DFID,
+          goma_ctx->fem.augc[iAC].LSPHASE, input, goma_ctx->fem.augc[iAC].CONSTV);
 
       break;
 
@@ -5379,300 +5474,346 @@ void rd_ac_specs(FILE *ifp, char *input) {
                        * CONSTV - This is the value the flux should take over that side side
                        */
 
-      if (augc[iAC].Type == AC_FLUX) {
-        if (fscanf(ifp, "%d %d %d %s", &augc[iAC].MTID, &augc[iAC].BCID, &augc[iAC].DFID, input) !=
-            4) {
+      if (goma_ctx->fem.augc[iAC].Type == AC_FLUX) {
+        if (fscanf(ifp, "%d %d %d %s", &goma_ctx->fem.augc[iAC].MTID, &goma_ctx->fem.augc[iAC].BCID,
+                   &goma_ctx->fem.augc[iAC].DFID, input) != 4) {
           GOMA_EH(GOMA_ERROR, "Error in syntax for flux-type augmenting condition");
         }
 
-        SPF(endofstring(echo_string), " %d %d %d %s", augc[iAC].MTID, augc[iAC].BCID,
-            augc[iAC].DFID, input);
+        SPF(endofstring(echo_string), " %d %d %d %s", goma_ctx->fem.augc[iAC].MTID,
+            goma_ctx->fem.augc[iAC].BCID, goma_ctx->fem.augc[iAC].DFID, input);
 
-        if (goma_ctx->num_proc != 1 && augc[iAC].BCID == APREPRO_AC_BCID) {
+        if (goma_ctx->num_proc != 1 && goma_ctx->fem.augc[iAC].BCID == APREPRO_AC_BCID) {
           GOMA_EH(GOMA_ERROR, "Aprepro parameter AC not ready for parallel");
         }
       } else {
-        if (fscanf(ifp, "%d %d %d %s", &augc[iAC].MTID, &augc[iAC].MPID, &augc[iAC].MDID, input) !=
-            4) {
+        if (fscanf(ifp, "%d %d %d %s", &goma_ctx->fem.augc[iAC].MTID, &goma_ctx->fem.augc[iAC].MPID,
+                   &goma_ctx->fem.augc[iAC].MDID, input) != 4) {
           fprintf(stderr, "%s:\tError reading augc[%d].MTID augc[%d].MPID augc[%d].MDID\n", yo, iAC,
                   iAC, iAC);
           exit(-1);
         }
-        SPF(endofstring(echo_string), " %d %d %d %s", augc[iAC].MTID, augc[iAC].MPID,
-            augc[iAC].MDID, input);
+        SPF(endofstring(echo_string), " %d %d %d %s", goma_ctx->fem.augc[iAC].MTID,
+            goma_ctx->fem.augc[iAC].MPID, goma_ctx->fem.augc[iAC].MDID, input);
       }
 
       if (strcmp(input, "FORCE_X") == 0) {
-        augc[iAC].MFID = FORCE_X;
+        goma_ctx->fem.augc[iAC].MFID = FORCE_X;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading FORCE_X augmenting condition");
         }
       } else if (strcmp(input, "FORCE_X_POS") == 0) {
-        augc[iAC].MFID = FORCE_X_POS;
+        goma_ctx->fem.augc[iAC].MFID = FORCE_X_POS;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading FORCE_X_POS augmenting condition");
         }
       } else if (strcmp(input, "FORCE_X_NEG") == 0) {
-        augc[iAC].MFID = FORCE_X_NEG;
+        goma_ctx->fem.augc[iAC].MFID = FORCE_X_NEG;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading FORCE_X_NEG augmenting condition");
         }
       } else if (strcmp(input, "FORCE_Y") == 0) {
-        augc[iAC].MFID = FORCE_Y;
+        goma_ctx->fem.augc[iAC].MFID = FORCE_Y;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading FORCE_Y augmenting condition");
         }
       } else if (strcmp(input, "FORCE_Y_POS") == 0) {
-        augc[iAC].MFID = FORCE_Y_POS;
+        goma_ctx->fem.augc[iAC].MFID = FORCE_Y_POS;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading FORCE_Y_POS augmenting condition");
         }
       } else if (strcmp(input, "FORCE_Y_NEG") == 0) {
-        augc[iAC].MFID = FORCE_Y_NEG;
+        goma_ctx->fem.augc[iAC].MFID = FORCE_Y_NEG;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading FORCE_Y_NEG augmenting condition");
         }
       } else if (strcmp(input, "FORCE_Z") == 0) {
-        augc[iAC].MFID = FORCE_Z;
+        goma_ctx->fem.augc[iAC].MFID = FORCE_Z;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading FORCE_Z augmenting condition");
         }
       } else if (strcmp(input, "FORCE_Z_POS") == 0) {
-        augc[iAC].MFID = FORCE_Z_POS;
+        goma_ctx->fem.augc[iAC].MFID = FORCE_Z_POS;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading FORCE_Z_POS augmenting condition");
         }
       } else if (strcmp(input, "FORCE_Z_NEG") == 0) {
-        augc[iAC].MFID = FORCE_Z_NEG;
+        goma_ctx->fem.augc[iAC].MFID = FORCE_Z_NEG;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading FORCE_Z_NEG augmenting condition");
         }
       } else if (strcmp(input, "FORCE_NORMAL") == 0) {
-        augc[iAC].MFID = FORCE_NORMAL;
+        goma_ctx->fem.augc[iAC].MFID = FORCE_NORMAL;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading FORCE_NORMAL augmenting condition");
         }
       } else if (strcmp(input, "FORCE_TANGENT1") == 0) {
-        augc[iAC].MFID = FORCE_TANGENT1;
+        goma_ctx->fem.augc[iAC].MFID = FORCE_TANGENT1;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading FORCE_TANGENT1 augmenting condition");
         }
       } else if (strcmp(input, "FORCE_TANGENT2") == 0) {
-        augc[iAC].MFID = FORCE_TANGENT2;
+        goma_ctx->fem.augc[iAC].MFID = FORCE_TANGENT2;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading FORCE_TANGENT2 augmenting condition");
         }
       } else if (strcmp(input, "VOLUME_FLUX") == 0) {
-        augc[iAC].MFID = VOLUME_FLUX;
+        goma_ctx->fem.augc[iAC].MFID = VOLUME_FLUX;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading VOLUME_FLUX augmenting condition");
         }
       } else if (strcmp(input, "SHELL_VOLUME_FLUX") == 0) {
-        augc[iAC].MFID = SHELL_VOLUME_FLUX;
+        goma_ctx->fem.augc[iAC].MFID = SHELL_VOLUME_FLUX;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading SHELL_VOLUME_FLUX augmenting condition");
         }
       } else if (strcmp(input, "HEAT_FLUX") == 0) {
-        augc[iAC].MFID = HEAT_FLUX;
+        goma_ctx->fem.augc[iAC].MFID = HEAT_FLUX;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading HEAT_FLUX augmenting condition");
         }
       } else if (strcmp(input, "SPECIES_FLUX") == 0) {
-        augc[iAC].MFID = SPECIES_FLUX;
+        goma_ctx->fem.augc[iAC].MFID = SPECIES_FLUX;
 
-        if (fscanf(ifp, "%d %d %lf", &augc[iAC].SSID, &augc[iAC].COMPID, &augc[iAC].CONSTV) != 3) {
+        if (fscanf(ifp, "%d %d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].COMPID,
+                   &goma_ctx->fem.augc[iAC].CONSTV) != 3) {
           GOMA_EH(GOMA_ERROR, "Error in reading SPECIES_FLUX augmenting condition");
         }
       } else if (strcmp(input, "CHARGED_SPECIES_FLUX") == 0) {
-        augc[iAC].MFID = CHARGED_SPECIES_FLUX;
+        goma_ctx->fem.augc[iAC].MFID = CHARGED_SPECIES_FLUX;
 
-        if (fscanf(ifp, "%d %d %lf", &augc[iAC].SSID, &augc[iAC].COMPID, &augc[iAC].CONSTV) != 3) {
+        if (fscanf(ifp, "%d %d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].COMPID,
+                   &goma_ctx->fem.augc[iAC].CONSTV) != 3) {
           GOMA_EH(GOMA_ERROR, "Error in reading CHARGED_SPECIES_FLUX augmenting condition");
         }
       } else if (strcmp(input, "CURRENT") == 0) {
-        augc[iAC].MFID = CURRENT;
+        goma_ctx->fem.augc[iAC].MFID = CURRENT;
 
-        if (fscanf(ifp, "%d %d %lf", &augc[iAC].SSID, &augc[iAC].COMPID, &augc[iAC].CONSTV) != 3) {
+        if (fscanf(ifp, "%d %d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].COMPID,
+                   &goma_ctx->fem.augc[iAC].CONSTV) != 3) {
           GOMA_EH(GOMA_ERROR, "Error in reading CURRENT augmenting condition");
         }
       } else if (strcmp(input, "CURRENT_FICKIAN") == 0) {
-        augc[iAC].MFID = CURRENT_FICKIAN;
+        goma_ctx->fem.augc[iAC].MFID = CURRENT_FICKIAN;
 
-        if (fscanf(ifp, "%d %d %lf %lf", &augc[iAC].SSID, &augc[iAC].COMPID, &augc[iAC].CONSTV,
-                   &z[augc[iAC].COMPID]) != 4) {
+        if (fscanf(ifp, "%d %d %lf %lf", &goma_ctx->fem.augc[iAC].SSID,
+                   &goma_ctx->fem.augc[iAC].COMPID, &goma_ctx->fem.augc[iAC].CONSTV,
+                   &z[goma_ctx->fem.augc[iAC].COMPID]) != 4) {
           GOMA_EH(GOMA_ERROR, "Error in reading CURRENT_FICKIAN augmenting condition");
         }
-        augc[iAC].CONSTV /= z[augc[iAC].COMPID] * F; /* convert current density to molar flux */
+        goma_ctx->fem.augc[iAC].CONSTV /=
+            z[goma_ctx->fem.augc[iAC].COMPID] * F; /* convert current density to molar flux */
       } else if (strcmp(input, "PORE_LIQ_FLUX") == 0) {
-        augc[iAC].MFID = PORE_LIQ_FLUX;
+        goma_ctx->fem.augc[iAC].MFID = PORE_LIQ_FLUX;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading PORE_LIQ_FLUX augmenting condition");
         }
       } else if (strcmp(input, "TORQUE") == 0) {
-        augc[iAC].MFID = TORQUE;
+        goma_ctx->fem.augc[iAC].MFID = TORQUE;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading TORQUE augmenting condition");
         }
       } else if (strcmp(input, "AVERAGE_CONC") == 0) {
-        augc[iAC].MFID = AVERAGE_CONC;
+        goma_ctx->fem.augc[iAC].MFID = AVERAGE_CONC;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading AVERAGE_CONC augmenting condition");
         }
       } else if (strcmp(input, "SURF_DISSIP") == 0) {
-        augc[iAC].MFID = SURF_DISSIP;
+        goma_ctx->fem.augc[iAC].MFID = SURF_DISSIP;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading SURF_DISSIP augmenting condition");
         }
       } else if (strcmp(input, "AREA") == 0) {
-        augc[iAC].MFID = AREA;
+        goma_ctx->fem.augc[iAC].MFID = AREA;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading AREA augmenting condition");
         }
       } else if (strcmp(input, "VOL_REVOLUTION") == 0) {
-        augc[iAC].MFID = VOL_REVOLUTION;
+        goma_ctx->fem.augc[iAC].MFID = VOL_REVOLUTION;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading VOL_REVOLUTION augmenting condition");
         }
       } else if (strcmp(input, "NEG_LS_FLUX") == 0) {
-        augc[iAC].MFID = NEG_LS_FLUX;
+        goma_ctx->fem.augc[iAC].MFID = NEG_LS_FLUX;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading NEG_LS_FLUX augmenting condition");
         }
       } else if (strcmp(input, "POS_LS_FLUX") == 0) {
-        augc[iAC].MFID = POS_LS_FLUX;
+        goma_ctx->fem.augc[iAC].MFID = POS_LS_FLUX;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading POS_LS_FLUX augmenting condition");
         }
       } else if (strcmp(input, "N_DOT_X") == 0) {
-        augc[iAC].MFID = N_DOT_X;
+        goma_ctx->fem.augc[iAC].MFID = N_DOT_X;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading N_DOT_X augmenting condition");
         }
       } else if (strcmp(input, "ELEC_FORCE_NORMAL") == 0) {
-        augc[iAC].MFID = ELEC_FORCE_NORMAL;
+        goma_ctx->fem.augc[iAC].MFID = ELEC_FORCE_NORMAL;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading ELEC_FORCE_NORMAL augmenting condition");
         }
       } else if (strcmp(input, "ELEC_FORCE_TANGENT1") == 0) {
-        augc[iAC].MFID = ELEC_FORCE_TANGENT1;
+        goma_ctx->fem.augc[iAC].MFID = ELEC_FORCE_TANGENT1;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading ELEC_FORCE_TANGENT1 augmenting condition");
         }
       } else if (strcmp(input, "ELEC_FORCE_TANGENT2") == 0) {
-        augc[iAC].MFID = ELEC_FORCE_TANGENT2;
+        goma_ctx->fem.augc[iAC].MFID = ELEC_FORCE_TANGENT2;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading ELEC_FORCE_TANGENT2 augmenting condition");
         }
       } else if (strcmp(input, "ELEC_FORCE_X") == 0) {
-        augc[iAC].MFID = ELEC_FORCE_X;
+        goma_ctx->fem.augc[iAC].MFID = ELEC_FORCE_X;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading ELEC_FORCE_X augmenting condition");
         }
       } else if (strcmp(input, "ELEC_FORCE_Y") == 0) {
-        augc[iAC].MFID = ELEC_FORCE_Y;
+        goma_ctx->fem.augc[iAC].MFID = ELEC_FORCE_Y;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading ELEC_FORCE_Y augmenting condition");
         }
       } else if (strcmp(input, "ELEC_FORCE_Z") == 0) {
-        augc[iAC].MFID = ELEC_FORCE_Z;
+        goma_ctx->fem.augc[iAC].MFID = ELEC_FORCE_Z;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading ELEC_FORCE_Z augmenting condition");
         }
       } else if (strcmp(input, "NET_CHARGE") == 0) {
-        augc[iAC].MFID = NET_SURF_CHARGE;
+        goma_ctx->fem.augc[iAC].MFID = NET_SURF_CHARGE;
 
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading NET_CHARGE augmenting condition");
         }
       } else if (strcmp(input, "ACOUSTIC_FLUX_NORMAL") == 0) {
-        augc[iAC].MFID = ACOUSTIC_FLUX_NORMAL;
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        goma_ctx->fem.augc[iAC].MFID = ACOUSTIC_FLUX_NORMAL;
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading ACOUSTIC_FLUX augmenting condition");
         }
       } else if (strcmp(input, "ACOUSTIC_FLUX_TANGENT1") == 0) {
-        augc[iAC].MFID = ACOUSTIC_FLUX_TANGENT1;
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        goma_ctx->fem.augc[iAC].MFID = ACOUSTIC_FLUX_TANGENT1;
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading ACOUSTIC_FLUX augmenting condition");
         }
       } else if (strcmp(input, "ACOUSTIC_FLUX_TANGENT2") == 0) {
-        augc[iAC].MFID = ACOUSTIC_FLUX_TANGENT2;
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        goma_ctx->fem.augc[iAC].MFID = ACOUSTIC_FLUX_TANGENT2;
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading ACOUSTIC_FLUX augmenting condition");
         }
       } else if (strcmp(input, "ACOUSTIC_FLUX_X") == 0) {
-        augc[iAC].MFID = ACOUSTIC_FLUX_X;
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        goma_ctx->fem.augc[iAC].MFID = ACOUSTIC_FLUX_X;
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading ACOUSTIC_FLUX augmenting condition");
         }
       } else if (strcmp(input, "ACOUSTIC_FLUX_Y") == 0) {
-        augc[iAC].MFID = ACOUSTIC_FLUX_Y;
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        goma_ctx->fem.augc[iAC].MFID = ACOUSTIC_FLUX_Y;
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading ACOUSTIC_FLUX augmenting condition");
         }
       } else if (strcmp(input, "ACOUSTIC_FLUX_Z") == 0) {
-        augc[iAC].MFID = ACOUSTIC_FLUX_Z;
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        goma_ctx->fem.augc[iAC].MFID = ACOUSTIC_FLUX_Z;
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading ACOUSTIC_FLUX augmenting condition");
         }
       } else if (strcmp(input, "REPULSIVE_FORCE") == 0) {
-        augc[iAC].MFID = REPULSIVE_FORCE;
-        if (fscanf(ifp, "%d %lf", &augc[iAC].SSID, &augc[iAC].CONSTV) != 2) {
+        goma_ctx->fem.augc[iAC].MFID = REPULSIVE_FORCE;
+        if (fscanf(ifp, "%d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].CONSTV) !=
+            2) {
           GOMA_EH(GOMA_ERROR, "Error in reading REPULSIVE_FORCE augmenting condition");
         }
       } else if (strcmp(input, "SPECIES_FLUX_REVOLUTION") == 0) {
-        augc[iAC].MFID = SPECIES_FLUX_REVOLUTION;
+        goma_ctx->fem.augc[iAC].MFID = SPECIES_FLUX_REVOLUTION;
 
-        if (fscanf(ifp, "%d %d %lf", &augc[iAC].SSID, &augc[iAC].COMPID, &augc[iAC].CONSTV) != 3) {
+        if (fscanf(ifp, "%d %d %lf", &goma_ctx->fem.augc[iAC].SSID, &goma_ctx->fem.augc[iAC].COMPID,
+                   &goma_ctx->fem.augc[iAC].CONSTV) != 3) {
           GOMA_EH(GOMA_ERROR, "Error in reading SPECIES_FLUX_REVOLUTION augmenting condition");
         }
       } else {
         GOMA_EH(GOMA_ERROR, "That flux-type augmenting condition has yet to be implemented");
       }
 
-      switch (augc[iAC].MFID) {
+      switch (goma_ctx->fem.augc[iAC].MFID) {
       case CHARGED_SPECIES_FLUX:
       case CURRENT:
       case SPECIES_FLUX:
       case SPECIES_FLUX_REVOLUTION:
-        SPF(endofstring(echo_string), " %d %d %.4g", augc[iAC].SSID, augc[iAC].COMPID,
-            augc[iAC].CONSTV);
+        SPF(endofstring(echo_string), " %d %d %.4g", goma_ctx->fem.augc[iAC].SSID,
+            goma_ctx->fem.augc[iAC].COMPID, goma_ctx->fem.augc[iAC].CONSTV);
         break;
       case CURRENT_FICKIAN:
-        SPF(endofstring(echo_string), " %d %d %.4g %.4g", augc[iAC].SSID, augc[iAC].COMPID,
-            augc[iAC].CONSTV, z[augc[iAC].COMPID]);
+        SPF(endofstring(echo_string), " %d %d %.4g %.4g", goma_ctx->fem.augc[iAC].SSID,
+            goma_ctx->fem.augc[iAC].COMPID, goma_ctx->fem.augc[iAC].CONSTV,
+            z[goma_ctx->fem.augc[iAC].COMPID]);
         break;
       default:
-        SPF(endofstring(echo_string), " %d %.4g", augc[iAC].SSID, augc[iAC].CONSTV);
+        SPF(endofstring(echo_string), " %d %.4g", goma_ctx->fem.augc[iAC].SSID,
+            goma_ctx->fem.augc[iAC].CONSTV);
         break;
       }
       break;
@@ -5683,22 +5824,22 @@ void rd_ac_specs(FILE *ifp, char *input) {
        * CONSTV - This is the value the flux should take over that side side
        */
 
-      if (fscanf(ifp, "%d %d %s %lf", &augc[iAC].MTID, &augc[iAC].SSID, input, &augc[iAC].CONSTV) !=
-          4) {
+      if (fscanf(ifp, "%d %d %s %lf", &goma_ctx->fem.augc[iAC].MTID, &goma_ctx->fem.augc[iAC].SSID,
+                 input, &goma_ctx->fem.augc[iAC].CONSTV) != 4) {
         GOMA_EH(GOMA_ERROR, "Error in syntax for Lagrange Multiplier augmenting condition");
       }
 
       stringup(input);
 
       if (!strcmp(input, "VOLUME_FLOW") || !strcmp(input, "VOLUME_FLUX")) {
-        augc[iAC].MFID = VOLUME_FLUX;
-        augc[iAC].COMPID = 0.0;
+        goma_ctx->fem.augc[iAC].MFID = VOLUME_FLUX;
+        goma_ctx->fem.augc[iAC].COMPID = 0.0;
       } else {
         GOMA_EH(GOMA_ERROR, "Unknown Lagrange Multiplier constraint type.");
       }
 
-      SPF(endofstring(echo_string), " %d %d %s %.4g", augc[iAC].MTID, augc[iAC].SSID, input,
-          augc[iAC].CONSTV);
+      SPF(endofstring(echo_string), " %d %d %s %.4g", goma_ctx->fem.augc[iAC].MTID,
+          goma_ctx->fem.augc[iAC].SSID, input, goma_ctx->fem.augc[iAC].CONSTV);
 
       break;
 
@@ -5721,24 +5862,27 @@ void rd_ac_specs(FILE *ifp, char *input) {
        *        defined on one block to unknowns defined on the other.
        *        These terms have no space allocated in the Jacobian.
        */
-      if (fscanf(ifp, "%d %d %d %d", &augc[iAC].SSID, &augc[iAC].solid_eb, &augc[iAC].fluid_eb,
-                 &augc[iAC].lm_eb) < 4) {
+      if (fscanf(ifp, "%d %d %d %d", &goma_ctx->fem.augc[iAC].SSID,
+                 &goma_ctx->fem.augc[iAC].solid_eb, &goma_ctx->fem.augc[iAC].fluid_eb,
+                 &goma_ctx->fem.augc[iAC].lm_eb) < 4) {
         GOMA_EH(GOMA_ERROR, "Error reading SSID, solid_eb, fluid_eb, lm_eb\n");
       }
 
       /* Do some error checking */
-      if (augc[iAC].solid_eb == augc[iAC].fluid_eb) {
+      if (goma_ctx->fem.augc[iAC].solid_eb == goma_ctx->fem.augc[iAC].fluid_eb) {
         GOMA_EH(GOMA_ERROR, "Fluid and solid element blocks cannot be the same!");
       }
-      if (augc[iAC].solid_eb != augc[iAC].lm_eb && augc[iAC].fluid_eb != augc[iAC].lm_eb) {
+      if (goma_ctx->fem.augc[iAC].solid_eb != goma_ctx->fem.augc[iAC].lm_eb &&
+          goma_ctx->fem.augc[iAC].fluid_eb != goma_ctx->fem.augc[iAC].lm_eb) {
         GOMA_EH(GOMA_ERROR, "LM element block must be same as either fluid and solid!");
       }
 
       /* If these tests were passed, set global flag */
       Do_Overlap = TRUE;
 
-      SPF(endofstring(echo_string), " %d %d %d %d", augc[iAC].SSID, augc[iAC].solid_eb,
-          augc[iAC].fluid_eb, augc[iAC].lm_eb);
+      SPF(endofstring(echo_string), " %d %d %d %d", goma_ctx->fem.augc[iAC].SSID,
+          goma_ctx->fem.augc[iAC].solid_eb, goma_ctx->fem.augc[iAC].fluid_eb,
+          goma_ctx->fem.augc[iAC].lm_eb);
 
       break;
 
@@ -5754,7 +5898,8 @@ void rd_ac_specs(FILE *ifp, char *input) {
        *
        *  VAR - Variable to be made periodic
        */
-      if (fscanf(ifp, "%s %d %d", input, &augc[iAC].SSID, &augc[iAC].SSID2) != 3) {
+      if (fscanf(ifp, "%s %d %d", input, &goma_ctx->fem.augc[iAC].SSID,
+                 &goma_ctx->fem.augc[iAC].SSID2) != 3) {
         GOMA_EH(GOMA_ERROR, "Error in syntax for Periodic Boundary Condition augmenting condition");
       } else {
         int var, var_found = FALSE;
@@ -5767,10 +5912,11 @@ void rd_ac_specs(FILE *ifp, char *input) {
         if (!var_found) {
           GOMA_EH(GOMA_ERROR, "Could not identify variable type for Periodic Boundary Condition");
         }
-        augc[iAC].VAR = var - 1; /* this got incremented one more time than desired */
+        goma_ctx->fem.augc[iAC].VAR = var - 1; /* this got incremented one more time than desired */
       }
 
-      SPF(endofstring(echo_string), " %s %d %d", input, augc[iAC].SSID, augc[iAC].SSID2);
+      SPF(endofstring(echo_string), " %s %d %d", input, goma_ctx->fem.augc[iAC].SSID,
+          goma_ctx->fem.augc[iAC].SSID2);
 
       break;
 
@@ -5784,44 +5930,46 @@ void rd_ac_specs(FILE *ifp, char *input) {
      */
 
     if (do_alc) {
-      augc[nAC1].Type = AC_ARC_LENGTH;
-      augc[nAC1].DFID = -1;
-      augc[nAC1].CONSTV = cont->BegParameterValue;
+      goma_ctx->fem.augc[nAC1].Type = AC_ARC_LENGTH;
+      goma_ctx->fem.augc[nAC1].DFID = -1;
+      goma_ctx->fem.augc[nAC1].CONSTV = goma_ctx->fem.cont->BegParameterValue;
     }
 
     /*  read parameter filename for Aprepro parameter cases  */
 #ifndef GOMA_ENABLE_APREPRO_LIB
-    if (augc[iAC].BCID == APREPRO_LIB_AC_BCID) {
+    if (goma_ctx->fem.augc[iAC].BCID == APREPRO_LIB_AC_BCID) {
       GOMA_EH(GOMA_ERROR,
               "Found Aprepro Library augmenting condition but GOMA_ENABLE_APREPRO_LIB=no");
     }
 #endif
 
-    if (augc[iAC].BCID == APREPRO_LIB_AC_BCID ||
-        ((augc[iAC].Type == AC_USERBC || augc[iAC].Type == AC_FLUX ||
-          augc[iAC].Type == AC_FLUX_MAT || augc[iAC].Type == AC_POSITION) &&
-         augc[iAC].BCID == APREPRO_AC_BCID)) {
+    if (goma_ctx->fem.augc[iAC].BCID == APREPRO_LIB_AC_BCID ||
+        ((goma_ctx->fem.augc[iAC].Type == AC_USERBC || goma_ctx->fem.augc[iAC].Type == AC_FLUX ||
+          goma_ctx->fem.augc[iAC].Type == AC_FLUX_MAT ||
+          goma_ctx->fem.augc[iAC].Type == AC_POSITION) &&
+         goma_ctx->fem.augc[iAC].BCID == APREPRO_AC_BCID)) {
 
       if (fscanf(ifp, "%s", string) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Parameter File name");
       }
-      strcpy(augc[iAC].Params_File, string);
+      strcpy(goma_ctx->fem.augc[iAC].Params_File, string);
       if (fscanf(ifp, "%s", string) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Parameter name");
       }
-      strcpy(augc[iAC].AP_param, string);
+      strcpy(goma_ctx->fem.augc[iAC].AP_param, string);
 
-      SPF(endofstring(echo_string), " %s %s", augc[iAC].Params_File, augc[iAC].AP_param);
+      SPF(endofstring(echo_string), " %s %s", goma_ctx->fem.augc[iAC].Params_File,
+          goma_ctx->fem.augc[iAC].AP_param);
 
       // read in the file
-      if (augc[iAC].BCID == APREPRO_LIB_AC_BCID) {
-        FILE *fp = fopen(augc[iAC].Params_File, "rb");
+      if (goma_ctx->fem.augc[iAC].BCID == APREPRO_LIB_AC_BCID) {
+        FILE *fp = fopen(goma_ctx->fem.augc[iAC].Params_File, "rb");
         fseek(fp, 0L, SEEK_END);
         int sz = ftell(fp);
         rewind(fp);
-        augc[iAC].Aprepro_lib_string_len = sz;
-        augc[iAC].Aprepro_lib_string = calloc(sz + 1, sizeof(char));
-        size_t retval = fread(augc[iAC].Aprepro_lib_string, sizeof(char), sz, fp);
+        goma_ctx->fem.augc[iAC].Aprepro_lib_string_len = sz;
+        goma_ctx->fem.augc[iAC].Aprepro_lib_string = calloc(sz + 1, sizeof(char));
+        size_t retval = fread(goma_ctx->fem.augc[iAC].Aprepro_lib_string, sizeof(char), sz, fp);
         if (retval != (size_t)sz) {
           GOMA_EH(GOMA_ERROR, "Error reading APREPRO_LIB parameter file, %d != %lu", sz, retval);
         }
@@ -5835,8 +5983,8 @@ void rd_ac_specs(FILE *ifp, char *input) {
       strip(line);
       if ((num_const = count_parameters(line)) > 0) {
         iread = tokenize_by_whsp(line, arguments, MAX_NUMBER_PARAMS);
-        augc[iAC].len_AC = 0;
-        augc[iAC].DataFlt = alloc_dbl_1(num_const, 0.0);
+        goma_ctx->fem.augc[iAC].len_AC = 0;
+        goma_ctx->fem.augc[iAC].DataFlt = alloc_dbl_1(num_const, 0.0);
         for (i = 0; i < num_const; i++) {
           if (!strncmp(arguments[i], "AC_TABLE", 8)) {
             if ((i + 3) < num_const) {
@@ -5848,9 +5996,9 @@ void rd_ac_specs(FILE *ifp, char *input) {
               break;
             }
           } else {
-            augc[iAC].DataFlt[i] = atof(arguments[i]);
-            augc[iAC].len_AC++;
-            SPF(endofstring(echo_string), " %.4g", augc[iAC].DataFlt[i]);
+            goma_ctx->fem.augc[iAC].DataFlt[i] = atof(arguments[i]);
+            goma_ctx->fem.augc[iAC].len_AC++;
+            SPF(endofstring(echo_string), " %.4g", goma_ctx->fem.augc[iAC].DataFlt[i]);
           }
         }
       }
@@ -5946,31 +6094,31 @@ void rd_solver_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Total Number of Matrices", input, '=');
   if (iread == 1) {
-    upd->Total_Num_Matrices = read_int(ifp, "Total Number of Matrices");
-    if (upd->Total_Num_Matrices < 1) {
+    goma_ctx->fem.upd->Total_Num_Matrices = read_int(ifp, "Total Number of Matrices");
+    if (goma_ctx->fem.upd->Total_Num_Matrices < 1) {
       GOMA_EH(GOMA_ERROR, "Total Number of Matrices should be greater or equal to 1");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of Matrices",
-             upd->Total_Num_Matrices);
+             goma_ctx->fem.upd->Total_Num_Matrices);
     ECHO(echo_string, echo_file);
   } else {
-    upd->Total_Num_Matrices = 1;
+    goma_ctx->fem.upd->Total_Num_Matrices = 1;
   }
 
-  for (int i = 0; i < upd->Total_Num_Matrices; i++) {
-    tran->relaxation[i] = 1.0;
+  for (int i = 0; i < goma_ctx->fem.upd->Total_Num_Matrices; i++) {
+    goma_ctx->fem.tran->relaxation[i] = 1.0;
   }
 
   iread = look_for_optional(ifp, "Strong Boundary Condition Replace Equation", input, '=');
-  upd->strong_bc_replace = FALSE;
+  goma_ctx->fem.upd->strong_bc_replace = FALSE;
   if (iread == 1) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (!strcasecmp(input, "no") || !strcasecmp(input, "false")) {
-      upd->strong_bc_replace = FALSE;
+      goma_ctx->fem.upd->strong_bc_replace = FALSE;
       ECHO("Strong Boundary Condition Replace Equation = no", echo_file);
     } else if (!strcasecmp(input, "yes") || !strcasecmp(input, "true")) {
-      upd->strong_bc_replace = TRUE;
+      goma_ctx->fem.upd->strong_bc_replace = TRUE;
       ECHO("Strong Boundary Condition Replace Equation = yes", echo_file);
     } else {
       GOMA_EH(GOMA_ERROR, "Bad specification for Strong Boundary Condition Replace Equation");
@@ -5979,32 +6127,32 @@ void rd_solver_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Strong Boundary Condition Penalty", input, '=');
   if (iread == 1) {
-    upd->strong_penalty = read_dbl(ifp, "Strong Boundary Condition Penalty");
-    if (upd->strong_penalty <= 0) {
+    goma_ctx->fem.upd->strong_penalty = read_dbl(ifp, "Strong Boundary Condition Penalty");
+    if (goma_ctx->fem.upd->strong_penalty <= 0) {
       GOMA_EH(GOMA_ERROR, "Strong Boundary Condition Penalty should be greater than 0, got %g",
-              upd->strong_penalty);
+              goma_ctx->fem.upd->strong_penalty);
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "Strong Boundary Condition Penalty",
-             upd->strong_penalty);
+             goma_ctx->fem.upd->strong_penalty);
     ECHO(echo_string, echo_file);
   } else {
-    if (upd->strong_bc_replace) {
-      upd->strong_penalty = 1.0;
+    if (goma_ctx->fem.upd->strong_bc_replace) {
+      goma_ctx->fem.upd->strong_penalty = 1.0;
     } else {
-      upd->strong_penalty = BIG_PENALTY;
+      goma_ctx->fem.upd->strong_penalty = BIG_PENALTY;
     }
   }
 
   iread = look_for_optional(ifp, "Segregated Solve", input, '=');
-  upd->SegregatedSolve = FALSE;
+  goma_ctx->fem.upd->SegregatedSolve = FALSE;
   if (iread == 1) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (!strcasecmp(input, "no")) {
-      upd->SegregatedSolve = FALSE;
+      goma_ctx->fem.upd->SegregatedSolve = FALSE;
       ECHO("Segregated Solve = no", echo_file);
     } else if (!strcasecmp(input, "yes")) {
-      upd->SegregatedSolve = TRUE;
+      goma_ctx->fem.upd->SegregatedSolve = TRUE;
       ECHO("Segregated Solve = yes", echo_file);
     } else {
       GOMA_EH(GOMA_ERROR, "Bad specification for Segregated Solve");
@@ -6239,8 +6387,8 @@ void rd_solver_specs(FILE *ifp, char *input) {
   }
 
   // Optional MUMPS controls
-  if (upd->solver_info == NULL) {
-    upd->solver_info = calloc(1, sizeof(solver_information));
+  if (goma_ctx->fem.upd->solver_info == NULL) {
+    goma_ctx->fem.upd->solver_info = calloc(1, sizeof(solver_information));
   }
   if (goma_ctx->solver.linear_solver == MUMPS) {
     // have to figure out which ones we actually want to be setable
@@ -6254,12 +6402,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
       if (iread == 1) {
         read_string(ifp, input, '\n');
         strip(input);
-        int count = sscanf(input, "%d", &upd->solver_info->icntl[param - 1]);
+        int count = sscanf(input, "%d", &goma_ctx->fem.upd->solver_info->icntl[param - 1]);
         if (count == 1) {
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", search_string,
-                   upd->solver_info->icntl[param - 1]);
+                   goma_ctx->fem.upd->solver_info->icntl[param - 1]);
           ECHO(echo_string, echo_file);
-          upd->solver_info->icntl_user_set[param - 1] = 1;
+          goma_ctx->fem.upd->solver_info->icntl_user_set[param - 1] = 1;
         } else if (count != 1) {
           GOMA_EH(GOMA_ERROR, "Error reading MUMPS ICNTL %d", param);
         }
@@ -6274,12 +6422,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
       if (iread == 1) {
         read_string(ifp, input, '\n');
         strip(input);
-        int count = sscanf(input, "%lf", &upd->solver_info->cntl[param - 1]);
+        int count = sscanf(input, "%lf", &goma_ctx->fem.upd->solver_info->cntl[param - 1]);
         if (count == 1) {
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %lf", search_string,
-                   upd->solver_info->cntl[param - 1]);
+                   goma_ctx->fem.upd->solver_info->cntl[param - 1]);
           ECHO(echo_string, echo_file);
-          upd->solver_info->cntl_user_set[param - 1] = 1;
+          goma_ctx->fem.upd->solver_info->cntl_user_set[param - 1] = 1;
         } else if (count != 1) {
           GOMA_EH(GOMA_ERROR, "Error reading MUMPS ICNTL %d", param);
         }
@@ -6775,20 +6923,20 @@ void rd_solver_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Mesh correction damping", input, '=');
   if (iread == 1) {
-    int num_const = read_constants(ifp, &(upd->mesh_correction_damping), -1);
-    upd->n_mesh_corrections = num_const;
+    int num_const = read_constants(ifp, &(goma_ctx->fem.upd->mesh_correction_damping), -1);
+    goma_ctx->fem.upd->n_mesh_corrections = num_const;
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", "Mesh correction damping");
     for (i = 0; i < num_const; i++)
-      SPF(endofstring(echo_string), " %.4g", upd->mesh_correction_damping[i]);
+      SPF(endofstring(echo_string), " %.4g", goma_ctx->fem.upd->mesh_correction_damping[i]);
     ECHO(echo_string, echo_file);
   } else {
-    upd->n_mesh_corrections = 0;
+    goma_ctx->fem.upd->n_mesh_corrections = 0;
   }
   iread = look_for_optional(ifp, "Mesh correction tolerance", input, '=');
   if (iread == 1) {
-    int num_const = read_constants(ifp, &(upd->mesh_correction_tolerances), -1);
-    if (num_const != upd->n_mesh_corrections) {
+    int num_const = read_constants(ifp, &(goma_ctx->fem.upd->mesh_correction_tolerances), -1);
+    if (num_const != goma_ctx->fem.upd->n_mesh_corrections) {
       GOMA_EH(
           GOMA_ERROR,
           "Number of mesh correction tolerances must match number of Mesh correction tolerance");
@@ -6796,40 +6944,44 @@ void rd_solver_specs(FILE *ifp, char *input) {
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", "Mesh correction tolerance");
     for (i = 0; i < num_const; i++)
-      SPF(endofstring(echo_string), " %.4g", upd->mesh_correction_tolerances[i]);
+      SPF(endofstring(echo_string), " %.4g", goma_ctx->fem.upd->mesh_correction_tolerances[i]);
     ECHO(echo_string, echo_file);
   }
 
   if (goma_ctx->solver.newton_line_search_type == NLS_BACKTRACK_MESH &&
-      upd->n_mesh_corrections < 1) {
+      goma_ctx->fem.upd->n_mesh_corrections < 1) {
     GOMA_WH(
         GOMA_ERROR,
         "You have selected the BACKTRACK_MESH backtracking line search, but have not specified any "
         "mesh correction dampings.");
-    upd->n_mesh_corrections = 3;
-    upd->mesh_correction_damping = malloc(upd->n_mesh_corrections * sizeof(double));
-    upd->mesh_correction_tolerances = malloc(upd->n_mesh_corrections * sizeof(double));
-    upd->mesh_correction_damping[0] = 0.5;
-    upd->mesh_correction_damping[1] = 0.2;
-    upd->mesh_correction_damping[2] = 0.1;
-    upd->mesh_correction_tolerances[0] = 1e-5;
-    upd->mesh_correction_tolerances[1] = 1e-4;
-    upd->mesh_correction_tolerances[2] = 1e-3;
+    goma_ctx->fem.upd->n_mesh_corrections = 3;
+    goma_ctx->fem.upd->mesh_correction_damping =
+        malloc(goma_ctx->fem.upd->n_mesh_corrections * sizeof(double));
+    goma_ctx->fem.upd->mesh_correction_tolerances =
+        malloc(goma_ctx->fem.upd->n_mesh_corrections * sizeof(double));
+    goma_ctx->fem.upd->mesh_correction_damping[0] = 0.5;
+    goma_ctx->fem.upd->mesh_correction_damping[1] = 0.2;
+    goma_ctx->fem.upd->mesh_correction_damping[2] = 0.1;
+    goma_ctx->fem.upd->mesh_correction_tolerances[0] = 1e-5;
+    goma_ctx->fem.upd->mesh_correction_tolerances[1] = 1e-4;
+    goma_ctx->fem.upd->mesh_correction_tolerances[2] = 1e-3;
     GOMA_WH(GOMA_ERROR,
             "Defaulting to %d mesh correction dampings of %g %g %g and tolerances of %g %g %g",
-            upd->n_mesh_corrections, upd->mesh_correction_damping[0],
-            upd->mesh_correction_damping[1], upd->mesh_correction_damping[2],
-            upd->mesh_correction_tolerances[0], upd->mesh_correction_tolerances[1],
-            upd->mesh_correction_tolerances[2]);
+            goma_ctx->fem.upd->n_mesh_corrections, goma_ctx->fem.upd->mesh_correction_damping[0],
+            goma_ctx->fem.upd->mesh_correction_damping[1],
+            goma_ctx->fem.upd->mesh_correction_damping[2],
+            goma_ctx->fem.upd->mesh_correction_tolerances[0],
+            goma_ctx->fem.upd->mesh_correction_tolerances[1],
+            goma_ctx->fem.upd->mesh_correction_tolerances[2]);
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", "Mesh correction damping");
-    for (i = 0; i < upd->n_mesh_corrections; i++)
-      SPF(endofstring(echo_string), " %.4g", upd->mesh_correction_damping[i]);
+    for (i = 0; i < goma_ctx->fem.upd->n_mesh_corrections; i++)
+      SPF(endofstring(echo_string), " %.4g", goma_ctx->fem.upd->mesh_correction_damping[i]);
     ECHO(echo_string, echo_file);
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", "Mesh correction tolerance");
-    for (i = 0; i < upd->n_mesh_corrections; i++)
-      SPF(endofstring(echo_string), " %.4g", upd->mesh_correction_tolerances[i]);
+    for (i = 0; i < goma_ctx->fem.upd->n_mesh_corrections; i++)
+      SPF(endofstring(echo_string), " %.4g", goma_ctx->fem.upd->mesh_correction_tolerances[i]);
     ECHO(echo_string, echo_file);
   }
 
@@ -6876,7 +7028,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
            goma_ctx->solver.epsilon[0][0]);
   ECHO(echo_string, echo_file);
 
-  for (imtrx = 1; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 1; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     goma_ctx->solver.epsilon[imtrx][0] = goma_ctx->solver.epsilon[0][0];
   }
   snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Normalized Residual Tolerance",
@@ -6897,28 +7049,28 @@ void rd_solver_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Residual Relative Tolerance", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le", &upd->Residual_Relative_Tol[0]) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->fem.upd->Residual_Relative_Tol[0]) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Residual Relative Tolerance");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Residual Relative Tolerance",
-             upd->Residual_Relative_Tol[0]);
+             goma_ctx->fem.upd->Residual_Relative_Tol[0]);
     ECHO(echo_string, echo_file);
   } else {
-    upd->Residual_Relative_Tol[0] = 1e10;
+    goma_ctx->fem.upd->Residual_Relative_Tol[0] = 1e10;
   }
-  for (imtrx = 1; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    upd->Residual_Relative_Tol[imtrx] = upd->Residual_Relative_Tol[0];
+  for (imtrx = 1; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    goma_ctx->fem.upd->Residual_Relative_Tol[imtrx] = goma_ctx->fem.upd->Residual_Relative_Tol[0];
   }
 
-  for (imtrx = 1; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 1; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     goma_ctx->solver.epsilon[imtrx][0] = goma_ctx->solver.epsilon[0][0];
   }
 
-  for (imtrx = 1; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 1; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     goma_ctx->solver.epsilon[imtrx][2] = goma_ctx->solver.epsilon[0][2];
   }
 
-  for (imtrx = 1; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 1; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     goma_ctx->solver.epsilon[imtrx][1] = 0.;
   }
 
@@ -6998,7 +7150,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
              goma_ctx->solver.epsilon[0][1]);
     ECHO(echo_string, echo_file);
 
-    for (imtrx = 1; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 1; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       goma_ctx->solver.epsilon[imtrx][1] = goma_ctx->solver.epsilon[0][1];
     }
   }
@@ -7060,9 +7212,9 @@ void rd_solver_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0 || strcmp(input, "false") == 0) {
-      upd->disable_pspg_tau_sensitivities = false;
+      goma_ctx->fem.upd->disable_pspg_tau_sensitivities = false;
     } else if (strcmp(input, "yes") == 0 || strcmp(input, "true") == 0) {
-      upd->disable_pspg_tau_sensitivities = true;
+      goma_ctx->fem.upd->disable_pspg_tau_sensitivities = true;
     } else {
       GOMA_EH(GOMA_ERROR,
               "invalid choice: Pressure Stabilization Disable Tau Sens, yes (true) or no (false)");
@@ -7071,7 +7223,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
              input);
     ECHO(echo_string, echo_file);
   } else {
-    upd->disable_pspg_tau_sensitivities = false;
+    goma_ctx->fem.upd->disable_pspg_tau_sensitivities = false;
     ECHO("(Pressure Stabilization Disable Tau Sens = no) (default)", echo_file);
   }
   iread = look_for_optional(ifp, "Pressure Stabilization Lagged Tau", input, '=');
@@ -7079,9 +7231,9 @@ void rd_solver_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0 || strcmp(input, "false") == 0) {
-      upd->pspg_lagged_tau = false;
+      goma_ctx->fem.upd->pspg_lagged_tau = false;
     } else if (strcmp(input, "yes") == 0 || strcmp(input, "true") == 0) {
-      upd->pspg_lagged_tau = true;
+      goma_ctx->fem.upd->pspg_lagged_tau = true;
     } else {
       GOMA_EH(GOMA_ERROR,
               "invalid choice: Pressure Stabilization Lagged Tau, yes (true) or no (false)");
@@ -7090,7 +7242,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
              input);
     ECHO(echo_string, echo_file);
   } else {
-    upd->pspg_lagged_tau = false;
+    goma_ctx->fem.upd->pspg_lagged_tau = false;
     ECHO("(Pressure Stabilization Lagged Tau = no) (default)", echo_file);
   }
 
@@ -7099,16 +7251,16 @@ void rd_solver_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0 || strcmp(input, "false") == 0) {
-      upd->supg_lagged_tau = false;
+      goma_ctx->fem.upd->supg_lagged_tau = false;
     } else if (strcmp(input, "yes") == 0 || strcmp(input, "true") == 0) {
-      upd->supg_lagged_tau = true;
+      goma_ctx->fem.upd->supg_lagged_tau = true;
     } else {
       GOMA_EH(GOMA_ERROR, "invalid choice: SUPG Lagged Tau, yes (true) or no (false)");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "SUPG Lagged Tau", input);
     ECHO(echo_string, echo_file);
   } else {
-    upd->supg_lagged_tau = false;
+    goma_ctx->fem.upd->supg_lagged_tau = false;
     ECHO("(SUPG Lagged Tau = no) (default)", echo_file);
   }
 
@@ -7117,16 +7269,16 @@ void rd_solver_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0 || strcmp(input, "false") == 0) {
-      upd->disable_supg_tau_sensitivities = false;
+      goma_ctx->fem.upd->disable_supg_tau_sensitivities = false;
     } else if (strcmp(input, "yes") == 0 || strcmp(input, "true") == 0) {
-      upd->disable_supg_tau_sensitivities = true;
+      goma_ctx->fem.upd->disable_supg_tau_sensitivities = true;
     } else {
       GOMA_EH(GOMA_ERROR, "invalid choice: SUPG Disable Tau Sens, yes (true) or no (false)");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "SUPG Disable Tau Sens", input);
     ECHO(echo_string, echo_file);
   } else {
-    upd->disable_supg_tau_sensitivities = false;
+    goma_ctx->fem.upd->disable_supg_tau_sensitivities = false;
     ECHO("(SUPG Disable Tau Sens = no) (default)", echo_file);
   }
 
@@ -7135,16 +7287,16 @@ void rd_solver_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0 || strcmp(input, "false") == 0) {
-      upd->PSPG_advection_correction = false;
+      goma_ctx->fem.upd->PSPG_advection_correction = false;
     } else if (strcmp(input, "yes") == 0 || strcmp(input, "true") == 0) {
-      upd->PSPG_advection_correction = true;
+      goma_ctx->fem.upd->PSPG_advection_correction = true;
     } else {
       GOMA_EH(GOMA_ERROR, "invalid choice: PSPG Advection Correction, yes (true) or no (false)");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "PSPG Advection Correction", input);
     ECHO(echo_string, echo_file);
   } else {
-    upd->PSPG_advection_correction = false;
+    goma_ctx->fem.upd->PSPG_advection_correction = false;
     ECHO("(PSPG Advection Correction = no) (default)", echo_file);
   }
 
@@ -7153,16 +7305,16 @@ void rd_solver_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0 || strcmp(input, "false") == 0) {
-      upd->devss_traceless_gradient = false;
+      goma_ctx->fem.upd->devss_traceless_gradient = false;
     } else if (strcmp(input, "yes") == 0 || strcmp(input, "true") == 0) {
-      upd->devss_traceless_gradient = true;
+      goma_ctx->fem.upd->devss_traceless_gradient = true;
     } else {
       GOMA_EH(GOMA_ERROR, "invalid choice: DEVSS Traceless Gradient, yes (true) or no (false)");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "DEVSS Traceless Gradient", input);
     ECHO(echo_string, echo_file);
   } else {
-    upd->devss_traceless_gradient = false;
+    goma_ctx->fem.upd->devss_traceless_gradient = false;
     ECHO("(DEVSS Traceless Gradient = no) (default)", echo_file);
   }
 
@@ -7193,33 +7345,33 @@ void rd_solver_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Number of Segregated Subcycles", input, '=');
   if (iread == 1) {
-    upd->SegregatedSubcycles = read_int(ifp, "Number of Segregated Subcycles");
-    if (upd->SegregatedSubcycles < 1) {
+    goma_ctx->fem.upd->SegregatedSubcycles = read_int(ifp, "Number of Segregated Subcycles");
+    if (goma_ctx->fem.upd->SegregatedSubcycles < 1) {
       GOMA_EH(GOMA_ERROR, "Number of Segregated Subcycles should be greater or equal to 1");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of Segregated Subcycles",
-             upd->SegregatedSubcycles);
+             goma_ctx->fem.upd->SegregatedSubcycles);
     ECHO(echo_string, echo_file);
   } else {
-    upd->SegregatedSubcycles = 1;
+    goma_ctx->fem.upd->SegregatedSubcycles = 1;
     ECHO("(Number of Segregated Subcycles = 1) (default)", echo_file);
   }
-  upd->AutoDiff = 0;
+  goma_ctx->fem.upd->AutoDiff = 0;
   iread = look_for_optional(ifp, "Use AutoDiff Assembly", input, '=');
   if (iread == 1) {
-    upd->AutoDiff = -1;
+    goma_ctx->fem.upd->AutoDiff = -1;
     if (strcmp(input, "no") == 0) {
-      upd->AutoDiff = 0;
+      goma_ctx->fem.upd->AutoDiff = 0;
     } else if (strcmp(input, "yes") == 0) {
-      upd->AutoDiff = 1;
+      goma_ctx->fem.upd->AutoDiff = 1;
     }
-    if (upd->SegregatedSubcycles < 1) {
+    if (goma_ctx->fem.upd->SegregatedSubcycles < 1) {
       GOMA_EH(GOMA_ERROR, "Use AutoDiff Assembly should equal yes or no, instead found %s", input);
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Use AutoDiff Assembly", input);
     ECHO(echo_string, echo_file);
   } else {
-    upd->AutoDiff = 0;
+    goma_ctx->fem.upd->AutoDiff = 0;
     ECHO("(Use AutoDiff Assembly = no) (default)", echo_file);
   }
 
@@ -7290,16 +7442,16 @@ void rd_solver_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strncmp(input, "no", 2) == 0) {
-      upd->petsc_solve_post_proc = false;
+      goma_ctx->fem.upd->petsc_solve_post_proc = false;
     } else if (strncmp(input, "yes", 3) == 0) {
-      upd->petsc_solve_post_proc = true;
+      goma_ctx->fem.upd->petsc_solve_post_proc = true;
     } else {
       GOMA_EH(GOMA_ERROR, "invalid choice for PETSc solve post proc : must be yes or no");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "PETSc solve post proc", input);
     ECHO(echo_string, echo_file);
   } else {
-    upd->petsc_solve_post_proc = false;
+    goma_ctx->fem.upd->petsc_solve_post_proc = false;
   }
 
   /* look for optional flags specifying dependencies to ignore */
@@ -7307,7 +7459,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
     int err;
     int eq, var;
 
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       for (eq = 0; eq < MAX_VARIABLE_TYPES; eq++) {
         for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
           Ignore_Deps[imtrx][eq][var] = FALSE;
@@ -7348,7 +7500,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
       }
 
       if (!strcmp(input, "all") || !strcmp(input, "ALL")) {
-        for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+        for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
           for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
             if (var != eq) /* keep this entry only */
             {
@@ -7362,7 +7514,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
           }
         }
       } else {
-        for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+        for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
           /* loop through equation names and compare to input */
           for (var = 0; var < MAX_VARIABLE_TYPES && !var_found; var++) {
             if (!strcmp(input, Var_Name[var].name1) || !strcmp(input, Var_Name[var].name2)) {
@@ -7420,7 +7572,7 @@ void rd_eigen_specs(FILE *ifp, char *input) {
   }
 
   /* SELECT ARPACK METHOD */
-  eigen->Eigen_Algorithm = LSA_DEFAULT;
+  goma_ctx->fem.eigen->Eigen_Algorithm = LSA_DEFAULT;
   iread = look_for_optional(ifp, "Eigen Algorithm", input, '=');
   if (iread == 1) {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", input);
@@ -7433,52 +7585,53 @@ void rd_eigen_specs(FILE *ifp, char *input) {
       /* LOCA continuation: default to shift and invert */
     case LOCA:
       if (strcmp(input, "cayley") == 0) {
-        eigen->Eigen_Algorithm = LSA_CAYLEY;
+        goma_ctx->fem.eigen->Eigen_Algorithm = LSA_CAYLEY;
       } else {
-        eigen->Eigen_Algorithm = LSA_SI;
+        goma_ctx->fem.eigen->Eigen_Algorithm = LSA_SI;
       }
       break;
 
       /* No continuation: Use ARPACK if card present, otherwise eggroll */
     case ALC_NONE:
       if (strcmp(input, "cayley") == 0) {
-        eigen->Eigen_Algorithm = LSA_CAYLEY;
-        loca_in->Cont_Alg = LOCA_LSA_ONLY;
+        goma_ctx->fem.eigen->Eigen_Algorithm = LSA_CAYLEY;
+        goma_ctx->fem.loca_in->Cont_Alg = LOCA_LSA_ONLY;
       } else if (strcmp(input, "si") == 0) {
-        eigen->Eigen_Algorithm = LSA_SI;
-        loca_in->Cont_Alg = LOCA_LSA_ONLY;
+        goma_ctx->fem.eigen->Eigen_Algorithm = LSA_SI;
+        goma_ctx->fem.loca_in->Cont_Alg = LOCA_LSA_ONLY;
       } else
-        eigen->Eigen_Algorithm = LSA_DEFAULT;
+        goma_ctx->fem.eigen->Eigen_Algorithm = LSA_DEFAULT;
 
       /* Initialize these to avoid UMR's: */
-      if (loca_in->Cont_Alg == LOCA_LSA_ONLY) {
-        cont->BegParameterValue = 0.0;
-        cont->EndParameterValue = 0.0;
-        cont->Delta_s0 = 0.0;
-        cont->MaxPathSteps = 0;
-        cont->print_freq = 1;
-        cont->upType = LOCA_LSA_ONLY;
+      if (goma_ctx->fem.loca_in->Cont_Alg == LOCA_LSA_ONLY) {
+        goma_ctx->fem.cont->BegParameterValue = 0.0;
+        goma_ctx->fem.cont->EndParameterValue = 0.0;
+        goma_ctx->fem.cont->Delta_s0 = 0.0;
+        goma_ctx->fem.cont->MaxPathSteps = 0;
+        goma_ctx->fem.cont->print_freq = 1;
+        goma_ctx->fem.cont->upType = LOCA_LSA_ONLY;
       }
       break;
 
     case HUN_ZEROTH:
     case HUN_FIRST:
-      fprintf(stderr, "HUN %d %d %d\n", nHC, hunt[0].Type, hunt[0].BCID);
+      fprintf(stderr, "HUN %d %d %d\n", nHC, goma_ctx->fem.hunt[0].Type,
+              goma_ctx->fem.hunt[0].BCID);
       if (strcmp(input, "cayley") == 0) {
-        eigen->Eigen_Algorithm = LSA_CAYLEY;
+        goma_ctx->fem.eigen->Eigen_Algorithm = LSA_CAYLEY;
       } else if (strcmp(input, "si") == 0) {
-        eigen->Eigen_Algorithm = LSA_SI;
+        goma_ctx->fem.eigen->Eigen_Algorithm = LSA_SI;
       } else
-        eigen->Eigen_Algorithm = LSA_DEFAULT;
+        goma_ctx->fem.eigen->Eigen_Algorithm = LSA_DEFAULT;
 
       /* Initialize these to avoid UMR's: */
-      if (0 && loca_in->Cont_Alg == LOCA_LSA_ONLY) {
-        cont->BegParameterValue = 0.0;
-        cont->EndParameterValue = 0.0;
-        cont->Delta_s0 = 0.0;
-        cont->MaxPathSteps = 0;
-        cont->print_freq = 1;
-        cont->upType = LOCA_LSA_ONLY;
+      if (0 && goma_ctx->fem.loca_in->Cont_Alg == LOCA_LSA_ONLY) {
+        goma_ctx->fem.cont->BegParameterValue = 0.0;
+        goma_ctx->fem.cont->EndParameterValue = 0.0;
+        goma_ctx->fem.cont->Delta_s0 = 0.0;
+        goma_ctx->fem.cont->MaxPathSteps = 0;
+        goma_ctx->fem.cont->print_freq = 1;
+        goma_ctx->fem.cont->upType = LOCA_LSA_ONLY;
       }
       break;
       /* For non-LOCA continuation, this card does not apply */
@@ -7496,15 +7649,16 @@ void rd_eigen_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Eigen Number of modes", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &eigen->Eigen_NEV_WANT) != 1)
+    if (fscanf(ifp, "%d", &goma_ctx->fem.eigen->Eigen_NEV_WANT) != 1)
       iread = -1;
   }
   if (iread != 1) {
-    eigen->Eigen_NEV_WANT = 10;
+    goma_ctx->fem.eigen->Eigen_NEV_WANT = 10;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %d)", "Eigen Number of modes",
-             eigen->Eigen_NEV_WANT);
+             goma_ctx->fem.eigen->Eigen_NEV_WANT);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, eigen->Eigen_NEV_WANT);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input,
+             goma_ctx->fem.eigen->Eigen_NEV_WANT);
   }
 
   ECHO(echo_string, echo_file);
@@ -7513,15 +7667,16 @@ void rd_eigen_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Eigen Record modes", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &eigen->Eigen_Record_Modes) != 1)
+    if (fscanf(ifp, "%d", &goma_ctx->fem.eigen->Eigen_Record_Modes) != 1)
       iread = -1;
   }
   if (iread != 1) {
-    eigen->Eigen_Record_Modes = 0;
+    goma_ctx->fem.eigen->Eigen_Record_Modes = 0;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %d)", "Eigen Record modes",
-             eigen->Eigen_Record_Modes);
+             goma_ctx->fem.eigen->Eigen_Record_Modes);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, eigen->Eigen_Record_Modes);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input,
+             goma_ctx->fem.eigen->Eigen_Record_Modes);
   }
 
   ECHO(echo_string, echo_file);
@@ -7530,15 +7685,16 @@ void rd_eigen_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Eigen Size of Krylov subspace", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &eigen->Eigen_Krylov_Subspace) != 1)
+    if (fscanf(ifp, "%d", &goma_ctx->fem.eigen->Eigen_Krylov_Subspace) != 1)
       iread = -1;
   }
   if (iread != 1) {
-    eigen->Eigen_Krylov_Subspace = 30;
+    goma_ctx->fem.eigen->Eigen_Krylov_Subspace = 30;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %d)", "Eigen Size of Krylov subspace",
-             eigen->Eigen_Krylov_Subspace);
+             goma_ctx->fem.eigen->Eigen_Krylov_Subspace);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, eigen->Eigen_Krylov_Subspace);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input,
+             goma_ctx->fem.eigen->Eigen_Krylov_Subspace);
   }
 
   ECHO(echo_string, echo_file);
@@ -7547,15 +7703,16 @@ void rd_eigen_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Eigen Maximum Iterations", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &eigen->Eigen_Maximum_Iterations) != 1)
+    if (fscanf(ifp, "%d", &goma_ctx->fem.eigen->Eigen_Maximum_Iterations) != 1)
       iread = -1;
   }
   if (iread != 1) {
-    eigen->Eigen_Maximum_Iterations = 100;
+    goma_ctx->fem.eigen->Eigen_Maximum_Iterations = 100;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %d)", "Eigen Maximum Iterations",
-             eigen->Eigen_Maximum_Iterations);
+             goma_ctx->fem.eigen->Eigen_Maximum_Iterations);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, eigen->Eigen_Maximum_Iterations);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input,
+             goma_ctx->fem.eigen->Eigen_Maximum_Iterations);
   }
 
   ECHO(echo_string, echo_file);
@@ -7564,15 +7721,15 @@ void rd_eigen_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Eigen Number of Filter Steps", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &eigen->Eigen_Filter) != 1)
+    if (fscanf(ifp, "%d", &goma_ctx->fem.eigen->Eigen_Filter) != 1)
       iread = -1;
   }
   if (iread != 1) {
-    eigen->Eigen_Filter = 2;
+    goma_ctx->fem.eigen->Eigen_Filter = 2;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %d)", "Eigen Number of Filter Steps",
-             eigen->Eigen_Filter);
+             goma_ctx->fem.eigen->Eigen_Filter);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, eigen->Eigen_Filter);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->fem.eigen->Eigen_Filter);
   }
 
   ECHO(echo_string, echo_file);
@@ -7585,15 +7742,15 @@ void rd_eigen_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0) {
-      eigen->Eigen_Recycle = 0;
+      goma_ctx->fem.eigen->Eigen_Recycle = 0;
     } else if (strcmp(input, "yes") == 0) {
-      eigen->Eigen_Recycle = 1;
+      goma_ctx->fem.eigen->Eigen_Recycle = 1;
     } else {
       GOMA_EH(GOMA_ERROR, "invalid choice: Eigen Recycle must be yes or no");
     }
     SPF(endofstring(echo_string), " %s", input);
   } else {
-    eigen->Eigen_Recycle = 0;
+    goma_ctx->fem.eigen->Eigen_Recycle = 0;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %s)", "Eigen Recycle", "no");
   }
 
@@ -7603,12 +7760,13 @@ void rd_eigen_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Eigen Tolerance", input, '=');
   if (iread == 1) {
-    eigen->Eigen_Tolerance = read_dbl(ifp, "Eigen Tolerance");
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, eigen->Eigen_Tolerance);
+    goma_ctx->fem.eigen->Eigen_Tolerance = read_dbl(ifp, "Eigen Tolerance");
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+             goma_ctx->fem.eigen->Eigen_Tolerance);
   } else {
-    eigen->Eigen_Tolerance = 1.0e-06;
+    goma_ctx->fem.eigen->Eigen_Tolerance = 1.0e-06;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %.4g)", "Eigen Tolerance",
-             eigen->Eigen_Tolerance);
+             goma_ctx->fem.eigen->Eigen_Tolerance);
   }
 
   ECHO(echo_string, echo_file);
@@ -7621,13 +7779,13 @@ void rd_eigen_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "yes") == 0) {
-      eigen->Eigen_Matrix_Output = 1;
+      goma_ctx->fem.eigen->Eigen_Matrix_Output = 1;
     } else {
-      eigen->Eigen_Matrix_Output = 0;
+      goma_ctx->fem.eigen->Eigen_Matrix_Output = 0;
     }
     SPF(endofstring(echo_string), " %s", input);
   } else {
-    eigen->Eigen_Matrix_Output = 0;
+    goma_ctx->fem.eigen->Eigen_Matrix_Output = 0;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %s)", "Eigen Matrix Output", "no");
   }
 
@@ -7637,14 +7795,15 @@ void rd_eigen_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Eigen Initial Vector Weight", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le", &eigen->Eigen_IV_Wt) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->fem.eigen->Eigen_IV_Wt) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Eigen Initial Vector Weight");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, eigen->Eigen_IV_Wt);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+             goma_ctx->fem.eigen->Eigen_IV_Wt);
   } else {
-    eigen->Eigen_IV_Wt = 0.5;
+    goma_ctx->fem.eigen->Eigen_IV_Wt = 0.5;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %.4g)", "Eigen Tolerance",
-             eigen->Eigen_IV_Wt);
+             goma_ctx->fem.eigen->Eigen_IV_Wt);
   }
 
   ECHO(echo_string, echo_file);
@@ -7652,53 +7811,56 @@ void rd_eigen_specs(FILE *ifp, char *input) {
   /* INITIAL SHIFTS [eggroll only] */
 
   for (i = 0; i < 4; i++) {
-    eigen->Eigen_Shifts[i] = -1.0;
+    goma_ctx->fem.eigen->Eigen_Shifts[i] = -1.0;
   }
   iread = look_for_optional(ifp, "Eigen Initial Shifts", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le %le %le %le", &eigen->Eigen_Shifts[0], &eigen->Eigen_Shifts[1],
-               &eigen->Eigen_Shifts[2], &eigen->Eigen_Shifts[3]) != 4) {
+    if (fscanf(ifp, "%le %le %le %le", &goma_ctx->fem.eigen->Eigen_Shifts[0],
+               &goma_ctx->fem.eigen->Eigen_Shifts[1], &goma_ctx->fem.eigen->Eigen_Shifts[2],
+               &goma_ctx->fem.eigen->Eigen_Shifts[3]) != 4) {
       GOMA_EH(GOMA_ERROR, "Four float values required for Eigen Initial Shifts\n");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", input);
-    SPF_DBL_VEC(endofstring(echo_string), 4, eigen->Eigen_Shifts);
+    SPF_DBL_VEC(endofstring(echo_string), 4, goma_ctx->fem.eigen->Eigen_Shifts);
   } else {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = ", "Eigen Initial Shifts");
-    SPF_DBL_VEC(endofstring(echo_string), 4, eigen->Eigen_Shifts);
+    SPF_DBL_VEC(endofstring(echo_string), 4, goma_ctx->fem.eigen->Eigen_Shifts);
     SPF(endofstring(echo_string), ")");
   }
   ECHO(echo_string, echo_file);
 
   /* CAYLEY SIGMA AND MU [ARPACK only] */
 
-  if (eigen->Eigen_Algorithm == LSA_CAYLEY) {
-    eigen->Eigen_Cayley_Sigma = 100.0;
+  if (goma_ctx->fem.eigen->Eigen_Algorithm == LSA_CAYLEY) {
+    goma_ctx->fem.eigen->Eigen_Cayley_Sigma = 100.0;
   } else {
-    eigen->Eigen_Cayley_Sigma = 0.0;
+    goma_ctx->fem.eigen->Eigen_Cayley_Sigma = 0.0;
   }
   iread = look_for_optional(ifp, "Eigen Cayley Sigma", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le", &eigen->Eigen_Cayley_Sigma) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->fem.eigen->Eigen_Cayley_Sigma) != 1) {
       GOMA_EH(GOMA_ERROR, "Error reading Eigen Cayley Sigma");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, eigen->Eigen_Cayley_Sigma);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+             goma_ctx->fem.eigen->Eigen_Cayley_Sigma);
   } else {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %.4g)", "Eigen Cayley Sigma",
-             eigen->Eigen_Cayley_Sigma);
+             goma_ctx->fem.eigen->Eigen_Cayley_Sigma);
   }
 
   ECHO(echo_string, echo_file);
 
-  eigen->Eigen_Cayley_Mu = 1000.0;
+  goma_ctx->fem.eigen->Eigen_Cayley_Mu = 1000.0;
   iread = look_for_optional(ifp, "Eigen Cayley Mu", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le", &eigen->Eigen_Cayley_Mu) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->fem.eigen->Eigen_Cayley_Mu) != 1) {
       GOMA_EH(GOMA_ERROR, "Error reading Eigen Cayley Mu");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, eigen->Eigen_Cayley_Mu);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+             goma_ctx->fem.eigen->Eigen_Cayley_Mu);
   } else {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %.4g)", "Eigen Cayley Mu",
-             eigen->Eigen_Cayley_Mu);
+             goma_ctx->fem.eigen->Eigen_Cayley_Mu);
   }
 
   ECHO(echo_string, echo_file);
@@ -7707,91 +7869,96 @@ void rd_eigen_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Eigen Maximum Outer Iterations", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &eigen->Eigen_Maximum_Outer_Iterations) != 1)
+    if (fscanf(ifp, "%d", &goma_ctx->fem.eigen->Eigen_Maximum_Outer_Iterations) != 1)
       iread = -1;
     else
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input,
-               eigen->Eigen_Maximum_Outer_Iterations);
+               goma_ctx->fem.eigen->Eigen_Maximum_Outer_Iterations);
   }
 
   if (iread != 1) {
-    eigen->Eigen_Maximum_Outer_Iterations = 1;
+    goma_ctx->fem.eigen->Eigen_Maximum_Outer_Iterations = 1;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %d)", "Eigen Maximum Outer Iterations",
-             eigen->Eigen_Maximum_Outer_Iterations);
+             goma_ctx->fem.eigen->Eigen_Maximum_Outer_Iterations);
   }
 
   ECHO(echo_string, echo_file);
 
   /* EIGENSOLVER SHIFT/INVERT TOLERANCE PARAMETER [ARPACK only] */
 
-  eigen->Eigen_SI_Tol_Param = 2.0e-2;
+  goma_ctx->fem.eigen->Eigen_SI_Tol_Param = 2.0e-2;
   iread = look_for_optional(ifp, "Eigen SI tolerance parameter", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le", &eigen->Eigen_SI_Tol_Param) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->fem.eigen->Eigen_SI_Tol_Param) != 1) {
       GOMA_EH(GOMA_ERROR, "Error reading Eigen SI tolerance parameter");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, eigen->Eigen_SI_Tol_Param);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+             goma_ctx->fem.eigen->Eigen_SI_Tol_Param);
   } else
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %.4g)", "Eigen SI tolerance parameter",
-             eigen->Eigen_SI_Tol_Param);
+             goma_ctx->fem.eigen->Eigen_SI_Tol_Param);
 
   ECHO(echo_string, echo_file);
 
   /* EIGENSOLVER RELATIVE TOLERANCE [ARPACK only] */
 
-  eigen->Eigen_Relative_Tol = 1.0e-6;
+  goma_ctx->fem.eigen->Eigen_Relative_Tol = 1.0e-6;
   iread = look_for_optional(ifp, "Eigen Relative tolerance", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le", &eigen->Eigen_Relative_Tol) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->fem.eigen->Eigen_Relative_Tol) != 1) {
       GOMA_EH(GOMA_ERROR, "Error reading Eigen Relative tolerance");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, eigen->Eigen_Relative_Tol);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+             goma_ctx->fem.eigen->Eigen_Relative_Tol);
   } else
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %.4g)", "Eigen Relative tolerance",
-             eigen->Eigen_Relative_Tol);
+             goma_ctx->fem.eigen->Eigen_Relative_Tol);
 
   ECHO(echo_string, echo_file);
 
   /* EIGEN LINEAR SOLVER TOLERANCE [ARPACK only] */
 
-  eigen->Eigen_Linear_Tol = 1.0e-6;
+  goma_ctx->fem.eigen->Eigen_Linear_Tol = 1.0e-6;
   iread = look_for_optional(ifp, "Eigen Linear Solver tolerance", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le", &eigen->Eigen_Linear_Tol) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->fem.eigen->Eigen_Linear_Tol) != 1) {
       GOMA_EH(GOMA_ERROR, "Error reading Eigen Linear Solver tolerance");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, eigen->Eigen_Linear_Tol);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+             goma_ctx->fem.eigen->Eigen_Linear_Tol);
   } else
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %.4g)", "Eigen Linear Solver tolerance",
-             eigen->Eigen_Linear_Tol);
+             goma_ctx->fem.eigen->Eigen_Linear_Tol);
 
   ECHO(echo_string, echo_file);
 
   /* EIGENVALUE FREQUENCY [ARPACK only] */
-  eigen->Eigen_Solve_Freq = 1;
+  goma_ctx->fem.eigen->Eigen_Solve_Freq = 1;
   iread = look_for_optional(ifp, "Eigenvalue output frequency", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &eigen->Eigen_Solve_Freq) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->fem.eigen->Eigen_Solve_Freq) != 1) {
       GOMA_EH(GOMA_ERROR, "Error reading Eigenvalue output frequency");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, eigen->Eigen_Solve_Freq);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input,
+             goma_ctx->fem.eigen->Eigen_Solve_Freq);
   } else
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %d)", "Eigenvalue output frequency",
-             eigen->Eigen_Solve_Freq);
+             goma_ctx->fem.eigen->Eigen_Solve_Freq);
 
   ECHO(echo_string, echo_file);
 
   /* EIGENVECTOR FREQUENCY [ARPACK only] */
-  eigen->Eigen_Write_Freq = -1;
+  goma_ctx->fem.eigen->Eigen_Write_Freq = -1;
   iread = look_for_optional(ifp, "Eigenvector output frequency", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &eigen->Eigen_Write_Freq) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->fem.eigen->Eigen_Write_Freq) != 1) {
       GOMA_EH(GOMA_ERROR, "Error reading Eigenvector output frequency");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, eigen->Eigen_Write_Freq);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input,
+             goma_ctx->fem.eigen->Eigen_Write_Freq);
   } else
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %d)", "Eigenvector output frequency",
-             eigen->Eigen_Write_Freq);
+             goma_ctx->fem.eigen->Eigen_Write_Freq);
 
   ECHO(echo_string, echo_file);
 
@@ -7802,12 +7969,12 @@ void rd_eigen_specs(FILE *ifp, char *input) {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", input);
     (void)read_string(ifp, input, '\n');
     strip(input);
-    strcpy(eigen->Eigen_Output_File, input);
-    SPF(endofstring(echo_string), " %s", eigen->Eigen_Output_File);
+    strcpy(goma_ctx->fem.eigen->Eigen_Output_File, input);
+    SPF(endofstring(echo_string), " %s", goma_ctx->fem.eigen->Eigen_Output_File);
   } else {
-    strcpy(eigen->Eigen_Output_File, "LSA.exoII");
+    strcpy(goma_ctx->fem.eigen->Eigen_Output_File, "LSA.exoII");
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s = %s)", "Eigenvector output file",
-             eigen->Eigen_Output_File);
+             goma_ctx->fem.eigen->Eigen_Output_File);
   }
 
   ECHO(echo_string, echo_file);
@@ -7890,32 +8057,33 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
   ECHO("\nProblem Description =\n", echo_input_file);
 
   look_for(ifp, "Number of Materials", input, '=');
-  if (fscanf(ifp, "%d", &(upd->Num_Mat)) != 1) {
+  if (fscanf(ifp, "%d", &(goma_ctx->fem.upd->Num_Mat)) != 1) {
     fprintf(stderr, "Expected to read 1 int for \"Number of Materials\" - attempt to enumerate...");
-    upd->Num_Mat = -1;
+    goma_ctx->fem.upd->Num_Mat = -1;
   }
 
   /*
    * Count Number of Materials if Num_Mat is set to -1
    */
 
-  if (upd->Num_Mat == -1)
-    upd->Num_Mat = count_list(ifp, "MAT", input, '=', "END OF MAT");
+  if (goma_ctx->fem.upd->Num_Mat == -1)
+    goma_ctx->fem.upd->Num_Mat = count_list(ifp, "MAT", input, '=', "END OF MAT");
   /*
    * Check the number of materials against the default Maximum number of materials
    */
-  if (upd->Num_Mat > MAX_NUMBER_MATLS) {
+  if (goma_ctx->fem.upd->Num_Mat > MAX_NUMBER_MATLS) {
     sprintf(err_msg, "Found num materials = %d > %d - boost MAX_NUMBER_MATLS in mm_mp_const.h",
-            upd->Num_Mat, MAX_NUMBER_MATLS);
+            goma_ctx->fem.upd->Num_Mat, MAX_NUMBER_MATLS);
     GOMA_EH(GOMA_ERROR, err_msg);
   }
 
-  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of Materials", upd->Num_Mat);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of Materials",
+           goma_ctx->fem.upd->Num_Mat);
   ECHO(echo_string, echo_input_file);
 
-  upd->Max_Num_Species_Eqn = -123456789; /* initialize */
-  upd->Max_Num_Species = -123456789;     /* initialize */
-  upd->Max_Num_Porous_Eqn = -123456789;  /* initialize */
+  goma_ctx->fem.upd->Max_Num_Species_Eqn = -123456789; /* initialize */
+  goma_ctx->fem.upd->Max_Num_Species = -123456789;     /* initialize */
+  goma_ctx->fem.upd->Max_Num_Porous_Eqn = -123456789;  /* initialize */
 
   Num_Interpolations = 0; /* Initialize counter (cf rf_fem.h) */
 
@@ -7924,21 +8092,21 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
   }
 
   for (imtrx = 0; imtrx < MAX_NUM_MATRICES; imtrx++) {
-    upd->Total_Num_EQ[imtrx] = 0;
-    upd->Total_Num_Var[imtrx] = 0;
+    goma_ctx->fem.upd->Total_Num_EQ[imtrx] = 0;
+    goma_ctx->fem.upd->Total_Num_Var[imtrx] = 0;
   }
 
   for (i = 0; i < MAX_VARIABLE_TYPES + MAX_CONC; i++) {
     for (imtrx = 0; imtrx < MAX_NUM_MATRICES; imtrx++) {
-      upd->ep[imtrx][i] = -1;
-      upd->vp[imtrx][i] = -1;
+      goma_ctx->fem.upd->ep[imtrx][i] = -1;
+      goma_ctx->fem.upd->vp[imtrx][i] = -1;
     }
   }
 
   /*
    * ------------- Loop over the number of materials ----------
    */
-  for (mn = 0; mn < upd->Num_Mat; mn++) { /* mn */
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) { /* mn */
     /*
      *
      * Part 1 -- Look for Material Name (Arbitrary) and
@@ -7958,13 +8126,13 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
     if (nAC > 0) {
       int iAC;
       for (iAC = 0; iAC < nAC; iAC++) {
-        if (augc[iAC].Type == AC_VOLUME) {
-          if (eb_in_matrl(augc[iAC].MTID, mn)) {
-            pd_glob[mn]->VolumeIntegral = iAC;
+        if (goma_ctx->fem.augc[iAC].Type == AC_VOLUME) {
+          if (eb_in_matrl(goma_ctx->fem.augc[iAC].MTID, mn)) {
+            goma_ctx->fem.pd_glob[mn]->VolumeIntegral = iAC;
           }
-        } else if (augc[iAC].Type == AC_LS_VEL) {
-          if (eb_in_matrl(augc[iAC].MTID, mn)) {
-            pd_glob[mn]->LSVelocityIntegral = iAC;
+        } else if (goma_ctx->fem.augc[iAC].Type == AC_LS_VEL) {
+          if (eb_in_matrl(goma_ctx->fem.augc[iAC].MTID, mn)) {
+            goma_ctx->fem.pd_glob[mn]->LSVelocityIntegral = iAC;
           }
         }
       }
@@ -7985,22 +8153,24 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
 
     have_mesh_var = 0;
     have_por_liq_pres_var = 0;
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-      if (pd_glob[0]->v[imtrx][MESH_DISPLACEMENT1]) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+      if (goma_ctx->fem.pd_glob[0]->v[imtrx][MESH_DISPLACEMENT1]) {
         have_mesh_var = 1;
       }
-      if (pd_glob[0]->v[imtrx][POR_LIQ_PRES]) {
+      if (goma_ctx->fem.pd_glob[0]->v[imtrx][POR_LIQ_PRES]) {
         have_por_liq_pres_var = 1;
       }
     }
 
-    efv->ev_porous_decouple = T_NOTHING;
-    if (efv->ev) {
+    goma_ctx->fem.efv->ev_porous_decouple = T_NOTHING;
+    if (goma_ctx->fem.efv->ev) {
 
-      if ((strcmp(efv->name[0], "DMX") == 0 || strcmp(efv->name[0], "DISPLX") == 0) &&
-          (strcmp(efv->name[1], "DMY") == 0 || strcmp(efv->name[1], "DISPLY") == 0) &&
+      if ((strcmp(goma_ctx->fem.efv->name[0], "DMX") == 0 ||
+           strcmp(goma_ctx->fem.efv->name[0], "DISPLX") == 0) &&
+          (strcmp(goma_ctx->fem.efv->name[1], "DMY") == 0 ||
+           strcmp(goma_ctx->fem.efv->name[1], "DISPLY") == 0) &&
           (have_mesh_var == 0) && (have_por_liq_pres_var == 1)) {
-        efv->ev_porous_decouple = T_SOMETHING;
+        goma_ctx->fem.efv->ev_porous_decouple = T_SOMETHING;
       } else if ((have_mesh_var == 0) && (have_por_liq_pres_var == 1)) {
         GOMA_EH(GOMA_ERROR, "You have por_liq_press equation and efv's, but not the right order. "
                             "Talk to PRS or RAR");
@@ -8019,7 +8189,7 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
      * unity and control weightings through multipliers in equation
      * specifications
      */
-    (void)strcpy(MatFile, pd_glob[mn]->MaterialName);
+    (void)strcpy(MatFile, goma_ctx->fem.pd_glob[mn]->MaterialName);
     (void)strcat(MatFile, MatFileSuffix);
 
     strcpy(echo_mat_file, "echo_");
@@ -8093,18 +8263,20 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
      *  current material
      */
     if (goma_ctx->debug_flag > 2) {
-      (void)matrl_prop_print(mp_glob[mn], mn);
+      (void)matrl_prop_print(goma_ctx->fem.mp_glob[mn], mn);
     }
     ECHO("CLOSE", echo_mat_file);
   } /* END OF for(mn=0; mn<upd->Num_Mat... */
 
   ECHO("\nEND OF MAT\n", echo_input_file);
 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    if (upd->Total_Num_EQ[imtrx] > MAX_PROB_VAR) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (goma_ctx->fem.upd->Total_Num_EQ[imtrx] > MAX_PROB_VAR) {
       fprintf(stderr, "%sTotal number of equations, %d, in Matrix, %d, exceeds MAX_PROB_VAR, %d\n",
-              "input FATAL ERROR: ", upd->Total_Num_EQ[imtrx], (imtrx + 1), MAX_PROB_VAR);
-      fprintf(stderr, "\tIncrease MAX_PROB_VAR to %d and rerun\n", upd->Total_Num_EQ[imtrx]);
+              "input FATAL ERROR: ", goma_ctx->fem.upd->Total_Num_EQ[imtrx], (imtrx + 1),
+              MAX_PROB_VAR);
+      fprintf(stderr, "\tIncrease MAX_PROB_VAR to %d and rerun\n",
+              goma_ctx->fem.upd->Total_Num_EQ[imtrx]);
       GOMA_EH(GOMA_ERROR, "MAX_PROB_VAR is too small for number of equations");
     }
   }
@@ -8195,7 +8367,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
   int mtrx_index0 = 0;  /* Current matrix index read from input file - 0 based */
   int numMtrxLines = 0; /* Number of matrix lines to be read */
   int MeshMotion = -1;
-  PROBLEM_DESCRIPTION_STRUCT *pd_ptr = pd_glob[mn];
+  PROBLEM_DESCRIPTION_STRUCT *pd_ptr = goma_ctx->fem.pd_glob[mn];
   char ts[MAX_BC_KEYWORD_LENGTH] = "\0";
 
   char tscs[MAX_CS_KEYWORD_LENGTH] = "\0";
@@ -8231,7 +8403,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
   }
 
   pd_ptr->CoordinateSystem = CoordinateSystem;
-  upd->CoordinateSystem = CoordinateSystem;
+  goma_ctx->fem.upd->CoordinateSystem = CoordinateSystem;
 
   snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Coordinate System", tscs);
   ECHO(echo_string, echo_file);
@@ -8309,7 +8481,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
   ECHO(echo_string, echo_file);
 
   pd_ptr->MeshMotion = MeshMotion;
-  cr_glob[mn]->MeshMotion = pd_ptr->MeshMotion;
+  goma_ctx->fem.cr_glob[mn]->MeshMotion = pd_ptr->MeshMotion;
 
   /*
    *  Number of Bulk Species Line
@@ -8400,8 +8572,9 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
    * Now store the maximum values for the number of species equations and
    * number of species in the upd structure
    */
-  upd->Max_Num_Species_Eqn = MAX(upd->Max_Num_Species_Eqn, pd_ptr->Num_Species_Eqn);
-  upd->Max_Num_Species = MAX(upd->Max_Num_Species, pd_ptr->Num_Species);
+  goma_ctx->fem.upd->Max_Num_Species_Eqn =
+      MAX(goma_ctx->fem.upd->Max_Num_Species_Eqn, pd_ptr->Num_Species_Eqn);
+  goma_ctx->fem.upd->Max_Num_Species = MAX(goma_ctx->fem.upd->Max_Num_Species, pd_ptr->Num_Species);
 
   /*
    *  Write the resulting number of species equations out to the output file
@@ -8426,9 +8599,9 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
    * the "Max_Num_Spec" variable for all materials up to and including this
    * one.
    */
-  if (pd_ptr->Num_Species_Eqn > upd->Max_Num_Species_Eqn) {
-    upd->Max_Num_Species_Eqn = pd_ptr->Num_Species_Eqn;
-    upd->Max_Num_Species = pd_ptr->Num_Species;
+  if (pd_ptr->Num_Species_Eqn > goma_ctx->fem.upd->Max_Num_Species_Eqn) {
+    goma_ctx->fem.upd->Max_Num_Species_Eqn = pd_ptr->Num_Species_Eqn;
+    goma_ctx->fem.upd->Max_Num_Species = pd_ptr->Num_Species;
   }
 
   /*
@@ -8442,8 +8615,8 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
     retn = read_string(ifp, input, '\n');
     strip(input);
     pd_ptr->Species_Var_Type = species_type_str_to_int(input);
-    if (upd->Species_Var_Type == 0)
-      upd->Species_Var_Type = pd_ptr->Species_Var_Type;
+    if (goma_ctx->fem.upd->Species_Var_Type == 0)
+      goma_ctx->fem.upd->Species_Var_Type = pd_ptr->Species_Var_Type;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Default Material Species Type", input);
     ECHO(echo_string, echo_file);
   }
@@ -8454,17 +8627,17 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
   err = look_forward_optional(ifp, "Number of viscoelastic modes", input, '=');
 
   if (err == -1) {
-    vn_glob[mn]->modes = 0;
+    goma_ctx->fem.vn_glob[mn]->modes = 0;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of viscoelastic modes",
-             vn_glob[mn]->modes);
+             goma_ctx->fem.vn_glob[mn]->modes);
     ECHO(echo_string, echo_file);
   } else {
-    if (fscanf(ifp, "%d", &vn_glob[mn]->modes) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->fem.vn_glob[mn]->modes) != 1) {
       GOMA_EH(GOMA_ERROR, "Expected to read 1 int for \"Number of viscoelastic modes\"");
     }
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of viscoelastic modes",
-             vn_glob[mn]->modes);
+             goma_ctx->fem.vn_glob[mn]->modes);
     ECHO(echo_string, echo_file);
   }
 
@@ -8530,7 +8703,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         read_string(ifp, input, '\n');
         strip(input);
         if (strcmp(input, "yes") == 0) {
-          pg->time_step_control_disabled[mtrx_index0] = TRUE;
+          goma_ctx->fem.pg->time_step_control_disabled[mtrx_index0] = TRUE;
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "Disable time step control = %s", input);
           ECHO(echo_string, echo_file);
         }
@@ -8539,22 +8712,22 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
       if (look_forward_optional_until(ifp, "Relaxation", "MATRIX", input, '=') == 1) {
         read_string(ifp, input, '\n');
         strip(input);
-        if (sscanf(input, "%le", &tran->relaxation[mtrx_index0]) == 1) {
+        if (sscanf(input, "%le", &goma_ctx->fem.tran->relaxation[mtrx_index0]) == 1) {
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "Relaxation = %g",
-                   tran->relaxation[mtrx_index0]);
+                   goma_ctx->fem.tran->relaxation[mtrx_index0]);
           ECHO(echo_string, echo_file);
         }
       }
       if (look_forward_optional_until(ifp, "Relaxation Tolerance", "MATRIX", input, '=') == 1) {
         read_string(ifp, input, '\n');
         strip(input);
-        if (sscanf(input, "%le", &tran->relaxation_tolerance[mtrx_index0]) == 1) {
+        if (sscanf(input, "%le", &goma_ctx->fem.tran->relaxation_tolerance[mtrx_index0]) == 1) {
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "Relaxation Tolerance = %g",
-                   tran->relaxation[mtrx_index0]);
+                   goma_ctx->fem.tran->relaxation[mtrx_index0]);
           ECHO(echo_string, echo_file);
         }
       } else {
-        tran->relaxation_tolerance[mtrx_index0] = 1.0e-4;
+        goma_ctx->fem.tran->relaxation_tolerance[mtrx_index0] = 1.0e-4;
       }
     }
     int iread;
@@ -8581,19 +8754,19 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
 
     iread = look_forward_optional_until(ifp, "Matrix Subcycle Count", "MATRIX", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%d", &(pg->matrix_subcycle_count[imtrx])) != 1) {
+      if (fscanf(ifp, "%d", &(goma_ctx->fem.pg->matrix_subcycle_count[imtrx])) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Matrix Subcycle Count");
       }
 
-      if (pg->matrix_subcycle_count[imtrx] <= 0) {
+      if (goma_ctx->fem.pg->matrix_subcycle_count[imtrx] <= 0) {
         GOMA_EH(GOMA_ERROR, "Expected Matrix Subcycle Count to be > 0");
       }
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Matrix Subcycle Count",
-               pg->matrix_subcycle_count[imtrx]);
+               goma_ctx->fem.pg->matrix_subcycle_count[imtrx]);
       ECHO(echo_string, echo_file);
     } else {
-      pg->matrix_subcycle_count[imtrx] = 1.0;
+      goma_ctx->fem.pg->matrix_subcycle_count[imtrx] = 1.0;
     }
 
     iread =
@@ -8618,11 +8791,11 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
     }
     iread = look_forward_optional_until(ifp, "Residual Relative Tolerance", "MATRIX", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%le", &upd->Residual_Relative_Tol[imtrx]) != 1) {
+      if (fscanf(ifp, "%le", &goma_ctx->fem.upd->Residual_Relative_Tol[imtrx]) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Residual Relative Tolerance");
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Residual Relative Tolerance",
-               upd->Residual_Relative_Tol[imtrx]);
+               goma_ctx->fem.upd->Residual_Relative_Tol[imtrx]);
       ECHO(echo_string, echo_file);
     }
 
@@ -8806,21 +8979,21 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
       } else if (!strcasecmp(ts, "fill")) {
         ce = set_eqn(R_FILL, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "level_set")) {
-        if (ls == NULL)
+        if (goma_ctx->fem.ls == NULL)
           GOMA_EH(GOMA_ERROR, "Level Set Interface tracking must be turned on.");
         ce = set_eqn(R_LEVEL_SET, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "curvature")) {
         ce = set_eqn(R_CURVATURE, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "normal1")) {
-        if (ls == NULL)
+        if (goma_ctx->fem.ls == NULL)
           GOMA_EH(GOMA_ERROR, " NORMAL1 equation requires Level Set Interface tracking on.");
         ce = set_eqn(R_NORMAL1, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "normal2")) {
-        if (ls == NULL)
+        if (goma_ctx->fem.ls == NULL)
           GOMA_EH(GOMA_ERROR, " NORMAL2 equation requires Level Set Interface tracking on.");
         ce = set_eqn(R_NORMAL2, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "normal3")) {
-        if (ls == NULL)
+        if (goma_ctx->fem.ls == NULL)
           GOMA_EH(GOMA_ERROR, " NORMAL3 equation requires Level Set Interface tracking on.");
         ce = set_eqn(R_NORMAL3, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "voltage")) {
@@ -8964,7 +9137,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         pd_ptr->Do_Surf_Geometry = 1;
       } else if (!strcasecmp(ts, "ext_v")) {
         ce = set_eqn(R_EXT_VELOCITY, mtrx_index0, pd_ptr);
-        ls->Extension_Velocity = TRUE;
+        goma_ctx->fem.ls->Extension_Velocity = TRUE;
       } else if (!strcasecmp(ts, "efield1")) {
         ce = set_eqn(R_EFIELD1, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "efield2")) {
@@ -9049,7 +9222,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         pd_ptr->Num_Porous_Eqn++;
       } else if (!strcasecmp(ts, "porous_liq")) {
         ce = set_eqn(R_POR_LIQ_PRES, mtrx_index0, pd_ptr);
-        if (tran->theta != 0.0)
+        if (goma_ctx->fem.tran->theta != 0.0)
           GOMA_EH(GOMA_ERROR, "Please don't use Time step parameter of 0.5                         "
                               "          for porous media problems.  Use 0.0");
         if (pd_ptr->e[mtrx_index0][R_POR_SATURATION]) {
@@ -9119,7 +9292,8 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t\t%s = %s", "EQ", ts);
 
-      upd->Max_Num_Porous_Eqn = MAX(upd->Max_Num_Porous_Eqn, pd_ptr->Num_Porous_Eqn);
+      goma_ctx->fem.upd->Max_Num_Porous_Eqn =
+          MAX(goma_ctx->fem.upd->Max_Num_Porous_Eqn, pd_ptr->Num_Porous_Eqn);
 
       /*
        * This sets up a useful mapping over the active equations...
@@ -9136,8 +9310,9 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
        * materials in the problem.
        */
       for (j = 0; j < eqnMult; j++) {
-        if (upd->ep[mtrx_index0][ce + j] == -1) {
-          upd->ep[mtrx_index0][ce + j] = (upd->Total_Num_EQ[mtrx_index0])++;
+        if (goma_ctx->fem.upd->ep[mtrx_index0][ce + j] == -1) {
+          goma_ctx->fem.upd->ep[mtrx_index0][ce + j] =
+              (goma_ctx->fem.upd->Total_Num_EQ[mtrx_index0])++;
         }
       }
 
@@ -9162,52 +9337,52 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         pd_ptr->w[mtrx_index0][ce] = I_Q2;
       } else if (!strcasecmp(ts, "Q1_G")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q1_G;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_G")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q2_G;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_GP")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q1_GP;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_GP")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q2_GP;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_GN")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q1_GN;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_GN")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q2_GN;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_XV")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q1_XV;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_XV")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q2_XV;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_XG")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q1_XG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_XG")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q2_XG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_HV")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q1_HV;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_HG")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q1_HG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_HVG")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q1_HVG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_HV")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q2_HV;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_HG")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q2_HG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_HVG")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q2_HVG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_LSA")) {
         pd_ptr->w[mtrx_index0][ce] = I_Q2_LSA;
       } else if (!strcasecmp(ts, "Q1_D")) {
@@ -9226,31 +9401,31 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         pd_ptr->w[mtrx_index0][ce] = I_P1;
       } else if (!strcasecmp(ts, "P0_G")) {
         pd_ptr->w[mtrx_index0][ce] = I_P0_G;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P1_G")) {
         pd_ptr->w[mtrx_index0][ce] = I_P1_G;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P0_GP")) {
         pd_ptr->w[mtrx_index0][ce] = I_P0_GP;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P1_GP")) {
         pd_ptr->w[mtrx_index0][ce] = I_P1_GP;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P0_GN")) {
         pd_ptr->w[mtrx_index0][ce] = I_P0_GN;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P1_GN")) {
         pd_ptr->w[mtrx_index0][ce] = I_P1_GN;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P0_XV")) {
         pd_ptr->w[mtrx_index0][ce] = I_P0_XV;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P1_XV")) {
         pd_ptr->w[mtrx_index0][ce] = I_P1_XV;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P1_XG")) {
         pd_ptr->w[mtrx_index0][ce] = I_P1_XG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "SP")) {
         pd_ptr->w[mtrx_index0][ce] = I_SP;
         GOMA_WH(-1,
@@ -9634,9 +9809,10 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
        *         their implementation.
        */
       for (j = 0; j < eqnMult; j++) {
-        if (upd->vp[mtrx_index0][cv + j] == -1) {
-          upd->vp[mtrx_index0][cv + j] = upd->Total_Num_Var[mtrx_index0];
-          upd->Total_Num_Var[mtrx_index0]++;
+        if (goma_ctx->fem.upd->vp[mtrx_index0][cv + j] == -1) {
+          goma_ctx->fem.upd->vp[mtrx_index0][cv + j] =
+              goma_ctx->fem.upd->Total_Num_Var[mtrx_index0];
+          goma_ctx->fem.upd->Total_Num_Var[mtrx_index0]++;
         }
       }
 
@@ -9676,52 +9852,52 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         pd_ptr->i[mtrx_index0][cv] = I_Q2;
       } else if (!strcasecmp(ts, "Q1_G")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q1_G;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_G")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q2_G;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_GP")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q1_GP;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_GP")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q2_GP;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_GN")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q1_GN;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_GN")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q2_GN;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_XV")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q1_XV;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_XV")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q2_XV;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_XG")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q1_XG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_XG")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q2_XG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_HV")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q1_HV;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_HG")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q1_HG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q1_HVG")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q1_HVG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_HV")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q2_HV;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_HG")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q2_HG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_HVG")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q2_HVG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "Q2_LSA")) {
         pd_ptr->i[mtrx_index0][cv] = I_Q2_LSA;
       } else if (!strcasecmp(ts, "Q1_D")) {
@@ -9743,31 +9919,31 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         pd_ptr->i[mtrx_index0][cv] = I_P1;
       } else if (!strcasecmp(ts, "P0_G")) {
         pd_ptr->i[mtrx_index0][cv] = I_P0_G;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P1_G")) {
         pd_ptr->i[mtrx_index0][cv] = I_P1_G;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P0_GP")) {
         pd_ptr->i[mtrx_index0][cv] = I_P0_GP;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P1_GP")) {
         pd_ptr->i[mtrx_index0][cv] = I_P1_GP;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P0_GN")) {
         pd_ptr->i[mtrx_index0][cv] = I_P0_GN;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P1_GN")) {
         pd_ptr->i[mtrx_index0][cv] = I_P1_GN;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P0_XV")) {
         pd_ptr->i[mtrx_index0][cv] = I_P0_XV;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P1_XV")) {
         pd_ptr->i[mtrx_index0][cv] = I_P1_XV;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "P1_XG")) {
         pd_ptr->i[mtrx_index0][cv] = I_P1_XG;
-        upd->XFEM = TRUE;
+        goma_ctx->fem.upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "SP")) {
         pd_ptr->i[mtrx_index0][cv] = I_SP;
       } else if (!strcasecmp(ts, "N1")) {
@@ -10397,7 +10573,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
     if (pd_ptr->e[mtrx_index0][ce]) {
       cem = R_STRESS11_1;
       cvm = POLYMER_STRESS11_1;
-      for (n = 1; n < vn_glob[mn]->modes; n++) {
+      for (n = 1; n < goma_ctx->fem.vn_glob[mn]->modes; n++) {
         /* set flag to turn on this stress mode */
         pd_ptr->e[mtrx_index0][cem] = pd_ptr->e[mtrx_index0][ce];
         /* set weight function to be the same as mother mode,  R_STRESS11 */
@@ -10422,12 +10598,12 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         /*
          * Setup actual equation to problem equation index arrays
          */
-        if (upd->ep[mtrx_index0][cem] == -1) {
-          upd->ep[mtrx_index0][cem] = upd->Total_Num_EQ[mtrx_index0]++;
+        if (goma_ctx->fem.upd->ep[mtrx_index0][cem] == -1) {
+          goma_ctx->fem.upd->ep[mtrx_index0][cem] = goma_ctx->fem.upd->Total_Num_EQ[mtrx_index0]++;
         }
 
-        if (upd->vp[mtrx_index0][cvm] == -1) {
-          upd->vp[mtrx_index0][cvm] = upd->Total_Num_Var[mtrx_index0]++;
+        if (goma_ctx->fem.upd->vp[mtrx_index0][cvm] == -1) {
+          goma_ctx->fem.upd->vp[mtrx_index0][cvm] = goma_ctx->fem.upd->Total_Num_Var[mtrx_index0]++;
         }
 
         /* move on to the 11 component of the next stress tensor */
@@ -10443,7 +10619,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
     if (pd_ptr->e[mtrx_index0][ce]) {
       cem = R_STRESS12_1;
       cvm = POLYMER_STRESS12_1;
-      for (n = 1; n < vn_glob[mn]->modes; n++) {
+      for (n = 1; n < goma_ctx->fem.vn_glob[mn]->modes; n++) {
         /* set flag to turn on this stress mode */
         pd_ptr->e[mtrx_index0][cem] = pd_ptr->e[mtrx_index0][ce];
         /* set weight function to be the same as mother mode,  R_STRESS12 */
@@ -10468,11 +10644,11 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         /*
          * Setup actual equation to problem equation index arrays
          */
-        if (upd->ep[mtrx_index0][cem] == -1) {
-          upd->ep[mtrx_index0][cem] = upd->Total_Num_EQ[mtrx_index0]++;
+        if (goma_ctx->fem.upd->ep[mtrx_index0][cem] == -1) {
+          goma_ctx->fem.upd->ep[mtrx_index0][cem] = goma_ctx->fem.upd->Total_Num_EQ[mtrx_index0]++;
         }
-        if (upd->vp[mtrx_index0][cvm] == -1) {
-          upd->vp[mtrx_index0][cvm] = upd->Total_Num_Var[mtrx_index0]++;
+        if (goma_ctx->fem.upd->vp[mtrx_index0][cvm] == -1) {
+          goma_ctx->fem.upd->vp[mtrx_index0][cvm] = goma_ctx->fem.upd->Total_Num_Var[mtrx_index0]++;
         }
 
         /* move on to the 12 component of the next stress tensor */
@@ -10488,7 +10664,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
     if (pd_ptr->e[mtrx_index0][ce]) {
       cem = R_STRESS22_1;
       cvm = POLYMER_STRESS22_1;
-      for (n = 1; n < vn_glob[mn]->modes; n++) {
+      for (n = 1; n < goma_ctx->fem.vn_glob[mn]->modes; n++) {
         /* set flag to turn on this stress mode */
         pd_ptr->e[mtrx_index0][cem] = pd_ptr->e[mtrx_index0][ce];
         /* set weight function to be the same as mother mode,  R_STRESS22 */
@@ -10514,11 +10690,11 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         /*
          * Setup actual equation to problem equation index arrays
          */
-        if (upd->ep[mtrx_index0][cem] == -1) {
-          upd->ep[mtrx_index0][cem] = upd->Total_Num_EQ[mtrx_index0]++;
+        if (goma_ctx->fem.upd->ep[mtrx_index0][cem] == -1) {
+          goma_ctx->fem.upd->ep[mtrx_index0][cem] = goma_ctx->fem.upd->Total_Num_EQ[mtrx_index0]++;
         }
-        if (upd->vp[mtrx_index0][cvm] == -1) {
-          upd->vp[mtrx_index0][cvm] = upd->Total_Num_Var[mtrx_index0]++;
+        if (goma_ctx->fem.upd->vp[mtrx_index0][cvm] == -1) {
+          goma_ctx->fem.upd->vp[mtrx_index0][cvm] = goma_ctx->fem.upd->Total_Num_Var[mtrx_index0]++;
         }
 
         /* move on to the 22 component of the next stress tensor */
@@ -10534,7 +10710,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
     if (pd_ptr->e[mtrx_index0][ce]) {
       cem = R_STRESS13_1;
       cvm = POLYMER_STRESS13_1;
-      for (n = 1; n < vn_glob[mn]->modes; n++) {
+      for (n = 1; n < goma_ctx->fem.vn_glob[mn]->modes; n++) {
         /* set flag to turn on this stress mode */
         pd_ptr->e[mtrx_index0][cem] = pd_ptr->e[mtrx_index0][ce];
         /* set weight function to be the same as mother mode,  R_STRESS13 */
@@ -10559,11 +10735,11 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         /*
          * Setup actual equation to problem equation index arrays
          */
-        if (upd->ep[mtrx_index0][cem] == -1) {
-          upd->ep[mtrx_index0][cem] = upd->Total_Num_EQ[mtrx_index0]++;
+        if (goma_ctx->fem.upd->ep[mtrx_index0][cem] == -1) {
+          goma_ctx->fem.upd->ep[mtrx_index0][cem] = goma_ctx->fem.upd->Total_Num_EQ[mtrx_index0]++;
         }
-        if (upd->vp[mtrx_index0][cvm] == -1) {
-          upd->vp[mtrx_index0][cvm] = upd->Total_Num_Var[mtrx_index0]++;
+        if (goma_ctx->fem.upd->vp[mtrx_index0][cvm] == -1) {
+          goma_ctx->fem.upd->vp[mtrx_index0][cvm] = goma_ctx->fem.upd->Total_Num_Var[mtrx_index0]++;
         }
 
         /* move on to the 13 component of the next stress tensor */
@@ -10579,7 +10755,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
     if (pd_ptr->e[mtrx_index0][ce]) {
       cem = R_STRESS23_1;
       cvm = POLYMER_STRESS23_1;
-      for (n = 1; n < vn_glob[mn]->modes; n++) {
+      for (n = 1; n < goma_ctx->fem.vn_glob[mn]->modes; n++) {
         /* set flag to turn on this stress mode */
         pd_ptr->e[mtrx_index0][cem] = pd_ptr->e[mtrx_index0][ce];
         /* set weight function to be the same as mother mode,  R_STRESS23 */
@@ -10604,11 +10780,11 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         /*
          * Setup actual equation to problem equation index arrays
          */
-        if (upd->ep[mtrx_index0][cem] == -1) {
-          upd->ep[mtrx_index0][cem] = upd->Total_Num_EQ[mtrx_index0]++;
+        if (goma_ctx->fem.upd->ep[mtrx_index0][cem] == -1) {
+          goma_ctx->fem.upd->ep[mtrx_index0][cem] = goma_ctx->fem.upd->Total_Num_EQ[mtrx_index0]++;
         }
-        if (upd->vp[mtrx_index0][cvm] == -1) {
-          upd->vp[mtrx_index0][cvm] = upd->Total_Num_Var[mtrx_index0]++;
+        if (goma_ctx->fem.upd->vp[mtrx_index0][cvm] == -1) {
+          goma_ctx->fem.upd->vp[mtrx_index0][cvm] = goma_ctx->fem.upd->Total_Num_Var[mtrx_index0]++;
         }
 
         /* move on to the 23 component of the next stress tensor */
@@ -10624,7 +10800,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
     if (pd_ptr->e[mtrx_index0][ce]) {
       cem = R_STRESS33_1;
       cvm = POLYMER_STRESS33_1;
-      for (n = 1; n < vn_glob[mn]->modes; n++) {
+      for (n = 1; n < goma_ctx->fem.vn_glob[mn]->modes; n++) {
         /* set flag to turn on this stress mode */
         pd_ptr->e[mtrx_index0][cem] = pd_ptr->e[mtrx_index0][ce];
         /* set weight function to be the same as mother mode,  R_STRESS33 */
@@ -10649,11 +10825,11 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         /*
          * Setup actual equation to problem equation index arrays
          */
-        if (upd->ep[mtrx_index0][cem] == -1) {
-          upd->ep[mtrx_index0][cem] = upd->Total_Num_EQ[mtrx_index0]++;
+        if (goma_ctx->fem.upd->ep[mtrx_index0][cem] == -1) {
+          goma_ctx->fem.upd->ep[mtrx_index0][cem] = goma_ctx->fem.upd->Total_Num_EQ[mtrx_index0]++;
         }
-        if (upd->vp[mtrx_index0][cvm] == -1) {
-          upd->vp[mtrx_index0][cvm] = upd->Total_Num_Var[mtrx_index0]++;
+        if (goma_ctx->fem.upd->vp[mtrx_index0][cvm] == -1) {
+          goma_ctx->fem.upd->vp[mtrx_index0][cvm] = goma_ctx->fem.upd->Total_Num_Var[mtrx_index0]++;
         }
 
         /* move on to the 33 component of the next stress tensor */
@@ -10682,7 +10858,8 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
     /* Consistency diagnostics for runs involving 3D stability of
      * 2D flows... */
     if (Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE) {
-      if (!pd_glob[mn]->e[0][R_MOMENTUM3] || !pd_glob[mn]->v[0][VELOCITY3]) {
+      if (!goma_ctx->fem.pd_glob[mn]->e[0][R_MOMENTUM3] ||
+          !goma_ctx->fem.pd_glob[mn]->v[0][VELOCITY3]) {
         fprintf(stderr, "\nR_MOMENTUM3/VELOCITY3 are required for a 3D stability of a 2D flow.\n");
         fprintf(stderr, "They are missing in material %d (0-based)\n\n", mn);
         GOMA_EH(GOMA_ERROR, "missing equation for 3D stability of 2D flow");
@@ -11358,7 +11535,7 @@ void set_mp_to_unity(const int mn) {
   int v;
   int w;
   struct Elastic_Constitutive *e;
-  MATRL_PROP_STRUCT *m = mp_glob[mn];
+  MATRL_PROP_STRUCT *m = goma_ctx->fem.mp_glob[mn];
 
   /*
    * First load up the simplest constitutive relations for all fluxes...
@@ -11367,34 +11544,34 @@ void set_mp_to_unity(const int mn) {
    * one kind of varible...
    */
 
-  pd_glob[mn]->MomentumFluxModel = NEWTONIAN;
+  goma_ctx->fem.pd_glob[mn]->MomentumFluxModel = NEWTONIAN;
 
-  gn_glob[mn]->ConstitutiveEquation = NEWTONIAN;
+  goma_ctx->fem.gn_glob[mn]->ConstitutiveEquation = NEWTONIAN;
 
-  pd_glob[mn]->MassFluxModel = FICKIAN;
+  goma_ctx->fem.pd_glob[mn]->MassFluxModel = FICKIAN;
 
-  cr_glob[mn]->HeatFluxModel = CR_HF_FOURIER_0;
+  goma_ctx->fem.cr_glob[mn]->HeatFluxModel = CR_HF_FOURIER_0;
 
-  cr_glob[mn]->MeshFluxModel = LINEAR;
+  goma_ctx->fem.cr_glob[mn]->MeshFluxModel = LINEAR;
 
-  cr_glob[mn]->MomentumFluxModel = CR_MF_NEWTON_0;
+  goma_ctx->fem.cr_glob[mn]->MomentumFluxModel = CR_MF_NEWTON_0;
 
-  cr_glob[mn]->MassFluxModel = pd_glob[mn]->MassFluxModel;
+  goma_ctx->fem.cr_glob[mn]->MassFluxModel = goma_ctx->fem.pd_glob[mn]->MassFluxModel;
 
-  cr_glob[mn]->MeshMotion = pd_glob[mn]->MeshMotion;
+  goma_ctx->fem.cr_glob[mn]->MeshMotion = goma_ctx->fem.pd_glob[mn]->MeshMotion;
 
-  mp_glob[mn]->DefaultDatabase = DB_GOMA_MAT;
+  goma_ctx->fem.mp_glob[mn]->DefaultDatabase = DB_GOMA_MAT;
 
-  mp_glob[mn]->thermal_conductivity = 1.;
-  mp_glob[mn]->ConductivityModel = CONSTANT;
+  goma_ctx->fem.mp_glob[mn]->thermal_conductivity = 1.;
+  goma_ctx->fem.mp_glob[mn]->ConductivityModel = CONSTANT;
   for (v = 0; v < MAX_CONC + MAX_VARIABLE_TYPES; v++) {
-    mp_glob[mn]->d_thermal_conductivity[v] = 0.;
+    goma_ctx->fem.mp_glob[mn]->d_thermal_conductivity[v] = 0.;
   }
 
-  gn_glob[mn]->mu0 = 1.;
+  goma_ctx->fem.gn_glob[mn]->mu0 = 1.;
   m->viscosity = 1.;
   m->ViscosityModel = CONSTANT;
-  gn_glob[mn]->len_u_tau_y = 0;
+  goma_ctx->fem.gn_glob[mn]->len_u_tau_y = 0;
   m->surface_tension = 1.;
   m->SurfaceTensionModel = CONSTANT;
   for (v = 0; v < MAX_CONC + MAX_VARIABLE_TYPES; v++) {
@@ -11436,32 +11613,32 @@ void set_mp_to_unity(const int mn) {
     m->d_saturation[v] = 0.;
   }
 
-  mp_glob[mn]->Porous_wt_func = 0.;
-  mp_glob[mn]->Porous_wt_funcModel = GALERKIN;
-  mp_glob[mn]->PorousGasConstantsModel = CONSTANT;
+  goma_ctx->fem.mp_glob[mn]->Porous_wt_func = 0.;
+  goma_ctx->fem.mp_glob[mn]->Porous_wt_funcModel = GALERKIN;
+  goma_ctx->fem.mp_glob[mn]->PorousGasConstantsModel = CONSTANT;
 
-  for (w = 0; w < pd_glob[mn]->Num_Porous_Eqn; w++) {
-    mp_glob[mn]->PorousDiffusivityModel[w] = CONSTANT;
-    mp_glob[mn]->porous_diffusivity[w] = 1.;
-    mp_glob[mn]->PorousLatentHeatVapModel[w] = CONSTANT;
-    mp_glob[mn]->porous_latent_heat_vap[w] = 1.;
-    mp_glob[mn]->PorousLatentHeatFusionModel[w] = CONSTANT;
-    mp_glob[mn]->porous_latent_heat_fusion[w] = 1.;
-    mp_glob[mn]->PorousVaporPressureModel[w] = CONSTANT;
-    mp_glob[mn]->porous_vapor_pressure[w] = 1.;
+  for (w = 0; w < goma_ctx->fem.pd_glob[mn]->Num_Porous_Eqn; w++) {
+    goma_ctx->fem.mp_glob[mn]->PorousDiffusivityModel[w] = CONSTANT;
+    goma_ctx->fem.mp_glob[mn]->porous_diffusivity[w] = 1.;
+    goma_ctx->fem.mp_glob[mn]->PorousLatentHeatVapModel[w] = CONSTANT;
+    goma_ctx->fem.mp_glob[mn]->porous_latent_heat_vap[w] = 1.;
+    goma_ctx->fem.mp_glob[mn]->PorousLatentHeatFusionModel[w] = CONSTANT;
+    goma_ctx->fem.mp_glob[mn]->porous_latent_heat_fusion[w] = 1.;
+    goma_ctx->fem.mp_glob[mn]->PorousVaporPressureModel[w] = CONSTANT;
+    goma_ctx->fem.mp_glob[mn]->porous_vapor_pressure[w] = 1.;
   }
 
   for (w = 0; w < MAX_PMV; w++) {
     for (v = 0; v < MAX_CONC + MAX_VARIABLE_TYPES; v++) {
-      mp_glob[mn]->d_porous_diffusivity[w][v] = 0.;
-      mp_glob[mn]->d_porous_vapor_pressure[w][v] = 0.;
+      goma_ctx->fem.mp_glob[mn]->d_porous_diffusivity[w][v] = 0.;
+      goma_ctx->fem.mp_glob[mn]->d_porous_vapor_pressure[w][v] = 0.;
     }
   }
 
-  mp_glob[mn]->Spwt_func = 0.;
-  mp_glob[mn]->Spwt_funcModel = GALERKIN;
+  goma_ctx->fem.mp_glob[mn]->Spwt_func = 0.;
+  goma_ctx->fem.mp_glob[mn]->Spwt_funcModel = GALERKIN;
 
-  for (w = 0; w < pd_glob[mn]->Num_Species_Eqn; w++) {
+  for (w = 0; w < goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn; w++) {
     m->DiffusivityModel[w] = CONSTANT;
     m->diffusivity[w] = 1.;
     m->VaporPressureModel[w] = CONSTANT;
@@ -11511,31 +11688,31 @@ void set_mp_to_unity(const int mn) {
     m->StateVector[w] = 0.0;
   }
 
-  elc_glob[mn]->lame_mu = 1.;
-  elc_glob[mn]->lame_lambda = 1.;
-  elc_glob[mn]->lame_mu_model = CONSTANT;
-  elc_glob[mn]->lame_lambda_model = CONSTANT;
+  goma_ctx->fem.elc_glob[mn]->lame_mu = 1.;
+  goma_ctx->fem.elc_glob[mn]->lame_lambda = 1.;
+  goma_ctx->fem.elc_glob[mn]->lame_mu_model = CONSTANT;
+  goma_ctx->fem.elc_glob[mn]->lame_lambda_model = CONSTANT;
   for (v = 0; v < MAX_CONC + MAX_VARIABLE_TYPES; v++) {
-    elc_glob[mn]->d_lame_mu[v] = 0.;
-    elc_glob[mn]->d_lame_lambda[v] = 0.;
+    goma_ctx->fem.elc_glob[mn]->d_lame_mu[v] = 0.;
+    goma_ctx->fem.elc_glob[mn]->d_lame_lambda[v] = 0.;
   }
-  elc_glob[mn]->thermal_expansion = 0.;
-  elc_glob[mn]->solid_reference_temp = 25.;
-  elc_glob[mn]->thermal_expansion_model = CONSTANT;
-  elc_glob[mn]->solid_reference_temp = CONSTANT;
+  goma_ctx->fem.elc_glob[mn]->thermal_expansion = 0.;
+  goma_ctx->fem.elc_glob[mn]->solid_reference_temp = 25.;
+  goma_ctx->fem.elc_glob[mn]->thermal_expansion_model = CONSTANT;
+  goma_ctx->fem.elc_glob[mn]->solid_reference_temp = CONSTANT;
 
-  elc_rs_glob[mn]->lame_mu = 1.;
-  elc_rs_glob[mn]->lame_lambda = 1.;
-  elc_rs_glob[mn]->lame_mu_model = CONSTANT;
-  elc_rs_glob[mn]->lame_lambda_model = CONSTANT;
+  goma_ctx->fem.elc_rs_glob[mn]->lame_mu = 1.;
+  goma_ctx->fem.elc_rs_glob[mn]->lame_lambda = 1.;
+  goma_ctx->fem.elc_rs_glob[mn]->lame_mu_model = CONSTANT;
+  goma_ctx->fem.elc_rs_glob[mn]->lame_lambda_model = CONSTANT;
   for (v = 0; v < MAX_CONC + MAX_VARIABLE_TYPES; v++) {
-    elc_rs_glob[mn]->d_lame_mu[v] = 0.;
-    elc_rs_glob[mn]->d_lame_lambda[v] = 0.;
+    goma_ctx->fem.elc_rs_glob[mn]->d_lame_mu[v] = 0.;
+    goma_ctx->fem.elc_rs_glob[mn]->d_lame_lambda[v] = 0.;
   }
-  elc_rs_glob[mn]->thermal_expansion = 0.;
-  elc_rs_glob[mn]->solid_reference_temp = 25.;
-  elc_rs_glob[mn]->thermal_expansion_model = CONSTANT;
-  elc_rs_glob[mn]->solid_reference_temp = CONSTANT;
+  goma_ctx->fem.elc_rs_glob[mn]->thermal_expansion = 0.;
+  goma_ctx->fem.elc_rs_glob[mn]->solid_reference_temp = 25.;
+  goma_ctx->fem.elc_rs_glob[mn]->thermal_expansion_model = CONSTANT;
+  goma_ctx->fem.elc_rs_glob[mn]->solid_reference_temp = CONSTANT;
 
   for (v = 0; v < MAX_VARIABLE_TYPES; v++) {
     m->ReferenceModel[v] = CONSTANT;
@@ -11605,7 +11782,7 @@ void set_mp_to_unity(const int mn) {
    * Elastic Constitutive properties...
    */
 
-  e = elc_glob[mn];
+  e = goma_ctx->fem.elc_glob[mn];
 
   e->len_u_mu = 0;
   e->len_u_lambda = 0;
@@ -12250,7 +12427,7 @@ void apply_command_line(struct Command_line_command **clc, int nclc)
   static char b[] = "                               ->";
   int i;
 
-  upd->fpe_enabled = 0;
+  goma_ctx->fem.upd->fpe_enabled = 0;
   for (i = 0; i < nclc; i++) {
     if (clc[i]->type == CONTIN_FILE) {
       fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "GUESS file", goma_ctx->init_guess_file, b,
@@ -12280,13 +12457,13 @@ void apply_command_line(struct Command_line_command **clc, int nclc)
               goma_ctx->solver.max_newton_steps, b, "Number of Newton Iterations", clc[i]->i_val);
       goma_ctx->solver.max_newton_steps = clc[i]->i_val;
     } else if (clc[i]->type == TIME_START) {
-      fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Initial Time", tran->init_time, b,
-              "Initial Time", clc[i]->r_val);
-      tran->init_time = clc[i]->r_val;
+      fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Initial Time",
+              goma_ctx->fem.tran->init_time, b, "Initial Time", clc[i]->r_val);
+      goma_ctx->fem.tran->init_time = clc[i]->r_val;
     } else if (clc[i]->type == TIME_END) {
-      fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Maximum Time", tran->TimeMax, b,
-              "Maximum TIme", clc[i]->r_val);
-      tran->TimeMax = clc[i]->r_val;
+      fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Maximum Time",
+              goma_ctx->fem.tran->TimeMax, b, "Maximum TIme", clc[i]->r_val);
+      goma_ctx->fem.tran->TimeMax = clc[i]->r_val;
     } else if (clc[i]->type == RELAXATION) {
       fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Newton correction factor",
               goma_ctx->solver.damp_factor1, b, "Newton correction factor", clc[i]->r_val);
@@ -12295,52 +12472,52 @@ void apply_command_line(struct Command_line_command **clc, int nclc)
       goma_ctx->solver.damp_factor3 = -1.; /* To force the override default*/
     } else if (clc[i]->type == CONT_BEG_PVALUE) {
       fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Initial parameter value",
-              cont->BegParameterValue, b, "Initial parameter value", clc[i]->r_val);
-      cont->BegParameterValue = clc[i]->r_val;
+              goma_ctx->fem.cont->BegParameterValue, b, "Initial parameter value", clc[i]->r_val);
+      goma_ctx->fem.cont->BegParameterValue = clc[i]->r_val;
     } else if (clc[i]->type == CONT_END_PVALUE) {
       fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Final parameter value",
-              cont->EndParameterValue, b, "Final parameter value", clc[i]->r_val);
-      cont->EndParameterValue = clc[i]->r_val;
+              goma_ctx->fem.cont->EndParameterValue, b, "Final parameter value", clc[i]->r_val);
+      goma_ctx->fem.cont->EndParameterValue = clc[i]->r_val;
     } else if (clc[i]->type == CONT_PATHSTEP) {
-      fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "delta_s", cont->Delta_s0, b,
-              "delta_s", clc[i]->r_val);
-      cont->Delta_s0 = clc[i]->r_val;
+      fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "delta_s",
+              goma_ctx->fem.cont->Delta_s0, b, "delta_s", clc[i]->r_val);
+      goma_ctx->fem.cont->Delta_s0 = clc[i]->r_val;
     } else if (clc[i]->type == CONT_PATH_STEPS) {
       fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Maximum number of path steps",
-              cont->MaxPathSteps, b, "Maximum number of path steps", clc[i]->i_val);
-      cont->MaxPathSteps = clc[i]->i_val;
+              goma_ctx->fem.cont->MaxPathSteps, b, "Maximum number of path steps", clc[i]->i_val);
+      goma_ctx->fem.cont->MaxPathSteps = clc[i]->i_val;
     } else if (clc[i]->type == CONT_MIN_PVALUE) {
-      fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Minimum path step", cont->Delta_s_min,
-              b, "Minimum path step", clc[i]->r_val);
-      cont->Delta_s_min = clc[i]->r_val;
+      fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Minimum path step",
+              goma_ctx->fem.cont->Delta_s_min, b, "Minimum path step", clc[i]->r_val);
+      goma_ctx->fem.cont->Delta_s_min = clc[i]->r_val;
     } else if (clc[i]->type == CONT_MAX_PVALUE) {
-      fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Maximum path step", cont->Delta_s_max,
-              b, "Maximum path step", clc[i]->r_val);
-      cont->Delta_s_max = clc[i]->r_val;
+      fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Maximum path step",
+              goma_ctx->fem.cont->Delta_s_max, b, "Maximum path step", clc[i]->r_val);
+      goma_ctx->fem.cont->Delta_s_max = clc[i]->r_val;
     } else if (clc[i]->type == CONT_METHOD) {
       fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Continuation", Continuation, b,
               "Continuation", clc[i]->i_val);
       Continuation = clc[i]->i_val;
     } else if (clc[i]->type == CONT_TYPE) {
-      fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Continuation Type", cont->upType, b,
-              "Continuation Type", clc[i]->i_val);
-      cont->upType = clc[i]->i_val;
+      fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Continuation Type",
+              goma_ctx->fem.cont->upType, b, "Continuation Type", clc[i]->i_val);
+      goma_ctx->fem.cont->upType = clc[i]->i_val;
     } else if (clc[i]->type == CONT_BCID) {
-      fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Boundary condition ID", cont->upBCID,
-              b, "Boundary condition ID", clc[i]->i_val);
-      cont->upBCID = clc[i]->i_val;
+      fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Boundary condition ID",
+              goma_ctx->fem.cont->upBCID, b, "Boundary condition ID", clc[i]->i_val);
+      goma_ctx->fem.cont->upBCID = clc[i]->i_val;
     } else if (clc[i]->type == CONT_DFID) {
       fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Boundary condition data float tag",
-              cont->upDFID, b, "Boundary condition data float tag", clc[i]->i_val);
-      cont->upDFID = clc[i]->i_val;
+              goma_ctx->fem.cont->upDFID, b, "Boundary condition data float tag", clc[i]->i_val);
+      goma_ctx->fem.cont->upDFID = clc[i]->i_val;
     } else if (clc[i]->type == CONT_MTID) {
-      fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Material id", cont->upMTID, b,
-              "Material id", clc[i]->i_val);
-      cont->upMTID = clc[i]->i_val;
+      fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Material id",
+              goma_ctx->fem.cont->upMTID, b, "Material id", clc[i]->i_val);
+      goma_ctx->fem.cont->upMTID = clc[i]->i_val;
     } else if (clc[i]->type == CONT_MPID) {
-      fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Material property tag", cont->upMPID,
-              b, "Material property tag", clc[i]->i_val);
-      cont->upMPID = clc[i]->i_val;
+      fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Material property tag",
+              goma_ctx->fem.cont->upMPID, b, "Material property tag", clc[i]->i_val);
+      goma_ctx->fem.cont->upMPID = clc[i]->i_val;
     } else if (clc[i]->type == PARSER_OPTION) {
       fprintf(stdout, "-newp request.");
       goma_ctx->new_parser_flag = 1;
@@ -12352,7 +12529,7 @@ void apply_command_line(struct Command_line_command **clc, int nclc)
       goma_ctx->write_intermediate_solutions = TRUE;
     } else if (clc[i]->type == CL_FPE_ENABLED) {
       fprintf(stdout, "Enabling floating point exceptions.\n\n");
-      upd->fpe_enabled = 1;
+      goma_ctx->fem.upd->fpe_enabled = 1;
     } else if (clc[i]->type == EXOII_TIME_PLANE) {
       fprintf(stdout, "Exodus Time Plane = %d\n\n", clc[i]->i_val);
       goma_ctx->exo_time_plane = clc[i]->i_val;
@@ -14475,23 +14652,25 @@ static void read_MAT_line(FILE *ifp, int mn, char *input)
   /*
    * Store the material index into the material structure
    */
-  mp_glob[mn]->MatID = mn;
+  goma_ctx->fem.mp_glob[mn]->MatID = mn;
 
   /*
    * Parse the material name
    */
-  if (!interpret_string(tok.tok_ptr[0], pd_glob[mn]->MaterialName))
+  if (!interpret_string(tok.tok_ptr[0], goma_ctx->fem.pd_glob[mn]->MaterialName))
     goto L_ERROR;
-  strcpy(mp_glob[mn]->Material_Name, pd_glob[mn]->MaterialName);
+  strcpy(goma_ctx->fem.mp_glob[mn]->Material_Name, goma_ctx->fem.pd_glob[mn]->MaterialName);
 
-  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "MAT", pd_glob[mn]->MaterialName);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "MAT",
+           goma_ctx->fem.pd_glob[mn]->MaterialName);
 
   /*
    * Store the number of element blocks having this material type
    *  -> Malloc space in the material structure based on this quantity
    */
-  mp_glob[mn]->Num_Matrl_Elem_Blk = numTok - 1;
-  mp_glob[mn]->Matrl_Elem_Blk_Ids = alloc_int_1(mp_glob[mn]->Num_Matrl_Elem_Blk, 0);
+  goma_ctx->fem.mp_glob[mn]->Num_Matrl_Elem_Blk = numTok - 1;
+  goma_ctx->fem.mp_glob[mn]->Matrl_Elem_Blk_Ids =
+      alloc_int_1(goma_ctx->fem.mp_glob[mn]->Num_Matrl_Elem_Blk, 0);
 
   /*
    * Store the element block id's of the element blocks in the list
@@ -14499,12 +14678,12 @@ static void read_MAT_line(FILE *ifp, int mn, char *input)
    *     we haven't read the exodus file and thus haven't set up
    *     the Element Block structure list.
    */
-  for (i = 0; i < mp_glob[mn]->Num_Matrl_Elem_Blk; i++) {
-    if (!interpret_int(tok.tok_ptr[i + 1], mp_glob[mn]->Matrl_Elem_Blk_Ids + i))
+  for (i = 0; i < goma_ctx->fem.mp_glob[mn]->Num_Matrl_Elem_Blk; i++) {
+    if (!interpret_int(tok.tok_ptr[i + 1], goma_ctx->fem.mp_glob[mn]->Matrl_Elem_Blk_Ids + i))
       goto L_ERROR;
 
-    SPF_INT_VEC(endofstring(echo_string), mp_glob[mn]->Num_Matrl_Elem_Blk,
-                mp_glob[mn]->Matrl_Elem_Blk_Ids);
+    SPF_INT_VEC(endofstring(echo_string), goma_ctx->fem.mp_glob[mn]->Num_Matrl_Elem_Blk,
+                goma_ctx->fem.mp_glob[mn]->Matrl_Elem_Blk_Ids);
 
     ECHO(echo_string, echo_file);
   }
@@ -14863,7 +15042,7 @@ struct Data_Table *setup_table_external(char *filename, struct Data_Table *table
 
   table = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
 
-  table->columns = pd->Num_Dim + 1;
+  table->columns = goma_ctx->fem.pd->Num_Dim + 1;
 
   /*
    * "y-axis" of table
@@ -14874,7 +15053,7 @@ struct Data_Table *setup_table_external(char *filename, struct Data_Table *table
 
   /* read interpolation order */
 
-  switch (pd->Num_Dim) {
+  switch (goma_ctx->fem.pd->Num_Dim) {
   case 2:
     table->interp_method = BILINEAR;
     break;

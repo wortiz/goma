@@ -43,18 +43,18 @@ void display_parameterC(double lambda,  /* PARAMETER VALUE */
    * 		BEGIN EXECUTION
    */
 
-  if (cont->upType == 1) {
+  if (goma_ctx->fem.cont->upType == 1) {
 
-    ibc = cont->upBCID;
-    idf = cont->upDFID;
+    ibc = goma_ctx->fem.cont->upBCID;
+    idf = goma_ctx->fem.cont->upDFID;
 
     printf("\n New BC[%4d] DF[%4d] = %10.6e\n", ibc, idf, lambda);
 
-  } else if (cont->upType == 2) {
+  } else if (goma_ctx->fem.cont->upType == 2) {
 
-    mn = cont->upMTID;
+    mn = goma_ctx->fem.cont->upMTID;
 
-    printf("\n New MT[%4d] MP[%4d] = %10.6e\n", mn + 1, cont->upMPID, lambda);
+    printf("\n New MT[%4d] MP[%4d] = %10.6e\n", mn + 1, goma_ctx->fem.cont->upMPID, lambda);
   }
 
 } /* END of routine display_parameterC  */

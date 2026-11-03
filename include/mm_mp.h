@@ -24,29 +24,7 @@
 #define GOMA_MM_MP_H
 
 #include "mm_mp_structs.h"
-
-extern struct Material_Properties *mp, **mp_glob, *mp_old;
-
-//! Declaration of the global temporary pointer for viscosity related props
-/*!
- *  this is used a temporary pointer variable
- */
-extern GEN_NEWT_STRUCT *gn;
-
-//! Declaration for a vector of global permament pointers for viscosity related props
-/*!
- *   This loops over ??
- *   It has a length of
- */
-extern GEN_NEWT_STRUCT **gn_glob;
-
-extern struct Elastic_Constitutive *elc, **elc_glob, *elc_rs, **elc_rs_glob;
-
-extern struct Viscoelastic_Constitutive **ve, ***ve_glob;
-
-extern struct Viscoelastic_Nonmodal *vn, **vn_glob;
-
-extern struct Viscoplastic_Constitutive *evpl, **evpl_glob;
+#include "util/goma_context.h" /* material pointers live in goma_ctx->fem */
 
 extern struct Variable_Initialization Var_init[MAX_VARIABLE_TYPES + MAX_CONC];
 

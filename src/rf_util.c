@@ -280,18 +280,18 @@ void put_fill_vector(const int N, double x[], const double fill_vector[], const 
   int ki;    /* counter from 0 to the number of dofs      */
 
   for (i = 0; i < N; i++) {
-    nvdof = Dolphin[pg->imtrx][i][R_FILL]; /* Number of FILL dofs at this node. */
+    nvdof = Dolphin[goma_ctx->fem.pg->imtrx][i][R_FILL]; /* Number of FILL dofs at this node. */
     for (ki = 0; ki < nvdof; ki++) {
-      ie = Index_Solution(i, R_FILL, 0, ki, -1, pg->imtrx);
+      ie = Index_Solution(i, R_FILL, 0, ki, -1, goma_ctx->fem.pg->imtrx);
       if (ie != -1) {
-        if (ie > NumUnknowns[pg->imtrx]) {
+        if (ie > NumUnknowns[goma_ctx->fem.pg->imtrx]) {
           GOMA_EH(ie, "put_fill_vector");
         } else {
           x[ie] = fill_vector[node_to_fill[i] + ki];
         }
       } else if (ie == -1) {
         mn = first_matID_at_node(i);
-        ie = Index_Solution(i, R_FILL, 0, ki, mn, pg->imtrx);
+        ie = Index_Solution(i, R_FILL, 0, ki, mn, goma_ctx->fem.pg->imtrx);
         if (ie != -1) {
           x[ie] = fill_vector[node_to_fill[i] + ki];
         } else {
@@ -318,14 +318,14 @@ void get_fill_vector(const int N,
   int ki;    /* counter from 0 to number of dofs          */
 
   for (i = 0; i < N; i++) {
-    nvdof = Dolphin[pg->imtrx][i][R_FILL];
+    nvdof = Dolphin[goma_ctx->fem.pg->imtrx][i][R_FILL];
     for (ki = 0; ki < nvdof; ki++) {
-      ie = Index_Solution(i, R_FILL, ktype, ki, -1, pg->imtrx);
+      ie = Index_Solution(i, R_FILL, ktype, ki, -1, goma_ctx->fem.pg->imtrx);
       if (ie != -1) {
         fill_vector[node_to_fill[i] + ki] = x[ie];
       } else {
         mn = first_matID_at_node(i);
-        ie = Index_Solution(i, R_FILL, ktype, ki, mn, pg->imtrx);
+        ie = Index_Solution(i, R_FILL, ktype, ki, mn, goma_ctx->fem.pg->imtrx);
         if (ie != -1) {
           fill_vector[node_to_fill[i] + ki] = x[ie];
         }
@@ -360,7 +360,7 @@ int countmap_vardofs(const int varType, const int num_nodes, int *map) {
     GOMA_EH(-1, "Attempt to count a bogus variable.");
   }
   for (node = 0; node < num_nodes; node++) {
-    nv = Nodes[node]->Nodal_Vars_Info[pg->imtrx];
+    nv = Nodes[node]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     nun = get_nv_ndofs_modMF(nv, varType);
     if (nun > 0) {
       map[node] = count;
@@ -389,7 +389,7 @@ count_fill_unknowns ( int N,
       if ( Dolphin[pg_imtrx][i][FILL] )
 	{
 	  node_to_fill[i] = num_fill_unknowns;
-	  num_fill_unknowns += Dolphin[pg->imtrx][i][FILL];
+	  num_fill_unknowns += Dolphin[goma_ctx->fem.pg->imtrx][i][FILL];
 	}
     }
 } /* END of routine count_fill_unknowns */
@@ -440,10 +440,11 @@ int filter_conc(const int N, /* number of nodes */
   const double minimum_shear_rate = 0.0;
   int i, ie;
 
-  if (pd->e[pg->imtrx][R_MASS]) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS]) {
     for (i = 0; i < N; i++) {
-      if (Dolphin[pg->imtrx][i][R_MASS]) {
-        ie = Index_Solution(i, R_MASS, filter_species_material_number, 0, -1, pg->imtrx);
+      if (Dolphin[goma_ctx->fem.pg->imtrx][i][R_MASS]) {
+        ie = Index_Solution(i, R_MASS, filter_species_material_number, 0, -1,
+                            goma_ctx->fem.pg->imtrx);
         if (ie != -1) {
           x[ie] = x[ie] > cmin ? x[ie] : cmin;
           if (cmax != 0.0) {
@@ -453,10 +454,10 @@ int filter_conc(const int N, /* number of nodes */
       }
     }
   }
-  if (pd->e[pg->imtrx][R_SHEAR_RATE]) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHEAR_RATE]) {
     for (i = 0; i < N; i++) {
-      if (Dolphin[pg->imtrx][i][R_SHEAR_RATE]) {
-        ie = Index_Solution(i, R_SHEAR_RATE, 0, 0, -1, pg->imtrx);
+      if (Dolphin[goma_ctx->fem.pg->imtrx][i][R_SHEAR_RATE]) {
+        ie = Index_Solution(i, R_SHEAR_RATE, 0, 0, -1, goma_ctx->fem.pg->imtrx);
         if (ie != -1) {
           if (x[ie] < minimum_shear_rate) {
             x[ie] = minimum_shear_rate;
@@ -619,28 +620,30 @@ double time_step_control(const double delta_t,
    * Collect deviations from predicted and max values
    * and ncp[eqn] => Number of unknowns in each binned variable type
    */
-  for (i = 0; i < (num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]); i++) {
+  for (i = 0; i < (num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                   num_boundary_dofs[goma_ctx->fem.pg->imtrx]);
+       i++) {
 
     valid = TRUE;
 
     inode = 0;
-    vd = Index_Solution_Inv(i, &inode, NULL, NULL, &idof, pg->imtrx);
+    vd = Index_Solution_Inv(i, &inode, NULL, NULL, &idof, goma_ctx->fem.pg->imtrx);
     eqn = vd->Variable_Type;
 
 #ifdef DEBUG_HKM
-    if (eqn != idv[pg->imtrx][i][0]) {
+    if (eqn != idv[goma_ctx->fem.pg->imtrx][i][0]) {
       GOMA_EH(-1, "error in  Index_Solution_Inv mapping");
     }
 #endif
 
     /* ignore corrections caused by changing side of interface */
-    if (ls != NULL && xfem != NULL && ls->Length_Scale == 0.) {
+    if (goma_ctx->fem.ls != NULL && xfem != NULL && goma_ctx->fem.ls->Length_Scale == 0.) {
       int MatID = vd->MatID;
       int interp;
       double F, Fold;
       if (MatID == -1)
         MatID = 0;
-      interp = pd_glob[MatID]->i[pg->imtrx][eqn];
+      interp = goma_ctx->fem.pd_glob[MatID]->i[goma_ctx->fem.pg->imtrx][eqn];
 
       if (is_xfem_interp(interp)) {
         gnn_distance(inode, x, x_old, NULL, &F, &Fold, NULL);
@@ -1538,19 +1541,21 @@ void init_vec(
   switch (goma_ctx->solver.guess_flag) {
   case 0:
     /* Initialize all of the solution vector to zero */
-    for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
+    for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
       u[i] = 0.0;
     }
 
     /* Some Special Cases */
 
     /* Structural shell variables */
-    if (upd->vp[pg->imtrx][SHELL_X] >= 0 && upd->vp[pg->imtrx][SHELL_Y] >= 0) {
+    if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_X] >= 0 &&
+        goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_Y] >= 0) {
       init_structural_shell_coord(u);
     }
 
     /* Shell normal vector unknowns requiring initialization */
-    if (upd->vp[pg->imtrx][SHELL_NORMAL1] > -1 && upd->vp[pg->imtrx][SHELL_NORMAL2] > -1) {
+    if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_NORMAL1] > -1 &&
+        goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_NORMAL2] > -1) {
       init_shell_normal_unknowns(u, exo);
     }
     break;
@@ -1560,19 +1565,19 @@ void init_vec(
      *  Initialize the solution vector to random
      *  numbers between 0 and 1
      */
-    fill_dvec_rand(u, NumUnknowns[pg->imtrx]);
+    fill_dvec_rand(u, NumUnknowns[goma_ctx->fem.pg->imtrx]);
     break;
 
   case 2:
     /* Initialize all of the solution vector to  the value of 1 */
-    for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
+    for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
       u[i] = 1.0;
     }
     break;
 
   case 4:
     /* Initialize a solution vector from an ascii file */
-    read_initial_guess(u, NumUnknowns[pg->imtrx], uAC, nAC);
+    read_initial_guess(u, NumUnknowns[goma_ctx->fem.pg->imtrx], uAC, nAC);
     break;
 
   case 5:
@@ -1640,9 +1645,9 @@ void init_vec(
     if (goma_ctx->num_var_bound > 0) {
       int idv;
       var = Var_init[0].var;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         for (i = 0; i < DPI_ptr->num_owned_nodes; i++) {
-          idv = Index_Solution(i, var, 0, 0, -1, pg->imtrx);
+          idv = Index_Solution(i, var, 0, 0, -1, goma_ctx->fem.pg->imtrx);
           if (idv != -1) {
             if (u[idv] < Var_init[0].init_val_min)
               u[idv] = Var_init[0].init_val_min;
@@ -1651,7 +1656,7 @@ void init_vec(
           }
         }
       }
-      exchange_dof(cx, dpi, u, pg->imtrx);
+      exchange_dof(cx, dpi, u, goma_ctx->fem.pg->imtrx);
     }
 
     /*
@@ -1691,8 +1696,8 @@ void init_vec(
   /***********************************************************************/
   if (nAC > 0) {
     for (iAC = 0; iAC < nAC; iAC++) {
-      if (augc[iAC].iread == 2) {
-        uAC[iAC] = augc[iAC].tmp3;
+      if (goma_ctx->fem.augc[iAC].iread == 2) {
+        uAC[iAC] = goma_ctx->fem.augc[iAC].tmp3;
         DPRINTF(stdout, "AUGC[%d] initialized from input file :%6.3g \n", iAC, uAC[iAC]);
         update_parameterAC(iAC, NULL, NULL, uAC, cx, exo, dpi);
       }
@@ -1733,7 +1738,7 @@ void init_vec(
       } else {
         double xpt[DIM] = {0, 0, 0}, var_val[MAX_VARIABLE_TYPES];
         int dir, ierr;
-        for (dir = 0; dir < pd->Num_Dim; dir++) {
+        for (dir = 0; dir < goma_ctx->fem.pd->Num_Dim; dir++) {
           xpt[dir] = goma_ctx->mesh.coor[dir][i];
         }
         init_vec_value(var_val, 0.0, MAX_VARIABLE_TYPES);
@@ -1756,17 +1761,18 @@ void init_vec(
      *       do.
      */
     if (retn == 1) {
-      frac_vec = alloc_dbl_1(upd->Max_Num_Species, 0.0);
+      frac_vec = alloc_dbl_1(goma_ctx->fem.upd->Max_Num_Species, 0.0);
       retn = check_consistent_fraction_vector(Var_init, goma_ctx->num_var_init,
-                                              upd->Max_Num_Species, frac_vec);
+                                              goma_ctx->fem.upd->Max_Num_Species, frac_vec);
 
       /*
        *   Decide whether we need to do any conversions between the types of
        *   fraction vectors before insertion.
        */
 
-      if (pd_glob[0]->Species_Var_Type != retn) {
-        (void)convert_species_var(pd_glob[0]->Species_Var_Type, mp_glob[0], retn, frac_vec, 0.);
+      if (goma_ctx->fem.pd_glob[0]->Species_Var_Type != retn) {
+        (void)convert_species_var(goma_ctx->fem.pd_glob[0]->Species_Var_Type,
+                                  goma_ctx->fem.mp_glob[0], retn, frac_vec, 0.);
       }
 
       /*
@@ -1774,7 +1780,7 @@ void init_vec(
        * parts of the solution vector, for all materials. Only need to
        * inject the maximum number of species equations.
        */
-      for (i = 0; i < upd->Max_Num_Species_Eqn; i++) {
+      for (i = 0; i < goma_ctx->fem.upd->Max_Num_Species_Eqn; i++) {
         init_vec_value(dum_var, frac_vec[i], DPI_ptr->num_owned_nodes);
         inject_nodal_vec(u, MASS_FRACTION, i, 0, -2, dum_var);
       }
@@ -1820,8 +1826,8 @@ void init_vec(
     if (mn < 0) {
       continue;
     }
-    pd = pd_glob[mn];
-    mp = mp_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
     if (Num_Var_Init_Mat[mn] > 0) {
       e_start = exo->eb_ptr[ebi];
       e_end = exo->eb_ptr[ebi + 1];
@@ -1845,7 +1851,7 @@ void init_vec(
          */
         for (n = 0; n < num_nodes; n++) {
           i = goma_ctx->mesh.proc_elem_connect[index++];
-          nv = Nodes[i]->Nodal_Vars_Info[pg->imtrx];
+          nv = Nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
           for (j = 0; j < Num_Var_Init_Mat[mn]; j++) {
             int slaved = Var_init_mat[mn][j].slave_block;
 
@@ -1861,17 +1867,19 @@ void init_vec(
              * a valid interpolation for that variable in the
              * current element block
              */
-            if (nunks > 0 && pd->i[pg->imtrx][var] && !slaved &&
+            if (nunks > 0 && goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] && !slaved &&
                 Var_init_mat[mn][j].len_u_pars < 0) {
               /*
                * Check against ktype here to make sure we have
                * an associated unknown
                */
-              if (var == MASS_FRACTION && Var_init_mat[mn][j].ktype >= pd->Num_Species_Eqn) {
+              if (var == MASS_FRACTION &&
+                  Var_init_mat[mn][j].ktype >= goma_ctx->fem.pd->Num_Species_Eqn) {
                 continue;
               }
               if (nunks == 1) {
-                ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn, pg->imtrx);
+                ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn,
+                                      goma_ctx->fem.pg->imtrx);
                 u[ipos] = Var_init_mat[mn][j].init_val;
               } else {
                 /*
@@ -1881,12 +1889,13 @@ void init_vec(
                  *  HKM -> we can't take this block out, until we
                  *         get rid of the debugging section below.
                  */
-                interpType = pd->i[pg->imtrx][var];
+                interpType = goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var];
                 if (interpType == I_P0 || interpType == I_P1) {
                   /*
                    *  For P0 and P1 interpolation, only first dof is set
                    */
-                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn, pg->imtrx);
+                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn,
+                                        goma_ctx->fem.pg->imtrx);
                   u[ipos] = Var_init_mat[mn][j].init_val;
                 } else if (interpType == I_PQ1 || interpType == I_PQ2) {
                   /*
@@ -1902,7 +1911,8 @@ void init_vec(
                   if (interpType == I_PQ2)
                     ndof = 9;
                   for (k = 0; k < ndof; k++) {
-                    ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, k, mn, pg->imtrx);
+                    ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, k, mn,
+                                          goma_ctx->fem.pg->imtrx);
                     u[ipos] = Var_init_mat[mn][j].init_val;
                   }
                 } else {
@@ -1913,7 +1923,8 @@ void init_vec(
                    *   This currently is determined by a even odd
                    *   scheme wrt the element block id.
                    */
-                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn, pg->imtrx);
+                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn,
+                                        goma_ctx->fem.pg->imtrx);
                   u[ipos] = Var_init_mat[mn][j].init_val;
                 }
               }
@@ -1927,7 +1938,7 @@ void init_vec(
   /*
    *  Exchange the degrees of freedom with neighboring processors
    */
-  exchange_dof(cx, dpi, u, pg->imtrx);
+  exchange_dof(cx, dpi, u, goma_ctx->fem.pg->imtrx);
 
   /*
    * check for external variables which have to be read in
@@ -1935,12 +1946,13 @@ void init_vec(
    * or fields generated from pixel files
    */
 
-  if (efv->ev) {
+  if (goma_ctx->fem.efv->ev) {
     k = 0;
     int map_pix_fast_called = 0;
-    for (w = 0; w < efv->Num_external_field; w++) {
-      if (efv->i[w] == I_TABLE) {
-        ext_Tables[k] = setup_table_external(efv->file_nm[w], ext_table, efv->name[w]);
+    for (w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
+      if (goma_ctx->fem.efv->i[w] == I_TABLE) {
+        ext_Tables[k] = setup_table_external(goma_ctx->fem.efv->file_nm[w], ext_table,
+                                             goma_ctx->fem.efv->name[w]);
         k++;
       }
 
@@ -1950,23 +1962,24 @@ void init_vec(
        *           calling program instead of being read in from a file.
        *           This task is handled elsewhere for these cases.
        */
-      else if (strcmp(efv->file_nm[w], "IMPORT") != 0 &&
-               strcmp(efv->file_nm[w], "IMPORT_EV") != 0) {
-        if (!efv->ipix[w]) {
-          DPRINTF(stdout, "%s:  reading fixed field \"%s\" from \"%s\" ...\n", yo, efv->name[w],
-                  efv->file_nm[w]);
-          err = rd_vectors_from_exoII(u, efv->file_nm[w], 1, w, INT_MAX, &timeValueReadExt, exo);
+      else if (strcmp(goma_ctx->fem.efv->file_nm[w], "IMPORT") != 0 &&
+               strcmp(goma_ctx->fem.efv->file_nm[w], "IMPORT_EV") != 0) {
+        if (!goma_ctx->fem.efv->ipix[w]) {
+          DPRINTF(stdout, "%s:  reading fixed field \"%s\" from \"%s\" ...\n", yo,
+                  goma_ctx->fem.efv->name[w], goma_ctx->fem.efv->file_nm[w]);
+          err = rd_vectors_from_exoII(u, goma_ctx->fem.efv->file_nm[w], 1, w, INT_MAX,
+                                      &timeValueReadExt, exo);
           if (err != 0) {
             DPRINTF(stderr, "%s:  err fr rd_vectors_from_exoII() while reading external fields\n",
                     yo);
           }
         }
 
-        else if (efv->ipix[w] == 1) /*Original pixel to mesh tool */
+        else if (goma_ctx->fem.efv->ipix[w] == 1) /*Original pixel to mesh tool */
         {
           DPRINTF(stderr, "\nMapping pixel image to mesh with original algorithm...");
           err = rd_image_to_mesh(w, exo);
-        } else if (efv->ipix[w] == 2) /*'Fast' pixel to mesh tool */
+        } else if (goma_ctx->fem.efv->ipix[w] == 2) /*'Fast' pixel to mesh tool */
         {
           DPRINTF(stderr, "\nMapping pixel image to mesh with 'fast' algorithm...");
           err = rd_image_to_mesh2(w, exo);
@@ -1976,8 +1989,8 @@ void init_vec(
         }
       }
 #ifndef LIBRARY_MODE
-      else if (strcmp(efv->file_nm[w], "IMPORT") == 0 ||
-               strcmp(efv->file_nm[w], "IMPORT_EV") == 0) {
+      else if (strcmp(goma_ctx->fem.efv->file_nm[w], "IMPORT") == 0 ||
+               strcmp(goma_ctx->fem.efv->file_nm[w], "IMPORT_EV") == 0) {
         GOMA_EH(-1, "External fields can only be imported in LIBRARY_MODE!");
       }
 #endif
@@ -1989,7 +2002,7 @@ void init_vec(
         fix_exo_file(goma_ctx->num_proc, "map_pix_fast.exoII");
       }
     }
-    if (efv->exit_after_pixel_map == true) {
+    if (goma_ctx->fem.efv->exit_after_pixel_map == true) {
       P0PRINTF("Exiting early due to setting Exit after pixel map = yes\n");
       MPI_Finalize();
       exit(0);
@@ -2004,34 +2017,34 @@ void init_vec(
    * Loop over element blocks that exist for this processor, determine
    * if any material is being treated with TALE
    */
-  efv->TALE = FALSE;
+  goma_ctx->fem.efv->TALE = FALSE;
   for (ebi = 0; ebi < exo->num_elem_blocks; ebi++) {
     mn = Matilda[ebi];
     if (mn < 0) {
       continue;
     }
-    if (pd_glob[mn]->MeshMotion == TOTAL_ALE) {
-      efv->TALE = TRUE;
+    if (goma_ctx->fem.pd_glob[mn]->MeshMotion == TOTAL_ALE) {
+      goma_ctx->fem.efv->TALE = TRUE;
     }
   }
-  if (efv->TALE) {
+  if (goma_ctx->fem.efv->TALE) {
     /*
      * If we are doing a TALE analysis,
      *   Allocate and save the initial displacement fields using
      *   fields in the external field variables struct.
      */
     for (a = 0; a < exo->num_dim; a++) {
-      efv->init_displacement_ndl_val[a] = alloc_dbl_1(exo->num_nodes, 0.0);
-      extract_nodal_vec(u, MESH_DISPLACEMENT1 + a, 0, -2, efv->init_displacement_ndl_val[a], exo,
-                        FALSE, 0.);
+      goma_ctx->fem.efv->init_displacement_ndl_val[a] = alloc_dbl_1(exo->num_nodes, 0.0);
+      extract_nodal_vec(u, MESH_DISPLACEMENT1 + a, 0, -2,
+                        goma_ctx->fem.efv->init_displacement_ndl_val[a], exo, FALSE, 0.);
     }
     for (a = 0; a < exo->num_dim; a++) {
-      efv->init_displacement_ndl_val[a + DIM] = alloc_dbl_1(exo->num_nodes, 0.0);
-      extract_nodal_vec(u, SOLID_DISPLACEMENT1 + a, 0, -2, efv->init_displacement_ndl_val[DIM + a],
-                        exo, FALSE, 0.);
+      goma_ctx->fem.efv->init_displacement_ndl_val[a + DIM] = alloc_dbl_1(exo->num_nodes, 0.0);
+      extract_nodal_vec(u, SOLID_DISPLACEMENT1 + a, 0, -2,
+                        goma_ctx->fem.efv->init_displacement_ndl_val[DIM + a], exo, FALSE, 0.);
     }
   }
-  exchange_dof(cx, dpi, u, pg->imtrx);
+  exchange_dof(cx, dpi, u, goma_ctx->fem.pg->imtrx);
 
   /* User initialization part
    * Loop over element blocks that exist for this processor, determine
@@ -2043,8 +2056,8 @@ void init_vec(
     if (mn < 0) {
       continue;
     }
-    pd = pd_glob[mn];
-    mp = mp_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
     if (Num_Var_Init_Mat[mn] > 0) {
       e_start = exo->eb_ptr[ebi];
       e_end = exo->eb_ptr[ebi + 1];
@@ -2073,7 +2086,7 @@ void init_vec(
          */
         for (n = 0; n < num_nodes; n++) {
           i = goma_ctx->mesh.proc_elem_connect[index++];
-          nv = Nodes[i]->Nodal_Vars_Info[pg->imtrx];
+          nv = Nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
           for (j = 0; j < Num_Var_Init_Mat[mn]; j++) {
             int slaved = Var_init_mat[mn][j].slave_block;
 
@@ -2089,17 +2102,17 @@ void init_vec(
              * a valid interpolation for that variable in the
              * current element block
              */
-            if (nunks > 0 && pd->i[pg->imtrx][var] && !slaved &&
+            if (nunks > 0 && goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] && !slaved &&
                 Var_init_mat[mn][j].len_u_pars >= 0) {
               double xpt[DIM] = {0, 0, 0}, var_val[MAX_VARIABLE_TYPES];
               int dir;
-              for (dir = 0; dir < pd->Num_Dim; dir++) {
+              for (dir = 0; dir < goma_ctx->fem.pd->Num_Dim; dir++) {
                 xpt[dir] = goma_ctx->mesh.coor[dir][i];
               }
               init_vec_value(var_val, 0.0, MAX_VARIABLE_TYPES);
               for (a = 0; a < MAX_VARIABLE_TYPES; a++) {
-                if (pd->v[pg->imtrx][a]) {
-                  k = Index_Solution(i, a, 0, 0, mn, pg->imtrx);
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][a]) {
+                  k = Index_Solution(i, a, 0, 0, mn, goma_ctx->fem.pg->imtrx);
                   if (k != -1) {
                     var_val[a] = u[k];
                   }
@@ -2109,11 +2122,13 @@ void init_vec(
                * Check against ktype here to make sure we have
                * an associated unknown
                */
-              if (var == MASS_FRACTION && Var_init_mat[mn][j].ktype >= pd->Num_Species_Eqn) {
+              if (var == MASS_FRACTION &&
+                  Var_init_mat[mn][j].ktype >= goma_ctx->fem.pd->Num_Species_Eqn) {
                 continue;
               }
               if (nunks == 1) {
-                ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn, pg->imtrx);
+                ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn,
+                                      goma_ctx->fem.pg->imtrx);
                 u[ipos] = user_mat_init(var, i, Var_init_mat[mn][j].init_val,
                                         Var_init_mat[mn][j].u_pars, xpt, mn, var_val);
               } else {
@@ -2124,12 +2139,13 @@ void init_vec(
                  *  HKM -> we can't take this block out, until we
                  *         get rid of the debugging section below.
                  */
-                interpType = pd->i[pg->imtrx][var];
+                interpType = goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var];
                 if (interpType == I_P0 || interpType == I_P1) {
                   /*
                    *  For P0 and P1 interpolation, only first dof is set
                    */
-                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn, pg->imtrx);
+                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn,
+                                        goma_ctx->fem.pg->imtrx);
                   u[ipos] = user_mat_init(var, i, Var_init_mat[mn][j].init_val,
                                           Var_init_mat[mn][j].u_pars, xpt, mn, var_val);
                 } else if (interpType == I_PQ1 || interpType == I_PQ2) {
@@ -2146,7 +2162,8 @@ void init_vec(
                   if (interpType == I_PQ2)
                     ndof = 9;
                   for (k = 0; k < ndof; k++) {
-                    ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, k, mn, pg->imtrx);
+                    ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, k, mn,
+                                          goma_ctx->fem.pg->imtrx);
                     u[ipos] = user_mat_init(var, i, Var_init_mat[mn][j].init_val,
                                             Var_init_mat[mn][j].u_pars, xpt, mn, var_val);
                   }
@@ -2158,7 +2175,8 @@ void init_vec(
                    *   This currently is determined by a even odd
                    *   scheme wrt the element block id.
                    */
-                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn, pg->imtrx);
+                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn,
+                                        goma_ctx->fem.pg->imtrx);
                   u[ipos] = user_mat_init(var, i, Var_init_mat[mn][j].init_val,
                                           Var_init_mat[mn][j].u_pars, xpt, mn, var_val);
                 }
@@ -2174,7 +2192,7 @@ void init_vec(
   /*
    *  Exchange the degrees of freedom with neighboring processors
    */
-  exchange_dof(cx, dpi, u, pg->imtrx);
+  exchange_dof(cx, dpi, u, goma_ctx->fem.pg->imtrx);
 
   return;
 } /* END of routine init_vec **************************************************/
@@ -2207,10 +2225,10 @@ void init_structural_shell_coord(double u[])
                                     *never get here for 3D */
   {
     var = SHELL_X + comp;
-    if (upd->vp[pg->imtrx][var]) {
+    if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var]) {
       for (node = 0; node < goma_ctx->mesh.num_node; node++) {
-        if (Dolphin[pg->imtrx][node][var] > 0) {
-          dof = Index_Solution(node, var, 0, 0, -1, pg->imtrx);
+        if (Dolphin[goma_ctx->fem.pg->imtrx][node][var] > 0) {
+          dof = Index_Solution(node, var, 0, 0, -1, goma_ctx->fem.pg->imtrx);
           u[dof] = goma_ctx->mesh.coor[comp][node];
         }
       } /* for: node(s) */
@@ -2260,13 +2278,13 @@ void init_shell_normal_unknowns(double x[], const Exo_DB *exo)
     ielem = exo->eb_ptr[i];
     ielem_type = Elem_Type(exo, ielem);
     ielem_dim = elem_info(NDIM, ielem_type);
-    if (ielem_dim == pd->Num_Dim)
+    if (ielem_dim == goma_ctx->fem.pd->Num_Dim)
       continue;
 
     /* Loop over all elements */
     for (ielem = e_start; ielem < e_end; ielem++) {
       ielem_type = Elem_Type(exo, ielem);
-      load_ei(ielem, exo, 0, pg->imtrx);
+      load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
       err = load_elem_dofptr(ielem, exo, x, x, x, x, 0);
       GOMA_EH(err, "Can't load elem_dofptr in shell normals initialization");
 
@@ -2274,7 +2292,7 @@ void init_shell_normal_unknowns(double x[], const Exo_DB *exo)
       num_local_nodes = elem_info(NNODES, ielem_type);
       iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[ielem];
 
-      switch (ei[pg->imtrx]->ielem_shape) {
+      switch (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape) {
       case LINE_SEGMENT:
       case SHELL:
       case TRISHELL:
@@ -2295,15 +2313,15 @@ void init_shell_normal_unknowns(double x[], const Exo_DB *exo)
           ignode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ilnode];
 
           /* Get node number and indices into solution vector for normal dofs */
-          nxi = Index_Solution(ignode, SHELL_NORMAL1, 0, 0, -2, pg->imtrx);
-          nyi = Index_Solution(ignode, SHELL_NORMAL2, 0, 0, -2, pg->imtrx);
+          nxi = Index_Solution(ignode, SHELL_NORMAL1, 0, 0, -2, goma_ctx->fem.pg->imtrx);
+          nyi = Index_Solution(ignode, SHELL_NORMAL2, 0, 0, -2, goma_ctx->fem.pg->imtrx);
 
-          x[nxi] = fv->snormal[0];
-          x[nyi] = fv->snormal[1];
+          x[nxi] = goma_ctx->fem.fv->snormal[0];
+          x[nyi] = goma_ctx->fem.fv->snormal[1];
 
-          if (pd->Num_Dim == 3) {
-            nzi = Index_Solution(ignode, SHELL_NORMAL3, 0, 0, -2, pg->imtrx);
-            x[nzi] = fv->snormal[2];
+          if (goma_ctx->fem.pd->Num_Dim == 3) {
+            nzi = Index_Solution(ignode, SHELL_NORMAL3, 0, 0, -2, goma_ctx->fem.pg->imtrx);
+            x[nzi] = goma_ctx->fem.fv->snormal[2];
           }
         }
         break;
@@ -2374,7 +2392,7 @@ static void read_initial_guess(double u[], const int np, double uAC[], const int
    *  on each line. The rest of the line is ignored.
    */
   if (nAC > 0) {
-    if (augc[0].iread == 1) {
+    if (goma_ctx->fem.augc[0].iread == 1) {
       for (i = 0; i < nAC; i++) {
         nchar = read_line(file, input, FALSE);
         if (nchar <= 0) {
@@ -2426,11 +2444,11 @@ int write_ascii_soln(double *u,     /* Solution vector */
   if (dofname != NULL) {
     if (resid == NULL) {
       for (i = 0; i < np; i++) {
-        fprintf(file, "%23.16e %s\n", u[i], dofname[pg->imtrx][i]);
+        fprintf(file, "%23.16e %s\n", u[i], dofname[goma_ctx->fem.pg->imtrx][i]);
       }
     } else {
       for (i = 0; i < np; i++) {
-        fprintf(file, "%23.16e %s %23.16e\n", u[i], dofname[pg->imtrx][i], resid[i]);
+        fprintf(file, "%23.16e %s %23.16e\n", u[i], dofname[goma_ctx->fem.pg->imtrx][i], resid[i]);
       }
     }
   } else {
@@ -2500,7 +2518,7 @@ int wr_soln_vec(double u[],    /* solution vector */
   }
 
   for (i = 0; i < np; i++) {
-    fprintf(file, fmt, u[i], dofname[pg->imtrx][i], r[i]);
+    fprintf(file, fmt, u[i], dofname[goma_ctx->fem.pg->imtrx][i], r[i]);
   }
 
   fclose(file);
@@ -2644,17 +2662,17 @@ int rd_vectors_from_exoII(double u[],
 
   if (action_flag == 0) {
     for (var = V_FIRST; var < V_LAST; var++) {
-      if (Num_Var_In_Type[pg->imtrx][var]) {
+      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
         if (var == MASS_FRACTION) {
-          for (mn = -1; mn < upd->Num_Mat; mn++) {
+          for (mn = -1; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
             if (mn == -1) {
-              for (i = upd->Num_Mat - 1; i >= 0; i--) {
-                if (mp_glob[i]->Num_Species == upd->Max_Num_Species) {
-                  matrl = mp_glob[i];
+              for (i = goma_ctx->fem.upd->Num_Mat - 1; i >= 0; i--) {
+                if (goma_ctx->fem.mp_glob[i]->Num_Species == goma_ctx->fem.upd->Max_Num_Species) {
+                  matrl = goma_ctx->fem.mp_glob[i];
                 }
               }
             } else {
-              matrl = mp_glob[mn];
+              matrl = goma_ctx->fem.mp_glob[mn];
             }
             for (w = 0; w < matrl->Num_Species_Eqn; w++) {
               error = rd_exoII_nv(u, var, mn, matrl, var_names, num_nodes, num_vars, exoid,
@@ -2662,17 +2680,17 @@ int rd_vectors_from_exoII(double u[],
             }
           }
         } else {
-          for (mn = -1; mn < upd->Num_Mat; mn++) {
+          for (mn = -1; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
             if (mn == -1) {
-              for (i = upd->Num_Mat - 1; i >= 0; i--) {
-                if (pd_glob[i]->i[pg->imtrx][var]) {
-                  matrl = mp_glob[i];
+              for (i = goma_ctx->fem.upd->Num_Mat - 1; i >= 0; i--) {
+                if (goma_ctx->fem.pd_glob[i]->i[goma_ctx->fem.pg->imtrx][var]) {
+                  matrl = goma_ctx->fem.mp_glob[i];
                 }
               }
             } else {
-              matrl = mp_glob[mn];
+              matrl = goma_ctx->fem.mp_glob[mn];
             }
-            if (mn != -1 && (pd_glob[mn]->i[pg->imtrx][var] == I_P0)) {
+            if (mn != -1 && (goma_ctx->fem.pd_glob[mn]->i[goma_ctx->fem.pg->imtrx][var] == I_P0)) {
               // element variables we need to loop through the element blocks as we can have repeats
               // of the same material in different element blocks
               for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
@@ -2685,7 +2703,8 @@ int rd_vectors_from_exoII(double u[],
                                       time_step, 0, exo);
                 }
               }
-            } else if (mn != -1 && (pd_glob[mn]->i[pg->imtrx][var] == I_P1)) {
+            } else if (mn != -1 &&
+                       (goma_ctx->fem.pd_glob[mn]->i[goma_ctx->fem.pg->imtrx][var] == I_P1)) {
               // element variables we need to loop through the element blocks as we can have repeats
               // of the same material in different element blocks
               for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
@@ -2712,22 +2731,23 @@ int rd_vectors_from_exoII(double u[],
   }
 
   if (action_flag == 1) {
-    if (efv->ev) {
+    if (goma_ctx->fem.efv->ev) {
       /*
        * Allocate memory for external field variable arrays
        */
-      efv->ext_fld_ndl_val[variable_no] = alloc_dbl_1(exo->num_nodes, 0.0);
+      goma_ctx->fem.efv->ext_fld_ndl_val[variable_no] = alloc_dbl_1(exo->num_nodes, 0.0);
       printf("rd_vectors_from_exoII: Allocated field %d for %s at %p\n", variable_no,
-             efv->name[variable_no], (void *)efv->ext_fld_ndl_val[variable_no]);
+             goma_ctx->fem.efv->name[variable_no],
+             (void *)goma_ctx->fem.efv->ext_fld_ndl_val[variable_no]);
       vdex = -1;
 #ifdef REACTION_PRODUCT_EFV
       if (TimeIntegration != STEADY) {
-        efv->ext_fld_ndl_val_old[variable_no] = alloc_dbl_1(exo->num_nodes, 0.);
-        efv->ext_fld_ndl_val_older[variable_no] = alloc_dbl_1(exo->num_nodes, 0.);
+        goma_ctx->fem.efv->ext_fld_ndl_val_old[variable_no] = alloc_dbl_1(exo->num_nodes, 0.);
+        goma_ctx->fem.efv->ext_fld_ndl_val_older[variable_no] = alloc_dbl_1(exo->num_nodes, 0.);
       }
 #endif
       for (i = 0; i < num_vars; i++) {
-        if (strcmp(var_names[i], efv->name[variable_no]) == 0) {
+        if (strcmp(var_names[i], goma_ctx->fem.efv->name[variable_no]) == 0) {
           vdex = i + 1;
         }
       }
@@ -2739,11 +2759,11 @@ int rd_vectors_from_exoII(double u[],
         for (int k = 0; k < exo->num_nodes; k++) {
           int base_index = exo->ghost_node_to_base[k];
           if (base_index != -1) {
-            efv->ext_fld_ndl_val[variable_no][k] = tmp_vector[base_index];
+            goma_ctx->fem.efv->ext_fld_ndl_val[variable_no][k] = tmp_vector[base_index];
           }
         }
 
-        exchange_node(cx[0], DPI_ptr, efv->ext_fld_ndl_val[variable_no]);
+        exchange_node(cx[0], DPI_ptr, goma_ctx->fem.efv->ext_fld_ndl_val[variable_no]);
         free(tmp_vector);
 
         GOMA_EH(error, "ex_get_var nodal");
@@ -2891,7 +2911,7 @@ int rd_trans_vectors_from_exoII(double u[],
     fprintf(stderr, "Warning: no nodal variables stored in exoII input file.\n");
   }
 
-  if (efv->ev) {
+  if (goma_ctx->fem.efv->ev) {
     /*
      * Already allocated this in rd_vectors_from_exoII for external field variable arrays
      */
@@ -2901,11 +2921,12 @@ int rd_trans_vectors_from_exoII(double u[],
 
     if (desired_time_step == 0) {
       fprintf(stderr, "rd_trans_vectors_from_exoII: Into existing field %d for %s at %p\n",
-              variable_no, efv->name[variable_no], (void *)efv->ext_fld_ndl_val[variable_no]);
+              variable_no, goma_ctx->fem.efv->name[variable_no],
+              (void *)goma_ctx->fem.efv->ext_fld_ndl_val[variable_no]);
     }
     vdex = -1;
     for (i = 0; i < num_vars; i++) {
-      if (strcmp(var_names[i], efv->name[variable_no]) == 0) {
+      if (strcmp(var_names[i], goma_ctx->fem.efv->name[variable_no]) == 0) {
         vdex = i + 1;
       }
     }
@@ -2921,7 +2942,7 @@ int rd_trans_vectors_from_exoII(double u[],
         if (base_index != -1) {
           slope = (val_high[base_index] - val_low[base_index]) / (time_higher - time_lower);
           yint = val_low[base_index] - slope * time_lower;
-          efv->ext_fld_ndl_val[variable_no][k] = slope * (*timeValueIn) + yint;
+          goma_ctx->fem.efv->ext_fld_ndl_val[variable_no][k] = slope * (*timeValueIn) + yint;
         }
       }
     }
@@ -2935,7 +2956,7 @@ int rd_trans_vectors_from_exoII(double u[],
   /*
    *  Exchange the degrees of freedom with neighboring processors
    */
-  exchange_node(cx, dpi, efv->ext_fld_ndl_val[variable_no]);
+  exchange_node(cx, dpi, goma_ctx->fem.efv->ext_fld_ndl_val[variable_no]);
 
   return 0;
 } /* end rd_trans_vectors_from_exoII*/
@@ -3224,7 +3245,7 @@ static void inject_nodal_vec(double sol_vec[],
   NODAL_VARS_STRUCT *nv;
   VARIABLE_DESCRIPTION_STRUCT *vd;
   for (i = 0; i < DPI_ptr->num_universe_nodes; i++) {
-    nv = Nodes[i]->Nodal_Vars_Info[pg->imtrx];
+    nv = Nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     int base_index = EXO_ptr->ghost_node_to_base[i];
     if (base_index != -1) {
       if (matID == -2) {
@@ -3238,16 +3259,17 @@ static void inject_nodal_vec(double sol_vec[],
           }
 #endif
           if (k == (int)vd->Subvar_Index) {
-            index = (Nodes[i]->First_Unknown[pg->imtrx] + nv->Nodal_Offset[vindex] + idof);
+            index = (Nodes[i]->First_Unknown[goma_ctx->fem.pg->imtrx] + nv->Nodal_Offset[vindex] +
+                     idof);
             sol_vec[index] = nodal_vec[base_index];
           }
         }
       } else {
         int ndof = 0;
-        if (pd->i[pg->imtrx][varType] == I_PQ1) {
+        if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][varType] == I_PQ1) {
           ndof = 4;
           GOMA_WH(-1, "Using 4 dof injecting variable");
-        } else if (pd->i[pg->imtrx][varType] == I_PQ2) {
+        } else if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][varType] == I_PQ2) {
           ndof = 9;
           GOMA_WH(-1, "Using 9 dof injecting variable");
         }
@@ -3255,13 +3277,13 @@ static void inject_nodal_vec(double sol_vec[],
         if (ndof > 0) {
           int local_dof = 0;
           for (local_dof = 0; local_dof < ndof; local_dof++) {
-            index = Index_Solution(i, varType, k, local_dof, matID, pg->imtrx);
+            index = Index_Solution(i, varType, k, local_dof, matID, goma_ctx->fem.pg->imtrx);
             if (index != -1) {
               sol_vec[index] = nodal_vec[base_index];
             }
           }
         } else {
-          index = Index_Solution(i, varType, k, idof, matID, pg->imtrx);
+          index = Index_Solution(i, varType, k, idof, matID, goma_ctx->fem.pg->imtrx);
           if (index != -1) {
             sol_vec[index] = nodal_vec[base_index];
           }
@@ -3371,7 +3393,7 @@ static void inject_elem_vec(double sol_vec[],
            There should never be more than one of this quantity defined
            per element, or we have a problem treating it as an element
            variable. Hence the found_quantity check.                       */
-        index = Index_Solution(I, varType, k, idof, matID, pg->imtrx);
+        index = Index_Solution(I, varType, k, idof, matID, goma_ctx->fem.pg->imtrx);
         int base_index = exo->eb_ghost_elem_to_base[eb_index][ielem - e_start];
         if (index != -1 && base_index != -1) {
           /* This should be the one node that has our value - set the element
@@ -3396,7 +3418,7 @@ static void inject_elem_vec(double sol_vec[],
          There should never be more than one of this quantity defined
          per element, or we have a problem treating it as an element
          variable. Hence the found_quantity check.                       */
-      index = Index_Solution(I, varType, k, idof, matID, pg->imtrx);
+      index = Index_Solution(I, varType, k, idof, matID, goma_ctx->fem.pg->imtrx);
       int base_index = exo->eb_ghost_elem_to_base[eb_index][ielem - e_start];
       if (index != -1 && base_index != -1) {
         /* This should be the one node that has our value - set the element
@@ -3446,7 +3468,7 @@ int build_node_index_var(const int varType,
     GOMA_EH(-1, "Attempt to count a bogus variable.");
   }
   count = 0;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (node = 0; node < num_nodes; node++) {
       nv = Nodes[node]->Nodal_Vars_Info[imtrx];
       if (nv->Num_Var_Desc_Per_Type[varType] > 0) {
@@ -3482,7 +3504,7 @@ int count_vardofs(const int varType, const int num_nodes) {
     GOMA_EH(-1, "Attempt to count a bogus variable.");
   }
   count = 0;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (node = 0; node < num_nodes; node++) {
       nv = Nodes[node]->Nodal_Vars_Info[imtrx];
       nun = get_nv_ndofs_modMF(nv, varType);
@@ -3588,7 +3610,7 @@ int find_first_elem_with_var(Exo_DB *e, int var) {
   for (eb = 0; (!found) && eb < e->num_elem_blocks; eb++) {
     mn = Matilda[eb];
 
-    found = pd_glob[mn]->v[pg->imtrx][var];
+    found = goma_ctx->fem.pd_glob[mn]->v[goma_ctx->fem.pg->imtrx][var];
     if (found)
       first_elem = e->eb_ptr[eb];
   }
@@ -3608,7 +3630,7 @@ int load_import_fields(dbl *base_p_por, const Exo_DB *exo, int callnum) {
   /* Make sure there are fields to load */
   if (Num_Import_NV == 0 && Num_Import_EV == 0)
     return 0;
-  if (libio->xnv_in == NULL || libio->xev_in == NULL) {
+  if (goma_ctx->fem.libio->xnv_in == NULL || goma_ctx->fem.libio->xev_in == NULL) {
     fprintf(stderr, "Invalid import vector(s)!\n");
     return -1;
   }
@@ -3616,20 +3638,20 @@ int load_import_fields(dbl *base_p_por, const Exo_DB *exo, int callnum) {
     ev_tmp = alloc_dbl_1(nn, 0.0);
 
   /* Loop over all defined external fields */
-  for (w = 0; w < efv->Num_external_field; w++) {
+  for (w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
 
     /* Import the nodal vars */
-    if (!strcmp(efv->file_nm[w], "IMPORT")) {
-      fprintf(stderr, " Importing external #%d nvar field %s...\n", w, efv->name[w]);
-      efv->ext_fld_ndl_val[w] = alloc_dbl_1(nn, 0.0);
+    if (!strcmp(goma_ctx->fem.efv->file_nm[w], "IMPORT")) {
+      fprintf(stderr, " Importing external #%d nvar field %s...\n", w, goma_ctx->fem.efv->name[w]);
+      goma_ctx->fem.efv->ext_fld_ndl_val[w] = alloc_dbl_1(nn, 0.0);
       nv_start = nn * nv_count;
       if (doing_ev)
         GOMA_WH(-1, "Problem with order of external field cards!\n");
       for (i = 0; i < nn; i++) {
-        efv->ext_fld_ndl_val[w][i] = libio->xnv_in[nv_start + i];
+        goma_ctx->fem.efv->ext_fld_ndl_val[w][i] = goma_ctx->fem.libio->xnv_in[nv_start + i];
 
-        if (base_p_por != NULL && w == efv->ev_porous_index) {
-          base_p_por[i] = efv->ext_fld_ndl_val[w][i];
+        if (base_p_por != NULL && w == goma_ctx->fem.efv->ev_porous_index) {
+          base_p_por[i] = goma_ctx->fem.efv->ext_fld_ndl_val[w][i];
         }
       }
       nv_count++;
@@ -3637,27 +3659,27 @@ int load_import_fields(dbl *base_p_por, const Exo_DB *exo, int callnum) {
   }
 
   /****************************Anneal from external***********************/
-  if (efv->ev_porous_decouple) {
+  if (goma_ctx->fem.efv->ev_porous_decouple) {
     anneal_mesh_with_external_field(exo);
   }
 
-  for (w = 0; w < efv->Num_external_field; w++) {
+  for (w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
     /*
      * Element vars loaded second because they have to projected to nodes.  For this
      *   we may need the external nodal displacements to already have been imported
      */
-    if (!strcmp(efv->file_nm[w], "IMPORT_EV")) {
-      fprintf(stderr, " Importing external #%d evar field %s...\n", w, efv->name[w]);
-      efv->ext_fld_ndl_val[w] = alloc_dbl_1(nn, 0.0);
+    if (!strcmp(goma_ctx->fem.efv->file_nm[w], "IMPORT_EV")) {
+      fprintf(stderr, " Importing external #%d evar field %s...\n", w, goma_ctx->fem.efv->name[w]);
+      goma_ctx->fem.efv->ext_fld_ndl_val[w] = alloc_dbl_1(nn, 0.0);
       doing_ev = TRUE;
       vzero(nn, &ev_tmp[0]);
       interp_ev_to_nodes(exo, ev_tmp, ev_count);
       for (i = 0; i < nn; i++) {
-        efv->ext_fld_ndl_val[w][i] = ev_tmp[i];
+        goma_ctx->fem.efv->ext_fld_ndl_val[w][i] = ev_tmp[i];
 
         /* Save base porosity for updates if applicable */
-        if (base_p_por != NULL && w == efv->ev_porous_index) {
-          base_p_por[i] = efv->ext_fld_ndl_val[w][i];
+        if (base_p_por != NULL && w == goma_ctx->fem.efv->ev_porous_index) {
+          base_p_por[i] = goma_ctx->fem.efv->ext_fld_ndl_val[w][i];
         }
       }
       ev_count++;
@@ -3699,21 +3721,22 @@ void interp_ev_to_nodes(const Exo_DB *exo, dbl *ev_tmp, int iev) {
     for (j = ne1; j < ne2; j++) {
       el = exo->node_elem_list[j];
 
-      ei[pg->imtrx]->ielem = el;
-      ei[pg->imtrx]->ielem_type = Elem_Type(exo, el);
-      ei[pg->imtrx]->num_local_nodes = elem_info(NNODES, ei[pg->imtrx]->ielem_type);
+      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem = el;
+      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type = Elem_Type(exo, el);
+      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes =
+          elem_info(NNODES, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
 
       h_elem_siz(hsquared, hh, dhh, FALSE);
 
       h_siz = hsquared[0] * hsquared[1];
-      if (pd->Num_Dim > 2)
+      if (goma_ctx->fem.pd->Num_Dim > 2)
         h_siz *= hsquared[2];
 
       h_siz = sqrt(h_siz);
 
       h_siz_sum += h_siz;
 
-      sum += libio->xev_in[n + el] * h_siz;
+      sum += goma_ctx->fem.libio->xev_in[n + el] * h_siz;
     }
     avg = sum / h_siz_sum;
 
@@ -3760,7 +3783,7 @@ int advance_porosity_ev(const int time_step, const int nn, dbl *x, dbl *base_p_p
     return 0;
 
   /* check for valid porosity external field index */
-  i_por_ev = efv->ev_porous_index;
+  i_por_ev = goma_ctx->fem.efv->ev_porous_index;
   GOMA_EH(i_por_ev, "Porosity external field not found!");
 
   /* Loop over nodes in problem */
@@ -3772,14 +3795,14 @@ int advance_porosity_ev(const int time_step, const int nn, dbl *x, dbl *base_p_p
      * boundary when the porous material has the smaller material index!
      */
     mn = first_matID_at_node(n);
-    i = Index_Solution(n, eq, 0, 0, -1, pg->imtrx);
+    i = Index_Solution(n, eq, 0, 0, -1, goma_ctx->fem.pg->imtrx);
 
     /* Proceed if eq is active at node */
     if (i > -1) {
-      cr = mp_glob[mn]->porous_compressibility;
-      por0 = mp_glob[mn]->initial_porosity;
+      cr = goma_ctx->fem.mp_glob[mn]->porous_compressibility;
+      por0 = goma_ctx->fem.mp_glob[mn]->initial_porosity;
       delta = cr * por0 * (x[i] - base_p_liq[n]);
-      efv->ext_fld_ndl_val[i_por_ev][n] = base_p_por[n] + delta;
+      goma_ctx->fem.efv->ext_fld_ndl_val[i_por_ev][n] = base_p_por[n] + delta;
     }
   }
 
@@ -3822,7 +3845,7 @@ int advance_porosity_goma_first(
     return 0;
 
   /* check for valid porosity external field index */
-  i_por_ev = efv->ev_porous_index;
+  i_por_ev = goma_ctx->fem.efv->ev_porous_index;
   GOMA_EH(i_por_ev, "Porosity external field not found!");
 
   /* Loop over nodes in problem */
@@ -3834,14 +3857,14 @@ int advance_porosity_goma_first(
      * boundary when the porous material has the smaller material index!
      */
     mn = first_matID_at_node(n);
-    i = Index_Solution(n, eq, 0, 0, -1, pg->imtrx);
+    i = Index_Solution(n, eq, 0, 0, -1, goma_ctx->fem.pg->imtrx);
 
     /* Proceed if eq is active at node */
     if (i > -1) {
-      cr = mp_glob[mn]->porous_compressibility;
-      por0 = mp_glob[mn]->initial_porosity;
+      cr = goma_ctx->fem.mp_glob[mn]->porous_compressibility;
+      por0 = goma_ctx->fem.mp_glob[mn]->initial_porosity;
       delta = cr * por0 * (x[i] - base_p_liq[n]);
-      efv->ext_fld_ndl_val[i_por_ev][n] = base_p_por[n] + delta;
+      goma_ctx->fem.efv->ext_fld_ndl_val[i_por_ev][n] = base_p_por[n] + delta;
     }
   }
 
@@ -3859,12 +3882,12 @@ int advance_porosity_jas_leads(const int time_step,
   int eq = POR_LIQ_PRES;
 
   /* check for valid porosity external field index */
-  i_por_ev = efv->ev_porous_index;
+  i_por_ev = goma_ctx->fem.efv->ev_porous_index;
   GOMA_EH(i_por_ev, "Porosity external field not found!");
 
   /* Loop over nodes in problem */
   for (n = 0; n < nn; n++) {
-    efv->ext_fld_ndl_val[i_por_ev][n] =
+    goma_ctx->fem.efv->ext_fld_ndl_val[i_por_ev][n] =
         p_por_final[n] - p_por_dot[n] * (animas_time_step + current_gtime - starting_gtime);
   }
 
@@ -3897,48 +3920,53 @@ int init_pmv_hyst(const Exo_DB *exo)
      */
     mn = first_matID_at_node(inode);
 
-    for (ipore = 0; ipore < pd_glob[mn]->Num_Porous_Shell_Eqn; ipore++) {
+    for (ipore = 0; ipore < goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn; ipore++) {
 
       /* Initialize switch trigger to OFF */
-      pmv_hyst->curve_switch[ipore][inode] = 0;
+      goma_ctx->fem.pmv_hyst->curve_switch[ipore][inode] = 0;
 
       /* Initialize number of curve switches from external field */
       i_num_switch_ext_field =
-          mp_glob[mn]->por_shell_cap_pres_hyst_num_switch_ext_field_index[ipore];
+          goma_ctx->fem.mp_glob[mn]->por_shell_cap_pres_hyst_num_switch_ext_field_index[ipore];
       if (i_num_switch_ext_field > -1) {
-        pmv_hyst->num_switch[ipore][inode] =
-            (int)efv->ext_fld_ndl_val[i_num_switch_ext_field][inode];
+        goma_ctx->fem.pmv_hyst->num_switch[ipore][inode] =
+            (int)goma_ctx->fem.efv->ext_fld_ndl_val[i_num_switch_ext_field][inode];
       }
 
       /* Initialize curve types from external field */
       i_curve_type_ext_field =
-          mp_glob[mn]->por_shell_cap_pres_hyst_curve_type_ext_field_index[ipore];
+          goma_ctx->fem.mp_glob[mn]->por_shell_cap_pres_hyst_curve_type_ext_field_index[ipore];
       if (i_curve_type_ext_field > -1) {
-        pmv_hyst->curve_type[ipore][inode] =
-            (int)efv->ext_fld_ndl_val[i_curve_type_ext_field][inode];
-        pmv_hyst->curve_type_old[ipore][inode] =
-            (int)efv->ext_fld_ndl_val[i_curve_type_ext_field][inode];
+        goma_ctx->fem.pmv_hyst->curve_type[ipore][inode] =
+            (int)goma_ctx->fem.efv->ext_fld_ndl_val[i_curve_type_ext_field][inode];
+        goma_ctx->fem.pmv_hyst->curve_type_old[ipore][inode] =
+            (int)goma_ctx->fem.efv->ext_fld_ndl_val[i_curve_type_ext_field][inode];
       }
 
       /*
        * Initialize imbibition minimum and drainage maximum saturation values from main curve
        * parameters specified in the material file
        */
-      pmv_hyst->sat_min_imbibe[ipore][inode] = mp_glob[mn]->u_PorousShellCapPres[ipore][0];
-      pmv_hyst->sat_max_drain[ipore][inode] = mp_glob[mn]->u_PorousShellCapPres[ipore][5];
+      goma_ctx->fem.pmv_hyst->sat_min_imbibe[ipore][inode] =
+          goma_ctx->fem.mp_glob[mn]->u_PorousShellCapPres[ipore][0];
+      goma_ctx->fem.pmv_hyst->sat_max_drain[ipore][inode] =
+          goma_ctx->fem.mp_glob[mn]->u_PorousShellCapPres[ipore][5];
 
       /* Finally initialize the saturation and capillary pressure values at switching points*/
-      if (pmv_hyst->curve_type[ipore][inode] == 1) /* If starting at draining curve */
+      if (goma_ctx->fem.pmv_hyst->curve_type[ipore][inode] == 1) /* If starting at draining curve */
       {
-        pmv_hyst->sat_switch[ipore][inode] =
-            mp_glob[mn]->u_PorousShellCapPres[0][4]; /* Switch at the minimum saturation */
-        pmv_hyst->cap_pres_switch[ipore][inode] =
+        goma_ctx->fem.pmv_hyst->sat_switch[ipore][inode] =
+            goma_ctx->fem.mp_glob[mn]
+                ->u_PorousShellCapPres[0][4]; /* Switch at the minimum saturation */
+        goma_ctx->fem.pmv_hyst->cap_pres_switch[ipore][inode] =
             1.0e-12; /* Set to arbitrary small capillary pressure */
-      } else if (pmv_hyst->curve_type[ipore][inode] == 0) /* If starting at imbibition curve */
+      } else if (goma_ctx->fem.pmv_hyst->curve_type[ipore][inode] ==
+                 0) /* If starting at imbibition curve */
       {
-        pmv_hyst->sat_switch[ipore][inode] =
-            mp_glob[mn]->u_PorousShellCapPres[0][1]; /* Switch at the maximum saturation */
-        pmv_hyst->cap_pres_switch[ipore][inode] =
+        goma_ctx->fem.pmv_hyst->sat_switch[ipore][inode] =
+            goma_ctx->fem.mp_glob[mn]
+                ->u_PorousShellCapPres[0][1]; /* Switch at the maximum saturation */
+        goma_ctx->fem.pmv_hyst->cap_pres_switch[ipore][inode] =
             1.0e12; /* Set to arbitrary large capillary pressure */
       }
     }
@@ -3970,24 +3998,24 @@ int advance_etch_area_ext_field(const int time_step, const int nn, const dbl del
   double etch_area_old, etch_depth_old, etch_area, etch_depth;
   double etch_rate;
 
-  i_etch_area = efv->ev_etch_area;
-  i_etch_depth = efv->ev_etch_depth;
+  i_etch_area = goma_ctx->fem.efv->ev_etch_area;
+  i_etch_depth = goma_ctx->fem.efv->ev_etch_depth;
 
   /* Loop over nodes in problem */
   for (n = 0; n < nn; n++) {
     /*
      * Load up concentration field - g/cm^3
      */
-    i_H2O = Index_Solution(n, MASS_FRACTION, 0, 0, -1, pg->imtrx);
-    i_KOH = Index_Solution(n, MASS_FRACTION, 1, 0, -1, pg->imtrx);
+    i_H2O = Index_Solution(n, MASS_FRACTION, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+    i_KOH = Index_Solution(n, MASS_FRACTION, 1, 0, -1, goma_ctx->fem.pg->imtrx);
     rho_H2O = x[i_H2O];
     rho_KOH = x[i_KOH];
 
     /*
      * Load up etch area and depth from external field
      */
-    etch_area_old = efv->ext_fld_ndl_val[i_etch_area][n];
-    etch_depth_old = efv->ext_fld_ndl_val[i_etch_depth][n];
+    etch_area_old = goma_ctx->fem.efv->ext_fld_ndl_val[i_etch_area][n];
+    etch_depth_old = goma_ctx->fem.efv->ext_fld_ndl_val[i_etch_depth][n];
 
     /*
      * Calculate etch rate
@@ -4004,8 +4032,8 @@ int advance_etch_area_ext_field(const int time_step, const int nn, const dbl del
       etch_area = 0.0;
       etch_depth = etch_depth_old;
     }
-    efv->ext_fld_ndl_val[i_etch_area][n] = etch_area;
-    efv->ext_fld_ndl_val[i_etch_depth][n] = etch_depth;
+    goma_ctx->fem.efv->ext_fld_ndl_val[i_etch_area][n] = etch_area;
+    goma_ctx->fem.efv->ext_fld_ndl_val[i_etch_depth][n] = etch_depth;
 
   } /* End of loop over nodes */
   return 0;
@@ -4043,28 +4071,28 @@ int evaluate_sat_hyst_criterion_nodal(const dbl *x_static,
      */
     mn = first_matID_at_node(inode);
 
-    for (ipore = 0; ipore < pd_glob[mn]->Num_Porous_Shell_Eqn; ipore++) {
+    for (ipore = 0; ipore < goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn; ipore++) {
 
-      num_switch = pmv_hyst->num_switch[ipore][inode];
+      num_switch = goma_ctx->fem.pmv_hyst->num_switch[ipore][inode];
 
       if (ipore == 0) {
-        ie = Index_Solution(inode, R_SHELL_SAT_1, 0, 0, -1, pg->imtrx);
+        ie = Index_Solution(inode, R_SHELL_SAT_1, 0, 0, -1, goma_ctx->fem.pg->imtrx);
         sat_node = x_static[ie];
         sat_dot_node = x_dot_static[ie];
       } else if (ipore == 1) {
-        ie = Index_Solution(inode, R_SHELL_SAT_2, 0, 0, -1, pg->imtrx);
+        ie = Index_Solution(inode, R_SHELL_SAT_2, 0, 0, -1, goma_ctx->fem.pg->imtrx);
         sat_node = x_static[ie];
         sat_dot_node = x_dot_static[ie];
       } else if (ipore == 2) {
-        ie = Index_Solution(inode, R_SHELL_SAT_3, 0, 0, -1, pg->imtrx);
+        ie = Index_Solution(inode, R_SHELL_SAT_3, 0, 0, -1, goma_ctx->fem.pg->imtrx);
         sat_node = x_static[ie];
         sat_dot_node = x_dot_static[ie];
       }
 
-      curve_type = pmv_hyst->curve_type[ipore][inode];
+      curve_type = goma_ctx->fem.pmv_hyst->curve_type[ipore][inode];
 
       /* Call the load_cap_pres with curve switch OFF */
-      pmv_hyst->curve_switch[ipore][inode] = 0;
+      goma_ctx->fem.pmv_hyst->curve_switch[ipore][inode] = 0;
       cap_pres_node = load_cap_pres(ipore, -1, inode, sat_node);
 
       /*If the accumulation is positive, above a certain
@@ -4078,12 +4106,12 @@ int evaluate_sat_hyst_criterion_nodal(const dbl *x_static,
 
       if ((sat_dot_node > 0.0) && (curve_type == 0)) {
         /* We were on imbibition curve, and will remain so */
-        pmv_hyst->curve_switch[ipore][inode] = 0;
+        goma_ctx->fem.pmv_hyst->curve_switch[ipore][inode] = 0;
       }
 
       else if ((sat_dot_node < 0.0) && (curve_type == 1)) {
         /* We were on a draining curve, and will remain so */
-        pmv_hyst->curve_switch[ipore][inode] = 0;
+        goma_ctx->fem.pmv_hyst->curve_switch[ipore][inode] = 0;
       }
 
       else if ((sat_dot_node > 0.0) && (curve_type == 1) && (num_switch < num_switch_max)) {
@@ -4092,21 +4120,21 @@ int evaluate_sat_hyst_criterion_nodal(const dbl *x_static,
          * potentially switch to a imbibition curve
          */
 
-        if (fabs(sat_dot_node) > mp_glob[mn]->u_PorousShellCapPres[0][9])
+        if (fabs(sat_dot_node) > goma_ctx->fem.mp_glob[mn]->u_PorousShellCapPres[0][9])
         /* If greater than tolerance, switch to imbibition */
         {
-          pmv_hyst->curve_switch[ipore][inode] = 1;
-          pmv_hyst->num_switch[ipore][inode] += 1;
+          goma_ctx->fem.pmv_hyst->curve_switch[ipore][inode] = 1;
+          goma_ctx->fem.pmv_hyst->num_switch[ipore][inode] += 1;
 
-          pmv_hyst->curve_type_old[ipore][inode] = 1;
-          pmv_hyst->curve_type[ipore][inode] = 0;
+          goma_ctx->fem.pmv_hyst->curve_type_old[ipore][inode] = 1;
+          goma_ctx->fem.pmv_hyst->curve_type[ipore][inode] = 0;
 
-          pmv_hyst->sat_switch[ipore][inode] = sat_node;
-          pmv_hyst->cap_pres_switch[ipore][inode] = cap_pres_node;
+          goma_ctx->fem.pmv_hyst->sat_switch[ipore][inode] = sat_node;
+          goma_ctx->fem.pmv_hyst->cap_pres_switch[ipore][inode] = cap_pres_node;
         } else
         /* Else, don't switch */
         {
-          pmv_hyst->curve_switch[ipore][inode] = 0;
+          goma_ctx->fem.pmv_hyst->curve_switch[ipore][inode] = 0;
         }
       }
 
@@ -4116,21 +4144,21 @@ int evaluate_sat_hyst_criterion_nodal(const dbl *x_static,
          * potentially switch to a draining curve
          */
 
-        if (fabs(sat_dot_node) > mp_glob[mn]->u_PorousShellCapPres[0][9])
+        if (fabs(sat_dot_node) > goma_ctx->fem.mp_glob[mn]->u_PorousShellCapPres[0][9])
         /* If greater than tolerance, switch to draining */
         {
-          pmv_hyst->curve_switch[ipore][inode] = 1;
-          pmv_hyst->num_switch[ipore][inode] += 1;
+          goma_ctx->fem.pmv_hyst->curve_switch[ipore][inode] = 1;
+          goma_ctx->fem.pmv_hyst->num_switch[ipore][inode] += 1;
 
-          pmv_hyst->curve_type_old[ipore][inode] = 0;
-          pmv_hyst->curve_type[ipore][inode] = 1;
+          goma_ctx->fem.pmv_hyst->curve_type_old[ipore][inode] = 0;
+          goma_ctx->fem.pmv_hyst->curve_type[ipore][inode] = 1;
 
-          pmv_hyst->sat_switch[ipore][inode] = sat_node;
-          pmv_hyst->cap_pres_switch[ipore][inode] = cap_pres_node;
+          goma_ctx->fem.pmv_hyst->sat_switch[ipore][inode] = sat_node;
+          goma_ctx->fem.pmv_hyst->cap_pres_switch[ipore][inode] = cap_pres_node;
         } else
         /* Else, don't switch */
         {
-          pmv_hyst->curve_switch[ipore][inode] = 0;
+          goma_ctx->fem.pmv_hyst->curve_switch[ipore][inode] = 0;
         }
       }
 
@@ -4138,18 +4166,18 @@ int evaluate_sat_hyst_criterion_nodal(const dbl *x_static,
 
       /* Update number of curve switches */
       i_num_switch_ext_field =
-          mp_glob[mn]->por_shell_cap_pres_hyst_num_switch_ext_field_index[ipore];
+          goma_ctx->fem.mp_glob[mn]->por_shell_cap_pres_hyst_num_switch_ext_field_index[ipore];
       if (i_num_switch_ext_field > -1) {
-        efv->ext_fld_ndl_val[i_num_switch_ext_field][inode] =
-            (double)pmv_hyst->num_switch[ipore][inode];
+        goma_ctx->fem.efv->ext_fld_ndl_val[i_num_switch_ext_field][inode] =
+            (double)goma_ctx->fem.pmv_hyst->num_switch[ipore][inode];
       }
 
       /* Update curve type */
       i_curve_type_ext_field =
-          mp_glob[mn]->por_shell_cap_pres_hyst_curve_type_ext_field_index[ipore];
+          goma_ctx->fem.mp_glob[mn]->por_shell_cap_pres_hyst_curve_type_ext_field_index[ipore];
       if (i_curve_type_ext_field > -1) {
-        efv->ext_fld_ndl_val[i_curve_type_ext_field][inode] =
-            (double)pmv_hyst->curve_type[ipore][inode];
+        goma_ctx->fem.efv->ext_fld_ndl_val[i_curve_type_ext_field][inode] =
+            (double)goma_ctx->fem.pmv_hyst->curve_type[ipore][inode];
       }
     }
   }

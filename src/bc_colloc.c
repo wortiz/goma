@@ -125,7 +125,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
   double d_kfunc[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
   double time_intermediate = time_value - theta * delta_t;
   /* time at which bc's are evaluated */
-  const double penalty = upd->strong_penalty;
+  const double penalty = goma_ctx->fem.upd->strong_penalty;
   VARIABLE_DESCRIPTION_STRUCT *vd;
   int doFullJac = 0;
   double nwall[3];
@@ -168,7 +168,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
        */
       find_nodal_stu(id, ielem_type, &xi[0], &xi[1], &xi[2]);
 
-      err = load_basis_functions(xi, bfd);
+      err = load_basis_functions(xi, goma_ctx->fem.bfd);
       GOMA_EH(err, "problem from load_basis_functions");
 
       err = beer_belly();
@@ -183,7 +183,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
       err = load_bf_mesh_derivs();
       GOMA_EH(err, "load_bf_mesh_derivs");
 
-      if (upd->AutoDiff) {
+      if (goma_ctx->fem.upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
         fill_ad_field_variables();
 #else
@@ -199,7 +199,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
           ielem, iconnect_ptr, num_local_nodes, ielem_dim - 1, (int)elem_side_bc->id_side,
           (int)elem_side_bc->num_nodes_on_side, (elem_side_bc->local_elem_node_id));
 
-      if (ielem_dim != 3 && ielem_dim == pd->Num_Dim) {
+      if (ielem_dim != 3 && ielem_dim == goma_ctx->fem.pd->Num_Dim) {
         calc_surf_tangent(ielem, iconnect_ptr, num_local_nodes, ielem_dim - 1,
                           (int)elem_side_bc->num_nodes_on_side, (elem_side_bc->local_elem_node_id));
       }
@@ -207,14 +207,15 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
       /*
        * Load up porous media variables and properties, if needed
        */
-      if (mp->PorousMediaType == POROUS_UNSATURATED || mp->PorousMediaType == POROUS_TWO_PHASE ||
-          mp->PorousMediaType == POROUS_SATURATED) {
+      if (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+          goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE ||
+          goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED) {
         err = load_porous_properties();
         GOMA_EH(err, "load_porous_properties");
       }
 
       if (TimeIntegration != STEADY) {
-        if (mp->SurfaceTensionModel != CONSTANT) {
+        if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
           load_surface_tension(dsigma_dx);
           if (neg_elem_volume)
             return (status);
@@ -223,7 +224,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
 
       if (TimeIntegration != STEADY) {
         for (icount = 0; icount < ielem_dim; icount++) {
-          x_dot[icount] = fv_dot->x[icount];
+          x_dot[icount] = goma_ctx->fem.fv_dot->x[icount];
         }
       } else {
         for (icount = 0; icount < ielem_dim; icount++) {
@@ -255,8 +256,8 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
            * (i.e. no other overriding Dirichlet conditions,
            * And find the global unknown number for applying this condition
            */
-          index_eq =
-              bc_eqn_index(id, I, bc_input_id, ei[pg->imtrx]->mn, 0, &eqn, &matID_apply, &vd);
+          index_eq = bc_eqn_index(id, I, bc_input_id, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn,
+                                  0, &eqn, &matID_apply, &vd);
           if (index_eq >= 0) {
 
             /* initialize the general function to zero */
@@ -447,7 +448,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               func += (BC_Types[bc_input_id].BC_Data_Float[4] * t +
                        BC_Types[bc_input_id].BC_Data_Float[5] * t * t +
                        BC_Types[bc_input_id].BC_Data_Float[6] * t * t * t);
-              if (af->Assemble_LSA_Mass_Matrix)
+              if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
                 GOMA_EH(GOMA_ERROR, "LSA is not currently compatible with MOVING_PLANE_BC");
             } break;
 
@@ -526,8 +527,9 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             case U_VES23_7_PARABOLA_BC:
             case U_VES33_7_PARABOLA_BC:
               var_flag = BC_Types[bc_input_id].desc->equation;
-              f_vestress_parabola(var_flag, ielem_dim, U_PARABOLA_BC, ei[pg->imtrx]->mn, &func,
-                                  d_func, BC_Types[bc_input_id].u_BC, time_intermediate,
+              f_vestress_parabola(var_flag, ielem_dim, U_PARABOLA_BC,
+                                  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn, &func, d_func,
+                                  BC_Types[bc_input_id].u_BC, time_intermediate,
                                   BC_Types[bc_input_id].len_u_BC);
               break;
 
@@ -547,7 +549,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             case GD_TIME_BC:
               err = evaluate_time_func(time_intermediate, &f_time, bc_input_id);
               GOMA_EH(err, "Problems in evaluating time function");
-              if (af->Assemble_LSA_Mass_Matrix)
+              if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
                 GOMA_EH(GOMA_ERROR, "LSA is not currently compatible with GD_TIME_BC");
               break;
 
@@ -601,15 +603,21 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               int dof_map_curv[MDE] = {-1};
               int dof_map_tens[MDE] = {-1};
               /* Populate dof_map arrays */
-              for (ivar = 0; ivar < ei[pg->imtrx]->dof[VELOCITY1]; ivar++) {
-                inode = ei[pg->imtrx]->gnn_list[VELOCITY1][ivar];
-                for (jvar = 0; jvar < ei[pg->imtrx]->dof[SHELL_CURVATURE]; jvar++) {
-                  if (inode == ei[pg->imtrx]->gnn_list[SHELL_CURVATURE][jvar]) {
+              for (ivar = 0; ivar < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
+                   ivar++) {
+                inode = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[VELOCITY1][ivar];
+                for (jvar = 0;
+                     jvar < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SHELL_CURVATURE];
+                     jvar++) {
+                  if (inode ==
+                      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[SHELL_CURVATURE][jvar]) {
                     dof_map_curv[ivar] = jvar;
                   }
                 }
-                for (jvar = 0; jvar < ei[pg->imtrx]->dof[SHELL_TENSION]; jvar++) {
-                  if (inode == ei[pg->imtrx]->gnn_list[SHELL_TENSION][jvar]) {
+                for (jvar = 0; jvar < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SHELL_TENSION];
+                     jvar++) {
+                  if (inode ==
+                      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[SHELL_TENSION][jvar]) {
                     dof_map_tens[ivar] = jvar;
                   }
                 }
@@ -673,7 +681,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
                * one entry for vector conditions like capillary */
               memset(kfunc, 0, DIM * sizeof(double));
               memset(d_kfunc, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
-              contact_flag = (ls != NULL);
+              contact_flag = (goma_ctx->fem.ls != NULL);
               fvelo_normal_bc(kfunc, d_kfunc, BC_Types[bc_input_id].BC_Data_Float[0], contact_flag,
                               x_dot, theta, delta_t, (int)BC_Types[bc_input_id].BC_Name,
                               BC_Types[bc_input_id].BC_Data_Float[1],
@@ -704,7 +712,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               fgamma1_deriv_bc(kfunc, d_kfunc, BC_Types[bc_input_id].BC_Data_Float[0]);
               func = kfunc[0];
               doFullJac = 1;
-              el1 = ei[pg->imtrx]->ielem;
+              el1 = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
               nf = num_elem_friends[el1];
               if (nf == 0) {
                 GOMA_EH(GOMA_ERROR, "no friends");
@@ -720,7 +728,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               fgamma2_deriv_bc(kfunc, d_kfunc, BC_Types[bc_input_id].BC_Data_Float[0]);
               func = kfunc[0];
               doFullJac = 1;
-              el1 = ei[pg->imtrx]->ielem;
+              el1 = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
               nf = num_elem_friends[el1];
               if (nf == 0) {
                 GOMA_EH(GOMA_ERROR, "no friends");
@@ -755,12 +763,12 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
              * Collocated boundary conditions are always applied on the first
              * dof at a node. They are not discontinuous variables friendly
              */
-            ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
+            ldof_eqn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[eqn][id];
 
             if (eqn == R_MASS) {
               ieqn = MAX_PROB_EQN + BC_Types[bc_input_id].species_eq;
             } else {
-              ieqn = upd->ep[pg->imtrx][eqn];
+              ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
               if (goma_automatic_rotations.automatic_rotations &&
                   (BC_Types[bc_input_id].desc->rotate != NO_ROT)) {
                 int offset = offset_from_rotated_equation(BC_Types[bc_input_id].desc->equation);
@@ -773,8 +781,8 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             }
 
             if (ldof_eqn != -1) {
-              lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += penalty * func;
-              lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] *= f_time;
+              goma_ctx->fem.lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += penalty * func;
+              goma_ctx->fem.lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] *= f_time;
 
               /*
                * add sensitivities into matrix
@@ -783,10 +791,10 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
                *      loop over all dofs in element)
                *  - add into matrix
                */
-              if (af->Assemble_Jacobian) {
+              if (goma_ctx->fem.af->Assemble_Jacobian) {
 
                 for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-                  pvar = upd->vp[pg->imtrx][var];
+                  pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                   if (pvar != -1 && (BC_Types[bc_input_id].desc->sens[var] || 1)) {
                     /*
                      * Warning!!!!!!!!!!!!!!!!!!!!!!!
@@ -801,30 +809,34 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
                        * pointer to this entry *
                        * if it exists, add sens into matrix
                        */
-                      if (Dolphin[pg->imtrx][I][var] > 0) {
+                      if (Dolphin[goma_ctx->fem.pg->imtrx][I][var] > 0) {
                         if (!doFullJac) {
-                          ldof_var = ei[pg->imtrx]->ln_to_first_dof[var][id];
+                          ldof_var =
+                              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[var][id];
                           if (ldof_var != -1) {
-                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] +=
+                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] +=
                                 penalty * d_func[var];
-                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] *= f_time;
+                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] *=
+                                f_time;
                           }
                         } else {
 
                           if (doMeshMapping &&
                               (var == MESH_DISPLACEMENT1 || var == MESH_DISPLACEMENT2 ||
                                var == MESH_DISPLACEMENT3)) {
-                            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                                 j++) {
                               jk = dof_map[j];
-                              lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, jk)] +=
+                              goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, jk)] +=
                                   penalty * d_kfunc[0][var][j];
-                              lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, jk)] *= f_time;
+                              goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, jk)] *= f_time;
                             }
                           } else {
-                            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                              lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                                 j++) {
+                              goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
                                   penalty * d_kfunc[0][var][j];
-                              lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] *= f_time;
+                              goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] *= f_time;
                             }
                           }
                         }
@@ -833,36 +845,39 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
                          *   if variable is not defined at this node, loop
                          *   over all dof for this variable in this element
                          */
-                        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                           // I'm not sure this phi_j is ever going to be non-zero with the Dolphin
                           // check above check if we have a bf available before trying to use it
-                          if (bf[var]) {
-                            phi_j = bf[var]->phi[j];
-                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                          if (goma_ctx->fem.bf[var]) {
+                            phi_j = goma_ctx->fem.bf[var]->phi[j];
+                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
                                 penalty * d_func[var] * phi_j;
-                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] *= f_time;
+                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] *= f_time;
                           }
                         }
                       }
                     } else {
-                      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+                      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
                         pvar = MAX_PROB_VAR + w;
-                        if (Dolphin[pg->imtrx][I][var] > 0) {
-                          ldof_var = ei[pg->imtrx]->ln_to_first_dof[var][id];
+                        if (Dolphin[goma_ctx->fem.pg->imtrx][I][var] > 0) {
+                          ldof_var =
+                              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[var][id];
                           if (ldof_var != -1) {
-                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] +=
+                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] +=
                                 penalty * d_func[MAX_VARIABLE_TYPES + w];
-                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] *= f_time;
+                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] *=
+                                f_time;
                           }
                         }
                         /* if variable is not defined at this node,
                          * loop over all dof in this element */
                         else {
-                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                            phi_j = bf[var]->phi[j];
-                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                               j++) {
+                            phi_j = goma_ctx->fem.bf[var]->phi[j];
+                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
                                 penalty * d_func[MAX_VARIABLE_TYPES + w] * phi_j;
-                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] *= f_time;
+                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] *= f_time;
                           }
                         }
                       } /* end of loop over species */
@@ -901,13 +916,13 @@ void fplane(int ielem_dim,
   /**************************** EXECUTION BEGINS *******************************/
   int i;
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
 
   *func = (double)aa[3];
   for (i = 0; i < ielem_dim; i++) {
     d_func[MESH_DISPLACEMENT1 + i] = aa[i];
-    *func += (double)aa[i] * fv->x[i];
+    *func += (double)aa[i] * goma_ctx->fem.fv->x[i];
   }
 
 } /* END of routine fplane                                                   */
@@ -925,7 +940,7 @@ void f_fillet(const int ielem_dim,
   double cham_ang = -1., cham_rotn = 0., gamma = 0.;
   int iside = 0, chamfer = 0, i, dim = 2;
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
 
   if (num_const < 5) {
@@ -969,7 +984,7 @@ void f_fillet(const int ielem_dim,
 
   /**   compute angle of point on curve from arc center **/
 
-  theta = atan2(fv->x[1] - center[1], fv->x[0] - center[0]);
+  theta = atan2(goma_ctx->fem.fv->x[1] - center[1], goma_ctx->fem.fv->x[0] - center[0]);
   theta = theta > side_th[1] - 1.5 * M_PIE ? theta : theta + 2 * M_PIE;
   theta_mid = atan2(center[1] - pt[1], center[0] - pt[0]);
   theta_side[0] = side_th[0] - 0.5 * M_PIE;
@@ -987,22 +1002,26 @@ void f_fillet(const int ielem_dim,
 
   if ((theta_side[0] - gamma) <= theta && theta <= theta_avg) {
     if (iside == 1) {
-      *func = SQUARE(fv->x[0] - circ[0]) + SQUARE(fv->x[1] - circ[1]) - SQUARE(siderad);
-      d_func[MESH_DISPLACEMENT1] = 2. * (fv->x[0] - circ[0]);
-      d_func[MESH_DISPLACEMENT2] = 2. * (fv->x[1] - circ[1]);
+      *func = SQUARE(goma_ctx->fem.fv->x[0] - circ[0]) + SQUARE(goma_ctx->fem.fv->x[1] - circ[1]) -
+              SQUARE(siderad);
+      d_func[MESH_DISPLACEMENT1] = 2. * (goma_ctx->fem.fv->x[0] - circ[0]);
+      d_func[MESH_DISPLACEMENT2] = 2. * (goma_ctx->fem.fv->x[1] - circ[1]);
     } else {
-      *func = (fv->x[1] - pt[1]) * cos(side_th[0]) - (fv->x[0] - pt[0]) * sin(side_th[0]);
+      *func = (goma_ctx->fem.fv->x[1] - pt[1]) * cos(side_th[0]) -
+              (goma_ctx->fem.fv->x[0] - pt[0]) * sin(side_th[0]);
       d_func[MESH_DISPLACEMENT1] = -sin(side_th[0]);
       d_func[MESH_DISPLACEMENT2] = cos(side_th[0]);
     }
 
   } else if (theta_avg <= theta && (theta - 0.5 * M_PIE) <= (theta_side[1] + 0 * gamma)) {
     if (iside == 2) {
-      *func = SQUARE(fv->x[0] - circ[0]) + SQUARE(fv->x[1] - circ[1]) - SQUARE(siderad);
-      d_func[MESH_DISPLACEMENT1] = 2. * (fv->x[0] - circ[0]);
-      d_func[MESH_DISPLACEMENT2] = 2. * (fv->x[1] - circ[1]);
+      *func = SQUARE(goma_ctx->fem.fv->x[0] - circ[0]) + SQUARE(goma_ctx->fem.fv->x[1] - circ[1]) -
+              SQUARE(siderad);
+      d_func[MESH_DISPLACEMENT1] = 2. * (goma_ctx->fem.fv->x[0] - circ[0]);
+      d_func[MESH_DISPLACEMENT2] = 2. * (goma_ctx->fem.fv->x[1] - circ[1]);
     } else {
-      *func = (fv->x[1] - pt[1]) * cos(side_th[1]) - (fv->x[0] - pt[0]) * sin(side_th[1]);
+      *func = (goma_ctx->fem.fv->x[1] - pt[1]) * cos(side_th[1]) -
+              (goma_ctx->fem.fv->x[0] - pt[0]) * sin(side_th[1]);
       d_func[MESH_DISPLACEMENT1] = -sin(side_th[1]);
       d_func[MESH_DISPLACEMENT2] = cos(side_th[1]);
     }
@@ -1010,14 +1029,15 @@ void f_fillet(const int ielem_dim,
   } else {
     if (chamfer) {
       tmp = theta_mid + cham_rotn;
-      *func = (fv->x[1] - center[1]) * sin(tmp) + (fv->x[0] - center[0]) * cos(tmp) +
-              rad * sin(alpha - cham_rotn);
+      *func = (goma_ctx->fem.fv->x[1] - center[1]) * sin(tmp) +
+              (goma_ctx->fem.fv->x[0] - center[0]) * cos(tmp) + rad * sin(alpha - cham_rotn);
       d_func[MESH_DISPLACEMENT1] = cos(tmp);
       d_func[MESH_DISPLACEMENT2] = sin(tmp);
     } else {
-      *func = SQUARE(fv->x[0] - center[0]) + SQUARE(fv->x[1] - center[1]) - SQUARE(rad);
-      d_func[MESH_DISPLACEMENT1] = 2. * (fv->x[0] - center[0]);
-      d_func[MESH_DISPLACEMENT2] = 2. * (fv->x[1] - center[1]);
+      *func = SQUARE(goma_ctx->fem.fv->x[0] - center[0]) +
+              SQUARE(goma_ctx->fem.fv->x[1] - center[1]) - SQUARE(rad);
+      d_func[MESH_DISPLACEMENT1] = 2. * (goma_ctx->fem.fv->x[0] - center[0]);
+      d_func[MESH_DISPLACEMENT2] = 2. * (goma_ctx->fem.fv->x[1] - center[1]);
     }
   }
 
@@ -1040,7 +1060,7 @@ void f_double_rad(const int ielem_dim,
   double beta = 0, xcirc, ycirc, dist1, dist2, dist_mid;
   int is_curved = 0;
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
 
   if (num_const < 8)
@@ -1104,49 +1124,55 @@ fprintf(stderr,"circle %g %g %g %g\n",xcirc,ycirc,xcen2, ycen2);
 
   /**   compute angle of point on curve from arc center **/
 
-  th1 = atan2(fv->x[1] - ycen1, fv->x[0] - xcen1);
-  th2 = atan2(fv->x[1] - ycen2, fv->x[0] - xcen2);
+  th1 = atan2(goma_ctx->fem.fv->x[1] - ycen1, goma_ctx->fem.fv->x[0] - xcen1);
+  th2 = atan2(goma_ctx->fem.fv->x[1] - ycen2, goma_ctx->fem.fv->x[0] - xcen2);
   th2t = th2 > 0.0 ? th2 : th2 + 2 * M_PIE;
 
   /**  use different f depending on theta  **/
 
   if ((theta1 - 0.5 * M_PIE) <= th1 && th1 <= (theta1 + alpha1)) {
-    *func = (fv->x[1] - ypt1) * cos(theta1) - (fv->x[0] - xpt1) * sin(theta1);
+    *func = (goma_ctx->fem.fv->x[1] - ypt1) * cos(theta1) -
+            (goma_ctx->fem.fv->x[0] - xpt1) * sin(theta1);
     d_func[MESH_DISPLACEMENT1] = -sin(theta1);
     d_func[MESH_DISPLACEMENT2] = cos(theta1);
     /*fprintf(stderr,"DR case 1 %g %g %g %g %g %g\n",*func,fv->x[0],fv->x[1],th1,th2,th2t);*/
   } else if ((theta2 - alpha2) <= th2t && (th2t - 0.5 * M_PIE) <= theta2) {
-    *func = (fv->x[1] - ypt2) * cos(theta2) - (fv->x[0] - xpt2) * sin(theta2);
+    *func = (goma_ctx->fem.fv->x[1] - ypt2) * cos(theta2) -
+            (goma_ctx->fem.fv->x[0] - xpt2) * sin(theta2);
     d_func[MESH_DISPLACEMENT1] = -sin(theta2);
     d_func[MESH_DISPLACEMENT2] = cos(theta2);
     /*fprintf(stderr,"DR case 2 %g %g %g %g %g %g\n",*func,fv->x[0],fv->x[1],th1,th2,th2t);*/
   } else if (theta2m <= (th1 + 0.5 * M_PIE - beta) && th1 <= (theta1 - 0.5 * M_PIE)) {
-    *func = SQUARE(fv->x[0] - xcen1) + SQUARE(fv->x[1] - ycen1) - SQUARE(rad1);
-    d_func[MESH_DISPLACEMENT1] = 2. * (fv->x[0] - xcen1);
-    d_func[MESH_DISPLACEMENT2] = 2. * (fv->x[1] - ycen1);
+    *func = SQUARE(goma_ctx->fem.fv->x[0] - xcen1) + SQUARE(goma_ctx->fem.fv->x[1] - ycen1) -
+            SQUARE(rad1);
+    d_func[MESH_DISPLACEMENT1] = 2. * (goma_ctx->fem.fv->x[0] - xcen1);
+    d_func[MESH_DISPLACEMENT2] = 2. * (goma_ctx->fem.fv->x[1] - ycen1);
     /*fprintf(stderr,"DR case 3 %g %g %g %g %g %g\n",*func,fv->x[0],fv->x[1],th1,th2,th2t);*/
   } else if ((theta2m - 0.5 * M_PIE - beta) <= th2 &&
              ((th1 + 0.5 * M_PIE - beta) <= theta2m ||
               (th1 + 0.5 * M_PIE - beta) <= (theta1m - M_PIE))) {
     if (is_curved) {
-      *func = SQUARE(fv->x[0] - xcirc) + SQUARE(fv->x[1] - ycirc) - SQUARE(rad_curv);
-      d_func[MESH_DISPLACEMENT1] = 2. * (fv->x[0] - xcirc);
-      d_func[MESH_DISPLACEMENT2] = 2. * (fv->x[1] - ycirc);
+      *func = SQUARE(goma_ctx->fem.fv->x[0] - xcirc) + SQUARE(goma_ctx->fem.fv->x[1] - ycirc) -
+              SQUARE(rad_curv);
+      d_func[MESH_DISPLACEMENT1] = 2. * (goma_ctx->fem.fv->x[0] - xcirc);
+      d_func[MESH_DISPLACEMENT2] = 2. * (goma_ctx->fem.fv->x[1] - ycirc);
     } else {
-      *func = (fv->x[1] - ypt1) * cos(theta1m) - (fv->x[0] - xpt1) * sin(theta1m);
+      *func = (goma_ctx->fem.fv->x[1] - ypt1) * cos(theta1m) -
+              (goma_ctx->fem.fv->x[0] - xpt1) * sin(theta1m);
       d_func[MESH_DISPLACEMENT1] = -sin(theta1m);
       d_func[MESH_DISPLACEMENT2] = cos(theta1m);
     }
     /*fprintf(stderr,"DR case 4 %g %g %g %g %g %g %g
      * %g\n",*func,fv->x[0],fv->x[1],th1,th2,th2t,theta1m,theta2m);*/
   } else if ((th2t - 0.5 * M_PIE) >= theta2 && (theta2m - 0.5 * M_PIE - beta) >= th2) {
-    *func = SQUARE(fv->x[0] - xcen2) + SQUARE(fv->x[1] - ycen2) - SQUARE(rad2);
-    d_func[MESH_DISPLACEMENT1] = 2. * (fv->x[0] - xcen2);
-    d_func[MESH_DISPLACEMENT2] = 2. * (fv->x[1] - ycen2);
+    *func = SQUARE(goma_ctx->fem.fv->x[0] - xcen2) + SQUARE(goma_ctx->fem.fv->x[1] - ycen2) -
+            SQUARE(rad2);
+    d_func[MESH_DISPLACEMENT1] = 2. * (goma_ctx->fem.fv->x[0] - xcen2);
+    d_func[MESH_DISPLACEMENT2] = 2. * (goma_ctx->fem.fv->x[1] - ycen2);
     /*fprintf(stderr,"DR case 5 %g %g %g %g %g %g\n",*func,fv->x[0],fv->x[1],th1,th2,th2t);*/
   } else {
-    fprintf(stderr, "Double Rad case not found... %g %g %g %g %g\n", fv->x[0], fv->x[1], th1, th2,
-            th2t);
+    fprintf(stderr, "Double Rad case not found... %g %g %g %g %g\n", goma_ctx->fem.fv->x[0],
+            goma_ctx->fem.fv->x[1], th1, th2, th2t);
   }
 
   if (ielem_dim == 3)
@@ -1240,7 +1266,7 @@ void f_double_fillet(const int ielem_dim,
   double atol = 1.0e-9;
   int is_curved = 0;
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
 
   if (num_const < 8)
@@ -1321,8 +1347,8 @@ fprintf(stderr,"circle %g %g %g %g\n",xcirc,ycirc,xcen2, ycen2);
 
   /**   compute angle of point on curve from arc center **/
 
-  th1 = atan2(fv->x[1] - ycen1, fv->x[0] - xcen1);
-  th2 = atan2(fv->x[1] - ycen2, fv->x[0] - xcen2);
+  th1 = atan2(goma_ctx->fem.fv->x[1] - ycen1, goma_ctx->fem.fv->x[0] - xcen1);
+  th2 = atan2(goma_ctx->fem.fv->x[1] - ycen2, goma_ctx->fem.fv->x[0] - xcen2);
   th2t = th2 > 0.0 ? th2 : th2 + 2 * M_PIE;
 
   if (sqrt((theta1 - 0.5 * M_PIE) * (theta1 - 0.5 * M_PIE)) < atol ||
@@ -1349,56 +1375,65 @@ fprintf(stderr,"circle %g %g %g %g\n",xcirc,ycirc,xcen2, ycen2);
   /**  use different f depending on theta  **/
 
   if ((theta1 - 0.5 * M_PIE) <= th1 && (th1 <= th1ub)) {
-    *func = (fv->x[1] - ypt1) * cos(theta1) - (fv->x[0] - xpt1) * sin(theta1);
+    *func = (goma_ctx->fem.fv->x[1] - ypt1) * cos(theta1) -
+            (goma_ctx->fem.fv->x[0] - xpt1) * sin(theta1);
     d_func[MESH_DISPLACEMENT1] = -sin(theta1);
     d_func[MESH_DISPLACEMENT2] = cos(theta1);
     /*fprintf(stderr,"DR case 1 %g %g %g %g %g %g\n",*func,fv->x[0],fv->x[1],th1,th2,th2t);*/
   } else if ((theta2 - alpha2) <= th2t && (th2t - 0.5 * M_PIE) <= theta2) {
-    *func = (fv->x[1] - ypt2) * cos(theta2) - (fv->x[0] - xpt2) * sin(theta2);
+    *func = (goma_ctx->fem.fv->x[1] - ypt2) * cos(theta2) -
+            (goma_ctx->fem.fv->x[0] - xpt2) * sin(theta2);
     d_func[MESH_DISPLACEMENT1] = -sin(theta2);
     d_func[MESH_DISPLACEMENT2] = cos(theta2);
     /*fprintf(stderr,"DR case 2 %g %g %g %g %g %g\n",*func,fv->x[0],fv->x[1],th1,th2,th2t);*/
   } else if (theta2m <= (th1 + 0.5 * M_PIE - beta) && th1 <= (theta1 - 0.5 * M_PIE)) {
-    *func = SQUARE(fv->x[0] - xcen1) + SQUARE(fv->x[1] - ycen1) - SQUARE(rad1);
-    d_func[MESH_DISPLACEMENT1] = 2. * (fv->x[0] - xcen1);
-    d_func[MESH_DISPLACEMENT2] = 2. * (fv->x[1] - ycen1);
+    *func = SQUARE(goma_ctx->fem.fv->x[0] - xcen1) + SQUARE(goma_ctx->fem.fv->x[1] - ycen1) -
+            SQUARE(rad1);
+    d_func[MESH_DISPLACEMENT1] = 2. * (goma_ctx->fem.fv->x[0] - xcen1);
+    d_func[MESH_DISPLACEMENT2] = 2. * (goma_ctx->fem.fv->x[1] - ycen1);
     /*fprintf(stderr,"DR case 3 %g %g %g %g %g %g\n",*func,fv->x[0],fv->x[1],th1,th2,th2t);*/
   } else if ((theta2m - 0.5 * M_PIE - beta) <= th2 &&
              ((th1 + 0.5 * M_PIE - beta) <= theta2m ||
               (th1 + 0.5 * M_PIE - beta) <= (theta1m - M_PIE))) {
     if (is_curved) {
-      *func = SQUARE(fv->x[0] - xcirc) + SQUARE(fv->x[1] - ycirc) - SQUARE(rad_curv);
-      d_func[MESH_DISPLACEMENT1] = 2. * (fv->x[0] - xcirc);
-      d_func[MESH_DISPLACEMENT2] = 2. * (fv->x[1] - ycirc);
+      *func = SQUARE(goma_ctx->fem.fv->x[0] - xcirc) + SQUARE(goma_ctx->fem.fv->x[1] - ycirc) -
+              SQUARE(rad_curv);
+      d_func[MESH_DISPLACEMENT1] = 2. * (goma_ctx->fem.fv->x[0] - xcirc);
+      d_func[MESH_DISPLACEMENT2] = 2. * (goma_ctx->fem.fv->x[1] - ycirc);
     } else {
-      *func = (fv->x[1] - ypt1) * cos(theta1m) - (fv->x[0] - xpt1) * sin(theta1m);
+      *func = (goma_ctx->fem.fv->x[1] - ypt1) * cos(theta1m) -
+              (goma_ctx->fem.fv->x[0] - xpt1) * sin(theta1m);
       d_func[MESH_DISPLACEMENT1] = -sin(theta1m);
       d_func[MESH_DISPLACEMENT2] = cos(theta1m);
     }
     /*fprintf(stderr,"DR case 4 %g %g %g %g %g %g %g
      * %g\n",*func,fv->x[0],fv->x[1],th1,th2,th2t,theta1m,theta2m);*/
   } else if ((th2t - 0.5 * M_PIE) >= theta2 && ((theta2m - 0.5 * M_PIE - beta) >= th2)) {
-    *func = SQUARE(fv->x[0] - xcen2) + SQUARE(fv->x[1] - ycen2) - SQUARE(rad2);
-    d_func[MESH_DISPLACEMENT1] = 2. * (fv->x[0] - xcen2);
-    d_func[MESH_DISPLACEMENT2] = 2. * (fv->x[1] - ycen2);
+    *func = SQUARE(goma_ctx->fem.fv->x[0] - xcen2) + SQUARE(goma_ctx->fem.fv->x[1] - ycen2) -
+            SQUARE(rad2);
+    d_func[MESH_DISPLACEMENT1] = 2. * (goma_ctx->fem.fv->x[0] - xcen2);
+    d_func[MESH_DISPLACEMENT2] = 2. * (goma_ctx->fem.fv->x[1] - ycen2);
     /*fprintf(stderr,"DR case 5 %g %g %g %g %g %g\n",*func,fv->x[0],fv->x[1],th1,th2,th2t);*/
   } else {
     if (s2 <= th2 && th2 <= f2) {
-      *func = SQUARE(fv->x[0] - xcen2) + SQUARE(fv->x[1] - ycen2) - SQUARE(rad2);
-      d_func[MESH_DISPLACEMENT1] = 2. * (fv->x[0] - xcen2);
-      d_func[MESH_DISPLACEMENT2] = 2. * (fv->x[1] - ycen2);
+      *func = SQUARE(goma_ctx->fem.fv->x[0] - xcen2) + SQUARE(goma_ctx->fem.fv->x[1] - ycen2) -
+              SQUARE(rad2);
+      d_func[MESH_DISPLACEMENT1] = 2. * (goma_ctx->fem.fv->x[0] - xcen2);
+      d_func[MESH_DISPLACEMENT2] = 2. * (goma_ctx->fem.fv->x[1] - ycen2);
       /*fprintf(stderr,"DR case 5 %g %g %g %g %g %g\n",*func,fv->x[0],fv->x[1],th1,th2,th2t);*/
     } else if (s1 <= th1 && th1 <= f1) {
-      *func = (fv->x[1] - ypt1) * cos(theta1m) - (fv->x[0] - xpt1) * sin(theta1m);
+      *func = (goma_ctx->fem.fv->x[1] - ypt1) * cos(theta1m) -
+              (goma_ctx->fem.fv->x[0] - xpt1) * sin(theta1m);
       d_func[MESH_DISPLACEMENT1] = -sin(theta1m);
       d_func[MESH_DISPLACEMENT2] = cos(theta1m);
     } else if (f1 <= th1 && th1 <= th1ub) {
-      *func = (fv->x[1] - ypt1) * cos(theta1) - (fv->x[0] - xpt1) * sin(theta1);
+      *func = (goma_ctx->fem.fv->x[1] - ypt1) * cos(theta1) -
+              (goma_ctx->fem.fv->x[0] - xpt1) * sin(theta1);
       d_func[MESH_DISPLACEMENT1] = -sin(theta1);
       d_func[MESH_DISPLACEMENT2] = cos(theta1);
     } else {
-      fprintf(stderr, "Double Rad case not found... %g %g %g %g %g\n", fv->x[0], fv->x[1], th1, th2,
-              th2t);
+      fprintf(stderr, "Double Rad case not found... %g %g %g %g %g\n", goma_ctx->fem.fv->x[0],
+              goma_ctx->fem.fv->x[1], th1, th2, th2t);
     }
   }
 
@@ -1418,7 +1453,7 @@ void f_double_fillet_geom(const int ielem_dim,
 {
   /**************************** EXECUTION BEGINS *******************************/
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
 
   if (num_const < 8)
@@ -1489,49 +1524,56 @@ void f_double_fillet_geom(const int ielem_dim,
   dbl fdy[5];
 
   // fillet 1
-  fdist[0] = radius_1 - sqrt(SQUARE(fv->x[0] - xcen1) + SQUARE(fv->x[1] - ycen1));
-  fdx[0] = -(fv->x[0] - xcen1) / sqrt(SQUARE(fv->x[0] - xcen1) + SQUARE(fv->x[1] - ycen1));
-  fdy[0] = -(fv->x[1] - ycen1) / sqrt(SQUARE(fv->x[0] - xcen1) + SQUARE(fv->x[1] - ycen1));
+  fdist[0] = radius_1 -
+             sqrt(SQUARE(goma_ctx->fem.fv->x[0] - xcen1) + SQUARE(goma_ctx->fem.fv->x[1] - ycen1));
+  fdx[0] = -(goma_ctx->fem.fv->x[0] - xcen1) /
+           sqrt(SQUARE(goma_ctx->fem.fv->x[0] - xcen1) + SQUARE(goma_ctx->fem.fv->x[1] - ycen1));
+  fdy[0] = -(goma_ctx->fem.fv->x[1] - ycen1) /
+           sqrt(SQUARE(goma_ctx->fem.fv->x[0] - xcen1) + SQUARE(goma_ctx->fem.fv->x[1] - ycen1));
 
   // fillet 2
-  fdist[1] = radius_2 - sqrt(SQUARE(fv->x[0] - xcen2) + SQUARE(fv->x[1] - ycen2));
-  fdx[1] = -(fv->x[0] - xcen2) / sqrt(SQUARE(fv->x[0] - xcen2) + SQUARE(fv->x[1] - ycen2));
-  fdy[1] = -(fv->x[1] - ycen2) / sqrt(SQUARE(fv->x[0] - xcen2) + SQUARE(fv->x[1] - ycen2));
+  fdist[1] = radius_2 -
+             sqrt(SQUARE(goma_ctx->fem.fv->x[0] - xcen2) + SQUARE(goma_ctx->fem.fv->x[1] - ycen2));
+  fdx[1] = -(goma_ctx->fem.fv->x[0] - xcen2) /
+           sqrt(SQUARE(goma_ctx->fem.fv->x[0] - xcen2) + SQUARE(goma_ctx->fem.fv->x[1] - ycen2));
+  fdy[1] = -(goma_ctx->fem.fv->x[1] - ycen2) /
+           sqrt(SQUARE(goma_ctx->fem.fv->x[0] - xcen2) + SQUARE(goma_ctx->fem.fv->x[1] - ycen2));
 
   // main slope
   // check if point is on the main slope
-  fdist[2] = (fv->x[1] - pt1_y) * cos(sangle) + (fv->x[0] - pt1_x) * sin(sangle);
+  fdist[2] = (goma_ctx->fem.fv->x[1] - pt1_y) * cos(sangle) +
+             (goma_ctx->fem.fv->x[0] - pt1_x) * sin(sangle);
   fdx[2] = sin(sangle);
   fdy[2] = cos(sangle);
 
   // edge 1
   dbl slope_edge = atan2(start_edge[1] - pt1_y, start_edge[0] - pt1_x);
-  fdist[3] = ((fv->x[1] - start_edge[1]) * cos(slope_edge)) +
-             ((fv->x[0] - start_edge[0]) * sin(slope_edge));
+  fdist[3] = ((goma_ctx->fem.fv->x[1] - start_edge[1]) * cos(slope_edge)) +
+             ((goma_ctx->fem.fv->x[0] - start_edge[0]) * sin(slope_edge));
   fdx[3] = sin(slope_edge);
   fdy[3] = cos(slope_edge);
 
   // edge 2
   dbl slope_edge2 = atan2(end_edge[1] - pt2_y, end_edge[0] - pt2_x);
-  fdist[4] =
-      ((fv->x[1] - end_edge[1]) * cos(slope_edge2)) + ((fv->x[0] - end_edge[0]) * sin(slope_edge2));
+  fdist[4] = ((goma_ctx->fem.fv->x[1] - end_edge[1]) * cos(slope_edge2)) +
+             ((goma_ctx->fem.fv->x[0] - end_edge[0]) * sin(slope_edge2));
   fdx[4] = sin(slope_edge2);
   fdy[4] = cos(slope_edge2);
 
-  dbl fil1[DIM] = {fv->x[0] - xcen1, fv->x[1] - ycen1};
+  dbl fil1[DIM] = {goma_ctx->fem.fv->x[0] - xcen1, goma_ctx->fem.fv->x[1] - ycen1};
   dbl edge1[DIM] = {start_edge[0] - xcen1, start_edge[1] - ycen1};
   dbl main1[DIM] = {start_main[0] - xcen1, start_main[1] - ycen1};
 
-  dbl fil2[DIM] = {fv->x[0] - xcen2, fv->x[1] - ycen2};
+  dbl fil2[DIM] = {goma_ctx->fem.fv->x[0] - xcen2, goma_ctx->fem.fv->x[1] - ycen2};
   dbl edge2[DIM] = {end_edge[0] - xcen2, end_edge[1] - ycen2};
   dbl main2[DIM] = {end_main[0] - xcen2, end_main[1] - ycen2};
 
   int min_idx = 0;
   if (in_between_vectors_2D(edge1, main1, fil1) &&
-      near_circle(fillet_cen, radius_1, fv->x, 1.5 * radius_1)) {
+      near_circle(fillet_cen, radius_1, goma_ctx->fem.fv->x, 1.5 * radius_1)) {
     min_idx = 0;
   } else if (in_between_vectors_2D(edge2, main2, fil2) &&
-             near_circle(fillet_cen2, radius_2, fv->x, 1.5 * radius_2)) {
+             near_circle(fillet_cen2, radius_2, goma_ctx->fem.fv->x, 1.5 * radius_2)) {
     min_idx = 1;
   } else {
     for (int i = 2; i < 5; i++) {
@@ -1582,7 +1624,7 @@ void f_roll_fluid(int ielem_dim,
   double dthick_dV, dthick_dP;
 #endif
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
 
   if (num_const < 7)
@@ -1598,10 +1640,10 @@ void f_roll_fluid(int ielem_dim,
 
   /* calculate distance from interface surface to solid surface for repulsion calculations */
 
-  coord[0] = fv->x[0];
-  coord[1] = fv->x[1];
+  coord[0] = goma_ctx->fem.fv->x[0];
+  coord[1] = goma_ctx->fem.fv->x[1];
   if (ielem_dim == 3) {
-    coord[2] = fv->x[2];
+    coord[2] = goma_ctx->fem.fv->x[2];
   } else {
     coord[2] = 0.0;
   }
@@ -1650,20 +1692,20 @@ void f_roll_fluid(int ielem_dim,
   v_roll[1] = omega * roll_rad * v_dir[1];
   v_roll[2] = omega * roll_rad * v_dir[2];
 
-  if (TimeIntegration == TRANSIENT && pd->gv[R_MESH1]) {
+  if (TimeIntegration == TRANSIENT && goma_ctx->fem.pd->gv[R_MESH1]) {
     /* Add the mesh motion to the substrate velocity */
-    v_roll[0] += fv_dot->x[0];
-    v_roll[1] += fv_dot->x[1];
-    v_roll[2] += fv_dot->x[2];
+    v_roll[0] += goma_ctx->fem.fv_dot->x[0];
+    v_roll[1] += goma_ctx->fem.fv_dot->x[1];
+    v_roll[2] += goma_ctx->fem.fv_dot->x[2];
   }
 
   /* quantities specific to FLUID bcs   */
 
   if (num_const > 8 && p[9] >= 0.0) {
     dist = 0.;
-    for (var = 0; var < pd->Num_Dim; var++) {
+    for (var = 0; var < goma_ctx->fem.pd->Num_Dim; var++) {
       /* Uses undeformed node position */
-      dist += SQUARE(fv->x0[var] - xsurf[var]);
+      dist += SQUARE(goma_ctx->fem.fv->x0[var] - xsurf[var]);
     }
     dist /= SQUARE(p[10]);
     /*if(dist < 10)fprintf(stderr,"roll_fl %g %g %g\n",fv->x0[0],xsurf[0],dist);
@@ -1673,12 +1715,12 @@ void f_roll_fluid(int ielem_dim,
     velo_avg = 0.0;
     pgrad = 0.;
     v_mag = 0.;
-    for (j = 0; j < pd->Num_Dim; j++) {
-      velo_avg += fv->stangent[0][j] * (v_roll[j] + fv->v[j]);
-      v_solid += fv->stangent[0][j] * v_roll[j];
+    for (j = 0; j < goma_ctx->fem.pd->Num_Dim; j++) {
+      velo_avg += goma_ctx->fem.fv->stangent[0][j] * (v_roll[j] + goma_ctx->fem.fv->v[j]);
+      v_solid += goma_ctx->fem.fv->stangent[0][j] * v_roll[j];
       v_mag += SQUARE(v_roll[j]);
       if (Pflag) {
-        pgrad += fv->stangent[0][j] * fv->grad_P[j];
+        pgrad += goma_ctx->fem.fv->stangent[0][j] * goma_ctx->fem.fv->grad_P[j];
       }
     }
     v_mag = sqrt(v_mag);
@@ -1716,7 +1758,7 @@ void f_roll_fluid(int ielem_dim,
       dthick_dP = CUBE(thick)*viscinv/12.*jacinv;
 #endif
 #if 0
-fprintf(stderr,"slip %d %g %g %g %g\n",Pflag,fv->x[0],thick,flow/v_solid,velo_avg);
+fprintf(stderr,"slip %d %g %g %g %g\n",Pflag,goma_ctx->fem.fv->x[0],thick,flow/v_solid,velo_avg);
 fprintf(stderr,"more %g %g %g %g\n",res,jac, dthick_dV,dthick_dP);
 #endif
     thick = 0.;
@@ -1725,29 +1767,29 @@ fprintf(stderr,"more %g %g %g %g\n",res,jac, dthick_dV,dthick_dP);
     d_func[MESH_DISPLACEMENT2] = d_dist[1];
     d_func[MESH_DISPLACEMENT3] = d_dist[2];
 #if 0
-    for (jvar=0; jvar<pd->Num_Dim; jvar++)
+    for (jvar=0; jvar<goma_ctx->fem.pd->Num_Dim; jvar++)
       {
         var = VELOCITY1 + jvar;
-        for (k=0; k<pd->Num_Dim; k++)
+        for (k=0; k<goma_ctx->fem.pd->Num_Dim; k++)
           {
-           d_func[var] += -thick*dthick_dV*fv->stangent[0][k];
+           d_func[var] += -thick*dthick_dV*goma_ctx->fem.fv->stangent[0][k];
           }
        }
 #endif
 #if 0
 /* Mesh motion Jacobian entries   */
-        for (jvar=0; jvar<ei->ielem_dim; jvar++)
+        for (jvar=0; jvar<goma_ctx->fem.ei->ielem_dim; jvar++)
           {
             var = MESH_DISPLACEMENT1 + jvar;
-            if (pd->v[pg->imtrx][var])
+            if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var])
               {
-                    for (k = 0; k < pd->Num_Dim; k++)
+                    for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++)
                       {
-                        d_func[var] += -thick*dthick_dV*fv->v[k]
-                                *fv->stangent[0][k];
+                        d_func[var] += -thick*dthick_dV*goma_ctx->fem.fv->v[k]
+                                *goma_ctx->fem.fv->stangent[0][k];
                         if(Pflag)
                           {
-                          d_func[var] += -dthick_dP*pg_factor*fv->grad_P[k]*fv->stangent[0][k];
+                          d_func[var] += -dthick_dP*pg_factor*goma_ctx->fem.fv->grad_P[k]*goma_ctx->fem.fv->stangent[0][k];
                           }
                       }
               }
@@ -1756,13 +1798,13 @@ fprintf(stderr,"more %g %g %g %g\n",res,jac, dthick_dV,dthick_dP);
 #endif
 #if 0
    var = PRESSURE;
-    if (pd->v[pg->imtrx][var])
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var])
       {
         if(Pflag )
           {
-               for (k = 0; k < pd->Num_Dim; k++)
+               for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++)
                   {
-                    d_func[var] += -dthick_dP*pg_factor*fv->stangent[0][k];
+                    d_func[var] += -dthick_dP*pg_factor*goma_ctx->fem.fv->stangent[0][k];
                   }
           }
       }
@@ -1787,22 +1829,26 @@ void fvelocity_profile(int var_flag,
                        double p[],      /* p[] are the parameters passed in through the input deck*/
                        double time)     /* time at which bc's are evaluated        */
 {
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     d_func[var_flag] = 0.0;
   else
     d_func[var_flag] = -1.0;
-  if (pd->e[pg->imtrx][R_MESH1]) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     d_func[MESH_DISPLACEMENT1] =
-        dvelo_vary_fnc_d1(velo_condition, fv->x[0], fv->x[1], fv->x[2], p, time);
+        dvelo_vary_fnc_d1(velo_condition, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
+                          goma_ctx->fem.fv->x[2], p, time);
     d_func[MESH_DISPLACEMENT2] =
-        dvelo_vary_fnc_d2(velo_condition, fv->x[0], fv->x[1], fv->x[2], p, time);
+        dvelo_vary_fnc_d2(velo_condition, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
+                          goma_ctx->fem.fv->x[2], p, time);
     if (ielem_dim == 3)
       d_func[MESH_DISPLACEMENT3] =
-          dvelo_vary_fnc_d3(velo_condition, fv->x[0], fv->x[1], fv->x[2], p, time);
+          dvelo_vary_fnc_d3(velo_condition, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
+                            goma_ctx->fem.fv->x[2], p, time);
   }
-  *func = velo_vary_fnc(velo_condition, fv->x[0], fv->x[1], fv->x[2], p, time);
+  *func = velo_vary_fnc(velo_condition, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
+                        goma_ctx->fem.fv->x[2], p, time);
 
-  *func -= fv->v[var_flag - VELOCITY1];
+  *func -= goma_ctx->fem.fv->v[var_flag - VELOCITY1];
 
 } /* END of routine fvelocity_profile                                        */
 /*****************************************************************************/
@@ -1829,7 +1875,7 @@ void fvelocity_parabola(const int var_flag,
   qflow = p[2];
   gap = fabs(coord2 - coord1);
   pre_factor = 6. * qflow / (gap * gap * gap);
-  switch (pd->CoordinateSystem) {
+  switch (goma_ctx->fem.pd->CoordinateSystem) {
   case CARTESIAN:
   case CARTESIAN_2pt5D:
     pre_factor = 6. * qflow / (gap * gap * gap);
@@ -1863,7 +1909,7 @@ void fvelocity_parabola(const int var_flag,
     d_func[MESH_DISPLACEMENT1 + i] = 0.0;
   }
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     d_func[var_flag] = 0.0;
   else
     d_func[var_flag] = -1.0;
@@ -1872,26 +1918,32 @@ void fvelocity_parabola(const int var_flag,
     if (num_const == 3 || p[3] == 1.0) /*  Newtonian solution   */
     {
 
-      switch (pd->CoordinateSystem) {
+      switch (goma_ctx->fem.pd->CoordinateSystem) {
       case CARTESIAN:
       case CARTESIAN_2pt5D:
         switch (velo_condition) {
         case U_PARABOLA_BC:
-          *func = pre_factor * (fv->x[1] - coord1) * (coord2 - fv->x[1]);
-          if (pd->e[pg->imtrx][R_MESH1]) {
-            d_func[MESH_DISPLACEMENT2] = pre_factor * (coord1 + coord2 - 2. * fv->x[1]);
+          *func =
+              pre_factor * (goma_ctx->fem.fv->x[1] - coord1) * (coord2 - goma_ctx->fem.fv->x[1]);
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+            d_func[MESH_DISPLACEMENT2] =
+                pre_factor * (coord1 + coord2 - 2. * goma_ctx->fem.fv->x[1]);
           }
           break;
         case V_PARABOLA_BC:
-          *func = pre_factor * (fv->x[0] - coord1) * (coord2 - fv->x[0]);
-          if (pd->e[pg->imtrx][R_MESH1]) {
-            d_func[MESH_DISPLACEMENT1] = pre_factor * (coord1 + coord2 - 2. * fv->x[0]);
+          *func =
+              pre_factor * (goma_ctx->fem.fv->x[0] - coord1) * (coord2 - goma_ctx->fem.fv->x[0]);
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+            d_func[MESH_DISPLACEMENT1] =
+                pre_factor * (coord1 + coord2 - 2. * goma_ctx->fem.fv->x[0]);
           }
           break;
         case W_PARABOLA_BC:
-          *func = pre_factor * (fv->x[0] - coord1) * (coord2 - fv->x[0]);
-          if (pd->e[pg->imtrx][R_MESH1]) {
-            d_func[MESH_DISPLACEMENT1] = pre_factor * (coord1 + coord2 - 2. * fv->x[0]);
+          *func =
+              pre_factor * (goma_ctx->fem.fv->x[0] - coord1) * (coord2 - goma_ctx->fem.fv->x[0]);
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+            d_func[MESH_DISPLACEMENT1] =
+                pre_factor * (coord1 + coord2 - 2. * goma_ctx->fem.fv->x[0]);
           }
           break;
         default:
@@ -1903,26 +1955,30 @@ void fvelocity_parabola(const int var_flag,
         switch (velo_condition) {
         case U_PARABOLA_BC:
           if (coord1 <= DBL_SMALL) {
-            *func = pre_factor * (SQUARE(coord2) - SQUARE(fv->x[1]));
-            if (pd->e[pg->imtrx][R_MESH1]) {
-              d_func[MESH_DISPLACEMENT2] = pre_factor * (-2. * fv->x[1]);
+            *func = pre_factor * (SQUARE(coord2) - SQUARE(goma_ctx->fem.fv->x[1]));
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+              d_func[MESH_DISPLACEMENT2] = pre_factor * (-2. * goma_ctx->fem.fv->x[1]);
             }
           } else {
-            *func = pre_factor * (SQUARE(coord1) - SQUARE(fv->x[1]) +
-                                  (SQUARE(coord2) - SQUARE(coord1)) *
-                                      (log(fv->x[1] / coord1) / log(coord2 / coord1)));
-            if (pd->e[pg->imtrx][R_MESH1]) {
+            *func =
+                pre_factor * (SQUARE(coord1) - SQUARE(goma_ctx->fem.fv->x[1]) +
+                              (SQUARE(coord2) - SQUARE(coord1)) *
+                                  (log(goma_ctx->fem.fv->x[1] / coord1) / log(coord2 / coord1)));
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
               d_func[MESH_DISPLACEMENT2] =
-                  pre_factor * (-2. * fv->x[1] + (SQUARE(coord2) - SQUARE(coord1)) /
-                                                     log(coord2 / coord1) / fv->x[1]);
+                  pre_factor * (-2. * goma_ctx->fem.fv->x[1] + (SQUARE(coord2) - SQUARE(coord1)) /
+                                                                   log(coord2 / coord1) /
+                                                                   goma_ctx->fem.fv->x[1]);
             }
           }
           break;
         case V_PARABOLA_BC:
-          *func = pre_factor / fv->x[1] * (fv->x[0] - coord1) * (coord2 - fv->x[0]);
-          if (pd->e[pg->imtrx][R_MESH1]) {
-            d_func[MESH_DISPLACEMENT1] = pre_factor / fv->x[1] * (coord1 + coord2 - 2. * fv->x[0]);
-            d_func[MESH_DISPLACEMENT2] = -(*func) / fv->x[1];
+          *func = pre_factor / goma_ctx->fem.fv->x[1] * (goma_ctx->fem.fv->x[0] - coord1) *
+                  (coord2 - goma_ctx->fem.fv->x[0]);
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+            d_func[MESH_DISPLACEMENT1] = pre_factor / goma_ctx->fem.fv->x[1] *
+                                         (coord1 + coord2 - 2. * goma_ctx->fem.fv->x[0]);
+            d_func[MESH_DISPLACEMENT2] = -(*func) / goma_ctx->fem.fv->x[1];
           }
           break;
         default:
@@ -1933,36 +1989,36 @@ void fvelocity_parabola(const int var_flag,
     } else if (num_const > 3) /*  Power-law  solution   */
     {
       if (p[3] < 0.0) {
-        pl_index = gn->nexp;
+        pl_index = goma_ctx->fem.gn->nexp;
       } else {
         pl_index = p[3];
       }
-      switch (pd->CoordinateSystem) {
+      switch (goma_ctx->fem.pd->CoordinateSystem) {
       case CARTESIAN:
       case CARTESIAN_2pt5D:
         expon = 1. + 1. / pl_index;
         pre_factor = (2. * pl_index + 1.) / (pl_index + 1.) * qflow / pow(gap, expon + 1.);
         switch (velo_condition) {
         case U_PARABOLA_BC:
-          temp = 2 * fv->x[1] - coord1 - coord2;
+          temp = 2 * goma_ctx->fem.fv->x[1] - coord1 - coord2;
           *func = pre_factor * (pow(gap, expon) - pow(fabs(temp), expon));
-          if (pd->e[pg->imtrx][R_MESH1]) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
             d_func[MESH_DISPLACEMENT2] =
                 pre_factor * (-2. * SGN(temp) * expon * pow(fabs(temp), 1. / pl_index));
           }
           break;
         case V_PARABOLA_BC:
-          temp = 2 * fv->x[0] - coord1 - coord2;
+          temp = 2 * goma_ctx->fem.fv->x[0] - coord1 - coord2;
           *func = pre_factor * (pow(gap, expon) - pow(fabs(temp), expon));
-          if (pd->e[pg->imtrx][R_MESH1]) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
             d_func[MESH_DISPLACEMENT1] =
                 pre_factor * (-2. * SGN(temp) * expon * pow(fabs(temp), 1. / pl_index));
           }
           break;
         case W_PARABOLA_BC:
-          temp = 2 * fv->x[0] - coord1 - coord2;
+          temp = 2 * goma_ctx->fem.fv->x[0] - coord1 - coord2;
           *func = pre_factor * (pow(gap, expon) - pow(fabs(temp), expon));
-          if (pd->e[pg->imtrx][R_MESH1]) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
             d_func[MESH_DISPLACEMENT1] =
                 pre_factor * (-2. * SGN(temp) * expon * pow(fabs(temp), 1. / pl_index));
           }
@@ -1979,9 +2035,10 @@ void fvelocity_parabola(const int var_flag,
           if (coord1 <= DBL_SMALL) {
             pre_factor =
                 (3. * pl_index + 1.) / (pl_index + 1.) * qflow / M_PIE / pow(gap, expon + 2.);
-            *func = pre_factor * (pow(gap, expon) - pow(fv->x[1], expon));
-            if (pd->e[pg->imtrx][R_MESH1]) {
-              d_func[MESH_DISPLACEMENT2] = pre_factor * (-expon * pow(fv->x[1], expon - 1.));
+            *func = pre_factor * (pow(gap, expon) - pow(goma_ctx->fem.fv->x[1], expon));
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+              d_func[MESH_DISPLACEMENT2] =
+                  pre_factor * (-expon * pow(goma_ctx->fem.fv->x[1], expon - 1.));
             }
           } else {
             GOMA_EH(GOMA_ERROR, "Power-law annulus not done yet!\n");
@@ -1990,12 +2047,12 @@ void fvelocity_parabola(const int var_flag,
         case V_PARABOLA_BC:
           pre_factor =
               (2. * pl_index + 1.) / (pl_index + 1.) * qflow / M_PIE / pow(gap, expon + 1.);
-          temp = 2 * fv->x[0] - coord1 - coord2;
-          *func = pre_factor / fv->x[1] * (pow(gap, expon) - pow(fabs(temp), expon));
-          if (pd->e[pg->imtrx][R_MESH1]) {
-            d_func[MESH_DISPLACEMENT1] =
-                pre_factor / fv->x[1] * (-2. * SGN(temp) * expon * pow(fabs(temp), expon - 1.));
-            d_func[MESH_DISPLACEMENT2] = -(*func) / fv->x[1];
+          temp = 2 * goma_ctx->fem.fv->x[0] - coord1 - coord2;
+          *func = pre_factor / goma_ctx->fem.fv->x[1] * (pow(gap, expon) - pow(fabs(temp), expon));
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+            d_func[MESH_DISPLACEMENT1] = pre_factor / goma_ctx->fem.fv->x[1] *
+                                         (-2. * SGN(temp) * expon * pow(fabs(temp), expon - 1.));
+            d_func[MESH_DISPLACEMENT2] = -(*func) / goma_ctx->fem.fv->x[1];
           }
           break;
         default:
@@ -2031,7 +2088,7 @@ void fvelocity_parabola(const int var_flag,
     }
   }
 
-  *func -= fv->v[var_flag - VELOCITY1];
+  *func -= goma_ctx->fem.fv->v[var_flag - VELOCITY1];
 
 } /* END of routine fvelocity_parabola                                        */
 /*****************************************************************************/
@@ -2057,7 +2114,7 @@ void f_vestress_parabola(const int var_flag,
   double gamma[DIM][DIM];
   int i, mode = 0, strs = 0;
 
-  if (!pd->v[pg->imtrx][POLYMER_STRESS11]) {
+  if (!goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
     GOMA_EH(-1, "Polymer Stress needed for VE Stress PARABOLA BC.");
   }
 
@@ -2089,20 +2146,22 @@ void f_vestress_parabola(const int var_flag,
     GOMA_EH(-1, "Polymer Stress mode not found - VE Stress PARABOLA BC.");
   }
 
-  if (pd->gv[TEMPERATURE]) {
-    temp = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    temp = goma_ctx->fem.fv->T;
   } else {
-    temp = upd->Process_Temperature;
+    temp = goma_ctx->fem.upd->Process_Temperature;
   }
   /*  shift factor  */
-  if (vn->shiftModel == CONSTANT) {
-    at = vn->shift[0];
+  if (goma_ctx->fem.vn->shiftModel == CONSTANT) {
+    at = goma_ctx->fem.vn->shift[0];
     d_at_dT = 0.;
-  } else if (vn->shiftModel == MODIFIED_WLF) {
-    wlf_denom = vn->shift[1] + temp - mp->reference[TEMPERATURE];
+  } else if (goma_ctx->fem.vn->shiftModel == MODIFIED_WLF) {
+    wlf_denom = goma_ctx->fem.vn->shift[1] + temp - goma_ctx->fem.mp->reference[TEMPERATURE];
     if (wlf_denom != 0.) {
-      at = exp(vn->shift[0] * (mp->reference[TEMPERATURE] - temp) / wlf_denom);
-      d_at_dT = -at * vn->shift[0] * vn->shift[1] / (wlf_denom * wlf_denom);
+      at = exp(goma_ctx->fem.vn->shift[0] * (goma_ctx->fem.mp->reference[TEMPERATURE] - temp) /
+               wlf_denom);
+      d_at_dT =
+          -at * goma_ctx->fem.vn->shift[0] * goma_ctx->fem.vn->shift[1] / (wlf_denom * wlf_denom);
     }
   }
 
@@ -2111,7 +2170,7 @@ void f_vestress_parabola(const int var_flag,
   qflow = p[2];
   gap = fabs(coord2 - coord1);
   pre_factor = 6. * qflow / (gap * gap * gap);
-  switch (pd->CoordinateSystem) {
+  switch (goma_ctx->fem.pd->CoordinateSystem) {
   case CARTESIAN:
   case CARTESIAN_2pt5D:
     pre_factor = 6. * qflow / (gap * gap * gap);
@@ -2145,7 +2204,7 @@ void f_vestress_parabola(const int var_flag,
     d_func[MESH_DISPLACEMENT1 + i] = 0.0;
   }
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     d_func[var_flag] = 0.0;
   else
     d_func[var_flag] = -1.0;
@@ -2154,25 +2213,25 @@ void f_vestress_parabola(const int var_flag,
     if (num_const == 3 || p[3] == 1.0) /*  Newtonian solution   */
     {
 
-      switch (pd->CoordinateSystem) {
+      switch (goma_ctx->fem.pd->CoordinateSystem) {
       case CARTESIAN:
       case CARTESIAN_2pt5D:
         switch (velo_condition) {
         case U_PARABOLA_BC:
-          srate = pre_factor * (coord1 + coord2 - 2. * fv->x[1]);
-          if (pd->e[pg->imtrx][R_MESH1]) {
+          srate = pre_factor * (coord1 + coord2 - 2. * goma_ctx->fem.fv->x[1]);
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
             d_func[MESH_DISPLACEMENT2] = -2. * pre_factor;
           }
           break;
         case V_PARABOLA_BC:
-          srate = pre_factor * (coord1 + coord2 - 2. * fv->x[0]);
-          if (pd->e[pg->imtrx][R_MESH1]) {
+          srate = pre_factor * (coord1 + coord2 - 2. * goma_ctx->fem.fv->x[0]);
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
             d_func[MESH_DISPLACEMENT1] = -2. * pre_factor;
           }
           break;
         case W_PARABOLA_BC:
-          srate = pre_factor * (coord1 + coord2 - 2. * fv->x[0]);
-          if (pd->e[pg->imtrx][R_MESH1]) {
+          srate = pre_factor * (coord1 + coord2 - 2. * goma_ctx->fem.fv->x[0]);
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
             d_func[MESH_DISPLACEMENT1] = -2. * pre_factor;
           }
           break;
@@ -2185,25 +2244,28 @@ void f_vestress_parabola(const int var_flag,
         switch (velo_condition) {
         case U_PARABOLA_BC:
           if (coord1 <= DBL_SMALL) {
-            srate = pre_factor * (-2. * fv->x[1]);
-            if (pd->e[pg->imtrx][R_MESH1]) {
+            srate = pre_factor * (-2. * goma_ctx->fem.fv->x[1]);
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
               d_func[MESH_DISPLACEMENT2] = -2. * pre_factor;
             }
           } else {
-            srate = pre_factor * (-2. * fv->x[1] + (SQUARE(coord2) - SQUARE(coord1)) /
-                                                       log(coord2 / coord1) / fv->x[1]);
-            if (pd->e[pg->imtrx][R_MESH1]) {
+            srate = pre_factor * (-2. * goma_ctx->fem.fv->x[1] + (SQUARE(coord2) - SQUARE(coord1)) /
+                                                                     log(coord2 / coord1) /
+                                                                     goma_ctx->fem.fv->x[1]);
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
               d_func[MESH_DISPLACEMENT2] =
                   pre_factor * (-2. - (SQUARE(coord2) - SQUARE(coord1)) / log(coord2 / coord1) /
-                                          SQUARE(fv->x[1]));
+                                          SQUARE(goma_ctx->fem.fv->x[1]));
             }
           }
           break;
         case V_PARABOLA_BC:
-          *func = pre_factor / fv->x[1] * (fv->x[0] - coord1) * (coord2 - fv->x[0]);
-          if (pd->e[pg->imtrx][R_MESH1]) {
-            d_func[MESH_DISPLACEMENT1] = pre_factor / fv->x[1] * (coord1 + coord2 - 2. * fv->x[0]);
-            d_func[MESH_DISPLACEMENT2] = -(*func) / fv->x[1];
+          *func = pre_factor / goma_ctx->fem.fv->x[1] * (goma_ctx->fem.fv->x[0] - coord1) *
+                  (coord2 - goma_ctx->fem.fv->x[0]);
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+            d_func[MESH_DISPLACEMENT1] = pre_factor / goma_ctx->fem.fv->x[1] *
+                                         (coord1 + coord2 - 2. * goma_ctx->fem.fv->x[0]);
+            d_func[MESH_DISPLACEMENT2] = -(*func) / goma_ctx->fem.fv->x[1];
           }
           break;
         default:
@@ -2214,36 +2276,36 @@ void f_vestress_parabola(const int var_flag,
     } else if (num_const > 3) /*  Power-law  solution   */
     {
       if (p[3] < 0.0) {
-        pl_index = gn->nexp;
+        pl_index = goma_ctx->fem.gn->nexp;
       } else {
         pl_index = p[3];
       }
-      switch (pd->CoordinateSystem) {
+      switch (goma_ctx->fem.pd->CoordinateSystem) {
       case CARTESIAN:
       case CARTESIAN_2pt5D:
         expon = 1. + 1. / pl_index;
         pre_factor = (2. * pl_index + 1.) / (pl_index + 1.) * qflow / pow(gap, expon + 1.);
         switch (velo_condition) {
         case U_PARABOLA_BC:
-          tmp = 2 * fv->x[1] - coord1 - coord2;
+          tmp = 2 * goma_ctx->fem.fv->x[1] - coord1 - coord2;
           srate = pre_factor * (-2. * SGN(tmp) * expon * pow(fabs(tmp), 1. / pl_index));
-          if (pd->e[pg->imtrx][R_MESH1]) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
             d_func[MESH_DISPLACEMENT2] =
                 -4. * pre_factor * (expon * (expon - 1.) * pow(fabs(tmp), 1. / pl_index - 1.));
           }
           break;
         case V_PARABOLA_BC:
-          tmp = 2 * fv->x[0] - coord1 - coord2;
+          tmp = 2 * goma_ctx->fem.fv->x[0] - coord1 - coord2;
           srate = pre_factor * (-2. * SGN(tmp) * expon * pow(fabs(tmp), 1. / pl_index));
-          if (pd->e[pg->imtrx][R_MESH1]) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
             d_func[MESH_DISPLACEMENT1] =
                 -4. * pre_factor * (expon * (expon - 1.) * pow(fabs(tmp), 1. / pl_index - 1.));
           }
           break;
         case W_PARABOLA_BC:
-          tmp = 2 * fv->x[0] - coord1 - coord2;
+          tmp = 2 * goma_ctx->fem.fv->x[0] - coord1 - coord2;
           srate = pre_factor * (-2. * SGN(tmp) * expon * pow(fabs(tmp), 1. / pl_index));
-          if (pd->e[pg->imtrx][R_MESH1]) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
             d_func[MESH_DISPLACEMENT1] =
                 -4. * pre_factor * (expon * (expon - 1.) * pow(fabs(tmp), 1. / pl_index - 1.));
           }
@@ -2260,10 +2322,10 @@ void f_vestress_parabola(const int var_flag,
           if (coord1 <= DBL_SMALL) {
             pre_factor =
                 (3. * pl_index + 1.) / (pl_index + 1.) * qflow / M_PIE / pow(gap, expon + 2.);
-            srate = pre_factor * (-expon * pow(fv->x[1], expon - 1.));
-            if (pd->e[pg->imtrx][R_MESH1]) {
+            srate = pre_factor * (-expon * pow(goma_ctx->fem.fv->x[1], expon - 1.));
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
               d_func[MESH_DISPLACEMENT2] =
-                  pre_factor * (-expon * (expon - 1.) * pow(fv->x[1], expon - 2.));
+                  pre_factor * (-expon * (expon - 1.) * pow(goma_ctx->fem.fv->x[1], expon - 2.));
             }
           } else {
             GOMA_EH(-1, "Power-law annulus not done yet!\n");
@@ -2272,12 +2334,13 @@ void f_vestress_parabola(const int var_flag,
         case V_PARABOLA_BC:
           pre_factor =
               (2. * pl_index + 1.) / (pl_index + 1.) * qflow / M_PIE / pow(gap, expon + 1.);
-          tmp = 2 * fv->x[0] - coord1 - coord2;
-          srate = pre_factor / fv->x[1] * (-2. * SGN(tmp) * expon * pow(fabs(tmp), expon - 1.));
-          if (pd->e[pg->imtrx][R_MESH1]) {
-            d_func[MESH_DISPLACEMENT1] =
-                pre_factor / fv->x[1] * (-4. * expon * (expon - 1.) * pow(fabs(tmp), expon - 2.));
-            d_func[MESH_DISPLACEMENT2] = -(srate) / fv->x[1];
+          tmp = 2 * goma_ctx->fem.fv->x[0] - coord1 - coord2;
+          srate = pre_factor / goma_ctx->fem.fv->x[1] *
+                  (-2. * SGN(tmp) * expon * pow(fabs(tmp), expon - 1.));
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+            d_func[MESH_DISPLACEMENT1] = pre_factor / goma_ctx->fem.fv->x[1] *
+                                         (-4. * expon * (expon - 1.) * pow(fabs(tmp), expon - 2.));
+            d_func[MESH_DISPLACEMENT2] = -(srate) / goma_ctx->fem.fv->x[1];
           }
           break;
         default:
@@ -2291,14 +2354,14 @@ void f_vestress_parabola(const int var_flag,
   }
 
   /* Compute stresses from shear rate */
-  switch (vn->ConstitutiveEquation) {
+  switch (goma_ctx->fem.vn->ConstitutiveEquation) {
 
   case GIESEKUS:
-    alpha = ve_glob[mn][mode]->alpha;
-    lambda = ve_glob[mn][mode]->time_const_st->lambda0;
+    alpha = goma_ctx->fem.ve_glob[mn][mode]->alpha;
+    lambda = goma_ctx->fem.ve_glob[mn][mode]->time_const_st->lambda0;
     Ws = at * lambda * fabs(srate);
     A_alpha = 8 * alpha * (1. - alpha);
-    mup = viscosity(ve[mode]->gn, gamma, NULL);
+    mup = viscosity(goma_ctx->fem.ve[mode]->gn, gamma, NULL);
     if (Ws >= 0.1) {
       Ksqr = (sqrt(1. + 2 * A_alpha * SQUARE(Ws)) - 1.) / (A_alpha * SQUARE(Ws));
     } else {
@@ -2327,9 +2390,9 @@ void f_vestress_parabola(const int var_flag,
     }
     break;
   case OLDROYDB:
-    lambda = ve_glob[mn][mode]->time_const_st->lambda0;
+    lambda = goma_ctx->fem.ve_glob[mn][mode]->time_const_st->lambda0;
     Ws = at * lambda * fabs(srate);
-    mup = viscosity(ve[mode]->gn, gamma, NULL);
+    mup = viscosity(goma_ctx->fem.ve[mode]->gn, gamma, NULL);
     switch (strs) {
     case 0: /* S11 */
       *func = 2 * mup * lambda * SQUARE(srate);
@@ -2352,16 +2415,16 @@ void f_vestress_parabola(const int var_flag,
 
   switch (strs) {
   case 0: /* S11 */
-    *func -= fv->S[mode][0][0];
+    *func -= goma_ctx->fem.fv->S[mode][0][0];
     break;
   case 1: /* S12 */
-    *func -= fv->S[mode][0][1];
+    *func -= goma_ctx->fem.fv->S[mode][0][1];
     break;
   case 2: /* S22 */
-    *func -= fv->S[mode][1][1];
+    *func -= goma_ctx->fem.fv->S[mode][1][1];
     break;
   case 5: /* S33 */
-    *func -= fv->S[mode][2][2];
+    *func -= goma_ctx->fem.fv->S[mode][2][2];
     break;
   }
 
@@ -2374,17 +2437,20 @@ void fspline(int ielem_dim,
              double p[],      /* parameters to parameterize temperature eqn model*/
              double time)     /* time  at which bc's are evaluated     */
 {
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
 
-  d_func[MESH_DISPLACEMENT1] = dfncd1(fv->x[0], fv->x[1], fv->x[2], p, time);
+  d_func[MESH_DISPLACEMENT1] =
+      dfncd1(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], p, time);
 
-  d_func[MESH_DISPLACEMENT2] = dfncd2(fv->x[0], fv->x[1], fv->x[2], p, time);
+  d_func[MESH_DISPLACEMENT2] =
+      dfncd2(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], p, time);
 
   if (ielem_dim == 3)
-    d_func[MESH_DISPLACEMENT3] = dfncd3(fv->x[0], fv->x[1], fv->x[2], p, time);
+    d_func[MESH_DISPLACEMENT3] =
+        dfncd3(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], p, time);
 
-  *func = fnc(fv->x[0], fv->x[1], fv->x[2], p, time);
+  *func = fnc(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], p, time);
 
 } /* END of routine fspline                                                  */
 /*****************************************************************************/
@@ -2395,17 +2461,20 @@ void fspline_rs(int ielem_dim,
                 double p[],      /* parameters to parameterize temperature eqn model*/
                 double time)     /* time  at which bc's are evaluated     */
 {
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
 
-  d_func[SOLID_DISPLACEMENT1] = dfncd1(fv->x[0], fv->x[1], fv->x[2], p, time);
+  d_func[SOLID_DISPLACEMENT1] =
+      dfncd1(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], p, time);
 
-  d_func[SOLID_DISPLACEMENT2] = dfncd2(fv->x[0], fv->x[1], fv->x[2], p, time);
+  d_func[SOLID_DISPLACEMENT2] =
+      dfncd2(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], p, time);
 
   if (ielem_dim == 3)
-    d_func[SOLID_DISPLACEMENT3] = dfncd3(fv->x[0], fv->x[1], fv->x[2], p, time);
+    d_func[SOLID_DISPLACEMENT3] =
+        dfncd3(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], p, time);
 
-  *func = fnc(fv->x[0], fv->x[1], fv->x[2], p, time);
+  *func = fnc(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], p, time);
 
 } /* END of routine fspline_rs                                               */
 /*****************************************************************************/
@@ -2414,10 +2483,10 @@ void fTmelting(double *func,
                double d_func[], /* dimensioned MAX_VARIABLE_TYPES + MAX_CONC */
                double a1)       /*  function parameter from data card     */
 {
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
   d_func[TEMPERATURE] = 1.;
-  *func = fv->T - a1;
+  *func = goma_ctx->fem.fv->T - a1;
 } /* END of routine fTmelting                                                */
 /*****************************************************************************/
 
@@ -2468,7 +2537,7 @@ fgeneralized_dirichlet(double *func,
   dbl slope;           /* slope of interpolated function in table */
   dbl x_var_mp[1];     /* dummy variable for table lookup subroutines */
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return 0;
 
   /* ---- Find variable number and species number */
@@ -2492,7 +2561,7 @@ fgeneralized_dirichlet(double *func,
 
     *func = (x_var - BC_Types[bc_input_id].BC_Data_Float[0]);
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
           d_func[index_var + b] = d_vect_var[b];
@@ -2508,7 +2577,7 @@ fgeneralized_dirichlet(double *func,
     *func =
         (x_var * BC_Types[bc_input_id].BC_Data_Float[1] + BC_Types[bc_input_id].BC_Data_Float[0]);
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
           d_func[index_var + b] = d_vect_var[b] * BC_Types[bc_input_id].BC_Data_Float[1];
@@ -2524,7 +2593,7 @@ fgeneralized_dirichlet(double *func,
     *func =
         (BC_Types[bc_input_id].BC_Data_Float[1] / x_var + BC_Types[bc_input_id].BC_Data_Float[0]);
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
           d_func[index_var + b] =
@@ -2542,7 +2611,7 @@ fgeneralized_dirichlet(double *func,
         (x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[2] +
          x_var * BC_Types[bc_input_id].BC_Data_Float[1] + BC_Types[bc_input_id].BC_Data_Float[0]);
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
           d_func[index_var + b] =
@@ -2563,7 +2632,7 @@ fgeneralized_dirichlet(double *func,
              BC_Types[bc_input_id].BC_Data_Float[2] +
          (x_var - BC_Types[bc_input_id].BC_Data_Float[3]) * BC_Types[bc_input_id].BC_Data_Float[1] +
          BC_Types[bc_input_id].BC_Data_Float[0]);
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
           d_func[index_var + b] =
@@ -2587,7 +2656,7 @@ fgeneralized_dirichlet(double *func,
              (x_var - BC_Types[bc_input_id].BC_Data_Float[1]) -
          BC_Types[bc_input_id].BC_Data_Float[0] * BC_Types[bc_input_id].BC_Data_Float[0]);
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
           d_func[index_var + b] =
@@ -2614,7 +2683,7 @@ fgeneralized_dirichlet(double *func,
 
     /* printf("POLYN fit X,F = %f %f\n", x_var, *func); */
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
           d_func[index_var + b] =
@@ -2646,7 +2715,7 @@ fgeneralized_dirichlet(double *func,
     x_var_mp[0] = x_var;
     *func *= interpolate_table(BC_Types[bc_input_id].table, x_var_mp, &slope, NULL);
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
           d_func[index_var + b] = BC_Types[bc_input_id].BC_Data_Float[0] * slope * d_vect_var[b];
@@ -2702,7 +2771,7 @@ int load_variable(double *x_var,       /* variable value */
   memset(d_vect_var, 0, DIM * sizeof(double));
 
   if (jvar >= D_VEL1_DT && jvar <= D_P_DT) {
-    if (pd->TimeIntegration == STEADY)
+    if (goma_ctx->fem.pd->TimeIntegration == STEADY)
       GOMA_EH(GOMA_ERROR, "Unsteady GD for Steady problem");
   }
 
@@ -2710,443 +2779,443 @@ int load_variable(double *x_var,       /* variable value */
 
   switch (jvar) {
   case VELOCITY1:
-    *x_var = fv->v[0];
+    *x_var = goma_ctx->fem.fv->v[0];
     var = VELOCITY1;
     *d_x_var = 1.;
     break;
   case VELOCITY2:
-    *x_var = fv->v[1];
+    *x_var = goma_ctx->fem.fv->v[1];
     var = VELOCITY2;
     *d_x_var = 1.;
     break;
   case VELOCITY3:
-    *x_var = fv->v[2];
+    *x_var = goma_ctx->fem.fv->v[2];
     var = VELOCITY3;
     *d_x_var = 1.;
     break;
   case USTAR:
-    *x_var = fv->v_star[0];
+    *x_var = goma_ctx->fem.fv->v_star[0];
     var = USTAR;
     *d_x_var = 1.;
     break;
   case VSTAR:
-    *x_var = fv->v_star[1];
+    *x_var = goma_ctx->fem.fv->v_star[1];
     var = VSTAR;
     *d_x_var = 1.;
     break;
   case WSTAR:
-    *x_var = fv->v_star[2];
+    *x_var = goma_ctx->fem.fv->v_star[2];
     var = WSTAR;
     *d_x_var = 1.;
     break;
   case PVELOCITY1:
-    *x_var = fv->pv[0];
+    *x_var = goma_ctx->fem.fv->pv[0];
     var = PVELOCITY1;
     *d_x_var = 1.;
     break;
   case PVELOCITY2:
-    *x_var = fv->pv[1];
+    *x_var = goma_ctx->fem.fv->pv[1];
     var = PVELOCITY2;
     *d_x_var = 1.;
     break;
   case PVELOCITY3:
-    *x_var = fv->pv[2];
+    *x_var = goma_ctx->fem.fv->pv[2];
     var = PVELOCITY3;
     *d_x_var = 1.;
     break;
   case TEMPERATURE:
-    *x_var = fv->T;
+    *x_var = goma_ctx->fem.fv->T;
     var = TEMPERATURE;
     *d_x_var = 1.;
     break;
   case VOLTAGE:
-    *x_var = fv->V;
+    *x_var = goma_ctx->fem.fv->V;
     var = VOLTAGE;
     *d_x_var = 1.;
     break;
   case SURF_CHARGE:
-    *x_var = fv->qs;
+    *x_var = goma_ctx->fem.fv->qs;
     var = SURF_CHARGE;
     *d_x_var = 1.;
     break;
   case SHELL_CURVATURE:
-    *x_var = fv->sh_K;
+    *x_var = goma_ctx->fem.fv->sh_K;
     var = SHELL_CURVATURE;
     *d_x_var = 1.;
     break;
   case SHELL_CURVATURE2:
-    *x_var = fv->sh_K2;
+    *x_var = goma_ctx->fem.fv->sh_K2;
     var = SHELL_CURVATURE2;
     *d_x_var = 1.;
     break;
   case SHELL_TENSION:
-    *x_var = fv->sh_tens;
+    *x_var = goma_ctx->fem.fv->sh_tens;
     var = SHELL_TENSION;
     *d_x_var = 1.;
     break;
   case SHELL_X:
-    *x_var = fv->sh_x;
+    *x_var = goma_ctx->fem.fv->sh_x;
     var = SHELL_X;
     *d_x_var = 1.;
     break;
   case SHELL_Y:
-    *x_var = fv->sh_y;
+    *x_var = goma_ctx->fem.fv->sh_y;
     var = SHELL_Y;
     *d_x_var = 1.;
     break;
   case SHELL_USER:
-    *x_var = fv->sh_u;
+    *x_var = goma_ctx->fem.fv->sh_u;
     var = SHELL_USER;
     *d_x_var = 1.;
     break;
   case SHELL_ANGLE1:
-    *x_var = fv->sh_ang[0];
+    *x_var = goma_ctx->fem.fv->sh_ang[0];
     var = SHELL_ANGLE1;
     *d_x_var = 1.;
     break;
   case SHELL_ANGLE2:
-    *x_var = fv->sh_ang[1];
+    *x_var = goma_ctx->fem.fv->sh_ang[1];
     var = SHELL_ANGLE2;
     *d_x_var = 1.;
     break;
   case SHELL_SURF_DIV_V:
-    *x_var = fv->div_s_v;
+    *x_var = goma_ctx->fem.fv->div_s_v;
     var = SHELL_SURF_DIV_V;
     *d_x_var = 1.;
     break;
   case SHELL_SURF_CURV:
-    *x_var = fv->curv;
+    *x_var = goma_ctx->fem.fv->curv;
     var = SHELL_SURF_CURV;
     *d_x_var = 1.;
     break;
   case N_DOT_CURL_V:
-    *x_var = fv->n_dot_curl_s_v;
+    *x_var = goma_ctx->fem.fv->n_dot_curl_s_v;
     var = N_DOT_CURL_V;
     *d_x_var = 1.;
     break;
   case GRAD_S_V_DOT_N1:
-    *x_var = fv->grad_v_dot_n[0];
+    *x_var = goma_ctx->fem.fv->grad_v_dot_n[0];
     var = GRAD_S_V_DOT_N1;
     *d_x_var = 1.;
     break;
   case GRAD_S_V_DOT_N2:
-    *x_var = fv->grad_v_dot_n[1];
+    *x_var = goma_ctx->fem.fv->grad_v_dot_n[1];
     var = GRAD_S_V_DOT_N2;
     *d_x_var = 1.;
     break;
   case GRAD_S_V_DOT_N3:
-    *x_var = fv->grad_v_dot_n[2];
+    *x_var = goma_ctx->fem.fv->grad_v_dot_n[2];
     var = GRAD_S_V_DOT_N3;
     *d_x_var = 1.;
     break;
   case SHELL_DIFF_FLUX:
-    *x_var = fv->sh_J;
+    *x_var = goma_ctx->fem.fv->sh_J;
     var = SHELL_DIFF_FLUX;
     *d_x_var = 1.;
     break;
   case SHELL_DIFF_CURVATURE:
-    *x_var = fv->sh_Kd;
+    *x_var = goma_ctx->fem.fv->sh_Kd;
     var = SHELL_DIFF_CURVATURE;
     *d_x_var = 1.;
     break;
   case SHELL_NORMAL1:
-    *x_var = fv->n[0];
+    *x_var = goma_ctx->fem.fv->n[0];
     var = SHELL_NORMAL1;
     *d_x_var = 1.;
     break;
   case SHELL_NORMAL2:
-    *x_var = fv->n[1];
+    *x_var = goma_ctx->fem.fv->n[1];
     var = SHELL_NORMAL2;
     *d_x_var = 1.;
     break;
   case SHELL_NORMAL3:
-    *x_var = fv->n[2];
+    *x_var = goma_ctx->fem.fv->n[2];
     var = SHELL_NORMAL3;
     *d_x_var = 1.;
     break;
   case ACOUS_PREAL:
-    *x_var = fv->apr;
+    *x_var = goma_ctx->fem.fv->apr;
     var = ACOUS_PREAL;
     *d_x_var = 1.;
     break;
   case ACOUS_PIMAG:
-    *x_var = fv->api;
+    *x_var = goma_ctx->fem.fv->api;
     var = ACOUS_PIMAG;
     *d_x_var = 1.;
     break;
   case EM_CONT_REAL:
-    *x_var = fv->epr;
+    *x_var = goma_ctx->fem.fv->epr;
     var = EM_CONT_REAL;
     *d_x_var = 1.;
     break;
   case EM_CONT_IMAG:
-    *x_var = fv->epi;
+    *x_var = goma_ctx->fem.fv->epi;
     var = EM_CONT_IMAG;
     *d_x_var = 1.;
     break;
   case POR_SINK_MASS:
-    *x_var = fv->sink_mass;
+    *x_var = goma_ctx->fem.fv->sink_mass;
     var = POR_SINK_MASS;
     *d_x_var = 1.;
     break;
   case ACOUS_REYN_STRESS:
-    *x_var = fv->ars;
+    *x_var = goma_ctx->fem.fv->ars;
     var = ACOUS_REYN_STRESS;
     *d_x_var = 1.;
     break;
   case SHELL_BDYVELO:
-    *x_var = fv->sh_bv;
+    *x_var = goma_ctx->fem.fv->sh_bv;
     var = SHELL_BDYVELO;
     *d_x_var = 1.;
     break;
   case SHELL_LUBP:
-    *x_var = fv->sh_p;
+    *x_var = goma_ctx->fem.fv->sh_p;
     var = SHELL_LUBP;
     *d_x_var = 1.;
     break;
   case SHELL_FILMP:
-    *x_var = fv->sh_fp;
+    *x_var = goma_ctx->fem.fv->sh_fp;
     var = SHELL_FILMP;
     *d_x_var = 1.;
     break;
   case SHELL_FILMH:
-    *x_var = fv->sh_fh;
+    *x_var = goma_ctx->fem.fv->sh_fh;
     var = SHELL_FILMH;
     *d_x_var = 1.;
     break;
   case SHELL_PARTC:
-    *x_var = fv->sh_pc;
+    *x_var = goma_ctx->fem.fv->sh_pc;
     var = SHELL_PARTC;
     *d_x_var = 1.;
     break;
   case LUBP:
-    *x_var = fv->lubp;
+    *x_var = goma_ctx->fem.fv->lubp;
     var = LUBP;
     *d_x_var = 1.;
     break;
   case LUBP_2:
-    *x_var = fv->lubp_2;
+    *x_var = goma_ctx->fem.fv->lubp_2;
     var = LUBP_2;
     *d_x_var = 1.;
     break;
   case SHELL_SAT_CLOSED:
-    *x_var = fv->sh_sat_closed;
+    *x_var = goma_ctx->fem.fv->sh_sat_closed;
     var = SHELL_SAT_CLOSED;
     *d_x_var = 1.;
     break;
   case SHELL_PRESS_OPEN:
-    *x_var = fv->sh_p_open;
+    *x_var = goma_ctx->fem.fv->sh_p_open;
     var = SHELL_PRESS_OPEN;
     *d_x_var = 1.;
     break;
   case SHELL_PRESS_OPEN_2:
-    *x_var = fv->sh_p_open_2;
+    *x_var = goma_ctx->fem.fv->sh_p_open_2;
     var = SHELL_PRESS_OPEN_2;
     *d_x_var = 1.;
     break;
   case SHELL_SAT_1:
-    *x_var = fv->sh_sat_1;
+    *x_var = goma_ctx->fem.fv->sh_sat_1;
     var = SHELL_SAT_1;
     *d_x_var = 1.;
     break;
   case SHELL_SAT_2:
-    *x_var = fv->sh_sat_2;
+    *x_var = goma_ctx->fem.fv->sh_sat_2;
     var = SHELL_SAT_2;
     *d_x_var = 1.;
     break;
   case SHELL_SAT_3:
-    *x_var = fv->sh_sat_3;
+    *x_var = goma_ctx->fem.fv->sh_sat_3;
     var = SHELL_SAT_3;
     *d_x_var = 1.;
     break;
   case SHELL_TEMPERATURE:
-    *x_var = fv->sh_t;
+    *x_var = goma_ctx->fem.fv->sh_t;
     var = SHELL_TEMPERATURE;
     *d_x_var = 1.;
     break;
   case SHELL_DELTAH:
-    *x_var = fv->sh_dh;
+    *x_var = goma_ctx->fem.fv->sh_dh;
     var = SHELL_DELTAH;
     *d_x_var = 1.;
     break;
   case SHELL_LUB_CURV:
-    *x_var = fv->sh_l_curv;
+    *x_var = goma_ctx->fem.fv->sh_l_curv;
     var = SHELL_LUB_CURV;
     *d_x_var = 1.;
     break;
   case SHELL_LUB_CURV_2:
-    *x_var = fv->sh_l_curv_2;
+    *x_var = goma_ctx->fem.fv->sh_l_curv_2;
     var = SHELL_LUB_CURV_2;
     *d_x_var = 1.;
     break;
   case SHELL_SAT_GASN:
-    *x_var = fv->sh_sat_gasn;
+    *x_var = goma_ctx->fem.fv->sh_sat_gasn;
     var = SHELL_SAT_GASN;
     *d_x_var = 1.;
     break;
   case SHELL_SHEAR_TOP:
-    *x_var = fv->sh_shear_top;
+    *x_var = goma_ctx->fem.fv->sh_shear_top;
     var = SHELL_SHEAR_TOP;
     *d_x_var = 1.;
     break;
   case SHELL_SHEAR_BOT:
-    *x_var = fv->sh_shear_bot;
+    *x_var = goma_ctx->fem.fv->sh_shear_bot;
     var = SHELL_SHEAR_BOT;
     *d_x_var = 1.;
     break;
   case SHELL_CROSS_SHEAR:
-    *x_var = fv->sh_cross_shear;
+    *x_var = goma_ctx->fem.fv->sh_cross_shear;
     var = SHELL_CROSS_SHEAR;
     *d_x_var = 1.;
     break;
   case TFMP_PRES:
-    *x_var = fv->tfmp_pres;
+    *x_var = goma_ctx->fem.fv->tfmp_pres;
     var = TFMP_PRES;
     *d_x_var = 1;
     break;
   case TFMP_SAT:
-    *x_var = fv->tfmp_sat;
+    *x_var = goma_ctx->fem.fv->tfmp_sat;
     var = TFMP_SAT;
     *d_x_var = 1;
     break;
   case MAX_STRAIN:
-    *x_var = fv->max_strain;
+    *x_var = goma_ctx->fem.fv->max_strain;
     var = MAX_STRAIN;
     *d_x_var = 1.;
     break;
   case CUR_STRAIN:
-    *x_var = fv->cur_strain;
+    *x_var = goma_ctx->fem.fv->cur_strain;
     var = CUR_STRAIN;
     *d_x_var = 1.;
     break;
   case EDDY_NU:
-    *x_var = fv->eddy_nu;
+    *x_var = goma_ctx->fem.fv->eddy_nu;
     var = EDDY_NU;
     *d_x_var = 1.;
     break;
   case TURB_K:
-    *x_var = fv->turb_k;
+    *x_var = goma_ctx->fem.fv->turb_k;
     var = TURB_K;
     *d_x_var = 1.;
     break;
   case TURB_OMEGA:
-    *x_var = fv->turb_omega;
+    *x_var = goma_ctx->fem.fv->turb_omega;
     var = TURB_OMEGA;
     *d_x_var = 1.;
     break;
   case LIGHT_INTP:
-    *x_var = fv->poynt[0];
+    *x_var = goma_ctx->fem.fv->poynt[0];
     var = LIGHT_INTP;
     *d_x_var = 1.;
     break;
   case LIGHT_INTM:
-    *x_var = fv->poynt[1];
+    *x_var = goma_ctx->fem.fv->poynt[1];
     var = LIGHT_INTM;
     *d_x_var = 1.;
     break;
   case LIGHT_INTD:
-    *x_var = fv->poynt[2];
+    *x_var = goma_ctx->fem.fv->poynt[2];
     var = LIGHT_INTD;
     *d_x_var = 1.;
     break;
   case RESTIME:
-    *x_var = fv->restime;
+    *x_var = goma_ctx->fem.fv->restime;
     var = RESTIME;
     *d_x_var = 1.;
     break;
   case EM_E1_REAL:
-    *x_var = fv->em_er[0];
+    *x_var = goma_ctx->fem.fv->em_er[0];
     var = EM_E1_REAL;
     *d_x_var = 1.;
     break;
   case EM_E2_REAL:
-    *x_var = fv->em_er[1];
+    *x_var = goma_ctx->fem.fv->em_er[1];
     var = EM_E2_REAL;
     *d_x_var = 1.;
     break;
   case EM_E3_REAL:
-    *x_var = fv->em_er[2];
+    *x_var = goma_ctx->fem.fv->em_er[2];
     var = EM_E3_REAL;
     *d_x_var = 1.;
     break;
   case EM_E1_IMAG:
-    *x_var = fv->em_ei[0];
+    *x_var = goma_ctx->fem.fv->em_ei[0];
     var = EM_E1_IMAG;
     *d_x_var = 1.;
     break;
   case EM_E2_IMAG:
-    *x_var = fv->em_ei[1];
+    *x_var = goma_ctx->fem.fv->em_ei[1];
     var = EM_E2_IMAG;
     *d_x_var = 1.;
     break;
   case EM_E3_IMAG:
-    *x_var = fv->em_ei[2];
+    *x_var = goma_ctx->fem.fv->em_ei[2];
     var = EM_E3_IMAG;
     *d_x_var = 1.;
     break;
   case EM_H1_REAL:
-    *x_var = fv->em_hr[0];
+    *x_var = goma_ctx->fem.fv->em_hr[0];
     var = EM_H1_REAL;
     *d_x_var = 1.;
     break;
   case EM_H2_REAL:
-    *x_var = fv->em_hr[1];
+    *x_var = goma_ctx->fem.fv->em_hr[1];
     var = EM_H2_REAL;
     *d_x_var = 1.;
     break;
   case EM_H3_REAL:
-    *x_var = fv->em_hr[2];
+    *x_var = goma_ctx->fem.fv->em_hr[2];
     var = EM_H3_REAL;
     *d_x_var = 1.;
     break;
   case EM_H1_IMAG:
-    *x_var = fv->em_hi[0];
+    *x_var = goma_ctx->fem.fv->em_hi[0];
     var = EM_H1_IMAG;
     *d_x_var = 1.;
     break;
   case EM_H2_IMAG:
-    *x_var = fv->em_hi[1];
+    *x_var = goma_ctx->fem.fv->em_hi[1];
     var = EM_H2_IMAG;
     *d_x_var = 1.;
     break;
   case EM_H3_IMAG:
-    *x_var = fv->em_hi[2];
+    *x_var = goma_ctx->fem.fv->em_hi[2];
     var = EM_H3_IMAG;
     *d_x_var = 1.;
     break;
 
   case MASS_FRACTION:
-    *x_var = fv->c[wspec];
+    *x_var = goma_ctx->fem.fv->c[wspec];
     var = MASS_FRACTION;
     *d_x_var = 1.;
     break;
   case MESH_DISPLACEMENT1:
-    *x_var = fv->d[0];
+    *x_var = goma_ctx->fem.fv->d[0];
     var = MESH_DISPLACEMENT1;
     *d_x_var = 1.;
     break;
   case MESH_DISPLACEMENT2:
-    *x_var = fv->d[1];
+    *x_var = goma_ctx->fem.fv->d[1];
     var = MESH_DISPLACEMENT2;
     *d_x_var = 1.;
     break;
   case MESH_DISPLACEMENT3:
-    *x_var = fv->d[2];
+    *x_var = goma_ctx->fem.fv->d[2];
     var = MESH_DISPLACEMENT3;
     *d_x_var = 1.;
     break;
   case SOLID_DISPLACEMENT1:
-    *x_var = fv->d_rs[0];
+    *x_var = goma_ctx->fem.fv->d_rs[0];
     var = SOLID_DISPLACEMENT1;
     *d_x_var = 1.;
     break;
   case SOLID_DISPLACEMENT2:
-    *x_var = fv->d_rs[1];
+    *x_var = goma_ctx->fem.fv->d_rs[1];
     var = SOLID_DISPLACEMENT2;
     *d_x_var = 1.;
     break;
   case SOLID_DISPLACEMENT3:
-    *x_var = fv->d_rs[2];
+    *x_var = goma_ctx->fem.fv->d_rs[2];
     var = SOLID_DISPLACEMENT3;
     *d_x_var = 1.;
     break;
@@ -3154,407 +3223,407 @@ int load_variable(double *x_var,       /* variable value */
     GOMA_EH(GOMA_ERROR, "SURFACE variables not defined yet");
     break;
   case PRESSURE:
-    *x_var = fv->P;
+    *x_var = goma_ctx->fem.fv->P;
     var = PRESSURE;
     *d_x_var = 1.;
     break;
   case SHEAR_RATE:
-    *x_var = fv->SH;
+    *x_var = goma_ctx->fem.fv->SH;
     var = SHEAR_RATE;
     *d_x_var = 1.;
     break;
 
   case EXT_VELOCITY:
-    *x_var = fv->ext_v;
+    *x_var = goma_ctx->fem.fv->ext_v;
     var = EXT_VELOCITY;
     *d_x_var = 1.;
     break;
 
   case EFIELD1:
-    *x_var = fv->E_field[0];
+    *x_var = goma_ctx->fem.fv->E_field[0];
     var = EFIELD1;
     *d_x_var = 1.;
     break;
 
   case EFIELD2:
-    *x_var = fv->E_field[1];
+    *x_var = goma_ctx->fem.fv->E_field[1];
     var = EFIELD2;
     *d_x_var = 1.;
     break;
   case EFIELD3:
-    *x_var = fv->E_field[2];
+    *x_var = goma_ctx->fem.fv->E_field[2];
     var = EFIELD3;
     *d_x_var = 1.;
     break;
 
   case ENORM:
-    *x_var = fv->Enorm;
+    *x_var = goma_ctx->fem.fv->Enorm;
     var = ENORM;
     *d_x_var = 1.;
     break;
 
   case CURVATURE:
-    *x_var = fv->H;
+    *x_var = goma_ctx->fem.fv->H;
     var = CURVATURE;
     *d_x_var = 1.;
     break;
 
   case NORMAL1:
-    *x_var = fv->n[0];
+    *x_var = goma_ctx->fem.fv->n[0];
     var = NORMAL1;
     *d_x_var = 1;
     break;
 
   case NORMAL2:
-    *x_var = fv->n[1];
+    *x_var = goma_ctx->fem.fv->n[1];
     var = NORMAL2;
     *d_x_var = 1;
     break;
 
   case NORMAL3:
-    *x_var = fv->n[2];
+    *x_var = goma_ctx->fem.fv->n[2];
     var = NORMAL3;
     *d_x_var = 1;
     break;
 
   case POLYMER_STRESS11:
-    *x_var = fv->S[0][0][0];
+    *x_var = goma_ctx->fem.fv->S[0][0][0];
     var = POLYMER_STRESS11;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS12:
-    *x_var = fv->S[0][0][1];
+    *x_var = goma_ctx->fem.fv->S[0][0][1];
     var = POLYMER_STRESS12;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS22:
-    *x_var = fv->S[0][1][1];
+    *x_var = goma_ctx->fem.fv->S[0][1][1];
     var = POLYMER_STRESS22;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS13:
-    *x_var = fv->S[0][0][2];
+    *x_var = goma_ctx->fem.fv->S[0][0][2];
     var = POLYMER_STRESS13;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS23:
-    *x_var = fv->S[0][1][2];
+    *x_var = goma_ctx->fem.fv->S[0][1][2];
     var = POLYMER_STRESS23;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS33:
-    *x_var = fv->S[0][2][2];
+    *x_var = goma_ctx->fem.fv->S[0][2][2];
     var = POLYMER_STRESS33;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS11_1:
-    *x_var = fv->S[1][0][0];
+    *x_var = goma_ctx->fem.fv->S[1][0][0];
     var = POLYMER_STRESS11_1;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS12_1:
-    *x_var = fv->S[1][0][1];
+    *x_var = goma_ctx->fem.fv->S[1][0][1];
     var = POLYMER_STRESS12_1;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS22_1:
-    *x_var = fv->S[1][1][1];
+    *x_var = goma_ctx->fem.fv->S[1][1][1];
     var = POLYMER_STRESS22_1;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS13_1:
-    *x_var = fv->S[1][0][2];
+    *x_var = goma_ctx->fem.fv->S[1][0][2];
     var = POLYMER_STRESS13_1;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS23_1:
-    *x_var = fv->S[1][1][2];
+    *x_var = goma_ctx->fem.fv->S[1][1][2];
     var = POLYMER_STRESS23_1;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS33_1:
-    *x_var = fv->S[1][2][2];
+    *x_var = goma_ctx->fem.fv->S[1][2][2];
     var = POLYMER_STRESS33_1;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS11_2:
-    *x_var = fv->S[2][0][0];
+    *x_var = goma_ctx->fem.fv->S[2][0][0];
     var = POLYMER_STRESS11_2;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS12_2:
-    *x_var = fv->S[2][0][1];
+    *x_var = goma_ctx->fem.fv->S[2][0][1];
     var = POLYMER_STRESS12_2;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS22_2:
-    *x_var = fv->S[2][1][1];
+    *x_var = goma_ctx->fem.fv->S[2][1][1];
     var = POLYMER_STRESS22_2;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS13_2:
-    *x_var = fv->S[2][0][2];
+    *x_var = goma_ctx->fem.fv->S[2][0][2];
     var = POLYMER_STRESS13_2;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS23_2:
-    *x_var = fv->S[2][1][2];
+    *x_var = goma_ctx->fem.fv->S[2][1][2];
     var = POLYMER_STRESS23_2;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS33_2:
-    *x_var = fv->S[2][2][2];
+    *x_var = goma_ctx->fem.fv->S[2][2][2];
     var = POLYMER_STRESS33_2;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS11_3:
-    *x_var = fv->S[3][0][0];
+    *x_var = goma_ctx->fem.fv->S[3][0][0];
     var = POLYMER_STRESS11_3;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS12_3:
-    *x_var = fv->S[3][0][1];
+    *x_var = goma_ctx->fem.fv->S[3][0][1];
     var = POLYMER_STRESS12_3;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS22_3:
-    *x_var = fv->S[3][1][1];
+    *x_var = goma_ctx->fem.fv->S[3][1][1];
     var = POLYMER_STRESS22_3;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS13_3:
-    *x_var = fv->S[3][0][2];
+    *x_var = goma_ctx->fem.fv->S[3][0][2];
     var = POLYMER_STRESS13_3;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS23_3:
-    *x_var = fv->S[3][1][2];
+    *x_var = goma_ctx->fem.fv->S[3][1][2];
     var = POLYMER_STRESS23_3;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS33_3:
-    *x_var = fv->S[3][2][2];
+    *x_var = goma_ctx->fem.fv->S[3][2][2];
     var = POLYMER_STRESS33_3;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS11_4:
-    *x_var = fv->S[4][0][0];
+    *x_var = goma_ctx->fem.fv->S[4][0][0];
     var = POLYMER_STRESS11_4;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS12_4:
-    *x_var = fv->S[4][0][1];
+    *x_var = goma_ctx->fem.fv->S[4][0][1];
     var = POLYMER_STRESS12_4;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS22_4:
-    *x_var = fv->S[4][1][1];
+    *x_var = goma_ctx->fem.fv->S[4][1][1];
     var = POLYMER_STRESS22_4;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS13_4:
-    *x_var = fv->S[4][0][2];
+    *x_var = goma_ctx->fem.fv->S[4][0][2];
     var = POLYMER_STRESS13_4;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS23_4:
-    *x_var = fv->S[4][1][2];
+    *x_var = goma_ctx->fem.fv->S[4][1][2];
     var = POLYMER_STRESS23_4;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS33_4:
-    *x_var = fv->S[4][2][2];
+    *x_var = goma_ctx->fem.fv->S[4][2][2];
     var = POLYMER_STRESS33_4;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS11_5:
-    *x_var = fv->S[5][0][0];
+    *x_var = goma_ctx->fem.fv->S[5][0][0];
     var = POLYMER_STRESS11_5;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS12_5:
-    *x_var = fv->S[5][0][1];
+    *x_var = goma_ctx->fem.fv->S[5][0][1];
     var = POLYMER_STRESS12_5;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS22_5:
-    *x_var = fv->S[5][1][1];
+    *x_var = goma_ctx->fem.fv->S[5][1][1];
     var = POLYMER_STRESS22_5;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS13_5:
-    *x_var = fv->S[5][0][2];
+    *x_var = goma_ctx->fem.fv->S[5][0][2];
     var = POLYMER_STRESS13_5;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS23_5:
-    *x_var = fv->S[5][1][2];
+    *x_var = goma_ctx->fem.fv->S[5][1][2];
     var = POLYMER_STRESS23_5;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS33_5:
-    *x_var = fv->S[5][2][2];
+    *x_var = goma_ctx->fem.fv->S[5][2][2];
     var = POLYMER_STRESS33_5;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS11_6:
-    *x_var = fv->S[6][0][0];
+    *x_var = goma_ctx->fem.fv->S[6][0][0];
     var = POLYMER_STRESS11_6;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS12_6:
-    *x_var = fv->S[6][0][1];
+    *x_var = goma_ctx->fem.fv->S[6][0][1];
     var = POLYMER_STRESS12_6;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS22_6:
-    *x_var = fv->S[6][1][1];
+    *x_var = goma_ctx->fem.fv->S[6][1][1];
     var = POLYMER_STRESS22_6;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS13_6:
-    *x_var = fv->S[6][0][2];
+    *x_var = goma_ctx->fem.fv->S[6][0][2];
     var = POLYMER_STRESS13_6;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS23_6:
-    *x_var = fv->S[6][1][2];
+    *x_var = goma_ctx->fem.fv->S[6][1][2];
     var = POLYMER_STRESS23_6;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS33_6:
-    *x_var = fv->S[6][2][2];
+    *x_var = goma_ctx->fem.fv->S[6][2][2];
     var = POLYMER_STRESS33_6;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS11_7:
-    *x_var = fv->S[7][0][0];
+    *x_var = goma_ctx->fem.fv->S[7][0][0];
     var = POLYMER_STRESS11_7;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS12_7:
-    *x_var = fv->S[7][0][1];
+    *x_var = goma_ctx->fem.fv->S[7][0][1];
     var = POLYMER_STRESS12_7;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS22_7:
-    *x_var = fv->S[7][1][1];
+    *x_var = goma_ctx->fem.fv->S[7][1][1];
     var = POLYMER_STRESS22_7;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS13_7:
-    *x_var = fv->S[7][0][2];
+    *x_var = goma_ctx->fem.fv->S[7][0][2];
     var = POLYMER_STRESS13_7;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS23_7:
-    *x_var = fv->S[7][1][2];
+    *x_var = goma_ctx->fem.fv->S[7][1][2];
     var = POLYMER_STRESS23_7;
     *d_x_var = 1.;
     break;
 
   case POLYMER_STRESS33_7:
-    *x_var = fv->S[7][2][2];
+    *x_var = goma_ctx->fem.fv->S[7][2][2];
     var = POLYMER_STRESS33_7;
     *d_x_var = 1.;
     break;
 
   case VELOCITY_GRADIENT11:
-    *x_var = fv->G[0][0];
+    *x_var = goma_ctx->fem.fv->G[0][0];
     var = VELOCITY_GRADIENT11;
     *d_x_var = 1.;
     break;
 
   case VELOCITY_GRADIENT12:
-    *x_var = fv->G[0][1];
+    *x_var = goma_ctx->fem.fv->G[0][1];
     var = VELOCITY_GRADIENT12;
     *d_x_var = 1.;
     break;
 
   case VELOCITY_GRADIENT21:
-    *x_var = fv->G[1][0];
+    *x_var = goma_ctx->fem.fv->G[1][0];
     var = VELOCITY_GRADIENT21;
     *d_x_var = 1.;
     break;
 
   case VELOCITY_GRADIENT22:
-    *x_var = fv->G[1][1];
+    *x_var = goma_ctx->fem.fv->G[1][1];
     var = VELOCITY_GRADIENT22;
     *d_x_var = 1.;
     break;
 
   case VELOCITY_GRADIENT13:
-    *x_var = fv->G[0][2];
+    *x_var = goma_ctx->fem.fv->G[0][2];
     var = VELOCITY_GRADIENT13;
     *d_x_var = 1.;
     break;
 
   case VELOCITY_GRADIENT23:
-    *x_var = fv->G[1][2];
+    *x_var = goma_ctx->fem.fv->G[1][2];
     var = VELOCITY_GRADIENT23;
     *d_x_var = 1.;
     break;
 
   case VELOCITY_GRADIENT31:
-    *x_var = fv->G[2][0];
+    *x_var = goma_ctx->fem.fv->G[2][0];
     var = VELOCITY_GRADIENT31;
     *d_x_var = 1.;
     break;
 
   case VELOCITY_GRADIENT32:
-    *x_var = fv->G[2][1];
+    *x_var = goma_ctx->fem.fv->G[2][1];
     var = VELOCITY_GRADIENT32;
     *d_x_var = 1.;
     break;
 
   case VELOCITY_GRADIENT33:
-    *x_var = fv->G[2][2];
+    *x_var = goma_ctx->fem.fv->G[2][2];
     var = VELOCITY_GRADIENT33;
     *d_x_var = 1.;
     break;
@@ -3566,116 +3635,119 @@ int load_variable(double *x_var,       /* variable value */
   case PHASE5:
 
     b = jvar - PHASE1;
-    *x_var = fv->pF[b];
+    *x_var = goma_ctx->fem.fv->pF[b];
     var = PHASE1 + b;
     *d_x_var = 1.;
     break;
 
     /* if variable type is mesh position **not** mesh displacement*/
   case MESH_POSITION1:
-    *x_var = fv->x[0];
+    *x_var = goma_ctx->fem.fv->x[0];
     var = MESH_DISPLACEMENT1;
     *d_x_var = 1.;
     break;
   case MESH_POSITION2:
-    *x_var = fv->x[1];
+    *x_var = goma_ctx->fem.fv->x[1];
     var = MESH_DISPLACEMENT2;
     *d_x_var = 1.;
     break;
   case MESH_POSITION3:
-    *x_var = fv->x[2];
+    *x_var = goma_ctx->fem.fv->x[2];
     var = MESH_DISPLACEMENT3;
     *d_x_var = 1.;
     break;
   case SOLID_POSITION1:
-    *x_var = fv->x[0];
+    *x_var = goma_ctx->fem.fv->x[0];
     var = SOLID_DISPLACEMENT1;
     *d_x_var = 1.;
     break;
   case SOLID_POSITION2:
-    *x_var = fv->x[1];
+    *x_var = goma_ctx->fem.fv->x[1];
     var = SOLID_DISPLACEMENT2;
     *d_x_var = 1.;
     break;
   case SOLID_POSITION3:
-    *x_var = fv->x[2];
+    *x_var = goma_ctx->fem.fv->x[2];
     var = SOLID_DISPLACEMENT3;
     *d_x_var = 1.;
     break;
   case POR_LIQ_PRES:
-    *x_var = fv->p_liq;
+    *x_var = goma_ctx->fem.fv->p_liq;
     var = POR_LIQ_PRES;
     *d_x_var = 1.;
     break;
   case POR_GAS_PRES:
-    *x_var = fv->p_gas;
+    *x_var = goma_ctx->fem.fv->p_gas;
     var = POR_GAS_PRES;
     *d_x_var = 1.;
     break;
   case POR_POROSITY:
-    *x_var = fv->porosity;
+    *x_var = goma_ctx->fem.fv->porosity;
     var = POR_GAS_PRES;
     *d_x_var = 1.;
     break;
     /* adding velocity magnitude, i.e. SPEED  */
   case SPEED:
-    for (b = 0; b < pd->Num_Dim; b++) {
-      *x_var += SQUARE(fv->v[b]);
+    for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
+      *x_var += SQUARE(goma_ctx->fem.fv->v[b]);
     }
-    if (pd->CoordinateSystem == SWIRLING || pd->CoordinateSystem == PROJECTED_CARTESIAN ||
-        pd->CoordinateSystem == CARTESIAN_2pt5D) {
-      *x_var += SQUARE(fv->v[pd->Num_Dim]);
+    if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+        goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+        goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D) {
+      *x_var += SQUARE(goma_ctx->fem.fv->v[goma_ctx->fem.pd->Num_Dim]);
     }
     *x_var = sqrt(*x_var);
     var = VELOCITY1;
     *d_x_var = 1. / (*x_var);
-    for (b = 0; b < pd->Num_Dim; b++) {
-      d_vect_var[b] += fv->v[b] * (*d_x_var);
+    for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
+      d_vect_var[b] += goma_ctx->fem.fv->v[b] * (*d_x_var);
     }
-    if (pd->CoordinateSystem == SWIRLING || pd->CoordinateSystem == PROJECTED_CARTESIAN ||
-        pd->CoordinateSystem == CARTESIAN_2pt5D) {
-      d_vect_var[pd->Num_Dim] += fv->v[pd->Num_Dim] * (*d_x_var);
+    if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+        goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+        goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D) {
+      d_vect_var[goma_ctx->fem.pd->Num_Dim] +=
+          goma_ctx->fem.fv->v[goma_ctx->fem.pd->Num_Dim] * (*d_x_var);
     }
     break;
 
     /* if variable type is a time derivative */
   case D_VEL1_DT:
-    *x_var = fv_dot->v[0];
+    *x_var = goma_ctx->fem.fv_dot->v[0];
     var = VELOCITY1;
     *d_x_var = (1. + 2. * tt) / dt;
     break;
   case D_VEL2_DT:
-    *x_var = fv_dot->v[1];
+    *x_var = goma_ctx->fem.fv_dot->v[1];
     var = VELOCITY2;
     *d_x_var = (1. + 2. * tt) / dt;
     break;
   case D_VEL3_DT:
-    *x_var = fv_dot->v[2];
+    *x_var = goma_ctx->fem.fv_dot->v[2];
     var = VELOCITY3;
     *d_x_var = (1. + 2. * tt) / dt;
     break;
   case D_T_DT:
-    *x_var = fv_dot->T;
+    *x_var = goma_ctx->fem.fv_dot->T;
     var = TEMPERATURE;
     *d_x_var = (1. + 2. * tt) / dt;
     break;
   case D_Y_DT:
-    *x_var = fv_dot->c[wspec];
+    *x_var = goma_ctx->fem.fv_dot->c[wspec];
     var = MASS_FRACTION;
     *d_x_var = (1. + 2. * tt) / dt;
     break;
   case D_X1_DT:
-    *x_var = fv_dot->d[0];
+    *x_var = goma_ctx->fem.fv_dot->d[0];
     var = MESH_DISPLACEMENT1;
     *d_x_var = (1. + 2. * tt) / dt;
     break;
   case D_X2_DT:
-    *x_var = fv_dot->d[1];
+    *x_var = goma_ctx->fem.fv_dot->d[1];
     var = MESH_DISPLACEMENT2;
     *d_x_var = (1. + 2. * tt) / dt;
     break;
   case D_X3_DT:
-    *x_var = fv_dot->d[2];
+    *x_var = goma_ctx->fem.fv_dot->d[2];
     var = MESH_DISPLACEMENT3;
     *d_x_var = (1. + 2. * tt) / dt;
     break;
@@ -3683,7 +3755,7 @@ int load_variable(double *x_var,       /* variable value */
     GOMA_EH(GOMA_ERROR, "SURFACE variables not defined yet");
     break;
   case D_P_DT:
-    *x_var = fv_dot->P;
+    *x_var = goma_ctx->fem.fv_dot->P;
     var = PRESSURE;
     *d_x_var = (1. + 2. * tt) / dt;
     break;
@@ -3764,7 +3836,7 @@ int bc_eqn_index(int id,          /* local node number                 */
   struct BC_descriptions *bc_desc = bc->desc;
   NODE_INFO_STRUCT *node = Nodes[I];
   VARIABLE_DESCRIPTION_STRUCT *vd, *vd2 = NULL;
-  nv = node->Nodal_Vars_Info[pg->imtrx];
+  nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
   /*
    *  Find equation number and species number from the BC description
@@ -3816,7 +3888,8 @@ int bc_eqn_index(int id,          /* local node number                 */
    *        search).
    */
   if (BC_dup_ptr != NULL) {
-    bc_node = in_list(I, 0, BC_dup_ptr[pg->imtrx] + 1, BC_dup_nodes[pg->imtrx]);
+    bc_node = in_list(I, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx] + 1,
+                      BC_dup_nodes[goma_ctx->fem.pg->imtrx]);
     if (bc_node != -1) {
       /*
        * current node is in the BC_duplication list.
@@ -3827,7 +3900,8 @@ int bc_eqn_index(int id,          /* local node number                 */
        */
       i_calc = -1;
       if (ieqn <= LAST_REAL_EQ) {
-        i_calc = search_bc_dup_list(bc_input_id, BC_dup_list[pg->imtrx][bc_node][node_offset]);
+        i_calc = search_bc_dup_list(bc_input_id,
+                                    BC_dup_list[goma_ctx->fem.pg->imtrx][bc_node][node_offset]);
 
       } else if ((ieqn >= R_MESH_NORMAL) && (ieqn <= R_MESH_TANG2)) {
         if (goma_automatic_rotations.automatic_rotations) {
@@ -3839,7 +3913,7 @@ int bc_eqn_index(int id,          /* local node number                 */
               for (int j = 0; j < 3; j++) {
                 dot +=
                     goma_automatic_rotations.rotation_nodes[I].rotated_coord[dir]->normal->data[j] *
-                    fv->snormal[j];
+                    goma_ctx->fem.fv->snormal[j];
               }
               if (fabs(dot) > dot_max) {
                 best_dir = dir;
@@ -3867,7 +3941,8 @@ int bc_eqn_index(int id,          /* local node number                 */
           for (jeqn = R_MESH1; jeqn <= R_MESH3; jeqn++) {
             offset_j = get_nodal_unknown_offset(nv, jeqn, matID, 0, &vd2);
             if (offset_j >= 0) {
-              i_calc = search_bc_dup_list(bc_input_id, BC_dup_list[pg->imtrx][bc_node][offset_j]);
+              i_calc = search_bc_dup_list(bc_input_id,
+                                          BC_dup_list[goma_ctx->fem.pg->imtrx][bc_node][offset_j]);
               if (i_calc != -1) {
                 node_offset = offset_j;
                 ieqn = jeqn;
@@ -3887,7 +3962,7 @@ int bc_eqn_index(int id,          /* local node number                 */
               for (int j = 0; j < 3; j++) {
                 dot +=
                     goma_automatic_rotations.rotation_nodes[I].rotated_coord[dir]->normal->data[j] *
-                    fv->snormal[j];
+                    goma_ctx->fem.fv->snormal[j];
               }
               if (fabs(dot) > dot_max) {
                 best_dir = dir;
@@ -3908,7 +3983,8 @@ int bc_eqn_index(int id,          /* local node number                 */
           for (jeqn = R_MOMENTUM1; jeqn <= R_MOMENTUM3; jeqn++) {
             offset_j = get_nodal_unknown_offset(nv, jeqn, matID, 0, &vd2);
             if (offset_j >= 0) {
-              i_calc = search_bc_dup_list(bc_input_id, BC_dup_list[pg->imtrx][bc_node][offset_j]);
+              i_calc = search_bc_dup_list(bc_input_id,
+                                          BC_dup_list[goma_ctx->fem.pg->imtrx][bc_node][offset_j]);
               if (i_calc != -1) {
                 node_offset = offset_j;
                 ieqn = jeqn;
@@ -3922,7 +3998,8 @@ int bc_eqn_index(int id,          /* local node number                 */
         for (jeqn = R_SOLID1; jeqn <= R_SOLID3; jeqn++) {
           offset_j = get_nodal_unknown_offset(nv, jeqn, matID, 0, &vd2);
           if (offset_j >= 0) {
-            i_calc = search_bc_dup_list(bc_input_id, BC_dup_list[pg->imtrx][bc_node][offset_j]);
+            i_calc = search_bc_dup_list(bc_input_id,
+                                        BC_dup_list[goma_ctx->fem.pg->imtrx][bc_node][offset_j]);
             if (i_calc != -1) {
               node_offset = offset_j;
               ieqn = jeqn;
@@ -3960,7 +4037,7 @@ int bc_eqn_index(int id,          /* local node number                 */
         double dot = 0;
         for (int j = 0; j < 3; j++) {
           dot += goma_automatic_rotations.rotation_nodes[I].rotated_coord[dir]->normal->data[j] *
-                 fv->snormal[j];
+                 goma_ctx->fem.fv->snormal[j];
         }
         if (fabs(dot) > dot_max) {
           best_dir = dir;
@@ -4003,8 +4080,8 @@ int bc_eqn_index(int id,          /* local node number                 */
    * If the regular unknown equation is replaced by a Dirichlet
    * condition at this node, return -1
    */
-  if (node->DBC[pg->imtrx]) {
-    if (((int)node->DBC[pg->imtrx][node_offset]) != -1) {
+  if (node->DBC[goma_ctx->fem.pg->imtrx]) {
+    if (((int)node->DBC[goma_ctx->fem.pg->imtrx][node_offset]) != -1) {
       return -1;
     }
   }
@@ -4014,7 +4091,7 @@ int bc_eqn_index(int id,          /* local node number                 */
    */
   *matID_retn = matID;
   *eqn = ieqn;
-  index_eqn = node->First_Unknown[pg->imtrx] + node_offset;
+  index_eqn = node->First_Unknown[goma_ctx->fem.pg->imtrx] + node_offset;
 
   /*
    * HKM -> we can put this section into
@@ -4097,7 +4174,7 @@ int bc_eqn_index_stress(int id,          /* local node number                 */
   struct BC_descriptions *bc_desc = bc->desc;
   NODE_INFO_STRUCT *node = Nodes[I];
   VARIABLE_DESCRIPTION_STRUCT *vd;
-  nv = node->Nodal_Vars_Info[pg->imtrx];
+  nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
   /*
    *  Find equation number from the BC description
@@ -4181,7 +4258,8 @@ int bc_eqn_index_stress(int id,          /* local node number                 */
    *        results of this search (or just the need to do the
    *        search).
    */
-  bc_node = in_list(I, 0, BC_dup_ptr[pg->imtrx] + 1, BC_dup_nodes[pg->imtrx]);
+  bc_node =
+      in_list(I, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx] + 1, BC_dup_nodes[goma_ctx->fem.pg->imtrx]);
   if (bc_node != -1) {
     /*
      * current node is in the BC_duplication list.
@@ -4192,7 +4270,8 @@ int bc_eqn_index_stress(int id,          /* local node number                 */
      */
     i_calc = -1;
     if (ieqn <= LAST_REAL_EQ) {
-      i_calc = search_bc_dup_list(bc_input_id, BC_dup_list[pg->imtrx][bc_node][node_offset]);
+      i_calc = search_bc_dup_list(bc_input_id,
+                                  BC_dup_list[goma_ctx->fem.pg->imtrx][bc_node][node_offset]);
     } else {
       GOMA_EH(GOMA_ERROR, "Equation not in list ");
     }
@@ -4211,8 +4290,8 @@ int bc_eqn_index_stress(int id,          /* local node number                 */
    * If the regular unknown equation is replaced by a Dirichlet
    * condition at this node, return -1
    */
-  if (node->DBC[pg->imtrx]) {
-    if (((int)node->DBC[pg->imtrx][node_offset]) != -1) {
+  if (node->DBC[goma_ctx->fem.pg->imtrx]) {
+    if (((int)node->DBC[goma_ctx->fem.pg->imtrx][node_offset]) != -1) {
       return -1;
     }
   }
@@ -4222,7 +4301,7 @@ int bc_eqn_index_stress(int id,          /* local node number                 */
    */
   *matID_retn = matID;
   *eqn = ieqn;
-  index_eqn = node->First_Unknown[pg->imtrx] + node_offset;
+  index_eqn = node->First_Unknown[goma_ctx->fem.pg->imtrx] + node_offset;
 
   /*
    * HKM -> we can put this section into
@@ -4336,19 +4415,19 @@ void apply_table_bc(double *func,
   double slope, interp_val, x_table[2];
   double dfunc_dx[3];
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
 
   basis = BC_Type->table->t_index[0];
 
   /*  Setup Dummy variable to pass array to interpolation function */
   if (basis != -1)
-    x_table[0] = fv->x[basis];
+    x_table[0] = goma_ctx->fem.fv->x[basis];
   else
     x_table[0] = time_value;
 
   if (BC_Type->table->interp_method == BIQUADRATIC || BC_Type->table->interp_method == BILINEAR) {
-    x_table[1] = fv->x[BC_Type->table->t_index[1]];
+    x_table[1] = goma_ctx->fem.fv->x[BC_Type->table->t_index[1]];
   }
 
   interp_val = interpolate_table(BC_Type->table, x_table, &slope, dfunc_dx);
@@ -4359,243 +4438,243 @@ void apply_table_bc(double *func,
 
   switch (var) {
   case VELOCITY1:
-    *func = fv->v[0] - interp_val;
+    *func = goma_ctx->fem.fv->v[0] - interp_val;
     d_func[var] = 1.0;
     break;
   case VELOCITY2:
-    *func = fv->v[1] - interp_val;
+    *func = goma_ctx->fem.fv->v[1] - interp_val;
     d_func[var] = 1.0;
     break;
   case VELOCITY3:
-    *func = fv->v[2] - interp_val;
+    *func = goma_ctx->fem.fv->v[2] - interp_val;
     d_func[var] = 1.0;
     break;
   case TEMPERATURE:
-    *func = fv->T - interp_val;
+    *func = goma_ctx->fem.fv->T - interp_val;
     d_func[var] = 1.0;
     break;
   case MESH_DISPLACEMENT1:
-    *func = fv->d[0] - interp_val;
+    *func = goma_ctx->fem.fv->d[0] - interp_val;
     d_func[var] = 1.0;
     break;
   case MESH_DISPLACEMENT2:
-    *func = fv->d[1] - interp_val;
+    *func = goma_ctx->fem.fv->d[1] - interp_val;
     d_func[var] = 1.0;
     break;
   case MESH_DISPLACEMENT3:
-    *func = fv->d[2] - interp_val;
+    *func = goma_ctx->fem.fv->d[2] - interp_val;
     d_func[var] = 1.0;
     break;
   case MESH_POSITION1:
-    *func = fv->x[0] - interp_val;
+    *func = goma_ctx->fem.fv->x[0] - interp_val;
     d_func[MESH_DISPLACEMENT1] = 1.0;
     break;
   case MESH_POSITION2:
-    *func = fv->x[1] - interp_val;
+    *func = goma_ctx->fem.fv->x[1] - interp_val;
     d_func[MESH_DISPLACEMENT2] = 1.0;
     break;
   case MESH_POSITION3:
-    *func = fv->x[2] - interp_val;
+    *func = goma_ctx->fem.fv->x[2] - interp_val;
     d_func[MESH_DISPLACEMENT3] = 1.0;
     break;
   case MASS_FRACTION:
-    *func = fv->c[BC_Type->species_eq] - interp_val;
+    *func = goma_ctx->fem.fv->c[BC_Type->species_eq] - interp_val;
     d_func[MAX_VARIABLE_TYPES + BC_Type->species_eq] = 1.0;
     break;
   case PRESSURE:
-    *func = fv->P - interp_val;
+    *func = goma_ctx->fem.fv->P - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS11:
-    *func = fv->S[0][0][0] - interp_val;
+    *func = goma_ctx->fem.fv->S[0][0][0] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS12:
-    *func = fv->S[0][0][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[0][0][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS22:
-    *func = fv->S[0][1][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[0][1][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS13:
-    *func = fv->S[0][0][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[0][0][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS23:
-    *func = fv->S[0][1][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[0][1][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS33:
-    *func = fv->S[0][2][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[0][2][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS11_1:
-    *func = fv->S[1][0][0] - interp_val;
+    *func = goma_ctx->fem.fv->S[1][0][0] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS12_1:
-    *func = fv->S[1][0][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[1][0][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS22_1:
-    *func = fv->S[1][1][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[1][1][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS13_1:
-    *func = fv->S[1][0][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[1][0][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS23_1:
-    *func = fv->S[1][1][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[1][1][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS33_1:
-    *func = fv->S[1][2][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[1][2][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS11_2:
-    *func = fv->S[2][0][0] - interp_val;
+    *func = goma_ctx->fem.fv->S[2][0][0] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS12_2:
-    *func = fv->S[2][0][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[2][0][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS22_2:
-    *func = fv->S[2][1][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[2][1][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS13_2:
-    *func = fv->S[2][0][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[2][0][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS23_2:
-    *func = fv->S[2][1][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[2][1][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS33_2:
-    *func = fv->S[2][2][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[2][2][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS11_3:
-    *func = fv->S[3][0][0] - interp_val;
+    *func = goma_ctx->fem.fv->S[3][0][0] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS12_3:
-    *func = fv->S[3][0][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[3][0][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS22_3:
-    *func = fv->S[3][1][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[3][1][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS13_3:
-    *func = fv->S[3][0][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[3][0][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS23_3:
-    *func = fv->S[3][1][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[3][1][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS33_3:
-    *func = fv->S[3][2][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[3][2][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS11_4:
-    *func = fv->S[4][0][0] - interp_val;
+    *func = goma_ctx->fem.fv->S[4][0][0] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS12_4:
-    *func = fv->S[4][0][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[4][0][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS22_4:
-    *func = fv->S[4][1][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[4][1][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS13_4:
-    *func = fv->S[4][0][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[4][0][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS23_4:
-    *func = fv->S[4][1][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[4][1][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS33_4:
-    *func = fv->S[4][2][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[4][2][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS11_5:
-    *func = fv->S[5][0][0] - interp_val;
+    *func = goma_ctx->fem.fv->S[5][0][0] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS12_5:
-    *func = fv->S[5][0][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[5][0][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS22_5:
-    *func = fv->S[5][1][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[5][1][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS13_5:
-    *func = fv->S[5][0][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[5][0][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS23_5:
-    *func = fv->S[5][1][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[5][1][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS33_5:
-    *func = fv->S[5][2][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[5][2][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS11_6:
-    *func = fv->S[6][0][0] - interp_val;
+    *func = goma_ctx->fem.fv->S[6][0][0] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS12_6:
-    *func = fv->S[6][0][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[6][0][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS22_6:
-    *func = fv->S[6][1][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[6][1][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS13_6:
-    *func = fv->S[6][0][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[6][0][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS23_6:
-    *func = fv->S[6][1][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[6][1][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS33_6:
-    *func = fv->S[6][2][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[6][2][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS11_7:
-    *func = fv->S[7][0][0] - interp_val;
+    *func = goma_ctx->fem.fv->S[7][0][0] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS12_7:
-    *func = fv->S[7][0][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[7][0][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS22_7:
-    *func = fv->S[7][1][1] - interp_val;
+    *func = goma_ctx->fem.fv->S[7][1][1] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS13_7:
-    *func = fv->S[7][0][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[7][0][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS23_7:
-    *func = fv->S[7][1][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[7][1][2] - interp_val;
     d_func[var] = 1.0;
     break;
   case POLYMER_STRESS33_7:
-    *func = fv->S[7][2][2] - interp_val;
+    *func = goma_ctx->fem.fv->S[7][2][2] - interp_val;
     d_func[var] = 1.0;
     break;
 
@@ -4612,7 +4691,7 @@ void apply_table_bc(double *func,
     d_func[R_MESH1 + BC_Type->table->t_index[0]] -= dfunc_dx[0] * BC_Type->BC_Data_Float[0];
     d_func[R_MESH1 + BC_Type->table->t_index[1]] -= dfunc_dx[1] * BC_Type->BC_Data_Float[0];
   } else {
-    if (basis != -1 && pd->e[pg->imtrx][R_MESH1 + basis]) {
+    if (basis != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1 + basis]) {
       d_func[R_MESH1 + basis] -= slope;
     }
   }

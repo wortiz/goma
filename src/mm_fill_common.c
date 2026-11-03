@@ -43,16 +43,16 @@
 
 static void calculateVolumeFractionGasPhase(const dbl time) {
   dbl rho;
-  if (mp->DensityModel == DENSITY_FOAM) {
+  if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM) {
     GOMA_EH(GOMA_ERROR, "Not completed");
-  } else if (mp->DensityModel == DENSITY_FOAM_CONC) {
+  } else if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_CONC) {
     GOMA_EH(GOMA_ERROR, "Not completed");
-  } else if (mp->DensityModel == DENSITY_FOAM_TIME) {
+  } else if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_TIME) {
     double rho_init, rho_final, aexp, time_delay, realtime;
-    rho_init = mp->u_density[0];   /* Initial density */
-    rho_final = mp->u_density[1];  /* final density */
-    aexp = mp->u_density[2];       /* Arhennius constant for time exponent*/
-    time_delay = mp->u_density[3]; /* time delay before foaming starts */
+    rho_init = goma_ctx->fem.mp->u_density[0];   /* Initial density */
+    rho_final = goma_ctx->fem.mp->u_density[1];  /* final density */
+    aexp = goma_ctx->fem.mp->u_density[2];       /* Arhennius constant for time exponent*/
+    time_delay = goma_ctx->fem.mp->u_density[3]; /* time delay before foaming starts */
 
     if (time > time_delay) {
       realtime = time - time_delay;
@@ -63,16 +63,16 @@ static void calculateVolumeFractionGasPhase(const dbl time) {
     double theta = rho / rho_init;
     double MolecWeightGas = 30.;
     double rhoGas = MolecWeightGas / (82.05 * 300.);
-    mp->volumeFractionGas = rho_init / (rho_init - rhoGas) * (1.0 - theta);
-  } else if (mp->DensityModel == DENSITY_FOAM_TIME_TEMP) {
+    goma_ctx->fem.mp->volumeFractionGas = rho_init / (rho_init - rhoGas) * (1.0 - theta);
+  } else if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_TIME_TEMP) {
     double T;
-    double rho_init = mp->u_density[0];   /* Initial density (units of gm cm-3 */
-    double rho_final = mp->u_density[1];  /* Final density (units of gm cm-3 */
-    double cexp = mp->u_density[2];       /* cexp in units of Kelvin sec */
-    double coffset = mp->u_density[3];    /* offset in units of seconds */
-    double time_delay = mp->u_density[4]; /* time delay in units of seconds */
+    double rho_init = goma_ctx->fem.mp->u_density[0];   /* Initial density (units of gm cm-3 */
+    double rho_final = goma_ctx->fem.mp->u_density[1];  /* Final density (units of gm cm-3 */
+    double cexp = goma_ctx->fem.mp->u_density[2];       /* cexp in units of Kelvin sec */
+    double coffset = goma_ctx->fem.mp->u_density[3];    /* offset in units of seconds */
+    double time_delay = goma_ctx->fem.mp->u_density[4]; /* time delay in units of seconds */
     double drhoDT;
-    T = fv->T;
+    T = goma_ctx->fem.fv->T;
     if (time > time_delay) {
       double realtime = time - time_delay;
       double delRho = (rho_init - rho_final);
@@ -88,25 +88,27 @@ static void calculateVolumeFractionGasPhase(const dbl time) {
     double MolecWeightGas = 30.;
     // Have to make rhoGas independent of T, because rho_final is independent of T
     double rhoGas = MolecWeightGas / (82.05 * 300.);
-    mp->volumeFractionGas = rho_init / (rho_init - rhoGas) * (1.0 - theta);
-    mp->d_volumeFractionGas[TEMPERATURE] = -drhoDT / (rho_init - rhoGas);
-  } else if (mp->DensityModel == DENSITY_FOAM_PMDI_10) {
-    if (pd->gv[MOMENT1]) {
-      mp->volumeFractionGas = (fv->moment[1] / (1 + fv->moment[1]));
-      mp->d_volumeFractionGas[MOMENT1] = 1 / ((1 + fv->moment[1]) * (1 + fv->moment[1]));
+    goma_ctx->fem.mp->volumeFractionGas = rho_init / (rho_init - rhoGas) * (1.0 - theta);
+    goma_ctx->fem.mp->d_volumeFractionGas[TEMPERATURE] = -drhoDT / (rho_init - rhoGas);
+  } else if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_PMDI_10) {
+    if (goma_ctx->fem.pd->gv[MOMENT1]) {
+      goma_ctx->fem.mp->volumeFractionGas =
+          (goma_ctx->fem.fv->moment[1] / (1 + goma_ctx->fem.fv->moment[1]));
+      goma_ctx->fem.mp->d_volumeFractionGas[MOMENT1] =
+          1 / ((1 + goma_ctx->fem.fv->moment[1]) * (1 + goma_ctx->fem.fv->moment[1]));
     } else {
       int wCO2;
       int wH2O;
       int w;
 
       for (w = 0; w < MAX_VARIABLE_TYPES + MAX_CONC; w++) {
-        mp->d_volumeFractionGas[w] = 0.0;
+        goma_ctx->fem.mp->d_volumeFractionGas[w] = 0.0;
       }
 
       wCO2 = -1;
       wH2O = -1;
-      for (w = 0; w < pd->Num_Species; w++) {
-        switch (mp->SpeciesSourceModel[w]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species; w++) {
+        switch (goma_ctx->fem.mp->SpeciesSourceModel[w]) {
         case FOAM_PMDI_10_CO2:
           wCO2 = w;
           break;
@@ -124,10 +126,10 @@ static void calculateVolumeFractionGasPhase(const dbl time) {
         GOMA_EH(GOMA_ERROR, "Expected a Species Source of FOAM_PMDI_10_H2O");
       }
 
-      double M_CO2 = mp->u_density[0];
+      double M_CO2 = goma_ctx->fem.mp->u_density[0];
       // double rho_liq = mp->u_density[1];
-      double ref_press = mp->u_density[2];
-      double Rgas_const = mp->u_density[3];
+      double ref_press = goma_ctx->fem.mp->u_density[2];
+      double Rgas_const = goma_ctx->fem.mp->u_density[3];
       double rho_gas = 0;
       double nu;
       double d_nu_dC;
@@ -137,25 +139,27 @@ static void calculateVolumeFractionGasPhase(const dbl time) {
       double d_phi_dC = 0.0;
       double d_phi_dT = 0.0;
 
-      if (fv->T > 0) {
-        rho_gas = (ref_press * M_CO2 / (Rgas_const * fv->T));
-        nu = M_CO2 * fv->c[wCO2] / rho_gas;
+      if (goma_ctx->fem.fv->T > 0) {
+        rho_gas = (ref_press * M_CO2 / (Rgas_const * goma_ctx->fem.fv->T));
+        nu = M_CO2 * goma_ctx->fem.fv->c[wCO2] / rho_gas;
         d_nu_dC = M_CO2 / rho_gas;
-        d_nu_dT = M_CO2 * fv->c[wCO2] * Rgas_const / (ref_press * M_CO2);
+        d_nu_dT = M_CO2 * goma_ctx->fem.fv->c[wCO2] * Rgas_const / (ref_press * M_CO2);
 
         phi = nu / (1 + nu);
         d_phi_dC = (d_nu_dC) / ((1 + nu) * (1 + nu));
         d_phi_dT = (d_nu_dT) / ((1 + nu) * (1 + nu));
       }
 
-      mp->volumeFractionGas = phi;
-      mp->d_volumeFractionGas[TEMPERATURE] = d_phi_dT;
+      goma_ctx->fem.mp->volumeFractionGas = phi;
+      goma_ctx->fem.mp->d_volumeFractionGas[TEMPERATURE] = d_phi_dT;
 
-      mp->d_volumeFractionGas[MAX_VARIABLE_TYPES + wCO2] = d_phi_dC;
+      goma_ctx->fem.mp->d_volumeFractionGas[MAX_VARIABLE_TYPES + wCO2] = d_phi_dC;
     }
-  } else if (mp->DensityModel == DENSITY_MOMENT_BASED) {
-    mp->volumeFractionGas = (fv->moment[1] / (1 + fv->moment[1]));
-    mp->d_volumeFractionGas[MOMENT1] = 1 / ((1 + fv->moment[1]) * (1 + fv->moment[1]));
+  } else if (goma_ctx->fem.mp->DensityModel == DENSITY_MOMENT_BASED) {
+    goma_ctx->fem.mp->volumeFractionGas =
+        (goma_ctx->fem.fv->moment[1] / (1 + goma_ctx->fem.fv->moment[1]));
+    goma_ctx->fem.mp->d_volumeFractionGas[MOMENT1] =
+        1 / ((1 + goma_ctx->fem.fv->moment[1]) * (1 + goma_ctx->fem.fv->moment[1]));
   }
 }
 
@@ -169,9 +173,12 @@ void computeCommonMaterialProps_gp(const dbl time) {
    * Decide whether we have a two-phase flow and need to
    * calculate the volume fraction
    */
-  if (mp->DensityModel == DENSITY_FOAM || mp->DensityModel == DENSITY_FOAM_CONC ||
-      mp->DensityModel == DENSITY_FOAM_TIME || mp->DensityModel == DENSITY_FOAM_TIME_TEMP ||
-      mp->DensityModel == DENSITY_MOMENT_BASED || mp->DensityModel == DENSITY_FOAM_PMDI_10) {
+  if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM ||
+      goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_CONC ||
+      goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_TIME ||
+      goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_TIME_TEMP ||
+      goma_ctx->fem.mp->DensityModel == DENSITY_MOMENT_BASED ||
+      goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_PMDI_10) {
     calculateVolumeFractionGasPhase(time);
   }
 }

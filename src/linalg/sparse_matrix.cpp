@@ -128,7 +128,7 @@ extern "C" goma_error GomaSparseMatrix_SetProblemGraph(
    * loop over all of the nodes on this processor
    */
   for (inode = 0; inode < local_nodes; inode++) {
-    nv = Nodes[inode]->Nodal_Vars_Info[pg->imtrx];
+    nv = Nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     /*
      * Fill the vector list which points to the unknowns defined at this
      * node...
@@ -159,7 +159,7 @@ extern "C" goma_error GomaSparseMatrix_SetProblemGraph(
       for (j = exo->node_node_pntr[inode]; j < exo->node_node_pntr[inode + 1]; j++) {
         inter_node = exo->node_node_list[j];
         nodeCol = Nodes[inter_node];
-        nvCol = nodeCol->Nodal_Vars_Info[pg->imtrx];
+        nvCol = nodeCol->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
         /*
          * fill the vector list which points to the unknowns
@@ -192,7 +192,7 @@ extern "C" goma_error GomaSparseMatrix_SetProblemGraph(
            * Query the Interaction mask to determine if a jacobian entry
            * should be created
            */
-          add_var = Inter_Mask[pg->imtrx][rowVarType][colVarType];
+          add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
 
           /* The following code should be activated when solving DG viscoelastic problems
            * with full Jacobian treatment of upwind element stress terms
@@ -201,16 +201,16 @@ extern "C" goma_error GomaSparseMatrix_SetProblemGraph(
               exo->centroid_list[inter_node] != -1) {
             eb1 = exo->elem_eb[exo->centroid_list[inode]];
 
-            if (vn_glob[Matilda[eb1]]->dg_J_model == FULL_DG) {
-              i1 = pd_glob[Matilda[eb1]]->i[pg->imtrx][rowVarType];
-              i2 = pd_glob[Matilda[eb1]]->i[pg->imtrx][colVarType];
+            if (goma_ctx->fem.vn_glob[Matilda[eb1]]->dg_J_model == FULL_DG) {
+              i1 = goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][rowVarType];
+              i2 = goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][colVarType];
 
               if ((rowVarType == colVarType) &&
                   (i1 == I_P0 || i1 == I_P1 || i1 == I_PQ1 || i1 == I_PQ2) &&
                   (i2 == I_P0 || i2 == I_P1 || i2 == I_PQ1 || i2 == I_PQ2) &&
                   (rowVarType != PRESSURE) &&
                   (rowVarType > VELOCITY_GRADIENT33 || rowVarType < VELOCITY_GRADIENT11)) {
-                add_var = Inter_Mask[pg->imtrx][rowVarType][colVarType];
+                add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
               } else {
                 add_var = 0;
               }
@@ -224,7 +224,7 @@ extern "C" goma_error GomaSparseMatrix_SetProblemGraph(
             /*
              * Determine the equation number of the current unknown
              */
-            icol_index = nodeCol->First_Unknown[pg->imtrx] + inter_unknown;
+            icol_index = nodeCol->First_Unknown[goma_ctx->fem.pg->imtrx] + inter_unknown;
             coo_rows.push_back(GlobalIDs[irow_index]);
             coo_cols.push_back(GlobalIDs[icol_index]);
             nnz++;
@@ -287,12 +287,12 @@ extern "C" goma_error GomaSparseMatrix_LoadLec(GomaSparseMatrix matrix,
   std::vector<double> Values;
 
   for (e = V_FIRST; e < V_LAST; e++) {
-    pe = upd->ep[pg->imtrx][e];
+    pe = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][e];
     if (pe != -1) {
       if (e == R_MASS) {
-        for (ke = 0; ke < upd->Max_Num_Species_Eqn; ke++) {
+        for (ke = 0; ke < goma_ctx->fem.upd->Max_Num_Species_Eqn; ke++) {
           pe = MAX_PROB_VAR + ke;
-          dofs = ei[pg->imtrx]->dof[e];
+          dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[e];
           for (i = 0; i < dofs; i++) {
             /*
              * Check to see whether this dof is on a
@@ -300,23 +300,26 @@ extern "C" goma_error GomaSparseMatrix_LoadLec(GomaSparseMatrix matrix,
              * there is no need to fill in the processor
              * residual and Jacobian row for this variable.
              */
-            ledof = ei[pg->imtrx]->lvdof_to_ledof[e][i];
-            if (ei[pg->imtrx]->owned_ledof[ledof]) {
-              gnn = ei[pg->imtrx]->gnn_list[e][i];
-              nvdof = ei[pg->imtrx]->Baby_Dolphin[e][i];
-              je_new = ei[pg->imtrx]->ieqn_ledof[ledof] + ke;
-              row_index =
-                  Index_Solution(gnn, e, ke, nvdof, ei[pg->imtrx]->matID_ledof[ledof], pg->imtrx);
+            ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[e][i];
+            if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owned_ledof[ledof]) {
+              gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[e][i];
+              nvdof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Baby_Dolphin[e][i];
+              je_new = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ieqn_ledof[ledof] + ke;
+              row_index = Index_Solution(
+                  gnn, e, ke, nvdof, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof],
+                  goma_ctx->fem.pg->imtrx);
               resid_vector[row_index] += lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)];
 
-              if (af->Assemble_Jacobian) {
+              if (goma_ctx->fem.af->Assemble_Jacobian) {
                 for (v = V_FIRST; v < V_LAST; v++) {
-                  pv = upd->vp[pg->imtrx][v];
-                  if (pv != -1 && (Inter_Mask[pg->imtrx][e][v])) {
-                    ei_ptr = ei[pg->imtrx];
-                    if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
-                      if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
-                        ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
+                  pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
+                  if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
+                    ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
+                    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                        ielem) {
+                      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                          -1) {
+                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
                         if (ei_ptr == 0) {
                           printf("ei_ptr == 0\n");
                           exit(-1);
@@ -324,28 +327,28 @@ extern "C" goma_error GomaSparseMatrix_LoadLec(GomaSparseMatrix matrix,
                       }
                     }
                     if (v == MASS_FRACTION) {
-                      for (kv = 0; kv < upd->Max_Num_Species_Eqn; kv++) {
+                      for (kv = 0; kv < goma_ctx->fem.upd->Max_Num_Species_Eqn; kv++) {
                         pv = MAX_PROB_VAR + kv;
                         for (j = 0; j < ei_ptr->dof[v]; j++) {
                           ledof = ei_ptr->lvdof_to_ledof[v][j];
                           je_new = ei_ptr->ieqn_ledof[ledof] + kv;
-                          col_index = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
-                                                     ei_ptr->Baby_Dolphin[v][j],
-                                                     ei_ptr->matID_ledof[ledof], pg->imtrx);
+                          col_index = Index_Solution(
+                              ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
+                              ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                           GOMA_EH(col_index, "Bad var index.");
                           Indices.push_back(matrix->global_ids[col_index]);
                           Values.push_back(lec->J[LEC_J_INDEX(pe, pv, i, j)]);
                         }
                       }
                     } else {
-                      pv = upd->vp[pg->imtrx][v];
+                      pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
                       kv = 0;
                       for (j = 0; j < ei_ptr->dof[v]; j++) {
                         ledof = ei_ptr->lvdof_to_ledof[v][j];
                         je_new = ei_ptr->ieqn_ledof[ledof];
-                        col_index = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
-                                                   ei_ptr->Baby_Dolphin[v][j],
-                                                   ei_ptr->matID_ledof[ledof], pg->imtrx);
+                        col_index = Index_Solution(
+                            ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
+                            ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                         if (col_index != je_new) {
                           fprintf(stderr, "Oh fiddlesticks: je = %d, je_new = %d\n", col_index,
                                   je_new);
@@ -367,8 +370,8 @@ extern "C" goma_error GomaSparseMatrix_LoadLec(GomaSparseMatrix matrix,
           }
         }
       } else {
-        pe = upd->ep[pg->imtrx][e];
-        dofs = ei[pg->imtrx]->dof[e];
+        pe = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][e];
+        dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[e];
         for (i = 0; i < dofs; i++) {
           /*
            * Check to see whether this dof is on a
@@ -376,35 +379,37 @@ extern "C" goma_error GomaSparseMatrix_LoadLec(GomaSparseMatrix matrix,
            * there is no need to fill in the processor
            * residual and Jacobian row for this variable.
            */
-          ledof = ei[pg->imtrx]->lvdof_to_ledof[e][i];
-          if (ei[pg->imtrx]->owned_ledof[ledof]) {
-            row_index = ei[pg->imtrx]->gun_list[e][i];
+          ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[e][i];
+          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owned_ledof[ledof]) {
+            row_index = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[e][i];
             resid_vector[row_index] += lec->R[LEC_R_INDEX(pe, i)];
 
-            if (af->Assemble_Jacobian) {
+            if (goma_ctx->fem.af->Assemble_Jacobian) {
               for (v = V_FIRST; v < V_LAST; v++) {
-                pv = upd->vp[pg->imtrx][v];
-                if (pv != -1 && (Inter_Mask[pg->imtrx][e][v])) {
+                pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
+                if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
                   if (v == MASS_FRACTION) {
 
-                    ei_ptr = ei[pg->imtrx];
-                    if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
-                      if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
-                        ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
+                    ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
+                    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                        ielem) {
+                      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                          -1) {
+                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
                         if (ei_ptr == 0) {
                           GOMA_EH(GOMA_ERROR, "ei_ptr == 0\n");
                           exit(-1);
                         }
                       }
                     }
-                    for (kv = 0; kv < upd->Max_Num_Species_Eqn; kv++) {
+                    for (kv = 0; kv < goma_ctx->fem.upd->Max_Num_Species_Eqn; kv++) {
                       pv = MAX_PROB_VAR + kv;
                       for (j = 0; j < ei_ptr->dof[v]; j++) {
                         ledof = ei_ptr->lvdof_to_ledof[v][j];
                         je_new = ei_ptr->ieqn_ledof[ledof] + kv;
-                        col_index = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
-                                                   ei_ptr->Baby_Dolphin[v][j],
-                                                   ei_ptr->matID_ledof[ledof], pg->imtrx);
+                        col_index = Index_Solution(
+                            ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
+                            ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                         if (col_index != je_new) {
                           /*
                            * HKM -> another special case. Until we delineate
@@ -412,7 +417,8 @@ extern "C" goma_error GomaSparseMatrix_LoadLec(GomaSparseMatrix matrix,
                            *        dofs, je_new will be wrong here. je
                            *        is correct.
                            */
-                          if (Nodes[ei[pg->imtrx]->gnn_list[v][j]]->Mat_List.Length < 2) {
+                          if (Nodes[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j]]
+                                  ->Mat_List.Length < 2) {
                           }
                         }
                         GOMA_EH(col_index, "Bad var index.");
@@ -423,10 +429,12 @@ extern "C" goma_error GomaSparseMatrix_LoadLec(GomaSparseMatrix matrix,
                   } else {
                     kv = 0;
                     // NEW IMPLEMENTATION
-                    ei_ptr = ei[pg->imtrx];
-                    if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
-                      if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
-                        ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
+                    ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
+                    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                        ielem) {
+                      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                          -1) {
+                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
                         if (ei_ptr == 0) {
                           GOMA_EH(GOMA_ERROR, "ei slave pointer is null");
                           exit(-1);
@@ -438,7 +446,7 @@ extern "C" goma_error GomaSparseMatrix_LoadLec(GomaSparseMatrix matrix,
                       je_new = ei_ptr->ieqn_ledof[ledof];
                       col_index =
                           Index_Solution(ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
-                                         ei_ptr->matID_ledof[ledof], pg->imtrx);
+                                         ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                       if (col_index != je_new) {
                         fprintf(stderr, "Oh fiddlesticks: je = %d, je_new = %d\n", col_index,
                                 je_new);

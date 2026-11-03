@@ -35,7 +35,7 @@
 void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, ADType diffusivity, int interp_eqn) {
   ADType G[DIM][DIM];
 
-  ad_get_metric_tensor(ad_fv->B, dim, ei[pg->imtrx]->ielem_type, G);
+  ad_get_metric_tensor(ad_fv->B, dim, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, G);
 
   ADType v_d_gv = 0;
   for (int i = 0; i < dim; i++) {
@@ -121,7 +121,7 @@ void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale) {
     }
   }
 
-  ad_get_metric_tensor(ad_fv->B, dim, ei[pg->imtrx]->ielem_type, G);
+  ad_get_metric_tensor(ad_fv->B, dim, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, G);
 
   ADType v_d_gv = 0;
   for (int i = 0; i < dim; i++) {
@@ -130,9 +130,9 @@ void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale) {
     }
   }
 
-  ADType mu = ad_viscosity(gn, gamma);
-  for (int mode = 0; mode < vn->modes; mode++) {
-    ADType mup = ad_viscosity(ve[mode]->gn, gamma);
+  ADType mu = ad_viscosity(goma_ctx->fem.gn, gamma);
+  for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+    ADType mup = ad_viscosity(goma_ctx->fem.ve[mode]->gn, gamma);
     mu += mup;
   }
 
@@ -145,7 +145,7 @@ void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale) {
     }
   }
 
-  if (pd->TimeIntegration != STEADY) {
+  if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
     tau = inv_rho / (sqrt(4 / (dt * dt) + v_d_gv + diff_g_g));
   } else {
     tau = inv_rho / (sqrt(v_d_gv + diff_g_g) + 1e-14);

@@ -148,9 +148,9 @@ int bouss_momentum_source(dbl f[DIM], /* Body force. */
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T;
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i];
+  T = goma_ctx->fem.fv->T;
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i];
 
   /* Next, if jxb is to be computed, load up J and B vectors */
   if (jxb) {
@@ -160,144 +160,156 @@ int bouss_momentum_source(dbl f[DIM], /* Body force. */
       B_I[a] = J_I[a] = 0.;
     }
 
-    for (a = 0; a < efv->Num_external_field; a++) {
-      if (!strcmp(efv->name[a], "JX_REAL")) {
-        if (pd->CoordinateSystem == CYLINDRICAL || pd->CoordinateSystem == SWIRLING ||
-            pd->CoordinateSystem == PROJECTED_CARTESIAN) {
-          J[1] = fv->external_field[a];
+    for (a = 0; a < goma_ctx->fem.efv->Num_external_field; a++) {
+      if (!strcmp(goma_ctx->fem.efv->name[a], "JX_REAL")) {
+        if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL ||
+            goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+            goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN) {
+          J[1] = goma_ctx->fem.fv->external_field[a];
 
         } else {
-          J[0] = fv->external_field[a];
+          J[0] = goma_ctx->fem.fv->external_field[a];
         }
       }
-      if (!strcmp(efv->name[a], "JX_IMAG")) {
-        if (pd->CoordinateSystem == CYLINDRICAL || pd->CoordinateSystem == SWIRLING ||
-            pd->CoordinateSystem == PROJECTED_CARTESIAN) {
-          J_I[1] = fv->external_field[a];
+      if (!strcmp(goma_ctx->fem.efv->name[a], "JX_IMAG")) {
+        if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL ||
+            goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+            goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN) {
+          J_I[1] = goma_ctx->fem.fv->external_field[a];
         } else {
-          J_I[0] = fv->external_field[a];
+          J_I[0] = goma_ctx->fem.fv->external_field[a];
         }
       }
-      if (!strcmp(efv->name[a], "JY_REAL")) {
-        if (pd->CoordinateSystem == CYLINDRICAL || pd->CoordinateSystem == SWIRLING ||
-            pd->CoordinateSystem == PROJECTED_CARTESIAN) {
-          J[0] = -fv->external_field[a] / sqrt(2.);
+      if (!strcmp(goma_ctx->fem.efv->name[a], "JY_REAL")) {
+        if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL ||
+            goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+            goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN) {
+          J[0] = -goma_ctx->fem.fv->external_field[a] / sqrt(2.);
         } else {
-          J[1] = fv->external_field[a];
+          J[1] = goma_ctx->fem.fv->external_field[a];
         }
       }
-      if (!strcmp(efv->name[a], "JY_IMAG")) {
-        if (pd->CoordinateSystem == CYLINDRICAL || pd->CoordinateSystem == SWIRLING ||
-            pd->CoordinateSystem == PROJECTED_CARTESIAN) {
-          J_I[0] = -fv->external_field[a];
+      if (!strcmp(goma_ctx->fem.efv->name[a], "JY_IMAG")) {
+        if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL ||
+            goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+            goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN) {
+          J_I[0] = -goma_ctx->fem.fv->external_field[a];
         } else {
-          J_I[1] = fv->external_field[a];
+          J_I[1] = goma_ctx->fem.fv->external_field[a];
         }
       }
-      if (!strcmp(efv->name[a], "JZ_REAL")) {
-        J[2] = fv->external_field[a];
+      if (!strcmp(goma_ctx->fem.efv->name[a], "JZ_REAL")) {
+        J[2] = goma_ctx->fem.fv->external_field[a];
       }
-      if (!strcmp(efv->name[a], "JZ_IMAG")) {
-        J_I[2] = fv->external_field[a];
+      if (!strcmp(goma_ctx->fem.efv->name[a], "JZ_IMAG")) {
+        J_I[2] = goma_ctx->fem.fv->external_field[a];
       }
 
-      if (!strcmp(efv->name[a], "BX_REAL")) {
-        if (pd->CoordinateSystem == CYLINDRICAL || pd->CoordinateSystem == SWIRLING ||
-            pd->CoordinateSystem == PROJECTED_CARTESIAN) {
-          B[1] = fv->external_field[a];
+      if (!strcmp(goma_ctx->fem.efv->name[a], "BX_REAL")) {
+        if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL ||
+            goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+            goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN) {
+          B[1] = goma_ctx->fem.fv->external_field[a];
         } else {
-          B[0] = fv->external_field[a];
+          B[0] = goma_ctx->fem.fv->external_field[a];
         }
       }
-      if (!strcmp(efv->name[a], "BX_IMAG")) {
-        if (pd->CoordinateSystem == CYLINDRICAL || pd->CoordinateSystem == SWIRLING ||
-            pd->CoordinateSystem == PROJECTED_CARTESIAN) {
-          B_I[1] = fv->external_field[a];
+      if (!strcmp(goma_ctx->fem.efv->name[a], "BX_IMAG")) {
+        if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL ||
+            goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+            goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN) {
+          B_I[1] = goma_ctx->fem.fv->external_field[a];
         } else {
-          B_I[0] = fv->external_field[a];
+          B_I[0] = goma_ctx->fem.fv->external_field[a];
         }
       }
-      if (!strcmp(efv->name[a], "BY_REAL")) {
-        if (pd->CoordinateSystem == CYLINDRICAL || pd->CoordinateSystem == SWIRLING ||
-            pd->CoordinateSystem == PROJECTED_CARTESIAN) {
-          B[0] = -fv->external_field[a];
+      if (!strcmp(goma_ctx->fem.efv->name[a], "BY_REAL")) {
+        if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL ||
+            goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+            goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN) {
+          B[0] = -goma_ctx->fem.fv->external_field[a];
         } else {
-          B[1] = fv->external_field[a];
+          B[1] = goma_ctx->fem.fv->external_field[a];
         }
       }
-      if (!strcmp(efv->name[a], "BY_IMAG")) {
-        if (pd->CoordinateSystem == CYLINDRICAL || pd->CoordinateSystem == SWIRLING ||
-            pd->CoordinateSystem == PROJECTED_CARTESIAN) {
-          B_I[0] = -fv->external_field[a];
+      if (!strcmp(goma_ctx->fem.efv->name[a], "BY_IMAG")) {
+        if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL ||
+            goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+            goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN) {
+          B_I[0] = -goma_ctx->fem.fv->external_field[a];
         } else {
-          B_I[1] = fv->external_field[a];
+          B_I[1] = goma_ctx->fem.fv->external_field[a];
         }
       }
-      if (!strcmp(efv->name[a], "BZ_REAL")) {
-        if (pd->CoordinateSystem == CYLINDRICAL || pd->CoordinateSystem == SWIRLING ||
-            pd->CoordinateSystem == PROJECTED_CARTESIAN) {
-          B[2] = -fv->external_field[a];
+      if (!strcmp(goma_ctx->fem.efv->name[a], "BZ_REAL")) {
+        if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL ||
+            goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+            goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN) {
+          B[2] = -goma_ctx->fem.fv->external_field[a];
         } else {
-          B[2] = fv->external_field[a];
+          B[2] = goma_ctx->fem.fv->external_field[a];
         }
       }
-      if (!strcmp(efv->name[a], "BZ_IMAG")) {
-        if (pd->CoordinateSystem == CYLINDRICAL || pd->CoordinateSystem == SWIRLING ||
-            pd->CoordinateSystem == PROJECTED_CARTESIAN) {
-          B_I[2] = -fv->external_field[a];
+      if (!strcmp(goma_ctx->fem.efv->name[a], "BZ_IMAG")) {
+        if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL ||
+            goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+            goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN) {
+          B_I[2] = -goma_ctx->fem.fv->external_field[a];
         } else {
-          B_I[2] = fv->external_field[a];
+          B_I[2] = goma_ctx->fem.fv->external_field[a];
         }
       }
     }
   }
 
   /*components of gravity vector for input card */
-  g[0] = mp->momentum_source[0];
-  g[1] = mp->momentum_source[1];
-  g[2] = mp->momentum_source[2];
+  g[0] = goma_ctx->fem.mp->momentum_source[0];
+  g[1] = goma_ctx->fem.mp->momentum_source[1];
+  g[2] = goma_ctx->fem.mp->momentum_source[2];
 
   /**********************************************************/
   /* Temperature piece */
-  if (pd->v[pg->imtrx][TEMPERATURE]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
     for (a = 0; a < DIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
         if (hydrostatic) {
           /*
            * This ought to be equivalent to the previous model.
            * All nonzero initialization is here now.
            */
-          f[a] += mp->density * mp->momentum_source[a] *
-                  (1 - mp->Volume_Expansion * (T - mp->reference[TEMPERATURE]));
+          f[a] += goma_ctx->fem.mp->density * goma_ctx->fem.mp->momentum_source[a] *
+                  (1 - goma_ctx->fem.mp->Volume_Expansion *
+                           (T - goma_ctx->fem.mp->reference[TEMPERATURE]));
         } else {
           /*
            * This definition implies that a hydrostatic pressure field
            * has been subtracted from the pressure field. Now you're
            * solving for P_prime!
            */
-          f[a] += mp->density * mp->momentum_source[a] *
-                  (-mp->Volume_Expansion * (T - mp->reference[TEMPERATURE]));
+          f[a] += goma_ctx->fem.mp->density * goma_ctx->fem.mp->momentum_source[a] *
+                  (-goma_ctx->fem.mp->Volume_Expansion *
+                   (T - goma_ctx->fem.mp->reference[TEMPERATURE]));
         }
       }
     }
   }
 
   /* Species piece */
-  if (pd->v[pg->imtrx][MASS_FRACTION]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
     for (a = 0; a < DIM; a++) {
       if (hydrostatic) {
-        f[a] = g[a] * mp->density;
+        f[a] = g[a] * goma_ctx->fem.mp->density;
       }
 
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         eqn = R_MOMENTUM1 + a;
-        if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-          f[a] +=
-              -g[a] * mp->density * mp->species_vol_expansion[w] * (C[w] - mp->reference_concn[w]);
-        } else if (pd->gv[R_LUBP]) {
-          f[a] +=
-              -g[a] * mp->density * mp->species_vol_expansion[w] * (C[w] - mp->reference_concn[w]);
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+          f[a] += -g[a] * goma_ctx->fem.mp->density * goma_ctx->fem.mp->species_vol_expansion[w] *
+                  (C[w] - goma_ctx->fem.mp->reference_concn[w]);
+        } else if (goma_ctx->fem.pd->gv[R_LUBP]) {
+          f[a] += -g[a] * goma_ctx->fem.mp->density * goma_ctx->fem.mp->species_vol_expansion[w] *
+                  (C[w] - goma_ctx->fem.mp->reference_concn[w]);
         }
       }
     }
@@ -312,14 +324,15 @@ int bouss_momentum_source(dbl f[DIM], /* Body force. */
         for (c = 0; c < 3; c++)
 
         {
-          if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
             /*
              * Use PRS e_ijk alternator permute macro in std.h
              * rather than eps, with hi name clash potential...
              */
-            f[a] +=
-                0.5 * (mp->u_momentum_source[0] * permute(a + 1, b + 1, c + 1) * J[b] * B[c] +
-                       mp->u_momentum_source[0] * permute(a + 1, b + 1, c + 1) * J_I[b] * B_I[c]);
+            f[a] += 0.5 * (goma_ctx->fem.mp->u_momentum_source[0] * permute(a + 1, b + 1, c + 1) *
+                               J[b] * B[c] +
+                           goma_ctx->fem.mp->u_momentum_source[0] * permute(a + 1, b + 1, c + 1) *
+                               J_I[b] * B_I[c]);
           }
         }
       }
@@ -329,31 +342,36 @@ int bouss_momentum_source(dbl f[DIM], /* Body force. */
   /* Now do sensitivies */
 
   var = TEMPERATURE;
-  if (pd->v[pg->imtrx][TEMPERATURE]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
     for (a = 0; a < DIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          df->T[a][j] += -g[a] * mp->density * mp->Volume_Expansion * bf[var]->phi[j];
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          df->T[a][j] += -g[a] * goma_ctx->fem.mp->density * goma_ctx->fem.mp->Volume_Expansion *
+                         goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
   }
 
-  if (pd->v[pg->imtrx][MASS_FRACTION]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
     var = MASS_FRACTION;
     for (a = 0; a < DIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            df->C[a][w][j] += -g[a] * mp->density * mp->species_vol_expansion[w] * bf[var]->phi[j];
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            df->C[a][w][j] += -g[a] * goma_ctx->fem.mp->density *
+                              goma_ctx->fem.mp->species_vol_expansion[w] *
+                              goma_ctx->fem.bf[var]->phi[j];
           }
         }
-      } else if (pd->e[pg->imtrx][R_LUBP]) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            df->C[a][w][j] += -g[a] * mp->density * mp->species_vol_expansion[w] * bf[var]->phi[j];
+      } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            df->C[a][w][j] += -g[a] * goma_ctx->fem.mp->density *
+                              goma_ctx->fem.mp->species_vol_expansion[w] *
+                              goma_ctx->fem.bf[var]->phi[j];
           }
         }
       }
@@ -394,7 +412,7 @@ int EHD_POLARIZATION_source(dbl f[DIM], /* Body force. */
   dbl Efield[DIM]; /* Local versions for E-field    */
   dbl g[DIM];
   int j;
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /**********************************************************/
 
@@ -402,36 +420,36 @@ int EHD_POLARIZATION_source(dbl f[DIM], /* Body force. */
   /*NB This ought to be done once for all fields at gauss pt*/
 
   for (a = 0; a < DIM; a++)
-    Efield[a] = fv->E_field[a];
+    Efield[a] = goma_ctx->fem.fv->E_field[a];
 
   /*components of whatever (charge density?) from input card */
-  g[0] = mp->momentum_source[0];
+  g[0] = goma_ctx->fem.mp->momentum_source[0];
 
   /**********************************************************/
   for (a = 0; a < dim; a++) {
     eqn = R_MOMENTUM1 + a;
 
     for (b = 0; b < dim; b++) {
-      if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-        f[a] += g[0] * Efield[b] * fv->grad_E_field[b][a];
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+        f[a] += g[0] * Efield[b] * goma_ctx->fem.fv->grad_E_field[b][a];
       }
     }
   }
   /* Now do sensitivies */
 
   var = EFIELD1;
-  if (pd->v[pg->imtrx][var]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     for (a = 0; a < dim; a++) {
       eqn = R_MOMENTUM1 + a;
       for (b = 0; b < dim; b++) {
         var = R_EFIELD1 + b;
-        if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            phi_j = bf[var]->phi[j];
-            df->E[a][b][j] += g[0] * phi_j * fv->grad_E_field[b][a];
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            phi_j = goma_ctx->fem.bf[var]->phi[j];
+            df->E[a][b][j] += g[0] * phi_j * goma_ctx->fem.fv->grad_E_field[b][a];
 
             for (p = 0; p < dim; p++) {
-              df->E[a][b][j] += g[0] * Efield[p] * bf[var]->grad_phi_e[j][b][p][a];
+              df->E[a][b][j] += g[0] * Efield[p] * goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][a];
             }
           }
         }
@@ -440,17 +458,17 @@ int EHD_POLARIZATION_source(dbl f[DIM], /* Body force. */
   }
 
   var = EFIELD1;
-  if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
     for (a = 0; a < dim; a++) {
       eqn = R_MOMENTUM1 + a;
 
       for (b = 0; b < dim; b++) {
         var = R_EFIELD1 + b;
-        if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             advection_a = 0.;
             for (p = 0; p < dim; p++) {
-              advection_a += Efield[p] * fv->d_grad_E_field_dmesh[p][a][b][j];
+              advection_a += Efield[p] * goma_ctx->fem.fv->d_grad_E_field_dmesh[p][a][b][j];
             }
 
             df->X[a][b][j] += advection_a;
@@ -500,16 +518,16 @@ int gravity_vibrational_source(dbl f[DIM], /* Body force. */
   DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
   double rho = density(d_rho, time);
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
   /*components of gravity vector from input card */
   for (a = 0; a < DIM; a++)
-    g[a] = mp->momentum_source[a];
-  A = mp->u_momentum_source[0];
-  omega = mp->u_momentum_source[1];
+    g[a] = goma_ctx->fem.mp->momentum_source[a];
+  A = goma_ctx->fem.mp->u_momentum_source[0];
+  omega = goma_ctx->fem.mp->u_momentum_source[1];
   omega2 = omega * omega;
 
   g_mag = 0.;
@@ -526,7 +544,7 @@ int gravity_vibrational_source(dbl f[DIM], /* Body force. */
   for (a = 0; a < dim; a++) {
     eqn = R_MOMENTUM1 + a;
 
-    if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
       f[a] += rho * (g[a] + omega2 * A * cos(omega * time) * g[a] / g_mag);
     }
   }
@@ -557,9 +575,9 @@ int suspend_momentum_source(dbl f[DIM], /* Body force. */
   /* Begin Execution */
 
   /* difference between solid phase density and fluid phase density */
-  if (mp->DensityModel == SUSPENSION) {
-    species = (int)mp->u_density[0];
-    del_rho = mp->u_density[2] - mp->u_density[1];
+  if (goma_ctx->fem.mp->DensityModel == SUSPENSION) {
+    species = (int)goma_ctx->fem.mp->u_density[0];
+    del_rho = goma_ctx->fem.mp->u_density[2] - goma_ctx->fem.mp->u_density[1];
   } else {
     GOMA_EH(GOMA_ERROR, "No suspension momentum source without suspension density model.");
     return (status);
@@ -576,34 +594,34 @@ int suspend_momentum_source(dbl f[DIM], /* Body force. */
 
   /*  vol = C[species] -  mp->u_momentum_source[0];  */
 
-  vol = fv->c[species] - mp->u_momentum_source[0];
+  vol = goma_ctx->fem.fv->c[species] - goma_ctx->fem.mp->u_momentum_source[0];
 
   /*components of gravity vector for input card */
-  delta_rho_g[0] = mp->momentum_source[0] * del_rho;
-  delta_rho_g[1] = mp->momentum_source[1] * del_rho;
-  delta_rho_g[2] = mp->momentum_source[2] * del_rho;
+  delta_rho_g[0] = goma_ctx->fem.mp->momentum_source[0] * del_rho;
+  delta_rho_g[1] = goma_ctx->fem.mp->momentum_source[1] * del_rho;
+  delta_rho_g[2] = goma_ctx->fem.mp->momentum_source[2] * del_rho;
 
   /**********************************************************/
 
   /* Species piece */
-  if (pd->v[pg->imtrx][MASS_FRACTION]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
     for (a = 0; a < DIM; a++)
 
     {
       eqn = R_MOMENTUM1 + a;
-      if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
         f[a] += delta_rho_g[a] * vol;
       }
     }
   }
 
-  if (pd->v[pg->imtrx][MASS_FRACTION] && df != NULL) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION] && df != NULL) {
     var = MASS_FRACTION;
     for (a = 0; a < DIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          df->C[a][species][j] += delta_rho_g[a] * bf[var]->phi[j];
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          df->C[a][species][j] += delta_rho_g[a] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
@@ -622,19 +640,19 @@ int fill_momentum_source(double f[DIM]) {
   /* Local Variables */
 
   double rho;
-  double *param = mp->u_density;
+  double *param = goma_ctx->fem.mp->u_density;
 
-  if (mp->DensityModel != FILL) {
+  if (goma_ctx->fem.mp->DensityModel != FILL) {
     GOMA_EH(GOMA_ERROR, "No fill momentum source without fill density model.");
     return (0);
   }
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     GOMA_EH(GOMA_ERROR, "Use LEVEL_SET instead of FILL density model.");
     return (0);
   }
 
-  rho = param[0] * fv->F + param[1] * (1.0 - fv->F);
+  rho = param[0] * goma_ctx->fem.fv->F + param[1] * (1.0 - goma_ctx->fem.fv->F);
 
   /* Now fill in momentum source vector using gravity vector
    * stored in mp->momentum_source .  Note that since FILL
@@ -642,10 +660,10 @@ int fill_momentum_source(double f[DIM]) {
    * Jacobian.
    */
 
-  if (pd->v[pg->imtrx][FILL]) {
-    f[0] = mp->momentum_source[0] * rho;
-    f[1] = mp->momentum_source[1] * rho;
-    f[2] = mp->momentum_source[2] * rho;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][FILL]) {
+    f[0] = goma_ctx->fem.mp->momentum_source[0] * rho;
+    f[1] = goma_ctx->fem.mp->momentum_source[1] * rho;
+    f[2] = goma_ctx->fem.mp->momentum_source[2] * rho;
   }
 
   return (1);
@@ -671,13 +689,13 @@ int epoxy_dea_species_source(int species_no, /* Current species number */
 
   /* Begin Execution */
 
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
   /* extent of reaction, alpha */
-  alpha = fv->c[species_no];
+  alpha = goma_ctx->fem.fv->c[species_no];
   /*  if(alpha <= 0.) alpha = 0.0001; */
   A1 = param[0];
   E1 = param[1];
@@ -719,34 +737,35 @@ int epoxy_dea_species_source(int species_no, /* Current species number */
 
   /* Species piece */
   eqn = MASS_FRACTION;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    if (pd->e[imtrx][eqn] & T_SOURCE) {
-      mp->species_source[species_no] = (k1 + k2 * alpha_m) * alpha_n;
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (goma_ctx->fem.pd->e[imtrx][eqn] & T_SOURCE) {
+      goma_ctx->fem.mp->species_source[species_no] = (k1 + k2 * alpha_m) * alpha_n;
 
       /* Jacobian entries for source term */
       var = MASS_FRACTION;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         var_offset = MAX_VARIABLE_TYPES + species_no;
-        mp->d_species_source[var_offset] =
+        goma_ctx->fem.mp->d_species_source[var_offset] =
             (m * k2 * alpha_m1) * alpha_n - (k1 + k2 * alpha_m) * n * alpha_n1;
       }
 
       var = TEMPERATURE;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         if (T <= 0.) {
-          mp->d_species_source[var] = 0.;
+          goma_ctx->fem.mp->d_species_source[var] = 0.;
         } else if (T > 338.15 && T < 363.15) {
           if (alpha > 0) {
-            mp->d_species_source[var] =
+            goma_ctx->fem.mp->d_species_source[var] =
                 (k1 * E1 / (T * T) +
                  (A2 * (5. * pow((T - 273.15), -6.0) - 540. * pow((T - 273.15), -7.0))) *
                      (alpha_m * log(alpha_m) + alpha_m)) *
                 alpha_n;
           } else {
-            mp->d_species_source[var] = (k1 * E1 + k2 * alpha_m) * alpha_n / (T * T);
+            goma_ctx->fem.mp->d_species_source[var] = (k1 * E1 + k2 * alpha_m) * alpha_n / (T * T);
           }
         } else {
-          mp->d_species_source[var] = (k1 * E1 + k2 * E2 * alpha_m) * alpha_n / (T * T);
+          goma_ctx->fem.mp->d_species_source[var] =
+              (k1 * E1 + k2 * E2 * alpha_m) * alpha_n / (T * T);
         }
       }
     }
@@ -783,14 +802,14 @@ int epoxy_species_source(int species_no, /* Current species number */
 
   /* Begin Execution */
 
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
   /* extent of reaction, alpha */
-  alpha = fv->c[species_no];
+  alpha = goma_ctx->fem.fv->c[species_no];
   /*  if(alpha <= 0.) alpha = 0.0001; */
   A1 = param[0];
   E1 = param[1];
@@ -818,21 +837,21 @@ int epoxy_species_source(int species_no, /* Current species number */
 
   /* Species piece */
   eqn = MASS_FRACTION;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    if (pd->e[imtrx][eqn] & T_SOURCE) {
-      mp->species_source[species_no] = (k1 + k2 * alpha_m) * alpha_n;
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (goma_ctx->fem.pd->e[imtrx][eqn] & T_SOURCE) {
+      goma_ctx->fem.mp->species_source[species_no] = (k1 + k2 * alpha_m) * alpha_n;
 
       /* Jacobian entries for source term */
       var = MASS_FRACTION;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         var_offset = MAX_VARIABLE_TYPES + species_no;
-        mp->d_species_source[var_offset] =
+        goma_ctx->fem.mp->d_species_source[var_offset] =
             (m * k2 * alpha_m1) * alpha_n - (k1 + k2 * alpha_m) * n * alpha_n1;
       }
 
       var = TEMPERATURE;
-      if (pd->v[pg->imtrx][var]) {
-        mp->d_species_source[var] = (k1 * E1 + k2 * E2 * alpha_m) * alpha_n / (T * T);
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        goma_ctx->fem.mp->d_species_source[var] = (k1 * E1 + k2 * E2 * alpha_m) * alpha_n / (T * T);
       }
     }
   }
@@ -860,14 +879,14 @@ int epoxy_linear_exp_species_source(int species_no, /* Current species number */
 
   /* Begin Execution */
 
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
   /* extent of reaction, alpha */
-  alpha = fv->c[species_no];
+  alpha = goma_ctx->fem.fv->c[species_no];
   /*  if(alpha <= 0.) alpha = 0.0001; */
   A1 = param[0];
   E1 = param[1];
@@ -902,27 +921,28 @@ int epoxy_linear_exp_species_source(int species_no, /* Current species number */
 
   /* Species piece */
   eqn = MASS_FRACTION;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    if (pd->e[imtrx][eqn] & T_SOURCE) {
-      mp->species_source[species_no] = (k1 + k2 * alpha_m) * alpha_n;
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (goma_ctx->fem.pd->e[imtrx][eqn] & T_SOURCE) {
+      goma_ctx->fem.mp->species_source[species_no] = (k1 + k2 * alpha_m) * alpha_n;
 
       /* Jacobian entries for source term */
       var = MASS_FRACTION;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         var_offset = MAX_VARIABLE_TYPES + species_no;
-        mp->d_species_source[var_offset] =
+        goma_ctx->fem.mp->d_species_source[var_offset] =
             (m * k2 * alpha_m1) * alpha_n - (k1 + k2 * alpha_m) * n * alpha_n1;
       }
       var = TEMPERATURE;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         // k1 and k2 portion
-        mp->d_species_source[var] = (k1 * E1 + k2 * E2 * alpha_m) * alpha_n / (T * T);
+        goma_ctx->fem.mp->d_species_source[var] = (k1 * E1 + k2 * E2 * alpha_m) * alpha_n / (T * T);
         // k2 * alpha_m portion
         if (alpha > 0) {
-          mp->d_species_source[var] += k2 * mt * log(alpha) * alpha_m * alpha_n;
+          goma_ctx->fem.mp->d_species_source[var] += k2 * mt * log(alpha) * alpha_m * alpha_n;
         }
         //  alpha_n portion
-        mp->d_species_source[var] += nt * log(1.0 - alpha) * alpha_n * (k1 + k2 * alpha_m);
+        goma_ctx->fem.mp->d_species_source[var] +=
+            nt * log(1.0 - alpha) * alpha_n * (k1 + k2 * alpha_m);
       }
     }
   }
@@ -950,14 +970,14 @@ int epoxy_arrhenius_exp_species_source(int species_no, /* Current species number
 
   /* Begin Execution */
 
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
   /* extent of reaction, alpha */
-  alpha = fv->c[species_no];
+  alpha = goma_ctx->fem.fv->c[species_no];
   /*  if(alpha <= 0.) alpha = 0.0001; */
   A1 = param[0];
   E1 = param[1];
@@ -992,27 +1012,28 @@ int epoxy_arrhenius_exp_species_source(int species_no, /* Current species number
 
   /* Species piece */
   eqn = MASS_FRACTION;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    if (pd->e[imtrx][eqn] & T_SOURCE) {
-      mp->species_source[species_no] = (k1 + k2 * alpha_m) * alpha_n;
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (goma_ctx->fem.pd->e[imtrx][eqn] & T_SOURCE) {
+      goma_ctx->fem.mp->species_source[species_no] = (k1 + k2 * alpha_m) * alpha_n;
 
       /* Jacobian entries for source term */
       var = MASS_FRACTION;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         var_offset = MAX_VARIABLE_TYPES + species_no;
-        mp->d_species_source[var_offset] =
+        goma_ctx->fem.mp->d_species_source[var_offset] =
             (m * k2 * alpha_m1) * alpha_n - (k1 + k2 * alpha_m) * n * alpha_n1;
       }
       var = TEMPERATURE;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         // k1 and k2 portion
-        mp->d_species_source[var] = (k1 * E1 + k2 * E2 * alpha_m) * alpha_n / (T * T);
+        goma_ctx->fem.mp->d_species_source[var] = (k1 * E1 + k2 * E2 * alpha_m) * alpha_n / (T * T);
         // k2 * alpha_m portion
         if (alpha > 0) {
-          mp->d_species_source[var] += k2 * mt * log(alpha) * alpha_m * alpha_n;
+          goma_ctx->fem.mp->d_species_source[var] += k2 * mt * log(alpha) * alpha_m * alpha_n;
         }
         //  alpha_n portion
-        mp->d_species_source[var] += nt * log(1.0 - alpha) * alpha_n * (k1 + k2 * alpha_m);
+        goma_ctx->fem.mp->d_species_source[var] +=
+            nt * log(1.0 - alpha) * alpha_n * (k1 + k2 * alpha_m);
       }
     }
   }
@@ -1045,15 +1066,15 @@ int bond_species_source(int species_no, /* Current species number */
   /* Begin Execution */
 
   /* structure factor, nn */
-  nn = fv->c[species_no];
-  shear = fv->SH;
+  nn = goma_ctx->fem.fv->c[species_no];
+  shear = goma_ctx->fem.fv->SH;
   k1 = param[0];
   k2 = param[1];
   n0 = param[2];
   aexp = param[3];
   bexp = param[4];
 
-  shear = fv->SH;
+  shear = goma_ctx->fem.fv->SH;
   if (shear >= .0) {
     gterm_a = pow(shear + offset, aexp);
     gterm_b = pow(shear + offset, bexp);
@@ -1074,19 +1095,19 @@ int bond_species_source(int species_no, /* Current species number */
 
   /* Species piece */
   eqn = MASS_FRACTION;
-  if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-    mp->species_source[species_no] = -k1 * nn * gterm_a + k2 * (n0 - nn) * gterm_b;
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+    goma_ctx->fem.mp->species_source[species_no] = -k1 * nn * gterm_a + k2 * (n0 - nn) * gterm_b;
 
     /* Jacobian entries for source term */
     var = MASS_FRACTION;
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       var_offset = MAX_VARIABLE_TYPES + species_no;
-      mp->d_species_source[var_offset] = -k1 * gterm_a - k2 * gterm_b;
+      goma_ctx->fem.mp->d_species_source[var_offset] = -k1 * gterm_a - k2 * gterm_b;
     }
 
     var = SHEAR_RATE;
-    if (pd->v[pg->imtrx][var]) {
-      mp->d_species_source[var] = -k1 * nn * d_gterm_a + k2 * (n0 - nn) * d_gterm_b;
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      goma_ctx->fem.mp->d_species_source[var] = -k1 * nn * d_gterm_a + k2 * (n0 - nn) * d_gterm_b;
     }
   }
   return 0;
@@ -1132,28 +1153,28 @@ int foam_epoxy_species_source(int species_no, /* Current species number */
   double Rgas = 0.0, MW_f = 0.0, MW_a = 0.0, rho_epoxy = 0.0, rho_fluor = 0.0, T = 0.0;
   int species_l = -1, species_v = -1, species_a = -1;
 
-  if (mp->DensityModel == DENSITY_FOAM_CONC) {
-    species_l = (int)mp->u_density[0]; /* species number fluorinert liquid */
-    species_v = (int)mp->u_density[1]; /* species number fluorinert vapor */
-    species_a = (int)mp->u_density[2]; /* species number air vapor */
-    Rgas = mp->u_density[3];           /* Gas constant in appropriate units */
-    MW_f = mp->u_density[4];           /* molecular weight fluorinert */
-    MW_a = mp->u_density[5];           /* molecular weight air */
-    rho_epoxy = mp->u_density[6];      /* Density of epoxy resin */
-    rho_fluor = mp->u_density[7];      /* Density of liquid fluorinert */
+  if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_CONC) {
+    species_l = (int)goma_ctx->fem.mp->u_density[0]; /* species number fluorinert liquid */
+    species_v = (int)goma_ctx->fem.mp->u_density[1]; /* species number fluorinert vapor */
+    species_a = (int)goma_ctx->fem.mp->u_density[2]; /* species number air vapor */
+    Rgas = goma_ctx->fem.mp->u_density[3];           /* Gas constant in appropriate units */
+    MW_f = goma_ctx->fem.mp->u_density[4];           /* molecular weight fluorinert */
+    MW_a = goma_ctx->fem.mp->u_density[5];           /* molecular weight air */
+    rho_epoxy = goma_ctx->fem.mp->u_density[6];      /* Density of epoxy resin */
+    rho_fluor = goma_ctx->fem.mp->u_density[7];      /* Density of liquid fluorinert */
   } else {
     GOMA_EH(-1, "Foam_epoxy_species_source only works with foam_conc density model");
   }
 
   /* Begin Execution */
 
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
-  Press = upd->Pressure_Datum;
+  Press = goma_ctx->fem.upd->Pressure_Datum;
   rho_v_inv = Rgas * T / (Press * MW_f);
   rho_v = 1. / rho_v_inv;
   d_rho_v_dT = -(Press * MW_f) / (Rgas * T * T);
@@ -1161,9 +1182,9 @@ int foam_epoxy_species_source(int species_no, /* Current species number */
   rho_a_inv = Rgas * T / (Press * MW_a);
   d_rho_a_inv_dT = Rgas / (Press * MW_a);
 
-  rho = rho_epoxy + fv->c[species_v] * (1. - rho_epoxy * rho_v_inv) +
-        fv->c[species_a] * (1. - rho_epoxy * rho_a_inv) +
-        fv->c[species_l] * (1. - rho_epoxy / rho_fluor);
+  rho = rho_epoxy + goma_ctx->fem.fv->c[species_v] * (1. - rho_epoxy * rho_v_inv) +
+        goma_ctx->fem.fv->c[species_a] * (1. - rho_epoxy * rho_a_inv) +
+        goma_ctx->fem.fv->c[species_l] * (1. - rho_epoxy / rho_fluor);
 
   rho2 = rho * rho;
 
@@ -1171,8 +1192,8 @@ int foam_epoxy_species_source(int species_no, /* Current species number */
   drho_c_a = 1. - rho_epoxy * rho_a_inv;
   drho_c_l = 1. - rho_epoxy / rho_fluor;
 
-  drho_T = -fv->c[species_v] * rho_epoxy * d_rho_v_inv_dT -
-           fv->c[species_a] * rho_epoxy * d_rho_a_inv_dT;
+  drho_T = -goma_ctx->fem.fv->c[species_v] * rho_epoxy * d_rho_v_inv_dT -
+           goma_ctx->fem.fv->c[species_a] * rho_epoxy * d_rho_a_inv_dT;
 
   aT = param[0];
   bT = param[1];
@@ -1187,7 +1208,7 @@ int foam_epoxy_species_source(int species_no, /* Current species number */
   Ce = param[4];
 
   /* grab surface tension from material properties */
-  sigma = mp->surface_tension;
+  sigma = goma_ctx->fem.mp->surface_tension;
 
   /* Linear model for dx/dT */
 
@@ -1196,16 +1217,17 @@ int foam_epoxy_species_source(int species_no, /* Current species number */
 
   /* Use atmospheric pressure instead of the dynamic pressure to simplify things */
   if (Press > p_vap) {
-    Rc_1 = ff_c * rho_fluor * fv->c[species_v] / rho;
+    Rc_1 = ff_c * rho_fluor * goma_ctx->fem.fv->c[species_v] / rho;
     Rc_2 = pow(rho_fluor * (Press - p_vap) * 2. / 3., 0.5);
     Rc = Rc_1 * Rc_2;
     Re = 0.;
 
-    dRc_dc_v = (ff_c * rho_fluor / rho) * (1. - fv->c[species_v] * drho_c_v / rho) * Rc_2;
-    dRc_dc_a = -(ff_c * rho_fluor * fv->c[species_v] / rho2 * drho_c_a) * Rc_2;
-    dRc_dc_l = -(ff_c * rho_fluor * fv->c[species_v] / rho2 * drho_c_l) * Rc_2;
+    dRc_dc_v =
+        (ff_c * rho_fluor / rho) * (1. - goma_ctx->fem.fv->c[species_v] * drho_c_v / rho) * Rc_2;
+    dRc_dc_a = -(ff_c * rho_fluor * goma_ctx->fem.fv->c[species_v] / rho2 * drho_c_a) * Rc_2;
+    dRc_dc_l = -(ff_c * rho_fluor * goma_ctx->fem.fv->c[species_v] / rho2 * drho_c_l) * Rc_2;
 
-    dRc_dT = (ff_c * rho_fluor * fv->c[species_v] / rho2 * drho_T) * Rc_2 -
+    dRc_dT = (ff_c * rho_fluor * goma_ctx->fem.fv->c[species_v] / rho2 * drho_T) * Rc_2 -
              Rc_1 / (Rc_2 * 3.) * rho_fluor * bT;
 
     dRe_dc_v = 0.;
@@ -1214,10 +1236,10 @@ int foam_epoxy_species_source(int species_no, /* Current species number */
 
     dRe_dT = 0.;
   } else if (p_vap > Press) {
-    Rc_1 = ff_c * rho_fluor * fv->c[species_v] / rho;
+    Rc_1 = ff_c * rho_fluor * goma_ctx->fem.fv->c[species_v] / rho;
     Rc_2 = pow(rho_fluor * (Press - p_vap) * 2. / 3., 0.5);
     Rc = 0.;
-    Re_1 = ff_e * rho_v * fv->c[species_l] / rho;
+    Re_1 = ff_e * rho_v * goma_ctx->fem.fv->c[species_l] / rho;
     Re_2 = pow(rho_fluor * (p_vap - Press) * 2. / 3., 0.5);
     Re = Re_1 * Re_2;
 
@@ -1227,12 +1249,14 @@ int foam_epoxy_species_source(int species_no, /* Current species number */
 
     dRc_dT = 0.;
 
-    dRe_dc_v = -(ff_e * rho_v * fv->c[species_l] / rho2 * drho_c_v) * Re_2;
-    dRe_dc_a = -(ff_e * rho_v * fv->c[species_l] / rho2 * drho_c_a) * Re_2;
-    dRe_dc_l = (ff_e * rho_v / rho - ff_e * rho_v * fv->c[species_l] / rho2 * drho_c_a) * Re_2;
+    dRe_dc_v = -(ff_e * rho_v * goma_ctx->fem.fv->c[species_l] / rho2 * drho_c_v) * Re_2;
+    dRe_dc_a = -(ff_e * rho_v * goma_ctx->fem.fv->c[species_l] / rho2 * drho_c_a) * Re_2;
+    dRe_dc_l =
+        (ff_e * rho_v / rho - ff_e * rho_v * goma_ctx->fem.fv->c[species_l] / rho2 * drho_c_a) *
+        Re_2;
 
-    dRe_dT = (ff_e * d_rho_v_dT * fv->c[species_l] / rho -
-              ff_e * rho_v * fv->c[species_l] / rho2 * drho_T) *
+    dRe_dT = (ff_e * d_rho_v_dT * goma_ctx->fem.fv->c[species_l] / rho -
+              ff_e * rho_v * goma_ctx->fem.fv->c[species_l] / rho2 * drho_T) *
                  Re_2 +
              Rc_1 / (Rc_2 * 3.) * rho_fluor * bT;
   }
@@ -1241,21 +1265,21 @@ int foam_epoxy_species_source(int species_no, /* Current species number */
 
   /* Species piece */
   eqn = MASS_FRACTION;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    if (pd->e[imtrx][eqn] & T_SOURCE) {
-      mp->species_source[species_no] = Rc - Re;
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (goma_ctx->fem.pd->e[imtrx][eqn] & T_SOURCE) {
+      goma_ctx->fem.mp->species_source[species_no] = Rc - Re;
 
       /* Jacobian entries for source term */
       var = MASS_FRACTION;
-      if (pd->v[pg->imtrx][var]) {
-        mp->d_species_source[MAX_VARIABLE_TYPES + species_v] = dRc_dc_v - dRe_dc_v;
-        mp->d_species_source[MAX_VARIABLE_TYPES + species_a] = dRc_dc_a - dRe_dc_a;
-        mp->d_species_source[MAX_VARIABLE_TYPES + species_l] = dRc_dc_l - dRe_dc_l;
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_v] = dRc_dc_v - dRe_dc_v;
+        goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_a] = dRc_dc_a - dRe_dc_a;
+        goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_l] = dRc_dc_l - dRe_dc_l;
       }
 
       var = TEMPERATURE;
-      if (pd->v[pg->imtrx][var]) {
-        mp->d_species_source[var] = dRc_dT - dRe_dT;
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        goma_ctx->fem.mp->d_species_source[var] = dRc_dT - dRe_dT;
       }
     }
   }
@@ -1284,17 +1308,17 @@ int foam_pmdi10_rxn_species_source(int species_no, /* Current species number */
   double A = param[10];
   double E_norm = param[11];
 
-  double T = fv->T;
+  double T = goma_ctx->fem.fv->T;
 
   double source = 0;
 
   if (T <= 0) {
     source = 0;
-    mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = 0;
-    mp->d_species_source[TEMPERATURE] = 0;
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = 0;
+    goma_ctx->fem.mp->d_species_source[TEMPERATURE] = 0;
     return (source);
   }
-  double xi = fv->c[species_no];
+  double xi = goma_ctx->fem.fv->c[species_no];
 
   double T_g = (T_g0 * (1 - xi) + A * xi * T_ginf) / (1 - xi + A * xi);
   double d_T_g_dT = 0;
@@ -1315,7 +1339,8 @@ int foam_pmdi10_rxn_species_source(int species_no, /* Current species number */
 
   double k = (pow(1 + w_rxn * a_T, -beta)) * k0 * exp(-E_norm / T);
 
-  double d_k_dT = w_rxn * d_a_T_dT * (-beta) * k / (1 + w_rxn * a_T) + E_norm / (fv->T * fv->T) * k;
+  double d_k_dT = w_rxn * d_a_T_dT * (-beta) * k / (1 + w_rxn * a_T) +
+                  E_norm / (goma_ctx->fem.fv->T * goma_ctx->fem.fv->T) * k;
   double d_k_dC = w_rxn * d_a_T_dC * (-beta) * k / (1 + w_rxn * a_T);
 
   if (xi < 0) {
@@ -1328,31 +1353,32 @@ int foam_pmdi10_rxn_species_source(int species_no, /* Current species number */
 
   /* Species piece */
   eqn = MASS_FRACTION;
-  if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-    mp->species_source[species_no] = source;
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+    goma_ctx->fem.mp->species_source[species_no] = source;
 
     /* Jacobian entries for source term */
     var = MASS_FRACTION;
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       if (xi < 0) {
-        mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = d_k_dC * b;
+        goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = d_k_dC * b;
       } else {
-        mp->d_species_source[MAX_VARIABLE_TYPES + species_no] =
+        goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_no] =
             d_k_dC * (b + pow(xi, m)) * pow(1 - xi, n);
-        mp->d_species_source[MAX_VARIABLE_TYPES + species_no] += n * source / (1 - xi);
+        goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_no] +=
+            n * source / (1 - xi);
         if (xi > 0) {
-          mp->d_species_source[MAX_VARIABLE_TYPES + species_no] +=
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_no] +=
               m * k * pow(1 - xi, n) * pow(xi, m) / xi;
         }
       }
     }
 
     var = TEMPERATURE;
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       if (xi < 0) {
-        mp->d_species_source[var] = d_k_dT * (b + pow(xi, m)) * pow(1 - xi, n);
+        goma_ctx->fem.mp->d_species_source[var] = d_k_dT * (b + pow(xi, m)) * pow(1 - xi, n);
       } else {
-        mp->d_species_source[var] = d_k_dT * b;
+        goma_ctx->fem.mp->d_species_source[var] = d_k_dT * b;
       }
     }
   }
@@ -1370,8 +1396,8 @@ int foam_pmdi10_h2o_species_source(int species_no, /* Current species number */
 {
   int eqn, var;
 
-  double CH2O = fv->c[species_no];
-  double T = fv->T;
+  double CH2O = goma_ctx->fem.fv->c[species_no];
+  double T = goma_ctx->fem.fv->T;
   double n = param[0];
   double t_nuc = param[1];
   double A = param[2];
@@ -1383,14 +1409,14 @@ int foam_pmdi10_h2o_species_source(int species_no, /* Current species number */
 
   if (T <= 0) {
     source = 0;
-    mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = 0;
-    mp->d_species_source[TEMPERATURE] = 0;
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = 0;
+    goma_ctx->fem.mp->d_species_source[TEMPERATURE] = 0;
     return (source);
   }
 
   if (CH2O <= 0) {
     source = 0;
-    mp->species_source[species_no] = 0;
+    goma_ctx->fem.mp->species_source[species_no] = 0;
   } else {
     source = -N * A * exp(-norm_E / T) * pow(CH2O, n);
   }
@@ -1398,20 +1424,20 @@ int foam_pmdi10_h2o_species_source(int species_no, /* Current species number */
 
   /* Species piece */
   eqn = MASS_FRACTION;
-  if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-    mp->species_source[species_no] = source;
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+    goma_ctx->fem.mp->species_source[species_no] = source;
 
     /* Jacobian entries for source term */
     var = MASS_FRACTION;
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       if (CH2O > 0) {
-        mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = source * n / CH2O;
+        goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = source * n / CH2O;
       }
     }
 
     var = TEMPERATURE;
-    if (pd->v[pg->imtrx][var]) {
-      mp->d_species_source[var] = -norm_E / (T * T) * source;
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      goma_ctx->fem.mp->d_species_source[var] = -norm_E / (T * T) * source;
     }
   }
 
@@ -1425,12 +1451,12 @@ int foam_pmdi10_co2_species_source(int species_no, /* Current species number */
                                    double dt) {
   int eqn, var;
 
-  double T = fv->T;
+  double T = goma_ctx->fem.fv->T;
   int wH2O = -1;
   int w;
 
-  for (w = 0; w < pd->Num_Species; w++) {
-    if (mp->SpeciesSourceModel[w] == FOAM_PMDI_10_H2O) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species; w++) {
+    if (goma_ctx->fem.mp->SpeciesSourceModel[w] == FOAM_PMDI_10_H2O) {
       wH2O = w;
       break;
     }
@@ -1440,11 +1466,11 @@ int foam_pmdi10_co2_species_source(int species_no, /* Current species number */
     GOMA_EH(GOMA_ERROR, "Expected to find a speices with source FOAM_PMDI_10_H2O");
     return 0;
   }
-  double CH2O = fv->c[wH2O];
-  double n = mp->u_species_source[wH2O][0];
-  double t_nuc = mp->u_species_source[wH2O][1];
-  double A = mp->u_species_source[wH2O][2];
-  double norm_E = mp->u_species_source[wH2O][3];
+  double CH2O = goma_ctx->fem.fv->c[wH2O];
+  double n = goma_ctx->fem.mp->u_species_source[wH2O][0];
+  double t_nuc = goma_ctx->fem.mp->u_species_source[wH2O][1];
+  double A = goma_ctx->fem.mp->u_species_source[wH2O][2];
+  double norm_E = goma_ctx->fem.mp->u_species_source[wH2O][3];
 
   double N = 0.5 * (1 + tanh((time - t_nuc) / t_nuc));
 
@@ -1452,15 +1478,15 @@ int foam_pmdi10_co2_species_source(int species_no, /* Current species number */
 
   if (T <= 0) {
     source = 0;
-    mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = 0;
-    mp->d_species_source[MAX_VARIABLE_TYPES + wH2O] = 0;
-    mp->d_species_source[TEMPERATURE] = 0;
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = 0;
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + wH2O] = 0;
+    goma_ctx->fem.mp->d_species_source[TEMPERATURE] = 0;
     return (source);
   }
 
   if (CH2O <= 0) {
     source = 0;
-    mp->species_source[species_no] = 0;
+    goma_ctx->fem.mp->species_source[species_no] = 0;
   } else {
     source = N * A * exp(-norm_E / T) * pow(CH2O, n);
   }
@@ -1469,20 +1495,20 @@ int foam_pmdi10_co2_species_source(int species_no, /* Current species number */
 
   /* Species piece */
   eqn = MASS_FRACTION;
-  if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-    mp->species_source[species_no] = source;
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+    goma_ctx->fem.mp->species_source[species_no] = source;
 
     /* Jacobian entries for source term */
     var = MASS_FRACTION;
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       if (CH2O > 0) {
-        mp->d_species_source[MAX_VARIABLE_TYPES + wH2O] = source * n / CH2O;
+        goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + wH2O] = source * n / CH2O;
       }
     }
 
     var = TEMPERATURE;
-    if (pd->v[pg->imtrx][var]) {
-      mp->d_species_source[var] = -norm_E / (T * T) * source;
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      goma_ctx->fem.mp->d_species_source[var] = -norm_E / (T * T) * source;
     }
   }
 
@@ -1497,19 +1523,19 @@ int foam_pmdi10_co2_liq_species_source(int species_no, /* Current species number
                                        double dt) {
   int eqn, var;
 
-  double T = fv->T;
+  double T = goma_ctx->fem.fv->T;
   int wH2O = -1;
   int w;
   struct moment_growth_rate *MGR;
 
-  for (w = 0; w < pd->Num_Species; w++) {
-    if (mp->SpeciesSourceModel[w] == FOAM_PMDI_10_H2O) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species; w++) {
+    if (goma_ctx->fem.mp->SpeciesSourceModel[w] == FOAM_PMDI_10_H2O) {
       wH2O = w;
       break;
     }
   }
 
-  if (!pd->gv[MOMENT1]) {
+  if (!goma_ctx->fem.pd->gv[MOMENT1]) {
     GOMA_EH(GOMA_ERROR, "Expected to find moment equations for FOAM_PMDI_10_CO2_LIQ");
     return -1;
   }
@@ -1529,18 +1555,18 @@ int foam_pmdi10_co2_liq_species_source(int species_no, /* Current species number
   double Rgas_const = 8.31;
   double ref_press = 1e6;
 
-  if (mp->DensityModel == DENSITY_FOAM_PMDI_10) {
-    ref_press = mp->u_density[2];
-    Rgas_const = mp->u_density[3];
+  if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_PMDI_10) {
+    ref_press = goma_ctx->fem.mp->u_density[2];
+    Rgas_const = goma_ctx->fem.mp->u_density[3];
   } else {
     GOMA_EH(GOMA_ERROR, "Expected DENSITY_FOAM_PMDI_10 density model");
   }
 
-  double CH2O = fv->c[wH2O];
-  double n = mp->u_species_source[wH2O][0];
-  double t_nuc = mp->u_species_source[wH2O][1];
-  double A = mp->u_species_source[wH2O][2];
-  double norm_E = mp->u_species_source[wH2O][3];
+  double CH2O = goma_ctx->fem.fv->c[wH2O];
+  double n = goma_ctx->fem.mp->u_species_source[wH2O][0];
+  double t_nuc = goma_ctx->fem.mp->u_species_source[wH2O][1];
+  double A = goma_ctx->fem.mp->u_species_source[wH2O][2];
+  double norm_E = goma_ctx->fem.mp->u_species_source[wH2O][3];
 
   double N = 0.5 * (1 + tanh((time - t_nuc) / t_nuc));
 
@@ -1548,9 +1574,9 @@ int foam_pmdi10_co2_liq_species_source(int species_no, /* Current species number
 
   if (T <= 0) {
     source = 0;
-    mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = 0;
-    mp->d_species_source[MAX_VARIABLE_TYPES + wH2O] = 0;
-    mp->d_species_source[TEMPERATURE] = 0;
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = 0;
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + wH2O] = 0;
+    goma_ctx->fem.mp->d_species_source[TEMPERATURE] = 0;
     free(MGR);
     return (source);
   }
@@ -1560,7 +1586,7 @@ int foam_pmdi10_co2_liq_species_source(int species_no, /* Current species number
   if (CH2O <= 0) {
     source = 0;
     source_a = 0;
-    mp->species_source[species_no] = 0;
+    goma_ctx->fem.mp->species_source[species_no] = 0;
   } else {
     source_a = N * A * exp(-norm_E / T) * pow(CH2O, n);
   }
@@ -1570,17 +1596,18 @@ int foam_pmdi10_co2_liq_species_source(int species_no, /* Current species number
 
   /* Species piece */
   eqn = MASS_FRACTION;
-  if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
     int j;
-    mp->species_source[species_no] = source;
+    goma_ctx->fem.mp->species_source[species_no] = source;
     st->MassSource[species_no] = source;
 
     /* Jacobian entries for source term */
     var = MASS_FRACTION;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         if (CH2O > 0) {
-          st->d_MassSource_dc[species_no][wH2O][j] = source_a * n / CH2O * bf[var]->phi[j];
+          st->d_MassSource_dc[species_no][wH2O][j] =
+              source_a * n / CH2O * goma_ctx->fem.bf[var]->phi[j];
         }
         st->d_MassSource_dc[species_no][species_no][j] =
             -MGR->d_G_dC[species_no][1][j] * ref_press / (Rgas_const * T);
@@ -1588,10 +1615,10 @@ int foam_pmdi10_co2_liq_species_source(int species_no, /* Current species number
     }
 
     var = TEMPERATURE;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         st->d_MassSource_dT[species_no][j] =
-            -norm_E / (T * T) * source_a * bf[var]->phi[j] -
+            -norm_E / (T * T) * source_a * goma_ctx->fem.bf[var]->phi[j] -
             MGR->d_G_dT[species_no][1][j] * ref_press / (Rgas_const * T);
       }
     }
@@ -1608,21 +1635,21 @@ int foam_pmdi10_co2_gas_species_source(int species_no, /* Current species number
                                        double dt) {
   int eqn, var;
 
-  double T = fv->T;
+  double T = goma_ctx->fem.fv->T;
   int wH2O = -1;
   int wCO2Liq = -1;
   int w;
   struct moment_growth_rate *MGR;
 
-  for (w = 0; w < pd->Num_Species; w++) {
-    if (mp->SpeciesSourceModel[w] == FOAM_PMDI_10_H2O) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species; w++) {
+    if (goma_ctx->fem.mp->SpeciesSourceModel[w] == FOAM_PMDI_10_H2O) {
       wH2O = w;
-    } else if (mp->SpeciesSourceModel[w] == FOAM_PMDI_10_CO2_LIQ) {
+    } else if (goma_ctx->fem.mp->SpeciesSourceModel[w] == FOAM_PMDI_10_CO2_LIQ) {
       wCO2Liq = w;
     }
   }
 
-  if (!pd->gv[MOMENT1]) {
+  if (!goma_ctx->fem.pd->gv[MOMENT1]) {
     GOMA_EH(GOMA_ERROR, "Expected to find moment equations for FOAM_PMDI_10_CO2_LIQ");
   }
 
@@ -1644,9 +1671,9 @@ int foam_pmdi10_co2_gas_species_source(int species_no, /* Current species number
   double Rgas_const = 8.31;
   double ref_press = 1e6;
 
-  if (mp->DensityModel == DENSITY_FOAM_PMDI_10) {
-    ref_press = mp->u_density[2];
-    Rgas_const = mp->u_density[3];
+  if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_PMDI_10) {
+    ref_press = goma_ctx->fem.mp->u_density[2];
+    Rgas_const = goma_ctx->fem.mp->u_density[3];
   } else {
     GOMA_EH(GOMA_ERROR, "Expected DENSITY_FOAM_PMDI_10 density model");
   }
@@ -1654,9 +1681,9 @@ int foam_pmdi10_co2_gas_species_source(int species_no, /* Current species number
   double source;
   if (T <= 0) {
     source = 0;
-    mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = 0;
-    mp->d_species_source[MAX_VARIABLE_TYPES + wH2O] = 0;
-    mp->d_species_source[TEMPERATURE] = 0;
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = 0;
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + wH2O] = 0;
+    goma_ctx->fem.mp->d_species_source[TEMPERATURE] = 0;
     free(MGR);
     return 0;
   }
@@ -1667,23 +1694,23 @@ int foam_pmdi10_co2_gas_species_source(int species_no, /* Current species number
 
   /* Species piece */
   eqn = MASS_FRACTION;
-  if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
     int j;
-    mp->species_source[species_no] = source;
+    goma_ctx->fem.mp->species_source[species_no] = source;
     st->MassSource[species_no] = source;
 
     /* Jacobian entries for source term */
     var = MASS_FRACTION;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         st->d_MassSource_dc[species_no][wCO2Liq][j] =
             MGR->d_G_dC[wCO2Liq][1][j] * ref_press / (Rgas_const * T);
       }
     }
 
     var = TEMPERATURE;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         st->d_MassSource_dT[species_no][j] =
             MGR->d_G_dT[species_no][1][j] * ref_press / (Rgas_const * T);
       }
@@ -1720,36 +1747,37 @@ double epoxy_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
   /* Begin Execution */
 
   /* find equation that has extent of reaction */
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-    if (mp->SpeciesSourceModel[w] == EPOXY || mp->SpeciesSourceModel[w] == EPOXY_DEA ||
-        mp->SpeciesSourceModel[w] == EPOXY_LINEAR_EXP ||
-        mp->SpeciesSourceModel[w] == EPOXY_ARRHENIUS_EXP) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.mp->SpeciesSourceModel[w] == EPOXY ||
+        goma_ctx->fem.mp->SpeciesSourceModel[w] == EPOXY_DEA ||
+        goma_ctx->fem.mp->SpeciesSourceModel[w] == EPOXY_LINEAR_EXP ||
+        goma_ctx->fem.mp->SpeciesSourceModel[w] == EPOXY_ARRHENIUS_EXP) {
       /* extent of reaction, alpha */
       species_no = w;
     }
   }
-  if (pd->TimeIntegration != STEADY) {
-    alpha_dot = fv_dot->c[species_no];
+  if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+    alpha_dot = goma_ctx->fem.fv_dot->c[species_no];
   } else {
     alpha_dot = 0.0;
   }
 
-  delta_h = mp->heat_source;
+  delta_h = goma_ctx->fem.mp->heat_source;
 
   /* Species piece */
   eqn = TEMPERATURE;
-  if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
     h = delta_h * alpha_dot;
 
     /* Jacobian entries for source term */
     var = MASS_FRACTION;
-    if (d_h != NULL && pd->v[pg->imtrx][var]) {
-      if (mp->SpeciesSourceModel[species_no] == EPOXY ||
-          (mp->SpeciesSourceModel[species_no] == EPOXY_DEA) ||
-          (mp->SpeciesSourceModel[species_no] == EPOXY_LINEAR_EXP) ||
-          (mp->SpeciesSourceModel[species_no] == EPOXY_ARRHENIUS_EXP)) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          d_h->C[species_no][j] += delta_h * (1 + 2. * tt) / dt * bf[var]->phi[j];
+    if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      if (goma_ctx->fem.mp->SpeciesSourceModel[species_no] == EPOXY ||
+          (goma_ctx->fem.mp->SpeciesSourceModel[species_no] == EPOXY_DEA) ||
+          (goma_ctx->fem.mp->SpeciesSourceModel[species_no] == EPOXY_LINEAR_EXP) ||
+          (goma_ctx->fem.mp->SpeciesSourceModel[species_no] == EPOXY_ARRHENIUS_EXP)) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          d_h->C[species_no][j] += delta_h * (1 + 2. * tt) / dt * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
@@ -1810,31 +1838,31 @@ double butler_volmer_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h, dbl *a) {
   dhdc = dh[2];
 
   /* sensitivies of current source wrt PHI1, PHI2, and c  */
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     /* J_s_T --- sensitivity wrt electrode potential */
     var = TEMPERATURE;
-    if (d_h != NULL && pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        phi_j = bf[var]->phi[j];
+    if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
         d_h->T[j] = dhdT * phi_j;
       }
     }
 
     /* J_s_V --- sensitivity wrt electrolyte potential */
     var = VOLTAGE;
-    if (d_h != NULL && pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        phi_j = bf[var]->phi[j];
+    if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
         d_h->V[j] = dhdV * phi_j;
       }
     }
 
     /* J_s_c --- sensitivity wrt species concentrations */
     var = MASS_FRACTION;
-    if (d_h != NULL && pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        phi_j = bf[var]->phi[j];
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
           d_h->C[w][j] = 0.0; /* no dependency other than wspec */
         }
 
@@ -1909,9 +1937,9 @@ double butler_volmer_source(dbl *a, int key, dbl *dh) {
   FRT = F / R / T; /* F/R/T */
 
   /***********Load up convenient local variables*************/
-  PHI1 = fv->T;     /* electrode-phase potential   */
-  PHI2 = fv->V;     /* electrolyte-phase potential */
-  c = fv->c[wspec]; /* load up species concentration */
+  PHI1 = goma_ctx->fem.fv->T;     /* electrode-phase potential   */
+  PHI2 = goma_ctx->fem.fv->V;     /* electrolyte-phase potential */
+  c = goma_ctx->fem.fv->c[wspec]; /* load up species concentration */
   if (c == 0)
     c = cref;
   if (c < 0.0)
@@ -1974,26 +2002,26 @@ double vary_rho_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
   /* Begin Execution */
   /* this is mass_concentration based
       7/99 ACS */
-  T = fv->T;
-  Cp = mp->heat_capacity;
+  T = goma_ctx->fem.fv->T;
+  Cp = goma_ctx->fem.mp->heat_capacity;
 
-  if (mp->DensityModel == SOLVENT_POLYMER) {
+  if (goma_ctx->fem.mp->DensityModel == SOLVENT_POLYMER) {
     /* added ACSun 7/99 */
     rho_dot = 0.;
 
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      sv[w] = mp->specific_volume[w];
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      sv[w] = goma_ctx->fem.mp->specific_volume[w];
     }
-    sv_p = mp->specific_volume[pd->Num_Species_Eqn];
+    sv_p = goma_ctx->fem.mp->specific_volume[goma_ctx->fem.pd->Num_Species_Eqn];
 
     /* mass concentration formulation   */
-    if (pd->TimeIntegration != STEADY) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
-        if (fv->c[w] < 0) {
-          rho_dot += (fv_dot->c[w]) * (1. - sv[w] / sv_p);
+    if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+        if (goma_ctx->fem.fv->c[w] < 0) {
+          rho_dot += (goma_ctx->fem.fv_dot->c[w]) * (1. - sv[w] / sv_p);
           d_rho_dot_dc[w] = 0.;
         } else {
-          rho_dot += (fv_dot->c[w]) * (1. - sv[w] / sv_p);
+          rho_dot += (goma_ctx->fem.fv_dot->c[w]) * (1. - sv[w] / sv_p);
           d_rho_dot_dc[w] = (1 + 2. * tt) * (1. - sv[w] / sv_p) / dt;
         }
       }
@@ -2004,22 +2032,22 @@ double vary_rho_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
 
   eqn = TEMPERATURE;
 
-  if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
     h = T * Cp * rho_dot;
 
     /* Jacobian entries for source term */
     var = MASS_FRACTION;
-    if (d_h != NULL && pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          d_h->C[w][j] -= T * Cp * d_rho_dot_dc[w] * bf[var]->phi[j];
+    if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          d_h->C[w][j] -= T * Cp * d_rho_dot_dc[w] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
     var = TEMPERATURE;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_h->T[j] -= Cp * rho_dot * bf[var]->phi[j];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_h->T[j] -= Cp * rho_dot * goma_ctx->fem.bf[var]->phi[j];
       }
     }
   }
@@ -2043,18 +2071,18 @@ double foam_heat_source(
 
   int j, var;
 
-  hT = mp->u_heat_source[1];
-  Tb = mp->u_heat_source[2];
-  a0 = mp->u_heat_source[3];
-  phi0 = mp->u_heat_source[4];
+  hT = goma_ctx->fem.mp->u_heat_source[1];
+  Tb = goma_ctx->fem.mp->u_heat_source[2];
+  a0 = goma_ctx->fem.mp->u_heat_source[3];
+  phi0 = goma_ctx->fem.mp->u_heat_source[4];
 
-  h = -hT * (fv->T - Tb) * (3.0 * phi0 / 2.0 / a0);
+  h = -hT * (goma_ctx->fem.fv->T - Tb) * (3.0 * phi0 / 2.0 / a0);
 
   var = TEMPERATURE;
 
-  if (pd->v[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      d_h->T[j] += -bf[var]->phi[j] * (hT * 3.0 * phi0 / 2.0 / a0);
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      d_h->T[j] += -goma_ctx->fem.bf[var]->phi[j] * (hT * 3.0 * phi0 / 2.0 / a0);
     }
   }
   return (h);
@@ -2071,9 +2099,9 @@ double foam_pmdi_10_heat_source(
   DENSITY_DEPENDENCE_STRUCT d_rho_struct;
   DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
 
-  if (mp->DensityModel != DENSITY_FOAM_PMDI_10) {
+  if (goma_ctx->fem.mp->DensityModel != DENSITY_FOAM_PMDI_10) {
     GOMA_EH(GOMA_ERROR, "Expected FOAM_PMDI_10 Density Model for FOAM_PMDI Heat Source");
-    mp->heat_capacity = 0.0;
+    goma_ctx->fem.mp->heat_capacity = 0.0;
     return 0.0;
   }
 
@@ -2082,8 +2110,8 @@ double foam_pmdi_10_heat_source(
   int wRXN = -1;
   int w;
 
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-    if (mp->SpeciesSourceModel[w] == FOAM_PMDI_10_RXN) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.mp->SpeciesSourceModel[w] == FOAM_PMDI_10_RXN) {
       wRXN = w;
       break;
     }
@@ -2096,40 +2124,44 @@ double foam_pmdi_10_heat_source(
 
   int j, var;
 
-  double Delta_H_RXN = mp->u_heat_source[0];
-  double M_CO2 = mp->u_density[0];
-  double ref_press = mp->u_density[2];
+  double Delta_H_RXN = goma_ctx->fem.mp->u_heat_source[0];
+  double M_CO2 = goma_ctx->fem.mp->u_density[0];
+  double ref_press = goma_ctx->fem.mp->u_density[2];
 
-  double Rgas_const = mp->u_density[3];
+  double Rgas_const = goma_ctx->fem.mp->u_density[3];
 
   double rho_gas = 0;
 
-  rho_gas = (ref_press * M_CO2 / (Rgas_const * fv->T));
+  rho_gas = (ref_press * M_CO2 / (Rgas_const * goma_ctx->fem.fv->T));
 
   double Y = 1.0 - rho_gas / rho;
 
-  h = Delta_H_RXN * Y * rho * fv_dot->c[wRXN];
+  h = Delta_H_RXN * Y * rho * goma_ctx->fem.fv_dot->c[wRXN];
 
   if (d_h != NULL) {
     var = TEMPERATURE;
 
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         d_h->T[j] = 0;
-        d_h->T[j] = Delta_H_RXN * (-rho_gas / (rho * fv->T)) * rho * fv_dot->c[wRXN];
-        d_h->T[j] += Delta_H_RXN * Y * d_rho->T[j] * fv_dot->c[wRXN] +
-                     Delta_H_RXN * (-rho_gas / (rho * rho)) * d_rho->T[j] * fv_dot->c[wRXN];
+        d_h->T[j] = Delta_H_RXN * (-rho_gas / (rho * goma_ctx->fem.fv->T)) * rho *
+                    goma_ctx->fem.fv_dot->c[wRXN];
+        d_h->T[j] +=
+            Delta_H_RXN * Y * d_rho->T[j] * goma_ctx->fem.fv_dot->c[wRXN] +
+            Delta_H_RXN * (-rho_gas / (rho * rho)) * d_rho->T[j] * goma_ctx->fem.fv_dot->c[wRXN];
       }
     }
 
     var = MASS_FRACTION;
-    if (pd->v[pg->imtrx][var]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          d_h->C[w][j] = Delta_H_RXN * Y * d_rho->C[w][j] * fv_dot->c[wRXN] +
-                         Delta_H_RXN * rho_gas / rho * d_rho->C[w][j] * fv_dot->c[wRXN];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          d_h->C[w][j] =
+              Delta_H_RXN * Y * d_rho->C[w][j] * goma_ctx->fem.fv_dot->c[wRXN] +
+              Delta_H_RXN * rho_gas / rho * d_rho->C[w][j] * goma_ctx->fem.fv_dot->c[wRXN];
           if (w == wRXN) {
-            d_h->C[w][j] += Delta_H_RXN * Y * rho * bf[var]->phi[j] * (1 + 2. * tt) / dt;
+            d_h->C[w][j] +=
+                Delta_H_RXN * Y * rho * goma_ctx->fem.bf[var]->phi[j] * (1 + 2. * tt) / dt;
           }
         }
       }
@@ -2177,46 +2209,47 @@ double joule_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h, dbl time)
   int j;
   double h = 0.;
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   memset(dkdT, 0, sizeof(double) * MDE);
   memset(dkdV, 0, sizeof(double) * MDE);
   memset(dkdX, 0, sizeof(double) * DIM * MDE);
-  if (mp->Elec_ConductivityModel == USER) {
-    usr_electrical_conductivity(mp->u_electrical_conductivity, time);
+  if (goma_ctx->fem.mp->Elec_ConductivityModel == USER) {
+    usr_electrical_conductivity(goma_ctx->fem.mp->u_electrical_conductivity, time);
 
-    k = mp->electrical_conductivity;
+    k = goma_ctx->fem.mp->electrical_conductivity;
 
     var = TEMPERATURE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      dkdT[j] = mp->d_electrical_conductivity[var] * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      dkdT[j] = goma_ctx->fem.mp->d_electrical_conductivity[var] * goma_ctx->fem.bf[var]->phi[j];
     }
 
     var = VOLTAGE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      dkdV[j] = mp->d_electrical_conductivity[var] * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      dkdV[j] = goma_ctx->fem.mp->d_electrical_conductivity[var] * goma_ctx->fem.bf[var]->phi[j];
     }
 
-    if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (a = 0; a < dim; a++) {
         var = MESH_DISPLACEMENT1 + a;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          dkdX[a][j] = mp->d_electrical_conductivity[var] * bf[var]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          dkdX[a][j] =
+              goma_ctx->fem.mp->d_electrical_conductivity[var] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
 
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         var = MASS_FRACTION;
       }
     }
-  } else if (mp->Elec_ConductivityModel == CONSTANT) {
+  } else if (goma_ctx->fem.mp->Elec_ConductivityModel == CONSTANT) {
 
-    k = mp->electrical_conductivity;
+    k = goma_ctx->fem.mp->electrical_conductivity;
 
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         var = MASS_FRACTION;
       }
     }
@@ -2226,35 +2259,37 @@ double joule_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h, dbl time)
 
   /* Load current density */
   dbl J[DIM];
-  if (mp->len_u_heat_source == 0) {
+  if (goma_ctx->fem.mp->len_u_heat_source == 0) {
     for (a = 0; a < dim; a++) {
-      J[a] = fv->grad_V[a];
+      J[a] = goma_ctx->fem.fv->grad_V[a];
     }
-  } else if (mp->len_u_heat_source == 1) {
+  } else if (goma_ctx->fem.mp->len_u_heat_source == 1) {
 #if MAX_EXTERNAL_FIELD < 3
     GOMA_EH(GOMA_ERROR, "User Joule Heating source expected MAX_EXTERNAL_FIELD >= 3");
 #else
     char err_msg[MAX_CHAR_IN_INPUT];
-    b = (int)mp->u_heat_source[0];
-    sprintf(err_msg, "Joule heating using external fields %s %s %s.\n", efv->name[a + 0],
-            efv->name[a + 1], efv->name[a + 2]);
+    b = (int)goma_ctx->fem.mp->u_heat_source[0];
+    sprintf(err_msg, "Joule heating using external fields %s %s %s.\n",
+            goma_ctx->fem.efv->name[a + 0], goma_ctx->fem.efv->name[a + 1],
+            goma_ctx->fem.efv->name[a + 2]);
     GOMA_WH(-1, err_msg);
     for (a = 0; a < dim; a++) {
-      J[a] = fv->external_field[a + b] / k;
+      J[a] = goma_ctx->fem.fv->external_field[a + b] / k;
     }
 #endif
-  } else if (mp->len_u_heat_source == 2) {
+  } else if (goma_ctx->fem.mp->len_u_heat_source == 2) {
 #if MAX_EXTERNAL_FIELD < 3
     GOMA_EH(GOMA_ERROR, "User Joule Heating source expected MAX_EXTERNAL_FIELD >= 3");
 #else
     char err_msg[MAX_CHAR_IN_INPUT];
-    b = (int)mp->u_heat_source[0];
-    dbl scale = mp->u_heat_source[1];
+    b = (int)goma_ctx->fem.mp->u_heat_source[0];
+    dbl scale = goma_ctx->fem.mp->u_heat_source[1];
     sprintf(err_msg, "Joule heating using external fields %s %s %s, with J scaled by %e.\n",
-            efv->name[a + 0], efv->name[a + 1], efv->name[a + 2], scale);
+            goma_ctx->fem.efv->name[a + 0], goma_ctx->fem.efv->name[a + 1],
+            goma_ctx->fem.efv->name[a + 2], scale);
     GOMA_WH(-1, err_msg);
     for (a = 0; a < dim; a++) {
-      J[a] = scale * fv->external_field[a + b] / k;
+      J[a] = scale * goma_ctx->fem.fv->external_field[a + b] / k;
     }
 #endif
   } else {
@@ -2271,31 +2306,32 @@ double joule_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h, dbl time)
   /* Now do sensitivies */
 
   var = VOLTAGE;
-  if (d_h != NULL && pd->v[pg->imtrx][var]) {
+  if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     for (a = 0; a < dim; a++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_h->V[j] += k * 2. * fv->grad_V[a] * bf[var]->grad_phi[j][a] +
-                     dkdV[j] * fv->grad_V[a] * fv->grad_V[a];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_h->V[j] += k * 2. * goma_ctx->fem.fv->grad_V[a] * goma_ctx->fem.bf[var]->grad_phi[j][a] +
+                     dkdV[j] * goma_ctx->fem.fv->grad_V[a] * goma_ctx->fem.fv->grad_V[a];
       }
     }
   }
 
   var = TEMPERATURE;
-  if (d_h != NULL && pd->v[pg->imtrx][var]) {
+  if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     for (a = 0; a < dim; a++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_h->T[j] += dkdT[j] * fv->grad_V[a] * fv->grad_V[a];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_h->T[j] += dkdT[j] * goma_ctx->fem.fv->grad_V[a] * goma_ctx->fem.fv->grad_V[a];
       }
     }
   }
 
-  if (d_h != NULL && pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+  if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
     for (a = 0; a < dim; a++) {
       for (b = 0; b < dim; b++) {
         var = MESH_DISPLACEMENT1 + b;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          d_h->X[a][j] += k * 2. * fv->grad_V[a] * fv->d_grad_V_dmesh[a][b][j] +
-                          dkdX[a][j] * fv->grad_V[a] * fv->grad_V[a];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          d_h->X[a][j] +=
+              k * 2. * goma_ctx->fem.fv->grad_V[a] * goma_ctx->fem.fv->d_grad_V_dmesh[a][b][j] +
+              dkdX[a][j] * goma_ctx->fem.fv->grad_V[a] * goma_ctx->fem.fv->grad_V[a];
         }
       }
     }
@@ -2361,20 +2397,20 @@ double visc_diss_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
 
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
-      gamma_dot[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+      gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
 
   /* set stress to zero if it is not defined */
   memset(s, 0, sizeof(dbl) * DIM * DIM);
-  if (pd->v[pg->imtrx][POLYMER_STRESS11]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
 
     (void)stress_eqn_pointer(v_s);
 
     for (a = 0; a < VIM; a++) {
       for (b = 0; b < VIM; b++) {
-        for (mode = 0; mode < vn->modes; mode++) {
-          s[a][b] += fv->S[mode][a][b];
+        for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+          s[a][b] += goma_ctx->fem.fv->S[mode][a][b];
         }
         h += s[a][b] * gamma_dot[b][a];
       }
@@ -2385,7 +2421,7 @@ double visc_diss_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
 
   /* get mu and grad_mu */
 
-  mu = viscosity(gn, gamma_dot, d_mu);
+  mu = viscosity(goma_ctx->fem.gn, gamma_dot, d_mu);
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
 
   h += mu * gammadot * gammadot;
@@ -2393,25 +2429,25 @@ double visc_diss_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
   h *= param[0];
 
   /* Now do sensitivies */
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     var = TEMPERATURE;
-    if (d_h != NULL && pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         d_h->T[j] += param[0] * d_mu->T[j] * gammadot * gammadot;
       }
     }
 
-    if (d_h != NULL && pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (b = 0; b < VIM; b++) {
         var = MESH_DISPLACEMENT1 + b;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_h->X[b][j] += param[0] * (2. * mu * gammadot * d_gd_dmesh[b][j] +
                                       gammadot * gammadot * d_mu->X[b][j]);
-          if (pd->v[pg->imtrx][POLYMER_STRESS11]) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
             for (p = 0; p < VIM; p++) {
               for (q = 0; q < VIM; q++) {
-                d_h->X[b][j] += param[0] * s[p][q] * fv->d_grad_v_dmesh[q][p][b][j];
+                d_h->X[b][j] += param[0] * s[p][q] * goma_ctx->fem.fv->d_grad_v_dmesh[q][p][b][j];
               }
             }
           }
@@ -2419,16 +2455,17 @@ double visc_diss_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
       }
     }
 
-    if (d_h != NULL && pd->v[pg->imtrx][VELOCITY1]) {
+    if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
       for (b = 0; b < VIM; b++) {
         var = VELOCITY1 + b;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_h->v[b][j] +=
               param[0] * (2. * mu * gammadot * d_gd_dv[b][j] + gammadot * gammadot * d_mu->v[b][j]);
-          if (pd->v[pg->imtrx][POLYMER_STRESS11]) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
             for (p = 0; p < VIM; p++) {
               for (q = 0; q < VIM; q++) {
-                d_h->v[b][j] += param[0] * s[p][q] * bf[VELOCITY1]->grad_phi_e[j][b][q][p];
+                d_h->v[b][j] +=
+                    param[0] * s[p][q] * goma_ctx->fem.bf[VELOCITY1]->grad_phi_e[j][b][q][p];
               }
             }
           }
@@ -2436,13 +2473,14 @@ double visc_diss_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
       }
     }
 
-    if (d_h != NULL && pd->v[pg->imtrx][POLYMER_STRESS11]) {
-      for (mode = 0; mode < vn->modes; mode++) {
+    if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
+      for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
         for (a = 0; a < VIM; a++) {
           for (b = 0; b < VIM; b++) {
             var = v_s[mode][a][b];
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-              d_h->S[mode][a][b][j] = 0.5 * param[0] * gamma_dot[b][a] * bf[var]->phi[j];
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              d_h->S[mode][a][b][j] =
+                  0.5 * param[0] * gamma_dot[b][a] * goma_ctx->fem.bf[var]->phi[j];
             }
           }
         }
@@ -2464,12 +2502,12 @@ double foam_pmdi_10_heat_cap(HEAT_CAPACITY_DEPENDENCE_STRUCT *d_Cp, double time)
   DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
   double rho;
 
-  Cp_liq = mp->u_heat_capacity[0];
-  Cp_gas = mp->u_heat_capacity[1];
+  Cp_liq = goma_ctx->fem.mp->u_heat_capacity[0];
+  Cp_gas = goma_ctx->fem.mp->u_heat_capacity[1];
 
-  if (mp->DensityModel != DENSITY_FOAM_PMDI_10) {
+  if (goma_ctx->fem.mp->DensityModel != DENSITY_FOAM_PMDI_10) {
     GOMA_EH(GOMA_ERROR, "Expected FOAM_PMDI_10 Density Model for FOAM_PMDI Heat Capacity");
-    mp->heat_capacity = 0.0;
+    goma_ctx->fem.mp->heat_capacity = 0.0;
     return 0.0;
   }
 
@@ -2477,8 +2515,8 @@ double foam_pmdi_10_heat_cap(HEAT_CAPACITY_DEPENDENCE_STRUCT *d_Cp, double time)
 
   wCO2 = -1;
   wH2O = -1;
-  for (w = 0; w < pd->Num_Species; w++) {
-    switch (mp->SpeciesSourceModel[w]) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species; w++) {
+    switch (goma_ctx->fem.mp->SpeciesSourceModel[w]) {
     case FOAM_PMDI_10_CO2:
       wCO2 = w;
       break;
@@ -2490,57 +2528,59 @@ double foam_pmdi_10_heat_cap(HEAT_CAPACITY_DEPENDENCE_STRUCT *d_Cp, double time)
     }
   }
 
-  if (wCO2 == -1 && !pd->gv[MOMENT1]) {
+  if (wCO2 == -1 && !goma_ctx->fem.pd->gv[MOMENT1]) {
     GOMA_EH(GOMA_ERROR, "Expected a Species Source of FOAM_PMDI_10_CO2 or Moment equations");
   } else if (wH2O == -1) {
     GOMA_EH(GOMA_ERROR, "Expected a Species Source of FOAM_PMDI_10_H2O");
   }
 
-  double volF = mp->volumeFractionGas;
+  double volF = goma_ctx->fem.mp->volumeFractionGas;
 
-  double M_CO2 = mp->u_density[0];
-  double rho_liq = mp->u_density[1];
-  double ref_press = mp->u_density[2];
-  double Rgas_const = mp->u_density[3];
+  double M_CO2 = goma_ctx->fem.mp->u_density[0];
+  double rho_liq = goma_ctx->fem.mp->u_density[1];
+  double ref_press = goma_ctx->fem.mp->u_density[2];
+  double Rgas_const = goma_ctx->fem.mp->u_density[3];
 
   double rho_gas = 0;
 
-  rho_gas = (ref_press * M_CO2 / (Rgas_const * fv->T));
+  rho_gas = (ref_press * M_CO2 / (Rgas_const * goma_ctx->fem.fv->T));
 
   Cp = (Cp_liq * rho_liq * (1 - volF) + Cp_gas * rho_gas * volF) / rho;
 
   /* Now do sensitivies */
 
-  if (d_Cp != NULL && af->Assemble_Jacobian) {
-    if (pd->v[pg->imtrx][TEMPERATURE]) {
+  if (d_Cp != NULL && goma_ctx->fem.af->Assemble_Jacobian) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
       var = TEMPERATURE;
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_Cp->T[j] = -Cp / rho * d_rho->T[j];
-          d_Cp->T[j] += (Cp_liq * rho_liq * mp->d_volumeFractionGas[var]) / rho * bf[var]->phi[j];
-          d_Cp->T[j] += ((Cp_gas * rho_gas * mp->d_volumeFractionGas[var]) / rho) * bf[var]->phi[j];
+          d_Cp->T[j] += (Cp_liq * rho_liq * goma_ctx->fem.mp->d_volumeFractionGas[var]) / rho *
+                        goma_ctx->fem.bf[var]->phi[j];
+          d_Cp->T[j] += ((Cp_gas * rho_gas * goma_ctx->fem.mp->d_volumeFractionGas[var]) / rho) *
+                        goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
 
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
       var = MASS_FRACTION;
-      if (pd->v[pg->imtrx][var]) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
           int wvar = MAX_VARIABLE_TYPES + w;
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             d_Cp->C[w][j] = -Cp / rho * d_rho->C[w][j];
-            d_Cp->C[w][j] += ((Cp_liq * rho_liq * (mp->d_volumeFractionGas[wvar]) +
-                               Cp_gas * rho_gas * mp->d_volumeFractionGas[wvar]) /
+            d_Cp->C[w][j] += ((Cp_liq * rho_liq * (goma_ctx->fem.mp->d_volumeFractionGas[wvar]) +
+                               Cp_gas * rho_gas * goma_ctx->fem.mp->d_volumeFractionGas[wvar]) /
                               rho) *
-                             bf[var]->phi[j];
+                             goma_ctx->fem.bf[var]->phi[j];
           }
         }
       }
     }
   }
 
-  mp->heat_capacity = Cp;
+  goma_ctx->fem.mp->heat_capacity = Cp;
   return (Cp);
 }
 
@@ -2582,47 +2622,47 @@ double enthalpy_heat_capacity_model(HEAT_CAPACITY_DEPENDENCE_STRUCT *d_Cp) {
 
   /* Begin Execution */
 
-  latent_heat = mp->latent_heat_fusion[0]; /*single component for now*/
-                                           /* if this depends on conc'n */
-                                           /* then add section here     */
-  T_liq = mp->melting_point_liquidus;
-  T_sol = mp->melting_point_solidus;
-  Cp_base = mp->heat_capacity;
+  latent_heat = goma_ctx->fem.mp->latent_heat_fusion[0]; /*single component for now*/
+                                                         /* if this depends on conc'n */
+                                                         /* then add section here     */
+  T_liq = goma_ctx->fem.mp->melting_point_liquidus;
+  T_sol = goma_ctx->fem.mp->melting_point_solidus;
+  Cp_base = goma_ctx->fem.mp->heat_capacity;
 
   /************Initialize everything for saftey**************/
 
   Cp = 0.;
 
   var = VOLTAGE;
-  if (d_Cp != NULL && pd->e[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+  if (d_Cp != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       d_Cp->V[j] = 0.;
     }
   }
 
-  if (d_Cp != NULL && pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+  if (d_Cp != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
     for (b = 0; b < DIM; b++) {
       var = MESH_DISPLACEMENT1 + b;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         d_Cp->X[b][j] = 0.;
       }
     }
   }
 
-  if (d_Cp != NULL && pd->v[pg->imtrx][MASS_FRACTION]) {
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
+  if (d_Cp != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
       var = MASS_FRACTION;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         d_Cp->C[w][j] = 0.;
       }
     }
   }
 
-  if (d_Cp != NULL && pd->v[pg->imtrx][VELOCITY1]) {
+  if (d_Cp != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
     for (b = 0; b < DIM; b++) {
       var = VELOCITY1 + b;
       ;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         d_Cp->v[b][j] = 0.;
       }
     }
@@ -2637,20 +2677,23 @@ double enthalpy_heat_capacity_model(HEAT_CAPACITY_DEPENDENCE_STRUCT *d_Cp) {
 
   /* compute the average temperature of all nodes in this element */
   T_ave = 0.;
-  for (i = 0; i < ei[pg->imtrx]->dof[TEMPERATURE]; i++) {
-    T_ave += *esp->T[i];
+  for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TEMPERATURE]; i++) {
+    T_ave += *goma_ctx->fem.esp->T[i];
   }
-  T_ave = T_ave / ei[pg->imtrx]->dof[TEMPERATURE];
+  T_ave = T_ave / goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TEMPERATURE];
 
-  for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
-    for (i = 0; i < ei[pg->imtrx]->dof[TEMPERATURE]; i++) {
-      if (*esp->T[i] < (T_sol)) {
-        grad_H[a] += bf[TEMPERATURE]->grad_phi[i][a] * (*esp->T[i] * Cp_base);
-      } else if (*esp->T[i] > T_sol && *esp->T[i] < T_liq) {
-        grad_H[a] += bf[TEMPERATURE]->grad_phi[i][a] *
-                     (*esp->T[i] * Cp_base + latent_heat * (*esp->T[i]) / (T_liq - T_sol));
-      } else if (*esp->T[i] > T_liq) {
-        grad_H[a] += bf[TEMPERATURE]->grad_phi[i][a] * (*esp->T[i] * Cp_base);
+  for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TEMPERATURE]; i++) {
+      if (*goma_ctx->fem.esp->T[i] < (T_sol)) {
+        grad_H[a] +=
+            goma_ctx->fem.bf[TEMPERATURE]->grad_phi[i][a] * (*goma_ctx->fem.esp->T[i] * Cp_base);
+      } else if (*goma_ctx->fem.esp->T[i] > T_sol && *goma_ctx->fem.esp->T[i] < T_liq) {
+        grad_H[a] += goma_ctx->fem.bf[TEMPERATURE]->grad_phi[i][a] *
+                     (*goma_ctx->fem.esp->T[i] * Cp_base +
+                      latent_heat * (*goma_ctx->fem.esp->T[i]) / (T_liq - T_sol));
+      } else if (*goma_ctx->fem.esp->T[i] > T_liq) {
+        grad_H[a] +=
+            goma_ctx->fem.bf[TEMPERATURE]->grad_phi[i][a] * (*goma_ctx->fem.esp->T[i] * Cp_base);
       }
     }
   }
@@ -2659,11 +2702,11 @@ double enthalpy_heat_capacity_model(HEAT_CAPACITY_DEPENDENCE_STRUCT *d_Cp) {
 
   norm_grad_H = norm_grad_T = 0.;
 
-  for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++)
+  for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++)
 
   {
     norm_grad_H += grad_H[a] * grad_H[a];
-    norm_grad_T += fv->grad_T[a] * fv->grad_T[a];
+    norm_grad_T += goma_ctx->fem.fv->grad_T[a] * goma_ctx->fem.fv->grad_T[a];
   }
 
   if (fabs(norm_grad_T) <= 1.e-5) {
@@ -2677,32 +2720,33 @@ double enthalpy_heat_capacity_model(HEAT_CAPACITY_DEPENDENCE_STRUCT *d_Cp) {
 
   /* Now do sensitivies */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     if (fabs(norm_grad_T) > 1.e-5) {
-      if (d_Cp != NULL && pd->v[pg->imtrx][TEMPERATURE]) {
+      if (d_Cp != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
         var = TEMPERATURE;
-        if (pd->v[pg->imtrx][var]) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
 
-              if (*esp->T[j] <= T_sol) {
-                d_grad_H_dT[a][j] = bf[TEMPERATURE]->grad_phi[j][a] * (Cp_base);
-              } else if (*esp->T[j] > T_sol && *esp->T[j] < T_liq) {
-                d_grad_H_dT[a][j] = bf[TEMPERATURE]->grad_phi[j][a] *
+              if (*goma_ctx->fem.esp->T[j] <= T_sol) {
+                d_grad_H_dT[a][j] = goma_ctx->fem.bf[TEMPERATURE]->grad_phi[j][a] * (Cp_base);
+              } else if (*goma_ctx->fem.esp->T[j] > T_sol && *goma_ctx->fem.esp->T[j] < T_liq) {
+                d_grad_H_dT[a][j] = goma_ctx->fem.bf[TEMPERATURE]->grad_phi[j][a] *
                                     (Cp_base + latent_heat * (1. / (T_liq - T_sol)));
-              } else if (*esp->T[j] > T_liq) {
-                d_grad_H_dT[a][j] = bf[TEMPERATURE]->grad_phi[j][a] * (Cp_base);
+              } else if (*goma_ctx->fem.esp->T[j] > T_liq) {
+                d_grad_H_dT[a][j] = goma_ctx->fem.bf[TEMPERATURE]->grad_phi[j][a] * (Cp_base);
               }
             }
           }
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
-              d_Cp->T[j] +=
-                  (sqrt(norm_grad_T) * 0.5 * (2. * grad_H[a] * d_grad_H_dT[a][j]) /
-                       sqrt(norm_grad_H) -
-                   sqrt(norm_grad_H) * 0.5 *
-                       (2. * fv->grad_T[a] * bf[TEMPERATURE]->grad_phi[j][a]) / sqrt(norm_grad_T)) /
-                  norm_grad_T;
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
+              d_Cp->T[j] += (sqrt(norm_grad_T) * 0.5 * (2. * grad_H[a] * d_grad_H_dT[a][j]) /
+                                 sqrt(norm_grad_H) -
+                             sqrt(norm_grad_H) * 0.5 *
+                                 (2. * goma_ctx->fem.fv->grad_T[a] *
+                                  goma_ctx->fem.bf[TEMPERATURE]->grad_phi[j][a]) /
+                                 sqrt(norm_grad_T)) /
+                            norm_grad_T;
             }
           }
         }
@@ -2743,7 +2787,7 @@ int V_mesh_sfs_model(dbl *param,      /* User parameters (u_v_mesh_sfs) */
                      int gnn)         /* -1 for gauss point, global node number
                                        * for node point*/
 {
-  const int dim = pd->Num_Dim;
+  const int dim = goma_ctx->fem.pd->Num_Dim;
   int a;
 
   double X[3], X_0[3], R, theta_;
@@ -2757,7 +2801,7 @@ int V_mesh_sfs_model(dbl *param,      /* User parameters (u_v_mesh_sfs) */
 
   for (a = 0; a < dim; a++) {
     if (gnn == -1) {
-      X[a] = fv->x0[a]; /*we only care about
+      X[a] = goma_ctx->fem.fv->x0[a]; /*we only care about
                           the stress-free st.*/
     } else {
       X[a] = goma_ctx->mesh.coor[a][gnn];
@@ -2828,31 +2872,33 @@ int V_mesh_sfs_model(dbl *param,      /* User parameters (u_v_mesh_sfs) */
     v_mesh_sfs[1] = param[0] * R * v_dir[1];
     v_mesh_sfs[2] = param[0] * R * v_dir[2];
   } else if (model == OSC_LINEAR) {
-    double v_magn = 0, stroke = elc_rs->u_v_mesh_sfs[3];
-    double end_stroke = elc_rs->u_v_mesh_sfs[4], end_dt, time_pd, time_red;
+    double v_magn = 0, stroke = goma_ctx->fem.elc_rs->u_v_mesh_sfs[3];
+    double end_stroke = goma_ctx->fem.elc_rs->u_v_mesh_sfs[4], end_dt, time_pd, time_red;
     double interval;
     for (a = 0; a < DIM; a++) {
-      v_magn += SQUARE(elc_rs->u_v_mesh_sfs[a]);
+      v_magn += SQUARE(goma_ctx->fem.elc_rs->u_v_mesh_sfs[a]);
     }
     v_magn = sqrt(v_magn);
     time_pd = stroke / v_magn;
     end_dt = end_stroke / v_magn;
-    time_red = modf(tran->time_value / (4 * time_pd), &interval);
+    time_red = modf(goma_ctx->fem.tran->time_value / (4 * time_pd), &interval);
     if (time_red > (time_pd - end_dt) && time_red <= (time_pd + end_dt)) {
       for (a = 0; a < DIM; a++) {
-        elc_rs->v_mesh_sfs[a] = -sin((time_red - time_pd) * 2 / M_PIE) * elc_rs->u_v_mesh_sfs[a];
+        goma_ctx->fem.elc_rs->v_mesh_sfs[a] =
+            -sin((time_red - time_pd) * 2 / M_PIE) * goma_ctx->fem.elc_rs->u_v_mesh_sfs[a];
       }
     } else if (time_red > (time_pd + end_dt) && time_red <= (3 * time_pd - end_dt)) {
       for (a = 0; a < DIM; a++) {
-        elc_rs->v_mesh_sfs[a] = -elc_rs->u_v_mesh_sfs[a];
+        goma_ctx->fem.elc_rs->v_mesh_sfs[a] = -goma_ctx->fem.elc_rs->u_v_mesh_sfs[a];
       }
     } else if (time_red > (3 * time_pd - end_dt) && time_red <= (3 * time_pd + end_dt)) {
       for (a = 0; a < DIM; a++) {
-        elc_rs->v_mesh_sfs[a] = sin((time_red - time_pd) * 2 / M_PIE) * elc_rs->u_v_mesh_sfs[a];
+        goma_ctx->fem.elc_rs->v_mesh_sfs[a] =
+            sin((time_red - time_pd) * 2 / M_PIE) * goma_ctx->fem.elc_rs->u_v_mesh_sfs[a];
       }
     } else {
       for (a = 0; a < DIM; a++) {
-        elc_rs->v_mesh_sfs[a] = elc_rs->u_v_mesh_sfs[a];
+        goma_ctx->fem.elc_rs->v_mesh_sfs[a] = goma_ctx->fem.elc_rs->u_v_mesh_sfs[a];
       }
     }
 
@@ -2897,8 +2943,8 @@ int Diffusivity(void)
   int i, j, w, var, err = 0;
   double T = 298.0, P = 101.325;
   ;
-  for (w = 0; w < pd->Num_Species; w++) {
-    switch (mp->DiffusivityModel[w]) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species; w++) {
+    switch (goma_ctx->fem.mp->DiffusivityModel[w]) {
 
     case CONSTANT:
       /* do nothing...mp->diffusivity set in rd_mp_specs
@@ -2907,7 +2953,7 @@ int Diffusivity(void)
       break;
 
     case USER:
-      err = usr_diffusivity(w, mp->u_diffusivity[w]);
+      err = usr_diffusivity(w, goma_ctx->fem.mp->u_diffusivity[w]);
       break;
 
     case POROUS:
@@ -2918,7 +2964,7 @@ int Diffusivity(void)
       break;
 
     case FREE_VOL:
-      err = Free_Vol_Theory_Diffusivity(w, mp->u_diffusivity[w]);
+      err = Free_Vol_Theory_Diffusivity(w, goma_ctx->fem.mp->u_diffusivity[w]);
       break;
 
     case GENERALIZED_FREE_VOL:
@@ -2926,31 +2972,31 @@ int Diffusivity(void)
       break;
 
     case SEDIMENT:
-      err = sediment_compress_diffusivity(w, mp->u_diffusivity[w]);
+      err = sediment_compress_diffusivity(w, goma_ctx->fem.mp->u_diffusivity[w]);
       break;
 
     case BRUGGEMANN:
-      err = Bruggemann_diffusivity(w, mp->u_diffusivity[w]);
+      err = Bruggemann_diffusivity(w, goma_ctx->fem.mp->u_diffusivity[w]);
       break;
 
     case BRUGGEMANN_FREE_VOL:
-      err = Bruggemann_free_volume_diffusivity(w, mp->u_diffusivity[w]);
+      err = Bruggemann_free_volume_diffusivity(w, goma_ctx->fem.mp->u_diffusivity[w]);
       break;
 
     case TABLE: {
       struct Data_Table *table_local;
-      table_local = MP_Tables[mp->diffusivity_tableid[w]];
-      apply_table_mp(&mp->diffusivity[w], table_local);
+      table_local = MP_Tables[goma_ctx->fem.mp->diffusivity_tableid[w]];
+      apply_table_mp(&goma_ctx->fem.mp->diffusivity[w], table_local);
       for (i = 0; i < table_local->columns - 1; i++) {
         var = table_local->t_index[i];
         switch (var) {
         case TEMPERATURE:
-          mp->d_diffusivity[w][TEMPERATURE] = table_local->slope[i];
+          goma_ctx->fem.mp->d_diffusivity[w][TEMPERATURE] = table_local->slope[i];
           break;
         case MASS_FRACTION:
-          if (pd->v[pg->imtrx][MASS_FRACTION]) {
-            for (j = 0; j < pd->Num_Species; j++) {
-              mp->d_diffusivity[w][MAX_VARIABLE_TYPES + j] = table_local->slope[i];
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+            for (j = 0; j < goma_ctx->fem.pd->Num_Species; j++) {
+              goma_ctx->fem.mp->d_diffusivity[w][MAX_VARIABLE_TYPES + j] = table_local->slope[i];
             }
           }
           break;
@@ -2962,36 +3008,40 @@ int Diffusivity(void)
     } break;
 
     case LEVEL_SET:
-      err = ls_transport_property(mp->u_diffusivity[w][0], mp->u_diffusivity[w][1],
-                                  mp->u_diffusivity[w][2], &mp->diffusivity[w],
-                                  &mp->d_diffusivity[w][FILL]);
+      err = ls_transport_property(
+          goma_ctx->fem.mp->u_diffusivity[w][0], goma_ctx->fem.mp->u_diffusivity[w][1],
+          goma_ctx->fem.mp->u_diffusivity[w][2], &goma_ctx->fem.mp->diffusivity[w],
+          &goma_ctx->fem.mp->d_diffusivity[w][FILL]);
       break;
     case CHAPMAN_GAS:
       /* The assumption here would be that we are using an absolute temperature
            scale, so let's make sure it's positive  */
-      if (pd->gv[TEMPERATURE]) {
-        T = MAX(fv->T, 1.);
+      if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+        T = MAX(goma_ctx->fem.fv->T, 1.);
       } else {
-        T = upd->Process_Temperature;
+        T = goma_ctx->fem.upd->Process_Temperature;
       }
 
-      if (pd->gv[PRESSURE] && fv->P > 0) {
-        P = fv->P;
+      if (goma_ctx->fem.pd->gv[PRESSURE] && goma_ctx->fem.fv->P > 0) {
+        P = goma_ctx->fem.fv->P;
       } else {
-        P = upd->Pressure_Datum / 10000.0;
+        P = goma_ctx->fem.upd->Pressure_Datum / 10000.0;
       }
       /* First coefficient is A/sigma12/omega (0.001859 atm-cm^2-(g/mol)^1/2/(K^1.5-s))  */
-      mp->diffusivity[w] = mp->u_diffusivity[w][0] *
-                           sqrt(1. / mp->molecular_weight[w] + 1. / mp->u_diffusivity[w][1]) *
-                           pow(T, 1.5) / P;
-      if (pd->e[pg->imtrx][TEMPERATURE]) {
-        mp->d_diffusivity[w][TEMPERATURE] = 1.5 * mp->diffusivity[w] / T;
+      goma_ctx->fem.mp->diffusivity[w] = goma_ctx->fem.mp->u_diffusivity[w][0] *
+                                         sqrt(1. / goma_ctx->fem.mp->molecular_weight[w] +
+                                              1. / goma_ctx->fem.mp->u_diffusivity[w][1]) *
+                                         pow(T, 1.5) / P;
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
+        goma_ctx->fem.mp->d_diffusivity[w][TEMPERATURE] =
+            1.5 * goma_ctx->fem.mp->diffusivity[w] / T;
       }
-      if (pd->e[pg->imtrx][PRESSURE]) {
-        mp->d_diffusivity[w][PRESSURE] = mp->diffusivity[w] * P * log(P);
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][PRESSURE]) {
+        goma_ctx->fem.mp->d_diffusivity[w][PRESSURE] =
+            goma_ctx->fem.mp->diffusivity[w] * P * log(P);
       }
 
-      mp->d_diffusivity[w][MAX_VARIABLE_TYPES + w] = 0.0;
+      goma_ctx->fem.mp->d_diffusivity[w][MAX_VARIABLE_TYPES + w] = 0.0;
       break;
     default:
       break;
@@ -3157,7 +3207,7 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
 
   double term1, term2, term3, term4; /* intermediate parameters */
   PROPERTYJAC_STRUCT *densityJac = NULL;
-  propertyJac_realloc(&densityJac, mp->Num_Species + 1);
+  propertyJac_realloc(&densityJac, goma_ctx->fem.mp->Num_Species + 1);
 
   /* load up convenient quantities */
   V_1s = param[0];
@@ -3174,7 +3224,7 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
   V_20 = param[11];
   fv_model_number = (int)param[12];
 
-  T = fv->T;
+  T = goma_ctx->fem.fv->T;
 
   if (fv_model_number != 0) {
     /* beta = solvent molecular weight/ polymer molecular weight */
@@ -3192,15 +3242,15 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
    * this minor kludge is added for backward compatibility with the testsuite problems
    */
 
-  if (pd->Num_Species_Eqn == 1) {
-    if (mp->specific_volume[0] == -1.0)
-      mp->specific_volume[0] = V_10;
-    if (mp->specific_volume[1] == -1.0)
-      mp->specific_volume[1] = V_20;
+  if (goma_ctx->fem.pd->Num_Species_Eqn == 1) {
+    if (goma_ctx->fem.mp->specific_volume[0] == -1.0)
+      goma_ctx->fem.mp->specific_volume[0] = V_10;
+    if (goma_ctx->fem.mp->specific_volume[1] == -1.0)
+      goma_ctx->fem.mp->specific_volume[1] = V_20;
   }
 
   /*  initialization  */
-  C[0] = fv->c[0];
+  C[0] = goma_ctx->fem.fv->c[0];
   C[1] = 1.0 - C[0];
   vol_frac_2 = 1.0;
   /*  multi-component kludge	*/
@@ -3208,28 +3258,29 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
   vol_frac_1 = 0.0;
   memset(d_vol_frac_1_dc, 0, sizeof(dbl) * MAX_CONC);
   memset(dC0dc, 0, sizeof(dbl) * MAX_CONC);
-  density_tot = calc_density(mp, TRUE, densityJac, 0.0);
+  density_tot = calc_density(goma_ctx->fem.mp, TRUE, densityJac, 0.0);
   /*  density_tot = 1./mp->specific_volume[pd->Num_Species_Eqn]; */
-  switch (mp->Species_Var_Type) {
+  switch (goma_ctx->fem.mp->Species_Var_Type) {
   case SPECIES_DENSITY:
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      if (mp->FreeVolSolvent[w]) {
-        c0 += fv->c[w];
-        vol_frac_1 += fv->c[w] * mp->specific_volume[w];
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      if (goma_ctx->fem.mp->FreeVolSolvent[w]) {
+        c0 += goma_ctx->fem.fv->c[w];
+        vol_frac_1 += goma_ctx->fem.fv->c[w] * goma_ctx->fem.mp->specific_volume[w];
       }
     }
     C[0] = c0 / density_tot; /* w1 - the solvent mass fraction */
     C[1] = 1. - C[0];        /* w2 - the polymer mass fraction */
     vol_frac_2 = 1.0 - vol_frac_1;
-    if (af->Assemble_Jacobian) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
-        if (mp->FreeVolSolvent[w]) {
-          d_vol_frac_1_dc[w] = mp->specific_volume[w];
-          dC0dc[w] =
-              (density_tot - c0 * mp->d_density[MAX_VARIABLE_TYPES + w]) / SQUARE(density_tot);
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+        if (goma_ctx->fem.mp->FreeVolSolvent[w]) {
+          d_vol_frac_1_dc[w] = goma_ctx->fem.mp->specific_volume[w];
+          dC0dc[w] = (density_tot - c0 * goma_ctx->fem.mp->d_density[MAX_VARIABLE_TYPES + w]) /
+                     SQUARE(density_tot);
         } else {
           d_vol_frac_1_dc[w] = 0.0;
-          dC0dc[w] = -c0 * mp->d_density[MAX_VARIABLE_TYPES + w] / SQUARE(density_tot);
+          dC0dc[w] =
+              -c0 * goma_ctx->fem.mp->d_density[MAX_VARIABLE_TYPES + w] / SQUARE(density_tot);
         }
       }
     }
@@ -3237,24 +3288,26 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
 
   case SPECIES_UNDEFINED_FORM:
   case SPECIES_MASS_FRACTION:
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      if (mp->FreeVolSolvent[w]) {
-        c0 += fv->c[w];
-        vol_frac_1 += fv->c[w] * mp->specific_volume[w];
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      if (goma_ctx->fem.mp->FreeVolSolvent[w]) {
+        c0 += goma_ctx->fem.fv->c[w];
+        vol_frac_1 += goma_ctx->fem.fv->c[w] * goma_ctx->fem.mp->specific_volume[w];
       }
     }
     C[0] = c0 / density_tot; /* w1 - the solvent mass fraction */
     C[1] = 1. - C[0];        /* w2 - the polymer mass fraction */
     vol_frac_2 = 1.0 - vol_frac_1;
-    if (af->Assemble_Jacobian) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
-        if (mp->FreeVolSolvent[w]) {
-          d_vol_frac_1_dc[w] = mp->specific_volume[w] *
-                               (density_tot + fv->c[w] * mp->d_density[MAX_VARIABLE_TYPES + w]);
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+        if (goma_ctx->fem.mp->FreeVolSolvent[w]) {
+          d_vol_frac_1_dc[w] =
+              goma_ctx->fem.mp->specific_volume[w] *
+              (density_tot +
+               goma_ctx->fem.fv->c[w] * goma_ctx->fem.mp->d_density[MAX_VARIABLE_TYPES + w]);
           dC0dc[w] = 1.0;
         } else {
-          d_vol_frac_1_dc[w] =
-              mp->specific_volume[w] * fv->c[w] * mp->d_density[MAX_VARIABLE_TYPES + w];
+          d_vol_frac_1_dc[w] = goma_ctx->fem.mp->specific_volume[w] * goma_ctx->fem.fv->c[w] *
+                               goma_ctx->fem.mp->d_density[MAX_VARIABLE_TYPES + w];
           dC0dc[w] = 0.0;
         }
       }
@@ -3262,25 +3315,28 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
     break;
 
   case SPECIES_CONCENTRATION:
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      if (mp->FreeVolSolvent[w]) {
-        c0 += fv->c[w] * mp->molecular_weight[w];
-        vol_frac_1 += fv->c[w] * mp->specific_volume[w] * mp->molecular_weight[w];
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      if (goma_ctx->fem.mp->FreeVolSolvent[w]) {
+        c0 += goma_ctx->fem.fv->c[w] * goma_ctx->fem.mp->molecular_weight[w];
+        vol_frac_1 += goma_ctx->fem.fv->c[w] * goma_ctx->fem.mp->specific_volume[w] *
+                      goma_ctx->fem.mp->molecular_weight[w];
       }
     }
     C[0] = c0 / density_tot; /* w1 - the solvent mass fraction */
     C[1] = 1. - C[0];        /* w2 - the polymer mass fraction */
     vol_frac_2 = 1.0 - vol_frac_1;
-    if (af->Assemble_Jacobian) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
-        if (mp->FreeVolSolvent[w]) {
-          d_vol_frac_1_dc[w] = mp->specific_volume[w] * mp->molecular_weight[w];
-          dC0dc[w] =
-              (density_tot * mp->molecular_weight[w] - c0 * mp->d_density[MAX_VARIABLE_TYPES + w]) /
-              SQUARE(density_tot);
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+        if (goma_ctx->fem.mp->FreeVolSolvent[w]) {
+          d_vol_frac_1_dc[w] =
+              goma_ctx->fem.mp->specific_volume[w] * goma_ctx->fem.mp->molecular_weight[w];
+          dC0dc[w] = (density_tot * goma_ctx->fem.mp->molecular_weight[w] -
+                      c0 * goma_ctx->fem.mp->d_density[MAX_VARIABLE_TYPES + w]) /
+                     SQUARE(density_tot);
         } else {
           d_vol_frac_1_dc[w] = 0.0;
-          dC0dc[w] = -c0 * mp->d_density[MAX_VARIABLE_TYPES + w] / SQUARE(density_tot);
+          dC0dc[w] =
+              -c0 * goma_ctx->fem.mp->d_density[MAX_VARIABLE_TYPES + w] / SQUARE(density_tot);
         }
       }
     }
@@ -3326,23 +3382,24 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
   switch (fv_model_number) {
 
   case 0:
-    mp->diffusivity[species_no] = D_o * pow((1 - vol_frac_1), 2.0) * (1. - 2. * chi * vol_frac_1) *
-                                  exp(-(C[0] * V_1s + C[1] * x_si * V_2s) / V_fh_gamma);
+    goma_ctx->fem.mp->diffusivity[species_no] =
+        D_o * pow((1 - vol_frac_1), 2.0) * (1. - 2. * chi * vol_frac_1) *
+        exp(-(C[0] * V_1s + C[1] * x_si * V_2s) / V_fh_gamma);
     break;
   case 1:
-    mp->diffusivity[species_no] = (vol_frac_2 / C[1]) * Q_thermo * D1;
+    goma_ctx->fem.mp->diffusivity[species_no] = (vol_frac_2 / C[1]) * Q_thermo * D1;
     break;
 
   case 2:
-    mp->diffusivity[species_no] = D1;
+    goma_ctx->fem.mp->diffusivity[species_no] = D1;
     break;
 
   case 3:
-    mp->diffusivity[species_no] = Q_thermo * D1;
+    goma_ctx->fem.mp->diffusivity[species_no] = Q_thermo * D1;
     break;
 
   case 4:
-    mp->diffusivity[species_no] = A_friction * D1 * Q_thermo;
+    goma_ctx->fem.mp->diffusivity[species_no] = A_friction * D1 * Q_thermo;
     break;
 
   default:
@@ -3351,15 +3408,16 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
 
   } /* end of switch(fv_model_number) */
 
-  if (af->Assemble_Jacobian) {
-    if (pd->v[pg->imtrx][TEMPERATURE]) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
 
       if (fv_model_number != 4) {
-        dDdT = mp->diffusivity[0] * ((C[0] * V_1s + C[1] * x_si * V_2s) / pow(V_fh_gamma, 2.0)) *
+        dDdT = goma_ctx->fem.mp->diffusivity[0] *
+                   ((C[0] * V_1s + C[1] * x_si * V_2s) / pow(V_fh_gamma, 2.0)) *
                    (K11_gamma * C[0] + K12_gamma * C[1]) +
-               mp->diffusivity[0] * (E_div_R / T / T);
+               goma_ctx->fem.mp->diffusivity[0] * (E_div_R / T / T);
 
-        mp->d_diffusivity[species_no][TEMPERATURE] = dDdT;
+        goma_ctx->fem.mp->d_diffusivity[species_no][TEMPERATURE] = dDdT;
       }
       if (fv_model_number == 4) {
         term1 = (E_div_R_polymer - E_div_R) / (pow(T, 2));
@@ -3374,11 +3432,11 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
                    (K11_gamma * C[0] + K12_gamma * C[1]));
         dDdT = (dA_dT * Q_thermo * D1) + (A_friction * Q_thermo * d_D1_dT);
 
-        mp->d_diffusivity[species_no][TEMPERATURE] = dDdT;
+        goma_ctx->fem.mp->d_diffusivity[species_no][TEMPERATURE] = dDdT;
       }
     }
 
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
       /* FOR NOW ONLY ALLOW 2 COMPONENT SYSTEMS, I.E. 1 SPECIES EQUATION) */
 #if 0
 	  d_vol_frac_1_dC[0] = ((C[0]*V_10 + C[1]*V_20)*V_10 - C[0]*V_10*(V_10-V_20))
@@ -3387,7 +3445,7 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
 #endif
       exponen = exp(-(C[0] * V_1s + C[1] * x_si * V_2s) / V_fh_gamma);
 
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
 
         d_V_fh_gamma_dc[w] = dC0dc[w] * (K11_gamma * (K21mTg1 + T) - K12_gamma * (K22mTg2 + T));
         dexponen_dc[w] = (-(V_fh_gamma * (V_1s - x_si * V_2s) * dC0dc[w] -
@@ -3414,19 +3472,19 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
 
       switch (fv_model_number) {
       case 0:
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] =
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          goma_ctx->fem.mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] =
               2. * (1. - vol_frac_1) * d_vol_frac_1_dc[w] * (1. - 2. * chi * vol_frac_1) * exponen +
               pow(1. - vol_frac_1, 2.0) * (-2. * chi) * d_vol_frac_1_dc[w] * exponen +
               pow(1. - vol_frac_1, 2.0) * (1. - 2. * chi * vol_frac_1) * exponen * dexponen_dc[w];
-          mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] *= D_o;
+          goma_ctx->fem.mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] *= D_o;
         }
         break;
 
       case 1:
 
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] =
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          goma_ctx->fem.mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] =
               (-d_vol_frac_1_dc[w] * Q_thermo * D1 + vol_frac_2 * dQ_dc[w] * D1 +
                vol_frac_2 * Q_thermo * d_D1_dc[w]) /
                   C[1] -
@@ -3435,22 +3493,22 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
         break;
 
       case 2:
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] = d_D1_dc[w];
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          goma_ctx->fem.mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] = d_D1_dc[w];
         }
         break;
 
       case 3:
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] =
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          goma_ctx->fem.mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] =
               dQ_dc[w] * D1 + Q_thermo * d_D1_dc[w];
         }
         break;
 
       case 4:
 
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] =
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          goma_ctx->fem.mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] =
               dA_dc[w] * Q_thermo * D1 + dQ_dc[w] * A_friction * D1 +
               A_friction * Q_thermo * d_D1_dc[w];
         }
@@ -3493,7 +3551,7 @@ int Free_Vol_Theory_Diffusivity(int species_no, /* current species number*/
 int sediment_compress_diffusivity(int species_no, /* current species number*/
                                   double *param)  /* free volume params from mat file */
 {
-  double T = fv->T;
+  double T = goma_ctx->fem.fv->T;
 
   double kb = param[0];      /* Boltzmann constant */
   double visc = param[1];    /* Solvent viscosity */
@@ -3502,34 +3560,36 @@ int sediment_compress_diffusivity(int species_no, /* current species number*/
   double nexp = param[4];    /* Sedimentation coefficient exponent */
 
   /* Get particle volume fraction*/
-  double phi_part = fv->c[species_no];
+  double phi_part = goma_ctx->fem.fv->c[species_no];
   double phi_adj = 0.0;
   double dphi_part_dc_part = 1.0;
 
   PROPERTYJAC_STRUCT *densityJac = NULL;
-  propertyJac_realloc(&densityJac, mp->Num_Species + 1);
-  double density_tot = calc_density(mp, TRUE, densityJac, 0.0);
+  propertyJac_realloc(&densityJac, goma_ctx->fem.mp->Num_Species + 1);
+  double density_tot = calc_density(goma_ctx->fem.mp, TRUE, densityJac, 0.0);
 
-  switch (mp->Species_Var_Type) {
+  switch (goma_ctx->fem.mp->Species_Var_Type) {
   case SPECIES_VOL_FRACTION:
   case SPECIES_UNDEFINED_FORM:
-    phi_part = fv->c[species_no];
+    phi_part = goma_ctx->fem.fv->c[species_no];
     dphi_part_dc_part = 1.0;
     break;
 
   case SPECIES_MASS_FRACTION:
-    phi_part = density_tot * mp->specific_volume[species_no] * fv->c[species_no];
-    dphi_part_dc_part = mp->specific_volume[species_no] * densityJac->JacVector[species_no];
+    phi_part = density_tot * goma_ctx->fem.mp->specific_volume[species_no] *
+               goma_ctx->fem.fv->c[species_no];
+    dphi_part_dc_part =
+        goma_ctx->fem.mp->specific_volume[species_no] * densityJac->JacVector[species_no];
     break;
 
   case SPECIES_DENSITY:
-    phi_part = mp->specific_volume[species_no] * fv->c[species_no];
-    dphi_part_dc_part = mp->specific_volume[species_no];
+    phi_part = goma_ctx->fem.mp->specific_volume[species_no] * goma_ctx->fem.fv->c[species_no];
+    dphi_part_dc_part = goma_ctx->fem.mp->specific_volume[species_no];
     break;
 
   case SPECIES_CONCENTRATION:
-    phi_part = mp->molar_volume[species_no] * fv->c[species_no];
-    dphi_part_dc_part = mp->molar_volume[species_no];
+    phi_part = goma_ctx->fem.mp->molar_volume[species_no] * goma_ctx->fem.fv->c[species_no];
+    dphi_part_dc_part = goma_ctx->fem.mp->molar_volume[species_no];
     break;
 
   default:
@@ -3581,9 +3641,9 @@ int sediment_compress_diffusivity(int species_no, /* current species number*/
   double dDiff_dT = dDiff0_dT * K * (Z + phi_adj * dZ_dphi_part);
 
   /* Export the diffusion coefficient and its sensitivities to the struct */
-  mp->diffusivity[species_no] = Diff;
-  mp->d_diffusivity[species_no][TEMPERATURE] = dDiff_dT;
-  mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + species_no] = dDiff_dphi_part;
+  goma_ctx->fem.mp->diffusivity[species_no] = Diff;
+  goma_ctx->fem.mp->d_diffusivity[species_no][TEMPERATURE] = dDiff_dT;
+  goma_ctx->fem.mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + species_no] = dDiff_dphi_part;
 
   if (densityJac != NULL) {
     propertyJac_destroy(&densityJac);
@@ -3628,30 +3688,30 @@ int Bruggemann_diffusivity(int species_no, /* current species number*/
   /* Get particle volume fraction*/
   PROPERTYJAC_STRUCT *densityJac = NULL;
   double conv_factor = 1.0;
-  double phi_part = fv->c[i_part];
+  double phi_part = goma_ctx->fem.fv->c[i_part];
 
-  switch (mp->Species_Var_Type) {
+  switch (goma_ctx->fem.mp->Species_Var_Type) {
   case SPECIES_VOL_FRACTION:
   case SPECIES_UNDEFINED_FORM:
     conv_factor = 1.0;
-    phi_part = fv->c[i_part];
+    phi_part = goma_ctx->fem.fv->c[i_part];
     break;
 
   case SPECIES_MASS_FRACTION:
-    propertyJac_realloc(&densityJac, mp->Num_Species + 1);
-    conv_factor = calc_density(mp, TRUE, densityJac, 0.0);
-    conv_factor *= mp->specific_volume[i_part];
-    phi_part = conv_factor * fv->c[i_part];
+    propertyJac_realloc(&densityJac, goma_ctx->fem.mp->Num_Species + 1);
+    conv_factor = calc_density(goma_ctx->fem.mp, TRUE, densityJac, 0.0);
+    conv_factor *= goma_ctx->fem.mp->specific_volume[i_part];
+    phi_part = conv_factor * goma_ctx->fem.fv->c[i_part];
     break;
 
   case SPECIES_DENSITY:
-    conv_factor = mp->specific_volume[i_part];
-    phi_part = conv_factor * fv->c[i_part];
+    conv_factor = goma_ctx->fem.mp->specific_volume[i_part];
+    phi_part = conv_factor * goma_ctx->fem.fv->c[i_part];
     break;
 
   case SPECIES_CONCENTRATION:
-    conv_factor = mp->molar_volume[i_part];
-    phi_part = conv_factor * fv->c[i_part];
+    conv_factor = goma_ctx->fem.mp->molar_volume[i_part];
+    phi_part = conv_factor * goma_ctx->fem.fv->c[i_part];
     break;
 
   default:
@@ -3676,8 +3736,8 @@ int Bruggemann_diffusivity(int species_no, /* current species number*/
   }
 
   /* Export the diffusion coefficient and its sensitivities to the struct */
-  mp->diffusivity[species_no] = Diff;
-  mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + i_part] = dDiff_dphi_part;
+  goma_ctx->fem.mp->diffusivity[species_no] = Diff;
+  goma_ctx->fem.mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + i_part] = dDiff_dphi_part;
 
   if (densityJac != NULL) {
     propertyJac_destroy(&densityJac);
@@ -3758,62 +3818,66 @@ int Bruggemann_free_volume_diffusivity(int species_no, /* current species number
   /********* Get mass and volume fractions of each component ********/
 
   PROPERTYJAC_STRUCT *densityJac = NULL;
-  propertyJac_realloc(&densityJac, mp->Num_Species + 1);
-  double density_tot = calc_density(mp, TRUE, densityJac, 0.0);
+  propertyJac_realloc(&densityJac, goma_ctx->fem.mp->Num_Species + 1);
+  double density_tot = calc_density(goma_ctx->fem.mp, TRUE, densityJac, 0.0);
 
-  double phi_part = fv->c[i_part];
-  double phi_solv = fv->c[species_no];
+  double phi_part = goma_ctx->fem.fv->c[i_part];
+  double phi_solv = goma_ctx->fem.fv->c[species_no];
   double dphi_part_dc_part = 1.0;
   double dphi_solv_dc_solv = 1.0;
 
-  double omega_part = fv->c[i_part];
-  double omega_solv = fv->c[species_no];
+  double omega_part = goma_ctx->fem.fv->c[i_part];
+  double omega_solv = goma_ctx->fem.fv->c[species_no];
   double domega_part_dc_part = 1.0;
   double domega_solv_dc_solv = 1.0;
 
   double drho_dc_part = 1.0;
   double drho_dc_solv = 1.0;
 
-  switch (mp->Species_Var_Type) {
+  switch (goma_ctx->fem.mp->Species_Var_Type) {
   case SPECIES_VOL_FRACTION:
   case SPECIES_UNDEFINED_FORM:
-    phi_part = fv->c[i_part];
-    phi_solv = fv->c[species_no];
+    phi_part = goma_ctx->fem.fv->c[i_part];
+    phi_solv = goma_ctx->fem.fv->c[species_no];
     dphi_part_dc_part = 1.0;
     dphi_solv_dc_solv = 1.0;
 
-    omega_part = (1.0 / density_tot) * 1.0 / (mp->specific_volume[i_part]) * fv->c[i_part];
-    omega_solv = (1.0 / density_tot) * 1.0 / (mp->specific_volume[species_no]) * fv->c[species_no];
+    omega_part = (1.0 / density_tot) * 1.0 / (goma_ctx->fem.mp->specific_volume[i_part]) *
+                 goma_ctx->fem.fv->c[i_part];
+    omega_solv = (1.0 / density_tot) * 1.0 / (goma_ctx->fem.mp->specific_volume[species_no]) *
+                 goma_ctx->fem.fv->c[species_no];
     drho_dc_part = densityJac->JacVector[i_part];
     drho_dc_solv = densityJac->JacVector[species_no];
-    domega_part_dc_part =
-        -(1.0 / density_tot / density_tot) * 1.0 / (mp->specific_volume[i_part]) * drho_dc_part;
-    domega_solv_dc_solv =
-        -(1.0 / density_tot / density_tot) * 1.0 / (mp->specific_volume[species_no]) * drho_dc_solv;
+    domega_part_dc_part = -(1.0 / density_tot / density_tot) * 1.0 /
+                          (goma_ctx->fem.mp->specific_volume[i_part]) * drho_dc_part;
+    domega_solv_dc_solv = -(1.0 / density_tot / density_tot) * 1.0 /
+                          (goma_ctx->fem.mp->specific_volume[species_no]) * drho_dc_solv;
     break;
 
   case SPECIES_MASS_FRACTION:
-    phi_part = density_tot * mp->specific_volume[i_part] * fv->c[i_part];
-    phi_solv = density_tot * mp->specific_volume[species_no] * fv->c[species_no];
+    phi_part =
+        density_tot * goma_ctx->fem.mp->specific_volume[i_part] * goma_ctx->fem.fv->c[i_part];
+    phi_solv = density_tot * goma_ctx->fem.mp->specific_volume[species_no] *
+               goma_ctx->fem.fv->c[species_no];
     drho_dc_part = densityJac->JacVector[i_part];
     drho_dc_solv = densityJac->JacVector[species_no];
-    dphi_part_dc_part = mp->specific_volume[i_part] * drho_dc_part;
-    dphi_solv_dc_solv = mp->specific_volume[species_no] * drho_dc_solv;
+    dphi_part_dc_part = goma_ctx->fem.mp->specific_volume[i_part] * drho_dc_part;
+    dphi_solv_dc_solv = goma_ctx->fem.mp->specific_volume[species_no] * drho_dc_solv;
 
-    omega_part = fv->c[i_part];
-    omega_solv = fv->c[species_no];
+    omega_part = goma_ctx->fem.fv->c[i_part];
+    omega_solv = goma_ctx->fem.fv->c[species_no];
     domega_part_dc_part = 1.0;
     domega_solv_dc_solv = 1.0;
     break;
 
   case SPECIES_DENSITY:
-    phi_part = mp->specific_volume[i_part] * fv->c[i_part];
-    phi_solv = mp->specific_volume[species_no] * fv->c[species_no];
-    dphi_part_dc_part = mp->specific_volume[i_part];
-    dphi_solv_dc_solv = mp->specific_volume[species_no];
+    phi_part = goma_ctx->fem.mp->specific_volume[i_part] * goma_ctx->fem.fv->c[i_part];
+    phi_solv = goma_ctx->fem.mp->specific_volume[species_no] * goma_ctx->fem.fv->c[species_no];
+    dphi_part_dc_part = goma_ctx->fem.mp->specific_volume[i_part];
+    dphi_solv_dc_solv = goma_ctx->fem.mp->specific_volume[species_no];
 
-    omega_part = 1.0 / (density_tot)*fv->c[i_part];
-    omega_solv = 1.0 / (density_tot)*fv->c[species_no];
+    omega_part = 1.0 / (density_tot)*goma_ctx->fem.fv->c[i_part];
+    omega_solv = 1.0 / (density_tot)*goma_ctx->fem.fv->c[species_no];
     drho_dc_part = densityJac->JacVector[i_part];
     drho_dc_solv = densityJac->JacVector[species_no];
     domega_part_dc_part = (-1.0 / density_tot / density_tot) * drho_dc_part;
@@ -3822,16 +3886,19 @@ int Bruggemann_free_volume_diffusivity(int species_no, /* current species number
     break;
 
   case SPECIES_CONCENTRATION:
-    phi_part = mp->molar_volume[i_part] * fv->c[i_part];
-    phi_solv = mp->molar_volume[species_no] * fv->c[species_no];
-    dphi_part_dc_part = mp->molar_volume[i_part];
-    dphi_solv_dc_solv = mp->molar_volume[species_no];
+    phi_part = goma_ctx->fem.mp->molar_volume[i_part] * goma_ctx->fem.fv->c[i_part];
+    phi_solv = goma_ctx->fem.mp->molar_volume[species_no] * goma_ctx->fem.fv->c[species_no];
+    dphi_part_dc_part = goma_ctx->fem.mp->molar_volume[i_part];
+    dphi_solv_dc_solv = goma_ctx->fem.mp->molar_volume[species_no];
 
-    omega_part = mp->molar_volume[i_part] * mp->molecular_weight[i_part] * fv->c[i_part];
-    omega_solv =
-        mp->molar_volume[species_no] * mp->molecular_weight[species_no] * fv->c[species_no];
-    domega_part_dc_part = mp->molar_volume[i_part] * mp->molecular_weight[i_part];
-    domega_solv_dc_solv = mp->molar_volume[species_no] * mp->molecular_weight[species_no];
+    omega_part = goma_ctx->fem.mp->molar_volume[i_part] *
+                 goma_ctx->fem.mp->molecular_weight[i_part] * goma_ctx->fem.fv->c[i_part];
+    omega_solv = goma_ctx->fem.mp->molar_volume[species_no] *
+                 goma_ctx->fem.mp->molecular_weight[species_no] * goma_ctx->fem.fv->c[species_no];
+    domega_part_dc_part =
+        goma_ctx->fem.mp->molar_volume[i_part] * goma_ctx->fem.mp->molecular_weight[i_part];
+    domega_solv_dc_solv =
+        goma_ctx->fem.mp->molar_volume[species_no] * goma_ctx->fem.mp->molecular_weight[species_no];
     break;
   default:
     GOMA_EH(-1, "That Material Species Type is not supported");
@@ -3858,7 +3925,7 @@ int Bruggemann_free_volume_diffusivity(int species_no, /* current species number
 
   /*********** Calculate Free Volume contribution ********/
 
-  double T = fv->T;
+  double T = goma_ctx->fem.fv->T;
   double phi_poly = 1.0 - (phi_part + phi_solv);
   double dphi_poly_dc_part = -dphi_part_dc_part;
   double dphi_poly_dc_solv = -dphi_solv_dc_solv;
@@ -3927,12 +3994,12 @@ int Bruggemann_free_volume_diffusivity(int species_no, /* current species number
                dV_fh_gamma_dc_part);
 
   /*********** Export the combined diffusivity ********/
-  mp->diffusivity[species_no] = Diff_Bruggemann * Diff_Free_Vol;
-  mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + i_part] =
+  goma_ctx->fem.mp->diffusivity[species_no] = Diff_Bruggemann * Diff_Free_Vol;
+  goma_ctx->fem.mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + i_part] =
       dDiff_Bruggemann_dc_part * Diff_Free_Vol + Diff_Bruggemann * dDiff_Free_Vol_dc_part;
-  mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + species_no] =
+  goma_ctx->fem.mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + species_no] =
       Diff_Bruggemann * dDiff_Free_Vol_dc_solv;
-  mp->d_diffusivity[species_no][TEMPERATURE] = Diff_Bruggemann * dDiff_Free_Vol_dT;
+  goma_ctx->fem.mp->d_diffusivity[species_no][TEMPERATURE] = Diff_Bruggemann * dDiff_Free_Vol_dT;
 
   if (densityJac != NULL) {
     propertyJac_destroy(&densityJac);
@@ -3961,25 +4028,25 @@ int hydro_sediment_flux(struct Species_Conservation_Terms *st, int w)
   double flux_settling[DIM] = {0.0}, dflux_settling_dC[DIM] = {0.0};
   double K = 0.0, dK_dC = 0.0;
 
-  if (mp->SettlingModel[w] == SEDIMENT) {
+  if (goma_ctx->fem.mp->SettlingModel[w] == SEDIMENT) {
     double mult = 0.0;
     double v_settling[DIM] = {0.0};
-    double rho_part = mp->u_settling[w][0];
-    double rho_solv = mp->u_settling[w][1];
+    double rho_part = goma_ctx->fem.mp->u_settling[w][0];
+    double rho_solv = goma_ctx->fem.mp->u_settling[w][1];
     double grav[DIM] = {0.0};
-    grav[0] = mp->u_settling[w][2];
-    grav[1] = mp->u_settling[w][3];
-    grav[2] = mp->u_settling[w][4];
-    double visc = mp->u_settling[w][5];
-    double R_part = mp->u_settling[w][6];
-    double nexp = mp->u_settling[w][7];
+    grav[0] = goma_ctx->fem.mp->u_settling[w][2];
+    grav[1] = goma_ctx->fem.mp->u_settling[w][3];
+    grav[2] = goma_ctx->fem.mp->u_settling[w][4];
+    double visc = goma_ctx->fem.mp->u_settling[w][5];
+    double R_part = goma_ctx->fem.mp->u_settling[w][6];
+    double nexp = goma_ctx->fem.mp->u_settling[w][7];
 
-    double phi_part = fv->c[w];
+    double phi_part = goma_ctx->fem.fv->c[w];
     double dphi_part_dc_part = 1.0;
 
     PROPERTYJAC_STRUCT *densityJac = NULL;
-    propertyJac_realloc(&densityJac, mp->Num_Species + 1);
-    double density_tot = calc_density(mp, TRUE, densityJac, 0.0);
+    propertyJac_realloc(&densityJac, goma_ctx->fem.mp->Num_Species + 1);
+    double density_tot = calc_density(goma_ctx->fem.mp, TRUE, densityJac, 0.0);
 
     /* Calculate settling velocity*/
     mult = (2.0 / 9.0) * (R_part * R_part * (rho_part - rho_solv)) / visc;
@@ -3988,26 +4055,26 @@ int hydro_sediment_flux(struct Species_Conservation_Terms *st, int w)
     v_settling[2] = mult * grav[2];
 
     /* Get particles volume fraction */
-    switch (mp->Species_Var_Type) {
+    switch (goma_ctx->fem.mp->Species_Var_Type) {
     case SPECIES_VOL_FRACTION:
     case SPECIES_UNDEFINED_FORM:
-      phi_part = fv->c[w];
+      phi_part = goma_ctx->fem.fv->c[w];
       dphi_part_dc_part = 1.0;
       break;
 
     case SPECIES_MASS_FRACTION:
-      phi_part = density_tot * mp->specific_volume[w] * fv->c[w];
-      dphi_part_dc_part = mp->specific_volume[w] * densityJac->JacVector[w];
+      phi_part = density_tot * goma_ctx->fem.mp->specific_volume[w] * goma_ctx->fem.fv->c[w];
+      dphi_part_dc_part = goma_ctx->fem.mp->specific_volume[w] * densityJac->JacVector[w];
       break;
 
     case SPECIES_DENSITY:
-      phi_part = mp->specific_volume[w] * fv->c[w];
-      dphi_part_dc_part = mp->specific_volume[w];
+      phi_part = goma_ctx->fem.mp->specific_volume[w] * goma_ctx->fem.fv->c[w];
+      dphi_part_dc_part = goma_ctx->fem.mp->specific_volume[w];
       break;
 
     case SPECIES_CONCENTRATION:
-      phi_part = mp->molar_volume[w] * fv->c[w];
-      dphi_part_dc_part = mp->molar_volume[w];
+      phi_part = goma_ctx->fem.mp->molar_volume[w] * goma_ctx->fem.fv->c[w];
+      dphi_part_dc_part = goma_ctx->fem.mp->molar_volume[w];
       break;
 
     default:
@@ -4023,13 +4090,13 @@ int hydro_sediment_flux(struct Species_Conservation_Terms *st, int w)
         dK_dC = 0.0;
       }
 
-      flux_settling[0] = K * v_settling[0] * fv->c[w];
-      flux_settling[1] = K * v_settling[1] * fv->c[w];
-      flux_settling[2] = K * v_settling[2] * fv->c[w];
+      flux_settling[0] = K * v_settling[0] * goma_ctx->fem.fv->c[w];
+      flux_settling[1] = K * v_settling[1] * goma_ctx->fem.fv->c[w];
+      flux_settling[2] = K * v_settling[2] * goma_ctx->fem.fv->c[w];
 
-      dflux_settling_dC[0] = dK_dC * v_settling[0] * fv->c[w] + K * v_settling[0];
-      dflux_settling_dC[1] = dK_dC * v_settling[1] * fv->c[w] + K * v_settling[1];
-      dflux_settling_dC[2] = dK_dC * v_settling[2] * fv->c[w] + K * v_settling[2];
+      dflux_settling_dC[0] = dK_dC * v_settling[0] * goma_ctx->fem.fv->c[w] + K * v_settling[0];
+      dflux_settling_dC[1] = dK_dC * v_settling[1] * goma_ctx->fem.fv->c[w] + K * v_settling[1];
+      dflux_settling_dC[2] = dK_dC * v_settling[2] * goma_ctx->fem.fv->c[w] + K * v_settling[2];
     }
     if (densityJac != NULL) {
       propertyJac_destroy(&densityJac);
@@ -4047,38 +4114,40 @@ int hydro_sediment_flux(struct Species_Conservation_Terms *st, int w)
    */
   coeff_rho = 1.0;
 
-  rhoD = coeff_rho * mp->diffusivity[w];
+  rhoD = coeff_rho * goma_ctx->fem.mp->diffusivity[w];
 
   for (a = 0; a < VIM; a++) {
     st->diff_flux[w][a] = flux_settling[a];
     st->diff_flux[w][a] += -rhoD * st->grad_Y[w][a];
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     /* Sensitivity w.r.t. species concentration */
     var = MASS_FRACTION;
-    phi_ptr = bf[var]->phi;
+    phi_ptr = goma_ctx->fem.bf[var]->phi;
     for (a = 0; a < VIM; a++) {
-      for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
-        tmp = -coeff_rho * st->grad_Y[w][a] * mp->d_diffusivity[w][MAX_VARIABLE_TYPES + w1];
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
+        tmp = -coeff_rho * st->grad_Y[w][a] *
+              goma_ctx->fem.mp->d_diffusivity[w][MAX_VARIABLE_TYPES + w1];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           st->d_diff_flux_dc[w][a][w1][j] = tmp * phi_ptr[j];
         }
       }
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        st->d_diff_flux_dc[w][a][w][j] -= rhoD * bf[var]->grad_phi[j][a];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        st->d_diff_flux_dc[w][a][w][j] -= rhoD * goma_ctx->fem.bf[var]->grad_phi[j][a];
         st->d_diff_flux_dc[w][a][w][j] += dflux_settling_dC[a] * phi_ptr[j];
       }
     }
 
     /* Sensitivity w.r.t. mesh displacement */
-    for (q = 0; q < pd->Num_Dim; q++) {
+    for (q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
       var = MESH_DISPLACEMENT1 + q;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         for (a = 0; a < VIM; a++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            st->d_diff_flux_dmesh[w][a][q][j] = -rhoD * fv->d_grad_c_dmesh[a][w][q][j];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            st->d_diff_flux_dmesh[w][a][q][j] =
+                -rhoD * goma_ctx->fem.fv->d_grad_c_dmesh[a][w][q][j];
           }
         }
       }
@@ -4086,10 +4155,10 @@ int hydro_sediment_flux(struct Species_Conservation_Terms *st, int w)
 
     /* Sensitivity w.r.t. temperature */
     var = TEMPERATURE;
-    phi_ptr = bf[var]->phi;
+    phi_ptr = goma_ctx->fem.bf[var]->phi;
     for (a = 0; a < VIM; a++) {
-      tmp = -coeff_rho * mp->d_diffusivity[w][var] * st->grad_Y[w][a];
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      tmp = -coeff_rho * goma_ctx->fem.mp->d_diffusivity[w][var] * st->grad_Y[w][a];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         st->d_diff_flux_dT[w][a][j] = tmp * phi_ptr[j];
       }
     }
@@ -4110,12 +4179,12 @@ int hydro_sediment_flux(struct Species_Conservation_Terms *st, int w)
  */
 int Generalized_Diffusivity(void) {
   int w, w1, err = 0; /* return err != 0 to signal error */
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-    switch (mp->DiffusivityModel[w]) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+    switch (goma_ctx->fem.mp->DiffusivityModel[w]) {
     case GENERALIZED:
       /* constant mutual diffusivity */
-      for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
-        mp->diffusivity_gen_fick[w][w1] = mp->u_diffusivity[w][w1];
+      for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
+        goma_ctx->fem.mp->diffusivity_gen_fick[w][w1] = goma_ctx->fem.mp->u_diffusivity[w][w1];
       }
       break;
 
@@ -4185,7 +4254,7 @@ int Generalized_FV_Diffusivity(int species_no) /* current species number*/
 {
   int fv_model_number;
   int w, w1, w3, mode;
-  int w2 = pd->Num_Species_Eqn;
+  int w2 = goma_ctx->fem.pd->Num_Species_Eqn;
 
   double activity[MAX_CONC], dcoeff[MAX_CONC][MAX_CONC], d2coeff[MAX_CONC][MAX_CONC][MAX_CONC];
 
@@ -4205,7 +4274,7 @@ int Generalized_FV_Diffusivity(int species_no) /* current species number*/
   double d_Vfh_dT = 0.;
   double density_tot, rho[MAX_CONC];
   PROPERTYJAC_STRUCT *densityJac = NULL;
-  propertyJac_realloc(&densityJac, mp->Num_Species + 1);
+  propertyJac_realloc(&densityJac, goma_ctx->fem.mp->Num_Species + 1);
 
   /* Begin Execution */
 
@@ -4221,43 +4290,43 @@ int Generalized_FV_Diffusivity(int species_no) /* current species number*/
      such as UNIQUAC, NRTL, etc. */
 
   mode = FLORY;
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-    act_coeff(activity, dcoeff, d2coeff, fv->c, mode, w);
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+    act_coeff(activity, dcoeff, d2coeff, goma_ctx->fem.fv->c, mode, w);
   }
   /* load up polymer FV parameters */
 
-  fv_model_number = (int)mp->u_diffusivity[0][12];
+  fv_model_number = (int)goma_ctx->fem.mp->u_diffusivity[0][12];
 
-  vs[w2] = mp->u_diffusivity[0][1];
-  K1_gamma[w2] = mp->u_diffusivity[0][3];
-  K2mTg[w2] = mp->u_diffusivity[0][5];
+  vs[w2] = goma_ctx->fem.mp->u_diffusivity[0][1];
+  K1_gamma[w2] = goma_ctx->fem.mp->u_diffusivity[0][3];
+  K2mTg[w2] = goma_ctx->fem.mp->u_diffusivity[0][5];
 
   /* load up solvent FV parameters */
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-    vs[w] = mp->u_diffusivity[w][0];
-    K1_gamma[w] = mp->u_diffusivity[w][2];
-    K2mTg[w] = mp->u_diffusivity[w][4];
-    Do[w] = mp->u_diffusivity[w][8];
-    E_div_R[w] = mp->u_diffusivity[w][9];
-    sv[w] = mp->specific_volume[w];
-    mw[w] = mp->molecular_weight[w];
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+    vs[w] = goma_ctx->fem.mp->u_diffusivity[w][0];
+    K1_gamma[w] = goma_ctx->fem.mp->u_diffusivity[w][2];
+    K2mTg[w] = goma_ctx->fem.mp->u_diffusivity[w][4];
+    Do[w] = goma_ctx->fem.mp->u_diffusivity[w][8];
+    E_div_R[w] = goma_ctx->fem.mp->u_diffusivity[w][9];
+    sv[w] = goma_ctx->fem.mp->specific_volume[w];
+    mw[w] = goma_ctx->fem.mp->molecular_weight[w];
   }
 
-  Do[w2] = mp->u_diffusivity[0][10];
-  E_div_R[w2] = mp->u_diffusivity[0][11];
-  sv[w2] = mp->specific_volume[w2];
-  mw[w2] = mp->molecular_weight[w2];
-  T = fv->T;
+  Do[w2] = goma_ctx->fem.mp->u_diffusivity[0][10];
+  E_div_R[w2] = goma_ctx->fem.mp->u_diffusivity[0][11];
+  sv[w2] = goma_ctx->fem.mp->specific_volume[w2];
+  mw[w2] = goma_ctx->fem.mp->molecular_weight[w2];
+  T = goma_ctx->fem.fv->T;
 
   /* load up binary FV parameters
    * the diagonals are unity  */
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-    for (w1 = w + 1; w1 < pd->Num_Species_Eqn; w1++) {
-      xsi[w][w1] = mp->u_diffusivity[w][7] / mp->u_diffusivity[w1][7];
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+    for (w1 = w + 1; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
+      xsi[w][w1] = goma_ctx->fem.mp->u_diffusivity[w][7] / goma_ctx->fem.mp->u_diffusivity[w1][7];
       xsi[w1][w] = 1 / xsi[w][w1];
     }
     xsi[w][w] = 1.;
-    xsi[w][w2] = mp->u_diffusivity[w][7];
+    xsi[w][w2] = goma_ctx->fem.mp->u_diffusivity[w][7];
     xsi[w2][w] = 1. / xsi[w][w2];
   }
   xsi[w2][w2] = 1.;
@@ -4267,30 +4336,31 @@ int Generalized_FV_Diffusivity(int species_no) /* current species number*/
      differentiated via HKM's modifications .
      Convert density to weight fractions */
 
-  density_tot = calc_density(mp, TRUE, densityJac, 0.0);
+  density_tot = calc_density(goma_ctx->fem.mp, TRUE, densityJac, 0.0);
   memset(rho, 0, sizeof(dbl) * MAX_CONC);
   memset(drho_dc, 0, sizeof(dbl) * MAX_CONC * MAX_CONC);
-  switch (mp->Species_Var_Type) {
+  switch (goma_ctx->fem.mp->Species_Var_Type) {
   case SPECIES_DENSITY:
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      rho[w] = fv->c[w];
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      rho[w] = goma_ctx->fem.fv->c[w];
       drho_dc[w][w] = 1.0;
     }
     break;
   case SPECIES_UNDEFINED_FORM:
   case SPECIES_MASS_FRACTION:
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      rho[w] = fv->c[w] * density_tot;
-      for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      rho[w] = goma_ctx->fem.fv->c[w] * density_tot;
+      for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
         drho_dc[w][w1] =
-            density_tot * delta(w, w1) + fv->c[w] * mp->d_density[MAX_VARIABLE_TYPES + w1];
+            density_tot * delta(w, w1) +
+            goma_ctx->fem.fv->c[w] * goma_ctx->fem.mp->d_density[MAX_VARIABLE_TYPES + w1];
       }
     }
     break;
   case SPECIES_CONCENTRATION:
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      rho[w] = fv->c[w] * mp->molecular_weight[w];
-      drho_dc[w][w] = mp->molecular_weight[w];
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      rho[w] = goma_ctx->fem.fv->c[w] * goma_ctx->fem.mp->molecular_weight[w];
+      drho_dc[w][w] = goma_ctx->fem.mp->molecular_weight[w];
     }
     break;
   case SPECIES_MOLE_FRACTION:
@@ -4300,7 +4370,7 @@ int Generalized_FV_Diffusivity(int species_no) /* current species number*/
     break;
   }
 
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
     Do[w] *= exp(-E_div_R[w] / T);
     omega[w] = rho[w] / density_tot;
     allomega += omega[w];
@@ -4312,18 +4382,18 @@ int Generalized_FV_Diffusivity(int species_no) /* current species number*/
   numerator[w2] = omega[w2] * vs[w2] * xsi[w2][w2]; /* xsi[w2][w2] = 1 */
   V_fh_gamma = K1_gamma[w2] * omega[w2] * (K2mTg[w2] + T);
   d_Vfh_dT = K1_gamma[w2] * omega[w2];
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
     V_fh_gamma += K1_gamma[w] * omega[w] * (K2mTg[w] + T);
     d_Vfh_dT += K1_gamma[w] * omega[w];
     numerator[w] = omega[w2] * vs[w2] * xsi[w][w2];
     numerator[w2] += omega[w] * vs[w] * xsi[w2][w];
-    for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+    for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
       numerator[w] += omega[w1] * vs[w1] * xsi[w][w1];
     }
   }
 
   Dp[w2] = Do[w2] * exp(-numerator[w2] / V_fh_gamma);
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
     Dp[w] = Do[w] * exp(-numerator[w] / V_fh_gamma);
     alpha[w] = sv[w] * Dp[w] * (1. - Dp[w2] * sv[w2] * mw[w2] / (Dp[w] * sv[w] * mw[w]));
   }
@@ -4331,114 +4401,115 @@ int Generalized_FV_Diffusivity(int species_no) /* current species number*/
   /* mp->diffusivity_gen_fick[i][j] is the mutual diffusion
      coefficient D_ij calculated from self-diffusion coefficients D_i  */
 
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
     /* this only works for case Species_Density because of how dcoeff is calculated as of 01/19/22
      * Chance Parrish*/
     /* mp->diffusivity_gen_fick[species_no][w] = (delta(species_no,w) +
      * dcoeff[species_no][w]*rho[species_no])*Dp[species_no];*/
-    mp->diffusivity_gen_fick[species_no][w] =
+    goma_ctx->fem.mp->diffusivity_gen_fick[species_no][w] =
         (delta(species_no, w) + 0. * dcoeff[species_no][w] * rho[species_no]) * Dp[species_no];
-    for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+    for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
       /* this only works for case Species_Density because of how dcoeff is calculated as of 01/19/22
        * Chance Parrish*/
       /*mp->diffusivity_gen_fick[species_no][w] +=
        * alpha[w1]*rho[species_no]*(delta(w,w1)+rho[w1]*dcoeff[w1][w]);*/
-      mp->diffusivity_gen_fick[species_no][w] +=
+      goma_ctx->fem.mp->diffusivity_gen_fick[species_no][w] +=
           -alpha[w1] * rho[species_no] * (delta(w, w1) + 0. * rho[w1] * dcoeff[w1][w]);
     }
   }
   if (fv_model_number == 1) {
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      mp->diffusivity_gen_fick[species_no][w] =
-          delta(species_no, w) * (mp->diffusivity_gen_fick[species_no][w]);
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      goma_ctx->fem.mp->diffusivity_gen_fick[species_no][w] =
+          delta(species_no, w) * (goma_ctx->fem.mp->diffusivity_gen_fick[species_no][w]);
     }
   }
-  if (af->Assemble_Jacobian) {
-    if (pd->v[pg->imtrx][TEMPERATURE]) {
-      mp->d_diffusivity[species_no][TEMPERATURE] = 0.;
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
+      goma_ctx->fem.mp->d_diffusivity[species_no][TEMPERATURE] = 0.;
       /* As of 1/19/22, d_Dp_dT is assuming E_divR[i] = 0 Chance Parrish */
       d_Dp_dT[w2] = numerator[w2] / V_fh_gamma / V_fh_gamma * Dp[w2] * d_Vfh_dT;
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         d_Dp_dT[w] = numerator[w] / V_fh_gamma / V_fh_gamma * Dp[w] * d_Vfh_dT;
         d_alpha_dT[w] = d_Dp_dT[w] * alpha[w] / Dp[w] - sv[w2] * mw[w2] * d_Dp_dT[w2] / mw[w] +
                         Dp[w2] * sv[w2] * mw[w2] / Dp[w] / mw[w] * d_Dp_dT[w];
         /*mp->d_diffusivity_gf[species_no][w][TEMPERATURE] = (
          * dcoeff[species_no][w]*rho[w]+delta(species_no,w) )*d_Dp_dT[w];*/
-        mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] = 0.;
-        mp->d_diffusivity_gf[species_no][w][TEMPERATURE] =
+        goma_ctx->fem.mp->d_diffusivity[species_no][MAX_VARIABLE_TYPES + w] = 0.;
+        goma_ctx->fem.mp->d_diffusivity_gf[species_no][w][TEMPERATURE] =
             (0. * dcoeff[species_no][w] * rho[w] + delta(species_no, w)) * d_Dp_dT[w];
       }
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
-        for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+        for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
           /* mp->d_diffusivity_gf[species_no][w][TEMPERATURE] +=
            * -d_alpha_dT[w1]*rho[species_no]*(delta(w,w1)+rho[w1]*dcoeff[w1][w]);*/
-          mp->d_diffusivity_gf[species_no][w][TEMPERATURE] +=
+          goma_ctx->fem.mp->d_diffusivity_gf[species_no][w][TEMPERATURE] +=
               -d_alpha_dT[w1] * rho[species_no] * (delta(w, w1) + 0. * rho[w1] * dcoeff[w1][w]);
         }
       }
-      mp->d_diffusivity[species_no][TEMPERATURE] = 0.;
+      goma_ctx->fem.mp->d_diffusivity[species_no][TEMPERATURE] = 0.;
       if (fv_model_number == 1) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          mp->d_diffusivity_gf[species_no][w][TEMPERATURE] =
-              delta(species_no, w) * (mp->d_diffusivity_gf[species_no][w][TEMPERATURE]);
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          goma_ctx->fem.mp->d_diffusivity_gf[species_no][w][TEMPERATURE] =
+              delta(species_no, w) *
+              (goma_ctx->fem.mp->d_diffusivity_gf[species_no][w][TEMPERATURE]);
         }
       }
     }
 
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         d_Vfh_dc[w] = 0;
-        for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
-          d_omega_dc[w][w1] =
-              drho_dc[w][w1] / density_tot -
-              rho[w] / density_tot / density_tot * mp->d_density[MAX_VARIABLE_TYPES + w1];
+        for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
+          d_omega_dc[w][w1] = drho_dc[w][w1] / density_tot -
+                              rho[w] / density_tot / density_tot *
+                                  goma_ctx->fem.mp->d_density[MAX_VARIABLE_TYPES + w1];
         }
       }
 
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         d_Dp_dc[w2][w] = 0;
         d_num_dc[w2][w] = 0;
-        for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+        for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
           d_Vfh_dc[w] +=
               d_omega_dc[w1][w] * (K1_gamma[w1] * (K2mTg[w1] + T) - K1_gamma[w2] * (K2mTg[w2] + T));
           d_num_dc[w][w1] = 0.;
           d_num_dc[w2][w] += d_omega_dc[w1][w] * (vs[w1] * xsi[w2][w1] - vs[w2] * xsi[w2][w2]);
-          for (w3 = 0; w3 < pd->Num_Species_Eqn; w3++) {
+          for (w3 = 0; w3 < goma_ctx->fem.pd->Num_Species_Eqn; w3++) {
             d_num_dc[w][w1] += d_omega_dc[w3][w1] * (vs[w3] * xsi[w][w3] - vs[w2] * xsi[w][w2]);
           }
         }
       }
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
-        for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+        for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
           d_Dp_dc[w][w1] = Dp[w] * (-d_num_dc[w][w1] / V_fh_gamma +
                                     numerator[w] * d_Vfh_dc[w1] / (V_fh_gamma * V_fh_gamma));
         }
         d_Dp_dc[w2][w] = Dp[w2] * (-d_num_dc[w2][w] / V_fh_gamma +
                                    numerator[w2] * d_Vfh_dc[w] / (V_fh_gamma * V_fh_gamma));
-        for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+        for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
           d_alpha_dc[w][w1] = alpha[w] / Dp[w] * d_Dp_dc[w][w1] -
                               sv[w2] * mw[w2] / mw[w] * d_Dp_dc[w2][w1] +
                               Dp[w2] * sv[w2] * mw[w2] / (Dp[w] * mw[w]) * d_Dp_dc[w][w1];
         }
       }
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
-        for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+        for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
           /* mp->d_diffusivity_gf[species_no][w][MAX_VARIABLE_TYPES+w1] =
             d_Dp_dc[species_no][w1]*(delta(species_no,w)+rho[species_no]*dcoeff[species_no][w])
            +Dp[species_no]*(delta(species_no,w1)*dcoeff[species_no][w]+rho[species_no]*d2coeff[species_no][w][w1]);*/
-          mp->d_diffusivity_gf[species_no][w][MAX_VARIABLE_TYPES + w1] =
+          goma_ctx->fem.mp->d_diffusivity_gf[species_no][w][MAX_VARIABLE_TYPES + w1] =
               d_Dp_dc[species_no][w1] *
                   (delta(species_no, w) + 0. * rho[species_no] * dcoeff[species_no][w]) +
               0. * Dp[species_no] *
                   (delta(species_no, w1) * dcoeff[species_no][w] +
                    rho[species_no] * d2coeff[species_no][w][w1]);
-          for (w3 = 0; w3 < pd->Num_Species_Eqn; w3++) {
+          for (w3 = 0; w3 < goma_ctx->fem.pd->Num_Species_Eqn; w3++) {
             /* mp->d_diffusivity_gf[species_no][w][MAX_VARIABLE_TYPES+w1] +=
               -( d_alpha_dc[w3][w1]*rho[species_no]*(delta(w,w3)+rho[w3]*dcoeff[w3][w])
                 +alpha[w3]*delta(species_no,w1)*(delta(w3,w)+rho[w3]*dcoeff[w3][w])
                 +alpha[w3]*rho[species_no]*(delta(w3,w1)*dcoeff[w3][w]+rho[w3]*d2coeff[w3][w][w1])
                ); */
-            mp->d_diffusivity_gf[species_no][w][MAX_VARIABLE_TYPES + w1] += -(
+            goma_ctx->fem.mp->d_diffusivity_gf[species_no][w][MAX_VARIABLE_TYPES + w1] += -(
                 d_alpha_dc[w3][w1] * rho[species_no] *
                     (delta(w, w3) + 0. * rho[w3] * dcoeff[w3][w]) +
                 alpha[w3] * delta(species_no, w1) * (delta(w3, w) + 0. * rho[w3] * dcoeff[w3][w]) +
@@ -4448,17 +4519,17 @@ int Generalized_FV_Diffusivity(int species_no) /* current species number*/
         }
       }
       if (fv_model_number == 1) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
-            mp->d_diffusivity_gf[species_no][w][MAX_VARIABLE_TYPES + w1] =
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
+            goma_ctx->fem.mp->d_diffusivity_gf[species_no][w][MAX_VARIABLE_TYPES + w1] =
                 delta(species_no, w) *
-                (mp->d_diffusivity_gf[species_no][w][MAX_VARIABLE_TYPES + w1]);
+                (goma_ctx->fem.mp->d_diffusivity_gf[species_no][w][MAX_VARIABLE_TYPES + w1]);
           }
         }
       }
     }
   }
-  mp->diffusivity[species_no] = 0.;
+  goma_ctx->fem.mp->diffusivity[species_no] = 0.;
 
   return (0);
 
@@ -4548,10 +4619,10 @@ int hydro_flux(struct Species_Conservation_Terms *st,
   /*       return(1); */
   /*     } */
 
-  if (cr->MassFluxModel == HYDRODYNAMIC_QTENSOR_OLD) {
+  if (goma_ctx->fem.cr->MassFluxModel == HYDRODYNAMIC_QTENSOR_OLD) {
     hydro_qtensor_flux(st, w);
     return (1);
-  } else if (cr->MassFluxModel == HYDRODYNAMIC_QTENSOR) {
+  } else if (goma_ctx->fem.cr->MassFluxModel == HYDRODYNAMIC_QTENSOR) {
     hydro_qtensor_flux_new(st, w);
     return (1);
   }
@@ -4560,27 +4631,27 @@ int hydro_flux(struct Species_Conservation_Terms *st,
    * Put in a warning about these species variable types until
    * the equations can be worked out
    */
-  if (mp->Species_Var_Type == SPECIES_MASS_FRACTION ||
-      mp->Species_Var_Type == SPECIES_MOLE_FRACTION ||
-      mp->Species_Var_Type == SPECIES_VOL_FRACTION) {
+  if (goma_ctx->fem.mp->Species_Var_Type == SPECIES_MASS_FRACTION ||
+      goma_ctx->fem.mp->Species_Var_Type == SPECIES_MOLE_FRACTION ||
+      goma_ctx->fem.mp->Species_Var_Type == SPECIES_VOL_FRACTION) {
     GOMA_EH(GOMA_ERROR, "Possible Conflict: Hydro Flux Expression hasn't been checked out for this "
                         "species var type");
   }
 
   /* Set up some convenient local variables and pointers */
 
-  Y = fv->c;
-  grad_Y = fv->grad_c;
-  grad_gd = fv->grad_SH;
-  gammadot = fv->SH;
-  d_grad_gd_dmesh = fv->d_grad_SH_dmesh;
-  maxpack = gn->maxpack;
-  nexp = gn->nexp;
+  Y = goma_ctx->fem.fv->c;
+  grad_Y = goma_ctx->fem.fv->grad_c;
+  grad_gd = goma_ctx->fem.fv->grad_SH;
+  gammadot = goma_ctx->fem.fv->SH;
+  d_grad_gd_dmesh = goma_ctx->fem.fv->d_grad_SH_dmesh;
+  maxpack = goma_ctx->fem.gn->maxpack;
+  nexp = goma_ctx->fem.gn->nexp;
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
-  dmu_dY = &(mp->d_viscosity[MAX_VARIABLE_TYPES]);
-  d2mu_dY2 = &(mp->d2_viscosity[MAX_VARIABLE_TYPES]);
+  dmu_dY = &(goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES]);
+  d2mu_dY2 = &(goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES]);
   /*  d2mu_dgd_dY = mp->d2_viscosity[MAX_VARIABLE_TYPES + MAX_CONC]; */
 
   /* Compute gamma_dot[][], acceleration vector accel[],
@@ -4594,24 +4665,25 @@ int hydro_flux(struct Species_Conservation_Terms *st,
 
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
-      gamma_dot[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+      gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
 
   /* get mu and grad_mu */
 
-  mu = viscosity(gn, gamma_dot, d_mu);
+  mu = viscosity(goma_ctx->fem.gn, gamma_dot, d_mu);
 
-  if (gn->ConstitutiveEquation == SUSPENSION || gn->ConstitutiveEquation == CARREAU_SUSPENSION ||
-      gn->ConstitutiveEquation == POWERLAW_SUSPENSION) {
-    mu0 = gn->mu0; /* viscosity of pure fluid */
+  if (goma_ctx->fem.gn->ConstitutiveEquation == SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == CARREAU_SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == POWERLAW_SUSPENSION) {
+    mu0 = goma_ctx->fem.gn->mu0; /* viscosity of pure fluid */
     rel_mu_denom = (1.0 - Y[w] / maxpack);
     if (rel_mu_denom <= 0)
       rel_mu_denom = 0.01;
 
     mu_ppt = pow(rel_mu_denom, nexp);
 
-  } else if (gn->ConstitutiveEquation == FILLED_EPOXY)
+  } else if (goma_ctx->fem.gn->ConstitutiveEquation == FILLED_EPOXY)
   /*The extent of cure and temperature must be accounted for in
     calculating mu0 */
   {
@@ -4647,84 +4719,93 @@ int hydro_flux(struct Species_Conservation_Terms *st,
    */
 
   for (a = 0; a < dim; a++) {
-    grad_mu[a] += dmu_dY[w] * fv->grad_c[w][a];
+    grad_mu[a] += dmu_dY[w] * goma_ctx->fem.fv->grad_c[w][a];
   }
 
   for (a = 0; a < dim; a++) {
-    grad_mu1[a] += d_mu->gd * fv->grad_SH[a];
+    grad_mu1[a] += d_mu->gd * goma_ctx->fem.fv->grad_SH[a];
   }
 
   /* If non-neutrally bouyant suspension, compute density difference
    *  or it defaults to zero
    */
 
-  if (mp->DensityModel == SUSPENSION) {
-    del_rho = (mp->u_density[2] - mp->u_density[1]);
+  if (goma_ctx->fem.mp->DensityModel == SUSPENSION) {
+    del_rho = (goma_ctx->fem.mp->u_density[2] - goma_ctx->fem.mp->u_density[1]);
   }
 
   /* Compute HYDRODYNAMIC diffusive fluxes */
   /* Assign diffusivity values to each term */
 
   if (Y[w] > 0.) {
-    if (mp->GamDiffType[w] == LINEAR) {
-      Dc = mp->u_gadiffusivity[w][0] * 1.4 * Y[w];
-      dDc_dy = mp->u_gadiffusivity[w][0] * 1.4;
-    } else if (mp->GamDiffType[w] == INGBER) {
-      Dc = mp->u_gadiffusivity[w][0] * Y[w] * 1.4;
-      dDc_dy = mp->u_gadiffusivity[w][0];
-    } else if (mp->GamDiffType[w] == LEVEL_SET) {
+    if (goma_ctx->fem.mp->GamDiffType[w] == LINEAR) {
+      Dc = goma_ctx->fem.mp->u_gadiffusivity[w][0] * 1.4 * Y[w];
+      dDc_dy = goma_ctx->fem.mp->u_gadiffusivity[w][0] * 1.4;
+    } else if (goma_ctx->fem.mp->GamDiffType[w] == INGBER) {
+      Dc = goma_ctx->fem.mp->u_gadiffusivity[w][0] * Y[w] * 1.4;
+      dDc_dy = goma_ctx->fem.mp->u_gadiffusivity[w][0];
+    } else if (goma_ctx->fem.mp->GamDiffType[w] == LEVEL_SET) {
       double width;
-      if (ls == NULL)
+      if (goma_ctx->fem.ls == NULL)
         GOMA_EH(GOMA_ERROR,
                 "Need to activate to Level Set Interface Tracking to use this model.\n");
 
-      width = (mp->u_gadiffusivity[w][2] == 0.0) ? ls->Length_Scale : mp->u_gadiffusivity[w][2];
+      width = (goma_ctx->fem.mp->u_gadiffusivity[w][2] == 0.0)
+                  ? goma_ctx->fem.ls->Length_Scale
+                  : goma_ctx->fem.mp->u_gadiffusivity[w][2];
 
-      ls_transport_property(mp->u_gadiffusivity[w][0], mp->u_gadiffusivity[w][1], width, &Dc, NULL);
+      ls_transport_property(goma_ctx->fem.mp->u_gadiffusivity[w][0],
+                            goma_ctx->fem.mp->u_gadiffusivity[w][1], width, &Dc, NULL);
       dDc_dy = 0.0;
     } else {
-      Dc = mp->gam_diffusivity[w];
+      Dc = goma_ctx->fem.mp->gam_diffusivity[w];
       dDc_dy = 0.0;
     }
 
-    if (mp->MuDiffType[w] == LINEAR) {
-      Dmu = mp->u_mdiffusivity[w][0] * 1.4 * Y[w];
-      dDmu_dy = mp->u_mdiffusivity[w][0] * 1.4;
-    } else if (mp->MuDiffType[w] == LEVEL_SET) {
+    if (goma_ctx->fem.mp->MuDiffType[w] == LINEAR) {
+      Dmu = goma_ctx->fem.mp->u_mdiffusivity[w][0] * 1.4 * Y[w];
+      dDmu_dy = goma_ctx->fem.mp->u_mdiffusivity[w][0] * 1.4;
+    } else if (goma_ctx->fem.mp->MuDiffType[w] == LEVEL_SET) {
       double width;
-      if (ls == NULL)
+      if (goma_ctx->fem.ls == NULL)
         GOMA_EH(GOMA_ERROR,
                 "Need to activate to Level Set Interface Tracking to use this model.\n");
 
-      width = (mp->u_mdiffusivity[w][2] == 0.0) ? ls->Length_Scale : mp->u_mdiffusivity[w][2];
+      width = (goma_ctx->fem.mp->u_mdiffusivity[w][2] == 0.0)
+                  ? goma_ctx->fem.ls->Length_Scale
+                  : goma_ctx->fem.mp->u_mdiffusivity[w][2];
 
-      ls_transport_property(mp->u_mdiffusivity[w][0], mp->u_mdiffusivity[w][1], width, &Dmu, NULL);
+      ls_transport_property(goma_ctx->fem.mp->u_mdiffusivity[w][0],
+                            goma_ctx->fem.mp->u_mdiffusivity[w][1], width, &Dmu, NULL);
       dDmu_dy = 0.0;
     } else {
-      Dmu = mp->mu_diffusivity[w];
+      Dmu = goma_ctx->fem.mp->mu_diffusivity[w];
       dDmu_dy = 0.0;
     }
 
-    if (mp->GravDiffType[w] == BISECTION) {
-      Dg = mp->u_gdiffusivity[w][0] * del_rho;
-    } else if (mp->GravDiffType[w] == RZBISECTION) {
-      Dg = mp->u_gdiffusivity[w][0] * del_rho;
-      rzexp = mp->u_gdiffusivity[w][1];
-    } else if (mp->GravDiffType[w] == RICHARDSON_ZAKI) {
-      Dg = mp->u_gdiffusivity[w][0] * del_rho;
-      rzexp = mp->u_gdiffusivity[w][1];
-    } else if (mp->GravDiffType[w] == LEVEL_SET) {
+    if (goma_ctx->fem.mp->GravDiffType[w] == BISECTION) {
+      Dg = goma_ctx->fem.mp->u_gdiffusivity[w][0] * del_rho;
+    } else if (goma_ctx->fem.mp->GravDiffType[w] == RZBISECTION) {
+      Dg = goma_ctx->fem.mp->u_gdiffusivity[w][0] * del_rho;
+      rzexp = goma_ctx->fem.mp->u_gdiffusivity[w][1];
+    } else if (goma_ctx->fem.mp->GravDiffType[w] == RICHARDSON_ZAKI) {
+      Dg = goma_ctx->fem.mp->u_gdiffusivity[w][0] * del_rho;
+      rzexp = goma_ctx->fem.mp->u_gdiffusivity[w][1];
+    } else if (goma_ctx->fem.mp->GravDiffType[w] == LEVEL_SET) {
       double width;
-      if (ls == NULL)
+      if (goma_ctx->fem.ls == NULL)
         GOMA_EH(GOMA_ERROR,
                 "Need to activate to Level Set Interface Tracking to use this model.\n");
 
-      width = (mp->u_gdiffusivity[w][2] == 0.0) ? ls->Length_Scale : mp->u_gdiffusivity[w][2];
+      width = (goma_ctx->fem.mp->u_gdiffusivity[w][2] == 0.0)
+                  ? goma_ctx->fem.ls->Length_Scale
+                  : goma_ctx->fem.mp->u_gdiffusivity[w][2];
 
-      ls_transport_property(mp->u_gdiffusivity[w][0], mp->u_gdiffusivity[w][1], width, &Dg, NULL);
+      ls_transport_property(goma_ctx->fem.mp->u_gdiffusivity[w][0],
+                            goma_ctx->fem.mp->u_gdiffusivity[w][1], width, &Dg, NULL);
       Dg *= del_rho;
     } else {
-      Dg = mp->g_diffusivity[w] * del_rho;
+      Dg = goma_ctx->fem.mp->g_diffusivity[w] * del_rho;
     }
   } else {
     Dg = 0.;
@@ -4736,36 +4817,38 @@ int hydro_flux(struct Species_Conservation_Terms *st,
    *  in mat file it is direction dependent
    */
 
-  if (mp->FickDiffType[w] == ANISOTROPIC) {
+  if (goma_ctx->fem.mp->FickDiffType[w] == ANISOTROPIC) {
     for (a = 0; a < dim; a++) {
-      Dd[a] = mp->u_fdiffusivity[w][a];
+      Dd[a] = goma_ctx->fem.mp->u_fdiffusivity[w][a];
       dDd_dy[a] = 0.;
     }
-  } else if (mp->FickDiffType[w] == EXP_DECAY) {
+  } else if (goma_ctx->fem.mp->FickDiffType[w] == EXP_DECAY) {
     for (a = 0; a < dim; a++) {
       if (Y[w] >= 0. && Y[w] <= maxpack) {
-        Dd[a] = mp->u_fdiffusivity[w][0] * (exp(-mp->u_fdiffusivity[w][1] * Y[w]) +
-                                            exp(-mp->u_fdiffusivity[w][1] * fabs(maxpack - Y[w])));
-        dDd_dy[a] = -mp->u_fdiffusivity[w][0] * mp->u_fdiffusivity[w][1] *
-                    (exp(-mp->u_fdiffusivity[w][1] * Y[w]) -
-                     exp(-mp->u_fdiffusivity[w][1] * fabs(maxpack - Y[w])));
+        Dd[a] = goma_ctx->fem.mp->u_fdiffusivity[w][0] *
+                (exp(-goma_ctx->fem.mp->u_fdiffusivity[w][1] * Y[w]) +
+                 exp(-goma_ctx->fem.mp->u_fdiffusivity[w][1] * fabs(maxpack - Y[w])));
+        dDd_dy[a] = -goma_ctx->fem.mp->u_fdiffusivity[w][0] *
+                    goma_ctx->fem.mp->u_fdiffusivity[w][1] *
+                    (exp(-goma_ctx->fem.mp->u_fdiffusivity[w][1] * Y[w]) -
+                     exp(-goma_ctx->fem.mp->u_fdiffusivity[w][1] * fabs(maxpack - Y[w])));
       } else if (Y[w] < 0.) {
-        Dd[a] = mp->u_fdiffusivity[w][0];
+        Dd[a] = goma_ctx->fem.mp->u_fdiffusivity[w][0];
         dDd_dy[a] = 0.;
       } else if (Y[w] > maxpack) {
-        Dd[a] = mp->u_fdiffusivity[w][0];
+        Dd[a] = goma_ctx->fem.mp->u_fdiffusivity[w][0];
         dDd_dy[a] = 0.;
       }
     }
-  } else if (mp->FickDiffType[w] == SHOCK) {
-    if (pd->TimeIntegration != STEADY)
-      y_dot = fv_dot->c[w];
+  } else if (goma_ctx->fem.mp->FickDiffType[w] == SHOCK) {
+    if (goma_ctx->fem.pd->TimeIntegration != STEADY)
+      y_dot = goma_ctx->fem.fv_dot->c[w];
     else
       y_dot = 0.0;
 
     adv = 0.;
     for (a = 0; a < dim; a++) {
-      adv += fv->v[a] * grad_Y[w][a];
+      adv += goma_ctx->fem.fv->v[a] * grad_Y[w][a];
     }
 
     if (adv < 0)
@@ -4790,18 +4873,19 @@ int hydro_flux(struct Species_Conservation_Terms *st,
     h_elem = sqrt(hh_siz);
 
     for (a = 0; a < dim; a++) {
-      Dd[a] =
-          mp->u_fdiffusivity[w][0] * h_elem * sign_flux * (y_dot + adv) / (sign_adv * adv + h_elem);
+      Dd[a] = goma_ctx->fem.mp->u_fdiffusivity[w][0] * h_elem * sign_flux * (y_dot + adv) /
+              (sign_adv * adv + h_elem);
 
-      if (pd->TimeIntegration != STEADY)
-        dDd_dy[a] = mp->u_fdiffusivity[w][0] * h_elem * sign_flux * (1 + 2. * tt) / dt /
-                    (sign_adv * adv + h_elem);
+      if (goma_ctx->fem.pd->TimeIntegration != STEADY)
+        dDd_dy[a] = goma_ctx->fem.mp->u_fdiffusivity[w][0] * h_elem * sign_flux * (1 + 2. * tt) /
+                    dt / (sign_adv * adv + h_elem);
       else
         dDd_dy[a] = 0.;
 
-      dDd_dgrady[a] = mp->u_fdiffusivity[w][0] * h_elem * sign_flux * (fv->v[a]) /
-                      (sign_adv * adv + h_elem) * (1. - (y_dot + adv) / (sign_adv * adv + h_elem));
-      dDd_dv[a] = mp->u_fdiffusivity[w][0] * h_elem * sign_flux * (grad_Y[w][a]) /
+      dDd_dgrady[a] = goma_ctx->fem.mp->u_fdiffusivity[w][0] * h_elem * sign_flux *
+                      (goma_ctx->fem.fv->v[a]) / (sign_adv * adv + h_elem) *
+                      (1. - (y_dot + adv) / (sign_adv * adv + h_elem));
+      dDd_dv[a] = goma_ctx->fem.mp->u_fdiffusivity[w][0] * h_elem * sign_flux * (grad_Y[w][a]) /
                   (sign_adv * adv + h_elem) * (1. - (y_dot + adv) / (sign_adv * adv + h_elem));
     }
   }
@@ -4815,13 +4899,13 @@ int hydro_flux(struct Species_Conservation_Terms *st,
 
   if (Y[w] >= maxpack)
     Y[w] = maxpack;
-  if (mp->GravDiffType[w] == RICHARDSON_ZAKI) {
+  if (goma_ctx->fem.mp->GravDiffType[w] == RICHARDSON_ZAKI) {
     f = pow(1. - Y[w], rzexp);
     df_dmu = 0.;
     df_dmu0 = 0.;
     df_dy = -rzexp * f / (1. - Y[w]);
   } else {
-    f = (1. - mp->reference_concn[w]) / mu_ppt;
+    f = (1. - goma_ctx->fem.mp->reference_concn[w]) / mu_ppt;
     /*    f = (1. - Y[w])/mu_ppt;  */
     df_dmu = 0;
     df_dmu0 = 0.0;
@@ -4837,26 +4921,26 @@ int hydro_flux(struct Species_Conservation_Terms *st,
     st->diff_flux[w][a] = -Y[w] * Dc * (Y[w] * grad_gd[a] + gammadot * grad_Y[w][a]);
     st->diff_flux[w][a] += -Y[w] * Y[w] * gammadot * (Dmu * grad_mu[a] + Dmu1 * grad_mu1[a]) / mu;
 
-    st->diff_flux[w][a] += (Dg * f * Y[w]) * mp->momentum_source[a] / mu0;
+    st->diff_flux[w][a] += (Dg * f * Y[w]) * goma_ctx->fem.mp->momentum_source[a] / mu0;
     st->diff_flux[w][a] += -Dd[a] * grad_Y[w][a];
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     /* Compute derivative of viscosity gradient with respect to mesh displacement */
-    if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       memset(d_grad_mu_dmesh, 0, DIM * DIM * MDE * sizeof(dbl));
 
       /* d_grad_mu_dmesh */
 
       for (a = 0; a < dim; a++) {
         for (p = 0; p < dim; p++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
             d_grad_mu_dmesh[a][p][j] = 0.0;
 
             var = MASS_FRACTION;
-            for (l = 0; l < ei[pg->imtrx]->dof[var]; l++) {
-              d_grad_mu_dmesh[a][p][j] +=
-                  dmu_dY[w] * (*esp->c[w][l]) * bf[var]->d_grad_phi_dmesh[l][a][p][j];
+            for (l = 0; l < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; l++) {
+              d_grad_mu_dmesh[a][p][j] += dmu_dY[w] * (*goma_ctx->fem.esp->c[w][l]) *
+                                          goma_ctx->fem.bf[var]->d_grad_phi_dmesh[l][a][p][j];
             }
 
             d_grad_mu_dmesh[a][p][j] += d_mu->gd * d_grad_gd_dmesh[a][p][j];
@@ -4867,72 +4951,77 @@ int hydro_flux(struct Species_Conservation_Terms *st,
 
     var = MASS_FRACTION;
 
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      for (a = 0; a < dim && pd->v[pg->imtrx][var]; a++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      for (a = 0; a < dim && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]; a++) {
 
-        c_term = -2.0 * Y[w] * grad_gd[a] * bf[var]->phi[j];
-        c_term += -gammadot * grad_Y[w][a] * bf[var]->phi[j];
-        c_term += -Y[w] * gammadot * bf[var]->grad_phi[j][a];
+        c_term = -2.0 * Y[w] * grad_gd[a] * goma_ctx->fem.bf[var]->phi[j];
+        c_term += -gammadot * grad_Y[w][a] * goma_ctx->fem.bf[var]->phi[j];
+        c_term += -Y[w] * gammadot * goma_ctx->fem.bf[var]->grad_phi[j][a];
         c_term *= Dc;
-        c_term -= dDc_dy * bf[var]->phi[j] * Y[w] * (Y[w] * grad_gd[a] + gammadot * grad_Y[w][a]);
+        c_term -= dDc_dy * goma_ctx->fem.bf[var]->phi[j] * Y[w] *
+                  (Y[w] * grad_gd[a] + gammadot * grad_Y[w][a]);
 
-        mu_term =
-            -2.0 * Y[w] * gammadot * (Dmu * grad_mu[a] + Dmu1 * grad_mu1[a]) * bf[var]->phi[j] / mu;
+        mu_term = -2.0 * Y[w] * gammadot * (Dmu * grad_mu[a] + Dmu1 * grad_mu1[a]) *
+                  goma_ctx->fem.bf[var]->phi[j] / mu;
         mu_term += Y[w] * Y[w] * gammadot * d_mu->C[w][j] *
                    (Dmu * grad_mu[a] + Dmu1 * grad_mu1[a]) / mu / mu;
-        mu_term +=
-            -Dmu * Y[w] * Y[w] * gammadot *
-            (dmu_dY[w] * bf[var]->grad_phi[j][a] + d2mu_dY2[w] * grad_Y[w][a] * bf[var]->phi[j]) /
-            mu;
+        mu_term += -Dmu * Y[w] * Y[w] * gammadot *
+                   (dmu_dY[w] * goma_ctx->fem.bf[var]->grad_phi[j][a] +
+                    d2mu_dY2[w] * grad_Y[w][a] * goma_ctx->fem.bf[var]->phi[j]) /
+                   mu;
 
         /* 	      mu_term +=
          * -Dmu*Y[w]*Y[w]*gammadot*(d2mu_dgd_dY*bf[var]->phi[j]*grad_Y[w][a])/mu; */
         /* 	      mu_term +=
          * -Dmu1*Y[w]*Y[w]*gammadot*(d2mu_dgd_dY*bf[var]->phi[j]*fv->grad_SH[a])/mu; */
 
-        mu_term -= dDmu_dy * bf[var]->phi[j] * Y[w] * Y[w] * gammadot * grad_mu[a] / mu;
+        mu_term -=
+            dDmu_dy * goma_ctx->fem.bf[var]->phi[j] * Y[w] * Y[w] * gammadot * grad_mu[a] / mu;
 
-        g_term = ((f + df_dy * Y[w]) * bf[var]->phi[j] + Y[w] * df_dmu * d_mu->C[w][j]);
-        g_term *= Dg * mp->momentum_source[a] / mu0;
+        g_term =
+            ((f + df_dy * Y[w]) * goma_ctx->fem.bf[var]->phi[j] + Y[w] * df_dmu * d_mu->C[w][j]);
+        g_term *= Dg * goma_ctx->fem.mp->momentum_source[a] / mu0;
 
-        d_term = -bf[var]->grad_phi[j][a] * Dd[a] - grad_Y[w][a] * dDd_dy[a] * bf[var]->phi[j] -
-                 grad_Y[w][a] * dDd_dgrady[a] * bf[var]->grad_phi[j][a];
+        d_term = -goma_ctx->fem.bf[var]->grad_phi[j][a] * Dd[a] -
+                 grad_Y[w][a] * dDd_dy[a] * goma_ctx->fem.bf[var]->phi[j] -
+                 grad_Y[w][a] * dDd_dgrady[a] * goma_ctx->fem.bf[var]->grad_phi[j][a];
 
         st->d_diff_flux_dc[w][a][w][j] = c_term + mu_term + g_term + d_term;
 
         /* if filled_epoxy is used, there is a dependency of mu0 to
            the cure species */
-        if (gn->ConstitutiveEquation == FILLED_EPOXY) {
-          st->d_diff_flux_dc[w][a][gn->cure_species_no][j] =
-              Y[w] * Y[w] * gammadot * d_mu->C[gn->cure_species_no][j] *
+        if (goma_ctx->fem.gn->ConstitutiveEquation == FILLED_EPOXY) {
+          st->d_diff_flux_dc[w][a][goma_ctx->fem.gn->cure_species_no][j] =
+              Y[w] * Y[w] * gammadot * d_mu->C[goma_ctx->fem.gn->cure_species_no][j] *
               (Dmu * grad_mu[a] + Dmu1 * grad_mu1[a]) / mu / mu;
 
-          st->d_diff_flux_dc[w][a][gn->cure_species_no][j] +=
-              (-(Dg * f * Y[w] * mp->momentum_source[a]) / mu0) * d_mu->C[gn->cure_species_no][j] /
-              mu_ppt / mu0;
+          st->d_diff_flux_dc[w][a][goma_ctx->fem.gn->cure_species_no][j] +=
+              (-(Dg * f * Y[w] * goma_ctx->fem.mp->momentum_source[a]) / mu0) *
+              d_mu->C[goma_ctx->fem.gn->cure_species_no][j] / mu_ppt / mu0;
         }
       }
     }
 
     var = SHEAR_RATE;
 
-    for (a = 0; a < dim && pd->v[pg->imtrx][var]; a++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (a = 0; a < dim && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]; a++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
-        c_term = Y[w] * Y[w] * bf[var]->grad_phi[j][a];
-        c_term += Y[w] * grad_Y[w][a] * bf[var]->phi[j];
+        c_term = Y[w] * Y[w] * goma_ctx->fem.bf[var]->grad_phi[j][a];
+        c_term += Y[w] * grad_Y[w][a] * goma_ctx->fem.bf[var]->phi[j];
         c_term *= -Dc;
 
-        mu_term = -Dmu * Y[w] * Y[w] * grad_mu[a] * bf[var]->phi[j] / mu;
+        mu_term = -Dmu * Y[w] * Y[w] * grad_mu[a] * goma_ctx->fem.bf[var]->phi[j] / mu;
 
-        mu_term -= Dmu1 * Y[w] * Y[w] * grad_mu1[a] * bf[var]->phi[j] / mu;
+        mu_term -= Dmu1 * Y[w] * Y[w] * grad_mu1[a] * goma_ctx->fem.bf[var]->phi[j] / mu;
 
-        mu_term += (Y[w] * Y[w] * gammadot * d_mu->gd * bf[var]->phi[j] *
+        mu_term += (Y[w] * Y[w] * gammadot * d_mu->gd * goma_ctx->fem.bf[var]->phi[j] *
                     (Dmu1 * grad_mu1[a] + Dmu * grad_mu[a]) / mu / mu);
 
         mu_term -= Dmu1 * (Y[w] * Y[w] * gammadot *
-                           (d_mu->gd * bf[var]->grad_phi[j][a] +
-                            mp->d2_viscosity[SHEAR_RATE] * fv->grad_SH[a] * bf[var]->phi[j]) /
+                           (d_mu->gd * goma_ctx->fem.bf[var]->grad_phi[j][a] +
+                            goma_ctx->fem.mp->d2_viscosity[SHEAR_RATE] *
+                                goma_ctx->fem.fv->grad_SH[a] * goma_ctx->fem.bf[var]->phi[j]) /
                            mu);
 
         st->d_diff_flux_dSH[w][a][j] = c_term + mu_term;
@@ -4940,15 +5029,16 @@ int hydro_flux(struct Species_Conservation_Terms *st,
     }
 
     var = TEMPERATURE;
-    for (a = 0; a < dim && pd->v[pg->imtrx][var]; a++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+    for (a = 0; a < dim && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]; a++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++)
 
       {
         c_term = dDc_dT * (Y[w] * Y[w] * grad_gd[a] + Y[w] * gammadot * grad_Y[w][a]);
         mu_term = (dDmu_dT * grad_mu[a] - Dmu * grad_mu[a] * d_mu->T[j] / mu);
         mu_term *= -Y[w] * Y[w] * gammadot / mu;
-        g_term = df_dmu * d_mu->T[j] + (df_dmu0 - f / mu0) * dmu0_dT * bf[var]->phi[j];
-        g_term *= (Dg * Y[w] * mp->momentum_source[a]) / mu0;
+        g_term =
+            df_dmu * d_mu->T[j] + (df_dmu0 - f / mu0) * dmu0_dT * goma_ctx->fem.bf[var]->phi[j];
+        g_term *= (Dg * Y[w] * goma_ctx->fem.mp->momentum_source[a]) / mu0;
 
         st->d_diff_flux_dT[w][a][j] = c_term + mu_term + g_term;
       }
@@ -4962,10 +5052,10 @@ int hydro_flux(struct Species_Conservation_Terms *st,
     var = VELOCITY1;
     memset(st->d_diff_flux_dv, 0, MAX_CONC * DIM * DIM * MDE * sizeof(dbl));
 
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        for (a = 0; a < dim && pd->v[pg->imtrx][var]; a++) {
-          d_term = -grad_Y[w][a] * dDd_dv[a] * bf[var]->phi[j];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        for (a = 0; a < dim && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]; a++) {
+          d_term = -grad_Y[w][a] * dDd_dv[a] * goma_ctx->fem.bf[var]->phi[j];
           st->d_diff_flux_dv[w][a][a][j] = c_term + mu_term + g_term + d_term;
         }
       }
@@ -4973,20 +5063,20 @@ int hydro_flux(struct Species_Conservation_Terms *st,
 
     var = MESH_DISPLACEMENT1;
 
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       for (a = 0; a < dim; a++) {
         for (p = 0; p < dim; p++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++)
 
           {
             c_term = -Y[w] * Y[w] * d_grad_gd_dmesh[a][p][j];
-            c_term += -Y[w] * gammadot * fv->d_grad_c_dmesh[a][w][p][j];
+            c_term += -Y[w] * gammadot * goma_ctx->fem.fv->d_grad_c_dmesh[a][w][p][j];
             c_term *= Dc;
 
             mu_term = -Y[w] * Y[w] * gammadot * d_grad_mu_dmesh[a][p][j] / mu;
             mu_term *= Dmu;
 
-            d_term = -fv->d_grad_c_dmesh[a][w][p][j] * Dd[a];
+            d_term = -goma_ctx->fem.fv->d_grad_c_dmesh[a][w][p][j] * Dd[a];
             r_term = 0.;
 
             st->d_diff_flux_dmesh[w][a][p][j] = c_term + mu_term + d_term + r_term;
@@ -5056,10 +5146,10 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
   dbl del_rho = 0.0;
 
   /* Set up some convenient local variables and pointers */
-  Y = fv->c;
-  grad_Y = fv->grad_c;
+  Y = goma_ctx->fem.fv->c;
+  grad_Y = goma_ctx->fem.fv->grad_c;
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /* Compute gamma_dot[][] */
 
@@ -5069,18 +5159,20 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
 
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
-      gamma_dot[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+      gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
 
-  mu = viscosity(gn, gamma_dot, d_mu);
+  mu = viscosity(goma_ctx->fem.gn, gamma_dot, d_mu);
 
-  if (gn->ConstitutiveEquation == SUSPENSION || gn->ConstitutiveEquation == CARREAU_SUSPENSION ||
-      gn->ConstitutiveEquation == POWERLAW_SUSPENSION || gn->ConstitutiveEquation == FILLED_EPOXY) {
-    maxpack = gn->maxpack;
-    mu0 = gn->mu0; /* viscosity of pure fluid */
+  if (goma_ctx->fem.gn->ConstitutiveEquation == SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == CARREAU_SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == POWERLAW_SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == FILLED_EPOXY) {
+    maxpack = goma_ctx->fem.gn->maxpack;
+    mu0 = goma_ctx->fem.gn->mu0; /* viscosity of pure fluid */
   } else {
     maxpack = .68;
     mu0 = mu; /* viscosity of pure fluid */
@@ -5090,19 +5182,19 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
    *  or it defaults to zero
    */
 
-  if (mp->DensityModel == SUSPENSION) {
-    del_rho = (mp->u_density[2] - mp->u_density[1]);
+  if (goma_ctx->fem.mp->DensityModel == SUSPENSION) {
+    del_rho = (goma_ctx->fem.mp->u_density[2] - goma_ctx->fem.mp->u_density[1]);
   }
 
   /* Compute HYDRODYNAMIC diffusive fluxes */
   /* Assign diffusivity values to each term */
 
   if (Y[w] > 0.) {
-    if (mp->GravDiffType[w] == RICHARDSON_ZAKI) {
-      Dg = mp->u_gdiffusivity[w][0];
-      rzexp = mp->u_gdiffusivity[w][1];
+    if (goma_ctx->fem.mp->GravDiffType[w] == RICHARDSON_ZAKI) {
+      Dg = goma_ctx->fem.mp->u_gdiffusivity[w][0];
+      rzexp = goma_ctx->fem.mp->u_gdiffusivity[w][1];
     } else {
-      Dg = mp->g_diffusivity[w];
+      Dg = goma_ctx->fem.mp->g_diffusivity[w];
     }
   } else {
     Dg = 0.;
@@ -5112,15 +5204,16 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
    *  in mat file it is direction dependent
    */
 
-  if (mp->FickDiffType[w] == ANISOTROPIC) {
+  if (goma_ctx->fem.mp->FickDiffType[w] == ANISOTROPIC) {
     for (a = 0; a < dim; a++) {
-      Dd[a] = mp->u_fdiffusivity[w][a];
+      Dd[a] = goma_ctx->fem.mp->u_fdiffusivity[w][a];
       dDd_dy[a] = 0.;
     }
-  } else if (mp->FickDiffType[w] == EXP_DECAY) {
+  } else if (goma_ctx->fem.mp->FickDiffType[w] == EXP_DECAY) {
     for (a = 0; a < dim; a++) {
-      Dd[a] = mp->u_fdiffusivity[w][0] * exp(-mp->u_fdiffusivity[w][1] * Y[w]);
-      dDd_dy[a] = -mp->u_fdiffusivity[w][1] * Dd[a];
+      Dd[a] = goma_ctx->fem.mp->u_fdiffusivity[w][0] *
+              exp(-goma_ctx->fem.mp->u_fdiffusivity[w][1] * Y[w]);
+      dDd_dy[a] = -goma_ctx->fem.mp->u_fdiffusivity[w][1] * Dd[a];
     }
   }
 
@@ -5132,7 +5225,7 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
 
   if (Y[w] >= maxpack)
     Y[w] = maxpack;
-  if (mp->GravDiffType[w] == RICHARDSON_ZAKI) {
+  if (goma_ctx->fem.mp->GravDiffType[w] == RICHARDSON_ZAKI) {
     if (Y[w] / maxpack < 0.95) {
       f = pow(1. - Y[w], rzexp) / mu0;
       f *= (1. - Y[w] / maxpack);
@@ -5171,26 +5264,28 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
   /* assemble residual */
   for (a = 0; a < dim; a++) {
     st->diff_flux[w][a] = -M * div_tau_p[a];
-    st->diff_flux[w][a] += M * Y[w] * mp->momentum_source[a] * del_rho;
+    st->diff_flux[w][a] += M * Y[w] * goma_ctx->fem.mp->momentum_source[a] * del_rho;
     st->diff_flux[w][a] += -Dd[a] * grad_Y[w][a];
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     var = MASS_FRACTION;
-    for (a = 0; a < dim && pd->v[pg->imtrx][var]; a++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (a = 0; a < dim && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]; a++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
-        c_term = -dM_dy * bf[var]->phi[j] * div_tau_p[a];
+        c_term = -dM_dy * goma_ctx->fem.bf[var]->phi[j] * div_tau_p[a];
 
         c_term += -M * d_div_tau_p_dy[a][w][j];
 
         mu_term = -dM_dmu * d_mu->C[w][j] * div_tau_p[a];
 
-        g_term = ((f + df_dy * Y[w]) * bf[var]->phi[j] + Y[w] * df_dmu * d_mu->C[w][j]);
-        g_term *= Dg * mp->momentum_source[a] * del_rho;
+        g_term =
+            ((f + df_dy * Y[w]) * goma_ctx->fem.bf[var]->phi[j] + Y[w] * df_dmu * d_mu->C[w][j]);
+        g_term *= Dg * goma_ctx->fem.mp->momentum_source[a] * del_rho;
 
-        d_term = -bf[var]->grad_phi[j][a] * Dd[a] - grad_Y[w][a] * dDd_dy[a] * bf[var]->phi[j];
+        d_term = -goma_ctx->fem.bf[var]->grad_phi[j][a] * Dd[a] -
+                 grad_Y[w][a] * dDd_dy[a] * goma_ctx->fem.bf[var]->phi[j];
 
         st->d_diff_flux_dc[w][a][w][j] = c_term + mu_term + g_term + d_term;
       }
@@ -5198,22 +5293,22 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
       /* if filled_epoxy is used, there is a dependency of viscosity on
          the cure species */
 
-      if (gn->ConstitutiveEquation == FILLED_EPOXY) {
-        for (a = 0; a < dim && pd->v[pg->imtrx][var]; a++) {
+      if (goma_ctx->fem.gn->ConstitutiveEquation == FILLED_EPOXY) {
+        for (a = 0; a < dim && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]; a++) {
 
-          st->d_diff_flux_dc[w][a][gn->cure_species_no][j] =
-              (df_dmu * d_mu->C[gn->cure_species_no][j]) +
-              (df_dmu0 - f / mu0) * dmu0_dcure * bf[var]->phi[j];
+          st->d_diff_flux_dc[w][a][goma_ctx->fem.gn->cure_species_no][j] =
+              (df_dmu * d_mu->C[goma_ctx->fem.gn->cure_species_no][j]) +
+              (df_dmu0 - f / mu0) * dmu0_dcure * goma_ctx->fem.bf[var]->phi[j];
 
-          st->d_diff_flux_dc[w][a][gn->cure_species_no][j] *=
-              (Dg * Y[w] * mp->momentum_source[a] * del_rho) / mu0;
+          st->d_diff_flux_dc[w][a][goma_ctx->fem.gn->cure_species_no][j] *=
+              (Dg * Y[w] * goma_ctx->fem.mp->momentum_source[a] * del_rho) / mu0;
         }
       }
     }
 
     var = PRESSURE;
-    for (a = 0; a < dim && pd->v[pg->imtrx][var]; a++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (a = 0; a < dim && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]; a++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         c_term = 0.;
 
         c_term += -M * d_div_tau_p_dp[a][j];
@@ -5223,8 +5318,8 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
     }
 
     var = SHEAR_RATE;
-    for (a = 0; a < dim && pd->v[pg->imtrx][var]; a++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (a = 0; a < dim && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]; a++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
         c_term = -M * d_div_tau_p_dgd[a][j];
 
@@ -5233,14 +5328,15 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
     }
 
     var = TEMPERATURE;
-    for (a = 0; a < dim && pd->v[pg->imtrx][var]; a++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (a = 0; a < dim && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]; a++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         c_term = -Y[w] * dM_dmu * d_mu->T[j] * div_tau_p[a];
 
         mu_term = 0.;
 
-        g_term = df_dmu * d_mu->T[j] + (df_dmu0 - f / mu0) * dmu0_dT * bf[var]->phi[j];
-        g_term *= (Dg * Y[w] * mp->momentum_source[a] * del_rho) / mu0;
+        g_term =
+            df_dmu * d_mu->T[j] + (df_dmu0 - f / mu0) * dmu0_dT * goma_ctx->fem.bf[var]->phi[j];
+        g_term *= (Dg * Y[w] * goma_ctx->fem.mp->momentum_source[a] * del_rho) / mu0;
 
         st->d_diff_flux_dT[w][a][j] = c_term + mu_term + g_term;
       }
@@ -5249,10 +5345,10 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
     var = VELOCITY1;
     memset(st->d_diff_flux_dv, 0, MAX_CONC * DIM * DIM * MDE * sizeof(dbl));
 
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       for (a = 0; a < VIM; a++) {
         for (p = 0; p < VIM; p++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             c_term = -M * d_div_tau_p_dv[a][p][j];
 
             mu_term = 0.;
@@ -5266,17 +5362,17 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
     var = MESH_DISPLACEMENT1;
     memset(st->d_diff_flux_dmesh, 0, MAX_CONC * DIM * DIM * MDE * sizeof(dbl));
 
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       for (a = 0; a < dim; a++) {
         for (p = 0; p < dim; p++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++)
 
           {
             c_term = -M * d_div_tau_p_dmesh[a][p][j];
 
             mu_term = 0.;
 
-            d_term = -fv->d_grad_c_dmesh[a][w][p][j] * Dd[a];
+            d_term = -goma_ctx->fem.fv->d_grad_c_dmesh[a][w][p][j] * Dd[a];
 
             st->d_diff_flux_dmesh[w][a][p][j] = c_term + mu_term + d_term;
           }
@@ -5338,8 +5434,8 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
   memset(v2, 0, DIM * sizeof(double));
   memset(v3, 0, DIM * sizeof(double));
 
-  Y = fv->c;
-  dim = pd->Num_Dim;
+  Y = goma_ctx->fem.fv->c;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /* Compute gamma_dot[][] */
 
@@ -5347,7 +5443,7 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
 
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
-      gamma_dot[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+      gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
 
@@ -5356,12 +5452,14 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
 
   /* get mu and grad_mu */
 
-  mu = viscosity(gn, gamma_dot, NULL);
+  mu = viscosity(goma_ctx->fem.gn, gamma_dot, NULL);
 
-  if (gn->ConstitutiveEquation == SUSPENSION || gn->ConstitutiveEquation == CARREAU_SUSPENSION ||
-      gn->ConstitutiveEquation == POWERLAW_SUSPENSION || gn->ConstitutiveEquation == FILLED_EPOXY) {
-    maxpack = gn->maxpack;
-    mu0 = gn->mu0; /* viscosity of pure fluid */
+  if (goma_ctx->fem.gn->ConstitutiveEquation == SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == CARREAU_SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == POWERLAW_SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == FILLED_EPOXY) {
+    maxpack = goma_ctx->fem.gn->maxpack;
+    mu0 = goma_ctx->fem.gn->mu0; /* viscosity of pure fluid */
   } else {
     maxpack = .68;
     mu0 = mu; /* viscosity of pure fluid */
@@ -5396,7 +5494,7 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
   }
   memset(tau_p, 0, DIM * DIM * sizeof(dbl));
 
-  if (cr->MassFluxModel == HYDRODYNAMIC_QTENSOR_OLD) {
+  if (goma_ctx->fem.cr->MassFluxModel == HYDRODYNAMIC_QTENSOR_OLD) {
     /* Get Q tensor */
     for (a = 0; a < VIM; a++) {
       vort_dir_local[a] = 0.0;
@@ -5408,18 +5506,18 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
         qtensor[a][b] = (dbl)delta(a, b) - 0.5 * vort_dir_local[a] * vort_dir_local[b];
       }
     }
-  } else if (cr->MassFluxModel == HYDRODYNAMIC_QTENSOR) {
+  } else if (goma_ctx->fem.cr->MassFluxModel == HYDRODYNAMIC_QTENSOR) {
     /* Get Q tensor */
     for (a = 0; a < VIM; a++) {
       for (b = 0; b < VIM; b++) {
-        qtensor[a][b] = (dbl)delta(a, b) - 0.5 * fv->vd[a] * fv->vd[b];
+        qtensor[a][b] = (dbl)delta(a, b) - 0.5 * goma_ctx->fem.fv->vd[a] * goma_ctx->fem.fv->vd[b];
       }
     }
   } else {
     /* assume a diagonal Q tensor */
     memset(qtensor, 0, DIM * DIM * sizeof(dbl));
     for (a = 0; a < VIM; a++) {
-      qtensor[a][a] = mp->u_qdiffusivity[w][a];
+      qtensor[a][a] = goma_ctx->fem.mp->u_qdiffusivity[w][a];
     }
   }
 
@@ -5428,7 +5526,8 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
   memset(tau_p, 0, DIM * DIM * sizeof(dbl));
   for (a = 0; a < VIM; a++) {
     tau_p[a][a] +=
-        cp * Y[w] * fv->P; /* suspension pressure adds an isotropic term on the diagonal */
+        cp * Y[w] *
+        goma_ctx->fem.fv->P; /* suspension pressure adds an isotropic term on the diagonal */
     for (b = 0; b < VIM; b++) {
       tau_p[a][b] += mu0 * pp * gammadot * qtensor[a][b];
     }
@@ -5440,11 +5539,11 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
   memset(d_tau_p_dmesh, 0, DIM * DIM * DIM * MDE * sizeof(dbl));
   memset(d_tau_p_dp, 0, DIM * DIM * MDE * sizeof(dbl));
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     var = VELOCITY1;
-    if (pd->e[pg->imtrx][var]) {
-      dofs = ei[pg->imtrx]->dof[var];
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       if (gammadot != 0.0) {
         for (a = 0; a < VIM; a++) {
           for (b = 0; b < VIM; b++) {
@@ -5459,8 +5558,8 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
     }
 
     var = MESH_DISPLACEMENT1;
-    if (pd->e[pg->imtrx][var]) {
-      dofs = ei[pg->imtrx]->dof[var];
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       if (gammadot != 0.0) {
         for (a = 0; a < VIM; a++) {
           for (b = 0; b < VIM; b++) {
@@ -5475,21 +5574,22 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
     }
 
     var = VORT_DIR1;
-    if (pd->e[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
 
       memset(d_qtensor_dvd, 0, DIM * DIM * DIM * MDE * sizeof(dbl));
       for (p = 0; p < DIM; p++) {
         for (q = 0; q < DIM; q++) {
           for (b = 0; b < DIM; b++) {
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               d_qtensor_dvd[p][q][b][j] =
-                  -0.5 * bf[var]->phi[j] * (fv->vd[q] * delta(p, b) + fv->vd[p] * delta(q, b));
+                  -0.5 * goma_ctx->fem.bf[var]->phi[j] *
+                  (goma_ctx->fem.fv->vd[q] * delta(p, b) + goma_ctx->fem.fv->vd[p] * delta(q, b));
             }
           }
         }
       }
 
-      dofs = ei[pg->imtrx]->dof[var];
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       if (gammadot != 0.0) {
         for (a = 0; a < VIM; a++) {
           for (b = 0; b < VIM; b++) {
@@ -5504,25 +5604,26 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
     }
 
     var = MASS_FRACTION;
-    if (pd->e[pg->imtrx][var]) {
-      dofs = ei[pg->imtrx]->dof[var];
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       for (a = 0; a < VIM; a++) {
         for (j = 0; j < dofs; j++) {
-          d_tau_p_dy[a][a][w][j] += cp * bf[var]->phi[j] * fv->P;
+          d_tau_p_dy[a][a][w][j] += cp * goma_ctx->fem.bf[var]->phi[j] * goma_ctx->fem.fv->P;
 
           for (b = 0; b < VIM; b++) {
-            d_tau_p_dy[a][b][w][j] += mu0 * d_pp_dy * gammadot * bf[var]->phi[j] * qtensor[a][b];
+            d_tau_p_dy[a][b][w][j] +=
+                mu0 * d_pp_dy * gammadot * goma_ctx->fem.bf[var]->phi[j] * qtensor[a][b];
           }
         }
       }
     }
 
     var = PRESSURE;
-    if (pd->e[pg->imtrx][var]) {
-      dofs = ei[pg->imtrx]->dof[var];
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       for (a = 0; a < VIM; a++) {
         for (j = 0; j < dofs; j++) {
-          d_tau_p_dp[a][a][j] += cp * Y[w] * bf[var]->phi[j];
+          d_tau_p_dp[a][a][j] += cp * Y[w] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
@@ -5581,16 +5682,16 @@ int divergence_particle_stress(
   dbl radius_p, L_char, U_max;
   dbl v_bias[DIM], vort_bias[DIM], vy_bias[DIM];
 
-  Y = fv->c;
-  grad_Y = fv->grad_c;
-  grad_gd = fv->grad_SH;
-  gammadot = fv->SH;
+  Y = goma_ctx->fem.fv->c;
+  grad_Y = goma_ctx->fem.fv->grad_c;
+  grad_gd = goma_ctx->fem.fv->grad_SH;
+  gammadot = goma_ctx->fem.fv->SH;
 
   if (gammadot < 1.e-10) {
     gammadot = 1.e-10;
   }
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /* Compute gammadot, grad(gammadot), gamma_dot[][], d_gd_dG, and d_grad_gd_dG */
 
@@ -5598,23 +5699,23 @@ int divergence_particle_stress(
 
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
-      gamma_dot[a][b] = fv_old->grad_v[a][b] + fv_old->grad_v[b][a];
+      gamma_dot[a][b] = goma_ctx->fem.fv_old->grad_v[a][b] + goma_ctx->fem.fv_old->grad_v[b][a];
     }
   }
 
   /* get mu and grad_mu */
-  mu = viscosity(gn, gamma_dot, d_mu);
+  mu = viscosity(goma_ctx->fem.gn, gamma_dot, d_mu);
   memset(grad_mu, 0, DIM * sizeof(dbl));
 
-  dmu_dY = &(mp->d_viscosity[MAX_VARIABLE_TYPES]);
+  dmu_dY = &(goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES]);
   for (a = 0; a < DIM; a++) {
-    grad_mu[a] += dmu_dY[w] * fv->grad_c[w][a];
+    grad_mu[a] += dmu_dY[w] * goma_ctx->fem.fv->grad_c[w][a];
   }
 
   /* assume a diagonal Q tensor */
   memset(qtensor, 0, DIM * DIM * sizeof(dbl));
   for (a = 0; a < DIM; a++) {
-    qtensor[a][a] = mp->u_qdiffusivity[w][a];
+    qtensor[a][a] = goma_ctx->fem.mp->u_qdiffusivity[w][a];
   }
 
   /* Solve for the eigenvalues of gamma_dot   */
@@ -5658,10 +5759,12 @@ int divergence_particle_stress(
   memset(qtensor, 0, DIM * DIM * sizeof(dbl));
   rotate_tensor(Q_prime, qtensor, R, 0);
 
-  if (gn->ConstitutiveEquation == SUSPENSION || gn->ConstitutiveEquation == CARREAU_SUSPENSION ||
-      gn->ConstitutiveEquation == POWERLAW_SUSPENSION || gn->ConstitutiveEquation == FILLED_EPOXY) {
-    maxpack = gn->maxpack;
-    mu0 = gn->mu0; /* viscosity of pure fluid */
+  if (goma_ctx->fem.gn->ConstitutiveEquation == SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == CARREAU_SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == POWERLAW_SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == FILLED_EPOXY) {
+    maxpack = goma_ctx->fem.gn->maxpack;
+    mu0 = goma_ctx->fem.gn->mu0; /* viscosity of pure fluid */
   } else {
     maxpack = .68;
     mu0 = mu; /* viscosity of pure fluid */
@@ -5689,10 +5792,10 @@ int divergence_particle_stress(
   d_pp2_dy2 =
       2. * Kn / maxpack2 * comp + 4. * Kn * y_norm / maxpack * comp1 + Kn * y_norm * y_norm * comp2;
 
-  if (mp->SBM_Length_enabled) {
-    radius_p = mp->SBM_Lengths2[w][0];
-    L_char = mp->SBM_Lengths2[w][1];
-    U_max = mp->SBM_Lengths2[w][2];
+  if (goma_ctx->fem.mp->SBM_Length_enabled) {
+    radius_p = goma_ctx->fem.mp->SBM_Lengths2[w][0];
+    L_char = goma_ctx->fem.mp->SBM_Lengths2[w][1];
+    U_max = goma_ctx->fem.mp->SBM_Lengths2[w][2];
   } else {
     radius_p = 0.;
     L_char = 1.;
@@ -5710,7 +5813,7 @@ int divergence_particle_stress(
     }
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     memset(d_div_tau_p_dgd, 0, DIM * MDE * sizeof(dbl));
     memset(d_div_tau_p_dv, 0, DIM * DIM * MDE * sizeof(dbl));
     memset(d_div_tau_p_dy, 0, DIM * MAX_CONC * MDE * sizeof(dbl));
@@ -5718,46 +5821,46 @@ int divergence_particle_stress(
     memset(d_div_tau_p_dp, 0, DIM * MDE * sizeof(dbl));
 
     var = MASS_FRACTION;
-    if (pd->v[pg->imtrx][var]) {
-      dofs = ei[pg->imtrx]->dof[var];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       for (a = 0; a < WIM; a++) {
         for (j = 0; j < dofs; j++) {
           for (b = 0; b < WIM; b++) {
             d_div_tau_p_dy[a][w][j] +=
                 mu0 * qtensor[a][b] *
-                (d_pp_dy * bf[var]->phi[j] * grad_gd[b] +
-                 (gammadot + gamma_nl) * d_pp2_dy2 * bf[var]->phi[j] * grad_Y[w][b] +
-                 (gammadot + gamma_nl) * d_pp_dy * bf[var]->grad_phi[j][b]);
+                (d_pp_dy * goma_ctx->fem.bf[var]->phi[j] * grad_gd[b] +
+                 (gammadot + gamma_nl) * d_pp2_dy2 * goma_ctx->fem.bf[var]->phi[j] * grad_Y[w][b] +
+                 (gammadot + gamma_nl) * d_pp_dy * goma_ctx->fem.bf[var]->grad_phi[j][b]);
           }
         }
       }
     }
 
     var = SHEAR_RATE;
-    if (pd->v[pg->imtrx][var]) {
-      dofs = ei[pg->imtrx]->dof[var];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       for (a = 0; a < WIM; a++) {
         for (j = 0; j < dofs; j++) {
           for (b = 0; b < WIM; b++) {
-            d_div_tau_p_dgd[a][j] +=
-                mu0 * qtensor[a][b] *
-                (pp * bf[var]->grad_phi[j][b] + bf[var]->phi[j] * d_pp_dy * grad_Y[w][b]);
+            d_div_tau_p_dgd[a][j] += mu0 * qtensor[a][b] *
+                                     (pp * goma_ctx->fem.bf[var]->grad_phi[j][b] +
+                                      goma_ctx->fem.bf[var]->phi[j] * d_pp_dy * grad_Y[w][b]);
           }
         }
       }
     }
 
     var = MESH_DISPLACEMENT1;
-    if (pd->v[pg->imtrx][var]) {
-      dofs = ei[pg->imtrx]->dof[var];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       for (p = 0; p < dim; p++) {
         for (j = 0; j < dofs; j++) {
           for (a = 0; a < WIM; a++) {
             for (b = 0; b < WIM; b++) {
               d_div_tau_p_dmesh[a][p][j] +=
                   mu0 * qtensor[a][b] *
-                  (pp * fv->d_grad_SH_dmesh[b][p][j] +
-                   (gammadot + gamma_nl) * d_pp_dy * fv->d_grad_c_dmesh[b][w][p][j]);
+                  (pp * goma_ctx->fem.fv->d_grad_SH_dmesh[b][p][j] +
+                   (gammadot + gamma_nl) * d_pp_dy * goma_ctx->fem.fv->d_grad_c_dmesh[b][w][p][j]);
             }
           }
         }
@@ -5849,7 +5952,7 @@ int antoine_psat(double param[], double *f, double *dfdt)
   dbl TMIN, TMAX; /*Temperature range */
   dbl T;
 
-  T = fv->T;
+  T = goma_ctx->fem.fv->T;
 
   CONV = param[0];
   A = param[1];
@@ -5896,7 +5999,7 @@ int riedel_psat(double param[], double *f, double *dfdt) {
   dbl func, dfunc;
   dbl T, TMIN, TMAX;
 
-  T = fv->T;
+  T = goma_ctx->fem.fv->T;
 
   CONV = param[0];
   A = param[1];
@@ -5941,12 +6044,12 @@ int suspension_pm_fluid_momentum_source(dbl f[DIM], /* Body force. */
   dbl rho_f, rho_p, delta_rho;
   dbl p_vol_frac, pvf2;
 
-  if (mp->DensityModel == SUSPENSION_PM) {
-    species = (int)mp->u_density[0];
-    rho_f = mp->u_density[1];
-    rho_p = mp->u_density[2];
+  if (goma_ctx->fem.mp->DensityModel == SUSPENSION_PM) {
+    species = (int)goma_ctx->fem.mp->u_density[0];
+    rho_f = goma_ctx->fem.mp->u_density[1];
+    rho_p = goma_ctx->fem.mp->u_density[2];
     delta_rho = rho_p - rho_f;
-    pvf2 = p_vol_frac = fv->c[species];
+    pvf2 = p_vol_frac = goma_ctx->fem.fv->c[species];
     pvf2 *= pvf2;
   } else {
     GOMA_EH(GOMA_ERROR,
@@ -5954,7 +6057,7 @@ int suspension_pm_fluid_momentum_source(dbl f[DIM], /* Body force. */
     return (status);
   }
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /* MMH
    * The fluid momentum buoyancy source term due to particles.
@@ -5962,15 +6065,15 @@ int suspension_pm_fluid_momentum_source(dbl f[DIM], /* Body force. */
    */
   for (a = 0; a < dim; a++) {
     eqn = R_MOMENTUM1 + a;
-    if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-      f[a] = mp->momentum_source[a] * (pvf2 * rho_p + (1.0 - pvf2) * rho_f);
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+      f[a] = goma_ctx->fem.mp->momentum_source[a] * (pvf2 * rho_p + (1.0 - pvf2) * rho_f);
       /* For sensitivity of source to species.  The only
        * species that should be present here is the particle
        * phase.  */
-      for (j = 0; j < ei[pg->imtrx]->dof[MASS_FRACTION]; j++)
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MASS_FRACTION]; j++)
         /* MMH here, I switched from += to = (???) */
-        df->C[a][species][j] =
-            2.0 * p_vol_frac * delta_rho * mp->momentum_source[a] * bf[MASS_FRACTION]->phi[j];
+        df->C[a][species][j] = 2.0 * p_vol_frac * delta_rho * goma_ctx->fem.mp->momentum_source[a] *
+                               goma_ctx->fem.bf[MASS_FRACTION]->phi[j];
     }
   }
   return (status);
@@ -5989,18 +6092,18 @@ int suspension_pm_particle_momentum_source(
     dbl dfdv[DIM][DIM][MDE])      /* For velocity dependence */
 {
   int status = 1;
-  const int dim = pd->Num_Dim;
+  const int dim = goma_ctx->fem.pd->Num_Dim;
   int a, j;
   int eqn, species;
   dbl rho_f, rho_p, delta_rho;
   dbl p_vol_frac;
 
-  if (mp->DensityModel == SUSPENSION_PM) {
-    species = (int)mp->u_density[0];
-    rho_f = mp->u_density[1];
-    rho_p = mp->u_density[2];
+  if (goma_ctx->fem.mp->DensityModel == SUSPENSION_PM) {
+    species = (int)goma_ctx->fem.mp->u_density[0];
+    rho_f = goma_ctx->fem.mp->u_density[1];
+    rho_p = goma_ctx->fem.mp->u_density[2];
     delta_rho = rho_p - rho_f;
-    p_vol_frac = fv->c[species];
+    p_vol_frac = goma_ctx->fem.fv->c[species];
   } else {
     GOMA_EH(GOMA_ERROR,
             "MomentumSourceModel is SUSPENSION_PM, but DensityModel is not.\nThis is bad.");
@@ -6013,16 +6116,17 @@ int suspension_pm_particle_momentum_source(
    */
   for (a = 0; a < dim; a++) {
     eqn = R_PMOMENTUM1 + a;
-    if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-      f[a] = mp->momentum_source[a] * (p_vol_frac * (1.0 - p_vol_frac) * delta_rho);
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+      f[a] = goma_ctx->fem.mp->momentum_source[a] * (p_vol_frac * (1.0 - p_vol_frac) * delta_rho);
       /* For sensitivity of source to species.  The only
        * species that should be present here is the particle
        * phase.
        */
-      for (j = 0; j < ei[pg->imtrx]->dof[MASS_FRACTION]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MASS_FRACTION]; j++) {
         /* MMH: I changed this from += to = (??? what was += there for before?!) */
-        dfdC[a][species][j] = (1.0 - 2.0 * p_vol_frac) * delta_rho * mp->momentum_source[a] *
-                              bf[MASS_FRACTION]->phi[j];
+        dfdC[a][species][j] = (1.0 - 2.0 * p_vol_frac) * delta_rho *
+                              goma_ctx->fem.mp->momentum_source[a] *
+                              goma_ctx->fem.bf[MASS_FRACTION]->phi[j];
       }
     }
   }
@@ -6058,19 +6162,19 @@ int molten_glass_viscosity(dbl *vis,         /* Base FLOWING LIQUID VISCOITY  */
 
   /* Begin Execution */
 
-  AA = mp->u_FlowingLiquid_viscosity[0];
-  BB = mp->u_FlowingLiquid_viscosity[1];
-  CC = mp->u_FlowingLiquid_viscosity[2];
+  AA = goma_ctx->fem.mp->u_FlowingLiquid_viscosity[0];
+  BB = goma_ctx->fem.mp->u_FlowingLiquid_viscosity[1];
+  CC = goma_ctx->fem.mp->u_FlowingLiquid_viscosity[2];
 
   /************Initialize everything for safety**************/
 
   eqn = R_MOMENTUM1;
-  if (pd->e[pg->imtrx][eqn] & T_POROUS_BRINK) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_POROUS_BRINK) {
     *vis = 0.;
 
     if (dvis_dT != NULL) {
       var = TEMPERATURE;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         dvis_dT[j] = 0.;
       }
     }
@@ -6080,7 +6184,7 @@ int molten_glass_viscosity(dbl *vis,         /* Base FLOWING LIQUID VISCOITY  */
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T;
+  T = goma_ctx->fem.fv->T;
 
   /**********************************************************/
   *vis = pow(10.0, AA + BB / (T - CC));
@@ -6089,7 +6193,7 @@ int molten_glass_viscosity(dbl *vis,         /* Base FLOWING LIQUID VISCOITY  */
 
   if (dvis_dT != NULL) {
     var = TEMPERATURE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       dvis_dT[j] = -BB * exp(AA + BB / (T - CC)) / pow(T - CC, 2.0);
     }
   }
@@ -6142,7 +6246,7 @@ int epoxy_flowing_liquid_viscosity(dbl *vis, /* Base FLOWING LIQUID VISCOITY  */
 
   /******** Evaluate terms for viscosity *********/
 
-  alpha = fv->c[species]; /* extent of reaction */
+  alpha = goma_ctx->fem.fv->c[species]; /* extent of reaction */
 
   if (alpha < alpha_g) {
     ratio = (alpha_g) / (alpha_g - alpha);
@@ -6153,10 +6257,10 @@ int epoxy_flowing_liquid_viscosity(dbl *vis, /* Base FLOWING LIQUID VISCOITY  */
     exponent = A + B * alpha_g;
   }
 
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
   if (T <= 0.) {
@@ -6173,31 +6277,33 @@ int epoxy_flowing_liquid_viscosity(dbl *vis, /* Base FLOWING LIQUID VISCOITY  */
 
     /* d_flow_mu_dT */
     var = TEMPERATURE;
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       if (T <= 0.) {
-        mp->d_FlowingLiquid_viscosity[var] = 0.;
+        goma_ctx->fem.mp->d_FlowingLiquid_viscosity[var] = 0.;
       } else {
-        mp->d_FlowingLiquid_viscosity[var] = -mu * Aexp / (T * T);
+        goma_ctx->fem.mp->d_FlowingLiquid_viscosity[var] = -mu * Aexp / (T * T);
       }
 
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_flow_mu->T[j] = mp->d_FlowingLiquid_viscosity[var] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_flow_mu->T[j] =
+            goma_ctx->fem.mp->d_FlowingLiquid_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
 
     /* d_flow_mu_dC */
     var = MASS_FRACTION;
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       if (alpha < alpha_g) {
         deriv = exponent / (alpha_g - alpha) + B * log(ratio);
-        mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species] = mu * deriv;
+        goma_ctx->fem.mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species] = mu * deriv;
       } else {
         deriv = 0.0;
-        mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
+        goma_ctx->fem.mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
       }
 
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_flow_mu->C[species][j] = mp->d_FlowingLiquid_viscosity[var] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_flow_mu->C[species][j] =
+            goma_ctx->fem.mp->d_FlowingLiquid_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
   }
@@ -6237,13 +6343,15 @@ dbl solidification_permeability(dbl h_elem_avg, /* average element size */
   /* Begin Execution */
 
   /* this is the species that indicates solidification */
-  species = (int)mp->u_permeability[0];
+  species = (int)goma_ctx->fem.mp->u_permeability[0];
   /* viscosity of pure fluid */
-  mu0 = gn->mu0;
+  mu0 = goma_ctx->fem.gn->mu0;
 
-  if (gn->ConstitutiveEquation == SUSPENSION || gn->ConstitutiveEquation == CARREAU_SUSPENSION ||
-      gn->ConstitutiveEquation == POWERLAW_SUSPENSION || gn->ConstitutiveEquation == FILLED_EPOXY) {
-    maxpack = gn->maxpack;
+  if (goma_ctx->fem.gn->ConstitutiveEquation == SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == CARREAU_SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == POWERLAW_SUSPENSION ||
+      goma_ctx->fem.gn->ConstitutiveEquation == FILLED_EPOXY) {
+    maxpack = goma_ctx->fem.gn->maxpack;
   } else {
     maxpack = .68;
   }
@@ -6253,14 +6361,14 @@ dbl solidification_permeability(dbl h_elem_avg, /* average element size */
 
   maxpack = 1.;
 
-  vol = fv->c[species] / maxpack;
+  vol = goma_ctx->fem.fv->c[species] / maxpack;
 
   siz = 0.5 * h_elem_avg * h_elem_avg;
   if (vol > 0.999)
     vol = 0.999;
 
   eqn = R_MOMENTUM1;
-  if (pd->e[pg->imtrx][eqn] & T_POROUS_BRINK) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_POROUS_BRINK) {
     if (vol > 0.) {
       per = siz * (1. - vol) * (1. - vol) / (vol * (1.43 - vol)) / mu0;
     } else {
@@ -6272,16 +6380,17 @@ dbl solidification_permeability(dbl h_elem_avg, /* average element size */
 
   /* Now do sensitivies */
   var = MASS_FRACTION;
-  if (pd->v[pg->imtrx][var]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     if (vol > 0.) {
-      mp->d_permeability[MAX_VARIABLE_TYPES + species] =
+      goma_ctx->fem.mp->d_permeability[MAX_VARIABLE_TYPES + species] =
           siz * (1. - vol) / (vol * (1.43 - vol)) *
           (-2. - (1. - vol) / vol + (1. - vol) / (1.43 - vol)) / mu0 / maxpack;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_per_dc[species][j] = mp->d_permeability[MAX_VARIABLE_TYPES + species] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_per_dc[species][j] = goma_ctx->fem.mp->d_permeability[MAX_VARIABLE_TYPES + species] *
+                               goma_ctx->fem.bf[var]->phi[j];
       }
     } else {
-      mp->d_permeability[MAX_VARIABLE_TYPES + species] = 0.;
+      goma_ctx->fem.mp->d_permeability[MAX_VARIABLE_TYPES + species] = 0.;
     }
   }
 
@@ -6323,15 +6432,15 @@ int foam_species_source(double *param) {
 
   /* Begin Execution */
 
-  T = fv->T;
+  T = goma_ctx->fem.fv->T;
 
-  foam = fv->c[0];
-  gas = fv->c[1];
-  s1 = fv->c[2];
+  foam = goma_ctx->fem.fv->c[0];
+  gas = goma_ctx->fem.fv->c[1];
+  s1 = goma_ctx->fem.fv->c[2];
 
-  for (j = 0; j < pd->Num_Species; j++) {
-    if (fv->c[j] <= 1.e-10)
-      fv->c[j] = 1.e-10;
+  for (j = 0; j < goma_ctx->fem.pd->Num_Species; j++) {
+    if (goma_ctx->fem.fv->c[j] <= 1.e-10)
+      goma_ctx->fem.fv->c[j] = 1.e-10;
   }
 
   ext[0] = (1. - foam);
@@ -6392,29 +6501,29 @@ int foam_species_source(double *param) {
 
   /* Species piece , this is num_species+1 Jacobian */
   eqn = MASS_FRACTION;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    if (pd->e[imtrx][eqn] & T_SOURCE) {
-      mp->species_source[0] = -r1;
-      mp->species_source[1] = (0.3 * r1 + 0.943 * r2);
-      mp->species_source[2] = (0.7 * r1 - r2);
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (goma_ctx->fem.pd->e[imtrx][eqn] & T_SOURCE) {
+      goma_ctx->fem.mp->species_source[0] = -r1;
+      goma_ctx->fem.mp->species_source[1] = (0.3 * r1 + 0.943 * r2);
+      goma_ctx->fem.mp->species_source[2] = (0.7 * r1 - r2);
 
       /* Jacobian entries for source term */
 
-      mp->Jac_Species_Source[0] = -dr1_df;
-      mp->Jac_Species_Source[1] = -dr1_dg;
-      mp->Jac_Species_Source[2] = -dr1_ds1;
+      goma_ctx->fem.mp->Jac_Species_Source[0] = -dr1_df;
+      goma_ctx->fem.mp->Jac_Species_Source[1] = -dr1_dg;
+      goma_ctx->fem.mp->Jac_Species_Source[2] = -dr1_ds1;
 
-      mp->Jac_Species_Source[3] = 0.3 * dr1_df + 0.943 * dr2_df;
-      mp->Jac_Species_Source[4] = 0.3 * dr1_dg + 0.943 * dr2_dg;
-      mp->Jac_Species_Source[5] = 0.3 * dr1_ds1 + 0.943 * dr2_ds1;
+      goma_ctx->fem.mp->Jac_Species_Source[3] = 0.3 * dr1_df + 0.943 * dr2_df;
+      goma_ctx->fem.mp->Jac_Species_Source[4] = 0.3 * dr1_dg + 0.943 * dr2_dg;
+      goma_ctx->fem.mp->Jac_Species_Source[5] = 0.3 * dr1_ds1 + 0.943 * dr2_ds1;
 
-      mp->Jac_Species_Source[6] = 0.7 * dr1_df - dr2_df;
-      mp->Jac_Species_Source[7] = 0.7 * dr1_dg - dr2_dg;
-      mp->Jac_Species_Source[8] = 0.7 * dr1_ds1 - dr2_ds1;
+      goma_ctx->fem.mp->Jac_Species_Source[6] = 0.7 * dr1_df - dr2_df;
+      goma_ctx->fem.mp->Jac_Species_Source[7] = 0.7 * dr1_dg - dr2_dg;
+      goma_ctx->fem.mp->Jac_Species_Source[8] = 0.7 * dr1_ds1 - dr2_ds1;
 
-      mp->d_species_source[MAX_VARIABLE_TYPES + 0] = -dr1_dT;
-      mp->d_species_source[MAX_VARIABLE_TYPES + 1] = (0.3 * dr1_dT + 0.943 * dr2_dT);
-      mp->d_species_source[MAX_VARIABLE_TYPES + 2] = (0.7 * dr1_dT - dr2_dT);
+      goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] = -dr1_dT;
+      goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] = (0.3 * dr1_dT + 0.943 * dr2_dT);
+      goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 2] = (0.7 * dr1_dT - dr2_dT);
     }
   }
   return 0;
@@ -6470,38 +6579,40 @@ int electrode_species_source(int species_no, /* Current species number */
 
   /* Begin Execution */
 
-  mn = ei[pg->imtrx]
+  mn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
            ->mn; /* get region index: mn=1 for anode, mn=2 for cathode, mn=1 for separator */
-  PHI1 = fv->T;  /* Electrode potential solved using energy transport equation */
-  PHI2 = fv->V;  /* Electrolyte potential solved using charge conservation eq. */
+  PHI1 = goma_ctx->fem.fv->T; /* Electrode potential solved using energy transport equation */
+  PHI2 = goma_ctx->fem.fv->V; /* Electrolyte potential solved using charge conservation eq. */
   electrolyte_temperature(time, delta_t, 0); /* get electrolyte temperature at present time */
-  T = mp->electrolyte_temperature;
+  T = goma_ctx->fem.mp->electrolyte_temperature;
   FRT = F / R / T;
 
-  for (j = 0; j < pd->Num_Species_Eqn; j++) {
-    x[j] = fv->c[j];
+  for (j = 0; j < goma_ctx->fem.pd->Num_Species_Eqn; j++) {
+    x[j] = goma_ctx->fem.fv->c[j];
   }
 
   if (mn == 0) {
-    alphaa = mp->u_reaction_rate[0];
-    alphac = mp->u_reaction_rate[1];
+    alphaa = goma_ctx->fem.mp->u_reaction_rate[0];
+    alphac = goma_ctx->fem.mp->u_reaction_rate[1];
 
-    if (mp->InterfacialAreaModel == CONSTANT) {
-      ai0 = mp->interfacial_area;
-    } else if (mp->InterfacialAreaModel == THERMAL_BATTERY) {
+    if (goma_ctx->fem.mp->InterfacialAreaModel == CONSTANT) {
+      ai0 = goma_ctx->fem.mp->interfacial_area;
+    } else if (goma_ctx->fem.mp->InterfacialAreaModel == THERMAL_BATTERY) {
       GOMA_EH(GOMA_ERROR, "Non-constant interfacial-area model for anode awaits to be implemented");
     }
 
-    if (mp->ThermodynamicPotentialModel ==
+    if (goma_ctx->fem.mp->ThermodynamicPotentialModel ==
         LiSi) /* Calculate temperature-dependent thermodynamic potential for */
     {         /* Li(Si) anode; see SAND2000-0207 by Chen et al. 2000, p.18-19 */
-      util1 = mp->u_thermodynamic_potential[0];
-      util2 = mp->u_thermodynamic_potential[1];
-      La = mp->u_thermodynamic_potential[2]; /* anode thickness */
-      ea = mp->u_thermodynamic_potential[3]; /* anode porosity */
-      Va = mp->u_thermodynamic_potential[4]; /* molar volume of active anode material */
-      i = mp->u_thermodynamic_potential[5];  /* current density */
-      na = mp->u_thermodynamic_potential[6]; /* number of electrons involved in anode rxn */
+      util1 = goma_ctx->fem.mp->u_thermodynamic_potential[0];
+      util2 = goma_ctx->fem.mp->u_thermodynamic_potential[1];
+      La = goma_ctx->fem.mp->u_thermodynamic_potential[2]; /* anode thickness */
+      ea = goma_ctx->fem.mp->u_thermodynamic_potential[3]; /* anode porosity */
+      Va = goma_ctx->fem.mp
+               ->u_thermodynamic_potential[4]; /* molar volume of active anode material */
+      i = goma_ctx->fem.mp->u_thermodynamic_potential[5]; /* current density */
+      na = goma_ctx->fem.mp
+               ->u_thermodynamic_potential[6]; /* number of electrons involved in anode rxn */
       tau = na * La * ea * F / Va / i;
       util = time / tau;
 
@@ -6512,31 +6623,36 @@ int electrode_species_source(int species_no, /* Current species number */
       } else if (util > util2) {
         U0 = -0.0345 + 0.0001056 * T;
       }
-    } else if (mp->ThermodynamicPotentialModel == CONSTANT) /* Constant thermodynamic potential */
+    } else if (goma_ctx->fem.mp->ThermodynamicPotentialModel ==
+               CONSTANT) /* Constant thermodynamic potential */
     {
-      U0 = mp->thermodynamic_potential;
+      U0 = goma_ctx->fem.mp->thermodynamic_potential;
     }
 
     eta = PHI1 - PHI2 - U0; /* overpotential */
-    mp->species_source[0] = (ai0 / F) * x[0] * (exp(alphaa * FRT * eta) - exp(-alphac * FRT * eta));
-    mp->species_source[1] = 0.0; /* species 1 is being neither produced nor consumed */
-    mp->species_source[2] = 0.0; /* species 2 is being neither produced nor consumed */
+    goma_ctx->fem.mp->species_source[0] =
+        (ai0 / F) * x[0] * (exp(alphaa * FRT * eta) - exp(-alphac * FRT * eta));
+    goma_ctx->fem.mp->species_source[1] =
+        0.0; /* species 1 is being neither produced nor consumed */
+    goma_ctx->fem.mp->species_source[2] =
+        0.0; /* species 2 is being neither produced nor consumed */
   } else if (mn == 2) {
-    alphaa = mp->u_reaction_rate[0];
-    alphac = mp->u_reaction_rate[1];
+    alphaa = goma_ctx->fem.mp->u_reaction_rate[0];
+    alphac = goma_ctx->fem.mp->u_reaction_rate[1];
 
-    if (mp->InterfacialAreaModel == CONSTANT) {
-      ai0 = mp->interfacial_area;
-    } else if (mp->InterfacialAreaModel == THERMAL_BATTERY) {
-      ai00 = mp->u_interfacial_area[0];
-      util0 = mp->u_interfacial_area[1];
-      E = mp->u_interfacial_area[2] * 4.184; /* convert E from cal/mol-K to J/mol-k */
-      T0 = mp->u_interfacial_area[3];
-      Lc = mp->u_interfacial_area[4]; /* cathode thickness */
-      ec = mp->u_interfacial_area[5]; /* cathode porosity */
-      Vc = mp->u_interfacial_area[6]; /* molar volume of active cathode material */
-      i = mp->u_interfacial_area[7];  /* current density */
-      nc = mp->u_interfacial_area[8]; /* number of electrons invloved in cathode rxn */
+    if (goma_ctx->fem.mp->InterfacialAreaModel == CONSTANT) {
+      ai0 = goma_ctx->fem.mp->interfacial_area;
+    } else if (goma_ctx->fem.mp->InterfacialAreaModel == THERMAL_BATTERY) {
+      ai00 = goma_ctx->fem.mp->u_interfacial_area[0];
+      util0 = goma_ctx->fem.mp->u_interfacial_area[1];
+      E = goma_ctx->fem.mp->u_interfacial_area[2] * 4.184; /* convert E from cal/mol-K to J/mol-k */
+      T0 = goma_ctx->fem.mp->u_interfacial_area[3];
+      Lc = goma_ctx->fem.mp->u_interfacial_area[4]; /* cathode thickness */
+      ec = goma_ctx->fem.mp->u_interfacial_area[5]; /* cathode porosity */
+      Vc = goma_ctx->fem.mp->u_interfacial_area[6]; /* molar volume of active cathode material */
+      i = goma_ctx->fem.mp->u_interfacial_area[7];  /* current density */
+      nc =
+          goma_ctx->fem.mp->u_interfacial_area[8]; /* number of electrons invloved in cathode rxn */
       tau = nc * Lc * ec * F / Vc / i;
       util = time / tau;
       ER = E / R;
@@ -6547,17 +6663,19 @@ int electrode_species_source(int species_no, /* Current species number */
           "Variable interfacial-area model other than THERMAL_BATTERY awaits to be implemented");
     }
 
-    if (mp->ThermodynamicPotentialModel ==
+    if (goma_ctx->fem.mp->ThermodynamicPotentialModel ==
         FeS2) /* Calculate temperature-dependent thermodynamic potential for */
     {         /* FeS2 cathode; see SAND2000-0207 by Chen et al. 2000, p.19   */
-      util1 = mp->u_thermodynamic_potential[0];
-      util2 = mp->u_thermodynamic_potential[1];
-      util3 = mp->u_thermodynamic_potential[2];
-      Lc = mp->u_thermodynamic_potential[3]; /* cathode thickness */
-      ec = mp->u_thermodynamic_potential[4]; /* cathode porosity */
-      Vc = mp->u_thermodynamic_potential[5]; /* molar volume of active cathode material */
-      i = mp->u_thermodynamic_potential[6];  /* current density */
-      nc = mp->u_thermodynamic_potential[7]; /* number of electrons involved in cathode rxn */
+      util1 = goma_ctx->fem.mp->u_thermodynamic_potential[0];
+      util2 = goma_ctx->fem.mp->u_thermodynamic_potential[1];
+      util3 = goma_ctx->fem.mp->u_thermodynamic_potential[2];
+      Lc = goma_ctx->fem.mp->u_thermodynamic_potential[3]; /* cathode thickness */
+      ec = goma_ctx->fem.mp->u_thermodynamic_potential[4]; /* cathode porosity */
+      Vc = goma_ctx->fem.mp
+               ->u_thermodynamic_potential[5]; /* molar volume of active cathode material */
+      i = goma_ctx->fem.mp->u_thermodynamic_potential[6]; /* current density */
+      nc = goma_ctx->fem.mp
+               ->u_thermodynamic_potential[7]; /* number of electrons involved in cathode rxn */
       tau = nc * Lc * ec * F / Vc / i;
       util = time / tau;
 
@@ -6574,36 +6692,43 @@ int electrode_species_source(int species_no, /* Current species number */
       } else if (util > util3) {
         U0 = 1.43211 - 0.000147 * T;
       }
-    } else if (mp->ThermodynamicPotentialModel == CONSTANT) /* Constant thermodynamic potential */
+    } else if (goma_ctx->fem.mp->ThermodynamicPotentialModel ==
+               CONSTANT) /* Constant thermodynamic potential */
     {
-      U0 = mp->thermodynamic_potential;
+      U0 = goma_ctx->fem.mp->thermodynamic_potential;
     }
 
     eta = PHI1 - PHI2 - U0; /* overpotential */
-    mp->species_source[0] = (ai0 / F) * x[0] * (exp(alphaa * FRT * eta) - exp(-alphac * FRT * eta));
-    mp->species_source[1] = 0.0; /* species 1 is being neither produced nor consumed */
-    mp->species_source[2] = 0.0; /* species 2 is being neither produced nor consumed */
-  } else /* no electrochemical reactions take place in the separator region */
+    goma_ctx->fem.mp->species_source[0] =
+        (ai0 / F) * x[0] * (exp(alphaa * FRT * eta) - exp(-alphac * FRT * eta));
+    goma_ctx->fem.mp->species_source[1] =
+        0.0; /* species 1 is being neither produced nor consumed */
+    goma_ctx->fem.mp->species_source[2] =
+        0.0; /* species 2 is being neither produced nor consumed */
+  } else     /* no electrochemical reactions take place in the separator region */
   {
-    mp->species_source[0] = 0.0;
-    mp->species_source[1] = 0.0;
-    mp->species_source[2] = 0.0;
+    goma_ctx->fem.mp->species_source[0] = 0.0;
+    goma_ctx->fem.mp->species_source[1] = 0.0;
+    goma_ctx->fem.mp->species_source[2] = 0.0;
   }
 
   /* Sensitivities */
-  mp->d_species_source[MAX_VARIABLE_TYPES + 1] = 0.; /* wrt species # 2 */
+  goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] = 0.; /* wrt species # 2 */
   if (species_no == 1 || species_no == 2 || mn == 1) /* for separator region and species 2 & 3 */
   {
-    mp->d_species_source[MAX_VARIABLE_TYPES + 0] = 0.; /* wrt species # 1 */
-    mp->d_species_source[TEMPERATURE] = 0.;            /* wrt electrode potential */
-    mp->d_species_source[VOLTAGE] = 0.;                /* wrt electrolyte potential */
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] = 0.; /* wrt species # 1 */
+    goma_ctx->fem.mp->d_species_source[TEMPERATURE] = 0.;            /* wrt electrode potential */
+    goma_ctx->fem.mp->d_species_source[VOLTAGE] = 0.;                /* wrt electrolyte potential */
   } else /* for anode and cathode regions and when species_no = 0 */
   {
     eta = PHI1 - PHI2 - U0;
     sum = alphaa * exp(alphaa * FRT * eta) + alphac * exp(-alphac * FRT * eta);
-    mp->d_species_source[MAX_VARIABLE_TYPES + 0] = mp->species_source[0] / x[0]; /* wrt species 1 */
-    mp->d_species_source[TEMPERATURE] = (ai0 / F) * x[0] * FRT * sum; /* wrt electrode potential */
-    mp->d_species_source[VOLTAGE] = -mp->d_species_source[TEMPERATURE]; /* wrt electrolyte poten. */
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] =
+        goma_ctx->fem.mp->species_source[0] / x[0]; /* wrt species 1 */
+    goma_ctx->fem.mp->d_species_source[TEMPERATURE] =
+        (ai0 / F) * x[0] * FRT * sum; /* wrt electrode potential */
+    goma_ctx->fem.mp->d_species_source[VOLTAGE] =
+        -goma_ctx->fem.mp->d_species_source[TEMPERATURE]; /* wrt electrolyte poten. */
   }
 
   return (status);
@@ -6652,9 +6777,9 @@ int ion_reaction_source(int species_no) /* current species number */
   K3 = 4.5e-08;
 
   M_mix = 0.;
-  for (j = 0; j < pd->Num_Species; j++) {
-    x[j] = fv->c[j];
-    M_mix += x[j] * mp->molecular_weight[j];
+  for (j = 0; j < goma_ctx->fem.pd->Num_Species; j++) {
+    x[j] = goma_ctx->fem.fv->c[j];
+    M_mix += x[j] * goma_ctx->fem.mp->molecular_weight[j];
   }
   rho = density(NULL, 0.0); /*  RSL 6/22/02  */
   c = rho / M_mix;
@@ -6680,133 +6805,133 @@ int ion_reaction_source(int species_no) /* current species number */
   }
 
   eqn = MASS_FRACTION;
-  for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    if (pd->e[imtrx][eqn] & T_SOURCE) {
+  for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (goma_ctx->fem.pd->e[imtrx][eqn] & T_SOURCE) {
       switch (species_no) {
       case 0:
-        mp->species_source[species_no] = Q3;
+        goma_ctx->fem.mp->species_source[species_no] = Q3;
 
         var = TEMPERATURE;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[var] = 0.;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[var] = 0.;
         }
 
         var = MASS_FRACTION;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[MAX_VARIABLE_TYPES + 0] = dQ3dx0;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 1] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 2] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 3] = dQ3dx3;
-          mp->d_species_source[MAX_VARIABLE_TYPES + four] = dQ3dx4;
-          mp->d_species_source[MAX_VARIABLE_TYPES + five] = 0.;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] = dQ3dx0;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 2] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 3] = dQ3dx3;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + four] = dQ3dx4;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + five] = 0.;
         }
         break;
       case 1:
-        mp->species_source[species_no] = Q2;
+        goma_ctx->fem.mp->species_source[species_no] = Q2;
 
         var = TEMPERATURE;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[var] = 0.;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[var] = 0.;
         }
 
         var = MASS_FRACTION;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[MAX_VARIABLE_TYPES + 0] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 1] = dQ2dx1;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 2] = dQ2dx2;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 3] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + four] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + five] = dQ2dx5;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] = dQ2dx1;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 2] = dQ2dx2;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 3] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + four] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + five] = dQ2dx5;
         }
         break;
       case 2:
-        mp->species_source[species_no] = Q1 + Q2;
+        goma_ctx->fem.mp->species_source[species_no] = Q1 + Q2;
 
         var = TEMPERATURE;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[var] = 0.;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[var] = 0.;
         }
 
         var = MASS_FRACTION;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[MAX_VARIABLE_TYPES + 0] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 1] = dQ2dx1;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 2] = dQ1dx2 + dQ2dx2;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 3] = dQ1dx3;
-          mp->d_species_source[MAX_VARIABLE_TYPES + four] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + five] = dQ2dx5;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] = dQ2dx1;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 2] = dQ1dx2 + dQ2dx2;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 3] = dQ1dx3;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + four] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + five] = dQ2dx5;
         }
         break;
       case 3:
-        mp->species_source[species_no] = Q1 + Q3;
+        goma_ctx->fem.mp->species_source[species_no] = Q1 + Q3;
 
         var = TEMPERATURE;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[var] = 0.;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[var] = 0.;
         }
 
         var = MASS_FRACTION;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[MAX_VARIABLE_TYPES + 0] = dQ3dx0;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 1] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 2] = dQ1dx2;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 3] = dQ1dx3 + dQ3dx3;
-          mp->d_species_source[MAX_VARIABLE_TYPES + four] = dQ3dx4;
-          mp->d_species_source[MAX_VARIABLE_TYPES + five] = 0.;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] = dQ3dx0;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 2] = dQ1dx2;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 3] = dQ1dx3 + dQ3dx3;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + four] = dQ3dx4;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + five] = 0.;
         }
         break;
       case 4:
-        mp->species_source[species_no] = -Q3;
+        goma_ctx->fem.mp->species_source[species_no] = -Q3;
 
         var = TEMPERATURE;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[var] = 0.;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[var] = 0.;
         }
 
         var = MASS_FRACTION;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[MAX_VARIABLE_TYPES + 0] = -dQ3dx0;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 1] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 2] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 3] = -dQ3dx3;
-          mp->d_species_source[MAX_VARIABLE_TYPES + four] = -dQ3dx4;
-          mp->d_species_source[MAX_VARIABLE_TYPES + five] = 0.;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] = -dQ3dx0;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 2] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 3] = -dQ3dx3;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + four] = -dQ3dx4;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + five] = 0.;
         }
         break;
       case 5:
-        mp->species_source[species_no] = -Q2;
+        goma_ctx->fem.mp->species_source[species_no] = -Q2;
 
         var = TEMPERATURE;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[var] = 0.;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[var] = 0.;
         }
 
         var = MASS_FRACTION;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[MAX_VARIABLE_TYPES + 0] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 1] = -dQ2dx1;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 2] = -dQ2dx2;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 3] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + four] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + five] = -dQ2dx5;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] = -dQ2dx1;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 2] = -dQ2dx2;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 3] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + four] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + five] = -dQ2dx5;
         }
         break;
       case 6:
-        mp->species_source[species_no] = 0.;
+        goma_ctx->fem.mp->species_source[species_no] = 0.;
 
         var = TEMPERATURE;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[var] = 0.;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[var] = 0.;
         }
 
         var = MASS_FRACTION;
-        if (pd->v[pg->imtrx][var]) {
-          mp->d_species_source[MAX_VARIABLE_TYPES + 0] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 1] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 2] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + 3] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + four] = 0.;
-          mp->d_species_source[MAX_VARIABLE_TYPES + five] = 0.;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 2] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 3] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + four] = 0.;
+          goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + five] = 0.;
         }
         break;
       }
@@ -6845,12 +6970,12 @@ int electrolyte_temperature(double t,       /* present value of time */
   dbl Cp;    /* heat capacity of electrolyte in J/kg/K */
   dbl AhmCp; /* = 2Ah0/m/Cp with a unit of time */
 
-  T0 = mp->u_solution_temperature[0];
-  Ta = mp->u_solution_temperature[1];
-  A = mp->u_solution_temperature[2];
-  h0 = mp->u_solution_temperature[3];
-  m = mp->u_solution_temperature[4];
-  Cp = mp->u_solution_temperature[5];
+  T0 = goma_ctx->fem.mp->u_solution_temperature[0];
+  Ta = goma_ctx->fem.mp->u_solution_temperature[1];
+  A = goma_ctx->fem.mp->u_solution_temperature[2];
+  h0 = goma_ctx->fem.mp->u_solution_temperature[3];
+  m = goma_ctx->fem.mp->u_solution_temperature[4];
+  Cp = goma_ctx->fem.mp->u_solution_temperature[5];
 
   AhmCp = 2.0 * A * h0 / (m * Cp);
 
@@ -6860,8 +6985,9 @@ int electrolyte_temperature(double t,       /* present value of time */
   {
     if (t == 0.0 || t == delta_t) {
       t0 = delta_t;
-    } else if (t == tran->init_time || t == (tran->init_time + delta_t)) {
-      t0 = tran->init_time;
+    } else if (t == goma_ctx->fem.tran->init_time ||
+               t == (goma_ctx->fem.tran->init_time + delta_t)) {
+      t0 = goma_ctx->fem.tran->init_time;
     }
 #ifndef tflop
     if (t <= t0) {
@@ -6879,7 +7005,8 @@ int electrolyte_temperature(double t,       /* present value of time */
     }
     fclose(fp);
   } else if (print == 0) {
-    mp->electrolyte_temperature = T; /* put electrolyte temperature in the mp structure */
+    goma_ctx->fem.mp->electrolyte_temperature =
+        T; /* put electrolyte temperature in the mp structure */
   }
   return (status);
 }
@@ -7007,31 +7134,31 @@ int assemble_bond_evolution(double time, /* present time value */
   /*
    * Bail out fast if there's nothing to do...
    */
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (status);
   }
 
-  dim = ei[pg->imtrx]->ielem_dim;
+  dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
 
-  wt = fv->wt; /* Gauss point weight. */
+  wt = goma_ctx->fem.fv->wt; /* Gauss point weight. */
 
-  h3 = fv->h3; /* Differential volume element. */
+  h3 = goma_ctx->fem.fv->h3; /* Differential volume element. */
 
-  det_J = bf[eqn]->detJ;
+  det_J = goma_ctx->fem.bf[eqn]->detJ;
 
   memset(gamma_dot, 0, DIM * DIM * sizeof(dbl));
 
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
-      gamma_dot[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+      gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
 
-  nn = fv->nn;
-  if (pd->TimeIntegration != STEADY) {
-    nn_dot = fv_dot->nn;
+  nn = goma_ctx->fem.fv->nn;
+  if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+    nn_dot = goma_ctx->fem.fv_dot->nn;
   } else {
     nn_dot = 0.0;
   }
@@ -7040,14 +7167,14 @@ int assemble_bond_evolution(double time, /* present time value */
   if(nn < 1.e-5) nn = 0.;*/
   nn = MAX(nn, 0.);
 
-  k2 = gn->k2;
-  k1 = gn->k1;
+  k2 = goma_ctx->fem.gn->k2;
+  k1 = goma_ctx->fem.gn->k1;
 
-  n0 = gn->n0;
-  aexp = gn->pexp;
-  bexp = gn->qexp;
+  n0 = goma_ctx->fem.gn->n0;
+  aexp = goma_ctx->fem.gn->pexp;
+  bexp = goma_ctx->fem.gn->qexp;
 
-  diff_coef = gn->diff;
+  diff_coef = goma_ctx->fem.gn->diff;
 
   gterm_a = pow(gammadot + offset, aexp);
   gterm_b = pow(gammadot + offset, bexp);
@@ -7067,57 +7194,58 @@ int assemble_bond_evolution(double time, /* present time value */
    *          k2*(n0-n)*(shear-rate invariant)**b
    */
 
-  if (af->Assemble_Residual) {
-    peqn = upd->ep[pg->imtrx][eqn];
+  if (goma_ctx->fem.af->Assemble_Residual) {
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
     var = BOND_EVOLUTION;
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-      phi_i = bf[eqn]->phi[i];
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+      phi_i = goma_ctx->fem.bf[eqn]->phi[i];
       for (p = 0; p < VIM; p++) {
-        grad_phi_i[p] = bf[var]->grad_phi[i][p];
+        grad_phi_i[p] = goma_ctx->fem.bf[var]->grad_phi[i][p];
       }
 
       mass = 0.;
-      if (pd->TimeIntegration != STEADY) {
-        if (pd->e[pg->imtrx][eqn] & T_MASS) {
+      if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
           mass = nn_dot;
           mass *= phi_i * det_J * wt * h3;
-          mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+          mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
       advection = 0.;
-      if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
 
         for (p = 0; p < VIM; p++) {
-          advection += (fv->v[p] - fv_dot->x[p]) * fv->grad_nn[p];
+          advection +=
+              (goma_ctx->fem.fv->v[p] - goma_ctx->fem.fv_dot->x[p]) * goma_ctx->fem.fv->grad_nn[p];
         }
 
         advection *= phi_i * wt * det_J * h3;
-        advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+        advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
       }
 
       diffusion = 0.;
-      if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
         for (p = 0; p < VIM; p++) {
-          diffusion += grad_phi_i[p] * fv->grad_nn[p];
+          diffusion += grad_phi_i[p] * goma_ctx->fem.fv->grad_nn[p];
         }
         diffusion *= diff_coef * det_J * wt * h3;
-        diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+        diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
       }
 
       source = 0.;
-      if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
         if (DOUBLE_ZERO(nn)) {
           source = -k2 * (n0)*gterm_b;
           source *= phi_i * det_J * wt * h3;
-          source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+          source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
         } else {
           source = k1 * nn * gterm_a - k2 * (n0 - nn) * gterm_b;
           source *= phi_i * det_J * wt * h3;
-          source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+          source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
         }
       }
 
-      lec->R[LEC_R_INDEX(peqn, i)] += mass + advection + diffusion + source;
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += mass + advection + diffusion + source;
     }
   }
 
@@ -7125,13 +7253,13 @@ int assemble_bond_evolution(double time, /* present time value */
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
-    peqn = upd->ep[pg->imtrx][eqn];
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-      phi_i = bf[eqn]->phi[i];
+      phi_i = goma_ctx->fem.bf[eqn]->phi[i];
       for (p = 0; p < VIM; p++) {
-        grad_phi_i[p] = bf[eqn]->grad_phi[i][p];
+        grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
       }
 
       /*
@@ -7143,62 +7271,63 @@ int assemble_bond_evolution(double time, /* present time value */
        * J_nn_nn
        */
       var = BOND_EVOLUTION;
-      if (pd->v[pg->imtrx][var]) {
-        pvar = upd->vp[pg->imtrx][var];
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          phi_j = bf[var]->phi[j];
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          phi_j = goma_ctx->fem.bf[var]->phi[j];
           for (p = 0; p < VIM; p++) {
-            grad_phi_j[p] = bf[var]->grad_phi[j][p];
+            grad_phi_j[p] = goma_ctx->fem.bf[var]->grad_phi[j][p];
           }
 
           mass = 0.;
-          if (pd->TimeIntegration != STEADY) {
+          if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
             /*       printf("\t mass = %d and pd->TimeIntegration= %d \n", mass,
              * pd->TimeIntegration); */
-            if (pd->e[pg->imtrx][eqn] & T_MASS) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
               mass = (1. + 2. * tt) * phi_j / dt;
               /* printf("\t mass = %d and dt= %d and tt= %d\n", mass, dt, tt); */
 
               mass *= phi_i * det_J * wt * h3;
 
               /* printf("\t det_J = %d and wt= %d and h3= %d\n", det_J, wt, h3); */
-              mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+              mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
             }
           }
           /*  printf("finished mass term\n"); */
 
           advection = 0.;
-          if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
             for (p = 0; p < VIM; p++) {
-              advection += (fv->v[p] - fv_dot->x[p]) * grad_phi_j[p];
+              advection += (goma_ctx->fem.fv->v[p] - goma_ctx->fem.fv_dot->x[p]) * grad_phi_j[p];
             }
             advection *= phi_i * det_J * wt * h3;
-            advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+            advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
           }
 
           diffusion = 0.;
-          if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
             for (p = 0; p < VIM; p++) {
               diffusion += grad_phi_j[p] * grad_phi_i[p];
             }
             diffusion *= diff_coef * det_J * wt * h3;
-            diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+            diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
           }
 
           source = 0.;
-          if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
             if (DOUBLE_ZERO(nn)) {
               source = k2 * gterm_b * phi_j;
               source *= phi_i * det_J * wt * h3;
-              source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+              source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
             } else {
               source = (k1 * gterm_a + k2 * gterm_b) * phi_j;
               source *= phi_i * det_J * wt * h3;
-              source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+              source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
             }
           }
 
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass + advection + diffusion + source;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+              mass + advection + diffusion + source;
         }
       }
 
@@ -7207,38 +7336,39 @@ int assemble_bond_evolution(double time, /* present time value */
        */
       for (b = 0; b < VIM; b++) {
         var = VELOCITY1 + b;
-        if (pd->v[pg->imtrx][var]) {
-          pvar = upd->vp[pg->imtrx][var];
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            phi_j = bf[var]->phi[j];
-            grad_phi_j[b] = bf[var]->grad_phi[j][b];
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            phi_j = goma_ctx->fem.bf[var]->phi[j];
+            grad_phi_j[b] = goma_ctx->fem.bf[var]->grad_phi[j][b];
 
             mass = 0.;
 
             advection = 0.;
-            if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-              advection += phi_i * bf[var]->grad_phi[j][b] * fv->grad_nn[b];
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
+              advection +=
+                  phi_i * goma_ctx->fem.bf[var]->grad_phi[j][b] * goma_ctx->fem.fv->grad_nn[b];
               advection *= det_J * wt * h3;
-              advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+              advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
             }
 
             source = 0.;
-            if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
               if (DOUBLE_ZERO(nn)) {
                 source2 = k2 * (n0)*d_gterm_b;
                 source -= (source2)*d_gd_dv[b][j];
                 source *= phi_i * det_J * wt * h3;
-                source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
               } else {
                 source1 = k1 * nn * d_gterm_a;
                 source2 = k2 * (n0 - nn) * d_gterm_b;
                 source += (source1 - source2) * d_gd_dv[b][j];
                 source *= phi_i * det_J * wt * h3;
-                source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
               }
             }
 
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass + advection + source;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass + advection + source;
           }
         }
       }
@@ -7248,26 +7378,26 @@ int assemble_bond_evolution(double time, /* present time value */
        */
       for (b = 0; b < dim; b++) {
         var = MESH_DISPLACEMENT1 + b;
-        if (pd->v[pg->imtrx][var]) {
-          pvar = upd->vp[pg->imtrx][var];
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            phi_j = bf[var]->phi[j];
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-            dh3dmesh_bj = fv->dh3dq[b] * bf[var]->phi[j];
+            dh3dmesh_bj = goma_ctx->fem.fv->dh3dq[b] * goma_ctx->fem.bf[var]->phi[j];
 
-            d_det_J_dmeshbj = bf[eqn]->d_det_J_dm[b][j];
+            d_det_J_dmeshbj = goma_ctx->fem.bf[eqn]->d_det_J_dm[b][j];
 
             mass = 0.;
-            if (pd->TimeIntegration != STEADY) {
-              if (pd->e[pg->imtrx][eqn] & T_MASS) {
+            if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
                 mass += nn_dot;
                 mass *= phi_i * wt * (h3 * d_det_J_dmeshbj + dh3dmesh_bj * det_J);
-                mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+                mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
               }
             }
 
             advection = 0.;
-            if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
               /*
                * Four parts:
                *	Here, by "v" we mean "vconv" which is
@@ -7284,21 +7414,24 @@ int assemble_bond_evolution(double time, /* present time value */
 
               advection_a = 0.;
               for (p = 0; p < dim; p++) {
-                advection_a += (fv->v[p] - fv_dot->x[p]) * fv->d_grad_nn_dmesh[p][b][j];
+                advection_a += (goma_ctx->fem.fv->v[p] - goma_ctx->fem.fv_dot->x[p]) *
+                               goma_ctx->fem.fv->d_grad_nn_dmesh[p][b][j];
               }
               advection_a *= phi_i * h3 * det_J * wt;
 
               advection_b = 0.;
               for (p = 0; p < dim; p++) {
-                advection_b += (fv->v[p] - fv_dot->x[p]) * fv->grad_nn[p];
+                advection_b += (goma_ctx->fem.fv->v[p] - goma_ctx->fem.fv_dot->x[p]) *
+                               goma_ctx->fem.fv->grad_nn[p];
               }
               advection_b *= phi_i * h3 * d_det_J_dmeshbj * wt;
 
               advection_c = 0.;
-              if (pd->TimeIntegration != STEADY) {
-                if (pd->e[pg->imtrx][eqn] & T_MASS) {
+              if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+                if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
 
-                  advection_c -= bf[var]->phi[i] * (1 + 2. * tt) / dt * fv->grad_nn[b];
+                  advection_c -= goma_ctx->fem.bf[var]->phi[i] * (1 + 2. * tt) / dt *
+                                 goma_ctx->fem.fv->grad_nn[b];
 
                   advection_c *= phi_i * h3 * det_J * wt;
                 }
@@ -7306,51 +7439,53 @@ int assemble_bond_evolution(double time, /* present time value */
 
               advection_d = 0.;
               for (p = 0; p < dim; p++) {
-                advection_d += (fv->v[p] - fv_dot->x[p]) * fv->grad_nn[p];
+                advection_d += (goma_ctx->fem.fv->v[p] - goma_ctx->fem.fv_dot->x[p]) *
+                               goma_ctx->fem.fv->grad_nn[p];
               }
               advection_d *= phi_i * dh3dmesh_bj * det_J * wt;
 
               advection = advection_a + advection_b + advection_c + advection_d;
 
-              advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+              advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
             }
 
             diffusion = 0.;
-            if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
               diff_a = 0.;
               for (p = 0; p < dim; p++) {
-                dgrad_phi_i_dmesh[p] = bf[eqn]->d_grad_phi_dmesh[i][p][b][j];
+                dgrad_phi_i_dmesh[p] = goma_ctx->fem.bf[eqn]->d_grad_phi_dmesh[i][p][b][j];
 
-                diff_a += dgrad_phi_i_dmesh[p] * fv->grad_nn[p];
+                diff_a += dgrad_phi_i_dmesh[p] * goma_ctx->fem.fv->grad_nn[p];
               }
               diff_a *= det_J * h3 * wt;
 
               diff_b = 0.;
               for (p = 0; p < VIM; p++) {
-                diff_b += fv->d_grad_nn_dmesh[p][b][j] * grad_phi_i[p];
+                diff_b += goma_ctx->fem.fv->d_grad_nn_dmesh[p][b][j] * grad_phi_i[p];
               }
               diff_b *= det_J * h3 * wt;
 
               diff_c = 0.;
               for (p = 0; p < dim; p++) {
-                diff_c += grad_phi_i[p] * fv->grad_nn[p];
+                diff_c += grad_phi_i[p] * goma_ctx->fem.fv->grad_nn[p];
               }
               diff_c *= d_det_J_dmeshbj * h3 * wt;
 
               diff_d = 0.;
               for (p = 0; p < dim; p++) {
-                diff_d += grad_phi_i[p] * fv->grad_nn[p];
+                diff_d += grad_phi_i[p] * goma_ctx->fem.fv->grad_nn[p];
               }
               diff_d *= det_J * dh3dmesh_bj * wt;
 
               diffusion = diff_a + diff_b + diff_c + diff_d;
 
-              diffusion *= diff_coef * pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+              diffusion *=
+                  diff_coef * goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
             }
 
             source = 0.;
 
-            if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
               if (nn <= 0.) {
                 source2 = k2 * (n0 - nn) * gterm_b;
 
@@ -7359,7 +7494,8 @@ int assemble_bond_evolution(double time, /* present time value */
                 source -= (source2) * (d_det_J_dmeshbj * h3 + det_J * dh3dmesh_bj) +
                           (d_source2)*d_gd_dmesh[b][j] * h3 * det_J;
 
-                source *= phi_i * wt * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                source *=
+                    phi_i * wt * goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
               } else {
                 source1 = k1 * nn * gterm_a;
                 source2 = k2 * (n0 - nn) * gterm_b;
@@ -7370,11 +7506,13 @@ int assemble_bond_evolution(double time, /* present time value */
                 source += (source1 - source2) * (d_det_J_dmeshbj * h3 + det_J * dh3dmesh_bj) +
                           (d_source1 - d_source2) * d_gd_dmesh[b][j] * h3 * det_J;
 
-                source *= phi_i * wt * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                source *=
+                    phi_i * wt * goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
               }
             }
 
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass + advection + diffusion + source;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                mass + advection + diffusion + source;
           }
         }
       }
@@ -7420,8 +7558,8 @@ static void cal_current_density(double x[],           /* global nodal solution v
   double xw_acc, xe_acc;            /* locations of acc and its neighbor */
   double xw_ccc, xe_ccc;            /* locations of ccc and its neighbor */
 
-  sigma_anode = mp_glob[0]->thermal_conductivity;   /* anode conductivity, S/cm*/
-  sigma_cathode = mp_glob[2]->thermal_conductivity; /* cathode conductivity, S/cm */
+  sigma_anode = goma_ctx->fem.mp_glob[0]->thermal_conductivity;   /* anode conductivity, S/cm*/
+  sigma_cathode = goma_ctx->fem.mp_glob[2]->thermal_conductivity; /* cathode conductivity, S/cm */
 
   nsw_acc = nsID[0];
   nse_acc = nsID[1];
@@ -7435,10 +7573,10 @@ static void cal_current_density(double x[],           /* global nodal solution v
   if (nodew_acc == -1 || nodee_acc == -1 || nodew_ccc == -1 || nodee_ccc == -1)
     return;
 
-  idx_PHI1w_acc = Index_Solution(nodew_acc, TEMPERATURE, 0, 0, -1, pg->imtrx);
-  idx_PHI1e_acc = Index_Solution(nodee_acc, TEMPERATURE, 0, 0, -1, pg->imtrx);
-  idx_PHI1w_ccc = Index_Solution(nodew_ccc, TEMPERATURE, 0, 0, -1, pg->imtrx);
-  idx_PHI1e_ccc = Index_Solution(nodee_ccc, TEMPERATURE, 0, 0, -1, pg->imtrx);
+  idx_PHI1w_acc = Index_Solution(nodew_acc, TEMPERATURE, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+  idx_PHI1e_acc = Index_Solution(nodee_acc, TEMPERATURE, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+  idx_PHI1w_ccc = Index_Solution(nodew_ccc, TEMPERATURE, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+  idx_PHI1e_ccc = Index_Solution(nodee_ccc, TEMPERATURE, 0, 0, -1, goma_ctx->fem.pg->imtrx);
 
   if (idx_PHI1w_acc == -1 || idx_PHI1e_acc == -1 || idx_PHI1w_ccc == -1 || idx_PHI1e_ccc == -1)
     return;
@@ -7456,7 +7594,7 @@ static void cal_current_density(double x[],           /* global nodal solution v
   i_ccc = -sigma_cathode * ((PHI1e_ccc - PHI1w_ccc) / (xe_ccc - xw_ccc));
 
   electrolyte_temperature(time, delta_t, 0); /* get cell temperature */
-  T = mp->electrolyte_temperature;
+  T = goma_ctx->fem.mp->electrolyte_temperature;
 
   local_value[0] = i_acc; /* return anode current density to rf_solve.c */
   local_value[1] = i_ccc; /* return cathode current density to rf_solve.c */
@@ -7512,17 +7650,17 @@ int etching_KOH_source(int wspec,     /* Current species number */
 
   /* Get mass concentration of each species
      Mass concentration unit is g/cm^3 */
-  double rho_H2O = fv->c[0];
-  double rho_KOH = fv->c[1];
+  double rho_H2O = goma_ctx->fem.fv->c[0];
+  double rho_KOH = goma_ctx->fem.fv->c[1];
 
   /* Area fraction, read from external field when available */
   double a_frac = 1.0;
   int i_ext_field = -1;
-  if ((efv->ev) && (mp->SpeciesSourceModel[wspec] == ETCHING_KOH_EXT)) {
-    i_ext_field = mp->species_source_external_field_index;
+  if ((goma_ctx->fem.efv->ev) && (goma_ctx->fem.mp->SpeciesSourceModel[wspec] == ETCHING_KOH_EXT)) {
+    i_ext_field = goma_ctx->fem.mp->species_source_external_field_index;
     if (i_ext_field < 0)
       GOMA_EH(-1, "Trouble getting external field index in ETCHING_KOH_EXT");
-    a_frac = fv->external_field[i_ext_field];
+    a_frac = goma_ctx->fem.fv->external_field[i_ext_field];
   }
 
   /* Right now it only handles KOH wet etching on plane 100 of crystalline silicon*/
@@ -7531,55 +7669,59 @@ int etching_KOH_source(int wspec,     /* Current species number */
   /* Export it to mp->species_source, depending on their stochiometric coefficient */
   switch (wspec) {
   case 0: /* Water */
-    mp->species_source[wspec] = a_frac * 2.0 * rho_bulk_Si / MW_Si * MW_H2O * etch_rate;
+    goma_ctx->fem.mp->species_source[wspec] =
+        a_frac * 2.0 * rho_bulk_Si / MW_Si * MW_H2O * etch_rate;
     break;
 
   case 1: /* OH */
-    mp->species_source[wspec] = a_frac * 2.0 * rho_bulk_Si / MW_Si * MW_OH * etch_rate;
+    goma_ctx->fem.mp->species_source[wspec] =
+        a_frac * 2.0 * rho_bulk_Si / MW_Si * MW_OH * etch_rate;
     break;
 
   case 2: /* H2 */
-    mp->species_source[wspec] = a_frac * -2.0 * rho_bulk_Si / MW_Si * MW_H2 * etch_rate;
+    goma_ctx->fem.mp->species_source[wspec] =
+        a_frac * -2.0 * rho_bulk_Si / MW_Si * MW_H2 * etch_rate;
     break;
 
   case 3: /* SiO2OH2 */
-    mp->species_source[wspec] = a_frac * -1.0 * rho_bulk_Si / MW_Si * MW_SiO2OH2 * etch_rate;
+    goma_ctx->fem.mp->species_source[wspec] =
+        a_frac * -1.0 * rho_bulk_Si / MW_Si * MW_SiO2OH2 * etch_rate;
     break;
   }
 
   /* Export sensitivity to mp->d_species_source */
   switch (wspec) {
   case 0: /* Water */
-    mp->d_species_source[MAX_VARIABLE_TYPES + 0] =
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] =
         a_frac * 2.0 * rho_bulk_Si / MW_Si * MW_H2O * d_etch_rate_d_C[0];
-    mp->d_species_source[MAX_VARIABLE_TYPES + 1] =
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] =
         a_frac * 2.0 * rho_bulk_Si / MW_Si * MW_H2O * d_etch_rate_d_C[1];
     break;
 
   case 1: /* KOH */
-    mp->d_species_source[MAX_VARIABLE_TYPES + 0] =
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] =
         a_frac * 2.0 * rho_bulk_Si / MW_Si * MW_OH * d_etch_rate_d_C[0];
-    mp->d_species_source[MAX_VARIABLE_TYPES + 1] =
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] =
         a_frac * 2.0 * rho_bulk_Si / MW_Si * MW_OH * d_etch_rate_d_C[1];
     break;
 
   case 2: /* H2 */
-    mp->d_species_source[MAX_VARIABLE_TYPES + 0] =
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] =
         a_frac * -2.0 * rho_bulk_Si / MW_Si * MW_H2 * d_etch_rate_d_C[0];
-    mp->d_species_source[MAX_VARIABLE_TYPES + 1] =
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] =
         a_frac * -2.0 * rho_bulk_Si / MW_Si * MW_H2 * d_etch_rate_d_C[1];
     break;
 
   case 3: /* SiO2OH2 */
-    mp->d_species_source[MAX_VARIABLE_TYPES + 0] =
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 0] =
         a_frac * -1.0 * rho_bulk_Si / MW_Si * MW_SiO2OH2 * d_etch_rate_d_C[0];
-    mp->d_species_source[MAX_VARIABLE_TYPES + 1] =
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 1] =
         a_frac * -1.0 * rho_bulk_Si / MW_Si * MW_SiO2OH2 * d_etch_rate_d_C[1];
     break;
   }
 
-  mp->d_species_source[MAX_VARIABLE_TYPES + 2] = 0.0;
-  mp->d_species_source[MAX_VARIABLE_TYPES + 3] = 0.0;
+  goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 2] = 0.0;
+  goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + 3] = 0.0;
 
   return 0;
 
@@ -7637,7 +7779,7 @@ double calc_KOH_Si_etch_rate_100(double rho_H2O,            /* Concentration of 
   double E_a = 0.595;
 
   /* Temperature in K */
-  double T = upd->Process_Temperature;
+  double T = goma_ctx->fem.upd->Process_Temperature;
 
   /* Rate constant in (micron/hr) (mole/liter)^-4.25  */
   double k0 = 2480.0;

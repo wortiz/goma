@@ -143,17 +143,17 @@ int beer_belly(void) {
   struct Basis_Functions *MapBf;
   size_t v_length;
   dbl f, g, sum;
-  int imtrx = upd->matrix_index[pd->ShapeVar];
+  int imtrx = goma_ctx->fem.upd->matrix_index[goma_ctx->fem.pd->ShapeVar];
 
   static int is_initialized = FALSE;
   static int elem_blk_id_save = -123;
 
-  dim = ei[imtrx]->ielem_dim;
-  pdim = pd->Num_Dim;
-  int elem_type = ei[imtrx]->ielem_type;
+  dim = goma_ctx->fem.ei[imtrx]->ielem_dim;
+  pdim = goma_ctx->fem.pd->Num_Dim;
+  int elem_type = goma_ctx->fem.ei[imtrx]->ielem_type;
   int elem_shape = type2shape(elem_type);
 
-  ShapeVar = pd->ShapeVar;
+  ShapeVar = goma_ctx->fem.pd->ShapeVar;
 
   /* If this is a shell element, it may be a deforming mesh
    * even if there are no mesh equations on the shell block.
@@ -162,18 +162,20 @@ int beer_belly(void) {
    * any neighboring bulk block.
    */
 
-  if (pd->gv[MESH_DISPLACEMENT1]) {
-    DeformingMesh = ei[upd->matrix_index[MESH_DISPLACEMENT1]]->deforming_mesh;
+  if (goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1]) {
+    DeformingMesh =
+        goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[MESH_DISPLACEMENT1]]->deforming_mesh;
   } else {
-    DeformingMesh = ei[imtrx]->deforming_mesh;
+    DeformingMesh = goma_ctx->fem.ei[imtrx]->deforming_mesh;
   }
 
-  if ((si = in_list(pd->IntegrationMap, 0, Num_Interpolations, Unique_Interpolations)) == -1) {
+  if ((si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, Num_Interpolations,
+                    Unique_Interpolations)) == -1) {
     GOMA_EH(GOMA_ERROR, "Seems to be a problem finding the IntegrationMap interpolation.");
   }
-  MapBf = bfd[si];
+  MapBf = goma_ctx->fem.bfd[si];
 
-  mdof = ei[imtrx]->dof[ShapeVar];
+  mdof = goma_ctx->fem.ei[imtrx]->dof[ShapeVar];
 
   if (MapBf->interpolation == I_N1) {
     mdof = MapBf->shape_dof;
@@ -184,29 +186,29 @@ int beer_belly(void) {
    * initialize appropriate arrays...
    */
 
-  if (ei[imtrx]->elem_blk_id != elem_blk_id_save) {
+  if (goma_ctx->fem.ei[imtrx]->elem_blk_id != elem_blk_id_save) {
     is_initialized = FALSE;
   }
 
   for (t = 0; t < Num_Basis_Functions; t++) {
-    bfd[t]->detJ = 0.0;
+    goma_ctx->fem.bfd[t]->detJ = 0.0;
     v_length = DIM * DIM * sizeof(double);
-    memset(&(bfd[t]->J[0][0]), 0, v_length);
-    memset(&(bfd[t]->B[0][0]), 0, v_length);
+    memset(&(goma_ctx->fem.bfd[t]->J[0][0]), 0, v_length);
+    memset(&(goma_ctx->fem.bfd[t]->B[0][0]), 0, v_length);
 
     if (DeformingMesh && !is_initialized) {
       v_length = DIM * MDE * sizeof(double);
-      memset(&(bfd[t]->d_det_J_dm[0][0]), 0, v_length);
+      memset(&(goma_ctx->fem.bfd[t]->d_det_J_dm[0][0]), 0, v_length);
 
       v_length = DIM * DIM * DIM * MDE * sizeof(double);
-      memset(&(bfd[t]->dJ[0][0][0][0]), 0, v_length);
-      memset(&(bfd[t]->dB[0][0][0][0]), 0, v_length);
+      memset(&(goma_ctx->fem.bfd[t]->dJ[0][0][0][0]), 0, v_length);
+      memset(&(goma_ctx->fem.bfd[t]->dB[0][0][0][0]), 0, v_length);
     }
   }
 
   if (!is_initialized) {
     is_initialized = TRUE;
-    elem_blk_id_save = ei[imtrx]->elem_blk_id;
+    elem_blk_id_save = goma_ctx->fem.ei[imtrx]->elem_blk_id;
   }
 
   /*
@@ -218,8 +220,8 @@ int beer_belly(void) {
    * parametrically...
    */
   for (i = 0; i < VIM; i++) {
-    fv->x[i] = 0.;
-    fv_old->x[i] = 0.;
+    goma_ctx->fem.fv->x[i] = 0.;
+    goma_ctx->fem.fv_old->x[i] = 0.;
   }
 
   /*
@@ -228,26 +230,34 @@ int beer_belly(void) {
    */
   for (i = 0; i < pdim; i++) {
     if (DeformingMesh) {
-      for (k = 0; k < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; k++) {
-        node = ei[upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
+      for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
+           k++) {
+        node = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
 
         index = goma_ctx->mesh.proc_elem_connect
-                    [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
+                    [goma_ctx->mesh.proc_connect_ptr
+                         [goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->ielem] +
+                     node];
 
-        fv->x[i] += (goma_ctx->mesh.coor[i][index] + *esp->d[i][k]) * bf[R_MESH1]->phi[k];
+        goma_ctx->fem.fv->x[i] += (goma_ctx->mesh.coor[i][index] + *goma_ctx->fem.esp->d[i][k]) *
+                                  goma_ctx->fem.bf[R_MESH1]->phi[k];
 
-        fv_old->x[i] += (goma_ctx->mesh.coor[i][index] + *esp_old->d[i][k]) * bf[R_MESH1]->phi[k];
+        goma_ctx->fem.fv_old->x[i] +=
+            (goma_ctx->mesh.coor[i][index] + *goma_ctx->fem.esp_old->d[i][k]) *
+            goma_ctx->fem.bf[R_MESH1]->phi[k];
       }
     } else {
       for (k = 0; k < mdof; k++) {
-        node = MapBf->interpolation == I_N1 ? k : ei[imtrx]->dof_list[ShapeVar][k];
+        node = MapBf->interpolation == I_N1 ? k : goma_ctx->fem.ei[imtrx]->dof_list[ShapeVar][k];
 
-        index = goma_ctx->mesh
-                    .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[imtrx]->ielem] + node];
+        index =
+            goma_ctx->mesh
+                .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[goma_ctx->fem.ei[imtrx]->ielem] +
+                                   node];
 
-        fv->x[i] += goma_ctx->mesh.coor[i][index] * MapBf->phi[k];
+        goma_ctx->fem.fv->x[i] += goma_ctx->mesh.coor[i][index] * MapBf->phi[k];
 
-        fv_old->x[i] = fv->x[i];
+        goma_ctx->fem.fv_old->x[i] = goma_ctx->fem.fv->x[i];
       }
     }
   }
@@ -260,22 +270,25 @@ int beer_belly(void) {
   for (i = 0; i < dim; i++) {
     for (j = 0; j < pdim; j++) {
       if (DeformingMesh) {
-        for (k = 0; k < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; k++) {
-          node = ei[upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
+        for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
+             k++) {
+          node = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
 
-          index =
-              goma_ctx->mesh.proc_elem_connect
-                  [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
+          index = goma_ctx->mesh.proc_elem_connect
+                      [goma_ctx->mesh.proc_connect_ptr
+                           [goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->ielem] +
+                       node];
 
-          MapBf->J[i][j] +=
-              (goma_ctx->mesh.coor[j][index] + *esp->d[j][k]) * bf[R_MESH1]->dphidxi[k][i];
+          MapBf->J[i][j] += (goma_ctx->mesh.coor[j][index] + *goma_ctx->fem.esp->d[j][k]) *
+                            goma_ctx->fem.bf[R_MESH1]->dphidxi[k][i];
         }
       } else {
         for (k = 0; k < mdof; k++) {
-          node = MapBf->interpolation == I_N1 ? k : ei[imtrx]->dof_list[ShapeVar][k];
-          index = goma_ctx->mesh
-                      .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[imtrx]->ielem] + node];
-          MapBf->J[i][j] += goma_ctx->mesh.coor[j][index] * bf[ShapeVar]->dphidxi[k][i];
+          node = MapBf->interpolation == I_N1 ? k : goma_ctx->fem.ei[imtrx]->dof_list[ShapeVar][k];
+          index = goma_ctx->mesh.proc_elem_connect
+                      [goma_ctx->mesh.proc_connect_ptr[goma_ctx->fem.ei[imtrx]->ielem] + node];
+          MapBf->J[i][j] +=
+              goma_ctx->mesh.coor[j][index] * goma_ctx->fem.bf[ShapeVar]->dphidxi[k][i];
         }
       }
     }
@@ -291,7 +304,7 @@ int beer_belly(void) {
     if (t != si) {
       for (i = 0; i < dim; i++) {
         for (j = 0; j < pdim; j++) {
-          bfd[t]->J[i][j] = MapBf->J[i][j];
+          goma_ctx->fem.bfd[t]->J[i][j] = MapBf->J[i][j];
         }
       }
     }
@@ -316,11 +329,13 @@ int beer_belly(void) {
    * There are problems that depend on the rightmost column being the values
    * computed above, so use this block with caution.
    */
-  if (elem_shape == SHELL || elem_shape == TRISHELL || (mp->ehl_integration_kind == SIK_S)) {
+  if (elem_shape == SHELL || elem_shape == TRISHELL ||
+      (goma_ctx->fem.mp->ehl_integration_kind == SIK_S)) {
     dim++;
     for (t = 0; t < Num_Basis_Functions; t++) {
       for (j = 0; j < pdim; j++) {
-        bfd[t]->J[pd->Num_Dim - 1][j] = MapBf->J[pd->Num_Dim - 1][j] = (j + 1) * 1.0;
+        goma_ctx->fem.bfd[t]->J[goma_ctx->fem.pd->Num_Dim - 1][j] =
+            MapBf->J[goma_ctx->fem.pd->Num_Dim - 1][j] = (j + 1) * 1.0;
       }
     }
 
@@ -328,13 +343,13 @@ int beer_belly(void) {
      *didn't screw things up. Note that the detJ in the shell case can be
      *negative, but it is important to point out that we are not using it for
      *for integration, but only as a crutch for inversion of J */
-    if (pd->Num_Dim == 3) {
+    if (goma_ctx->fem.pd->Num_Dim == 3) {
       MapBf->detJ =
           MapBf->J[0][0] * (MapBf->J[1][1] * MapBf->J[2][2] - MapBf->J[1][2] * MapBf->J[2][1]) -
           MapBf->J[0][1] * (MapBf->J[1][0] * MapBf->J[2][2] - MapBf->J[2][0] * MapBf->J[1][2]) +
           MapBf->J[0][2] * (MapBf->J[1][0] * MapBf->J[2][1] - MapBf->J[2][0] * MapBf->J[1][1]);
     }
-    if (pd->Num_Dim == 2) {
+    if (goma_ctx->fem.pd->Num_Dim == 2) {
       MapBf->detJ = MapBf->J[0][0] * MapBf->J[1][1] - MapBf->J[0][1] * MapBf->J[1][0];
     }
 
@@ -374,11 +389,14 @@ int beer_belly(void) {
 
     if (DeformingMesh) {
       for (j = 0; j < pdim; j++) {
-        for (k = 0; k < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; k++) {
-          MapBf->dJ[0][j][j][k] = bf[R_MESH1]->dphidxi[k][0];
-          MapBf->d_det_J_dm[j][k] = bf[R_MESH1]->dphidxi[k][0] * MapBf->J[0][j] / MapBf->detJ;
+        for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
+             k++) {
+          MapBf->dJ[0][j][j][k] = goma_ctx->fem.bf[R_MESH1]->dphidxi[k][0];
+          MapBf->d_det_J_dm[j][k] =
+              goma_ctx->fem.bf[R_MESH1]->dphidxi[k][0] * MapBf->J[0][j] / MapBf->detJ;
           if (fabs(MapBf->J[0][j]) > DBL_SMALL) {
-            MapBf->dB[j][0][j][k] = -bf[R_MESH1]->dphidxi[k][0] / (MapBf->J[0][j] * MapBf->J[0][j]);
+            MapBf->dB[j][0][j][k] =
+                -goma_ctx->fem.bf[R_MESH1]->dphidxi[k][0] / (MapBf->J[0][j] * MapBf->J[0][j]);
             // MapBf->dB[0][j] [j][k] = -bf[R_MESH1]->dphidxi[k][0]
             //	/ (MapBf->J[0][j] * MapBf->J[0][j]);
           }
@@ -388,7 +406,7 @@ int beer_belly(void) {
     break;
 
   case 2:
-    dim = ei[pg->imtrx]->ielem_dim;
+    dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
     MapBf->detJ = MapBf->J[0][0] * MapBf->J[1][1] - MapBf->J[0][1] * MapBf->J[1][0];
 
     MapBf->B[0][0] = MapBf->J[1][1] / MapBf->detJ;
@@ -404,8 +422,9 @@ int beer_belly(void) {
     if (DeformingMesh) {
       for (i = 0; i < dim; i++) {
         for (j = 0; j < pdim; j++) {
-          for (n = 0; n < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; n++) {
-            MapBf->dJ[i][j][j][n] = bf[R_MESH1]->dphidxi[n][i];
+          for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
+               n++) {
+            MapBf->dJ[i][j][j][n] = goma_ctx->fem.bf[R_MESH1]->dphidxi[n][i];
           }
         }
       }
@@ -417,7 +436,8 @@ int beer_belly(void) {
        */
 
       for (k = 0; k < pdim; k++) {
-        for (n = 0; n < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; n++) {
+        for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
+             n++) {
           MapBf->d_det_J_dm[k][n] =
               MapBf->dJ[0][0][k][n] * MapBf->J[1][1] + MapBf->J[0][0] * MapBf->dJ[1][1][k][n] -
               MapBf->dJ[0][1][k][n] * MapBf->J[1][0] - MapBf->J[0][1] * MapBf->dJ[1][0][k][n];
@@ -433,7 +453,8 @@ int beer_belly(void) {
       f = 1. / (MapBf->detJ);
 
       for (k = 0; k < pdim; k++) {
-        for (n = 0; n < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; n++) {
+        for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
+             n++) {
           g = -(f * f) * MapBf->d_det_J_dm[k][n];
           MapBf->dB[0][0][k][n] = MapBf->dJ[1][1][k][n] * f + MapBf->J[1][1] * g;
 
@@ -451,7 +472,7 @@ int beer_belly(void) {
   case 3:
 
     /* Now that we are here, reset dim for the shell case */
-    dim = ei[imtrx]->ielem_dim;
+    dim = goma_ctx->fem.ei[imtrx]->ielem_dim;
 
     MapBf->detJ =
         MapBf->J[0][0] * (MapBf->J[1][1] * MapBf->J[2][2] - MapBf->J[1][2] * MapBf->J[2][1]) -
@@ -493,8 +514,9 @@ int beer_belly(void) {
 
       for (i = 0; i < dim; i++) {
         for (j = 0; j < pdim; j++) {
-          for (n = 0; n < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; n++) {
-            MapBf->dJ[i][j][j][n] = bf[R_MESH1]->dphidxi[n][i];
+          for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
+               n++) {
+            MapBf->dJ[i][j][j][n] = goma_ctx->fem.bf[R_MESH1]->dphidxi[n][i];
           }
         }
       }
@@ -542,7 +564,8 @@ int beer_belly(void) {
       f = 1. / (MapBf->detJ);
 
       for (k = 0; k < pdim; k++) {
-        for (n = 0; n < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; n++) {
+        for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
+             n++) {
           g = -(f * f) * MapBf->d_det_J_dm[k][n];
 
           MapBf->dB[0][0][k][n] =
@@ -612,18 +635,20 @@ int beer_belly(void) {
 
   for (t = 0; t < Num_Basis_Functions; t++) {
     if (t != si) {
-      bfd[t]->detJ = MapBf->detJ;
+      goma_ctx->fem.bfd[t]->detJ = MapBf->detJ;
       for (i = 0; i < pdim; i++) {
         for (j = 0; j < pdim; j++) {
-          bfd[t]->B[i][j] = MapBf->B[i][j];
+          goma_ctx->fem.bfd[t]->B[i][j] = MapBf->B[i][j];
 
           if (DeformingMesh) {
             for (k = 0; k < pdim; k++) {
-              for (n = 0; n < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; n++) {
-                bfd[t]->d_det_J_dm[k][n] = MapBf->d_det_J_dm[k][n];
+              for (n = 0;
+                   n < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
+                   n++) {
+                goma_ctx->fem.bfd[t]->d_det_J_dm[k][n] = MapBf->d_det_J_dm[k][n];
 
-                bfd[t]->dJ[i][j][k][n] = MapBf->dJ[i][j][k][n];
-                bfd[t]->dB[i][j][k][n] = MapBf->dB[i][j][k][n];
+                goma_ctx->fem.bfd[t]->dJ[i][j][k][n] = MapBf->dJ[i][j][k][n];
+                goma_ctx->fem.bfd[t]->dB[i][j][k][n] = MapBf->dB[i][j][k][n];
               }
             }
           }
@@ -679,43 +704,43 @@ void calc_surf_tangent(const int ielem,                /* current element number
   int i, id, j, k, l, inode, ldof, ShapeVar;
   double alpha;
 
-  ShapeVar = pd->ShapeVar;
+  ShapeVar = goma_ctx->fem.pd->ShapeVar;
 
-  memset(fv->stangent, 0, 2 * MAX_PDIM * sizeof(double));
-  memset(fv->dstangent_dx, 0, 2 * MAX_PDIM * MAX_PDIM * MDE * sizeof(double));
+  memset(goma_ctx->fem.fv->stangent, 0, 2 * MAX_PDIM * sizeof(double));
+  memset(goma_ctx->fem.fv->dstangent_dx, 0, 2 * MAX_PDIM * MAX_PDIM * MDE * sizeof(double));
 
   switch (ielem_surf_dim) {
 
   case 0:
-    fv->stangent[0][0] = 1.;
-    fv->stangent[1][0] = 0.;
+    goma_ctx->fem.fv->stangent[0][0] = 1.;
+    goma_ctx->fem.fv->stangent[1][0] = 0.;
     for (j = 0; j < nodes_per_elem; j++)
-      fv->dstangent_dx[0][0][0][j] = 0.;
+      goma_ctx->fem.fv->dstangent_dx[0][0][0][j] = 0.;
     break;
 
   case 1:
     /*
      *  In 2D n x t = k, these vectors satisfy the rh rule.
      */
-    fv->stangent[0][0] = -fv->snormal[1];
-    fv->stangent[0][1] = fv->snormal[0];
-    fv->stangent[1][2] = 1.0;
+    goma_ctx->fem.fv->stangent[0][0] = -goma_ctx->fem.fv->snormal[1];
+    goma_ctx->fem.fv->stangent[0][1] = goma_ctx->fem.fv->snormal[0];
+    goma_ctx->fem.fv->stangent[1][2] = 1.0;
     for (j = 0; j < nodes_per_elem; j++) {
-      fv->dstangent_dx[0][0][0][j] = 0.;
-      fv->dstangent_dx[0][0][1][j] = 0.;
-      fv->dstangent_dx[0][1][0][j] = 0.;
-      fv->dstangent_dx[0][1][1][j] = 0.;
+      goma_ctx->fem.fv->dstangent_dx[0][0][0][j] = 0.;
+      goma_ctx->fem.fv->dstangent_dx[0][0][1][j] = 0.;
+      goma_ctx->fem.fv->dstangent_dx[0][1][0][j] = 0.;
+      goma_ctx->fem.fv->dstangent_dx[0][1][1][j] = 0.;
     }
     for (i = 0; i < num_nodes_on_side; i++) {
       id = (int)local_elem_node_id[i];
       inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
-      ldof = ei[pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][id];
+      ldof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][id];
 
       if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
-        fv->dstangent_dx[0][0][1][ldof] = -fv->dsnormal_dx[1][1][ldof];
-        fv->dstangent_dx[0][0][0][ldof] = -fv->dsnormal_dx[1][0][ldof];
-        fv->dstangent_dx[0][1][1][ldof] = fv->dsnormal_dx[0][1][ldof];
-        fv->dstangent_dx[0][1][0][ldof] = fv->dsnormal_dx[0][0][ldof];
+        goma_ctx->fem.fv->dstangent_dx[0][0][1][ldof] = -goma_ctx->fem.fv->dsnormal_dx[1][1][ldof];
+        goma_ctx->fem.fv->dstangent_dx[0][0][0][ldof] = -goma_ctx->fem.fv->dsnormal_dx[1][0][ldof];
+        goma_ctx->fem.fv->dstangent_dx[0][1][1][ldof] = goma_ctx->fem.fv->dsnormal_dx[0][1][ldof];
+        goma_ctx->fem.fv->dstangent_dx[0][1][0][ldof] = goma_ctx->fem.fv->dsnormal_dx[0][0][ldof];
       }
     }
     break;
@@ -725,10 +750,12 @@ void calc_surf_tangent(const int ielem,                /* current element number
     /* First tangent defined as
      *    t1 = [(n X i) + (n X j)] / norm[n X (i+j)]
      */
-    alpha = sqrt(2. * fv->snormal[2] * fv->snormal[2] + SQUARE(fv->snormal[0] - fv->snormal[1]));
-    fv->stangent[0][0] = -fv->snormal[2] / alpha;
-    fv->stangent[0][1] = fv->snormal[2] / alpha;
-    fv->stangent[0][2] = (fv->snormal[0] - fv->snormal[1]) / alpha;
+    alpha = sqrt(2. * goma_ctx->fem.fv->snormal[2] * goma_ctx->fem.fv->snormal[2] +
+                 SQUARE(goma_ctx->fem.fv->snormal[0] - goma_ctx->fem.fv->snormal[1]));
+    goma_ctx->fem.fv->stangent[0][0] = -goma_ctx->fem.fv->snormal[2] / alpha;
+    goma_ctx->fem.fv->stangent[0][1] = goma_ctx->fem.fv->snormal[2] / alpha;
+    goma_ctx->fem.fv->stangent[0][2] =
+        (goma_ctx->fem.fv->snormal[0] - goma_ctx->fem.fv->snormal[1]) / alpha;
     if (SQUARE(alpha) <= 1.e-7) {
       fprintf(stderr,
               "Warning - norm of tangent on surface of element %d Jacobian is "
@@ -747,59 +774,71 @@ void calc_surf_tangent(const int ielem,                /* current element number
     /* Second tangent defined as t2 = n X t1 automatically normalized because t1
      * and n are unit vectors */
 
-    fv->stangent[1][0] =
-        (fv->snormal[1] * fv->stangent[0][2] - fv->snormal[2] * fv->stangent[0][1]);
-    fv->stangent[1][1] =
-        (fv->snormal[2] * fv->stangent[0][0] - fv->snormal[0] * fv->stangent[0][2]);
-    fv->stangent[1][2] =
-        (fv->snormal[0] * fv->stangent[0][1] - fv->snormal[1] * fv->stangent[0][0]);
+    goma_ctx->fem.fv->stangent[1][0] =
+        (goma_ctx->fem.fv->snormal[1] * goma_ctx->fem.fv->stangent[0][2] -
+         goma_ctx->fem.fv->snormal[2] * goma_ctx->fem.fv->stangent[0][1]);
+    goma_ctx->fem.fv->stangent[1][1] =
+        (goma_ctx->fem.fv->snormal[2] * goma_ctx->fem.fv->stangent[0][0] -
+         goma_ctx->fem.fv->snormal[0] * goma_ctx->fem.fv->stangent[0][2]);
+    goma_ctx->fem.fv->stangent[1][2] =
+        (goma_ctx->fem.fv->snormal[0] * goma_ctx->fem.fv->stangent[0][1] -
+         goma_ctx->fem.fv->snormal[1] * goma_ctx->fem.fv->stangent[0][0]);
 
     for (j = 0; j < nodes_per_elem; j++) {
       for (k = 0; k < ielem_surf_dim + 1; k++) {
         for (l = 0; l < ielem_surf_dim + 1; l++) {
-          fv->dstangent_dx[0][k][l][j] = 0.;
-          fv->dstangent_dx[1][k][l][j] = 0.;
+          goma_ctx->fem.fv->dstangent_dx[0][k][l][j] = 0.;
+          goma_ctx->fem.fv->dstangent_dx[1][k][l][j] = 0.;
         }
       }
     }
     for (i = 0; i < num_nodes_on_side; i++) {
       id = (int)local_elem_node_id[i];
       inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
-      ldof = ei[pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][id];
+      ldof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][id];
       if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
         for (j = 0; j < ielem_surf_dim + 1; j++) {
-          dalpha_dx[j] = (2. * fv->snormal[2] * fv->dsnormal_dx[2][j][ldof] +
-                          (fv->snormal[0] - fv->snormal[1]) *
-                              (fv->dsnormal_dx[0][j][ldof] - fv->dsnormal_dx[1][j][ldof])) /
-                         alpha;
+          dalpha_dx[j] =
+              (2. * goma_ctx->fem.fv->snormal[2] * goma_ctx->fem.fv->dsnormal_dx[2][j][ldof] +
+               (goma_ctx->fem.fv->snormal[0] - goma_ctx->fem.fv->snormal[1]) *
+                   (goma_ctx->fem.fv->dsnormal_dx[0][j][ldof] -
+                    goma_ctx->fem.fv->dsnormal_dx[1][j][ldof])) /
+              alpha;
 
-          fv->dstangent_dx[0][0][j][ldof] =
-              (-alpha * fv->dsnormal_dx[2][j][ldof] + fv->snormal[2] * dalpha_dx[j]) /
+          goma_ctx->fem.fv->dstangent_dx[0][0][j][ldof] =
+              (-alpha * goma_ctx->fem.fv->dsnormal_dx[2][j][ldof] +
+               goma_ctx->fem.fv->snormal[2] * dalpha_dx[j]) /
               SQUARE(alpha);
 
-          fv->dstangent_dx[0][1][j][ldof] =
-              (alpha * fv->dsnormal_dx[2][j][ldof] - fv->snormal[2] * dalpha_dx[j]) / SQUARE(alpha);
+          goma_ctx->fem.fv->dstangent_dx[0][1][j][ldof] =
+              (alpha * goma_ctx->fem.fv->dsnormal_dx[2][j][ldof] -
+               goma_ctx->fem.fv->snormal[2] * dalpha_dx[j]) /
+              SQUARE(alpha);
 
-          fv->dstangent_dx[0][2][j][ldof] =
-              (alpha * (fv->dsnormal_dx[0][j][ldof] - fv->dsnormal_dx[1][j][ldof]) -
-               (fv->snormal[0] - fv->snormal[1]) * dalpha_dx[j]) /
+          goma_ctx->fem.fv->dstangent_dx[0][2][j][ldof] =
+              (alpha * (goma_ctx->fem.fv->dsnormal_dx[0][j][ldof] -
+                        goma_ctx->fem.fv->dsnormal_dx[1][j][ldof]) -
+               (goma_ctx->fem.fv->snormal[0] - goma_ctx->fem.fv->snormal[1]) * dalpha_dx[j]) /
               SQUARE(alpha);
 
           /* derivatives of nXt1 */
-          fv->dstangent_dx[1][0][j][ldof] = (fv->dsnormal_dx[1][j][ldof] * fv->stangent[0][2] -
-                                             fv->dsnormal_dx[2][j][ldof] * fv->stangent[0][1] +
-                                             fv->snormal[1] * fv->dstangent_dx[0][2][j][ldof] -
-                                             fv->snormal[2] * fv->dstangent_dx[0][1][j][ldof]);
+          goma_ctx->fem.fv->dstangent_dx[1][0][j][ldof] =
+              (goma_ctx->fem.fv->dsnormal_dx[1][j][ldof] * goma_ctx->fem.fv->stangent[0][2] -
+               goma_ctx->fem.fv->dsnormal_dx[2][j][ldof] * goma_ctx->fem.fv->stangent[0][1] +
+               goma_ctx->fem.fv->snormal[1] * goma_ctx->fem.fv->dstangent_dx[0][2][j][ldof] -
+               goma_ctx->fem.fv->snormal[2] * goma_ctx->fem.fv->dstangent_dx[0][1][j][ldof]);
 
-          fv->dstangent_dx[1][1][j][ldof] = (fv->dsnormal_dx[2][j][ldof] * fv->stangent[0][0] -
-                                             fv->dsnormal_dx[0][j][ldof] * fv->stangent[0][2] +
-                                             fv->snormal[2] * fv->dstangent_dx[0][0][j][ldof] -
-                                             fv->snormal[0] * fv->dstangent_dx[0][2][j][ldof]);
+          goma_ctx->fem.fv->dstangent_dx[1][1][j][ldof] =
+              (goma_ctx->fem.fv->dsnormal_dx[2][j][ldof] * goma_ctx->fem.fv->stangent[0][0] -
+               goma_ctx->fem.fv->dsnormal_dx[0][j][ldof] * goma_ctx->fem.fv->stangent[0][2] +
+               goma_ctx->fem.fv->snormal[2] * goma_ctx->fem.fv->dstangent_dx[0][0][j][ldof] -
+               goma_ctx->fem.fv->snormal[0] * goma_ctx->fem.fv->dstangent_dx[0][2][j][ldof]);
 
-          fv->dstangent_dx[1][2][j][ldof] = (fv->dsnormal_dx[0][j][ldof] * fv->stangent[0][1] -
-                                             fv->dsnormal_dx[1][j][ldof] * fv->stangent[0][0] +
-                                             fv->snormal[0] * fv->dstangent_dx[0][1][j][ldof] -
-                                             fv->snormal[1] * fv->dstangent_dx[0][0][j][ldof]);
+          goma_ctx->fem.fv->dstangent_dx[1][2][j][ldof] =
+              (goma_ctx->fem.fv->dsnormal_dx[0][j][ldof] * goma_ctx->fem.fv->stangent[0][1] -
+               goma_ctx->fem.fv->dsnormal_dx[1][j][ldof] * goma_ctx->fem.fv->stangent[0][0] +
+               goma_ctx->fem.fv->snormal[0] * goma_ctx->fem.fv->dstangent_dx[0][1][j][ldof] -
+               goma_ctx->fem.fv->snormal[1] * goma_ctx->fem.fv->dstangent_dx[0][0][j][ldof]);
         }
       }
     }
@@ -842,7 +881,8 @@ void calc_tangent_from_seed(struct Rotation_Vectors *tangent,
     }
   }
 
-  if (af->Assemble_Jacobian && pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+  if (goma_ctx->fem.af->Assemble_Jacobian &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
     tangent->d_vector_n = normal->d_vector_n;
     for (j = 0; j < tangent->d_vector_n; j++) {
       tangent->d_vector_J[j] = normal->d_vector_J[j];
@@ -894,7 +934,7 @@ void calc_tangent_along_basis(struct Rotation_Vectors *tangent,
   int p;
   int i, id, inode, ldof;
 
-  const int ShapeVar = pd->ShapeVar;
+  const int ShapeVar = goma_ctx->fem.pd->ShapeVar;
   /***************************** execution begins
    * ******************************/
 
@@ -925,32 +965,36 @@ void calc_tangent_along_basis(struct Rotation_Vectors *tangent,
   tangent->d_vector_n = num_nodes_on_side;
   for (i = 0; i < tangent->d_vector_n; i++) {
     id = (int)local_elem_node_id[i];
-    inode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + id];
+    inode = goma_ctx->mesh
+                .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + id];
     tangent->d_vector_J[i] = inode;
-    ldof = ei[pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][id];
-    if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    ldof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][id];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
         for (p = 0; p < dim; p++) {
-          tangent->vector[p] += bf[ShapeVar]->dphidxi[ldof][i_basis] *
-                                (goma_ctx->mesh.coor[p][inode] + *esp->d[p][ldof]);
+          tangent->vector[p] += goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][i_basis] *
+                                (goma_ctx->mesh.coor[p][inode] + *goma_ctx->fem.esp->d[p][ldof]);
         }
       }
     } else {
       for (p = 0; p < dim; p++) {
-        tangent->vector[p] += bf[ShapeVar]->dphidxi[ldof][i_basis] * goma_ctx->mesh.coor[p][inode];
+        tangent->vector[p] +=
+            goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][i_basis] * goma_ctx->mesh.coor[p][inode];
       }
     }
   }
 
-  if (af->Assemble_Jacobian && pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+  if (goma_ctx->fem.af->Assemble_Jacobian &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
     for (i = 0; i < tangent->d_vector_n; i++) {
       id = (int)local_elem_node_id[i];
-      inode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + id];
-      ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
-      if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+      inode = goma_ctx->mesh
+                  .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + id];
+      ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
         if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
           for (p = 0; p < dim; p++) {
-            tangent->d_vector_dx[p][p][i] += bf[ShapeVar]->dphidxi[ldof][i_basis];
+            tangent->d_vector_dx[p][p][i] += goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][i_basis];
           }
         }
       }
@@ -996,7 +1040,8 @@ void cross_vectors(struct Rotation_Vectors *tangent2,
         -(normal->vector[0] * tangent1->vector[1] - normal->vector[1] * tangent1->vector[0]);
   }
 
-  if (af->Assemble_Jacobian && pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+  if (goma_ctx->fem.af->Assemble_Jacobian &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
     tangent2->d_vector_n = normal->d_vector_n;
     for (j = 0; j < tangent2->d_vector_n; j++) {
       tangent2->d_vector_J[j] = normal->d_vector_J[j];
@@ -1079,8 +1124,8 @@ void calc_unseeded_edge_tangents(struct Rotation_Vectors *tangent,
 
 {
   int j, inode, ldof;
-  const int ShapeVar = pd->ShapeVar;
-  const int DeformingMesh = pd->e[pg->imtrx][R_MESH1];
+  const int ShapeVar = goma_ctx->fem.pd->ShapeVar;
+  const int DeformingMesh = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1];
   int p;
   int j_id;
   double sign;
@@ -1272,32 +1317,34 @@ void calc_unseeded_edge_tangents(struct Rotation_Vectors *tangent,
   for (j = 0; j < num_nodes_on_edge; j++) {
     j_id = (int)edge_elem_node_id[j];
     inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + j_id];
-    ldof = ei[pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][j_id];
+    ldof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][j_id];
     if (DeformingMesh) {
       if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
         for (p = 0; p < dim; p++) {
-          tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir] *
-                                (goma_ctx->mesh.coor[p][inode] + *esp->d[p][ldof]);
+          tangent->vector[p] += sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir] *
+                                (goma_ctx->mesh.coor[p][inode] + *goma_ctx->fem.esp->d[p][ldof]);
         }
       }
     } else {
       for (p = 0; p < dim; p++) {
-        tangent->vector[p] +=
-            sign * bf[ShapeVar]->dphidxi[ldof][param_dir] * goma_ctx->mesh.coor[p][inode];
+        tangent->vector[p] += sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir] *
+                              goma_ctx->mesh.coor[p][inode];
       }
     }
   }
 
-  if (af->Assemble_Jacobian && pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+  if (goma_ctx->fem.af->Assemble_Jacobian &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
     tangent->d_vector_n = num_nodes_on_edge;
     for (j = 0; j < num_nodes_on_edge; j++) {
       j_id = (int)edge_elem_node_id[j];
       inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + j_id];
       tangent->d_vector_J[j] = inode;
-      ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][j_id];
+      ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][j_id];
       if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
         for (p = 0; p < dim; p++) {
-          tangent->d_vector_dx[p][p][j] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir];
+          tangent->d_vector_dx[p][p][j] +=
+              sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir];
         }
       }
     }
@@ -1345,8 +1392,8 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
 
 {
   int j, inode, ldof;
-  const int ShapeVar = pd->ShapeVar;
-  const int DeformingMesh = pd->e[pg->imtrx][R_MESH1];
+  const int ShapeVar = goma_ctx->fem.pd->ShapeVar;
+  const int DeformingMesh = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1];
   int p;
   int j_id;
   double sign;
@@ -1455,19 +1502,19 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
   for (j = 0; j < num_nodes_on_edge; j++) {
     j_id = (int)edge_elem_node_id[j];
     inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + j_id];
-    ldof = ei[pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][j_id];
+    ldof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][j_id];
     if (id_edge == 1 || id_edge == 3 || id_edge == 4) {
       if (DeformingMesh) {
         if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
           for (p = 0; p < dim; p++) {
-            tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir] *
-                                  (goma_ctx->mesh.coor[p][inode] + *esp->d[p][ldof]);
+            tangent->vector[p] += sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir] *
+                                  (goma_ctx->mesh.coor[p][inode] + *goma_ctx->fem.esp->d[p][ldof]);
           }
         }
       } else {
         for (p = 0; p < dim; p++) {
-          tangent->vector[p] +=
-              sign * bf[ShapeVar]->dphidxi[ldof][param_dir] * goma_ctx->mesh.coor[p][inode];
+          tangent->vector[p] += sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir] *
+                                goma_ctx->mesh.coor[p][inode];
         }
       }
     } else if (id_edge == 2) {
@@ -1482,14 +1529,14 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
         if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
 
           for (p = 0; p < dim; p++) {
-            tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] *
-                                  (goma_ctx->mesh.coor[p][inode] + *esp->d[p][ldof]);
+            tangent->vector[p] += sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir_tet] *
+                                  (goma_ctx->mesh.coor[p][inode] + *goma_ctx->fem.esp->d[p][ldof]);
           }
         }
       } else {
         for (p = 0; p < dim; p++) {
-          tangent->vector[p] +=
-              sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] * goma_ctx->mesh.coor[p][inode];
+          tangent->vector[p] += sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir_tet] *
+                                goma_ctx->mesh.coor[p][inode];
         }
       }
     } else if (id_edge == 6) {
@@ -1504,14 +1551,14 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
         if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
 
           for (p = 0; p < dim; p++) {
-            tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] *
-                                  (goma_ctx->mesh.coor[p][inode] + *esp->d[p][ldof]);
+            tangent->vector[p] += sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir_tet] *
+                                  (goma_ctx->mesh.coor[p][inode] + *goma_ctx->fem.esp->d[p][ldof]);
           }
         }
       } else {
         for (p = 0; p < dim; p++) {
-          tangent->vector[p] +=
-              sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] * goma_ctx->mesh.coor[p][inode];
+          tangent->vector[p] += sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir_tet] *
+                                goma_ctx->mesh.coor[p][inode];
         }
       }
     } else if (id_edge == 5) {
@@ -1526,14 +1573,14 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
         if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
 
           for (p = 0; p < dim; p++) {
-            tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] *
-                                  (goma_ctx->mesh.coor[p][inode] + *esp->d[p][ldof]);
+            tangent->vector[p] += sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir_tet] *
+                                  (goma_ctx->mesh.coor[p][inode] + *goma_ctx->fem.esp->d[p][ldof]);
           }
         }
       } else {
         for (p = 0; p < dim; p++) {
-          tangent->vector[p] +=
-              sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] * goma_ctx->mesh.coor[p][inode];
+          tangent->vector[p] += sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir_tet] *
+                                goma_ctx->mesh.coor[p][inode];
         }
       }
     } else {
@@ -1541,17 +1588,19 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
     }
   }
 
-  if (af->Assemble_Jacobian && pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+  if (goma_ctx->fem.af->Assemble_Jacobian &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
     tangent->d_vector_n = num_nodes_on_edge;
     for (j = 0; j < num_nodes_on_edge; j++) {
       j_id = (int)edge_elem_node_id[j];
       inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + j_id];
       tangent->d_vector_J[j] = inode;
-      ldof = ei[pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][j_id];
+      ldof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][j_id];
       if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
         if (id_edge == 1 || id_edge == 3 || id_edge == 4) {
           for (p = 0; p < dim; p++) {
-            tangent->d_vector_dx[p][p][j] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir];
+            tangent->d_vector_dx[p][p][j] +=
+                sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir];
           }
         } else if (id_edge == 2) {
           if (j_id == 1) {
@@ -1562,7 +1611,8 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
             sign *= -1;
           }
           for (p = 0; p < dim; p++) {
-            tangent->d_vector_dx[p][p][j] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet];
+            tangent->d_vector_dx[p][p][j] +=
+                sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir_tet];
           }
         } else if (id_edge == 6) {
           if (j_id == 2) {
@@ -1573,7 +1623,8 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
             sign *= -1;
           }
           for (p = 0; p < dim; p++) {
-            tangent->d_vector_dx[p][p][j] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet];
+            tangent->d_vector_dx[p][p][j] +=
+                sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir_tet];
           }
         } else if (id_edge == 5) {
           if (j_id == 1) {
@@ -1584,7 +1635,8 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
             sign *= -1;
           }
           for (p = 0; p < dim; p++) {
-            tangent->d_vector_dx[p][p][j] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet];
+            tangent->d_vector_dx[p][p][j] +=
+                sign * goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][param_dir_tet];
           }
         }
       }
@@ -1608,7 +1660,8 @@ void simple_normalize_vector(struct Rotation_Vectors *vector, const int dim) {
     sum += vector->vector[p] * vector->vector[p];
   sqsum = sqrt(sum);
 
-  if (af->Assemble_Jacobian && pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+  if (goma_ctx->fem.af->Assemble_Jacobian &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
     for (j = 0; j < vector->d_vector_n; j++) {
       for (p = 0; p < dim; p++) {
         d_sum[p][j] = 0.;
@@ -1705,8 +1758,9 @@ int load_bf_grad(void)
 #ifdef DO_NOT_UNROLL
   int WIM;
 
-  if ((pd->CoordinateSystem == CARTESIAN) || (pd->CoordinateSystem == CYLINDRICAL)) {
-    WIM = pd->Num_Dim;
+  if ((goma_ctx->fem.pd->CoordinateSystem == CARTESIAN) ||
+      (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL)) {
+    WIM = goma_ctx->fem.pd->Num_Dim;
   } else {
     WIM = VIM;
   }
@@ -1727,10 +1781,10 @@ int load_bf_grad(void)
      * scheme in the material
      */
     int imtrx;
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       for (vi = 0, v = -1; v == -1 && vi < MAX_VARIABLE_TYPES; vi++) {
 
-        if (pd->i[imtrx][vi] == bfd[b]->interpolation) {
+        if (goma_ctx->fem.pd->i[imtrx][vi] == goma_ctx->fem.bfd[b]->interpolation) {
           v = vi;
         }
       }
@@ -1740,21 +1794,22 @@ int load_bf_grad(void)
        *  correspond to a variable
        *  OR if element shape doesn't match the current element block.
        */
-      if (v != -1 && bfd[b]->element_shape == ei[pg->imtrx]->ielem_shape) {
-        bfv = bf[v];
-        dofs = ei[imtrx]->dof[v];
+      if (v != -1 && goma_ctx->fem.bfd[b]->element_shape ==
+                         goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape) {
+        bfv = goma_ctx->fem.bf[v];
+        dofs = goma_ctx->fem.ei[imtrx]->dof[v];
         if (bfv->interpolation == I_N1) {
           dofs = bfv->shape_dof;
         }
 
         /* initialize variables */
-        siz = pd->Num_Dim * MDE * sizeof(double);
+        siz = goma_ctx->fem.pd->Num_Dim * MDE * sizeof(double);
         /* memset(&(bfv->d_phi[0][0]),0,siz); */
 
         /*
          * First load up components of the *raw* derivative vector "d_phi"
          */
-        switch (pd->Num_Dim) {
+        switch (goma_ctx->fem.pd->Num_Dim) {
         case 1:
           for (i = 0; i < dofs; i++) {
             bfv->d_phi[i][0] =
@@ -1800,13 +1855,13 @@ int load_bf_grad(void)
         for (i = 0; i < dofs; i++) {
 #ifdef DO_NOT_UNROLL
           for (p = 0; p < WIM; p++) {
-            bfv->grad_phi[i][p] = (bfv->d_phi[i][p]) / (fv->h[p]);
+            bfv->grad_phi[i][p] = (bfv->d_phi[i][p]) / (goma_ctx->fem.fv->h[p]);
           }
 #else
-          bfv->grad_phi[i][0] = (bfv->d_phi[i][0]) / (fv->h[0]);
-          bfv->grad_phi[i][1] = (bfv->d_phi[i][1]) / (fv->h[1]);
+          bfv->grad_phi[i][0] = (bfv->d_phi[i][0]) / (goma_ctx->fem.fv->h[0]);
+          bfv->grad_phi[i][1] = (bfv->d_phi[i][1]) / (goma_ctx->fem.fv->h[1]);
           if (VIM == 3)
-            bfv->grad_phi[i][2] = (bfv->d_phi[i][2]) / (fv->h[2]);
+            bfv->grad_phi[i][2] = (bfv->d_phi[i][2]) / (goma_ctx->fem.fv->h[2]);
 #endif
         }
 
@@ -1884,7 +1939,7 @@ int load_bf_grad(void)
 
           /* } */
 
-          if (pd->CoordinateSystem != CARTESIAN) {
+          if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
 
             /*   for ( i=0; i<dofs; i++)
                  { */
@@ -1893,7 +1948,7 @@ int load_bf_grad(void)
             for (a = 0; a < WIM; a++) {
               for (p = 0; p < VIM; p++) {
                 for (q = 0; q < VIM; q++) {
-                  bfv->grad_phi_e[i][a][p][q] += bfv->phi[i] * fv->grad_e[a][p][q];
+                  bfv->grad_phi_e[i][a][p][q] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[a][p][q];
                 }
               }
             }
@@ -1914,39 +1969,39 @@ int load_bf_grad(void)
               }
             */
 
-            bfv->grad_phi_e[i][0][0][0] += bfv->phi[i] * fv->grad_e[0][0][0];
-            bfv->grad_phi_e[i][0][1][1] += bfv->phi[i] * fv->grad_e[0][1][1];
-            bfv->grad_phi_e[i][0][0][1] += bfv->phi[i] * fv->grad_e[0][0][1];
-            bfv->grad_phi_e[i][0][1][0] += bfv->phi[i] * fv->grad_e[0][1][0];
+            bfv->grad_phi_e[i][0][0][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][0][0];
+            bfv->grad_phi_e[i][0][1][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][1][1];
+            bfv->grad_phi_e[i][0][0][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][0][1];
+            bfv->grad_phi_e[i][0][1][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][1][0];
 
-            bfv->grad_phi_e[i][1][0][0] += bfv->phi[i] * fv->grad_e[1][0][0];
-            bfv->grad_phi_e[i][1][1][1] += bfv->phi[i] * fv->grad_e[1][1][1];
-            bfv->grad_phi_e[i][1][0][1] += bfv->phi[i] * fv->grad_e[1][0][1];
-            bfv->grad_phi_e[i][1][1][0] += bfv->phi[i] * fv->grad_e[1][1][0];
+            bfv->grad_phi_e[i][1][0][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][0][0];
+            bfv->grad_phi_e[i][1][1][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][1][1];
+            bfv->grad_phi_e[i][1][0][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][0][1];
+            bfv->grad_phi_e[i][1][1][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][1][0];
 
             if (VIM == 3) {
-              bfv->grad_phi_e[i][0][2][2] += bfv->phi[i] * fv->grad_e[0][2][2];
-              bfv->grad_phi_e[i][0][2][1] += bfv->phi[i] * fv->grad_e[0][2][1];
-              bfv->grad_phi_e[i][0][2][0] += bfv->phi[i] * fv->grad_e[0][2][0];
-              bfv->grad_phi_e[i][0][1][2] += bfv->phi[i] * fv->grad_e[0][1][2];
-              bfv->grad_phi_e[i][0][0][2] += bfv->phi[i] * fv->grad_e[0][0][2];
+              bfv->grad_phi_e[i][0][2][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][2][2];
+              bfv->grad_phi_e[i][0][2][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][2][1];
+              bfv->grad_phi_e[i][0][2][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][2][0];
+              bfv->grad_phi_e[i][0][1][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][1][2];
+              bfv->grad_phi_e[i][0][0][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][0][2];
 
-              bfv->grad_phi_e[i][1][2][2] += bfv->phi[i] * fv->grad_e[1][2][2];
-              bfv->grad_phi_e[i][1][2][1] += bfv->phi[i] * fv->grad_e[1][2][1];
-              bfv->grad_phi_e[i][1][2][0] += bfv->phi[i] * fv->grad_e[1][2][0];
-              bfv->grad_phi_e[i][1][1][2] += bfv->phi[i] * fv->grad_e[1][1][2];
-              bfv->grad_phi_e[i][1][0][2] += bfv->phi[i] * fv->grad_e[1][0][2];
+              bfv->grad_phi_e[i][1][2][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][2][2];
+              bfv->grad_phi_e[i][1][2][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][2][1];
+              bfv->grad_phi_e[i][1][2][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][2][0];
+              bfv->grad_phi_e[i][1][1][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][1][2];
+              bfv->grad_phi_e[i][1][0][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][0][2];
 
-              bfv->grad_phi_e[i][2][0][0] += bfv->phi[i] * fv->grad_e[2][0][0];
-              bfv->grad_phi_e[i][2][1][1] += bfv->phi[i] * fv->grad_e[2][1][1];
-              bfv->grad_phi_e[i][2][0][1] += bfv->phi[i] * fv->grad_e[2][0][1];
-              bfv->grad_phi_e[i][2][1][0] += bfv->phi[i] * fv->grad_e[2][1][0];
+              bfv->grad_phi_e[i][2][0][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][0][0];
+              bfv->grad_phi_e[i][2][1][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][1][1];
+              bfv->grad_phi_e[i][2][0][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][0][1];
+              bfv->grad_phi_e[i][2][1][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][1][0];
 
-              bfv->grad_phi_e[i][2][2][2] += bfv->phi[i] * fv->grad_e[2][2][2];
-              bfv->grad_phi_e[i][2][2][1] += bfv->phi[i] * fv->grad_e[2][2][1];
-              bfv->grad_phi_e[i][2][2][0] += bfv->phi[i] * fv->grad_e[2][2][0];
-              bfv->grad_phi_e[i][2][1][2] += bfv->phi[i] * fv->grad_e[2][1][2];
-              bfv->grad_phi_e[i][2][0][2] += bfv->phi[i] * fv->grad_e[2][0][2];
+              bfv->grad_phi_e[i][2][2][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][2][2];
+              bfv->grad_phi_e[i][2][2][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][2][1];
+              bfv->grad_phi_e[i][2][2][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][2][0];
+              bfv->grad_phi_e[i][2][1][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][1][2];
+              bfv->grad_phi_e[i][2][0][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][0][2];
             }
 
 #endif
@@ -1974,7 +2029,7 @@ int load_bf_grad(void)
          * variable.  I had one, but it is not presently being used.
          */
 
-        if (bfv->interpolation != I_N1 && (pd->gv[EM_E1_REAL] || CURL_V != -1)) {
+        if (bfv->interpolation != I_N1 && (goma_ctx->fem.pd->gv[EM_E1_REAL] || CURL_V != -1)) {
           siz = DIM * DIM * MDE * sizeof(double);
           memset(&(bfv->curl_phi_e[0][0][0]), 0, siz);
 
@@ -1988,18 +2043,18 @@ int load_bf_grad(void)
                 for (k = 0; k < DIM; k++) { /* VIM */
                   bfv->curl_phi_e[i][a][p] += permute(p, k, a) * bfv->grad_phi[i][k];
                 }
-                bfv->curl_phi_e[i][a][p] += bfv->phi[i] * fv->curl_e[a][p];
+                bfv->curl_phi_e[i][a][p] += bfv->phi[i] * goma_ctx->fem.fv->curl_e[a][p];
               }
             }
           }
         }
 
         if (bfv->interpolation == I_N1) {
-          int dofs = ei[pg->imtrx]->dof[v];
+          int dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
           for (i = 0; i < dofs; i++) {
-            for (int d = 0; d < pd->Num_Dim; d++) {
+            for (int d = 0; d < goma_ctx->fem.pd->Num_Dim; d++) {
               bfv->phi_e[i][d] = 0;
-              for (int k = 0; k < pd->Num_Dim; k++) {
+              for (int k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
                 // bfv->phi_e[i][d] += bfv->B[d][k] * bfv->ref_phi_e[i][k];
                 bfv->phi_e[i][d] += bfv->B[d][k] * bfv->ref_phi_e[i][k];
                 // bfv->phi_e[i][d] += bfv->ref_phi_e[i][k];
@@ -2008,10 +2063,10 @@ int load_bf_grad(void)
           }
 
           for (i = 0; i < dofs; i++) {
-            for (int d = 0; d < pd->Num_Dim; d++) {
+            for (int d = 0; d < goma_ctx->fem.pd->Num_Dim; d++) {
               bfv->curl_phi[i][d] = 0;
               for (int k = 0; k < DIM; k++) {
-                if (pd->Num_Dim < DIM) {
+                if (goma_ctx->fem.pd->Num_Dim < DIM) {
                   bfv->curl_phi[i][d] += (1 / bfv->detJ) * bfv->curl_e[i][k];
                 } else {
                   bfv->curl_phi[i][d] += (1 / bfv->detJ) * bfv->J[k][d] * bfv->curl_e[i][k];
@@ -2103,7 +2158,7 @@ int load_bf_mesh_derivs(void) {
   /* interpolated using bfl */
   int mdofs; /* degrees of freedom for mesh displacement */
   /* unknowns interpolated using bfm */
-  int mn = ei[pg->imtrx]->mn;
+  int mn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn;
   dbl f, g[DIM], g2[DIM];     /* Temporary variables for convenience. */
   dbl phi_m[MDE], phi_l[MDE]; /* load shapefunctions into local variables */
 
@@ -2112,16 +2167,16 @@ int load_bf_mesh_derivs(void) {
   BASIS_FUNCTIONS_STRUCT *bf_ptr;
   int imtrx;
 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     /*
      * If we aren't solving for displacements, then do a quick
      * return
      */
-    if (!ei[imtrx]->deforming_mesh) {
+    if (!goma_ctx->fem.ei[imtrx]->deforming_mesh) {
       continue;
     }
 
-    dim = pd->Num_Dim;
+    dim = goma_ctx->fem.pd->Num_Dim;
     dimNonSym = dim;
 
     /*
@@ -2129,8 +2184,8 @@ int load_bf_mesh_derivs(void) {
      * for the current element, mdofs, and the pointer to the
      * basis function structure, bfm
      */
-    mdofs = ei[imtrx]->dof[R_MESH1];
-    bfm = bf[MESH_DISPLACEMENT1];
+    mdofs = goma_ctx->fem.ei[imtrx]->dof[R_MESH1];
+    bfm = goma_ctx->fem.bf[MESH_DISPLACEMENT1];
     /*
      * preload mesh shape functions
      */
@@ -2143,8 +2198,8 @@ int load_bf_mesh_derivs(void) {
      * for the current element, mdofs, and the pointer to the
      * basis function structure, bfm
      */
-    mdofs = ei[imtrx]->dof[R_MESH1];
-    bfm = bf[MESH_DISPLACEMENT1];
+    mdofs = goma_ctx->fem.ei[imtrx]->dof[R_MESH1];
+    bfm = goma_ctx->fem.bf[MESH_DISPLACEMENT1];
     /*
      * preload mesh shape functions
      */
@@ -2153,7 +2208,7 @@ int load_bf_mesh_derivs(void) {
     }
 
     for (p = 0; p < VIM; p++) {
-      g[p] = 1.0 / fv->h[p];
+      g[p] = 1.0 / goma_ctx->fem.fv->h[p];
       g2[p] = g[p] * g[p];
     }
 
@@ -2162,7 +2217,7 @@ int load_bf_mesh_derivs(void) {
      * basis functions defined in this material
      */
     for (bix = 0; bix < Num_Basis_Functions; bix++) {
-      bf_ptr = bfd[bix];
+      bf_ptr = goma_ctx->fem.bfd[bix];
 
       /*
        * Find a variable "v" that has the same interpolation as
@@ -2176,13 +2231,13 @@ int load_bf_mesh_derivs(void) {
        *  correspond to a variable
        *  OR if element shape doesn't match the current element block.
        */
-      if (v != -1 && bf_ptr->element_shape == ei[imtrx]->ielem_shape) {
+      if (v != -1 && bf_ptr->element_shape == goma_ctx->fem.ei[imtrx]->ielem_shape) {
         /*
          * Store the number of dofs in the interpolation, vdofs.
          * Store bfl
          */
-        vdofs = ei[imtrx]->dof[v];
-        bfl = bf[v];
+        vdofs = goma_ctx->fem.ei[imtrx]->dof[v];
+        bfl = goma_ctx->fem.bf[v];
 
         /* preload shape functions */
         for (i = 0; i < vdofs; i++) {
@@ -2326,7 +2381,7 @@ int load_bf_mesh_derivs(void) {
           for (p = 0; p < dimNonSym; p++) {
             for (b = 0; b < dimNonSym; b++) {
               memset(&(bfl->d_grad_phi_dmesh[i][p][b][0]), 0, mdofs * sizeof(double));
-              f = -g2[p] * (fv->hq[p][b]);
+              f = -g2[p] * (goma_ctx->fem.fv->hq[p][b]);
               for (j = 0; j < mdofs; j++) {
                 for (q = 0; q < dimNonSym; q++) {
                   bfl->d_grad_phi_dmesh[i][p][b][j] +=
@@ -2362,7 +2417,7 @@ int load_bf_mesh_derivs(void) {
 
             /* (p,b) = (0,0) */
 
-            f = -g2[0] * (fv->hq[0][0]);
+            f = -g2[0] * (goma_ctx->fem.fv->hq[0][0]);
 
             bfl->d_grad_phi_dmesh[i][0][0][j] =
                 (f * phi_m[j] * bfl->B[0][0] + g[0] * bfl->dB[0][0][0][j]) * (bfl->dphidxi[i][0]);
@@ -2371,7 +2426,7 @@ int load_bf_mesh_derivs(void) {
                 (f * phi_m[j] * bfl->B[0][1] + g[0] * bfl->dB[0][1][0][j]) * (bfl->dphidxi[i][1]);
 
             /* (p,b) = (0,1) */
-            f = -g2[0] * (fv->hq[0][1]);
+            f = -g2[0] * (goma_ctx->fem.fv->hq[0][1]);
 
             bfl->d_grad_phi_dmesh[i][0][1][j] =
                 (f * phi_m[j] * bfl->B[0][0] + g[0] * bfl->dB[0][0][1][j]) * (bfl->dphidxi[i][0]);
@@ -2380,7 +2435,7 @@ int load_bf_mesh_derivs(void) {
                 (f * phi_m[j] * bfl->B[0][1] + g[0] * bfl->dB[0][1][1][j]) * (bfl->dphidxi[i][1]);
 
             /* (p,b) = (1,0) */
-            f = -g2[1] * (fv->hq[1][0]);
+            f = -g2[1] * (goma_ctx->fem.fv->hq[1][0]);
 
             bfl->d_grad_phi_dmesh[i][1][0][j] =
                 (f * phi_m[j] * bfl->B[1][0] + g[1] * bfl->dB[1][0][0][j]) * (bfl->dphidxi[i][0]);
@@ -2390,7 +2445,7 @@ int load_bf_mesh_derivs(void) {
 
             /* (p,b) = (1,1) */
 
-            f = -g2[1] * (fv->hq[1][1]);
+            f = -g2[1] * (goma_ctx->fem.fv->hq[1][1]);
             bfl->d_grad_phi_dmesh[i][1][1][j] =
                 (f * phi_m[j] * bfl->B[1][0] + g[1] * bfl->dB[1][0][1][j]) * (bfl->dphidxi[i][0]);
 
@@ -2412,7 +2467,7 @@ int load_bf_mesh_derivs(void) {
                   (f * phi_m[j] * bfl->B[1][2] + g[1] * bfl->dB[1][2][1][j]) * (bfl->dphidxi[i][2]);
 
               /* (p,b) = (2,2) */
-              f = -g2[2] * (fv->hq[2][2]);
+              f = -g2[2] * (goma_ctx->fem.fv->hq[2][2]);
               bfl->d_grad_phi_dmesh[i][2][2][j] =
                   (f * phi_m[j] * bfl->B[2][0] + g[2] * bfl->dB[2][0][2][j]) * (bfl->dphidxi[i][0]);
 
@@ -2423,7 +2478,7 @@ int load_bf_mesh_derivs(void) {
                   (f * phi_m[j] * bfl->B[2][2] + g[2] * bfl->dB[2][2][2][j]) * (bfl->dphidxi[i][2]);
 
               /* (p,b) = (2,1) */
-              f = -g2[2] * (fv->hq[2][1]);
+              f = -g2[2] * (goma_ctx->fem.fv->hq[2][1]);
               bfl->d_grad_phi_dmesh[i][2][1][j] =
                   (f * phi_m[j] * bfl->B[2][0] + g[2] * bfl->dB[2][0][1][j]) * (bfl->dphidxi[i][0]);
 
@@ -2433,7 +2488,7 @@ int load_bf_mesh_derivs(void) {
               bfl->d_grad_phi_dmesh[i][2][1][j] +=
                   (f * phi_m[j] * bfl->B[2][2] + g[2] * bfl->dB[2][2][1][j]) * (bfl->dphidxi[i][2]);
               /* (p,b) = (2,0) */
-              f = -g2[2] * (fv->hq[2][0]);
+              f = -g2[2] * (goma_ctx->fem.fv->hq[2][0]);
               bfl->d_grad_phi_dmesh[i][2][0][j] =
                   (f * phi_m[j] * bfl->B[2][0] + g[2] * bfl->dB[2][0][0][j]) * (bfl->dphidxi[i][0]);
 
@@ -2444,7 +2499,7 @@ int load_bf_mesh_derivs(void) {
                   (f * phi_m[j] * bfl->B[2][2] + g[2] * bfl->dB[2][2][0][j]) * (bfl->dphidxi[i][2]);
 
               /* (p,b) = (1,2) */
-              f = -g2[1] * (fv->hq[1][2]);
+              f = -g2[1] * (goma_ctx->fem.fv->hq[1][2]);
               bfl->d_grad_phi_dmesh[i][1][2][j] =
                   (f * phi_m[j] * bfl->B[1][0] + g[1] * bfl->dB[1][0][2][j]) * (bfl->dphidxi[i][0]);
 
@@ -2455,7 +2510,7 @@ int load_bf_mesh_derivs(void) {
                   (f * phi_m[j] * bfl->B[1][2] + g[1] * bfl->dB[1][2][2][j]) * (bfl->dphidxi[i][2]);
 
               /* (p,b) = (0,2) */
-              f = -g2[0] * (fv->hq[0][2]);
+              f = -g2[0] * (goma_ctx->fem.fv->hq[0][2]);
               bfl->d_grad_phi_dmesh[i][0][2][j] =
                   (f * phi_m[j] * bfl->B[0][0] + g[0] * bfl->dB[0][0][2][j]) * (bfl->dphidxi[i][0]);
 
@@ -2599,7 +2654,7 @@ int load_bf_mesh_derivs(void) {
                     }
 
                     bfl->d_grad_phi_e_dmesh[i][a][p][q][b][j] +=
-                        phi_l[i] * fv->d_grad_e_dq[a][p][q][b] * phi_m[j];
+                        phi_l[i] * goma_ctx->fem.fv->d_grad_e_dq[a][p][q][b] * phi_m[j];
                   }
                 }
               }
@@ -2631,7 +2686,7 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
  ************************************************************************/
 {
   int b, i, v, jdof, ledof;
-  int mn = ei[pg->imtrx]->mn;
+  int mn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn;
 
   int imtrx;
 
@@ -2641,7 +2696,7 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
    * kind of unique basis function that we have...
    */
   for (b = 0; b < Num_Basis_Functions; b++) {
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       bf_ptr = bfa[b];
 
       /*
@@ -2651,22 +2706,24 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
 
       v = bf_ptr->Var_Type_MatID[mn];
 
-      if (v != -1 && !pd->v[imtrx][v])
+      if (v != -1 && !goma_ctx->fem.pd->v[imtrx][v])
         continue;
 
       // Special case for vector Basis
       if (bf_ptr->interpolation == I_N1) {
         int jdof = 0;
-        switch (pd->Num_Dim) {
+        switch (goma_ctx->fem.pd->Num_Dim) {
         case 2:
-          for (i = 0; i < ei[imtrx]->dof[v]; i++) {
-            ledof = ei[imtrx]->lvdof_to_ledof[v][i];
-            if (ei[imtrx]->active_interp_ledof[ledof]) {
+          for (i = 0; i < goma_ctx->fem.ei[imtrx]->dof[v]; i++) {
+            ledof = goma_ctx->fem.ei[imtrx]->lvdof_to_ledof[v][i];
+            if (goma_ctx->fem.ei[imtrx]->active_interp_ledof[ledof]) {
 
-              vector_shape_function(DPI_ptr, ei[imtrx], xi, PSI, bf_ptr->element_shape,
-                                    bf_ptr->interpolation, jdof, bf_ptr->ref_phi_e[i], NULL);
-              vector_shape_function(DPI_ptr, ei[imtrx], xi, CURL_PSI, bf_ptr->element_shape,
-                                    bf_ptr->interpolation, jdof, NULL, bf_ptr->curl_e[i]);
+              vector_shape_function(DPI_ptr, goma_ctx->fem.ei[imtrx], xi, PSI,
+                                    bf_ptr->element_shape, bf_ptr->interpolation, jdof,
+                                    bf_ptr->ref_phi_e[i], NULL);
+              vector_shape_function(DPI_ptr, goma_ctx->fem.ei[imtrx], xi, CURL_PSI,
+                                    bf_ptr->element_shape, bf_ptr->interpolation, jdof, NULL,
+                                    bf_ptr->curl_e[i]);
 
               jdof++;
             }
@@ -2677,14 +2734,16 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
           break;
 
         case 3:
-          for (i = 0; i < ei[imtrx]->dof[v]; i++) {
-            ledof = ei[imtrx]->lvdof_to_ledof[v][i];
-            if (ei[imtrx]->active_interp_ledof[ledof]) {
+          for (i = 0; i < goma_ctx->fem.ei[imtrx]->dof[v]; i++) {
+            ledof = goma_ctx->fem.ei[imtrx]->lvdof_to_ledof[v][i];
+            if (goma_ctx->fem.ei[imtrx]->active_interp_ledof[ledof]) {
 
-              vector_shape_function(DPI_ptr, ei[imtrx], xi, PSI, bf_ptr->element_shape,
-                                    bf_ptr->interpolation, jdof, bf_ptr->ref_phi_e[i], NULL);
-              vector_shape_function(DPI_ptr, ei[imtrx], xi, CURL_PSI, bf_ptr->element_shape,
-                                    bf_ptr->interpolation, jdof, NULL, bf_ptr->curl_e[i]);
+              vector_shape_function(DPI_ptr, goma_ctx->fem.ei[imtrx], xi, PSI,
+                                    bf_ptr->element_shape, bf_ptr->interpolation, jdof,
+                                    bf_ptr->ref_phi_e[i], NULL);
+              vector_shape_function(DPI_ptr, goma_ctx->fem.ei[imtrx], xi, CURL_PSI,
+                                    bf_ptr->element_shape, bf_ptr->interpolation, jdof, NULL,
+                                    bf_ptr->curl_e[i]);
 
               jdof++;
             }
@@ -2702,29 +2761,29 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
 
         int q1_dof = getdofs(bf_ptr->element_shape, I_Q2);
         bf_ptr->shape_dof = q1_dof;
-        switch (pd->Num_Dim) {
+        switch (goma_ctx->fem.pd->Num_Dim) {
         case 2:
           for (i = 0; i < q1_dof; i++) {
-            bf_ptr->phi[i] =
-                newshape(xi, ei[imtrx]->ielem_type, PSI, i, bf_ptr->element_shape, I_Q2, jdof);
-            bf_ptr->dphidxi[i][0] =
-                newshape(xi, ei[imtrx]->ielem_type, DPSI_S, i, bf_ptr->element_shape, I_Q2, jdof);
-            bf_ptr->dphidxi[i][1] =
-                newshape(xi, ei[imtrx]->ielem_type, DPSI_T, i, bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->phi[i] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, PSI, i,
+                                      bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->dphidxi[i][0] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_S, i,
+                                             bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->dphidxi[i][1] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_T, i,
+                                             bf_ptr->element_shape, I_Q2, jdof);
             jdof++;
           }
           break;
 
         case 3:
           for (i = 0; i < q1_dof; i++) {
-            bf_ptr->phi[i] =
-                newshape(xi, ei[imtrx]->ielem_type, PSI, i, bf_ptr->element_shape, I_Q2, jdof);
-            bf_ptr->dphidxi[i][0] =
-                newshape(xi, ei[imtrx]->ielem_type, DPSI_S, i, bf_ptr->element_shape, I_Q2, jdof);
-            bf_ptr->dphidxi[i][1] =
-                newshape(xi, ei[imtrx]->ielem_type, DPSI_T, i, bf_ptr->element_shape, I_Q2, jdof);
-            bf_ptr->dphidxi[i][2] =
-                newshape(xi, ei[imtrx]->ielem_type, DPSI_U, i, bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->phi[i] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, PSI, i,
+                                      bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->dphidxi[i][0] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_S, i,
+                                             bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->dphidxi[i][1] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_T, i,
+                                             bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->dphidxi[i][2] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_U, i,
+                                             bf_ptr->element_shape, I_Q2, jdof);
             jdof++;
           }
           break;
@@ -2736,23 +2795,25 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
          *  correspond to any variable in the current material
          *  OR if element shape doesn't match the current element block.
          */
-        if (v != -1 && bf_ptr->element_shape == ei[imtrx]->ielem_shape) {
+        if (v != -1 && bf_ptr->element_shape == goma_ctx->fem.ei[imtrx]->ielem_shape) {
           /*
            * Now, case the dimensionality and look up basis functions
            * and their derivatives at the quadrature point
            * using elemental coordinates
            */
           jdof = 0;
-          switch (pd->Num_Dim) {
+          switch (goma_ctx->fem.pd->Num_Dim) {
           case 1:
-            for (i = 0; i < ei[imtrx]->dof[v]; i++) {
-              ledof = ei[imtrx]->lvdof_to_ledof[v][i];
-              if (ei[imtrx]->active_interp_ledof[ledof]) {
-                bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, ei[imtrx]->dof_list[v][i],
+            for (i = 0; i < goma_ctx->fem.ei[imtrx]->dof[v]; i++) {
+              ledof = goma_ctx->fem.ei[imtrx]->lvdof_to_ledof[v][i];
+              if (goma_ctx->fem.ei[imtrx]->active_interp_ledof[ledof]) {
+                bf_ptr->phi[i] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, PSI,
+                                          goma_ctx->fem.ei[imtrx]->dof_list[v][i],
                                           bf_ptr->element_shape, bf_ptr->interpolation, jdof);
                 bf_ptr->dphidxi[i][0] =
-                    newshape(xi, ei[imtrx]->ielem_type, DPSI_S, ei[imtrx]->dof_list[v][i],
-                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                    newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_S,
+                             goma_ctx->fem.ei[imtrx]->dof_list[v][i], bf_ptr->element_shape,
+                             bf_ptr->interpolation, jdof);
                 jdof++;
               } else {
                 bf_ptr->phi[i] = 0.0;
@@ -2762,17 +2823,20 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
             break;
 
           case 2:
-            for (i = 0; i < ei[imtrx]->dof[v]; i++) {
-              ledof = ei[imtrx]->lvdof_to_ledof[v][i];
-              if (ei[imtrx]->active_interp_ledof[ledof]) {
-                bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, ei[imtrx]->dof_list[v][i],
+            for (i = 0; i < goma_ctx->fem.ei[imtrx]->dof[v]; i++) {
+              ledof = goma_ctx->fem.ei[imtrx]->lvdof_to_ledof[v][i];
+              if (goma_ctx->fem.ei[imtrx]->active_interp_ledof[ledof]) {
+                bf_ptr->phi[i] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, PSI,
+                                          goma_ctx->fem.ei[imtrx]->dof_list[v][i],
                                           bf_ptr->element_shape, bf_ptr->interpolation, jdof);
                 bf_ptr->dphidxi[i][0] =
-                    newshape(xi, ei[imtrx]->ielem_type, DPSI_S, ei[imtrx]->dof_list[v][i],
-                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                    newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_S,
+                             goma_ctx->fem.ei[imtrx]->dof_list[v][i], bf_ptr->element_shape,
+                             bf_ptr->interpolation, jdof);
                 bf_ptr->dphidxi[i][1] =
-                    newshape(xi, ei[imtrx]->ielem_type, DPSI_T, ei[imtrx]->dof_list[v][i],
-                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                    newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_T,
+                             goma_ctx->fem.ei[imtrx]->dof_list[v][i], bf_ptr->element_shape,
+                             bf_ptr->interpolation, jdof);
                 jdof++;
               } else {
                 bf_ptr->phi[i] = 0.0;
@@ -2783,20 +2847,24 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
             break;
 
           case 3:
-            for (i = 0; i < ei[imtrx]->dof[v]; i++) {
-              ledof = ei[imtrx]->lvdof_to_ledof[v][i];
-              if (ei[imtrx]->active_interp_ledof[ledof]) {
-                bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, ei[imtrx]->dof_list[v][i],
+            for (i = 0; i < goma_ctx->fem.ei[imtrx]->dof[v]; i++) {
+              ledof = goma_ctx->fem.ei[imtrx]->lvdof_to_ledof[v][i];
+              if (goma_ctx->fem.ei[imtrx]->active_interp_ledof[ledof]) {
+                bf_ptr->phi[i] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, PSI,
+                                          goma_ctx->fem.ei[imtrx]->dof_list[v][i],
                                           bf_ptr->element_shape, bf_ptr->interpolation, jdof);
                 bf_ptr->dphidxi[i][0] =
-                    newshape(xi, ei[imtrx]->ielem_type, DPSI_S, ei[imtrx]->dof_list[v][i],
-                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                    newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_S,
+                             goma_ctx->fem.ei[imtrx]->dof_list[v][i], bf_ptr->element_shape,
+                             bf_ptr->interpolation, jdof);
                 bf_ptr->dphidxi[i][1] =
-                    newshape(xi, ei[imtrx]->ielem_type, DPSI_T, ei[imtrx]->dof_list[v][i],
-                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                    newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_T,
+                             goma_ctx->fem.ei[imtrx]->dof_list[v][i], bf_ptr->element_shape,
+                             bf_ptr->interpolation, jdof);
                 bf_ptr->dphidxi[i][2] =
-                    newshape(xi, ei[imtrx]->ielem_type, DPSI_U, ei[imtrx]->dof_list[v][i],
-                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                    newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_U,
+                             goma_ctx->fem.ei[imtrx]->dof_list[v][i], bf_ptr->element_shape,
+                             bf_ptr->interpolation, jdof);
                 jdof++;
               } else {
                 bf_ptr->phi[i] = 0.0;
@@ -2979,7 +3047,7 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
 
   /*   num_fill_unknowns  = dpi->num_universe_nodes; */
 
-  num_total_unknowns = num_universe_dofs[pg->imtrx];
+  num_total_unknowns = num_universe_dofs[goma_ctx->fem.pg->imtrx];
 
   /* set boolean for save old A matrix for data sensitivities,
      flux sensitivities, modified newton schemes, augmenting conditions,
@@ -3005,7 +3073,8 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
    */
 
   num_total_fill_unknowns = gsum_Int(internal_fill_unknowns + boundary_fill_unknowns);
-  num_total_unknowns = gsum_Int(num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]);
+  num_total_unknowns = gsum_Int(num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                                num_boundary_dofs[goma_ctx->fem.pg->imtrx]);
   dpi->num_dofs_global = num_total_unknowns;
 
   /*
@@ -3017,8 +3086,9 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
     local_value =
         (ija[internal_fill_unknowns + boundary_fill_unknowns] - external_fill_unknowns - 1);
   } else {
-    local_value = (ija[num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]] -
-                   num_external_dofs[pg->imtrx] - 1);
+    local_value = (ija[num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                       num_boundary_dofs[goma_ctx->fem.pg->imtrx]] -
+                   num_external_dofs[goma_ctx->fem.pg->imtrx] - 1);
   }
   nnz = gsum_Int(local_value);
 #else
@@ -3094,7 +3164,8 @@ void alloc_VBR_sparse_arrays(struct GomaLinearSolverData *ams, Exo_DB *exo, Dpi 
    *   calculate the total number of degrees of freedom in the problem
    *   by summing the contributions from each processor
    */
-  dpi->num_dofs_global = gsum_Int(num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]);
+  dpi->num_dofs_global = gsum_Int(num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                                  num_boundary_dofs[goma_ctx->fem.pg->imtrx]);
   nnz_tmp = gsum_Int(nnz);
 
   DPRINTF(stdout, "\n%-30s= %d\n", "Number of unknowns", dpi->num_dofs_global);
@@ -3265,7 +3336,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
   /*
    * Calculate the average number of degrees of freedom per node
    */
-  avgVarPerNode = (double)num_universe_dofs[pg->imtrx] / (double)itotal_nodes;
+  avgVarPerNode = (double)num_universe_dofs[goma_ctx->fem.pg->imtrx] / (double)itotal_nodes;
   /*
    * Estimate the average connectivity of a node
    */
@@ -3276,7 +3347,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
    *  -> Check for null pointer because this is a large
    *     allocation
    */
-  nz_temp = num_universe_dofs[pg->imtrx] * avgNodeToNodeConn * avgVarPerNode * 1.1;
+  nz_temp = num_universe_dofs[goma_ctx->fem.pg->imtrx] * avgNodeToNodeConn * avgVarPerNode * 1.1;
 
   *ija = ija_ptr = alloc_int_1(nz_temp, -1);
   if (*ija == NULL) {
@@ -3297,7 +3368,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
    * and then the total number of entries is storred at
    * ija[num_universe_dofs].
    */
-  nz_ptr = num_universe_dofs[pg->imtrx] + 1;
+  nz_ptr = num_universe_dofs[goma_ctx->fem.pg->imtrx] + 1;
 #ifdef DEBUG_GRAPH
   fprintf(ifp, "P_%d: nz_ptr = %d\n", goma_ctx->proc_id, nz_ptr);
 #endif
@@ -3306,7 +3377,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
    * loop over all of the nodes on this processor
    */
   for (inode = 0; inode < itotal_nodes; inode++) {
-    nv = Nodes[inode]->Nodal_Vars_Info[pg->imtrx];
+    nv = Nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     /*
      * Fill the vector list which points to the unknowns defined at this
      * node...
@@ -3345,7 +3416,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
       for (j = exo->node_node_pntr[inode]; j < exo->node_node_pntr[inode + 1]; j++) {
         inter_node = exo->node_node_list[j];
         nodeCol = Nodes[inter_node];
-        nvCol = nodeCol->Nodal_Vars_Info[pg->imtrx];
+        nvCol = nodeCol->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
         /*
          * fill the vector list which points to the unknowns
@@ -3377,7 +3448,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
            * Query the Interaction mask to determine if a jacobian entry
            * should be created
            */
-          add_var = Inter_Mask[pg->imtrx][rowVarType][colVarType];
+          add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
 
           /* The following code should be activated when solving DG viscoelastic
            * problems with full Jacobian treatment of upwind element stress
@@ -3387,16 +3458,16 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
               exo->centroid_list[inter_node] != -1) {
             eb1 = exo->elem_eb[exo->centroid_list[inode]];
 
-            if (vn_glob[Matilda[eb1]]->dg_J_model == FULL_DG) {
-              i1 = pd_glob[Matilda[eb1]]->i[pg->imtrx][rowVarType];
-              i2 = pd_glob[Matilda[eb1]]->i[pg->imtrx][colVarType];
+            if (goma_ctx->fem.vn_glob[Matilda[eb1]]->dg_J_model == FULL_DG) {
+              i1 = goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][rowVarType];
+              i2 = goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][colVarType];
 
               if ((rowVarType == colVarType) &&
                   (i1 == I_P0 || i1 == I_P1 || i1 == I_PQ1 || i1 == I_PQ2) &&
                   (i2 == I_P0 || i2 == I_P1 || i2 == I_PQ1 || i2 == I_PQ2) &&
                   (rowVarType != PRESSURE) &&
                   (rowVarType > VELOCITY_GRADIENT33 || rowVarType < VELOCITY_GRADIENT11)) {
-                add_var = Inter_Mask[pg->imtrx][rowVarType][colVarType];
+                add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
               } else {
                 add_var = 0;
               }
@@ -3410,7 +3481,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
             /*
              * Determine the equation number of the current unknown
              */
-            icol_index = nodeCol->First_Unknown[pg->imtrx] + inter_unknown;
+            icol_index = nodeCol->First_Unknown[goma_ctx->fem.pg->imtrx] + inter_unknown;
 
             if (icol_index != irow_index) {
               /*
@@ -3493,10 +3564,10 @@ static int find_VBR_problem_graph(int *indx[],
   }
 
   for (i = 0; i < row_nodes; i++) {
-    nvRow = Nodes[i]->Nodal_Vars_Info[pg->imtrx];
+    nvRow = Nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     for (k = (*bpntr)[i]; k < (*bpntr)[i + 1]; k++) {
       j = (*bindx)[k];
-      nvCol = Nodes[j]->Nodal_Vars_Info[pg->imtrx];
+      nvCol = Nodes[j]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
       (*indx)[k] = nnz;
       nnz += nvRow->Num_Unknowns * nvCol->Num_Unknowns;
     }
@@ -3505,14 +3576,14 @@ static int find_VBR_problem_graph(int *indx[],
   (*indx)[nnz_blocs] = nnz;
 
   for (i = 0; i < row_nodes; i++) {
-    nvRow = Nodes[i]->Nodal_Vars_Info[pg->imtrx];
+    nvRow = Nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     (*rpntr)[i] = row_ptr;
     row_ptr += nvRow->Num_Unknowns;
   }
   (*rpntr)[row_nodes] = row_ptr;
 
   for (j = 0; j < col_nodes; j++) {
-    nvCol = Nodes[j]->Nodal_Vars_Info[pg->imtrx];
+    nvCol = Nodes[j]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     (*cpntr)[j] = col_ptr;
     col_ptr += nvCol->Num_Unknowns;
   }
@@ -3540,7 +3611,7 @@ int fill_variable_vector(int inode, int ivec_varType[], int ivec_matID[])
   NODAL_VARS_STRUCT *nvs;
   VARIABLE_DESCRIPTION_STRUCT *vd;
   node = Nodes[inode];
-  nvs = node->Nodal_Vars_Info[pg->imtrx];
+  nvs = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
   for (l = 0; l < nvs->Num_Var_Desc; l++) {
     vd = nvs->Var_Desc_List[l];
     for (m = 0; m < vd->Ndof; m++) {
@@ -3578,7 +3649,8 @@ void zero_lec_row(double *local_J,
    * *******************************/
 
   for (i_var = 0; i_var < MAX_PROB_EQN + MAX_CONC; i_var++) {
-    memset(&(local_J[LEC_J_INDEX(eqn_type, i_var, ldof, 0)]), 0, sizeof(double) * lec->max_dof);
+    memset(&(local_J[LEC_J_INDEX(eqn_type, i_var, ldof, 0)]), 0,
+           sizeof(double) * goma_ctx->fem.lec->max_dof);
   }
 
 } /* END of routine zero_lec_row                                        */
@@ -3599,7 +3671,7 @@ void zero_lec_column(double *local_J,
   int eqn, dof;
 
   for (eqn = 0; eqn < MAX_PROB_EQN + MAX_CONC; eqn++) {
-    for (dof = 0; dof < lec->max_dof; dof++) {
+    for (dof = 0; dof < goma_ctx->fem.lec->max_dof; dof++) {
       local_J[LEC_J_INDEX(eqn, var_type, dof, ldof)] = 0.0;
     }
   }
@@ -3903,87 +3975,119 @@ double newshape(const double xi[],       /* local coordinates    */
       case PSI:          /* shape function */
         switch (Inode) { /* select specific shape function */
         case 0:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                      ->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                      ->EDGE != 1) {
             value = 0.25 * (1. - s) * (1. - t);
           } else {
             value = 0.25 * ((1. - s) * s * (1. - t) * t + (1 - s * s) * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (t - 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (s - 1.) * s;
             }
           }
           break;
         case 1:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                      ->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                      ->EDGE != 1) {
             value = 0.25 * (1. + s) * (1. - t);
           } else {
             value = 0.25 * ((1. + s) * s * (t - 1) * t + (1 - s * s) * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (t - 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (s + 1.) * s;
             }
           }
           break;
         case 2:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                      ->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                      ->EDGE != 1) {
             value = 0.25 * (1. + s) * (1. + t);
           } else {
             value = 0.25 * ((1. + s) * s * (t + 1) * t + (1 - s * s) * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (t + 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (s + 1.) * s;
             }
           }
           break;
         case 3:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                      ->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                      ->EDGE != 1) {
             value = 0.25 * (1. - s) * (1. + t);
           } else {
             value = 0.25 * ((s - 1) * s * (t + 1) * t + (1 - s * s) * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (t + 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (s - 1.) * s;
             }
           }
           break;
           /* can only get to these cases on external boundaries */
         case 4:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                  ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - s * s) * (t - 1.) * t;
           break;
         case 5:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                  ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - t * t) * (s + 1.) * s;
           break;
         case 6:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                  ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - s * s) * (t + 1.) * t;
           break;
         case 7:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                  ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - t * t) * (s - 1.) * s;
           break;
@@ -3993,87 +4097,119 @@ double newshape(const double xi[],       /* local coordinates    */
       case DPSI_S:       /* partial of shape fn w.r.t. s */
         switch (Inode) { /* select specific shape function */
         case 0:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                      ->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                      ->EDGE != 1) {
             value = -0.25 * (1. - t);
           } else {
             value = 0.25 * ((1. - 2 * s) * (1. - t) * t - 2 * s * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                    ->EDGE != 1) {
               value -= 0.5 * s * (t - 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (2. * s - 1.);
             }
           }
           break;
         case 1:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                      ->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                      ->EDGE != 1) {
             value = 0.25 * (1. - t);
           } else {
             value = 0.25 * ((1. + 2 * s) * (t - 1) * t - 2 * s * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                    ->EDGE != 1) {
               value -= 0.5 * s * (t - 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (2 * s + 1.);
             }
           }
           break;
         case 2:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                      ->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                      ->EDGE != 1) {
             value = 0.25 * (1. + t);
           } else {
             value = 0.25 * ((1. + 2 * s) * (t + 1) * t - 2 * s * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                    ->EDGE != 1) {
               value -= 0.5 * s * (t + 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (2 * s + 1.);
             }
           }
           break;
         case 3:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                      ->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                      ->EDGE != 1) {
             value = -0.25 * (1. + t);
           } else {
             value = 0.25 * ((2 * s - 1) * (t + 1) * t - 2 * s * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                    ->EDGE != 1) {
               value -= 0.5 * s * (t + 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (2 * s - 1.);
             }
           }
           break;
           /* can only get to these cases on external boundaries */
         case 4:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                  ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = -s * (t - 1.) * t;
           break;
         case 5:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                  ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - t * t) * (2 * s + 1.);
           break;
         case 6:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                  ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = -s * (t + 1.) * t;
           break;
         case 7:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                  ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - t * t) * (2 * s - 1.);
           break;
@@ -4083,87 +4219,119 @@ double newshape(const double xi[],       /* local coordinates    */
       case DPSI_T:       /* partial of shape fn w.r.t. t */
         switch (Inode) { /* select specific shape function */
         case 0:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                      ->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                      ->EDGE != 1) {
             value = -0.25 * (1. - s);
           } else {
             value = 0.25 * ((1. - s) * s * (1. - 2 * t) - (1 - s * s) * 2 * t);
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (2 * t - 1.);
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                    ->EDGE != 1) {
               value -= 0.5 * t * (s - 1.) * s;
             }
           }
           break;
         case 1:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                      ->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                      ->EDGE != 1) {
             value = -0.25 * (1. + s);
           } else {
             value = 0.25 * ((1. + s) * s * (2 * t - 1) - (1 - s * s) * 2 * t);
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (2 * t - 1.);
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                    ->EDGE != 1) {
               value -= 0.5 * t * (s + 1.) * s;
             }
           }
           break;
         case 2:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                      ->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                      ->EDGE != 1) {
             value = 0.25 * (1. + s);
           } else {
             value = 0.25 * ((1. + s) * s * (2 * t + 1) - (1 - s * s) * 2 * t);
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (2 * t + 1.);
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                    ->EDGE != 1) {
               value -= 0.5 * t * (s + 1.) * s;
             }
           }
           break;
         case 3:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                      ->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                      ->EDGE != 1) {
             value = 0.25 * (1. - s);
           } else {
             value = 0.25 * ((s - 1) * s * (2 * t + 1) - (1 - s * s) * 2 * t);
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                    ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (2 * t + 1.);
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE !=
-                1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect
+                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                    ->EDGE != 1) {
               value -= 0.5 * t * (s - 1.) * s;
             }
           }
           break;
           /* can only get to these cases on external boundaries */
         case 4:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+                  ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - s * s) * (2 * t - 1.);
           break;
         case 5:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+                  ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = -t * (s + 1.) * s;
           break;
         case 6:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+                  ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - s * s) * (2 * t + 1.);
           break;
         case 7:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect
+                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+                  ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = -t * (s - 1.) * s;
           break;
@@ -4330,7 +4498,7 @@ double newshape(const double xi[],       /* local coordinates    */
   default:
     GOMA_WH(-1, "Called shape() without determining the proper element type");
     value = shape(s, t, u, Ielem_type, Iquant, Inode);
-    if (ei[pg->imtrx]->ielem > 7)
+    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem > 7)
       printf("      Shape() call returned %g!\n", value);
     break;
   }
@@ -4365,10 +4533,10 @@ double extended_shape(const double xi[],       /* local coordinates    */
     double H = xfem->H;
     double delta = xfem->delta;
 
-    if (ls->Elem_Sign == -1) {
+    if (goma_ctx->fem.ls->Elem_Sign == -1) {
       H = 0.;
       delta = 0.;
-    } else if (ls->Elem_Sign == 1) {
+    } else if (goma_ctx->fem.ls->Elem_Sign == 1) {
       H = 1.;
       delta = 0.;
     }
@@ -4633,27 +4801,28 @@ int calc_shearrate(dbl *gammadot,           /* strain rate invariant */
     }
   }
 
-  if (pd->gv[FILM_HEIGHT]) {
-    *gammadot += -(fv->grad_v[0][0] + fv->grad_v[1][1]) * -(fv->grad_v[0][0] + fv->grad_v[1][1]);
+  if (goma_ctx->fem.pd->gv[FILM_HEIGHT]) {
+    *gammadot += -(goma_ctx->fem.fv->grad_v[0][0] + goma_ctx->fem.fv->grad_v[1][1]) *
+                 -(goma_ctx->fem.fv->grad_v[0][0] + goma_ctx->fem.fv->grad_v[1][1]);
   }
 
   *gammadot = sqrt(0.5 * fabs(*gammadot));
 
   /* get stuff for Jacobian entries */
   v = VELOCITY1;
-  vdofs = ei[pg->imtrx]->dof[v];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
 
   if (d_gd_dmesh != NULL || d_gd_dv != NULL) {
-    if (pd->v[pg->imtrx][R_MESH1]) {
-      mdofs = ei[pg->imtrx]->dof[R_MESH1];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+      mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
     }
 
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
         for (a = 0; a < VIM; a++) {
           for (i = 0; i < vdofs; i++) {
-            grad_phi_e_gam[i][a][p][q] =
-                bf[v]->grad_phi_e[i][a][p][q] + bf[v]->grad_phi_e[i][a][q][p];
+            grad_phi_e_gam[i][a][p][q] = goma_ctx->fem.bf[v]->grad_phi_e[i][a][p][q] +
+                                         goma_ctx->fem.bf[v]->grad_phi_e[i][a][q][p];
           }
         }
       }
@@ -4664,15 +4833,15 @@ int calc_shearrate(dbl *gammadot,           /* strain rate invariant */
    * d( gamma_dot )/dmesh
    */
 
-  if (pd->v[pg->imtrx][R_MESH1] && d_gd_dmesh != NULL) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][R_MESH1] && d_gd_dmesh != NULL) {
 
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
         for (b = 0; b < VIM; b++) {
           for (j = 0; j < mdofs; j++) {
 
-            d_gamma_dot_dmesh[p][q][b][j] =
-                fv->d_grad_v_dmesh[p][q][b][j] + fv->d_grad_v_dmesh[q][p][b][j];
+            d_gamma_dot_dmesh[p][q][b][j] = goma_ctx->fem.fv->d_grad_v_dmesh[p][q][b][j] +
+                                            goma_ctx->fem.fv->d_grad_v_dmesh[q][p][b][j];
           }
         }
       }
@@ -4722,7 +4891,7 @@ int calc_shearrate(dbl *gammadot,           /* strain rate invariant */
 static int var_if_interp_type_enabled(PROBLEM_DESCRIPTION_STRUCT *pd_ptr, int interp_type) {
   int imtrx;
   int var;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     if ((var = in_list(interp_type, 0, MAX_VARIABLE_TYPES, pd_ptr->i[imtrx])) != -1) {
       return var;
     }
@@ -4752,7 +4921,7 @@ void determine_ShapeVar(PROBLEM_DESCRIPTION_STRUCT *pd_ptr)
     int imtrx;
     int mesh_matrix = -1;
 
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       if (pd_ptr->v[imtrx][R_MESH1]) {
         mesh_matrix = imtrx;
         break;
@@ -4777,8 +4946,8 @@ void determine_ShapeVar(PROBLEM_DESCRIPTION_STRUCT *pd_ptr)
       } else if ((pd_ptr->ShapeVar = var_if_interp_type_enabled(pd_ptr, I_SP)) != -1) {
         pd_ptr->IntegrationMap = I_SP;
       } else {
-        pd_ptr->ShapeVar = pd_ptr->m[pg->imtrx][0];
-        pd_ptr->IntegrationMap = pd_ptr->i[pg->imtrx][pd_ptr->ShapeVar];
+        pd_ptr->ShapeVar = pd_ptr->m[goma_ctx->fem.pg->imtrx][0];
+        pd_ptr->IntegrationMap = pd_ptr->i[goma_ctx->fem.pg->imtrx][pd_ptr->ShapeVar];
       }
     }
   } else {
@@ -4786,11 +4955,13 @@ void determine_ShapeVar(PROBLEM_DESCRIPTION_STRUCT *pd_ptr)
      * This is for the case where the Q1, Q2 or SP has been specified
      * as the mapping order
      */
-    pd_ptr->ShapeVar = in_list(pd_ptr->IntegrationMap, 0, MAX_VARIABLE_TYPES, pd_ptr->i[pg->imtrx]);
+    pd_ptr->ShapeVar =
+        in_list(pd_ptr->IntegrationMap, 0, MAX_VARIABLE_TYPES, pd_ptr->i[goma_ctx->fem.pg->imtrx]);
     if (pd_ptr->ShapeVar == -1) {
       GOMA_EH(GOMA_ERROR, "Error: Specified Element Mapping has no corresponding variable .");
     }
-    if (pd_ptr->e[pg->imtrx][R_MESH1] && pd_ptr->IntegrationMap != pd_ptr->i[0][R_MESH1]) {
+    if (pd_ptr->e[goma_ctx->fem.pg->imtrx][R_MESH1] &&
+        pd_ptr->IntegrationMap != pd_ptr->i[0][R_MESH1]) {
       GOMA_WH(-1, "Warning: Having the Element Mapping differ from the "
                   "displacement interpolation may produce unexpected results.");
     }
@@ -4852,14 +5023,15 @@ void set_solid_inertia(void)
 {
   int mn;
 
-  tran->solid_inertia = FALSE;
-  for (mn = 0; mn < upd->Num_Mat; mn++) {
-    if (pd_glob[mn]->TimeIntegration != STEADY &&
-        pd_glob[mn]->etm[pg->imtrx][R_MESH1][(LOG2_MASS)] &&
-        pd_glob[mn]->MeshMotion == DYNAMIC_LAGRANGIAN) {
-      tran->solid_inertia = TRUE;
-    } else if (pd_glob[mn]->TimeIntegration != STEADY && pd_glob[mn]->MeshMotion == TOTAL_ALE) {
-      tran->solid_inertia = TRUE;
+  goma_ctx->fem.tran->solid_inertia = FALSE;
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+    if (goma_ctx->fem.pd_glob[mn]->TimeIntegration != STEADY &&
+        goma_ctx->fem.pd_glob[mn]->etm[goma_ctx->fem.pg->imtrx][R_MESH1][(LOG2_MASS)] &&
+        goma_ctx->fem.pd_glob[mn]->MeshMotion == DYNAMIC_LAGRANGIAN) {
+      goma_ctx->fem.tran->solid_inertia = TRUE;
+    } else if (goma_ctx->fem.pd_glob[mn]->TimeIntegration != STEADY &&
+               goma_ctx->fem.pd_glob[mn]->MeshMotion == TOTAL_ALE) {
+      goma_ctx->fem.tran->solid_inertia = TRUE;
     }
   }
 
@@ -5620,7 +5792,7 @@ goma_error zero_strong_resid_side(struct Local_Element_Contributions *lec,
     int n_modes;
     int stress_bc = 0;
     if (bc_desc->equation == R_STRESS11) {
-      n_modes = vn->modes;
+      n_modes = goma_ctx->fem.vn->modes;
       stress_bc = 1;
     } else {
       n_modes = 1;
@@ -5636,21 +5808,22 @@ goma_error zero_strong_resid_side(struct Local_Element_Contributions *lec,
       /* Find the local element node number for the current node */
       int id = (int)elem_side_bc->local_elem_node_id[i];
 
-      int I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + id];
+      int I = goma_ctx->mesh
+                  .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + id];
       if (goma_automatic_rotations.automatic_rotations && (bc->desc->rotate != NO_ROT)) {
         dbl xi[DIM];
-        int ielem_type = ei[pg->imtrx]->ielem_type;
+        int ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type;
         find_nodal_stu(id, ielem_type, &xi[0], &xi[1], &xi[2]);
 
-        goma_error err = load_basis_functions(xi, bfd);
+        goma_error err = load_basis_functions(xi, goma_ctx->fem.bfd);
         GOMA_EH(err, "problem from load_basis_functions");
 
         err = beer_belly();
         GOMA_EH(err, "beer_belly");
-        int ielem = ei[pg->imtrx]->ielem;
-        int iconnect_ptr = ei[pg->imtrx]->iconnect_ptr;
-        int num_local_nodes = ei[pg->imtrx]->num_local_nodes;
-        int ielem_dim = ei[pg->imtrx]->ielem_dim;
+        int ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
+        int iconnect_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr;
+        int num_local_nodes = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
+        int ielem_dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
 
         /* calculate the shape functions and their gradients */
 
@@ -5675,15 +5848,17 @@ goma_error zero_strong_resid_side(struct Local_Element_Contributions *lec,
             index_eq = bc_eqn_index(id, I, bc_input_id, map_mat_index(bc->BC_Data_Int[0]), p, &eqn,
                                     &matID_apply, &vd);
           } else if (stress_bc) {
-            index_eq = bc_eqn_index_stress(id, I, bc_input_id, ei[pg->imtrx]->mn, p, mode, &eqn,
-                                           &matID_apply, &vd);
+            index_eq = bc_eqn_index_stress(id, I, bc_input_id,
+                                           goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn, p, mode,
+                                           &eqn, &matID_apply, &vd);
           } else {
             index_eq =
-                bc_eqn_index(id, I, bc_input_id, ei[pg->imtrx]->mn, p, &eqn, &matID_apply, &vd);
+                bc_eqn_index(id, I, bc_input_id, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn, p,
+                             &eqn, &matID_apply, &vd);
           }
           int ldof_eqn;
           if (index_eq >= 0) {
-            int ieqn = upd->ep[pg->imtrx][eqn];
+            int ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
             if (goma_automatic_rotations.automatic_rotations && (bc->desc->rotate != NO_ROT)) {
               ieqn = equation_index_auto_rotate(elem_side_bc, I, eqn, p, bc);
             }
@@ -5692,9 +5867,9 @@ goma_error zero_strong_resid_side(struct Local_Element_Contributions *lec,
              * at the current node, whether or not it actually an
              * interpolating degree of freedom
              */
-            ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
+            ldof_eqn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[eqn][id];
             lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] = 0.0;
-            if (af->Assemble_Jacobian)
+            if (goma_ctx->fem.af->Assemble_Jacobian)
               zero_lec_row(lec->J, ieqn, ldof_eqn);
           }
         }

@@ -281,19 +281,19 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
   /*  variables for adaptive quadrature weight calculation   */
   double ls_F[9], ad_wt[9], xf[2];
   int ierr = 0, wt_type;
-  const int Jac_state = af->Assemble_Jacobian;
+  const int Jac_state = goma_ctx->fem.af->Assemble_Jacobian;
 
   for (a = 0; a < DIM; a++) {
     base_normal[a] = 0;
   }
   memset(Torque, 0, sizeof(double) * DIM);
 
-  dim = pd_glob[0]->Num_Dim;
+  dim = goma_ctx->fem.pd_glob[0]->Num_Dim;
 
   /* load eqn and variable number in tensor form */
   err = stress_eqn_pointer(v_s);
 
-  af->Assemble_Jacobian = TRUE;
+  goma_ctx->fem.af->Assemble_Jacobian = TRUE;
   /* first right time stamp or run stamp to separate the sets */
 
   if (print_flag && goma_ctx->proc_id == 0) {
@@ -344,16 +344,17 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
       int local_side_node_list[MAX_NODES_PER_SIDE];
       int id_side = exo->ss_side_list[exo->ss_elem_index[current_id]];
-      get_side_info(ei[pg->imtrx]->ielem_type, id_side, &num_nodes_on_side, local_side_node_list);
+      get_side_info(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, id_side,
+                    &num_nodes_on_side, local_side_node_list);
 
       elem_list = &exo->ss_elem_list[exo->ss_elem_index[current_id]];
 
       /* Now start element sweep */
 
       for (i = 0, local_flux = local_flux_conv = local_area = 0.; i < num_elem_in_set; i++) {
-        ei[pg->imtrx]->ielem = elem_list[i];
+        goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem = elem_list[i];
 
-        mn = find_mat_number(ei[pg->imtrx]->ielem, exo);
+        mn = find_mat_number(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, exo);
 
         /**    only do integration if the requested material number  **/
 
@@ -367,52 +368,53 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
           err = load_elem_dofptr(elem_list[i], exo, x, x, xdot, xdot, 0);
           GOMA_EH(err, "load_elem_dofptr");
 
-          err = bf_mp_init(pd);
+          err = bf_mp_init(goma_ctx->fem.pd);
           GOMA_EH(err, "bf_mp_init");
 
-          iconnect_ptr = ei[pg->imtrx]->iconnect_ptr;
-          ielem_type = ei[pg->imtrx]->ielem_type;
+          iconnect_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr;
+          ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type;
           ip_total = elem_info(NQUAD_SURF, ielem_type);
-          num_local_nodes = ei[pg->imtrx]->num_local_nodes;
-          ielem_dim = ei[pg->imtrx]->ielem_dim;
+          num_local_nodes = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
+          ielem_dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
 
           /* Calculates the ID side correctly for tets */
           if (ielem_type == LINEAR_TET || ielem_type == QUADRATIC_TET) {
-            id_side = find_id_side_SS(ei[pg->imtrx]->ielem, current_id, exo);
+            id_side =
+                find_id_side_SS(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, current_id, exo);
           } else {
-            id_side = find_id_side(ei[pg->imtrx]->ielem, num_nodes_on_side,
-                                   &exo->ss_node_list[current_id][num_nodes_on_side * i],
-                                   id_local_elem_coord, exo);
+            id_side = find_id_side(
+                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, num_nodes_on_side,
+                &exo->ss_node_list[current_id][num_nodes_on_side * i], id_local_elem_coord, exo);
           }
 
-          if (ls != NULL && ielem_dim == 2 &&
+          if (goma_ctx->fem.ls != NULL && ielem_dim == 2 &&
               (quantity == POS_LS_FLUX || quantity == NEG_LS_FLUX || quantity == DELTA ||
                quantity == LS_DCA)) {
-            if (ls->var != LS)
+            if (goma_ctx->fem.ls->var != LS)
               GOMA_WH(GOMA_ERROR, "Level-set variable is not LS!");
             switch (ielem_type) {
             case BIQUAD_QUAD:
             case BIQUAD_SHELL:
               switch (id_side) {
               case 1:
-                ls_F[0] = *esp_old->F[0];
-                ls_F[1] = *esp_old->F[1];
-                ls_F[2] = *esp_old->F[4];
+                ls_F[0] = *goma_ctx->fem.esp_old->F[0];
+                ls_F[1] = *goma_ctx->fem.esp_old->F[1];
+                ls_F[2] = *goma_ctx->fem.esp_old->F[4];
                 break;
               case 2:
-                ls_F[0] = *esp_old->F[1];
-                ls_F[1] = *esp_old->F[2];
-                ls_F[2] = *esp_old->F[5];
+                ls_F[0] = *goma_ctx->fem.esp_old->F[1];
+                ls_F[1] = *goma_ctx->fem.esp_old->F[2];
+                ls_F[2] = *goma_ctx->fem.esp_old->F[5];
                 break;
               case 3:
-                ls_F[0] = *esp_old->F[3];
-                ls_F[1] = *esp_old->F[2];
-                ls_F[2] = *esp_old->F[6];
+                ls_F[0] = *goma_ctx->fem.esp_old->F[3];
+                ls_F[1] = *goma_ctx->fem.esp_old->F[2];
+                ls_F[2] = *goma_ctx->fem.esp_old->F[6];
                 break;
               case 4:
-                ls_F[0] = *esp_old->F[0];
-                ls_F[1] = *esp_old->F[3];
-                ls_F[2] = *esp_old->F[7];
+                ls_F[0] = *goma_ctx->fem.esp_old->F[0];
+                ls_F[1] = *goma_ctx->fem.esp_old->F[3];
+                ls_F[2] = *goma_ctx->fem.esp_old->F[7];
                 break;
               default:
                 break;
@@ -422,24 +424,24 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             case BILINEAR_SHELL:
               switch (id_side) {
               case 1:
-                ls_F[0] = *esp_old->F[0];
-                ls_F[1] = *esp_old->F[1];
-                ls_F[2] = 0.5 * (*esp_old->F[0] + *esp_old->F[1]);
+                ls_F[0] = *goma_ctx->fem.esp_old->F[0];
+                ls_F[1] = *goma_ctx->fem.esp_old->F[1];
+                ls_F[2] = 0.5 * (*goma_ctx->fem.esp_old->F[0] + *goma_ctx->fem.esp_old->F[1]);
                 break;
               case 2:
-                ls_F[0] = *esp_old->F[1];
-                ls_F[1] = *esp_old->F[2];
-                ls_F[2] = 0.5 * (*esp_old->F[1] + *esp_old->F[2]);
+                ls_F[0] = *goma_ctx->fem.esp_old->F[1];
+                ls_F[1] = *goma_ctx->fem.esp_old->F[2];
+                ls_F[2] = 0.5 * (*goma_ctx->fem.esp_old->F[1] + *goma_ctx->fem.esp_old->F[2]);
                 break;
               case 3:
-                ls_F[0] = *esp_old->F[3];
-                ls_F[1] = *esp_old->F[2];
-                ls_F[2] = 0.5 * (*esp_old->F[3] + *esp_old->F[2]);
+                ls_F[0] = *goma_ctx->fem.esp_old->F[3];
+                ls_F[1] = *goma_ctx->fem.esp_old->F[2];
+                ls_F[2] = 0.5 * (*goma_ctx->fem.esp_old->F[3] + *goma_ctx->fem.esp_old->F[2]);
                 break;
               case 4:
-                ls_F[0] = *esp_old->F[0];
-                ls_F[1] = *esp_old->F[3];
-                ls_F[2] = 0.5 * (*esp_old->F[0] + *esp_old->F[3]);
+                ls_F[0] = *goma_ctx->fem.esp_old->F[0];
+                ls_F[1] = *goma_ctx->fem.esp_old->F[3];
+                ls_F[2] = 0.5 * (*goma_ctx->fem.esp_old->F[0] + *goma_ctx->fem.esp_old->F[3]);
                 break;
               default:
                 break;
@@ -453,24 +455,24 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               var = species_id - 1;
               switch (id_side) {
               case 1:
-                ls_F[0] = *esp_old->pF[var][0];
-                ls_F[1] = *esp_old->pF[var][1];
-                ls_F[2] = *esp_old->pF[var][4];
+                ls_F[0] = *goma_ctx->fem.esp_old->pF[var][0];
+                ls_F[1] = *goma_ctx->fem.esp_old->pF[var][1];
+                ls_F[2] = *goma_ctx->fem.esp_old->pF[var][4];
                 break;
               case 2:
-                ls_F[0] = *esp_old->pF[var][1];
-                ls_F[1] = *esp_old->pF[var][2];
-                ls_F[2] = *esp_old->pF[var][5];
+                ls_F[0] = *goma_ctx->fem.esp_old->pF[var][1];
+                ls_F[1] = *goma_ctx->fem.esp_old->pF[var][2];
+                ls_F[2] = *goma_ctx->fem.esp_old->pF[var][5];
                 break;
               case 3:
-                ls_F[0] = *esp_old->pF[var][3];
-                ls_F[1] = *esp_old->pF[var][2];
-                ls_F[2] = *esp_old->pF[var][6];
+                ls_F[0] = *goma_ctx->fem.esp_old->pF[var][3];
+                ls_F[1] = *goma_ctx->fem.esp_old->pF[var][2];
+                ls_F[2] = *goma_ctx->fem.esp_old->pF[var][6];
                 break;
               case 4:
-                ls_F[0] = *esp_old->pF[var][0];
-                ls_F[1] = *esp_old->pF[var][3];
-                ls_F[2] = *esp_old->pF[var][7];
+                ls_F[0] = *goma_ctx->fem.esp_old->pF[var][0];
+                ls_F[1] = *goma_ctx->fem.esp_old->pF[var][3];
+                ls_F[2] = *goma_ctx->fem.esp_old->pF[var][7];
                 break;
               default:
                 break;
@@ -496,16 +498,17 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
             }
             ierr = adaptive_weight(ad_wt, ip_total, ielem_dim - 1, ls_F, 0.0, wt_type,
-                                   ei[pg->imtrx]->ielem_type);
+                                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
             if (ierr == -1)
               printf("adaptive wt problem %d %g %g %g\n", ierr, ls_F[0], ls_F[1], ls_F[2]);
           }
 
-          if (ls != NULL && ls->elem_overlap_state && ls->Integration_Depth > 0) {
+          if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->elem_overlap_state &&
+              goma_ctx->fem.ls->Integration_Depth > 0) {
             Subgrid_Int.active = TRUE;
 
             get_subgrid_integration_pts(Subgrid_Tree, &element_search_grid, &Subgrid_Int.s,
-                                        &Subgrid_Int.wt, ls->Length_Scale);
+                                        &Subgrid_Int.wt, goma_ctx->fem.ls->Length_Scale);
 
             find_surf_center_st(ielem_type, id_side, ielem_dim, surface_centroid, &s, &t);
 
@@ -520,8 +523,9 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             local_q = local_qconv = 0.;
             memset(local_Torque, 0, DIM * sizeof(double));
 
-            if (ls != NULL && ls->elem_overlap_state && ls->Integration_Depth > 0) {
-              ls->Elem_Sign = 0;
+            if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->elem_overlap_state &&
+                goma_ctx->fem.ls->Integration_Depth > 0) {
+              goma_ctx->fem.ls->Elem_Sign = 0;
               xi[0] = Subgrid_Int.s[ip][0];
               xi[1] = Subgrid_Int.s[ip][1];
               xi[2] = Subgrid_Int.s[ip][2];
@@ -539,7 +543,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             }
 
             /* ****************************************/
-            err = load_basis_functions(xi, bfd);
+            err = load_basis_functions(xi, goma_ctx->fem.bfd);
             GOMA_EH(err, "problem from load_basis_functions");
 
             err = beer_belly();
@@ -558,9 +562,9 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             err = load_bf_mesh_derivs();
             GOMA_EH(err, "load_bf_mesh_derivs");
 
-            surface_determinant_and_normal(ei[pg->imtrx]->ielem, iconnect_ptr, num_local_nodes,
-                                           ielem_dim - 1, id_side, num_nodes_on_side,
-                                           id_local_elem_coord);
+            surface_determinant_and_normal(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem,
+                                           iconnect_ptr, num_local_nodes, ielem_dim - 1, id_side,
+                                           num_nodes_on_side, id_local_elem_coord);
 
             /*
              * Load up physical space gradients of field variables at this
@@ -572,9 +576,10 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             err = load_fv_mesh_derivs(1);
             GOMA_EH(err, "load_fv_mesh_derivs");
 
-            if (TimeIntegration != STEADY && pd->e[pg->imtrx][MESH_DISPLACEMENT1]) {
+            if (TimeIntegration != STEADY &&
+                goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
               for (j = 0; j < VIM; j++) {
-                x_dot[j] = fv_dot->x[j];
+                x_dot[j] = goma_ctx->fem.fv_dot->x[j];
               }
             } else {
               for (j = 0; j < VIM; j++) {
@@ -585,16 +590,18 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             do_LSA_mods(LSA_SURFACE);
 
             if (ielem_dim != 3) {
-              calc_surf_tangent(ei[pg->imtrx]->ielem, iconnect_ptr, num_local_nodes, ielem_dim - 1,
-                                num_nodes_on_side, id_local_elem_coord);
+              calc_surf_tangent(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, iconnect_ptr,
+                                num_local_nodes, ielem_dim - 1, num_nodes_on_side,
+                                id_local_elem_coord);
             }
 
             weight = wt;
-            det = fv->sdet * fv->h3;
+            det = goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->h3;
 
-            if (upd->CoordinateSystem == CYLINDRICAL || upd->CoordinateSystem == SWIRLING) {
+            if (goma_ctx->fem.upd->CoordinateSystem == CYLINDRICAL ||
+                goma_ctx->fem.upd->CoordinateSystem == SWIRLING) {
               weight = 2. * M_PIE * wt;
-              det = fv->sdet;
+              det = goma_ctx->fem.fv->sdet;
             }
 
             /*	get density  */
@@ -603,8 +610,9 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             /**   get solid stresses  **/
 
-            if (pd->e[pg->imtrx][R_MESH1] && cr->MeshMotion != ARBITRARY) {
-              err = belly_flop(elc->lame_mu);
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] &&
+                goma_ctx->fem.cr->MeshMotion != ARBITRARY) {
+              err = belly_flop(goma_ctx->fem.elc->lame_mu);
               GOMA_EH(err, "error in belly flop");
               if (err == 2)
                 exit(-1);
@@ -614,13 +622,14 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                * Guess what the 4 new args will have to be and bloat accordingly.
                */
 
-              err = mesh_stress_tensor(TT, dTT_dx, dTT_dp, dTT_dc, dTT_dp_liq, dTT_dp_gas,
-                                       dTT_dporosity, dTT_dsink_mass, dTT_dT, dTT_dmax_strain,
-                                       dTT_dcur_strain, elc->lame_mu, elc->lame_lambda, delta_t,
-                                       ei[pg->imtrx]->ielem, ip, ip_total);
+              err = mesh_stress_tensor(
+                  TT, dTT_dx, dTT_dp, dTT_dc, dTT_dp_liq, dTT_dp_gas, dTT_dporosity, dTT_dsink_mass,
+                  dTT_dT, dTT_dmax_strain, dTT_dcur_strain, goma_ctx->fem.elc->lame_mu,
+                  goma_ctx->fem.elc->lame_lambda, delta_t,
+                  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, ip, ip_total);
 
               /* For LINEAR ELASTICITY */
-              if (cr->MeshFluxModel == LINEAR) {
+              if (goma_ctx->fem.cr->MeshFluxModel == LINEAR) {
                 if (dim == 2) {
                   TT[2][2] = 1.;
                   TT[1][2] = 0.;
@@ -630,10 +639,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               /*  For Hookian Elasticity and shrinkage */
               else {
                 if (dim == 2) {
-                  elast_modulus = elc->lame_mu;
-                  if (cr->MeshFluxModel == NONLINEAR || cr->MeshFluxModel == HOOKEAN_PSTRAIN ||
-                      cr->MeshFluxModel == INCOMP_PSTRAIN)
-                    TT[2][2] = (1. - pow(fv->volume_change, 2. / 3.)) * elast_modulus - fv->P;
+                  elast_modulus = goma_ctx->fem.elc->lame_mu;
+                  if (goma_ctx->fem.cr->MeshFluxModel == NONLINEAR ||
+                      goma_ctx->fem.cr->MeshFluxModel == HOOKEAN_PSTRAIN ||
+                      goma_ctx->fem.cr->MeshFluxModel == INCOMP_PSTRAIN)
+                    TT[2][2] =
+                        (1. - pow(goma_ctx->fem.fv->volume_change, 2. / 3.)) * elast_modulus -
+                        goma_ctx->fem.fv->P;
                   /*              if (cr->MeshFluxModel == INCOMP_PSTRESS) */
                   else
                     TT[2][2] = 0.;
@@ -679,8 +691,9 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             } /* end of STRESS_TENSOR */
 
             /* calculate real-solid stress here !!*/
-            if (pd->e[pg->imtrx][R_SOLID1] && cr->MeshMotion != ARBITRARY) {
-              mu = elc_rs->lame_mu;
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SOLID1] &&
+                goma_ctx->fem.cr->MeshMotion != ARBITRARY) {
+              mu = goma_ctx->fem.elc_rs->lame_mu;
               err = belly_flop_rs(mu);
               GOMA_EH(err, "error in belly flop");
               if (err == 2)
@@ -689,15 +702,17 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                * Total mesh stress tensor...
                */
               err = solid_stress_tensor(TT, dTT_dx, dTT_drs, dTT_dp, dTT_dc, dTT_dp_liq, dTT_dp_gas,
-                                        dTT_dporosity, dTT_dT, dTT_dmax_strain, elc_rs->lame_mu,
-                                        elc_rs->lame_lambda);
+                                        dTT_dporosity, dTT_dT, dTT_dmax_strain,
+                                        goma_ctx->fem.elc_rs->lame_mu,
+                                        goma_ctx->fem.elc_rs->lame_lambda);
               if (dim == 2) {
-                elast_modulus = elc_rs->lame_mu;
+                elast_modulus = goma_ctx->fem.elc_rs->lame_mu;
 
-                if (cr->RealSolidFluxModel == NONLINEAR ||
-                    cr->RealSolidFluxModel == HOOKEAN_PSTRAIN ||
-                    cr->RealSolidFluxModel == INCOMP_PSTRAIN)
-                  TT[2][2] = (1. - pow(fv->volume_change, 2. / 3.)) * elast_modulus - fv->P;
+                if (goma_ctx->fem.cr->RealSolidFluxModel == NONLINEAR ||
+                    goma_ctx->fem.cr->RealSolidFluxModel == HOOKEAN_PSTRAIN ||
+                    goma_ctx->fem.cr->RealSolidFluxModel == INCOMP_PSTRAIN)
+                  TT[2][2] = (1. - pow(goma_ctx->fem.fv->volume_change, 2. / 3.)) * elast_modulus -
+                             goma_ctx->fem.fv->P;
                 /*              if (cr->MeshFluxModel == INCOMP_PSTRESS) */
                 else
                   TT[2][2] = 0.;
@@ -746,10 +761,10 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
              *  viscoelastic stress tensor
              */
             memset(ves, 0, sizeof(dbl) * DIM * DIM);
-            if (pd->gv[POLYMER_STRESS11]) {
+            if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
               for (a = 0; a < WIM; a++) {
                 for (b = 0; b < WIM; b++) {
-                  gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+                  gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
                 }
               }
               ve_polymer_stress(gamma, ves, NULL);
@@ -761,18 +776,18 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
              */
             memset(vs, 0, sizeof(dbl) * DIM * DIM);
             memset(gamma, 0, sizeof(dbl) * DIM * DIM);
-            if (cr->MeshMotion == ARBITRARY) {
+            if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
               for (a = 0; a < WIM; a++) {
                 for (b = 0; b < WIM; b++) {
-                  gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+                  gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
                 }
               }
 
-              mu = viscosity(gn, gamma, d_mu);
+              mu = viscosity(goma_ctx->fem.gn, gamma, d_mu);
 
               for (a = 0; a < WIM; a++) {
                 for (b = 0; b < WIM; b++) {
-                  vs[a][b] = mu * gamma[a][b] - fv->P * delta(a, b);
+                  vs[a][b] = mu * gamma[a][b] - goma_ctx->fem.fv->P * delta(a, b);
                 }
               }
               if (profile_flag & 1) {
@@ -824,10 +839,10 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
              * computing the electric stress tensor upfront.
              */
             memset(es, 0, sizeof(dbl) * DIM * DIM);
-            if (pd->e[pg->imtrx][R_POTENTIAL]) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
               efield_sqr = 0.0;
               for (a = 0; a < VIM; a++) {
-                efield[a] = -fv->grad_V[a];
+                efield[a] = -goma_ctx->fem.fv->grad_V[a];
                 efield_sqr += efield[a] * efield[a];
               }
 
@@ -836,7 +851,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   es[a][b] = efield[a] * efield[b] - 0.5 * efield_sqr * delta(a, b);
                 }
               }
-              perm = mp->permittivity;
+              perm = goma_ctx->fem.mp->permittivity;
               if (J_AC != NULL) {
                 memset(d_p_dV, 0, sizeof(double) * MDE);
                 memset(d_p_dT, 0, sizeof(double) * MDE);
@@ -848,19 +863,19 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             /*
              * load surface tension for variable models
              */
-            if (mp->SurfaceTensionModel == CONSTANT) {
+            if (goma_ctx->fem.mp->SurfaceTensionModel == CONSTANT) {
               dsigmadT = 0.0;
               for (a = 0; a < MAX_CONC; a++) {
                 dsigmadC[a] = 0.0;
               }
             }
-            if (mp->SurfaceTensionModel != CONSTANT) {
+            if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
               load_surface_tension(dsigma_dx);
             }
-            if (mp->SurfaceTensionModel == USER) {
-              dsigmadT = mp->d_surface_tension[TEMPERATURE];
+            if (goma_ctx->fem.mp->SurfaceTensionModel == USER) {
+              dsigmadT = goma_ctx->fem.mp->d_surface_tension[TEMPERATURE];
               for (a = 0; a < MAX_CONC; a++) {
-                dsigmadC[a] = mp->d_surface_tension[MAX_VARIABLE_TYPES + a];
+                dsigmadC[a] = goma_ctx->fem.mp->d_surface_tension[MAX_VARIABLE_TYPES + a];
               }
             }
 
@@ -881,14 +896,14 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             switch (quantity) {
             case AREA:
 
-              local_flux += weight * fv->sdet;
+              local_flux += weight * goma_ctx->fem.fv->sdet;
               local_flux_conv = 0.0;
 
               break;
 
             case VOL_REVOLUTION:
 
-              local_q += 0.5 * fv->x[1] * fabs(fv->snormal[1]);
+              local_q += 0.5 * goma_ctx->fem.fv->x[1] * fabs(goma_ctx->fem.fv->snormal[1]);
               local_flux += weight * det * local_q;
               local_flux_conv = 0.0;
               /*                      local_flux_conv += weight*det*mp->surface_tension ;*/
@@ -902,20 +917,22 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               k = conductivity(d_k, time_value);
               Cp = heat_capacity(d_Cp, time_value);
 
-              if (cr->HeatFluxModel == CR_HF_FOURIER_0) {
+              if (goma_ctx->fem.cr->HeatFluxModel == CR_HF_FOURIER_0) {
                 for (a = 0; a < VIM; a++) {
-                  local_q += -k * fv->snormal[a] * fv->grad_T[a];
-                  local_qconv += rho * Cp * fv->T * fv->snormal[a] * (fv->v[a] - x_dot[a]);
+                  local_q += -k * goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_T[a];
+                  local_qconv += rho * Cp * goma_ctx->fem.fv->T * goma_ctx->fem.fv->snormal[a] *
+                                 (goma_ctx->fem.fv->v[a] - x_dot[a]);
                 }
-              } else if (cr->HeatFluxModel == CR_HF_USER) {
-                usr_heat_flux(fv->grad_T, q, dq_gradT, dq_dX, time_value);
+              } else if (goma_ctx->fem.cr->HeatFluxModel == CR_HF_USER) {
+                usr_heat_flux(goma_ctx->fem.fv->grad_T, q, dq_gradT, dq_dX, time_value);
                 printf("untested\n");
                 exit(-1);
 
                 for (a = 0; a < VIM; a++) {
-                  local_q += fv->snormal[a] * q[a];
+                  local_q += goma_ctx->fem.fv->snormal[a] * q[a];
                   for (b = 0; b < VIM; b++) {
-                    local_qconv += fv->snormal[a] * dq_gradT[a][b] * fv->snormal[b];
+                    local_qconv += goma_ctx->fem.fv->snormal[a] * dq_gradT[a][b] *
+                                   goma_ctx->fem.fv->snormal[b];
                   }
                 }
               }
@@ -930,8 +947,9 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               kR_inv = 1. / (wnum * R_imped);
 
               for (a = 0; a < dim; a++) {
-                local_q += -kR_inv * fv->snormal[a] * fv->grad_api[a];
-                local_qconv += kR_inv * fv->snormal[a] * fv->grad_apr[a];
+                local_q += -kR_inv * goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_api[a];
+                local_qconv +=
+                    kR_inv * goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_apr[a];
               }
               local_flux += weight * det * local_q;
               local_flux_conv += weight * det * local_qconv;
@@ -944,8 +962,10 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               kR_inv = 1. / (wnum * R_imped);
 
               for (a = 0; a < dim; a++) {
-                local_q += -kR_inv * fv->stangent[0][a] * fv->grad_api[a];
-                local_qconv += kR_inv * fv->stangent[0][a] * fv->grad_apr[a];
+                local_q +=
+                    -kR_inv * goma_ctx->fem.fv->stangent[0][a] * goma_ctx->fem.fv->grad_api[a];
+                local_qconv +=
+                    kR_inv * goma_ctx->fem.fv->stangent[0][a] * goma_ctx->fem.fv->grad_apr[a];
               }
               local_flux += weight * det * local_q;
               local_flux_conv += weight * det * local_qconv;
@@ -958,8 +978,10 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               kR_inv = 1. / (wnum * R_imped);
 
               for (a = 0; a < dim; a++) {
-                local_q += -kR_inv * fv->stangent[1][a] * fv->grad_api[a];
-                local_qconv += kR_inv * fv->stangent[1][a] * fv->grad_apr[a];
+                local_q +=
+                    -kR_inv * goma_ctx->fem.fv->stangent[1][a] * goma_ctx->fem.fv->grad_api[a];
+                local_qconv +=
+                    kR_inv * goma_ctx->fem.fv->stangent[1][a] * goma_ctx->fem.fv->grad_apr[a];
               }
               local_flux += weight * det * local_q;
               local_flux_conv += weight * det * local_qconv;
@@ -971,8 +993,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               wnum = wave_number(d_wnum, time_value);
               kR_inv = 1. / (wnum * R_imped);
 
-              local_q += -kR_inv * fv->grad_api[0];
-              local_qconv += kR_inv * fv->grad_apr[0];
+              local_q += -kR_inv * goma_ctx->fem.fv->grad_api[0];
+              local_qconv += kR_inv * goma_ctx->fem.fv->grad_apr[0];
               local_flux += weight * det * local_q;
               local_flux_conv += weight * det * local_qconv;
               break;
@@ -983,8 +1005,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               wnum = wave_number(d_wnum, time_value);
               kR_inv = 1. / (wnum * R_imped);
 
-              local_q += -kR_inv * fv->grad_api[1];
-              local_qconv += kR_inv * fv->grad_apr[1];
+              local_q += -kR_inv * goma_ctx->fem.fv->grad_api[1];
+              local_qconv += kR_inv * goma_ctx->fem.fv->grad_apr[1];
               local_flux += weight * det * local_q;
               local_flux_conv += weight * det * local_qconv;
               break;
@@ -995,21 +1017,21 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               wnum = wave_number(d_wnum, time_value);
               kR_inv = 1. / (wnum * R_imped);
 
-              local_q += -kR_inv * fv->grad_api[2];
-              local_qconv += kR_inv * fv->grad_apr[2];
+              local_q += -kR_inv * goma_ctx->fem.fv->grad_api[2];
+              local_qconv += kR_inv * goma_ctx->fem.fv->grad_apr[2];
               local_flux += weight * det * local_q;
               local_flux_conv += weight * det * local_qconv;
               break;
 
             case VOLUME_FLUX:
-              if (pd->CoordinateSystem == CARTESIAN_2pt5D) {
-                local_q += fv->v[2] - x_dot[2];
+              if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D) {
+                local_q += goma_ctx->fem.fv->v[2] - x_dot[2];
               } else {
                 for (a = 0; a < WIM; a++) {
-                  if (cr->MeshMotion == ARBITRARY)
-                    local_q += fv->snormal[a] * (fv->v[a] - x_dot[a]);
-                  else if (pd->v[pg->imtrx][MESH_DISPLACEMENT1])
-                    local_q += fv->snormal[a] * (fv->d[a]);
+                  if (goma_ctx->fem.cr->MeshMotion == ARBITRARY)
+                    local_q += goma_ctx->fem.fv->snormal[a] * (goma_ctx->fem.fv->v[a] - x_dot[a]);
+                  else if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1])
+                    local_q += goma_ctx->fem.fv->snormal[a] * (goma_ctx->fem.fv->d[a]);
                   else
                     GOMA_EH(GOMA_ERROR,
                             "Inconsistency in volume-flux specification. Contact Developers");
@@ -1026,7 +1048,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
               /* First save local normal to edge because lubrication_shell_init changes it */
               for (a = 0; a < VIM; a++)
-                base_normal[a] = fv->snormal[a];
+                base_normal[a] = goma_ctx->fem.fv->snormal[a];
 
               n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
               lubrication_shell_initialize(n_dof, dof_map, -1, xi, exo, 0);
@@ -1036,7 +1058,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               calculate_lub_q_v(R_LUBP, time_value, 0, xi, exo);
 
               for (a = 0; a < VIM; a++) {
-                local_q += base_normal[a] * LubAux->q[a];
+                local_q += base_normal[a] * goma_ctx->fem.lub_aux->q[a];
               }
               local_flux += weight * det * local_q;
               /* clean-up */
@@ -1048,13 +1070,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             {
               double H = 0.0;
-              load_lsi(ls->Length_Scale);
+              load_lsi(goma_ctx->fem.ls->Length_Scale);
 
-              H = (quantity == POS_LS_FLUX ? lsi->H : (1.0 - lsi->H));
+              H = (quantity == POS_LS_FLUX ? goma_ctx->fem.lsi->H : (1.0 - goma_ctx->fem.lsi->H));
 
               for (a = 0; a < dim; a++) {
-                local_q += H * (fv->v[a] - x_dot[a]) * fv->snormal[a];
-                local_qconv += (fv->v[a] - x_dot[a]) * fv->snormal[a];
+                local_q += H * (goma_ctx->fem.fv->v[a] - x_dot[a]) * goma_ctx->fem.fv->snormal[a];
+                local_qconv += (goma_ctx->fem.fv->v[a] - x_dot[a]) * goma_ctx->fem.fv->snormal[a];
               }
               local_flux += weight * det * local_q;
               local_flux_conv += ad_wt[ip_total - ip - 1] * det * local_qconv;
@@ -1065,13 +1087,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             case PVELOCITY2:
             case PVELOCITY3:
               for (a = 0; a < WIM; a++) {
-                local_q += fv->snormal[a] * fv->pv[a];
+                local_q += goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->pv[a];
               }
               local_flux += weight * det * local_q;
               break;
 
             case EXT_VELOCITY: /* This is already a normal velocity */
-              local_q += fv->ext_v;
+              local_q += goma_ctx->fem.fv->ext_v;
               local_flux += weight * det * local_q;
               break;
 
@@ -1079,43 +1101,48 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             case EFIELD2:
             case EFIELD3:
               for (a = 0; a < VIM; a++) {
-                local_q += fv->snormal[a] * fv->E_field[a];
+                local_q += goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->E_field[a];
               }
               local_flux += weight * det * local_q;
               break;
 
             case SPECIES_FLUX:
               for (a = 0; a < VIM; a++) {
-                if (cr->MassFluxModel == FICKIAN || cr->MassFluxModel == STEFAN_MAXWELL ||
-                    cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
-                    cr->MassFluxModel == STEFAN_MAXWELL_VOLUME ||
-                    cr->MassFluxModel == FICKIAN_SHELL) {
+                if (goma_ctx->fem.cr->MassFluxModel == FICKIAN ||
+                    goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL ||
+                    goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
+                    goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_VOLUME ||
+                    goma_ctx->fem.cr->MassFluxModel == FICKIAN_SHELL) {
                   if (Diffusivity())
                     GOMA_EH(-1, "Error in Diffusivity.");
 
                   local_q +=
-                      fv->snormal[a] * (-mp->diffusivity[species_id] * fv->grad_c[species_id][a]);
-                } else if (cr->MassFluxModel == GENERALIZED_FICKIAN) {
+                      goma_ctx->fem.fv->snormal[a] * (-goma_ctx->fem.mp->diffusivity[species_id] *
+                                                      goma_ctx->fem.fv->grad_c[species_id][a]);
+                } else if (goma_ctx->fem.cr->MassFluxModel == GENERALIZED_FICKIAN) {
                   if (Generalized_Diffusivity())
                     GOMA_EH(-1, "Error in Diffusivity.");
-                  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                    local_q += fv->snormal[a] *
-                               (-mp->diffusivity_gen_fick[species_id][w] * fv->grad_c[w][a]);
+                  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                    local_q += goma_ctx->fem.fv->snormal[a] *
+                               (-goma_ctx->fem.mp->diffusivity_gen_fick[species_id][w] *
+                                goma_ctx->fem.fv->grad_c[w][a]);
                   }
-                } else if (cr->MassFluxModel == DARCY) { /* diffusion induced convection is zero */
-                } else if (cr->MassFluxModel == DM_SUSPENSION_BALANCE) {
+                } else if (goma_ctx->fem.cr->MassFluxModel ==
+                           DARCY) { /* diffusion induced convection is zero */
+                } else if (goma_ctx->fem.cr->MassFluxModel == DM_SUSPENSION_BALANCE) {
                   struct Species_Conservation_Terms st;
                   zero_structure(&st, sizeof(struct Species_Conservation_Terms), 1);
                   if (Diffusivity())
                     GOMA_EH(-1, "Error in Diffusivity.");
-                  for (w = 0; w < pd->Num_Species_Eqn; w++) {
+                  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
                     suspension_balance(&st, w);
-                    local_q += fv->snormal[a] * st.diff_flux[w][a];
+                    local_q += goma_ctx->fem.fv->snormal[a] * st.diff_flux[w][a];
                   }
                 } else {
                   GOMA_EH(-1, "Unimplemented mass flux constitutive relation.");
                 }
-                local_qconv += (fv->snormal[a] * (fv->v[a] - x_dot[a]) * fv->c[species_id]);
+                local_qconv += (goma_ctx->fem.fv->snormal[a] * (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                goma_ctx->fem.fv->c[species_id]);
               }
               local_flux += weight * det * local_q;
               local_flux_conv += weight * det * local_qconv;
@@ -1126,12 +1153,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               Diffusivity();
 
               for (a = 0; a < VIM; a++) {
-                local_q +=
-                    (-mp->diffusivity[species_id] * fv->snormal[a] * fv->grad_c[species_id][a]);
-                local_qconv += (fv->snormal[a] * (fv->v[a] - x_dot[a]) * fv->c[species_id]);
+                local_q += (-goma_ctx->fem.mp->diffusivity[species_id] *
+                            goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_c[species_id][a]);
+                local_qconv += (goma_ctx->fem.fv->snormal[a] * (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                goma_ctx->fem.fv->c[species_id]);
               }
-              local_q *= 0.5 * fv->x[1] * fabs(fv->snormal[1]);
-              local_qconv *= 0.5 * fv->x[1] * fabs(fv->snormal[1]);
+              local_q *= 0.5 * goma_ctx->fem.fv->x[1] * fabs(goma_ctx->fem.fv->snormal[1]);
+              local_qconv *= 0.5 * goma_ctx->fem.fv->x[1] * fabs(goma_ctx->fem.fv->snormal[1]);
               local_flux += weight * det * local_q;
               local_flux_conv += weight * det * local_qconv;
               break;
@@ -1140,9 +1168,9 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
               Diffusivity();
 
-              z[species_id] = mp->charge_number[species_id];
-              if (mp->SolutionTemperatureModel == CONSTANT) {
-                T = mp->solution_temperature;
+              z[species_id] = goma_ctx->fem.mp->charge_number[species_id];
+              if (goma_ctx->fem.mp->SolutionTemperatureModel == CONSTANT) {
+                T = goma_ctx->fem.mp->solution_temperature;
               } else {
                 GOMA_EH(GOMA_ERROR, "Solution-temperature model not yet implemented");
               }
@@ -1154,23 +1182,27 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               }
 
               FRT = FF / R / T;
-              kapta[species_id] =
-                  FRT * z[species_id] * mp->diffusivity[species_id] * fv->c[species_id];
-              for (w = 0; w < pd->Num_Species_Eqn; w++) {
+              kapta[species_id] = FRT * z[species_id] * goma_ctx->fem.mp->diffusivity[species_id] *
+                                  goma_ctx->fem.fv->c[species_id];
+              for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
                 d_kapta_dc[species_id][MAX_VARIABLE_TYPES + w] =
-                    FRT * z[species_id] * mp->diffusivity[species_id];
+                    FRT * z[species_id] * goma_ctx->fem.mp->diffusivity[species_id];
               }
-              d_kapta_dT[species_id] =
-                  (-FRT / T) * z[species_id] * mp->diffusivity[species_id] * fv->c[species_id];
+              d_kapta_dT[species_id] = (-FRT / T) * z[species_id] *
+                                       goma_ctx->fem.mp->diffusivity[species_id] *
+                                       goma_ctx->fem.fv->c[species_id];
               for (a = 0; a < VIM; a++) {
                 d_kapta_dx[species_id][a] = 0.0;
               }
 
               for (a = 0; a < VIM; a++) {
                 local_q +=
-                    (-mp->diffusivity[species_id] * fv->snormal[a] * fv->grad_c[species_id][a] -
-                     kapta[species_id] * fv->snormal[a] * fv->grad_V[a]);
-                local_qconv += (fv->snormal[a] * (fv->v[a] - x_dot[a]) * fv->c[species_id]);
+                    (-goma_ctx->fem.mp->diffusivity[species_id] * goma_ctx->fem.fv->snormal[a] *
+                         goma_ctx->fem.fv->grad_c[species_id][a] -
+                     kapta[species_id] * goma_ctx->fem.fv->snormal[a] *
+                         goma_ctx->fem.fv->grad_V[a]);
+                local_qconv += (goma_ctx->fem.fv->snormal[a] * (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                goma_ctx->fem.fv->c[species_id]);
               }
               local_flux += weight * det * local_q;
               local_flux_conv += weight * det * local_qconv;
@@ -1180,10 +1212,10 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
               Diffusivity();
 
-              z[species_id] = mp->charge_number[species_id];
+              z[species_id] = goma_ctx->fem.mp->charge_number[species_id];
 
-              if (mp->SolutionTemperatureModel == CONSTANT) {
-                T = mp->solution_temperature;
+              if (goma_ctx->fem.mp->SolutionTemperatureModel == CONSTANT) {
+                T = goma_ctx->fem.mp->solution_temperature;
               } else {
                 GOMA_EH(GOMA_ERROR, "Solution-temperature model not yet implemented");
               }
@@ -1195,30 +1227,34 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               }
 
               FRT = FF / R / T;
-              kapta[species_id] =
-                  FRT * z[species_id] * mp->diffusivity[species_id] * fv->c[species_id];
-              for (w = 0; w < pd->Num_Species_Eqn; w++) {
+              kapta[species_id] = FRT * z[species_id] * goma_ctx->fem.mp->diffusivity[species_id] *
+                                  goma_ctx->fem.fv->c[species_id];
+              for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
                 d_kapta_dc[species_id][MAX_VARIABLE_TYPES + w] =
-                    FRT * z[species_id] * mp->diffusivity[species_id];
+                    FRT * z[species_id] * goma_ctx->fem.mp->diffusivity[species_id];
               }
-              d_kapta_dT[species_id] =
-                  (-FRT / T) * z[species_id] * mp->diffusivity[species_id] * fv->c[species_id];
+              d_kapta_dT[species_id] = (-FRT / T) * z[species_id] *
+                                       goma_ctx->fem.mp->diffusivity[species_id] *
+                                       goma_ctx->fem.fv->c[species_id];
               for (a = 0; a < VIM; a++) {
                 d_kapta_dx[species_id][a] = 0.0;
               }
 
               for (a = 0; a < VIM; a++) {
                 local_q +=
-                    (-mp->diffusivity[species_id] * fv->snormal[a] * fv->grad_c[species_id][a] -
-                     kapta[species_id] * fv->snormal[a] * fv->grad_V[a]);
-                local_qconv += (fv->snormal[a] * (fv->v[a] - x_dot[a]) * fv->c[species_id]);
+                    (-goma_ctx->fem.mp->diffusivity[species_id] * goma_ctx->fem.fv->snormal[a] *
+                         goma_ctx->fem.fv->grad_c[species_id][a] -
+                     kapta[species_id] * goma_ctx->fem.fv->snormal[a] *
+                         goma_ctx->fem.fv->grad_V[a]);
+                local_qconv += (goma_ctx->fem.fv->snormal[a] * (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                goma_ctx->fem.fv->c[species_id]);
               }
               local_flux += weight * det * local_q;
               local_flux_conv += weight * det * local_qconv;
               break;
 
             case CURRENT:
-              k = mp->electrical_conductivity;
+              k = goma_ctx->fem.mp->electrical_conductivity;
               if (J_AC != NULL) {
                 memset(dkdV, 0, sizeof(double) * MDE);
                 memset(dkdT, 0, sizeof(double) * MDE);
@@ -1226,7 +1262,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 memset(dkdC, 0, sizeof(double) * MAX_CONC * MDE);
               }
               for (a = 0; a < VIM; a++) {
-                local_q += -k * fv->snormal[a] * fv->grad_V[a];
+                local_q += -k * goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_V[a];
               }
               local_flux += weight * det * local_q;
               local_flux_conv = 0.0;
@@ -1235,7 +1271,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             case ELEC_FORCE_NORMAL:
               for (a = 0; a < VIM; a++) {
                 for (b = 0; b < VIM; b++) {
-                  local_q += (fv->snormal[a] * perm * es[a][b] * fv->snormal[b]);
+                  local_q += (goma_ctx->fem.fv->snormal[a] * perm * es[a][b] *
+                              goma_ctx->fem.fv->snormal[b]);
                 }
               }
               local_flux += weight * det * local_q;
@@ -1243,16 +1280,18 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             case ELEC_FORCE_TANGENT1:
               for (a = 0; a < VIM; a++) {
                 for (b = 0; b < VIM; b++) {
-                  local_q += (fv->stangent[0][a] * perm * es[a][b] * fv->snormal[b]);
+                  local_q += (goma_ctx->fem.fv->stangent[0][a] * perm * es[a][b] *
+                              goma_ctx->fem.fv->snormal[b]);
                 }
               }
               local_flux += weight * det * local_q;
               break;
             case ELEC_FORCE_TANGENT2:
-              if (pd->Num_Dim == 3) {
+              if (goma_ctx->fem.pd->Num_Dim == 3) {
                 for (a = 0; a < VIM; a++) {
                   for (b = 0; b < VIM; b++) {
-                    local_q += (fv->stangent[1][a] * perm * es[a][b] * fv->snormal[b]);
+                    local_q += (goma_ctx->fem.fv->stangent[1][a] * perm * es[a][b] *
+                                goma_ctx->fem.fv->snormal[b]);
                   }
                 }
               } else {
@@ -1262,20 +1301,20 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
             case ELEC_FORCE_X:
               for (a = 0; a < VIM; a++) {
-                local_q += (perm * es[0][a] * fv->snormal[a]);
+                local_q += (perm * es[0][a] * goma_ctx->fem.fv->snormal[a]);
               }
               local_flux += weight * det * local_q;
               break;
             case ELEC_FORCE_Y:
               for (a = 0; a < VIM; a++) {
-                local_q += (perm * es[1][a] * fv->snormal[a]);
+                local_q += (perm * es[1][a] * goma_ctx->fem.fv->snormal[a]);
               }
               local_flux += weight * det * local_q;
               break;
             case ELEC_FORCE_Z:
-              if (pd->Num_Dim == 3) {
+              if (goma_ctx->fem.pd->Num_Dim == 3) {
                 for (a = 0; a < VIM; a++) {
-                  local_q += (perm * es[2][a] * fv->snormal[a]);
+                  local_q += (perm * es[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
               } else {
                 GOMA_EH(GOMA_ERROR, "Illegal flux type");
@@ -1284,20 +1323,21 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
             case NET_SURF_CHARGE:
               for (a = 0; a < VIM; a++) {
-                local_q += (-perm * fv->snormal[a] * efield[a]);
+                local_q += (-perm * goma_ctx->fem.fv->snormal[a] * efield[a]);
               }
               local_flux += weight * det * local_q;
               break;
 
             case TORQUE:
-              if (pd->CoordinateSystem == PROJECTED_CARTESIAN ||
-                  pd->CoordinateSystem == CARTESIAN_2pt5D)
+              if (goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+                  goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D)
                 GOMA_EH(
                     GOMA_ERROR,
                     "TORQUE has not been updated for the PROJECTED_CARTESIAN coordinate system.");
 
-              if (pd->CoordinateSystem == SWIRLING || pd->CoordinateSystem == CYLINDRICAL) {
-                if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+                  goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL) {
+                if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                   for (a = 0; a < WIM; a++) {
                     for (b = 0; b < WIM; b++) {
                       /*
@@ -1306,37 +1346,40 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                        * the moment arm is incorporated into sideset.
                        */
 
-                      local_q += fv->x[1] * e_theta[a] * (vs[a][b] + ves[a][b]) * fv->snormal[b];
-                      local_qconv += fv->x[1] * e_theta[a] *
-                                     (-rho * (fv->v[a] - x_dot[a]) * fv->v[b] * fv->snormal[b]);
+                      local_q += goma_ctx->fem.fv->x[1] * e_theta[a] * (vs[a][b] + ves[a][b]) *
+                                 goma_ctx->fem.fv->snormal[b];
+                      local_qconv += goma_ctx->fem.fv->x[1] * e_theta[a] *
+                                     (-rho * (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                      goma_ctx->fem.fv->v[b] * goma_ctx->fem.fv->snormal[b]);
                     }
                   }
                 } else {
                   for (a = 0; a < WIM; a++) {
                     for (b = 0; b < WIM; b++) {
-                      local_q += fv->x[1] * e_theta[a] * TT[a][b] * fv->snormal[b];
+                      local_q += goma_ctx->fem.fv->x[1] * e_theta[a] * TT[a][b] *
+                                 goma_ctx->fem.fv->snormal[b];
                     }
                   }
                 }
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
-              } else if (pd->CoordinateSystem == CARTESIAN) {
+              } else if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN) {
                 if (WIM == 2) {
-                  fv->x[2] = 0.0;
-                  fv->snormal[2] = 0.0;
+                  goma_ctx->fem.fv->x[2] = 0.0;
+                  goma_ctx->fem.fv->snormal[2] = 0.0;
                 }
-                if (cr->MeshMotion == ARBITRARY) {
+                if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                   for (a = 0; a < DIM; a++) {
                     Tract[a] = 0.0;
                     for (b = 0; b < DIM; b++) {
-                      Tract[a] += (vs[a][b] + ves[a][b]) * fv->snormal[b];
+                      Tract[a] += (vs[a][b] + ves[a][b]) * goma_ctx->fem.fv->snormal[b];
                     }
                   }
                 } else {
                   for (a = 0; a < DIM; a++) {
                     Tract[a] = 0.0;
                     for (b = 0; b < DIM; b++) {
-                      Tract[a] += TT[a][b] * fv->snormal[b];
+                      Tract[a] += TT[a][b] * goma_ctx->fem.fv->snormal[b];
                     }
                   }
                 }
@@ -1346,7 +1389,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (a = 0; a < DIM; a++) {
                   for (b = 0; b < DIM; b++) {
                     for (c = 0; c < DIM; c++) {
-                      local_Torque[a] += (permute(b, c, a) * fv->x[b] * Tract[c]);
+                      local_Torque[a] += (permute(b, c, a) * goma_ctx->fem.fv->x[b] * Tract[c]);
                     }
                   }
                 }
@@ -1364,18 +1407,20 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               err = load_porous_properties();
               GOMA_EH(err, "load_porous_properties");
 
-              if (mp->PorousMediaType == POROUS_SATURATED) {
+              if (goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED) {
 
                 for (a = 0; a < VIM; a++) {
-                  local_flux +=
-                      weight * det * mp->density * pmv->liq_darcy_velocity[a] * fv->snormal[a];
+                  local_flux += weight * det * goma_ctx->fem.mp->density *
+                                goma_ctx->fem.pmv->liq_darcy_velocity[a] *
+                                goma_ctx->fem.fv->snormal[a];
                   local_flux_conv += 0.;
                 }
-              } else if (mp->PorousMediaType == POROUS_UNSATURATED ||
-                         mp->PorousMediaType == POROUS_TWO_PHASE) {
+              } else if (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+                         goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) {
 
                 for (a = 0; a < VIM; a++) {
-                  local_flux += weight * det * pmv->rel_mass_flux[0][a] * fv->snormal[a];
+                  local_flux += weight * det * goma_ctx->fem.pmv->rel_mass_flux[0][a] *
+                                goma_ctx->fem.fv->snormal[a];
                   local_flux_conv += 0.;
                 }
               } else {
@@ -1384,13 +1429,15 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
 
             case FORCE_NORMAL:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < WIM; a++) {
                   for (b = 0; b < WIM; b++) {
-                    local_q += (fv->snormal[a] * (vs[a][b] + ves[a][b]) * fv->snormal[b]);
+                    local_q += (goma_ctx->fem.fv->snormal[a] * (vs[a][b] + ves[a][b]) *
+                                goma_ctx->fem.fv->snormal[b]);
 
                     local_qconv +=
-                        (-rho * fv->snormal[a] * (fv->v[a] - x_dot[a]) * fv->v[b] * fv->snormal[b]);
+                        (-rho * goma_ctx->fem.fv->snormal[a] * (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                         goma_ctx->fem.fv->v[b] * goma_ctx->fem.fv->snormal[b]);
                   }
                 }
                 local_flux += weight * det * local_q;
@@ -1398,7 +1445,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               } else {
                 for (a = 0; a < VIM; a++) {
                   for (b = 0; b < VIM; b++) {
-                    local_q += (fv->snormal[a] * TT[a][b] * fv->snormal[b]);
+                    local_q +=
+                        (goma_ctx->fem.fv->snormal[a] * TT[a][b] * goma_ctx->fem.fv->snormal[b]);
                   }
                 }
                 local_flux += weight * det * local_q;
@@ -1407,12 +1455,14 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case FORCE_TANGENT1:
 
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < WIM; a++) {
                   for (b = 0; b < WIM; b++) {
-                    local_q += (fv->stangent[0][a] * (vs[a][b] + ves[a][b]) * fv->snormal[b]);
-                    local_qconv += (-rho * fv->stangent[0][a] * (fv->v[a] - x_dot[a]) * fv->v[b] *
-                                    fv->snormal[b]);
+                    local_q += (goma_ctx->fem.fv->stangent[0][a] * (vs[a][b] + ves[a][b]) *
+                                goma_ctx->fem.fv->snormal[b]);
+                    local_qconv += (-rho * goma_ctx->fem.fv->stangent[0][a] *
+                                    (goma_ctx->fem.fv->v[a] - x_dot[a]) * goma_ctx->fem.fv->v[b] *
+                                    goma_ctx->fem.fv->snormal[b]);
                   }
                 }
                 local_flux += weight * det * local_q;
@@ -1420,7 +1470,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               } else {
                 for (a = 0; a < VIM; a++) {
                   for (b = 0; b < VIM; b++) {
-                    local_q += (fv->stangent[0][a] * TT[a][b] * fv->snormal[b]);
+                    local_q += (goma_ctx->fem.fv->stangent[0][a] * TT[a][b] *
+                                goma_ctx->fem.fv->snormal[b]);
                   }
                 }
                 local_flux += weight * det * local_q;
@@ -1429,13 +1480,16 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case FORCE_TANGENT2:
 
-              if (cr->MeshMotion == ARBITRARY) {
-                if (pd->Num_Dim == 3 || upd->CoordinateSystem == SWIRLING) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
+                if (goma_ctx->fem.pd->Num_Dim == 3 ||
+                    goma_ctx->fem.upd->CoordinateSystem == SWIRLING) {
                   for (a = 0; a < WIM; a++) {
                     for (b = 0; b < WIM; b++) {
-                      local_q += (fv->stangent[1][a] * (vs[a][b] + ves[a][b]) * fv->snormal[b]);
-                      local_qconv += (-rho * fv->stangent[1][a] * (fv->v[a] - x_dot[a]) * fv->v[b] *
-                                      fv->snormal[b]);
+                      local_q += (goma_ctx->fem.fv->stangent[1][a] * (vs[a][b] + ves[a][b]) *
+                                  goma_ctx->fem.fv->snormal[b]);
+                      local_qconv += (-rho * goma_ctx->fem.fv->stangent[1][a] *
+                                      (goma_ctx->fem.fv->v[a] - x_dot[a]) * goma_ctx->fem.fv->v[b] *
+                                      goma_ctx->fem.fv->snormal[b]);
                     }
                   }
                   local_flux += weight * det * local_q;
@@ -1446,7 +1500,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               } else {
                 for (a = 0; a < VIM; a++) {
                   for (b = 0; b < VIM; b++) {
-                    local_q += (fv->stangent[1][a] * TT[a][b] * fv->snormal[b]);
+                    local_q += (goma_ctx->fem.fv->stangent[1][a] * TT[a][b] *
+                                goma_ctx->fem.fv->snormal[b]);
                   }
                 }
                 local_flux += weight * det * local_q;
@@ -1456,7 +1511,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             case SHELL_FORCE_NORMAL:
               /* First save local normal to edge because lubrication_shell_init changes it */
               for (a = 0; a < VIM; a++)
-                base_normal[a] = fv->snormal[a];
+                base_normal[a] = goma_ctx->fem.fv->snormal[a];
 
               n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
               lubrication_shell_initialize(n_dof, dof_map, -1, xi, exo, 0);
@@ -1467,10 +1522,10 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
               for (a = 0; a < WIM; a++) {
                 for (b = 0; b < WIM; b++) {
-                  local_q += fv->lubp;
+                  local_q += goma_ctx->fem.fv->lubp;
 
-                  local_qconv += (-rho * base_normal[a] * (LubAux->q[a] - x_dot[a]) * LubAux->q[b] *
-                                  base_normal[b]);
+                  local_qconv += (-rho * base_normal[a] * (goma_ctx->fem.lub_aux->q[a] - x_dot[a]) *
+                                  goma_ctx->fem.lub_aux->q[b] * base_normal[b]);
                 }
               }
               local_flux += weight * det * local_q;
@@ -1480,26 +1535,28 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
 
             case FORCE_X:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < WIM; a++) {
-                  local_q += ((vs[0][a] + ves[0][a]) * fv->snormal[a]);
-                  local_qconv += (-rho * (fv->v[0] - x_dot[0]) * fv->v[a] * fv->snormal[a]);
+                  local_q += ((vs[0][a] + ves[0][a]) * goma_ctx->fem.fv->snormal[a]);
+                  local_qconv += (-rho * (goma_ctx->fem.fv->v[0] - x_dot[0]) *
+                                  goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT[0][a] * fv->snormal[a]);
+                  local_q += (TT[0][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
               }
               break;
 
             case FORCE_X_POS:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < WIM; a++) {
-                  local_q += ((vs[0][a] + ves[0][a]) * fv->snormal[a]);
-                  local_qconv += (-rho * (fv->v[0] - x_dot[0]) * fv->v[a] * fv->snormal[a]);
+                  local_q += ((vs[0][a] + ves[0][a]) * goma_ctx->fem.fv->snormal[a]);
+                  local_qconv += (-rho * (goma_ctx->fem.fv->v[0] - x_dot[0]) *
+                                  goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
                   local_q = 0;
@@ -1508,7 +1565,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT[0][a] * fv->snormal[a]);
+                  local_q += (TT[0][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
                   local_q = 0;
@@ -1518,10 +1575,11 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
 
             case FORCE_X_NEG:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < WIM; a++) {
-                  local_q += ((vs[0][a] + ves[0][a]) * fv->snormal[a]);
-                  local_qconv += (-rho * (fv->v[0] - x_dot[0]) * fv->v[a] * fv->snormal[a]);
+                  local_q += ((vs[0][a] + ves[0][a]) * goma_ctx->fem.fv->snormal[a]);
+                  local_qconv += (-rho * (goma_ctx->fem.fv->v[0] - x_dot[0]) *
+                                  goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
                   local_q = 0;
@@ -1530,7 +1588,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT[0][a] * fv->snormal[a]);
+                  local_q += (TT[0][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
                   local_q = 0;
@@ -1540,26 +1598,28 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
 
             case FORCE_Y:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < WIM; a++) {
-                  local_q += ((vs[1][a] + ves[1][a]) * fv->snormal[a]);
-                  local_qconv += (-rho * (fv->v[1] - x_dot[1]) * fv->v[a] * fv->snormal[a]);
+                  local_q += ((vs[1][a] + ves[1][a]) * goma_ctx->fem.fv->snormal[a]);
+                  local_qconv += (-rho * (goma_ctx->fem.fv->v[1] - x_dot[1]) *
+                                  goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT[1][a] * fv->snormal[a]);
+                  local_q += (TT[1][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
               }
               break;
 
             case FORCE_Y_POS:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < WIM; a++) {
-                  local_q += ((vs[1][a] + ves[1][a]) * fv->snormal[a]);
-                  local_qconv += (-rho * (fv->v[1] - x_dot[1]) * fv->v[a] * fv->snormal[a]);
+                  local_q += ((vs[1][a] + ves[1][a]) * goma_ctx->fem.fv->snormal[a]);
+                  local_qconv += (-rho * (goma_ctx->fem.fv->v[1] - x_dot[1]) *
+                                  goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
                   local_q = 0;
@@ -1568,7 +1628,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT[1][a] * fv->snormal[a]);
+                  local_q += (TT[1][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
                   local_q = 0;
@@ -1578,10 +1638,11 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
 
             case FORCE_Y_NEG:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < WIM; a++) {
-                  local_q += ((vs[1][a] + ves[1][a]) * fv->snormal[a]);
-                  local_qconv += (-rho * (fv->v[1] - x_dot[1]) * fv->v[a] * fv->snormal[a]);
+                  local_q += ((vs[1][a] + ves[1][a]) * goma_ctx->fem.fv->snormal[a]);
+                  local_qconv += (-rho * (goma_ctx->fem.fv->v[1] - x_dot[1]) *
+                                  goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
                   local_q = 0;
@@ -1590,7 +1651,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT[1][a] * fv->snormal[a]);
+                  local_q += (TT[1][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
                   local_q = 0;
@@ -1600,12 +1661,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
 
             case FORCE_Z:
-              if (cr->MeshMotion == ARBITRARY) {
-                if (pd->Num_Dim == 3) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
+                if (goma_ctx->fem.pd->Num_Dim == 3) {
                   for (a = 0; a < WIM; a++) {
-                    local_q += ((vs[2][a] + ves[2][a]) * fv->snormal[a]);
+                    local_q += ((vs[2][a] + ves[2][a]) * goma_ctx->fem.fv->snormal[a]);
 
-                    local_qconv += (-rho * (fv->v[2] - x_dot[2]) * fv->v[a] * fv->snormal[a]);
+                    local_qconv += (-rho * (goma_ctx->fem.fv->v[2] - x_dot[2]) *
+                                    goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
                   }
                   local_flux += weight * det * local_q;
                   local_flux_conv += weight * det * local_qconv;
@@ -1614,7 +1676,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 }
               } else {
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT[2][a] * fv->snormal[a]);
+                  local_q += (TT[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
               }
@@ -1622,12 +1684,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
 
             case FORCE_Z_POS:
-              if (cr->MeshMotion == ARBITRARY) {
-                if (pd->Num_Dim == 3) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
+                if (goma_ctx->fem.pd->Num_Dim == 3) {
                   for (a = 0; a < WIM; a++) {
-                    local_q += ((vs[2][a] + ves[2][a]) * fv->snormal[a]);
+                    local_q += ((vs[2][a] + ves[2][a]) * goma_ctx->fem.fv->snormal[a]);
 
-                    local_qconv += (-rho * (fv->v[2] - x_dot[2]) * fv->v[a] * fv->snormal[a]);
+                    local_qconv += (-rho * (goma_ctx->fem.fv->v[2] - x_dot[2]) *
+                                    goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
                   }
                   if (local_q < 0) {
                     local_q = 0;
@@ -1639,7 +1702,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 }
               } else {
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT[2][a] * fv->snormal[a]);
+                  local_q += (TT[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
                   local_q = 0;
@@ -1650,12 +1713,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
 
             case FORCE_Z_NEG:
-              if (cr->MeshMotion == ARBITRARY) {
-                if (pd->Num_Dim == 3) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
+                if (goma_ctx->fem.pd->Num_Dim == 3) {
                   for (a = 0; a < WIM; a++) {
-                    local_q += ((vs[2][a] + ves[2][a]) * fv->snormal[a]);
+                    local_q += ((vs[2][a] + ves[2][a]) * goma_ctx->fem.fv->snormal[a]);
 
-                    local_qconv += (-rho * (fv->v[2] - x_dot[2]) * fv->v[a] * fv->snormal[a]);
+                    local_qconv += (-rho * (goma_ctx->fem.fv->v[2] - x_dot[2]) *
+                                    goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
                   }
                   if (local_q > 0) {
                     local_q = 0;
@@ -1667,7 +1731,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 }
               } else {
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT[2][a] * fv->snormal[a]);
+                  local_q += (TT[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
                   local_q = 0;
@@ -1679,7 +1743,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case AVERAGE_CONC:
 
-              local_q += fv->c[species_id];
+              local_q += goma_ctx->fem.fv->c[species_id];
               local_flux += weight * det * local_q;
 
               break;
@@ -1708,8 +1772,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   betainv = BC_Types[a].BC_Data_Float[11];
                   /*  initialize variables */
 
-                  for (b = 0; b < pd->Num_Dim; b++) {
-                    coord[b] = fv->x[b];
+                  for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
+                    coord[b] = goma_ctx->fem.fv->x[b];
                   }
                   /*  find intersection of axis with normal plane - i.e., locate point on
                    *          axis that intersects plane normal to axis that contains local point.
@@ -1734,8 +1798,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   tangent = betainv / pow(dist / hscale, repexp);
                   local_q = kernel;
                   local_qconv = tangent;
-                  for (b = 0; b < pd->Num_Dim; b++) {
-                    local_Torque[b] = fv->x[b] * kernel;
+                  for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
+                    local_Torque[b] = goma_ctx->fem.fv->x[b] * kernel;
                   }
                 } else if (BC_Types[a].BC_Name == CAP_REPULSE_TABLE_BC) {
                   double hscale, repexp, P_rep, betainv, exp_scale;
@@ -1753,8 +1817,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   dcl_node = BC_Types[a].BC_Data_Int[2];
                   /*  initialize variables */
 
-                  for (b = 0; b < pd->Num_Dim; b++) {
-                    coord[b] = fv->x[b];
+                  for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
+                    coord[b] = goma_ctx->fem.fv->x[b];
                   }
 
                   for (b = 0; b < Num_BC; b++) {
@@ -1770,9 +1834,9 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                     k = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp]];
                     for (b = 0; b < goma_ctx->mesh.proc_ns_count[nsp]; b++) {
                       k = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp] + b];
-                      i1 = Index_Solution(k, MESH_DISPLACEMENT1, 0, 0, -1, pg->imtrx);
+                      i1 = Index_Solution(k, MESH_DISPLACEMENT1, 0, 0, -1, goma_ctx->fem.pg->imtrx);
                       GOMA_EH(i1, "Could not resolve index_solution.");
-                      for (i2 = 0; i2 < pd->Num_Dim; i2++) {
+                      for (i2 = 0; i2 < goma_ctx->fem.pd->Num_Dim; i2++) {
                         point[i2] = goma_ctx->mesh.coor[i2][k] + x[i1 + i2];
                       }
                     }
@@ -1789,11 +1853,11 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   /*  repulsion function  */
                   local_q = kernel;
                   local_qconv = tangent;
-                  for (b = 0; b < pd->Num_Dim; b++) {
-                    local_Torque[b] = fv->x[b] * kernel;
+                  for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
+                    local_Torque[b] = goma_ctx->fem.fv->x[b] * kernel;
                   }
-                  if (pd->Num_Dim < DIM) {
-                    local_Torque[pd->Num_Dim] = dist * kernel;
+                  if (goma_ctx->fem.pd->Num_Dim < DIM) {
+                    local_Torque[goma_ctx->fem.pd->Num_Dim] = dist * kernel;
                   }
                 } else if (BC_Types[a].BC_Name == CAP_REPULSE_BC) {
                   double repexp, P_rep, factor, denom;
@@ -1807,15 +1871,16 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   cp = BC_Types[a].BC_Data_Float[3];
                   dp = BC_Types[a].BC_Data_Float[4];
                   denom = sqrt(ap * ap + bp * bp + cp * cp);
-                  factor = ap * fv->x[0] + bp * fv->x[1] + cp * fv->x[2] + dp;
+                  factor = ap * goma_ctx->fem.fv->x[0] + bp * goma_ctx->fem.fv->x[1] +
+                           cp * goma_ctx->fem.fv->x[2] + dp;
                   dist = fabs(factor) / denom;
                   /*  initialize variables */
                   /*  repulsion function  */
                   kernel = P_rep / pow(dist, repexp);
                   /*  repulsion function  */
                   local_q = kernel;
-                  for (b = 0; b < pd->Num_Dim; b++) {
-                    local_Torque[b] = fv->x[b] * kernel;
+                  for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
+                    local_Torque[b] = goma_ctx->fem.fv->x[b] * kernel;
                   }
                 } else {
                   GOMA_EH(GOMA_ERROR, "Repulsive force not found\n");
@@ -1835,8 +1900,10 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                */
               for (a = 0; a < WIM; a++) {
                 for (b = 0; b < WIM; b++) {
-                  local_q += mp->surface_tension *
-                             (fv->grad_v[a][b] * (delta(a, b) - fv->snormal[a] * fv->snormal[b]));
+                  local_q +=
+                      goma_ctx->fem.mp->surface_tension *
+                      (goma_ctx->fem.fv->grad_v[a][b] *
+                       (delta(a, b) - goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->snormal[b]));
                 }
               }
 
@@ -1857,13 +1924,14 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               memset(Mag_imag, 0, sizeof(double) * DIM);
               memset(E_real, 0, sizeof(double) * DIM);
               memset(E_imag, 0, sizeof(double) * DIM);
-              if (pd->CoordinateSystem == PROJECTED_CARTESIAN ||
-                  pd->CoordinateSystem == CARTESIAN_2pt5D)
+              if (goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+                  goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D)
                 GOMA_EH(
                     GOMA_ERROR,
                     "POYNTING has not been updated for the PROJECTED_CARTESIAN coordinate system.");
 
-              if (pd->CoordinateSystem == SWIRLING || pd->CoordinateSystem == CYLINDRICAL) {
+              if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+                  goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL) {
                 GOMA_EH(GOMA_ERROR, "POYNTING has not been checked for CYLINDRICAL yet.");
                 for (a = 0; a < VIM; a++) {
                   for (b = 0; b < VIM; b++) {
@@ -1873,17 +1941,18 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                      * the moment arm is incorporated into sideset.
                      */
 
-                    local_q += (fv->x[1] * e_theta[a] * (vs[a][b] + ves[a][b]) * fv->snormal[b]);
+                    local_q += (goma_ctx->fem.fv->x[1] * e_theta[a] * (vs[a][b] + ves[a][b]) *
+                                goma_ctx->fem.fv->snormal[b]);
                   }
                 }
                 local_flux += weight * det * local_q;
-              } else if (pd->CoordinateSystem == CARTESIAN) {
-                Mag_imag[0] = kR_inv * fv->grad_apr[1];
-                Mag_imag[1] = -kR_inv * fv->grad_apr[0];
-                Mag_real[0] = kR_inv * fv->grad_api[1];
-                Mag_real[1] = -kR_inv * fv->grad_api[0];
-                E_real[2] = fv->apr;
-                E_imag[2] = fv->api;
+              } else if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN) {
+                Mag_imag[0] = kR_inv * goma_ctx->fem.fv->grad_apr[1];
+                Mag_imag[1] = -kR_inv * goma_ctx->fem.fv->grad_apr[0];
+                Mag_real[0] = kR_inv * goma_ctx->fem.fv->grad_api[1];
+                Mag_real[1] = -kR_inv * goma_ctx->fem.fv->grad_api[0];
+                E_real[2] = goma_ctx->fem.fv->apr;
+                E_imag[2] = goma_ctx->fem.fv->api;
                 for (a = 0; a < DIM; a++) {
                   for (b = 0; b < DIM; b++) {
                     for (c = 0; c < DIM; c++) {
@@ -1902,21 +1971,21 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               }
               break;
             case SCATTERING_CROSS_SECTION: {
-              const double c0 =
-                  1.0 / (sqrt(upd->Free_Space_Permittivity * upd->Free_Space_Permeability));
-              const double eps0 = upd->Free_Space_Permittivity;
-              const double mu0 = upd->Free_Space_Permeability;
+              const double c0 = 1.0 / (sqrt(goma_ctx->fem.upd->Free_Space_Permittivity *
+                                            goma_ctx->fem.upd->Free_Space_Permeability));
+              const double eps0 = goma_ctx->fem.upd->Free_Space_Permittivity;
+              const double mu0 = goma_ctx->fem.upd->Free_Space_Permeability;
 
-              dbl freq = upd->EM_Frequency;
+              dbl freq = goma_ctx->fem.upd->EM_Frequency;
               dbl lambda0 = c0 / freq;
               dbl k0 = 2 * M_PI / lambda0;
               dbl omega = k0 / sqrt(eps0 * mu0);
               dbl Z0 = sqrt(mu0 / eps0);
               complex double wave[3];
               complex double curl_wave[3];
-              dbl x = fv->x[0];
-              dbl y = fv->x[1];
-              dbl z = fv->x[2];
+              dbl x = goma_ctx->fem.fv->x[0];
+              dbl y = goma_ctx->fem.fv->x[1];
+              dbl z = goma_ctx->fem.fv->x[2];
               incident_wave(x, y, z, k0, wave, curl_wave);
               complex double permittivity;
               complex double permittivity_matrix[DIM];
@@ -1930,13 +1999,17 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               complex double S0 = 1 / (2 * Z1);
 
               complex double j = _Complex_I;
-              complex double E_s[DIM] = {fv->em_er[0] + j * fv->em_ei[0] - wave[0],
-                                         fv->em_er[1] + j * fv->em_ei[1] - wave[1],
-                                         fv->em_er[2] + j * fv->em_ei[2] - wave[2]};
+              complex double E_s[DIM] = {
+                  goma_ctx->fem.fv->em_er[0] + j * goma_ctx->fem.fv->em_ei[0] - wave[0],
+                  goma_ctx->fem.fv->em_er[1] + j * goma_ctx->fem.fv->em_ei[1] - wave[1],
+                  goma_ctx->fem.fv->em_er[2] + j * goma_ctx->fem.fv->em_ei[2] - wave[2]};
               complex double curl_E_s[DIM] = {
-                  fv->curl_em_er[0] + j * fv->curl_em_ei[0] - curl_wave[0],
-                  fv->curl_em_er[1] + j * fv->curl_em_ei[1] - curl_wave[1],
-                  fv->curl_em_er[2] + j * fv->curl_em_ei[2] - curl_wave[2]};
+                  goma_ctx->fem.fv->curl_em_er[0] + j * goma_ctx->fem.fv->curl_em_ei[0] -
+                      curl_wave[0],
+                  goma_ctx->fem.fv->curl_em_er[1] + j * goma_ctx->fem.fv->curl_em_ei[1] -
+                      curl_wave[1],
+                  goma_ctx->fem.fv->curl_em_er[2] + j * goma_ctx->fem.fv->curl_em_ei[2] -
+                      curl_wave[2]};
 
               complex double H_s[DIM] = {0.0, 0.0, 0.0};
 
@@ -1951,7 +2024,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               };
 
               for (a = 0; a < dim; a++) {
-                local_q += creal((1 / S0) * P[a]) * fv->snormal[a];
+                local_q += creal((1 / S0) * P[a]) * goma_ctx->fem.fv->snormal[a];
               }
 
               local_flux += weight * det * local_q;
@@ -1965,7 +2038,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                */
 
               for (a = 0; a < dim; a++) {
-                local_q += (fv->x[a] - param[a]) * fv->snormal[a];
+                local_q += (goma_ctx->fem.fv->x[a] - param[a]) * goma_ctx->fem.fv->snormal[a];
               }
 
               local_flux += weight * det * local_q / (double)dim;
@@ -1974,15 +2047,15 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case DELTA:
 
-              load_lsi(ls->Length_Scale);
-              local_q = lsi->delta;
-              local_qconv = lsi->delta;
-              local_flux += weight * det * lsi->delta;
-              local_flux_conv += ad_wt[ip_total - ip - 1] * det * lsi->delta;
+              load_lsi(goma_ctx->fem.ls->Length_Scale);
+              local_q = goma_ctx->fem.lsi->delta;
+              local_qconv = goma_ctx->fem.lsi->delta;
+              local_flux += weight * det * goma_ctx->fem.lsi->delta;
+              local_flux_conv += ad_wt[ip_total - ip - 1] * det * goma_ctx->fem.lsi->delta;
               break;
 
             case LS_DCA:
-              load_lsi(ls->Length_Scale);
+              load_lsi(goma_ctx->fem.ls->Length_Scale);
               ierr = interface_crossing_1DQ(ls_F, xf);
               if (ierr && ip == 0) {
                 switch (id_side) {
@@ -2005,7 +2078,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 }
                 xi[2] = 0;
 
-                err = load_basis_functions(xi, bfd);
+                err = load_basis_functions(xi, goma_ctx->fem.bfd);
                 GOMA_EH(err, "problem from load_basis_functions");
 
                 err = beer_belly();
@@ -2020,9 +2093,9 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 err = load_bf_mesh_derivs();
                 GOMA_EH(err, "load_bf_mesh_derivs");
 
-                surface_determinant_and_normal(ei[pg->imtrx]->ielem, iconnect_ptr, num_local_nodes,
-                                               ielem_dim - 1, id_side, num_nodes_on_side,
-                                               id_local_elem_coord);
+                surface_determinant_and_normal(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem,
+                                               iconnect_ptr, num_local_nodes, ielem_dim - 1,
+                                               id_side, num_nodes_on_side, id_local_elem_coord);
 
                 /*
                  * Load up physical space gradients of field variables at this
@@ -2034,9 +2107,10 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 err = load_fv_mesh_derivs(1);
                 GOMA_EH(err, "load_fv_mesh_derivs");
 
-                if (TimeIntegration != STEADY && pd->e[pg->imtrx][MESH_DISPLACEMENT1]) {
+                if (TimeIntegration != STEADY &&
+                    goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
                   for (j = 0; j < VIM; j++) {
-                    x_dot[j] = fv_dot->x[j];
+                    x_dot[j] = goma_ctx->fem.fv_dot->x[j];
                   }
                 } else {
                   for (j = 0; j < VIM; j++) {
@@ -2047,40 +2121,45 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 do_LSA_mods(LSA_SURFACE);
 
                 if (ielem_dim != 3) {
-                  calc_surf_tangent(ei[pg->imtrx]->ielem, iconnect_ptr, num_local_nodes,
-                                    ielem_dim - 1, num_nodes_on_side, id_local_elem_coord);
+                  calc_surf_tangent(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, iconnect_ptr,
+                                    num_local_nodes, ielem_dim - 1, num_nodes_on_side,
+                                    id_local_elem_coord);
                 }
-                load_lsi(ls->Length_Scale);
+                load_lsi(goma_ctx->fem.ls->Length_Scale);
                 if (profile_flag & 1) {
                   calc_shearrate(&gamma_dot, gamma, NULL, NULL);
-                  if (ls->SubElemIntegration) {
-                    elem_sign_org = ls->Elem_Sign;
-                    switch (mp->mp2nd->viscositymask[1] - mp->mp2nd->viscositymask[0]) {
+                  if (goma_ctx->fem.ls->SubElemIntegration) {
+                    elem_sign_org = goma_ctx->fem.ls->Elem_Sign;
+                    switch (goma_ctx->fem.mp->mp2nd->viscositymask[1] -
+                            goma_ctx->fem.mp->mp2nd->viscositymask[0]) {
                     case 1:
-                      ls->Elem_Sign = -1;
+                      goma_ctx->fem.ls->Elem_Sign = -1;
                       break;
                     case -1:
-                      ls->Elem_Sign = 1;
+                      goma_ctx->fem.ls->Elem_Sign = 1;
                       break;
                     }
-                    mu = viscosity(gn, gamma, d_mu);
-                    ls->Elem_Sign = elem_sign_org;
+                    mu = viscosity(goma_ctx->fem.gn, gamma, d_mu);
+                    goma_ctx->fem.ls->Elem_Sign = elem_sign_org;
                   } else {
-                    mu = viscosity(gn, gamma, d_mu);
-                    switch (mp->mp2nd->viscositymask[1] - mp->mp2nd->viscositymask[0]) {
+                    mu = viscosity(goma_ctx->fem.gn, gamma, d_mu);
+                    switch (goma_ctx->fem.mp->mp2nd->viscositymask[1] -
+                            goma_ctx->fem.mp->mp2nd->viscositymask[0]) {
                     case 1:
-                      mu = (mu - mp->mp2nd->viscosity * lsi->H) / (1. - lsi->H);
+                      mu = (mu - goma_ctx->fem.mp->mp2nd->viscosity * goma_ctx->fem.lsi->H) /
+                           (1. - goma_ctx->fem.lsi->H);
                       break;
                     case -1:
-                      mu = (mu - mp->mp2nd->viscosity * (1. - lsi->H)) / lsi->H;
+                      mu = (mu - goma_ctx->fem.mp->mp2nd->viscosity * (1. - goma_ctx->fem.lsi->H)) /
+                           goma_ctx->fem.lsi->H;
                       break;
                     }
                   }
                 }
 
                 for (a = 0; a < WIM; a++) {
-                  local_q -= fv->snormal[a] * lsi->normal[a];
-                  local_qconv += SQUARE(fv->v[a] - x_dot[a]);
+                  local_q -= goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.lsi->normal[a];
+                  local_qconv += SQUARE(goma_ctx->fem.fv->v[a] - x_dot[a]);
                 }
                 local_q = acos(local_q) * 180 / M_PIE;
                 local_qconv = sqrt(local_qconv);
@@ -2123,24 +2202,26 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             if (profile_flag && print_flag && (quantity != LS_DCA || (ierr && ip == 0))) {
               FILE *jfp;
               if ((jfp = fopen(filenm, "a")) != NULL) {
-                if (quantity == TORQUE &&
-                    (pd->CoordinateSystem != SWIRLING && pd->CoordinateSystem != CYLINDRICAL)) {
-                  fprintf(jfp, " %g  %g  %g  %g  %g %g", fv->x[0], fv->x[1], fv->x[2],
-                          local_Torque[0], local_Torque[1], local_Torque[2]);
+                if (quantity == TORQUE && (goma_ctx->fem.pd->CoordinateSystem != SWIRLING &&
+                                           goma_ctx->fem.pd->CoordinateSystem != CYLINDRICAL)) {
+                  fprintf(jfp, " %g  %g  %g  %g  %g %g", goma_ctx->fem.fv->x[0],
+                          goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], local_Torque[0],
+                          local_Torque[1], local_Torque[2]);
                 } else {
-                  fprintf(jfp, " %g  %g  %g  %g  %g", fv->x[0], fv->x[1], fv->x[2], local_q,
-                          local_qconv);
+                  fprintf(jfp, " %g  %g  %g  %g  %g", goma_ctx->fem.fv->x[0],
+                          goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], local_q, local_qconv);
                 }
                 if (profile_flag & 1)
                   fprintf(jfp, " %g  %g ", gamma_dot, mu);
                 if (profile_flag & 4)
-                  fprintf(jfp, " %g ", mp->surface_tension);
+                  fprintf(jfp, " %g ", goma_ctx->fem.mp->surface_tension);
                 if (profile_flag & 8)
-                  fprintf(jfp, " %g %g", fv->T, fv->P);
+                  fprintf(jfp, " %g %g", goma_ctx->fem.fv->T, goma_ctx->fem.fv->P);
                 if (profile_flag & 2)
                   fprintf(jfp, " %g %g %g", evalue1, evalue2, evalue3);
                 if (profile_flag & 16)
-                  fprintf(jfp, " %g %g %g", fv->snormal[0], fv->snormal[1], fv->snormal[2]);
+                  fprintf(jfp, " %g %g %g", goma_ctx->fem.fv->snormal[0],
+                          goma_ctx->fem.fv->snormal[1], goma_ctx->fem.fv->snormal[2]);
                 fprintf(jfp, " \n");
                 fflush(jfp);
               }
@@ -2151,7 +2232,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             if (J_AC != NULL) {
               int dir, sp = species_id;
               double d_term = 0, d_term1 = 0, d_term2 = 0, d_term3 = 0;
-              double (*d_diff)[MAX_VARIABLE_TYPES + MAX_CONC] = mp->d_diffusivity;
+              double (*d_diff)[MAX_VARIABLE_TYPES + MAX_CONC] = goma_ctx->fem.mp->d_diffusivity;
 
               switch (quantity) {
                 /* FORCE_X, FORCE_Y, FORCE_Z */
@@ -2191,25 +2272,27 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                 GOMA_EH(dir, "PANIC in evaluate_flux sensitivity section");
 
-                if (cr->MeshMotion == ARBITRARY) {
+                if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                   for (b = 0; b < dim; b++) {
                     var = VELOCITY1 + b;
                     int imtrx;
-                    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-                      if (pd->v[imtrx][var]) {
-                        for (j = 0; j < ei[imtrx]->dof[var]; j++) {
+                    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+                      if (goma_ctx->fem.pd->v[imtrx][var]) {
+                        for (j = 0; j < goma_ctx->fem.ei[imtrx]->dof[var]; j++) {
                           d_term = 0;
 
                           for (a = 0; a < dim; a++) {
-                            d_term += weight * det * fv->snormal[a] *
-                                      (mu * (bf[var]->grad_phi_e[j][b][dir][a] +
-                                             bf[var]->grad_phi_e[j][b][a][dir]) +
+                            d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                      (mu * (goma_ctx->fem.bf[var]->grad_phi_e[j][b][dir][a] +
+                                             goma_ctx->fem.bf[var]->grad_phi_e[j][b][a][dir]) +
                                        d_mu->v[b][j] * (gamma[dir][a]) +
-                                       -rho * (bf[var]->phi[j] * delta(dir, b) * fv->v[a] +
-                                               bf[var]->phi[j] * delta(a, b) *
-                                                   (fv->v[dir] - x_dot[dir])));
+                                       -rho * (goma_ctx->fem.bf[var]->phi[j] * delta(dir, b) *
+                                                   goma_ctx->fem.fv->v[a] +
+                                               goma_ctx->fem.bf[var]->phi[j] * delta(a, b) *
+                                                   (goma_ctx->fem.fv->v[dir] - x_dot[dir])));
                           }
-                          J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                              d_term;
                         }
                       }
                     }
@@ -2217,86 +2300,95 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                   var = PRESSURE;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                      d_term = -weight * det * fv->snormal[dir] * bf[var]->phi[j];
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                      d_term = -weight * det * goma_ctx->fem.fv->snormal[dir] *
+                               goma_ctx->fem.bf[var]->phi[j];
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
 
                   for (b = 0; b < dim; b++) {
                     var = MESH_DISPLACEMENT1 + b;
 
-                    if (pd->v[pg->imtrx][var]) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = d_term1 = d_term2 = 0.0;
 
                         for (a = 0; a < dim; a++) {
-                          d_term1 += weight * (vs[dir][a] + ves[dir][a]) * fv->snormal[a] *
-                                     fv->dsurfdet_dx[b][j];
+                          d_term1 += weight * (vs[dir][a] + ves[dir][a]) *
+                                     goma_ctx->fem.fv->snormal[a] *
+                                     goma_ctx->fem.fv->dsurfdet_dx[b][j];
 
-                          d_term2 +=
-                              weight * det * (vs[dir][a] + ves[a][b]) * fv->dsnormal_dx[a][b][j];
+                          d_term2 += weight * det * (vs[dir][a] + ves[a][b]) *
+                                     goma_ctx->fem.fv->dsnormal_dx[a][b][j];
 
-                          d_term += weight * det * fv->snormal[a] *
-                                    (mu * (fv->d_grad_v_dmesh[dir][a][b][j] +
-                                           fv->d_grad_v_dmesh[a][dir][b][j]) +
+                          d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                    (mu * (goma_ctx->fem.fv->d_grad_v_dmesh[dir][a][b][j] +
+                                           goma_ctx->fem.fv->d_grad_v_dmesh[a][dir][b][j]) +
                                      d_mu->X[b][j] * gamma[dir][a]);
                         }
 
                         for (a = 0; a < dim; a++) {
-                          d_term1 += -weight * rho * (fv->v[dir] - x_dot[dir]) * fv->v[a] *
-                                     fv->snormal[a] * fv->dsurfdet_dx[b][j];
+                          d_term1 += -weight * rho * (goma_ctx->fem.fv->v[dir] - x_dot[dir]) *
+                                     goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a] *
+                                     goma_ctx->fem.fv->dsurfdet_dx[b][j];
 
-                          d_term2 += -weight * det * rho * (fv->v[dir] - x_dot[dir]) * fv->v[a] *
-                                     fv->dsnormal_dx[a][b][j];
+                          d_term2 += -weight * det * rho * (goma_ctx->fem.fv->v[dir] - x_dot[dir]) *
+                                     goma_ctx->fem.fv->v[a] *
+                                     goma_ctx->fem.fv->dsnormal_dx[a][b][j];
                         }
 
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1 + d_term2;
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                            d_term + d_term1 + d_term2;
                       }
                     }
                   }
 
                   var = TEMPERATURE;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       for (d_term = 0., a = 0; a < dim; a++) {
-                        d_term += weight * det * fv->snormal[a] * (d_mu->T[j] * gamma[dir][a]);
+                        d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                  (d_mu->T[j] * gamma[dir][a]);
                       }
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
 
                   var = MASS_FRACTION;
-                  if (pd->v[pg->imtrx][var]) {
-                    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         /*
                          * Find the material index and gnn for the current
                          * local variable degree of freedom
                          * (can't just query gun_list for MASS_FRACTION
                          *  unknowns -> have to do a lookup)
                          */
-                        gnn = ei[pg->imtrx]->gnn_list[var][j];
-                        ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                        matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                        c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+                        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                        matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                        c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
                         for (d_term = 0.0, a = 0; a < dim; a++) {
-                          d_term += weight * det * fv->snormal[a] * (d_mu->C[w][j] * gamma[dir][a]);
+                          d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                    (d_mu->C[w][j] * gamma[dir][a]);
                         }
                         J_AC[c] += d_term;
                       }
                     }
                   }
 
-                  if (pd->v[pg->imtrx][POLYMER_STRESS11]) {
-                    for (ve_mode = 0; ve_mode < vn->modes; ve_mode++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
+                    for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
                       for (b = 0; b < WIM; b++) {
                         var = v_s[ve_mode][dir][b];
-                        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                          d_term = weight * det * fv->snormal[b] * (bf[var]->phi[j]);
-                          J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                          d_term = weight * det * goma_ctx->fem.fv->snormal[b] *
+                                   (goma_ctx->fem.bf[var]->phi[j]);
+                          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                              d_term;
                         }
                       }
                     }
@@ -2306,77 +2398,82 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   for (b = 0; b < dim; b++) {
                     var = MESH_DISPLACEMENT1 + b;
 
-                    if (pd->v[pg->imtrx][var]) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = d_term1 = d_term2 = 0.0;
 
                         for (a = 0; a < dim; a++) {
-                          d_term1 += weight * TT[dir][a] * fv->snormal[a] * fv->dsurfdet_dx[b][j];
+                          d_term1 += weight * TT[dir][a] * goma_ctx->fem.fv->snormal[a] *
+                                     goma_ctx->fem.fv->dsurfdet_dx[b][j];
 
-                          d_term2 += weight * det * TT[dir][a] * fv->dsnormal_dx[a][b][j];
+                          d_term2 +=
+                              weight * det * TT[dir][a] * goma_ctx->fem.fv->dsnormal_dx[a][b][j];
 
-                          d_term += weight * det * fv->snormal[a] * dTT_dx[dir][a][b][j];
+                          d_term +=
+                              weight * det * goma_ctx->fem.fv->snormal[a] * dTT_dx[dir][a][b][j];
                         }
 
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1 + d_term2;
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                            d_term + d_term1 + d_term2;
                       }
                     }
                   }
                   var = PRESSURE;
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = 0.0;
 
                       for (a = 0; a < dim; a++) {
-                        d_term += weight * det * fv->snormal[a] * dTT_dp[dir][a][j];
+                        d_term += weight * det * goma_ctx->fem.fv->snormal[a] * dTT_dp[dir][a][j];
                       }
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
                   var = TEMPERATURE;
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = 0.0;
 
                       for (a = 0; a < dim; a++) {
-                        d_term += weight * det * fv->snormal[a] * dTT_dT[dir][a][j];
+                        d_term += weight * det * goma_ctx->fem.fv->snormal[a] * dTT_dT[dir][a][j];
                       }
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
                   for (b = 0; b < dim; b++) {
                     var = SOLID_DISPLACEMENT1 + b;
 
-                    if (pd->v[pg->imtrx][var]) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = 0.0;
 
                         for (a = 0; a < dim; a++) {
-                          d_term += weight * det * fv->snormal[a] * dTT_drs[dir][a][b][j];
+                          d_term +=
+                              weight * det * goma_ctx->fem.fv->snormal[a] * dTT_drs[dir][a][b][j];
                         }
 
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                       }
                     }
                   }
                   var = MASS_FRACTION;
-                  if (pd->v[pg->imtrx][var]) {
-                    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         /*
                          * Find the material index and gnn for the current
                          * local variable degree of freedom
                          * (can't just query gun_list for MASS_FRACTION
                          *  unknowns -> have to do a lookup)
                          */
-                        gnn = ei[pg->imtrx]->gnn_list[var][j];
-                        ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                        matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                        c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+                        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                        matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                        c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
                         for (d_term = 0.0, a = 0; a < dim; a++) {
-                          d_term += weight * det * fv->snormal[a] *
+                          d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
                                     (dTT_dc[dir][a][w][j] * gamma[dir][a]);
                         }
                         J_AC[c] += d_term;
@@ -2390,70 +2487,86 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 /* FORCE_NORMAL */
               case FORCE_NORMAL:
 
-                if (cr->MeshMotion == ARBITRARY) {
+                if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                   for (p = 0; p < dim; p++) {
                     var = VELOCITY1 + p;
 
-                    if (pd->v[pg->imtrx][var]) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = d_term1 = 0.0;
 
                         for (a = 0; a < WIM; a++) {
                           for (b = 0; b < WIM; b++) {
-                            d_term += weight * det * fv->snormal[a] * fv->snormal[b] *
-                                      (mu * (bf[var]->grad_phi_e[j][p][a][b] +
-                                             bf[var]->grad_phi_e[j][p][b][a]) +
+                            d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->snormal[b] *
+                                      (mu * (goma_ctx->fem.bf[var]->grad_phi_e[j][p][a][b] +
+                                             goma_ctx->fem.bf[var]->grad_phi_e[j][p][b][a]) +
                                        d_mu->v[p][j] * gamma[a][b]);
-                            d_term1 += -weight * det * rho * fv->snormal[a] * fv->snormal[b] *
-                                       (fv->v[b] * bf[var]->phi[j] * delta(p, a) +
-                                        (fv->v[a] - x_dot[a]) * bf[var]->phi[j] * delta(p, b));
+                            d_term1 += -weight * det * rho * goma_ctx->fem.fv->snormal[a] *
+                                       goma_ctx->fem.fv->snormal[b] *
+                                       (goma_ctx->fem.fv->v[b] * goma_ctx->fem.bf[var]->phi[j] *
+                                            delta(p, a) +
+                                        (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                            goma_ctx->fem.bf[var]->phi[j] * delta(p, b));
                           }
                         }
 
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1;
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                            d_term + d_term1;
                       }
                     }
                   }
 
                   var = PRESSURE;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = 0.0;
 
                       for (a = 0; a < dim; a++) {
-                        d_term += -weight * det * fv->snormal[a] * fv->snormal[a] * bf[var]->phi[j];
+                        d_term += -weight * det * goma_ctx->fem.fv->snormal[a] *
+                                  goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.bf[var]->phi[j];
                       }
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                          d_term + d_term1;
                     }
                   }
 
                   for (p = 0; p < dim; p++) {
                     var = MESH_DISPLACEMENT1 + p;
 
-                    if (pd->v[pg->imtrx][var]) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = d_term1 = d_term2 = d_term3 = 0.0;
 
                         for (a = 0; a < WIM; a++) {
                           for (b = 0; b < WIM; b++) {
-                            d_term += weight * det * fv->snormal[a] * fv->snormal[b] *
-                                      (mu * (fv->d_grad_v_dmesh[a][b][p][j] +
-                                             fv->d_grad_v_dmesh[b][a][p][j]) +
+                            d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->snormal[b] *
+                                      (mu * (goma_ctx->fem.fv->d_grad_v_dmesh[a][b][p][j] +
+                                             goma_ctx->fem.fv->d_grad_v_dmesh[b][a][p][j]) +
                                        d_mu->X[p][j] * gamma[a][b]);
-                            d_term1 += weight * fv->snormal[a] * (vs[a][b] + ves[a][b]) *
-                                       fv->snormal[b] * fv->dsurfdet_dx[p][j];
+                            d_term1 += weight * goma_ctx->fem.fv->snormal[a] *
+                                       (vs[a][b] + ves[a][b]) * goma_ctx->fem.fv->snormal[b] *
+                                       goma_ctx->fem.fv->dsurfdet_dx[p][j];
                             d_term2 += weight * det * (vs[a][b] + ves[a][b]) *
-                                       (fv->snormal[a] * fv->dsnormal_dx[b][p][j] +
-                                        fv->dsnormal_dx[a][p][j] * fv->snormal[b]);
-                            d_term3 += -weight * rho * (fv->v[a] - x_dot[a]) * fv->v[b] *
-                                       (fv->dsurfdet_dx[p][j] * fv->snormal[a] * fv->snormal[b] +
-                                        det * fv->snormal[a] * fv->dsnormal_dx[b][p][j] +
-                                        det * fv->dsnormal_dx[a][p][j] * fv->snormal[b]);
+                                       (goma_ctx->fem.fv->snormal[a] *
+                                            goma_ctx->fem.fv->dsnormal_dx[b][p][j] +
+                                        goma_ctx->fem.fv->dsnormal_dx[a][p][j] *
+                                            goma_ctx->fem.fv->snormal[b]);
+                            d_term3 +=
+                                -weight * rho * (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                goma_ctx->fem.fv->v[b] *
+                                (goma_ctx->fem.fv->dsurfdet_dx[p][j] *
+                                     goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->snormal[b] +
+                                 det * goma_ctx->fem.fv->snormal[a] *
+                                     goma_ctx->fem.fv->dsnormal_dx[b][p][j] +
+                                 det * goma_ctx->fem.fv->dsnormal_dx[a][p][j] *
+                                     goma_ctx->fem.fv->snormal[b]);
                           }
                         }
 
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
                             d_term + d_term1 + d_term2 + d_term3;
                       }
                     }
@@ -2461,38 +2574,38 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                   var = TEMPERATURE;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = 0.0;
 
                       for (a = 0; a < dim; a++) {
                         for (b = 0; b < dim; b++) {
-                          d_term += weight * det * fv->snormal[a] * fv->snormal[b] *
-                                    (d_mu->T[j] * gamma[a][b]);
+                          d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                    goma_ctx->fem.fv->snormal[b] * (d_mu->T[j] * gamma[a][b]);
                         }
                       }
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
 
                   var = MASS_FRACTION;
-                  if (pd->v[pg->imtrx][var]) {
-                    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         /*
                          * Find the material index for the current
                          * local variable degree of freedom
                          * (can't just query gun_list for MASS_FRACTION
                          *  unknowns -> have to do a lookup)
                          */
-                        gnn = ei[pg->imtrx]->gnn_list[var][j];
-                        ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                        matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                        c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+                        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                        matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                        c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
                         for (d_term = 0.0, a = 0; a < dim; a++) {
                           for (b = 0; b < dim; b++) {
-                            d_term += weight * det * fv->snormal[a] * fv->snormal[b] *
-                                      (d_mu->C[w][j] * gamma[a][b]);
+                            d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->snormal[b] * (d_mu->C[w][j] * gamma[a][b]);
                           }
                         }
                         J_AC[c] += d_term;
@@ -2500,15 +2613,17 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                     }
                   }
 
-                  if (pd->v[pg->imtrx][POLYMER_STRESS11]) {
-                    for (ve_mode = 0; ve_mode < vn->modes; ve_mode++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
+                    for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
                       for (b = 0; b < WIM; b++) {
                         for (a = 0; a < dim; a++) {
                           var = v_s[ve_mode][a][b];
-                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                            d_term =
-                                weight * det * fv->snormal[b] * (bf[var]->phi[j]) * fv->snormal[a];
-                            J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                               j++) {
+                            d_term = weight * det * goma_ctx->fem.fv->snormal[b] *
+                                     (goma_ctx->fem.bf[var]->phi[j]) * goma_ctx->fem.fv->snormal[a];
+                            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                                d_term;
                           }
                         }
                       }
@@ -2518,93 +2633,99 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 {
                   var = PRESSURE;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = 0.0;
 
                       for (a = 0; a < dim; a++) {
-                        d_term += -weight * det * fv->snormal[a] * fv->snormal[a] * bf[var]->phi[j];
+                        d_term += -weight * det * goma_ctx->fem.fv->snormal[a] *
+                                  goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.bf[var]->phi[j];
                       }
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                          d_term + d_term1;
                     }
                   }
 
                   for (p = 0; p < dim; p++) {
                     var = MESH_DISPLACEMENT1 + p;
 
-                    if (pd->v[pg->imtrx][var]) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = d_term1 = d_term2 = 0.0;
 
                         for (a = 0; a < VIM; a++) {
                           for (b = 0; b < VIM; b++) {
-                            d_term +=
-                                weight * det * fv->snormal[a] * fv->snormal[b] * dTT_dx[a][b][p][j];
-                            d_term1 += weight * fv->snormal[a] * TT[a][b] * fv->snormal[b] *
-                                       fv->dsurfdet_dx[p][j];
+                            d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->snormal[b] * dTT_dx[a][b][p][j];
+                            d_term1 += weight * goma_ctx->fem.fv->snormal[a] * TT[a][b] *
+                                       goma_ctx->fem.fv->snormal[b] *
+                                       goma_ctx->fem.fv->dsurfdet_dx[p][j];
                             d_term2 += weight * det * TT[a][b] *
-                                       (fv->snormal[a] * fv->dsnormal_dx[b][p][j] +
-                                        fv->dsnormal_dx[a][p][j] * fv->snormal[b]);
+                                       (goma_ctx->fem.fv->snormal[a] *
+                                            goma_ctx->fem.fv->dsnormal_dx[b][p][j] +
+                                        goma_ctx->fem.fv->dsnormal_dx[a][p][j] *
+                                            goma_ctx->fem.fv->snormal[b]);
                           }
                         }
 
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1 + d_term2;
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                            d_term + d_term1 + d_term2;
                       }
                     }
                   }
                   for (p = 0; p < dim; p++) {
                     var = SOLID_DISPLACEMENT1 + p;
 
-                    if (pd->v[pg->imtrx][var]) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = 0.0;
 
                         for (a = 0; a < VIM; a++) {
                           for (b = 0; b < VIM; b++) {
-                            d_term += weight * det * fv->snormal[a] * fv->snormal[b] *
-                                      dTT_drs[a][b][p][j];
+                            d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->snormal[b] * dTT_drs[a][b][p][j];
                           }
                         }
 
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                       }
                     }
                   }
 
                   var = TEMPERATURE;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = 0.0;
 
                       for (a = 0; a < dim; a++) {
                         for (b = 0; b < dim; b++) {
-                          d_term +=
-                              weight * det * fv->snormal[a] * fv->snormal[b] * dTT_dT[a][b][j];
+                          d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                    goma_ctx->fem.fv->snormal[b] * dTT_dT[a][b][j];
                         }
                       }
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
 
                   var = MASS_FRACTION;
-                  if (pd->v[pg->imtrx][var]) {
-                    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         /*
                          * Find the material index for the current
                          * local variable degree of freedom
                          * (can't just query gun_list for MASS_FRACTION
                          *  unknowns -> have to do a lookup)
                          */
-                        gnn = ei[pg->imtrx]->gnn_list[var][j];
-                        ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                        matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                        c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+                        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                        matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                        c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
                         for (d_term = 0.0, a = 0; a < dim; a++) {
                           for (b = 0; b < dim; b++) {
-                            d_term +=
-                                weight * det * fv->snormal[a] * fv->snormal[b] * dTT_dc[a][b][w][j];
+                            d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->snormal[b] * dTT_dc[a][b][w][j];
                           }
                         }
                         J_AC[c] += d_term;
@@ -2622,26 +2743,31 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                 dir = quantity == FORCE_TANGENT1 ? 0 : 1;
 
-                if (cr->MeshMotion == ARBITRARY) {
+                if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                   for (p = 0; p < dim; p++) {
                     var = VELOCITY1 + p;
 
-                    if (pd->v[pg->imtrx][var]) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = d_term1 = 0.0;
 
                         for (a = 0; a < WIM; a++) {
                           for (b = 0; b < WIM; b++) {
-                            d_term += weight * det * fv->stangent[dir][a] * fv->snormal[b] *
-                                      (mu * (bf[var]->grad_phi_e[j][p][a][b] +
-                                             bf[var]->grad_phi_e[j][p][b][a]) +
+                            d_term += weight * det * goma_ctx->fem.fv->stangent[dir][a] *
+                                      goma_ctx->fem.fv->snormal[b] *
+                                      (mu * (goma_ctx->fem.bf[var]->grad_phi_e[j][p][a][b] +
+                                             goma_ctx->fem.bf[var]->grad_phi_e[j][p][b][a]) +
                                        d_mu->v[p][j] * gamma[a][b]);
-                            d_term1 += -weight * det * rho * fv->stangent[dir][a] * fv->snormal[b] *
-                                       (fv->v[b] * bf[var]->phi[j] * delta(p, a) +
-                                        (fv->v[a] - x_dot[a]) * bf[var]->phi[j] * delta(p, b));
+                            d_term1 += -weight * det * rho * goma_ctx->fem.fv->stangent[dir][a] *
+                                       goma_ctx->fem.fv->snormal[b] *
+                                       (goma_ctx->fem.fv->v[b] * goma_ctx->fem.bf[var]->phi[j] *
+                                            delta(p, a) +
+                                        (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                            goma_ctx->fem.bf[var]->phi[j] * delta(p, b));
                           }
                         }
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1;
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                            d_term + d_term1;
                       }
                     }
                   }
@@ -2649,30 +2775,38 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   for (p = 0; p < dim; p++) {
                     var = MESH_DISPLACEMENT1 + p;
 
-                    if (pd->v[pg->imtrx][var]) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = d_term1 = d_term2 = d_term3 = 0.0;
 
                         for (a = 0; a < dim; a++) {
                           for (b = 0; b < dim; b++) {
-                            d_term += weight * det * fv->stangent[dir][a] * fv->snormal[b] *
-                                      (mu * (fv->d_grad_v_dmesh[a][b][p][j] +
-                                             fv->d_grad_v_dmesh[b][a][p][j]) +
+                            d_term += weight * det * goma_ctx->fem.fv->stangent[dir][a] *
+                                      goma_ctx->fem.fv->snormal[b] *
+                                      (mu * (goma_ctx->fem.fv->d_grad_v_dmesh[a][b][p][j] +
+                                             goma_ctx->fem.fv->d_grad_v_dmesh[b][a][p][j]) +
                                        d_mu->X[p][j] * gamma[a][b]);
-                            d_term1 += weight * fv->stangent[dir][a] * (vs[a][b] + ves[a][b]) *
-                                       fv->snormal[b] * fv->dsurfdet_dx[p][j];
+                            d_term1 += weight * goma_ctx->fem.fv->stangent[dir][a] *
+                                       (vs[a][b] + ves[a][b]) * goma_ctx->fem.fv->snormal[b] *
+                                       goma_ctx->fem.fv->dsurfdet_dx[p][j];
                             d_term2 += weight * det * (vs[a][b] + ves[a][b]) *
-                                       (fv->stangent[dir][a] * fv->dsnormal_dx[b][p][j] +
-                                        fv->dstangent_dx[dir][a][p][j] * fv->snormal[b]);
-                            d_term3 +=
-                                -weight * rho * (fv->v[a] - x_dot[a]) * fv->v[b] *
-                                (fv->dsurfdet_dx[p][j] * fv->stangent[dir][a] * fv->snormal[b] +
-                                 det * fv->stangent[dir][a] * fv->dsnormal_dx[b][p][j] +
-                                 det * fv->dstangent_dx[dir][a][p][j] * fv->snormal[b]);
+                                       (goma_ctx->fem.fv->stangent[dir][a] *
+                                            goma_ctx->fem.fv->dsnormal_dx[b][p][j] +
+                                        goma_ctx->fem.fv->dstangent_dx[dir][a][p][j] *
+                                            goma_ctx->fem.fv->snormal[b]);
+                            d_term3 += -weight * rho * (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                       goma_ctx->fem.fv->v[b] *
+                                       (goma_ctx->fem.fv->dsurfdet_dx[p][j] *
+                                            goma_ctx->fem.fv->stangent[dir][a] *
+                                            goma_ctx->fem.fv->snormal[b] +
+                                        det * goma_ctx->fem.fv->stangent[dir][a] *
+                                            goma_ctx->fem.fv->dsnormal_dx[b][p][j] +
+                                        det * goma_ctx->fem.fv->dstangent_dx[dir][a][p][j] *
+                                            goma_ctx->fem.fv->snormal[b]);
                           }
                         }
 
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
                             d_term + d_term1 + d_term2 + d_term3;
                       }
                     }
@@ -2680,38 +2814,38 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                   var = TEMPERATURE;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = 0.0;
 
                       for (a = 0; a < dim; a++) {
                         for (b = 0; b < dim; b++) {
-                          d_term += weight * det * fv->stangent[dir][a] * fv->snormal[b] *
-                                    (d_mu->T[j] * gamma[a][b]);
+                          d_term += weight * det * goma_ctx->fem.fv->stangent[dir][a] *
+                                    goma_ctx->fem.fv->snormal[b] * (d_mu->T[j] * gamma[a][b]);
                         }
                       }
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
 
                   var = MASS_FRACTION;
-                  if (pd->v[pg->imtrx][var]) {
-                    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         /*
                          * Find the material index for the current
                          * local variable degree of freedom
                          * (can't just query gun_list for MASS_FRACTION
                          *  unknowns -> have to do a lookup)
                          */
-                        gnn = ei[pg->imtrx]->gnn_list[var][j];
-                        ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                        matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                        c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+                        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                        matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                        c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
                         for (d_term = 0.0, a = 0; a < dim; a++) {
                           for (b = 0; b < dim; b++) {
-                            d_term += weight * det * fv->stangent[dir][a] * fv->snormal[b] *
-                                      (d_mu->C[w][j] * gamma[a][b]);
+                            d_term += weight * det * goma_ctx->fem.fv->stangent[dir][a] *
+                                      goma_ctx->fem.fv->snormal[b] * (d_mu->C[w][j] * gamma[a][b]);
                           }
                         }
                         J_AC[c] += d_term;
@@ -2719,15 +2853,18 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                     }
                   }
 
-                  if (pd->v[pg->imtrx][POLYMER_STRESS11]) {
-                    for (ve_mode = 0; ve_mode < vn->modes; ve_mode++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
+                    for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
                       for (b = 0; b < WIM; b++) {
                         for (a = 0; a < dim; a++) {
                           var = v_s[ve_mode][a][b];
-                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                            d_term = weight * det * fv->snormal[b] * (bf[var]->phi[j]) *
-                                     fv->stangent[dir][a];
-                            J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                               j++) {
+                            d_term = weight * det * goma_ctx->fem.fv->snormal[b] *
+                                     (goma_ctx->fem.bf[var]->phi[j]) *
+                                     goma_ctx->fem.fv->stangent[dir][a];
+                            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                                d_term;
                           }
                         }
                       }
@@ -2738,74 +2875,74 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   for (p = 0; p < dim; p++) {
                     var = MESH_DISPLACEMENT1 + p;
 
-                    if (pd->v[pg->imtrx][var]) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = 0.0;
 
                         for (a = 0; a < dim; a++) {
                           for (b = 0; b < dim; b++) {
-                            d_term += weight * det * fv->stangent[dir][a] * fv->snormal[b] *
-                                      dTT_dx[a][b][p][j];
+                            d_term += weight * det * goma_ctx->fem.fv->stangent[dir][a] *
+                                      goma_ctx->fem.fv->snormal[b] * dTT_dx[a][b][p][j];
                           }
                         }
 
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                       }
                     }
                   }
                   for (p = 0; p < dim; p++) {
                     var = SOLID_DISPLACEMENT1 + p;
 
-                    if (pd->v[pg->imtrx][var]) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = 0.0;
 
                         for (a = 0; a < dim; a++) {
                           for (b = 0; b < dim; b++) {
-                            d_term += weight * det * fv->stangent[dir][a] * fv->snormal[b] *
-                                      dTT_drs[a][b][p][j];
+                            d_term += weight * det * goma_ctx->fem.fv->stangent[dir][a] *
+                                      goma_ctx->fem.fv->snormal[b] * dTT_drs[a][b][p][j];
                           }
                         }
 
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                       }
                     }
                   }
 
                   var = TEMPERATURE;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = 0.0;
 
                       for (a = 0; a < dim; a++) {
                         for (b = 0; b < dim; b++) {
-                          d_term += weight * det * fv->stangent[dir][a] * fv->snormal[b] *
-                                    dTT_dT[a][b][j];
+                          d_term += weight * det * goma_ctx->fem.fv->stangent[dir][a] *
+                                    goma_ctx->fem.fv->snormal[b] * dTT_dT[a][b][j];
                         }
                       }
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
 
                   var = MASS_FRACTION;
-                  if (pd->v[pg->imtrx][var]) {
-                    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         /*
                          * Find the material index for the current
                          * local variable degree of freedom
                          * (can't just query gun_list for MASS_FRACTION
                          *  unknowns -> have to do a lookup)
                          */
-                        gnn = ei[pg->imtrx]->gnn_list[var][j];
-                        ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                        matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                        c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+                        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                        matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                        c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
                         for (d_term = 0.0, a = 0; a < dim; a++) {
                           for (b = 0; b < dim; b++) {
-                            d_term += weight * det * fv->stangent[dir][a] * fv->snormal[b] *
-                                      dTT_dc[a][b][w][j];
+                            d_term += weight * det * goma_ctx->fem.fv->stangent[dir][a] *
+                                      goma_ctx->fem.fv->snormal[b] * dTT_dc[a][b][w][j];
                           }
                         }
                         J_AC[c] += d_term;
@@ -2823,15 +2960,16 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = VELOCITY1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = 0.0;
 
                       for (a = 0; a < WIM; a++) {
-                        d_term += weight * det * fv->snormal[a] * (bf[var]->phi[j] * delta(p, a));
+                        d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                  (goma_ctx->fem.bf[var]->phi[j] * delta(p, a));
                       }
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
                 }
@@ -2839,17 +2977,20 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = 0.0;
 
                       for (a = 0; a < dim; a++) {
-                        d_term += weight * det * fv->dsnormal_dx[a][p][j] * (fv->v[a] - x_dot[a]);
-                        d_term1 +=
-                            weight * fv->dsurfdet_dx[p][j] * fv->snormal[a] * (fv->v[a] - x_dot[a]);
+                        d_term += weight * det * goma_ctx->fem.fv->dsnormal_dx[a][p][j] *
+                                  (goma_ctx->fem.fv->v[a] - x_dot[a]);
+                        d_term1 += weight * goma_ctx->fem.fv->dsurfdet_dx[p][j] *
+                                   goma_ctx->fem.fv->snormal[a] *
+                                   (goma_ctx->fem.fv->v[a] - x_dot[a]);
                       }
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                          d_term + d_term1;
                     }
                   }
                 }
@@ -2860,29 +3001,33 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                 var = TEMPERATURE;
 
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   d_term = 0;
 
                   for (a = 0; a < dim; a++) {
-                    d_term +=
-                        weight * det * fv->snormal[a] *
-                        (-d_k->T[j] * fv->grad_T[a] - k * bf[var]->grad_phi[j][a] +
-                         rho * (d_Cp->T[j] * fv->T + Cp * bf[var]->phi[j]) * (fv->v[a] - x_dot[a]));
+                    d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                              (-d_k->T[j] * goma_ctx->fem.fv->grad_T[a] -
+                               k * goma_ctx->fem.bf[var]->grad_phi[j][a] +
+                               rho *
+                                   (d_Cp->T[j] * goma_ctx->fem.fv->T +
+                                    Cp * goma_ctx->fem.bf[var]->phi[j]) *
+                                   (goma_ctx->fem.fv->v[a] - x_dot[a]));
                   }
 
-                  J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                  J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                 }
 
                 for (p = 0; p < dim; p++) {
                   var = VELOCITY1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = 0.0;
 
-                      d_term += weight * det * rho * Cp * fv->T * fv->snormal[p] * bf[var]->phi[j];
+                      d_term += weight * det * rho * Cp * goma_ctx->fem.fv->T *
+                                goma_ctx->fem.fv->snormal[p] * goma_ctx->fem.bf[var]->phi[j];
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                     /* tabaer notes that d_Cp->v has not been included */
                   }
@@ -2891,46 +3036,55 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = 0.0;
 
                       for (a = 0; a < dim; a++) {
-                        d_term +=
-                            -weight * (fv->dsurfdet_dx[p][j] * k * fv->snormal[a] * fv->grad_T[a] +
-                                       det * d_k->X[p][j] * fv->snormal[a] * fv->grad_T[a] +
-                                       det * k * fv->dsnormal_dx[a][p][j] * fv->grad_T[a] +
-                                       det * k * fv->snormal[a] * fv->d_grad_T_dmesh[a][p][j]);
-                        d_term1 += weight * rho * fv->T * (fv->v[a] - x_dot[a]) *
-                                   (fv->dsurfdet_dx[p][j] * Cp * fv->snormal[a] +
-                                    det * d_Cp->X[p][j] * fv->snormal[a] +
-                                    det * Cp * fv->dsnormal_dx[a][p][j]);
+                        d_term += -weight *
+                                  (goma_ctx->fem.fv->dsurfdet_dx[p][j] * k *
+                                       goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_T[a] +
+                                   det * d_k->X[p][j] * goma_ctx->fem.fv->snormal[a] *
+                                       goma_ctx->fem.fv->grad_T[a] +
+                                   det * k * goma_ctx->fem.fv->dsnormal_dx[a][p][j] *
+                                       goma_ctx->fem.fv->grad_T[a] +
+                                   det * k * goma_ctx->fem.fv->snormal[a] *
+                                       goma_ctx->fem.fv->d_grad_T_dmesh[a][p][j]);
+                        d_term1 += weight * rho * goma_ctx->fem.fv->T *
+                                   (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                   (goma_ctx->fem.fv->dsurfdet_dx[p][j] * Cp *
+                                        goma_ctx->fem.fv->snormal[a] +
+                                    det * d_Cp->X[p][j] * goma_ctx->fem.fv->snormal[a] +
+                                    det * Cp * goma_ctx->fem.fv->dsnormal_dx[a][p][j]);
                       }
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                          d_term + d_term1;
                     }
                   }
                 }
 
                 var = MASS_FRACTION;
-                if (pd->v[pg->imtrx][var]) {
-                  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       /*
                        * Find the material index for the current
                        * local variable degree of freedom
                        * (can't just query gun_list for MASS_FRACTION
                        *  unknowns -> have to do a lookup)
                        */
-                      gnn = ei[pg->imtrx]->gnn_list[var][j];
-                      ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                      matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                      c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+                      gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                      ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                      matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                      c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
                       for (d_term = 0.0, a = 0; a < dim; a++) {
-                        d_term += -weight * det * d_k->C[w][j] * fv->snormal[a] * fv->grad_T[a] +
-                                  weight * det * rho * d_Cp->C[w][j] * fv->T * fv->snormal[a] *
-                                      (fv->v[a] - x_dot[a]);
+                        d_term += -weight * det * d_k->C[w][j] * goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->grad_T[a] +
+                                  weight * det * rho * d_Cp->C[w][j] * goma_ctx->fem.fv->T *
+                                      goma_ctx->fem.fv->snormal[a] *
+                                      (goma_ctx->fem.fv->v[a] - x_dot[a]);
                       }
                       J_AC[c] += d_term;
                     }
@@ -2941,29 +3095,31 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               case SPECIES_FLUX:
 
                 var = MASS_FRACTION;
-                if (pd->v[pg->imtrx][var]) {
-                  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       /*
                        * Find the material index for the current
                        * local variable degree of freedom
                        * (can't just query gun_list for MASS_FRACTION
                        *  unknowns -> have to do a lookup)
                        */
-                      gnn = ei[pg->imtrx]->gnn_list[var][j];
-                      ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                      matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                      c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+                      gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                      ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                      matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                      c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
                       d_term = d_term1 = 0.0;
                       for (a = 0; a < dim; a++) {
-                        d_term += -weight * det * fv->snormal[a] *
-                                  (d_diff[sp][MAX_VARIABLE_TYPES + w] * bf[var]->phi[j] *
-                                       fv->grad_c[species_id][a] +
-                                   mp->diffusivity[species_id] * bf[var]->grad_phi[j][a] *
-                                       delta(w, species_id));
+                        d_term +=
+                            -weight * det * goma_ctx->fem.fv->snormal[a] *
+                            (d_diff[sp][MAX_VARIABLE_TYPES + w] * goma_ctx->fem.bf[var]->phi[j] *
+                                 goma_ctx->fem.fv->grad_c[species_id][a] +
+                             goma_ctx->fem.mp->diffusivity[species_id] *
+                                 goma_ctx->fem.bf[var]->grad_phi[j][a] * delta(w, species_id));
 
-                        d_term1 += weight * det * fv->snormal[a] * (fv->v[a] - x_dot[a]) *
-                                   bf[var]->phi[j] * delta(w, species_id);
+                        d_term1 += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                   (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                   goma_ctx->fem.bf[var]->phi[j] * delta(w, species_id);
                       }
                       /*J_AC[c] += d_term + d_term1;*/
                       J_AC[c] += d_term;
@@ -2974,11 +3130,12 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = VELOCITY1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                      d_term = weight * det * fv->snormal[p] * fv->c[species_id] * bf[var]->phi[j];
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                      d_term = weight * det * goma_ctx->fem.fv->snormal[p] *
+                               goma_ctx->fem.fv->c[species_id] * goma_ctx->fem.bf[var]->phi[j];
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
                 }
@@ -2986,41 +3143,47 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = d_term2 = 0.0;
 
                       for (a = 0; a < VIM; a++) {
                         d_term +=
                             -weight *
-                            (fv->dsurfdet_dx[p][j] * mp->diffusivity[sp] * fv->snormal[a] *
-                                 fv->grad_c[sp][a] +
-                             det * (d_diff[sp][var] * bf[var]->phi[j] * fv->snormal[a] *
-                                        fv->grad_c[sp][a] +
-                                    mp->diffusivity[sp] *
-                                        (fv->dsnormal_dx[a][p][j] * fv->grad_c[species_id][a] +
-                                         fv->snormal[a] * fv->d_grad_c_dmesh[a][sp][p][j])));
-                        d_term1 += weight * (fv->v[a] - x_dot[a]) * fv->c[sp] *
-                                   (fv->dsurfdet_dx[p][j] * fv->snormal[a] +
-                                    det * fv->dsnormal_dx[a][p][j]);
+                            (goma_ctx->fem.fv->dsurfdet_dx[p][j] *
+                                 goma_ctx->fem.mp->diffusivity[sp] * goma_ctx->fem.fv->snormal[a] *
+                                 goma_ctx->fem.fv->grad_c[sp][a] +
+                             det * (d_diff[sp][var] * goma_ctx->fem.bf[var]->phi[j] *
+                                        goma_ctx->fem.fv->snormal[a] *
+                                        goma_ctx->fem.fv->grad_c[sp][a] +
+                                    goma_ctx->fem.mp->diffusivity[sp] *
+                                        (goma_ctx->fem.fv->dsnormal_dx[a][p][j] *
+                                             goma_ctx->fem.fv->grad_c[species_id][a] +
+                                         goma_ctx->fem.fv->snormal[a] *
+                                             goma_ctx->fem.fv->d_grad_c_dmesh[a][sp][p][j])));
+                        d_term1 +=
+                            weight * (goma_ctx->fem.fv->v[a] - x_dot[a]) * goma_ctx->fem.fv->c[sp] *
+                            (goma_ctx->fem.fv->dsurfdet_dx[p][j] * goma_ctx->fem.fv->snormal[a] +
+                             det * goma_ctx->fem.fv->dsnormal_dx[a][p][j]);
                       }
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                          d_term + d_term1;
                     }
                   }
                 }
 
                 var = TEMPERATURE;
 
-                if (pd->v[pg->imtrx][var]) {
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     d_term = 0;
 
                     for (a = 0; a < VIM; a++) {
-                      d_term += -weight * det * d_diff[sp][var] * bf[var]->phi[j] * fv->snormal[a] *
-                                fv->grad_c[sp][a];
+                      d_term += -weight * det * d_diff[sp][var] * goma_ctx->fem.bf[var]->phi[j] *
+                                goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_c[sp][a];
                     }
 
-                    J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                    J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                   }
                 }
 
@@ -3029,31 +3192,33 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               case CHARGED_SPECIES_FLUX:
 
                 var = MASS_FRACTION;
-                if (pd->v[pg->imtrx][var]) {
-                  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       /*
                        * Find the material index for the current
                        * local variable degree of freedom
                        * (can't just query gun_list for MASS_FRACTION
                        *  unknowns -> have to do a lookup)
                        */
-                      gnn = ei[pg->imtrx]->gnn_list[var][j];
-                      ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                      matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                      c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+                      gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                      ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                      matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                      c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
                       d_term = d_term1 = 0.0;
                       for (a = 0; a < dim; a++) {
-                        d_term += -weight * det * fv->snormal[a] *
-                                  (d_diff[sp][MAX_VARIABLE_TYPES + w] * bf[var]->phi[j] *
-                                       fv->grad_c[species_id][a] +
-                                   mp->diffusivity[species_id] * bf[var]->grad_phi[j][a] *
-                                       delta(w, species_id) +
-                                   d_kapta_dc[species_id][MAX_VARIABLE_TYPES + w] *
-                                       bf[var]->phi[j] * fv->grad_V[a]);
+                        d_term +=
+                            -weight * det * goma_ctx->fem.fv->snormal[a] *
+                            (d_diff[sp][MAX_VARIABLE_TYPES + w] * goma_ctx->fem.bf[var]->phi[j] *
+                                 goma_ctx->fem.fv->grad_c[species_id][a] +
+                             goma_ctx->fem.mp->diffusivity[species_id] *
+                                 goma_ctx->fem.bf[var]->grad_phi[j][a] * delta(w, species_id) +
+                             d_kapta_dc[species_id][MAX_VARIABLE_TYPES + w] *
+                                 goma_ctx->fem.bf[var]->phi[j] * goma_ctx->fem.fv->grad_V[a]);
 
-                        d_term1 += weight * det * fv->snormal[a] * (fv->v[a] - x_dot[a]) *
-                                   bf[var]->phi[j] * delta(w, species_id);
+                        d_term1 += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                   (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                   goma_ctx->fem.bf[var]->phi[j] * delta(w, species_id);
                       }
                       J_AC[c] += d_term + d_term1;
                     }
@@ -3063,10 +3228,11 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = VELOCITY1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                      d_term = weight * det * fv->snormal[p] * fv->c[species_id] * bf[var]->phi[j];
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                      d_term = weight * det * goma_ctx->fem.fv->snormal[p] *
+                               goma_ctx->fem.fv->c[species_id] * goma_ctx->fem.bf[var]->phi[j];
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
                 }
@@ -3074,63 +3240,72 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = d_term2 = 0.0;
 
                       for (a = 0; a < VIM; a++) {
                         d_term +=
                             -weight *
-                            (fv->dsurfdet_dx[p][j] * fv->snormal[a] *
-                                 (mp->diffusivity[sp] * fv->grad_c[sp][a] +
-                                  kapta[species_id] * fv->grad_V[a]) +
-                             det * (d_diff[sp][var] * bf[var]->phi[j] * fv->snormal[a] *
-                                        fv->grad_c[sp][a] +
-                                    d_kapta_dx[species_id][a] * bf[var]->phi[j] * fv->snormal[a] *
-                                        fv->grad_V[a] +
-                                    mp->diffusivity[sp] * fv->dsnormal_dx[a][p][j] *
-                                        fv->grad_c[species_id][a] +
-                                    kapta[species_id] * fv->dsnormal_dx[a][p][j] * fv->grad_V[a] +
-                                    mp->diffusivity[sp] * fv->snormal[a] *
-                                        fv->d_grad_c_dmesh[a][sp][p][j] +
-                                    kapta[species_id] * fv->snormal[a] *
-                                        fv->d_grad_V_dmesh[a][p][j]));
+                            (goma_ctx->fem.fv->dsurfdet_dx[p][j] * goma_ctx->fem.fv->snormal[a] *
+                                 (goma_ctx->fem.mp->diffusivity[sp] *
+                                      goma_ctx->fem.fv->grad_c[sp][a] +
+                                  kapta[species_id] * goma_ctx->fem.fv->grad_V[a]) +
+                             det *
+                                 (d_diff[sp][var] * goma_ctx->fem.bf[var]->phi[j] *
+                                      goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->grad_c[sp][a] +
+                                  d_kapta_dx[species_id][a] * goma_ctx->fem.bf[var]->phi[j] *
+                                      goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_V[a] +
+                                  goma_ctx->fem.mp->diffusivity[sp] *
+                                      goma_ctx->fem.fv->dsnormal_dx[a][p][j] *
+                                      goma_ctx->fem.fv->grad_c[species_id][a] +
+                                  kapta[species_id] * goma_ctx->fem.fv->dsnormal_dx[a][p][j] *
+                                      goma_ctx->fem.fv->grad_V[a] +
+                                  goma_ctx->fem.mp->diffusivity[sp] * goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->d_grad_c_dmesh[a][sp][p][j] +
+                                  kapta[species_id] * goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->d_grad_V_dmesh[a][p][j]));
 
-                        d_term1 += weight * (fv->v[a] - x_dot[a]) * fv->c[sp] *
-                                   (fv->dsurfdet_dx[p][j] * fv->snormal[a] +
-                                    det * fv->dsnormal_dx[a][p][j]);
+                        d_term1 +=
+                            weight * (goma_ctx->fem.fv->v[a] - x_dot[a]) * goma_ctx->fem.fv->c[sp] *
+                            (goma_ctx->fem.fv->dsurfdet_dx[p][j] * goma_ctx->fem.fv->snormal[a] +
+                             det * goma_ctx->fem.fv->dsnormal_dx[a][p][j]);
                       }
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                          d_term + d_term1;
                     }
                   }
                 }
 
                 var = TEMPERATURE;
 
-                if (pd->v[pg->imtrx][var]) {
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     d_term = 0;
 
                     for (a = 0; a < VIM; a++) {
-                      d_term += -weight * det * bf[var]->phi[j] * fv->snormal[a] *
-                                (d_diff[sp][var] * fv->grad_c[sp][a] +
-                                 d_kapta_dT[species_id] * fv->grad_V[a]);
+                      d_term += -weight * det * goma_ctx->fem.bf[var]->phi[j] *
+                                goma_ctx->fem.fv->snormal[a] *
+                                (d_diff[sp][var] * goma_ctx->fem.fv->grad_c[sp][a] +
+                                 d_kapta_dT[species_id] * goma_ctx->fem.fv->grad_V[a]);
                     }
-                    J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                    J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                   }
                 }
 
                 var = VOLTAGE;
 
-                if (pd->v[pg->imtrx][var]) {
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     d_term = 0;
 
                     for (a = 0; a < VIM; a++) {
-                      d_term += -weight * det * kapta[species_id] * bf[var]->grad_phi[j][a] *
-                                fv->snormal[a];
+                      d_term += -weight * det * kapta[species_id] *
+                                goma_ctx->fem.bf[var]->grad_phi[j][a] *
+                                goma_ctx->fem.fv->snormal[a];
                     }
-                    J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                    J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                   }
                 }
 
@@ -3139,31 +3314,33 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               case CURRENT_FICKIAN:
 
                 var = MASS_FRACTION;
-                if (pd->v[pg->imtrx][var]) {
-                  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       /*
                        * Find the material index for the current
                        * local variable degree of freedom
                        * (can't just query gun_list for MASS_FRACTION
                        *  unknowns -> have to do a lookup)
                        */
-                      gnn = ei[pg->imtrx]->gnn_list[var][j];
-                      ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                      matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                      c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+                      gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                      ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                      matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                      c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
                       d_term = d_term1 = 0.0;
                       for (a = 0; a < dim; a++) {
-                        d_term += -weight * det * fv->snormal[a] *
-                                  (d_diff[sp][MAX_VARIABLE_TYPES + w] * bf[var]->phi[j] *
-                                       fv->grad_c[species_id][a] +
-                                   mp->diffusivity[species_id] * bf[var]->grad_phi[j][a] *
-                                       delta(w, species_id) +
-                                   d_kapta_dc[species_id][MAX_VARIABLE_TYPES + w] *
-                                       bf[var]->phi[j] * fv->grad_V[a]);
+                        d_term +=
+                            -weight * det * goma_ctx->fem.fv->snormal[a] *
+                            (d_diff[sp][MAX_VARIABLE_TYPES + w] * goma_ctx->fem.bf[var]->phi[j] *
+                                 goma_ctx->fem.fv->grad_c[species_id][a] +
+                             goma_ctx->fem.mp->diffusivity[species_id] *
+                                 goma_ctx->fem.bf[var]->grad_phi[j][a] * delta(w, species_id) +
+                             d_kapta_dc[species_id][MAX_VARIABLE_TYPES + w] *
+                                 goma_ctx->fem.bf[var]->phi[j] * goma_ctx->fem.fv->grad_V[a]);
 
-                        d_term1 += weight * det * fv->snormal[a] * (fv->v[a] - x_dot[a]) *
-                                   bf[var]->phi[j] * delta(w, species_id);
+                        d_term1 += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                   (goma_ctx->fem.fv->v[a] - x_dot[a]) *
+                                   goma_ctx->fem.bf[var]->phi[j] * delta(w, species_id);
                       }
                       J_AC[c] += d_term + d_term1;
                     }
@@ -3173,10 +3350,11 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = VELOCITY1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                      d_term = weight * det * fv->snormal[p] * fv->c[species_id] * bf[var]->phi[j];
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                      d_term = weight * det * goma_ctx->fem.fv->snormal[p] *
+                               goma_ctx->fem.fv->c[species_id] * goma_ctx->fem.bf[var]->phi[j];
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
                 }
@@ -3184,63 +3362,72 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = d_term2 = 0.0;
 
                       for (a = 0; a < VIM; a++) {
                         d_term +=
                             -weight *
-                            (fv->dsurfdet_dx[p][j] * fv->snormal[a] *
-                                 (mp->diffusivity[sp] * fv->grad_c[sp][a] +
-                                  kapta[species_id] * fv->grad_V[a]) +
-                             det * (d_diff[sp][var] * bf[var]->phi[j] * fv->snormal[a] *
-                                        fv->grad_c[sp][a] +
-                                    d_kapta_dx[species_id][a] * bf[var]->phi[j] * fv->snormal[a] *
-                                        fv->grad_V[a] +
-                                    mp->diffusivity[sp] * fv->dsnormal_dx[a][p][j] *
-                                        fv->grad_c[species_id][a] +
-                                    kapta[species_id] * fv->dsnormal_dx[a][p][j] * fv->grad_V[a] +
-                                    mp->diffusivity[sp] * fv->snormal[a] *
-                                        fv->d_grad_c_dmesh[a][sp][p][j] +
-                                    kapta[species_id] * fv->snormal[a] *
-                                        fv->d_grad_V_dmesh[a][p][j]));
+                            (goma_ctx->fem.fv->dsurfdet_dx[p][j] * goma_ctx->fem.fv->snormal[a] *
+                                 (goma_ctx->fem.mp->diffusivity[sp] *
+                                      goma_ctx->fem.fv->grad_c[sp][a] +
+                                  kapta[species_id] * goma_ctx->fem.fv->grad_V[a]) +
+                             det *
+                                 (d_diff[sp][var] * goma_ctx->fem.bf[var]->phi[j] *
+                                      goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->grad_c[sp][a] +
+                                  d_kapta_dx[species_id][a] * goma_ctx->fem.bf[var]->phi[j] *
+                                      goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_V[a] +
+                                  goma_ctx->fem.mp->diffusivity[sp] *
+                                      goma_ctx->fem.fv->dsnormal_dx[a][p][j] *
+                                      goma_ctx->fem.fv->grad_c[species_id][a] +
+                                  kapta[species_id] * goma_ctx->fem.fv->dsnormal_dx[a][p][j] *
+                                      goma_ctx->fem.fv->grad_V[a] +
+                                  goma_ctx->fem.mp->diffusivity[sp] * goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->d_grad_c_dmesh[a][sp][p][j] +
+                                  kapta[species_id] * goma_ctx->fem.fv->snormal[a] *
+                                      goma_ctx->fem.fv->d_grad_V_dmesh[a][p][j]));
 
-                        d_term1 += weight * (fv->v[a] - x_dot[a]) * fv->c[sp] *
-                                   (fv->dsurfdet_dx[p][j] * fv->snormal[a] +
-                                    det * fv->dsnormal_dx[a][p][j]);
+                        d_term1 +=
+                            weight * (goma_ctx->fem.fv->v[a] - x_dot[a]) * goma_ctx->fem.fv->c[sp] *
+                            (goma_ctx->fem.fv->dsurfdet_dx[p][j] * goma_ctx->fem.fv->snormal[a] +
+                             det * goma_ctx->fem.fv->dsnormal_dx[a][p][j]);
                       }
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                          d_term + d_term1;
                     }
                   }
                 }
 
                 var = TEMPERATURE;
 
-                if (pd->v[pg->imtrx][var]) {
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     d_term = 0;
 
                     for (a = 0; a < VIM; a++) {
-                      d_term += -weight * det * bf[var]->phi[j] * fv->snormal[a] *
-                                (d_diff[sp][var] * fv->grad_c[sp][a] +
-                                 d_kapta_dT[species_id] * fv->grad_V[a]);
+                      d_term += -weight * det * goma_ctx->fem.bf[var]->phi[j] *
+                                goma_ctx->fem.fv->snormal[a] *
+                                (d_diff[sp][var] * goma_ctx->fem.fv->grad_c[sp][a] +
+                                 d_kapta_dT[species_id] * goma_ctx->fem.fv->grad_V[a]);
                     }
-                    J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                    J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                   }
                 }
 
                 var = VOLTAGE;
 
-                if (pd->v[pg->imtrx][var]) {
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     d_term = 0;
 
                     for (a = 0; a < VIM; a++) {
-                      d_term += -weight * det * kapta[species_id] * bf[var]->grad_phi[j][a] *
-                                fv->snormal[a];
+                      d_term += -weight * det * kapta[species_id] *
+                                goma_ctx->fem.bf[var]->grad_phi[j][a] *
+                                goma_ctx->fem.fv->snormal[a];
                     }
-                    J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                    J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                   }
                 }
 
@@ -3250,39 +3437,41 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                 var = VOLTAGE;
 
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   d_term = 0;
 
                   for (a = 0; a < dim; a++) {
-                    d_term += weight * det * fv->snormal[a] *
-                              (-dkdV[j] * fv->grad_V[a] - k * bf[var]->grad_phi[j][a]);
+                    d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                              (-dkdV[j] * goma_ctx->fem.fv->grad_V[a] -
+                               k * goma_ctx->fem.bf[var]->grad_phi[j][a]);
                   }
 
                   /* J_AC[ ei[pg->imtrx]->gun_list[var][j]  ] += d_term; */
-                  J_AC[ei[pg->imtrx]->gun_list[var][j]] = 1.0;
+                  J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] = 1.0;
                 }
 
                 var = TEMPERATURE;
 
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   d_term = 0;
 
                   for (a = 0; a < dim; a++) {
-                    d_term += weight * det * fv->snormal[a] * (-dkdT[j] * fv->grad_V[a]);
+                    d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                              (-dkdT[j] * goma_ctx->fem.fv->grad_V[a]);
                   }
 
                   /* J_AC[ ei[pg->imtrx]->gun_list[var][j]  ] += d_term; */
-                  J_AC[ei[pg->imtrx]->gun_list[var][j]] = 1.0;
+                  J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] = 1.0;
                 }
 
                 for (p = 0; p < dim; p++) {
                   var = VELOCITY1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = 0.0;
                       /* J_AC[ ei[pg->imtrx]->gun_list[var][j]  ] += d_term; */
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] = 1.0;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] = 1.0;
                     }
                   }
                 }
@@ -3290,41 +3479,46 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = 0.0;
 
                       for (a = 0; a < dim; a++) {
-                        d_term +=
-                            -weight * (fv->dsurfdet_dx[p][j] * k * fv->snormal[a] * fv->grad_V[a] +
-                                       det * dkdX[p][j] * fv->snormal[a] * fv->grad_V[a] +
-                                       det * k * fv->dsnormal_dx[a][p][j] * fv->grad_V[a] +
-                                       det * k * fv->snormal[a] * fv->d_grad_V_dmesh[a][p][j]);
+                        d_term += -weight *
+                                  (goma_ctx->fem.fv->dsurfdet_dx[p][j] * k *
+                                       goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_V[a] +
+                                   det * dkdX[p][j] * goma_ctx->fem.fv->snormal[a] *
+                                       goma_ctx->fem.fv->grad_V[a] +
+                                   det * k * goma_ctx->fem.fv->dsnormal_dx[a][p][j] *
+                                       goma_ctx->fem.fv->grad_V[a] +
+                                   det * k * goma_ctx->fem.fv->snormal[a] *
+                                       goma_ctx->fem.fv->d_grad_V_dmesh[a][p][j]);
                       }
 
                       /* J_AC[ ei[pg->imtrx]->gun_list[var][j]  ] += d_term; */
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] = 1.0;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] = 1.0;
                     }
                   }
                 }
 
                 var = MASS_FRACTION;
-                if (pd->v[pg->imtrx][var]) {
-                  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       /*
                        * Find the material index for the current
                        * local variable degree of freedom
                        * (can't just query gun_list for MASS_FRACTION
                        *  unknowns -> have to do a lookup)
                        */
-                      gnn = ei[pg->imtrx]->gnn_list[var][j];
-                      ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                      matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                      c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+                      gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                      ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                      matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                      c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
                       for (d_term = 0.0, a = 0; a < dim; a++) {
-                        d_term += -weight * det * dkdC[w][j] * fv->snormal[a] * fv->grad_V[a];
+                        d_term += -weight * det * dkdC[w][j] * goma_ctx->fem.fv->snormal[a] *
+                                  goma_ctx->fem.fv->grad_V[a];
                       }
                       /* J_AC[c] += d_term; */
                       J_AC[c] = 1.0;
@@ -3338,29 +3532,30 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                      d_term = weight * fv->dsurfdet_dx[p][j] * fv->c[species_id];
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                      d_term = weight * goma_ctx->fem.fv->dsurfdet_dx[p][j] *
+                               goma_ctx->fem.fv->c[species_id];
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
                 }
 
                 var = MASS_FRACTION;
-                if (pd->v[pg->imtrx][var]) {
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     /*
                      * Find the material index for the current
                      * local variable degree of freedom
                      * (can't just query gun_list for MASS_FRACTION
                      *  unknowns -> have to do a lookup)
                      */
-                    gnn = ei[pg->imtrx]->gnn_list[var][j];
-                    ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                    matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                    c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
-                    d_term = weight * det * bf[var]->phi[j];
+                    gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                    ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                    matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                    c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
+                    d_term = weight * det * goma_ctx->fem.bf[var]->phi[j];
                     J_AC[c] += d_term;
                   }
                 }
@@ -3371,9 +3566,10 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += weight * fv->dsurfdet_dx[p][j];
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                          weight * goma_ctx->fem.fv->dsurfdet_dx[p][j];
                     }
                   }
                 }
@@ -3384,13 +3580,15 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-                          0.5 * weight * SGN(fv->snormal[1]) *
-                          (fv->x[1] * (fv->snormal[1] * fv->dsurfdet_dx[p][j] +
-                                       det * fv->dsnormal_dx[1][p][j]) +
-                           det * fv->snormal[1] * bf[var]->phi[j] * delta(p, 1));
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                          0.5 * weight * SGN(goma_ctx->fem.fv->snormal[1]) *
+                          (goma_ctx->fem.fv->x[1] *
+                               (goma_ctx->fem.fv->snormal[1] * goma_ctx->fem.fv->dsurfdet_dx[p][j] +
+                                det * goma_ctx->fem.fv->dsnormal_dx[1][p][j]) +
+                           det * goma_ctx->fem.fv->snormal[1] * goma_ctx->fem.bf[var]->phi[j] *
+                               delta(p, 1));
                     }
                   }
                 }
@@ -3401,20 +3599,23 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 for (p = 0; p < DIM; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       double term1 = 0.0, term2 = 0.0, term3 = 0.0;
 
-                      term1 = fv->snormal[p] * bf[var]->phi[j] / (double)dim;
+                      term1 = goma_ctx->fem.fv->snormal[p] * goma_ctx->fem.bf[var]->phi[j] /
+                              (double)dim;
 
                       for (a = 0; a < dim; a++) {
-                        term2 += (fv->x[a] - param[a]) * fv->dsnormal_dx[a][p][j] / (double)dim;
-                        term3 += (fv->x[a] - param[a]) * fv->snormal[p] / (double)dim;
+                        term2 += (goma_ctx->fem.fv->x[a] - param[a]) *
+                                 goma_ctx->fem.fv->dsnormal_dx[a][p][j] / (double)dim;
+                        term3 += (goma_ctx->fem.fv->x[a] - param[a]) *
+                                 goma_ctx->fem.fv->snormal[p] / (double)dim;
                       }
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
                           weight * term1 * det + weight * term2 * det +
-                          weight * term3 * fv->dsurfdet_dx[p][j];
+                          weight * term3 * goma_ctx->fem.fv->dsurfdet_dx[p][j];
                     }
                   }
                 }
@@ -3425,68 +3626,73 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                 var = VOLTAGE;
 
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   d_term1 = 0;
                   for (a = 0; a < dim; a++) {
-                    d_term1 += efield[a] * (-bf[var]->grad_phi[j][a]);
+                    d_term1 += efield[a] * (-goma_ctx->fem.bf[var]->grad_phi[j][a]);
                   }
                   d_term = 0;
 
                   for (a = 0; a < dim; a++) {
                     for (b = 0; b < dim; b++) {
-                      d_term +=
-                          weight * det * fv->snormal[a] * fv->snormal[b] *
-                          (d_p_dV[j] * es[a][b] +
-                           perm * ((-bf[var]->grad_phi[j][a]) * efield[b] +
-                                   efield[a] * (-bf[var]->grad_phi[j][b]) - delta(a, b) * d_term1));
+                      d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                goma_ctx->fem.fv->snormal[b] *
+                                (d_p_dV[j] * es[a][b] +
+                                 perm * ((-goma_ctx->fem.bf[var]->grad_phi[j][a]) * efield[b] +
+                                         efield[a] * (-goma_ctx->fem.bf[var]->grad_phi[j][b]) -
+                                         delta(a, b) * d_term1));
                     }
                   }
 
-                  J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                  J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                 }
 
                 var = TEMPERATURE;
 
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   d_term = 0;
 
                   for (a = 0; a < dim; a++) {
                     for (b = 0; b < dim; b++) {
-                      d_term +=
-                          weight * det * fv->snormal[a] * fv->snormal[b] * (d_p_dT[j] * es[a][b]);
+                      d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
+                                goma_ctx->fem.fv->snormal[b] * (d_p_dT[j] * es[a][b]);
                     }
                   }
 
-                  J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                  J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                 }
 
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = 0.0;
                       for (a = 0; a < dim; a++) {
-                        d_term1 += efield[a] * (-fv->d_grad_V_dmesh[a][p][j]);
+                        d_term1 += efield[a] * (-goma_ctx->fem.fv->d_grad_V_dmesh[a][p][j]);
                       }
                       for (a = 0; a < dim; a++) {
                         for (b = 0; b < dim; b++) {
                           d_term +=
                               weight *
-                              (fv->dsurfdet_dx[p][j] * fv->snormal[a] * perm * es[a][b] *
-                                   fv->snormal[b] +
-                               det * d_p_dX[p][j] * fv->snormal[a] * es[a][b] * fv->snormal[b] +
-                               det * perm * fv->dsnormal_dx[a][p][j] * es[a][b] * fv->snormal[b] +
-                               det * perm * fv->dsnormal_dx[b][p][j] * es[a][b] * fv->snormal[a] +
-                               det * perm * fv->snormal[a] * fv->snormal[b] *
-                                   (efield[a] * (-fv->d_grad_V_dmesh[b][p][j]) +
-                                    (-fv->d_grad_V_dmesh[a][p][j]) * efield[b] -
+                              (goma_ctx->fem.fv->dsurfdet_dx[p][j] * goma_ctx->fem.fv->snormal[a] *
+                                   perm * es[a][b] * goma_ctx->fem.fv->snormal[b] +
+                               det * d_p_dX[p][j] * goma_ctx->fem.fv->snormal[a] * es[a][b] *
+                                   goma_ctx->fem.fv->snormal[b] +
+                               det * perm * goma_ctx->fem.fv->dsnormal_dx[a][p][j] * es[a][b] *
+                                   goma_ctx->fem.fv->snormal[b] +
+                               det * perm * goma_ctx->fem.fv->dsnormal_dx[b][p][j] * es[a][b] *
+                                   goma_ctx->fem.fv->snormal[a] +
+                               det * perm * goma_ctx->fem.fv->snormal[a] *
+                                   goma_ctx->fem.fv->snormal[b] *
+                                   (efield[a] * (-goma_ctx->fem.fv->d_grad_V_dmesh[b][p][j]) +
+                                    (-goma_ctx->fem.fv->d_grad_V_dmesh[a][p][j]) * efield[b] -
                                     delta(a, b) * d_term1));
                         }
                       }
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
                 }
@@ -3500,69 +3706,73 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                 var = VOLTAGE;
 
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   d_term1 = 0;
                   for (a = 0; a < dim; a++) {
-                    d_term1 += efield[a] * (-bf[var]->grad_phi[j][a]);
+                    d_term1 += efield[a] * (-goma_ctx->fem.bf[var]->grad_phi[j][a]);
                   }
                   d_term = 0;
 
                   for (a = 0; a < dim; a++) {
                     for (b = 0; b < dim; b++) {
-                      d_term +=
-                          weight * det * fv->stangent[dir][a] * -fv->snormal[b] *
-                          (d_p_dV[j] * es[a][b] +
-                           perm * ((-bf[var]->grad_phi[j][a]) * efield[b] +
-                                   efield[a] * (-bf[var]->grad_phi[j][b]) - delta(a, b) * d_term1));
+                      d_term += weight * det * goma_ctx->fem.fv->stangent[dir][a] *
+                                -goma_ctx->fem.fv->snormal[b] *
+                                (d_p_dV[j] * es[a][b] +
+                                 perm * ((-goma_ctx->fem.bf[var]->grad_phi[j][a]) * efield[b] +
+                                         efield[a] * (-goma_ctx->fem.bf[var]->grad_phi[j][b]) -
+                                         delta(a, b) * d_term1));
                     }
                   }
 
-                  J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                  J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                 }
 
                 var = TEMPERATURE;
 
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   d_term = 0;
 
                   for (a = 0; a < dim; a++) {
                     for (b = 0; b < dim; b++) {
-                      d_term += weight * det * fv->stangent[dir][a] * -fv->snormal[b] *
-                                (d_p_dT[j] * es[a][b]);
+                      d_term += weight * det * goma_ctx->fem.fv->stangent[dir][a] *
+                                -goma_ctx->fem.fv->snormal[b] * (d_p_dT[j] * es[a][b]);
                     }
                   }
 
-                  J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                  J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                 }
 
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = 0.0;
                       for (a = 0; a < dim; a++) {
-                        d_term1 += efield[a] * (-fv->d_grad_V_dmesh[a][p][j]);
+                        d_term1 += efield[a] * (-goma_ctx->fem.fv->d_grad_V_dmesh[a][p][j]);
                       }
                       for (a = 0; a < dim; a++) {
                         for (b = 0; b < dim; b++) {
-                          d_term += weight * (fv->dsurfdet_dx[p][j] * fv->stangent[dir][a] * perm *
-                                                  es[a][b] * -fv->snormal[b] +
-                                              det * d_p_dX[p][j] * fv->stangent[dir][a] * es[a][b] *
-                                                  -fv->snormal[b] +
-                                              det * perm * fv->dstangent_dx[dir][a][p][j] *
-                                                  es[a][b] * -fv->snormal[b] +
-                                              det * perm * -fv->dsnormal_dx[b][p][j] * es[a][b] *
-                                                  fv->stangent[dir][a] +
-                                              det * perm * fv->stangent[dir][a] * -fv->snormal[b] *
-                                                  (efield[a] * (-fv->d_grad_V_dmesh[b][p][j]) +
-                                                   (-fv->d_grad_V_dmesh[a][p][j]) * efield[b] -
-                                                   delta(a, b) * d_term1));
+                          d_term += weight *
+                                    (goma_ctx->fem.fv->dsurfdet_dx[p][j] *
+                                         goma_ctx->fem.fv->stangent[dir][a] * perm * es[a][b] *
+                                         -goma_ctx->fem.fv->snormal[b] +
+                                     det * d_p_dX[p][j] * goma_ctx->fem.fv->stangent[dir][a] *
+                                         es[a][b] * -goma_ctx->fem.fv->snormal[b] +
+                                     det * perm * goma_ctx->fem.fv->dstangent_dx[dir][a][p][j] *
+                                         es[a][b] * -goma_ctx->fem.fv->snormal[b] +
+                                     det * perm * -goma_ctx->fem.fv->dsnormal_dx[b][p][j] *
+                                         es[a][b] * goma_ctx->fem.fv->stangent[dir][a] +
+                                     det * perm * goma_ctx->fem.fv->stangent[dir][a] *
+                                         -goma_ctx->fem.fv->snormal[b] *
+                                         (efield[a] * (-goma_ctx->fem.fv->d_grad_V_dmesh[b][p][j]) +
+                                          (-goma_ctx->fem.fv->d_grad_V_dmesh[a][p][j]) * efield[b] -
+                                          delta(a, b) * d_term1));
                         }
                       }
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
                 }
@@ -3585,58 +3795,61 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                 var = VOLTAGE;
 
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   d_term1 = 0;
                   for (a = 0; a < dim; a++) {
-                    d_term1 += efield[a] * (-bf[var]->grad_phi[j][a]);
+                    d_term1 += efield[a] * (-goma_ctx->fem.bf[var]->grad_phi[j][a]);
                   }
                   d_term = 0;
 
                   for (b = 0; b < dim; b++) {
-                    d_term +=
-                        weight * det * -fv->snormal[b] *
-                        (d_p_dV[j] * es[dir][b] + perm * ((-bf[var]->grad_phi[j][dir]) * efield[b] +
-                                                          efield[dir] * (-bf[var]->grad_phi[j][b]) -
-                                                          delta(dir, b) * d_term1));
+                    d_term += weight * det * -goma_ctx->fem.fv->snormal[b] *
+                              (d_p_dV[j] * es[dir][b] +
+                               perm * ((-goma_ctx->fem.bf[var]->grad_phi[j][dir]) * efield[b] +
+                                       efield[dir] * (-goma_ctx->fem.bf[var]->grad_phi[j][b]) -
+                                       delta(dir, b) * d_term1));
                   }
 
-                  J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                  J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                 }
 
                 var = TEMPERATURE;
 
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   d_term = 0;
 
                   for (b = 0; b < dim; b++) {
-                    d_term += weight * det * -fv->snormal[b] * (d_p_dT[j] * es[dir][b]);
+                    d_term +=
+                        weight * det * -goma_ctx->fem.fv->snormal[b] * (d_p_dT[j] * es[dir][b]);
                   }
 
-                  J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                  J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                 }
 
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = 0.0;
                       for (a = 0; a < dim; a++) {
-                        d_term1 += efield[a] * (-fv->d_grad_V_dmesh[a][p][j]);
+                        d_term1 += efield[a] * (-goma_ctx->fem.fv->d_grad_V_dmesh[a][p][j]);
                       }
                       for (b = 0; b < dim; b++) {
                         d_term +=
-                            weight * (fv->dsurfdet_dx[p][j] * perm * es[dir][b] * -fv->snormal[b] +
-                                      det * d_p_dX[p][j] * es[dir][b] * -fv->snormal[b] +
-                                      det * perm * -fv->dsnormal_dx[b][p][j] * es[dir][b] +
-                                      det * perm * -fv->snormal[b] *
-                                          (efield[dir] * (-fv->d_grad_V_dmesh[b][p][j]) +
-                                           (-fv->d_grad_V_dmesh[dir][p][j]) * efield[b] -
-                                           delta(dir, b) * d_term1));
+                            weight *
+                            (goma_ctx->fem.fv->dsurfdet_dx[p][j] * perm * es[dir][b] *
+                                 -goma_ctx->fem.fv->snormal[b] +
+                             det * d_p_dX[p][j] * es[dir][b] * -goma_ctx->fem.fv->snormal[b] +
+                             det * perm * -goma_ctx->fem.fv->dsnormal_dx[b][p][j] * es[dir][b] +
+                             det * perm * -goma_ctx->fem.fv->snormal[b] *
+                                 (efield[dir] * (-goma_ctx->fem.fv->d_grad_V_dmesh[b][p][j]) +
+                                  (-goma_ctx->fem.fv->d_grad_V_dmesh[dir][p][j]) * efield[b] -
+                                  delta(dir, b) * d_term1));
                       }
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
                 }
@@ -3647,46 +3860,50 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                 var = VOLTAGE;
 
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   d_term = 0;
 
                   for (a = 0; a < dim; a++) {
-                    d_term += -weight * det * fv->snormal[a] *
-                              (d_p_dV[j] * efield[a] + perm * (-bf[var]->grad_phi[j][a]));
+                    d_term +=
+                        -weight * det * goma_ctx->fem.fv->snormal[a] *
+                        (d_p_dV[j] * efield[a] + perm * (-goma_ctx->fem.bf[var]->grad_phi[j][a]));
                   }
 
-                  J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                  J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                 }
 
                 var = TEMPERATURE;
 
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   d_term = 0;
 
                   for (a = 0; a < dim; a++) {
-                    d_term += -weight * det * fv->snormal[a] * (d_p_dT[j] * efield[a]);
+                    d_term +=
+                        -weight * det * goma_ctx->fem.fv->snormal[a] * (d_p_dT[j] * efield[a]);
                   }
 
-                  J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                  J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                 }
 
                 for (p = 0; p < dim; p++) {
                   var = MESH_DISPLACEMENT1 + p;
 
-                  if (pd->v[pg->imtrx][var]) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = 0.0;
 
                       for (a = 0; a < dim; a++) {
                         d_term += -weight *
-                                  (fv->dsurfdet_dx[p][j] * fv->snormal[a] * perm * efield[a] +
-                                   det * d_p_dX[p][j] * fv->snormal[a] * efield[a] +
-                                   det * perm * fv->dsnormal_dx[a][p][j] * efield[a] +
-                                   det * perm * fv->snormal[a] * (-fv->d_grad_V_dmesh[a][p][j]));
+                                  (goma_ctx->fem.fv->dsurfdet_dx[p][j] *
+                                       goma_ctx->fem.fv->snormal[a] * perm * efield[a] +
+                                   det * d_p_dX[p][j] * goma_ctx->fem.fv->snormal[a] * efield[a] +
+                                   det * perm * goma_ctx->fem.fv->dsnormal_dx[a][p][j] * efield[a] +
+                                   det * perm * goma_ctx->fem.fv->snormal[a] *
+                                       (-goma_ctx->fem.fv->d_grad_V_dmesh[a][p][j]));
                       }
 
-                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                      J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += d_term;
                     }
                   }
                 }
@@ -3751,22 +3968,23 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               err = load_elem_dofptr(corner_elem, exo, x, x, xdot, xdot, 0);
               GOMA_EH(err, "load_elem_dofptr");
 
-              err = bf_mp_init(pd);
+              err = bf_mp_init(goma_ctx->fem.pd);
               GOMA_EH(err, "bf_mp_init");
 
-              iconnect_ptr = ei[pg->imtrx]->iconnect_ptr;
-              ielem_type = ei[pg->imtrx]->ielem_type;
+              iconnect_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr;
+              ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type;
               ip_total = elem_info(NQUAD_SURF, ielem_type);
-              num_local_nodes = ei[pg->imtrx]->num_local_nodes;
-              ielem_dim = ei[pg->imtrx]->ielem_dim;
+              num_local_nodes = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
+              ielem_dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
 
-              id_side = find_id_side(ei[pg->imtrx]->ielem, num_nodes_on_side,
-                                     &exo->ss_node_list[sset_id][num_nodes_on_side * i],
-                                     id_local_elem_coord, exo);
+              id_side = find_id_side(
+                  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, num_nodes_on_side,
+                  &exo->ss_node_list[sset_id][num_nodes_on_side * i], id_local_elem_coord, exo);
 
-              find_nodal_stu(local_node, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
+              find_nodal_stu(local_node, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, xi,
+                             xi + 1, xi + 2);
 
-              err = load_basis_functions(xi, bfd);
+              err = load_basis_functions(xi, goma_ctx->fem.bfd);
               GOMA_EH(err, "problem from load_basis_functions");
 
               err = beer_belly();
@@ -3782,8 +4000,10 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               GOMA_EH(err, "load_bf_mesh_derivs");
 
               surface_determinant_and_normal(
-                  corner_elem, exo->elem_node_pntr[corner_elem], ei[pg->imtrx]->num_local_nodes,
-                  ei[pg->imtrx]->ielem_dim - 1, id_side, num_nodes_on_side, id_local_elem_coord);
+                  corner_elem, exo->elem_node_pntr[corner_elem],
+                  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
+                  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim - 1, id_side,
+                  num_nodes_on_side, id_local_elem_coord);
               err = load_fv_grads();
               GOMA_EH(err, "load_fv_grads");
 
@@ -3794,24 +4014,24 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 calc_surf_tangent(corner_elem, iconnect_ptr, num_local_nodes, ielem_dim - 1,
                                   num_nodes_on_side, id_local_elem_coord);
               }
-              dim = pd_glob[0]->Num_Dim;
+              dim = goma_ctx->fem.pd_glob[0]->Num_Dim;
 
               /*
                * load surface tension for variable models
                */
-              if (mp->SurfaceTensionModel == CONSTANT) {
+              if (goma_ctx->fem.mp->SurfaceTensionModel == CONSTANT) {
                 dsigmadT = 0.0;
                 for (a = 0; a < MAX_CONC; a++) {
                   dsigmadC[a] = 0.0;
                 }
               }
-              if (mp->SurfaceTensionModel != CONSTANT) {
+              if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
                 load_surface_tension(dsigma_dx);
               }
-              if (mp->SurfaceTensionModel == USER) {
-                dsigmadT = mp->d_surface_tension[TEMPERATURE];
+              if (goma_ctx->fem.mp->SurfaceTensionModel == USER) {
+                dsigmadT = goma_ctx->fem.mp->d_surface_tension[TEMPERATURE];
                 for (a = 0; a < MAX_CONC; a++) {
-                  dsigmadC[a] = mp->d_surface_tension[MAX_VARIABLE_TYPES + a];
+                  dsigmadC[a] = goma_ctx->fem.mp->d_surface_tension[MAX_VARIABLE_TYPES + a];
                 }
               }
               switch (quantity) {
@@ -3845,73 +4065,90 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                                                                                  ? 2
                                                                                  : -1)))))))));
 
-                if (cr->MeshMotion == ARBITRARY) {
-                  if (pd->CoordinateSystem == CARTESIAN) {
-                    local_flux += sign * mp->surface_tension * fv->stangent[0][dir];
+                if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
+                  if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN) {
+                    local_flux += sign * goma_ctx->fem.mp->surface_tension *
+                                  goma_ctx->fem.fv->stangent[0][dir];
 
                     if (J_AC != NULL) {
                       for (p = 0; p < dim; p++) {
                         var = MESH_DISPLACEMENT1 + p;
 
-                        if (pd->v[pg->imtrx][var]) {
-                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-                                sign * mp->surface_tension * fv->dstangent_dx[0][dir][p][j];
+                        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                               j++) {
+                            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                                sign * goma_ctx->fem.mp->surface_tension *
+                                goma_ctx->fem.fv->dstangent_dx[0][dir][p][j];
                           }
                         }
                       }
                       var = TEMPERATURE;
 
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-                            sign * fv->stangent[0][dir] * dsigmadT * bf[var]->phi[j];
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                            sign * goma_ctx->fem.fv->stangent[0][dir] * dsigmadT *
+                            goma_ctx->fem.bf[var]->phi[j];
                       }
                       var = MASS_FRACTION;
-                      if (pd->v[pg->imtrx][var]) {
-                        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                            gnn = ei[pg->imtrx]->gnn_list[var][j];
-                            ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                            matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                            c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
-                            J_AC[c] += sign * fv->stangent[0][dir] * dsigmadC[w] * bf[var]->phi[j];
+                      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                               j++) {
+                            gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                            ledof =
+                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                            matIndex =
+                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                            c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
+                            J_AC[c] += sign * goma_ctx->fem.fv->stangent[0][dir] * dsigmadC[w] *
+                                       goma_ctx->fem.bf[var]->phi[j];
                           }
                         }
                       }
                     }
-                  } else if (pd->CoordinateSystem == SWIRLING ||
-                             pd->CoordinateSystem == CYLINDRICAL) {
-                    local_flux +=
-                        2 * M_PIE * fv->x[1] * sign * mp->surface_tension * fv->stangent[0][dir];
+                  } else if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+                             goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL) {
+                    local_flux += 2 * M_PIE * goma_ctx->fem.fv->x[1] * sign *
+                                  goma_ctx->fem.mp->surface_tension *
+                                  goma_ctx->fem.fv->stangent[0][dir];
                     if (J_AC != NULL) {
                       for (p = 0; p < dim; p++) {
                         var = MESH_DISPLACEMENT1 + p;
-                        if (pd->v[pg->imtrx][var]) {
-                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-                                2 * M_PIE * sign * mp->surface_tension *
-                                (fv->x[1] * fv->dstangent_dx[0][dir][p][j] +
-                                 delta(p, 1) * bf[var]->phi[j] * fv->stangent[0][dir]);
+                        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                               j++) {
+                            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                                2 * M_PIE * sign * goma_ctx->fem.mp->surface_tension *
+                                (goma_ctx->fem.fv->x[1] *
+                                     goma_ctx->fem.fv->dstangent_dx[0][dir][p][j] +
+                                 delta(p, 1) * goma_ctx->fem.bf[var]->phi[j] *
+                                     goma_ctx->fem.fv->stangent[0][dir]);
                           }
                         }
                       }
                       var = TEMPERATURE;
 
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                        J_AC[ei[pg->imtrx]->gun_list[var][j]] += 2 * M_PIE * sign * fv->x[1] *
-                                                                 fv->stangent[0][dir] * dsigmadT *
-                                                                 bf[var]->phi[j];
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                            2 * M_PIE * sign * goma_ctx->fem.fv->x[1] *
+                            goma_ctx->fem.fv->stangent[0][dir] * dsigmadT *
+                            goma_ctx->fem.bf[var]->phi[j];
                       }
                       var = MASS_FRACTION;
-                      if (pd->v[pg->imtrx][var]) {
-                        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                            gnn = ei[pg->imtrx]->gnn_list[var][j];
-                            ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-                            matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-                            c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
-                            J_AC[c] += 2 * M_PIE * fv->x[1] * sign * fv->stangent[0][dir] *
-                                       dsigmadC[w] * bf[var]->phi[j];
+                      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                               j++) {
+                            gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+                            ledof =
+                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+                            matIndex =
+                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+                            c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
+                            J_AC[c] += 2 * M_PIE * goma_ctx->fem.fv->x[1] * sign *
+                                       goma_ctx->fem.fv->stangent[0][dir] * dsigmadC[w] *
+                                       goma_ctx->fem.bf[var]->phi[j];
                           }
                         }
                       }
@@ -3953,13 +4190,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               if (profile_flag && print_flag && (quantity != LS_DCA || (ierr && ip == 0))) {
                 FILE *jfp;
                 if ((jfp = fopen(filenm, "a")) != NULL) {
-                  fprintf(jfp, " %g  %g  %g  %g  %g", fv->x[0], fv->x[1], fv->x[2], local_q,
-                          local_qconv);
+                  fprintf(jfp, " %g  %g  %g  %g  %g", goma_ctx->fem.fv->x[0],
+                          goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], local_q, local_qconv);
 #if PRINT_VISCOSITY
                   fprintf(jfp, " %g  %g ", gamma_dot, mu);
 #endif
 #if PRINT_SURFACE_TENSION
-                  fprintf(jfp, " %g ", fv->T);
+                  fprintf(jfp, " %g ", goma_ctx->fem.fv->T);
 /*                         mp->surface_tension); */
 #endif
                   fprintf(jfp, " \n");
@@ -4008,15 +4245,17 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                   GOMA_EH(dir, "PANIC in evaluate_flux sensitivity section");
 
-                  if (cr->MeshMotion == ARBITRARY) {
+                  if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                     for (b = 0; b < dim; b++) {
                       var = MESH_DISPLACEMENT1 + b;
 
-                      if (pd->v[pg->imtrx][var]) {
-                        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                          d_term = sign * mp->surface_tension * fv->dstangent_dx[0][dir][b][j];
+                      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                          d_term = sign * goma_ctx->fem.mp->surface_tension *
+                                   goma_ctx->fem.fv->dstangent_dx[0][dir][b][j];
 
-                          J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                              d_term;
                         }
                       }
                     }
@@ -4066,7 +4305,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
     FILE *jfp;
     if ((jfp = fopen(filenm, "a")) != NULL) {
       if (quantity == TORQUE) {
-        if (pd->CoordinateSystem == SWIRLING || pd->CoordinateSystem == CYLINDRICAL) {
+        if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+            goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL) {
           fprintf(jfp, " torque= %g   \n", local_flux);
         } else { /* CARTESIAN */
           fprintf(jfp, " torque= %g %g %g area= %g\n", Torque[0], Torque[1], Torque[2], local_area);
@@ -4087,7 +4327,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
       fclose(jfp);
     }
   }
-  af->Assemble_Jacobian = Jac_state;
+  goma_ctx->fem.af->Assemble_Jacobian = Jac_state;
   return (local_flux + local_flux_conv); /* failsafe default? */
 }
 
@@ -4170,19 +4410,21 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
        quantity == I_HEAT_ENERGY_POS);
   int do_LS_integ = (neg_LS_integ || pos_LS_integ);
 
-  adaptive_integration_active = (ls != NULL && ls->AdaptIntegration && do_LS_integ);
+  adaptive_integration_active =
+      (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->AdaptIntegration && do_LS_integ);
   subgrid_integration_active =
-      (ls != NULL && ls->Integration_Depth > 0 && !adaptive_integration_active && do_LS_integ);
+      (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->Integration_Depth > 0 &&
+       !adaptive_integration_active && do_LS_integ);
   subelement_vol_integration_active =
-      (ls != NULL && ls->SubElemIntegration && !adaptive_integration_active &&
-       (params == NULL || params[0] == 0.) && do_LS_integ);
+      (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->SubElemIntegration &&
+       !adaptive_integration_active && (params == NULL || params[0] == 0.) && do_LS_integ);
   subelement_surf_integration_active =
-      (ls != NULL && ls->SubElemIntegration && !adaptive_integration_active &&
-       (params == NULL || params[0] == 0.) &&
+      (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->SubElemIntegration &&
+       !adaptive_integration_active && (params == NULL || params[0] == 0.) &&
        (quantity == I_LS_ARC_LENGTH || quantity == I_MAG_GRAD_FILL_ERROR));
 
   if (subgrid_integration_active)
-    start_tree = create_shape_fcn_tree(ls->Integration_Depth);
+    start_tree = create_shape_fcn_tree(goma_ctx->fem.ls->Integration_Depth);
 
   /* first write time stamp or run stamp to separate the sets */
 
@@ -4203,8 +4445,9 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
   }
 
   /* Exclude porous shell from this */
-  if ((pd->e[pg->imtrx][R_SHELL_SAT_1]) || (pd->e[pg->imtrx][R_SHELL_SAT_2]) ||
-      (pd->e[pg->imtrx][R_SHELL_SAT_3])) {
+  if ((goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1]) ||
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_2]) ||
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3])) {
     PorousShellOn = 1;
   }
 
@@ -4221,22 +4464,23 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
       double wt, xi[3];
       double (*s)[DIM] = NULL, *weight = NULL;
 
-      ei[pg->imtrx]->ielem = elem;
+      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem = elem;
 
       /*needed for saturation hyst. func. */
       PRS_mat_ielem =
-          ei[pg->imtrx]->ielem - exo->eb_ptr[find_elemblock_index(ei[pg->imtrx]->ielem, exo)];
+          goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem -
+          exo->eb_ptr[find_elemblock_index(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, exo)];
 
       err = load_elem_dofptr(elem, exo, x, x, xdot, xdot, 0);
       GOMA_EH(err, "load_elem_dofptr");
 
-      err = bf_mp_init(pd);
+      err = bf_mp_init(goma_ctx->fem.pd);
       GOMA_EH(err, "bf_mp_init");
 
-      ip_total = elem_info(NQUAD, ei[pg->imtrx]->ielem_type);
+      ip_total = elem_info(NQUAD, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
 
       if (subgrid_integration_active) {
-        double width = num_params == 0 ? ls->Length_Scale : 2.0 * params[0];
+        double width = num_params == 0 ? goma_ctx->fem.ls->Length_Scale : 2.0 * params[0];
 
         if ((Use_Subgrid_Integration = current_elem_overlaps_interface(width))) {
           ip_total =
@@ -4251,27 +4495,28 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
           } else {
             ip_total = get_subelement_integration_pts(&s, &weight, NULL, 0., -2, 0);
           }
-          ls->Elem_Sign = 0;
+          goma_ctx->fem.ls->Elem_Sign = 0;
         }
       } else if (subelement_surf_integration_active) {
         ip_total = 0;
         if ((Use_Subelement_Integration = current_elem_on_isosurface(FILL, 0.))) {
           ip_total = get_subelement_integration_pts(&s, &weight, NULL, 0., -1, 0);
-          ls->Elem_Sign = 0;
-          ls->on_sharp_surf = TRUE;
+          goma_ctx->fem.ls->Elem_Sign = 0;
+          goma_ctx->fem.ls->on_sharp_surf = TRUE;
         }
       } else if (adaptive_integration_active) {
-        for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          ls_F[i] = *esp_old->F[i];
+        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+          ls_F[i] = *goma_ctx->fem.esp_old->F[i];
         }
         wt_type = 2;
         if (neg_LS_integ) {
-          for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
+          for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
             ls_F[i] = -ls_F[i];
           }
         }
-        ierr = adaptive_weight(ad_wt, ip_total, ei[pg->imtrx]->ielem_dim, ls_F, 0.0, wt_type,
-                               ei[pg->imtrx]->ielem_type);
+        ierr = adaptive_weight(ad_wt, ip_total,
+                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim, ls_F, 0.0,
+                               wt_type, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
         if (ierr == -1)
           printf("adaptive wt problem %d %g %g %g\n", ierr, ls_F[0], ls_F[1], ls_F[2]);
       }
@@ -4282,31 +4527,33 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
         if (goma_ctx->num_proc > 1)
           GOMA_WH(-1, "SURFACE_SPECIES not recommended in parallel\n");
         if (quantity == I_SURF_SPECIES) {
-          for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-            ls_F[i] = params[pd->Num_Species_Eqn] - params[pd->Num_Species_Eqn + 1];
-            for (j = 0; j < pd->Num_Species_Eqn; j++) {
-              ls_F[i] += params[j] * (*esp_old->c[j][i]);
+          for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+            ls_F[i] = params[goma_ctx->fem.pd->Num_Species_Eqn] -
+                      params[goma_ctx->fem.pd->Num_Species_Eqn + 1];
+            for (j = 0; j < goma_ctx->fem.pd->Num_Species_Eqn; j++) {
+              ls_F[i] += params[j] * (*goma_ctx->fem.esp_old->c[j][i]);
             }
           }
         } else if (quantity == I_SURF_TEMP) {
-          ierr = ei[pg->imtrx]->dof[TEMPERATURE] / ei[pg->imtrx]->num_local_nodes;
-          for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-            ls_F[i] = (*esp_old->T[ierr * i]) - params[0];
+          ierr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TEMPERATURE] /
+                 goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
+          for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+            ls_F[i] = (*goma_ctx->fem.esp_old->T[ierr * i]) - params[0];
           }
         } else
           GOMA_EH(GOMA_ERROR, "That SURF quantity not available.");
 
         ierr = 0;
-        if (pd->Num_Dim == 3) {
-          if (ei[pg->imtrx]->ielem_type == TRILINEAR_HEX) {
+        if (goma_ctx->fem.pd->Num_Dim == 3) {
+          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type == TRILINEAR_HEX) {
             ierr = interface_crossing_3DL(ls_F, xf3D, side_id, ecrd);
           } else
             GOMA_WH(-1, "Only SURF 3D element is TRILINEAR_HEX.");
         } else {
-          if (ei[pg->imtrx]->ielem_type == BIQUAD_QUAD ||
-              ei[pg->imtrx]->ielem_type == BIQUAD_SHELL ||
-              ei[pg->imtrx]->ielem_type == BILINEAR_QUAD ||
-              ei[pg->imtrx]->ielem_type == BILINEAR_SHELL) {
+          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type == BIQUAD_QUAD ||
+              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type == BIQUAD_SHELL ||
+              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type == BILINEAR_QUAD ||
+              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type == BILINEAR_SHELL) {
             ierr = interface_crossing_2DQ(ls_F, xf2D, side_id, nint2D, ecrd);
           } else
             GOMA_EH(GOMA_ERROR,
@@ -4321,7 +4568,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
               xi[1] = ecrd[i][1];
               xi[2] = ecrd[i][2];
 
-              err = load_basis_functions(xi, bfd);
+              err = load_basis_functions(xi, goma_ctx->fem.bfd);
               GOMA_EH(err, "problem from load_basis_functions");
 
               err = beer_belly();
@@ -4330,7 +4577,8 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
               err = load_fv();
               GOMA_EH(err, "load_fv");
 
-              fprintf(jfp, "%d %d %g %g %g\n", elem, i, fv->x[0], fv->x[1], fv->x[2]);
+              fprintf(jfp, "%d %d %g %g %g\n", elem, i, goma_ctx->fem.fv->x[0],
+                      goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2]);
             }
             fclose(jfp);
           }
@@ -4347,16 +4595,18 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
           xi[0] = s[ip][0];
           xi[1] = s[ip][1];
           xi[2] = s[ip][2];
-          fv->wt = wt = weight[ip];
+          goma_ctx->fem.fv->wt = wt = weight[ip];
         } else {
           /* find quadrature point locations for current ip */
-          find_stu(ip, ei[pg->imtrx]->ielem_type, &xi[0], &xi[1], &xi[2]);
+          find_stu(ip, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, &xi[0], &xi[1],
+                   &xi[2]);
 
           /* find quadrature weights for current ip */
           if (adaptive_integration_active) {
-            fv->wt = wt = ad_wt[ip_total - 1 - ip];
+            goma_ctx->fem.fv->wt = wt = ad_wt[ip_total - 1 - ip];
           } else {
-            fv->wt = wt = Gq_weight(ip, ei[pg->imtrx]->ielem_type);
+            goma_ctx->fem.fv->wt = wt =
+                Gq_weight(ip, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
           }
         }
 
@@ -4364,7 +4614,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
          * Load up basis function information for ea variable...
          */
 
-        err = load_basis_functions(xi, bfd);
+        err = load_basis_functions(xi, goma_ctx->fem.bfd);
         GOMA_EH(err, "problem from load_basis_functions");
 
         err = beer_belly();
@@ -4376,7 +4626,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
         err = load_bf_grad();
         GOMA_EH(err, "load_bf_grad");
 
-        if (pd->e[pg->imtrx][R_MESH1]) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
           err = load_bf_mesh_derivs();
           GOMA_EH(err, "load_bf_mesh_derivs");
         }
@@ -4384,12 +4634,12 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
         err = load_fv_grads();
         GOMA_EH(err, "load_fv_grads");
 
-        if (pd->e[pg->imtrx][R_MESH1]) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
           err = load_fv_mesh_derivs(1);
           GOMA_EH(err, "load_fv_mesh_derivs");
         }
 
-        if ((mp->PorousMediaType != CONTINUOUS) && (!PorousShellOn)) {
+        if ((goma_ctx->fem.mp->PorousMediaType != CONTINUOUS) && (!PorousShellOn)) {
           err = load_porous_properties();
           GOMA_EH(err, "load_porous_properties");
         }
@@ -4398,9 +4648,10 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
         computeCommonMaterialProps_gp(time_value);
 
         if (subelement_surf_integration_active)
-          bf[pd->ShapeVar]->detJ = 1.;
+          goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->detJ = 1.;
 
-        if (ei[pg->imtrx]->ielem_type >= BILINEAR_SHELL && ei[pg->imtrx]->ielem_type <= P0_SHELL) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type >= BILINEAR_SHELL &&
+            goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type <= P0_SHELL) {
           is_shell = TRUE;
         }
 
@@ -4409,7 +4660,9 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
 #ifdef PARALLEL
         delta_sum = sum - sum0;
 
-        if (goma_ctx->num_proc > 1 && dpi->elem_owner[ei[pg->imtrx]->ielem] == goma_ctx->proc_id) {
+        if (goma_ctx->num_proc > 1 &&
+            dpi->elem_owner[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem] ==
+                goma_ctx->proc_id) {
           proc_sum += delta_sum;
         }
 
@@ -4436,14 +4689,15 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
     free_shape_fcn_tree(start_tree);
   }
 
-  if (ls != NULL)
-    ls->on_sharp_surf = FALSE;
+  if (goma_ctx->fem.ls != NULL)
+    goma_ctx->fem.ls->on_sharp_surf = FALSE;
 
   if (quantity == I_SPECIES_SOURCE) {
-    if (time_value <= tran->init_time + delta_t) {
+    if (time_value <= goma_ctx->fem.tran->init_time + delta_t) {
       goma_ctx->spec_source_inventory[mn][species_id] = sum;
     } else {
-      goma_ctx->spec_source_inventory[mn][species_id] += 0.5 * sum * (delta_t + tran->delta_t);
+      goma_ctx->spec_source_inventory[mn][species_id] +=
+          0.5 * sum * (delta_t + goma_ctx->fem.tran->delta_t);
     }
   }
   if (print_flag && goma_ctx->proc_id == 0) {
@@ -4466,7 +4720,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
 
   // Kind of a hack to keep track of the porous liquid inventory for a time-dependent BC
 
-  if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN])
     goma_ctx->porous_liq_inventory = sum;
 
   return (sum);
@@ -4496,25 +4750,26 @@ int compute_volume_integrand(const int quantity,
  *
  ******************************************************************************/
 {
-  double weight = fv->wt;
-  double det, det_J = bf[pd->ShapeVar]->detJ;
-  double h3 = fv->h3;
-  int a, b, p, q, var, j, dim = pd->Num_Dim, gnn, matIndex, ledof, c;
+  double weight = goma_ctx->fem.fv->wt;
+  double det, det_J = goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->detJ;
+  double h3 = goma_ctx->fem.fv->h3;
+  int a, b, p, q, var, j, dim = goma_ctx->fem.pd->Num_Dim, gnn, matIndex, ledof, c;
   int *n_dof = NULL;
   int dof_map[MDE];
 
-  if (upd->CoordinateSystem == PROJECTED_CARTESIAN)
+  if (goma_ctx->fem.upd->CoordinateSystem == PROJECTED_CARTESIAN)
     GOMA_WH(-1, "compute_volume_integrand has not been updated for the PROJECTED_CARTESIAN "
                 "coordinate system.");
 
-  if (upd->CoordinateSystem == CYLINDRICAL || upd->CoordinateSystem == SWIRLING) {
+  if (goma_ctx->fem.upd->CoordinateSystem == CYLINDRICAL ||
+      goma_ctx->fem.upd->CoordinateSystem == SWIRLING) {
     weight *= 2. * M_PIE;
   }
 
   if (is_shell) {
     n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
     lubrication_shell_initialize(n_dof, dof_map, -1, xi, exo, 0);
-    det = fv->sdet; // Different determinant since this is a shell
+    det = goma_ctx->fem.fv->sdet; // Different determinant since this is a shell
   } else {
     det = det_J * h3;
   }
@@ -4528,12 +4783,12 @@ int compute_volume_integrand(const int quantity,
       for (p = 0; p < dim; p++) {
         var = MESH_DISPLACEMENT1 + p;
 
-        if (pd->v[pg->imtrx][var]) {
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-                weight *
-                (h3 * bf[pd->ShapeVar]->d_det_J_dm[p][j] + fv->dh3dq[p] * bf[var]->phi[j] * det_J);
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                weight * (h3 * goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->d_det_J_dm[p][j] +
+                          goma_ctx->fem.fv->dh3dq[p] * goma_ctx->fem.bf[var]->phi[j] * det_J);
           }
         }
       }
@@ -4545,7 +4800,8 @@ int compute_volume_integrand(const int quantity,
     if (num_params < 4) {
       GOMA_WH(-1, "not enough plane parameters for VOL_PLANE\n");
     }
-    dist = params[0] * fv->x[0] + params[1] * fv->x[1] + params[2] * fv->x[2] + params[3];
+    dist = params[0] * goma_ctx->fem.fv->x[0] + params[1] * goma_ctx->fem.fv->x[1] +
+           params[2] * goma_ctx->fem.fv->x[2] + params[3];
     dist /= sqrt(SQUARE(params[0]) + SQUARE(params[1]) + SQUARE(params[2]));
 
     if (dist > 0) {
@@ -4555,12 +4811,12 @@ int compute_volume_integrand(const int quantity,
         for (p = 0; p < dim; p++) {
           var = MESH_DISPLACEMENT1 + p;
 
-          if (pd->v[pg->imtrx][var]) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-              J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-                  weight * (h3 * bf[pd->ShapeVar]->d_det_J_dm[p][j] +
-                            fv->dh3dq[p] * bf[var]->phi[j] * det_J);
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                  weight * (h3 * goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->d_det_J_dm[p][j] +
+                            goma_ctx->fem.fv->dh3dq[p] * goma_ctx->fem.bf[var]->phi[j] * det_J);
             }
           }
         }
@@ -4571,7 +4827,7 @@ int compute_volume_integrand(const int quantity,
   break;
   case I_LUB_LOAD: {
 
-    *sum += fv->lubp * weight * det;
+    *sum += goma_ctx->fem.fv->lubp * weight * det;
 
     break;
   }
@@ -4590,7 +4846,7 @@ int compute_volume_integrand(const int quantity,
     double vsq;
     vsq = 0;
     for (a = 0; a < dim; a++)
-      vsq += SQUARE(fv->v[a]);
+      vsq += SQUARE(goma_ctx->fem.fv->v[a]);
     *sum += sqrt(vsq) * weight * det;
 
     if (J_AC != NULL) {
@@ -4599,10 +4855,10 @@ int compute_volume_integrand(const int quantity,
       for (p = 0; p < dim; p++) {
         var = VELOCITY1 + p;
 
-        if (pd->v[pg->imtrx][var]) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-                weight * (inv_vsqrt * fv->v[p] * bf[var]->phi[j]) * det;
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                weight * (inv_vsqrt * goma_ctx->fem.fv->v[p] * goma_ctx->fem.bf[var]->phi[j]) * det;
           }
         }
       }
@@ -4611,14 +4867,14 @@ int compute_volume_integrand(const int quantity,
   case I_VORTICITY: {
     double vsq = 0;
     for (a = 0; a < VIM; a++)
-      vsq += fv->curl_v[a] * fv->curl_v[a];
+      vsq += goma_ctx->fem.fv->curl_v[a] * goma_ctx->fem.fv->curl_v[a];
     *sum += sqrt(vsq) * weight * det;
   } break;
 
   case I_HELICITY: {
     double vsq = 0;
     for (a = 0; a < VIM; a++)
-      vsq += SQUARE(fv->v[a] * fv->curl_v[a]);
+      vsq += SQUARE(goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->curl_v[a]);
     *sum += sqrt(vsq) * weight * det;
   } break;
 
@@ -4627,7 +4883,7 @@ int compute_volume_integrand(const int quantity,
     for (a = 0; a < VIM; a++) {
       for (p = 0; p < VIM; p++) {
         for (q = 0; q < VIM; q++) {
-          lamb_v[a] += permute(p, q, a) * fv->curl_v[p] * fv->v[q];
+          lamb_v[a] += permute(p, q, a) * goma_ctx->fem.fv->curl_v[p] * goma_ctx->fem.fv->v[q];
         }
       }
     }
@@ -4641,8 +4897,8 @@ int compute_volume_integrand(const int quantity,
     double vorticity, omega[DIM][DIM];
     for (a = 0; a < VIM; a++) {
       for (b = 0; b < VIM; b++) {
-        gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
-        omega[a][b] = fv->grad_v[a][b] - fv->grad_v[b][a];
+        gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
+        omega[a][b] = goma_ctx->fem.fv->grad_v[a][b] - goma_ctx->fem.fv->grad_v[b][a];
       }
     }
     /* find second invariant of strain-rate */
@@ -4655,7 +4911,7 @@ int compute_volume_integrand(const int quantity,
     double gammadot, del_v[DIM][DIM];
     for (a = 0; a < VIM; a++) {
       for (b = 0; b < VIM; b++) {
-        del_v[a][b] = fv->grad_v[a][b];
+        del_v[a][b] = goma_ctx->fem.fv->grad_v[a][b];
       }
     }
     calc_shearrate(&gammadot, del_v, NULL, NULL);
@@ -4671,30 +4927,34 @@ int compute_volume_integrand(const int quantity,
     double ves[MAX_PDIM][MAX_PDIM]; /* viscoelastic stress */
     int ve_mode;
 
-    if (mp->HeatSourceModel == VISC_DISS) {
-      *sum += weight * det * visc_diss_heat_source(NULL, mp->u_heat_source);
-    } else if (mp->HeatSourceModel == VISC_ACOUSTIC) {
-      *sum += weight * det * visc_diss_heat_source(NULL, mp->u_heat_source);
-      *sum +=
-          weight * det * visc_diss_acoustic_source(NULL, mp->u_heat_source, mp->len_u_heat_source);
+    if (goma_ctx->fem.mp->HeatSourceModel == VISC_DISS) {
+      *sum += weight * det * visc_diss_heat_source(NULL, goma_ctx->fem.mp->u_heat_source);
+    } else if (goma_ctx->fem.mp->HeatSourceModel == VISC_ACOUSTIC) {
+      *sum += weight * det * visc_diss_heat_source(NULL, goma_ctx->fem.mp->u_heat_source);
+      *sum += weight * det *
+              visc_diss_acoustic_source(NULL, goma_ctx->fem.mp->u_heat_source,
+                                        goma_ctx->fem.mp->len_u_heat_source);
     }
-    if (mp->HeatSourceModel == EM_DISS) {
-      *sum += weight * det * em_diss_heat_source(NULL, mp->u_heat_source, mp->len_u_heat_source);
+    if (goma_ctx->fem.mp->HeatSourceModel == EM_DISS) {
+      *sum += weight * det *
+              em_diss_heat_source(NULL, goma_ctx->fem.mp->u_heat_source,
+                                  goma_ctx->fem.mp->len_u_heat_source);
     }
-    if (mp->HeatSourceModel == EM_VECTOR_DISS) {
-      *sum +=
-          weight * det * em_diss_e_curlcurl_source(NULL, mp->u_heat_source, mp->len_u_heat_source);
+    if (goma_ctx->fem.mp->HeatSourceModel == EM_VECTOR_DISS) {
+      *sum += weight * det *
+              em_diss_e_curlcurl_source(NULL, goma_ctx->fem.mp->u_heat_source,
+                                        goma_ctx->fem.mp->len_u_heat_source);
     } else {
       for (p = 0; p < WIM; p++) {
         for (q = 0; q < WIM; q++) {
-          gamma_dot[p][q] = fv->grad_v[p][q] + fv->grad_v[q][p];
+          gamma_dot[p][q] = goma_ctx->fem.fv->grad_v[p][q] + goma_ctx->fem.fv->grad_v[q][p];
         }
       }
 
-      mu = viscosity(gn, gamma_dot, NULL);
+      mu = viscosity(goma_ctx->fem.gn, gamma_dot, NULL);
       for (p = 0; p < WIM; p++) {
         for (q = 0; q < WIM; q++) {
-          vs[p][q] = mu * gamma_dot[p][q] - fv->P * delta(p, q);
+          vs[p][q] = mu * gamma_dot[p][q] - goma_ctx->fem.fv->P * delta(p, q);
         }
       }
       /*
@@ -4702,11 +4962,11 @@ int compute_volume_integrand(const int quantity,
        *  assume only EVSS_F formulation for now
        */
       memset(ves, 0, sizeof(dbl) * DIM * DIM);
-      if (pd->v[pg->imtrx][POLYMER_STRESS11]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
         for (p = 0; p < WIM; p++) {
           for (q = 0; q < WIM; q++) {
-            for (ve_mode = 0; ve_mode < vn->modes; ve_mode++) {
-              ves[p][q] += fv->S[ve_mode][p][q];
+            for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
+              ves[p][q] += goma_ctx->fem.fv->S[ve_mode][p][q];
             }
           }
         }
@@ -4714,7 +4974,7 @@ int compute_volume_integrand(const int quantity,
 
       for (p = 0; p < WIM; p++) {
         for (q = 0; q < WIM; q++) {
-          *sum += weight * ((vs[q][p] + ves[q][p]) * fv->grad_v[p][q]) * det;
+          *sum += weight * ((vs[q][p] + ves[q][p]) * goma_ctx->fem.fv->grad_v[p][q]) * det;
         }
       }
       if (J_AC != NULL) {
@@ -4731,16 +4991,16 @@ int compute_volume_integrand(const int quantity,
 
     /* NOTE: MUST add volume_int sensitivities for use in augmenting conditions */
 
-    if (mp->Elec_ConductivityModel == USER) {
-      usr_electrical_conductivity(mp->u_electrical_conductivity, time);
+    if (goma_ctx->fem.mp->Elec_ConductivityModel == USER) {
+      usr_electrical_conductivity(goma_ctx->fem.mp->u_electrical_conductivity, time);
 
-      k = mp->electrical_conductivity;
+      k = goma_ctx->fem.mp->electrical_conductivity;
     } else {
-      k = mp->electrical_conductivity;
+      k = goma_ctx->fem.mp->electrical_conductivity;
     }
 
     for (q = 0; q < DIM; q++) {
-      *sum += weight * (k * fv->grad_V[q] * fv->grad_V[q]) * det;
+      *sum += weight * (k * goma_ctx->fem.fv->grad_V[q] * goma_ctx->fem.fv->grad_V[q]) * det;
     }
 
     if (J_AC != NULL) {
@@ -4761,7 +5021,7 @@ int compute_volume_integrand(const int quantity,
 
       for (p = 0; p < WIM; p++) {
         for (q = 0; q < WIM; q++) {
-          gamma_dot[p][q] = fv->grad_v[p][q] + fv->grad_v[q][p];
+          gamma_dot[p][q] = goma_ctx->fem.fv->grad_v[p][q] + goma_ctx->fem.fv->grad_v[q][p];
         }
       }
 
@@ -4783,8 +5043,8 @@ int compute_volume_integrand(const int quantity,
 
   case I_SPECIES_MASS: {
     double dens_factor, density_tot, untracked_spec = 0;
-    density_tot = calc_density(mp, FALSE, NULL, 0.0);
-    switch (mp->Species_Var_Type) {
+    density_tot = calc_density(goma_ctx->fem.mp, FALSE, NULL, 0.0);
+    switch (goma_ctx->fem.mp->Species_Var_Type) {
     case SPECIES_DENSITY: {
       dens_factor = 1.;
       break;
@@ -4799,28 +5059,28 @@ int compute_volume_integrand(const int quantity,
       break;
     }
     }
-    if (species_no < pd->Num_Species_Eqn) {
-      *sum += weight * det * (dens_factor * fv->c[species_no]);
+    if (species_no < goma_ctx->fem.pd->Num_Species_Eqn) {
+      *sum += weight * det * (dens_factor * goma_ctx->fem.fv->c[species_no]);
     } else {
-      switch (mp->Species_Var_Type) {
+      switch (goma_ctx->fem.mp->Species_Var_Type) {
       case SPECIES_CONCENTRATION:
         untracked_spec = density_tot;
-        for (j = 0; j < pd->Num_Species_Eqn; j++) {
-          untracked_spec -= fv->c[j] * mp->molecular_weight[j];
+        for (j = 0; j < goma_ctx->fem.pd->Num_Species_Eqn; j++) {
+          untracked_spec -= goma_ctx->fem.fv->c[j] * goma_ctx->fem.mp->molecular_weight[j];
         }
-        untracked_spec /= mp->molecular_weight[pd->Num_Species_Eqn];
+        untracked_spec /= goma_ctx->fem.mp->molecular_weight[goma_ctx->fem.pd->Num_Species_Eqn];
         break;
       case SPECIES_DENSITY:
         untracked_spec = density_tot;
-        for (j = 0; j < pd->Num_Species_Eqn; j++) {
-          untracked_spec -= fv->c[j];
+        for (j = 0; j < goma_ctx->fem.pd->Num_Species_Eqn; j++) {
+          untracked_spec -= goma_ctx->fem.fv->c[j];
         }
         break;
       case SPECIES_MASS_FRACTION:
       case SPECIES_UNDEFINED_FORM:
         untracked_spec = 1.0;
-        for (j = 0; j < pd->Num_Species_Eqn; j++) {
-          untracked_spec -= fv->c[j];
+        for (j = 0; j < goma_ctx->fem.pd->Num_Species_Eqn; j++) {
+          untracked_spec -= goma_ctx->fem.fv->c[j];
         }
       }
       *sum += weight * det * (dens_factor * untracked_spec);
@@ -4830,31 +5090,32 @@ int compute_volume_integrand(const int quantity,
       for (a = 0; a < dim; a++) {
         var = MESH_DISPLACEMENT1 + a;
 
-        if (pd->v[pg->imtrx][var]) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
-            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
                 weight *
-                (h3 * bf[pd->ShapeVar]->d_det_J_dm[a][j] + fv->dh3dq[a] * bf[var]->phi[j] * det_J) *
-                dens_factor * fv->c[species_no];
+                (h3 * goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->d_det_J_dm[a][j] +
+                 goma_ctx->fem.fv->dh3dq[a] * goma_ctx->fem.bf[var]->phi[j] * det_J) *
+                dens_factor * goma_ctx->fem.fv->c[species_no];
           }
         }
       }
 
       var = MASS_FRACTION;
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           /*
            * Find the material index for the current
            * local variable degree of freedom
            * (can't just query gun_list for MASS_FRACTION
            *  unknowns -> have to do a lookup)
            */
-          gnn = ei[pg->imtrx]->gnn_list[var][j];
-          ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-          matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-          c = Index_Solution(gnn, var, species_no, 0, matIndex, pg->imtrx);
-          J_AC[c] += weight * det * dens_factor * bf[var]->phi[j];
+          gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+          ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+          matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+          c = Index_Solution(gnn, var, species_no, 0, matIndex, goma_ctx->fem.pg->imtrx);
+          J_AC[c] += weight * det * dens_factor * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
@@ -4869,9 +5130,10 @@ int compute_volume_integrand(const int quantity,
 
     double H = 1.0;
 
-    if (ls != NULL && (quantity == I_MASS_NEGATIVE_FILL || quantity == I_MASS_POSITIVE_FILL)) {
-      load_lsi(ls->Length_Scale);
-      H = quantity == I_MASS_POSITIVE_FILL ? lsi->H : (1.0 - lsi->H);
+    if (goma_ctx->fem.ls != NULL &&
+        (quantity == I_MASS_NEGATIVE_FILL || quantity == I_MASS_POSITIVE_FILL)) {
+      load_lsi(goma_ctx->fem.ls->Length_Scale);
+      H = quantity == I_MASS_POSITIVE_FILL ? goma_ctx->fem.lsi->H : (1.0 - goma_ctx->fem.lsi->H);
     }
 
     if (J_AC == NULL) {
@@ -4887,53 +5149,56 @@ int compute_volume_integrand(const int quantity,
       for (a = 0; a < dim; a++) {
         var = MESH_DISPLACEMENT1 + a;
 
-        if (pd->v[pg->imtrx][var]) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
-            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-                weight * ((h3 * bf[pd->ShapeVar]->d_det_J_dm[a][j] +
-                           fv->dh3dq[a] * bf[var]->phi[j] * det_J) *
+            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                weight * ((h3 * goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->d_det_J_dm[a][j] +
+                           goma_ctx->fem.fv->dh3dq[a] * goma_ctx->fem.bf[var]->phi[j] * det_J) *
                               rho * H +
-                          det * rho * lsi->d_H_dmesh[a][j]);
+                          det * rho * goma_ctx->fem.lsi->d_H_dmesh[a][j]);
           }
         }
       }
 
       var = TEMPERATURE;
 
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
-          J_AC[ei[pg->imtrx]->gun_list[var][j]] += weight * det * d_rho->T[j] * H;
+          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+              weight * det * d_rho->T[j] * H;
         }
       }
 
       var = FILL;
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          J_AC[ei[pg->imtrx]->gun_list[var][j]] += weight * det * d_rho->F[j] * H;
-          if (ls != NULL &&
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+              weight * det * d_rho->F[j] * H;
+          if (goma_ctx->fem.ls != NULL &&
               (quantity == I_MASS_NEGATIVE_FILL || quantity == I_MASS_POSITIVE_FILL)) {
-            J_AC[ei[pg->imtrx]->gun_list[var][j]] += weight * det * rho * lsi->d_H_dF[j];
+            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                weight * det * rho * goma_ctx->fem.lsi->d_H_dF[j];
           }
         }
       }
 
       var = MASS_FRACTION;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         int w;
-        for (w = 0; w < pd->Num_Species; w++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species; w++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             /*
              * Find the material index for the current
              * local variable degree of freedom
              * (can't just query gun_list for MASS_FRACTION
              *  unknowns -> have to do a lookup)
              */
-            gnn = ei[pg->imtrx]->gnn_list[var][j];
-            ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-            matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-            c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+            gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+            ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+            matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+            c = Index_Solution(gnn, var, w, 0, matIndex, goma_ctx->fem.pg->imtrx);
             J_AC[c] += weight * det * d_rho->C[w][j] * H;
           }
         }
@@ -4952,41 +5217,48 @@ int compute_volume_integrand(const int quantity,
     const int init_spec = 0;
     double exp_factor = 1.0;
     zero_structure(&s_terms, sizeof(struct Species_Conservation_Terms), 1);
-    get_continuous_species_terms(&s_terms, time, tran->theta, delta_t, NULL);
+    get_continuous_species_terms(&s_terms, time, goma_ctx->fem.tran->theta, delta_t, NULL);
 
     /* correct mass based on shrinkage */
     switch (species_no) {
     case 0:
-      exp_factor = mp->specific_volume[init_spec] / mp->specific_volume[init_spec + 1];
+      exp_factor = goma_ctx->fem.mp->specific_volume[init_spec] /
+                   goma_ctx->fem.mp->specific_volume[init_spec + 1];
       break;
     case 1:
-      exp_factor = mp->specific_volume[init_spec + 1] / mp->specific_volume[init_spec];
+      exp_factor = goma_ctx->fem.mp->specific_volume[init_spec + 1] /
+                   goma_ctx->fem.mp->specific_volume[init_spec];
       break;
     default:
-      exp_factor = mp->specific_volume[species_no] / mp->specific_volume[pd->Num_Species_Eqn];
+      exp_factor = goma_ctx->fem.mp->specific_volume[species_no] /
+                   goma_ctx->fem.mp->specific_volume[goma_ctx->fem.pd->Num_Species_Eqn];
       break;
     }
     /* integrate product reaction rate */
-    if (time > tran->init_time + delta_t) {
+    if (time > goma_ctx->fem.tran->init_time + delta_t) {
       *sum += weight * det * (-s_terms.MassSource[species_no]) * exp_factor;
     }
-    if (efv->ev) {
-      if (efv->i[species_no] != I_TABLE) {
-        for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          ie = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-          ldof = ei[pg->imtrx]->ln_to_dof[eqn][i];
+    if (goma_ctx->fem.efv->ev) {
+      if (goma_ctx->fem.efv->i[species_no] != I_TABLE) {
+        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+          ie = goma_ctx->mesh
+                   .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+          ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[eqn][i];
           if (ldof >= 0) {
             /* on first time step, integrate initial reaction product field  */
-            if (time <= tran->init_time + delta_t) {
-              *sum += weight * det * bf[eqn]->phi[ldof] * efv->ext_fld_ndl_val[species_no][ie];
+            if (time <= goma_ctx->fem.tran->init_time + delta_t) {
+              *sum += weight * det * goma_ctx->fem.bf[eqn]->phi[ldof] *
+                      goma_ctx->fem.efv->ext_fld_ndl_val[species_no][ie];
             }
             /* and increment reaction product field  */
-            efv->ext_fld_ndl_val[species_no][ie] += bf[eqn]->phi[ldof] * weight * det * 0.5 *
-                                                    (delta_t + tran->delta_t) *
-                                                    (-s_terms.MassSource[species_no]) * exp_factor;
+            goma_ctx->fem.efv->ext_fld_ndl_val[species_no][ie] +=
+                goma_ctx->fem.bf[eqn]->phi[ldof] * weight * det * 0.5 *
+                (delta_t + goma_ctx->fem.tran->delta_t) * (-s_terms.MassSource[species_no]) *
+                exp_factor;
             /* for one time through, integrate lumped mass matrix   */
             if (species_no == 0) {
-              goma_ctx->spec_source_lumped_mass[ie] += bf[eqn]->phi[ldof] * weight * det;
+              goma_ctx->spec_source_lumped_mass[ie] +=
+                  goma_ctx->fem.bf[eqn]->phi[ldof] * weight * det;
             }
           }
         }
@@ -4997,30 +5269,31 @@ int compute_volume_integrand(const int quantity,
       for (a = 0; a < dim; a++) {
         var = MESH_DISPLACEMENT1 + a;
 
-        if (pd->v[pg->imtrx][var]) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
                 weight *
-                (h3 * bf[pd->ShapeVar]->d_det_J_dm[a][j] + fv->dh3dq[a] * bf[var]->phi[j] * det_J) *
+                (h3 * goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->d_det_J_dm[a][j] +
+                 goma_ctx->fem.fv->dh3dq[a] * goma_ctx->fem.bf[var]->phi[j] * det_J) *
                 (-s_terms.MassSource[species_no]) * exp_factor;
           }
         }
       }
 
       var = MASS_FRACTION;
-      if (pd->v[pg->imtrx][var]) {
-        for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             /*
              * Find the material index for the current
              * local variable degree of freedom
              * (can't just query gun_list for MASS_FRACTION
              *  unknowns -> have to do a lookup)
              */
-            gnn = ei[pg->imtrx]->gnn_list[var][j];
-            ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
-            matIndex = ei[pg->imtrx]->matID_ledof[ledof];
-            c = Index_Solution(gnn, var, species_no, 0, matIndex, pg->imtrx);
+            gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[var][j];
+            ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][j];
+            matIndex = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
+            c = Index_Solution(gnn, var, species_no, 0, matIndex, goma_ctx->fem.pg->imtrx);
             J_AC[c] += weight * det * (-s_terms.d_MassSource_dc[species_no][w1][j]) * exp_factor;
           }
         }
@@ -5039,7 +5312,7 @@ int compute_volume_integrand(const int quantity,
 
     rho = density(NULL, time);
 
-    *sum += weight * det * rho * fv->v[dir];
+    *sum += weight * det * rho * goma_ctx->fem.fv->v[dir];
 
     if (J_AC != NULL) {
       GOMA_EH(GOMA_ERROR,
@@ -5051,15 +5324,16 @@ int compute_volume_integrand(const int quantity,
   case I_HEAT_ENERGY_POS:
   case I_HEAT_ENERGY_NEG: {
     double alpha, rho, Cp;
-    double height = 1.0, temp = fv->T;
+    double height = 1.0, temp = goma_ctx->fem.fv->T;
     double H_U, dH_U_dtime, H_L, dH_L_dtime;
     double dH_U_dX[DIM], dH_L_dX[DIM], dH_U_dp, dH_U_ddh, dH_dF[MDE];
     memset(dH_U_dX, 0, sizeof(dbl) * DIM);
     memset(dH_L_dX, 0, sizeof(dbl) * DIM);
     memset(dH_dF, 0, sizeof(dbl) * MDE);
 
-    if (ls != NULL && (quantity == I_HEAT_ENERGY_NEG || quantity == I_HEAT_ENERGY_POS)) {
-      alpha = params == NULL ? ls->Length_Scale : 2.0 * params[0];
+    if (goma_ctx->fem.ls != NULL &&
+        (quantity == I_HEAT_ENERGY_NEG || quantity == I_HEAT_ENERGY_POS)) {
+      alpha = params == NULL ? goma_ctx->fem.ls->Length_Scale : 2.0 * params[0];
       load_lsi(alpha);
     }
 
@@ -5073,16 +5347,17 @@ int compute_volume_integrand(const int quantity,
     if (is_shell) {
       height = height_function_model(&H_U, &dH_U_dtime, &H_L, &dH_L_dtime, dH_U_dX, dH_L_dX,
                                      &dH_U_dp, &dH_U_ddh, dH_dF, time, delta_t);
-      if (mp->HeightUFunctionModel == WALL_DISTMOD || mp->HeightUFunctionModel == WALL_DISTURB) {
+      if (goma_ctx->fem.mp->HeightUFunctionModel == WALL_DISTMOD ||
+          goma_ctx->fem.mp->HeightUFunctionModel == WALL_DISTURB) {
         height = MAX(H_U - H_L, DBL_SEMI_SMALL);
       }
-      temp = fv->sh_t;
+      temp = goma_ctx->fem.fv->sh_t;
     }
 
     if (quantity == I_HEAT_ENERGY_NEG) {
-      height *= lsi->H;
+      height *= goma_ctx->fem.lsi->H;
     } else if (quantity == I_HEAT_ENERGY_POS) {
-      height *= (1.0 - lsi->H);
+      height *= (1.0 - goma_ctx->fem.lsi->H);
     }
     *sum += height * rho * Cp * temp * weight * det;
 
@@ -5090,14 +5365,16 @@ int compute_volume_integrand(const int quantity,
       for (p = 0; p < dim; p++) {
         var = MESH_DISPLACEMENT1 + p;
 
-        if (pd->v[pg->imtrx][var]) {
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
                 height * rho * Cp * temp * weight *
-                (h3 * bf[pd->ShapeVar]->d_det_J_dm[p][j] + fv->dh3dq[p] * bf[var]->phi[j] * det_J);
-            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-                (dH_U_dX[p] - dH_L_dX[p]) * bf[var]->phi[j] * rho * Cp * temp * weight * det;
+                (h3 * goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->d_det_J_dm[p][j] +
+                 goma_ctx->fem.fv->dh3dq[p] * goma_ctx->fem.bf[var]->phi[j] * det_J);
+            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                (dH_U_dX[p] - dH_L_dX[p]) * goma_ctx->fem.bf[var]->phi[j] * rho * Cp * temp *
+                weight * det;
           }
         }
       }
@@ -5107,20 +5384,21 @@ int compute_volume_integrand(const int quantity,
       } else {
         var = TEMPERATURE;
       }
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-              height * rho * Cp * bf[var]->phi[j] * weight * det;
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+              height * rho * Cp * goma_ctx->fem.bf[var]->phi[j] * weight * det;
         }
       }
 
       var = FILL;
 
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          J_AC[ei[pg->imtrx]->gun_list[var][j]] += dH_dF[j] * rho * Cp * temp * weight * det;
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+              dH_dF[j] * rho * Cp * temp * weight * det;
         }
       }
     }
@@ -5129,27 +5407,29 @@ int compute_volume_integrand(const int quantity,
 
   case I_KINETIC_ENERGY: {
 
-    *sum += fv->T * weight * det;
+    *sum += goma_ctx->fem.fv->T * weight * det;
 
     if (J_AC != NULL) {
       for (p = 0; p < dim; p++) {
         var = MESH_DISPLACEMENT1 + p;
 
-        if (pd->v[pg->imtrx][var]) {
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-                fv->T * weight *
-                (h3 * bf[pd->ShapeVar]->d_det_J_dm[p][j] + fv->dh3dq[p] * bf[var]->phi[j] * det_J);
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                goma_ctx->fem.fv->T * weight *
+                (h3 * goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->d_det_J_dm[p][j] +
+                 goma_ctx->fem.fv->dh3dq[p] * goma_ctx->fem.bf[var]->phi[j] * det_J);
           }
         }
       }
       var = TEMPERATURE;
 
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          J_AC[ei[pg->imtrx]->gun_list[var][j]] += bf[var]->phi[j] * weight * det;
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+              goma_ctx->fem.bf[var]->phi[j] * weight * det;
         }
       }
     }
@@ -5164,42 +5444,44 @@ int compute_volume_integrand(const int quantity,
     VISCOSITY_DEPENDENCE_STRUCT d_mu_struct; /* viscosity dependence */
     VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
 
-    if (vn->ConstitutiveEquation != NOPOLYMER) {
+    if (goma_ctx->fem.vn->ConstitutiveEquation != NOPOLYMER) {
       GOMA_EH(GOMA_ERROR,
               "Computation of stress integral for POLYMER models currently no supported.\n");
     }
 
     for (p = 0; p < WIM; p++) {
       for (q = 0; q < WIM; q++) {
-        gamma_dot[p][q] = fv->grad_v[p][q] + fv->grad_v[q][p];
+        gamma_dot[p][q] = goma_ctx->fem.fv->grad_v[p][q] + goma_ctx->fem.fv->grad_v[q][p];
       }
     }
 
-    mu = viscosity(gn, gamma_dot, d_mu);
+    mu = viscosity(goma_ctx->fem.gn, gamma_dot, d_mu);
 
-    *sum += weight * det * (-3.0 * fv->P);
+    *sum += weight * det * (-3.0 * goma_ctx->fem.fv->P);
 
     if (J_AC != NULL) {
       double dterm, dterm1;
 
       var = PRESSURE;
 
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          J_AC[ei[pg->imtrx]->gun_list[var][j]] += weight * det * (-3.0 * bf[var]->phi[j]);
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+              weight * det * (-3.0 * goma_ctx->fem.bf[var]->phi[j]);
         }
       }
 
       for (a = 0; a < dim; a++) {
         var = VELOCITY1 + a;
 
-        if (pd->v[pg->imtrx][var]) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             for (b = 0; b < dim; b++) {
 
-              J_AC[ei[pg->imtrx]->gun_list[var][j]] += weight * det *
-                                                       (d_mu->v[a][j] * 2.0 * fv->grad_v[a][a] +
-                                                        mu * 2.0 * bf[var]->grad_phi_e[j][a][b][b]);
+              J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                  weight * det *
+                  (d_mu->v[a][j] * 2.0 * goma_ctx->fem.fv->grad_v[a][a] +
+                   mu * 2.0 * goma_ctx->fem.bf[var]->grad_phi_e[j][a][b][b]);
             }
           }
         }
@@ -5208,21 +5490,21 @@ int compute_volume_integrand(const int quantity,
       for (a = 0; a < dim; a++) {
         var = MESH_DISPLACEMENT1 + a;
 
-        if (pd->v[pg->imtrx][var]) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             dterm = dterm1 = 0.0;
             for (b = 0; b < dim; b++) {
               dterm += weight *
-                       (h3 * bf[pd->ShapeVar]->d_det_J_dm[a][j] +
-                        fv->dh3dq[a] * bf[var]->phi[j] * det_J) *
-                       (-fv->P + mu * 2.0 * fv->grad_v[b][b]);
+                       (h3 * goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->d_det_J_dm[a][j] +
+                        goma_ctx->fem.fv->dh3dq[a] * goma_ctx->fem.bf[var]->phi[j] * det_J) *
+                       (-goma_ctx->fem.fv->P + mu * 2.0 * goma_ctx->fem.fv->grad_v[b][b]);
 
               dterm1 += weight * det *
-                        (d_mu->X[a][j] * 2.0 * fv->grad_v[b][b] +
-                         mu * 2.0 * fv->d_grad_v_dmesh[b][b][a][j]);
+                        (d_mu->X[a][j] * 2.0 * goma_ctx->fem.fv->grad_v[b][b] +
+                         mu * 2.0 * goma_ctx->fem.fv->d_grad_v_dmesh[b][b][a][j]);
             }
 
-            J_AC[ei[pg->imtrx]->gun_list[var][j]] += dterm + dterm1;
+            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] += dterm + dterm1;
           }
         }
       }
@@ -5245,18 +5527,19 @@ int compute_volume_integrand(const int quantity,
 
       if (J_AC != NULL) {
         var = LS;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          J_AC[ei[pg->imtrx]->gun_list[var][j]] += dwt_dF * height * det;
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+              dwt_dF * height * det;
         }
       }
     } else {
       double H = 0.0, sign;
 
-      alpha = params == NULL ? ls->Length_Scale : 2.0 * params[0];
+      alpha = params == NULL ? goma_ctx->fem.ls->Length_Scale : 2.0 * params[0];
 
       load_lsi(alpha);
 
-      H = quantity == I_POS_FILL ? lsi->H : (1.0 - lsi->H);
+      H = quantity == I_POS_FILL ? goma_ctx->fem.lsi->H : (1.0 - goma_ctx->fem.lsi->H);
 
       *sum += height * weight * det * H;
 
@@ -5266,9 +5549,10 @@ int compute_volume_integrand(const int quantity,
         load_lsi_derivs();
 
         var = LS;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           sign = quantity == I_POS_FILL ? +1.0 : -1.0;
-          J_AC[ei[pg->imtrx]->gun_list[var][j]] += height * weight * det * (sign * lsi->d_H_dF[j]);
+          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+              height * weight * det * (sign * goma_ctx->fem.lsi->d_H_dF[j]);
         }
       }
     }
@@ -5281,7 +5565,8 @@ int compute_volume_integrand(const int quantity,
     if (num_params < 5) {
       GOMA_WH(-1, "not enough plane parameters for POS-NEG_PLANE_FILL\n");
     }
-    dist = params[1] * fv->x[0] + params[2] * fv->x[1] + params[3] * fv->x[2] + params[4];
+    dist = params[1] * goma_ctx->fem.fv->x[0] + params[2] * goma_ctx->fem.fv->x[1] +
+           params[3] * goma_ctx->fem.fv->x[2] + params[4];
     dist /= sqrt(SQUARE(params[1]) + SQUARE(params[2]) + SQUARE(params[3]));
     if (dist > 0) {
       if (adapt_int_flag) {
@@ -5290,18 +5575,19 @@ int compute_volume_integrand(const int quantity,
 
         if (J_AC != NULL) {
           var = LS;
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            J_AC[ei[pg->imtrx]->gun_list[var][j]] += dwt_dF * height * det;
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                dwt_dF * height * det;
           }
         }
       } else {
         double H = 0.0, sign;
 
-        alpha = params == NULL ? ls->Length_Scale : 2.0 * params[0];
+        alpha = params == NULL ? goma_ctx->fem.ls->Length_Scale : 2.0 * params[0];
 
         load_lsi(alpha);
 
-        H = quantity == I_POS_VOLPLANE ? lsi->H : (1.0 - lsi->H);
+        H = quantity == I_POS_VOLPLANE ? goma_ctx->fem.lsi->H : (1.0 - goma_ctx->fem.lsi->H);
 
         *sum += height * weight * det * H;
 
@@ -5311,10 +5597,10 @@ int compute_volume_integrand(const int quantity,
           load_lsi_derivs();
 
           var = LS;
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             sign = quantity == I_POS_VOLPLANE ? +1.0 : -1.0;
-            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-                height * weight * det * (sign * lsi->d_H_dF[j]);
+            J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+                height * weight * det * (sign * goma_ctx->fem.lsi->d_H_dF[j]);
           }
         }
       }
@@ -5324,22 +5610,24 @@ int compute_volume_integrand(const int quantity,
   case I_MAG_GRAD_FILL_ERROR: {
     double alpha;
 
-    alpha = params == NULL ? ls->Length_Scale : 2.0 * params[0];
+    alpha = params == NULL ? goma_ctx->fem.ls->Length_Scale : 2.0 * params[0];
 
     load_lsi(alpha);
 
-    *sum += weight * det * lsi->delta * (lsi->gfmag - 1.) * (lsi->gfmag - 1.);
+    *sum += weight * det * goma_ctx->fem.lsi->delta * (goma_ctx->fem.lsi->gfmag - 1.) *
+            (goma_ctx->fem.lsi->gfmag - 1.);
 
     if (J_AC != NULL) {
 
       /* Do this even for uncoupled fill problems. */
       load_lsi_derivs();
 
-      var = ls->var;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-            weight * det * (lsi->gfmag - 1.) *
-            (lsi->delta * 2. * lsi->d_gfmag_dF[j] + (lsi->gfmag - 1.) * lsi->d_delta_dF[j]);
+      var = goma_ctx->fem.ls->var;
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+            weight * det * (goma_ctx->fem.lsi->gfmag - 1.) *
+            (goma_ctx->fem.lsi->delta * 2. * goma_ctx->fem.lsi->d_gfmag_dF[j] +
+             (goma_ctx->fem.lsi->gfmag - 1.) * goma_ctx->fem.lsi->d_delta_dF[j]);
       }
     }
   } break;
@@ -5347,20 +5635,21 @@ int compute_volume_integrand(const int quantity,
   case I_LS_ARC_LENGTH: {
     double alpha;
 
-    alpha = (params == NULL) ? ls->Length_Scale : 2.0 * params[0];
+    alpha = (params == NULL) ? goma_ctx->fem.ls->Length_Scale : 2.0 * params[0];
 
     load_lsi(alpha);
 
-    *sum += weight * det * lsi->delta;
+    *sum += weight * det * goma_ctx->fem.lsi->delta;
 
     if (J_AC != NULL) {
 
       /* Do this even for uncoupled fill problems. */
       load_lsi_derivs();
 
-      var = ls->var;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        J_AC[ei[pg->imtrx]->gun_list[var][j]] += weight * det * lsi->d_delta_dF[j];
+      var = goma_ctx->fem.ls->var;
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+            weight * det * goma_ctx->fem.lsi->d_delta_dF[j];
       }
     }
   } break;
@@ -5397,14 +5686,14 @@ int compute_volume_integrand(const int quantity,
       if (dir == -1)
         GOMA_EH(GOMA_ERROR, "compute_volume_integrand(): ACK! I'm confused!\n");
 
-      alpha = params == NULL ? ls->Length_Scale : 2.0 * params[0];
+      alpha = params == NULL ? goma_ctx->fem.ls->Length_Scale : 2.0 * params[0];
 
       load_lsi(alpha);
 
       /* Positive or negative H? */
-      H = sign > 0.0 ? lsi->H : 1.0 - lsi->H;
+      H = sign > 0.0 ? goma_ctx->fem.lsi->H : 1.0 - goma_ctx->fem.lsi->H;
 
-      *sum += weight * det * H * fv->v[dir];
+      *sum += weight * det * H * goma_ctx->fem.fv->v[dir];
 
       if (J_AC != NULL) {
 
@@ -5412,14 +5701,15 @@ int compute_volume_integrand(const int quantity,
         load_lsi_derivs();
 
         var = LS;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-              weight * det * (sign * lsi->d_H_dF[j]) * fv->v[dir];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+              weight * det * (sign * goma_ctx->fem.lsi->d_H_dF[j]) * goma_ctx->fem.fv->v[dir];
         }
 
         var = VELOCITY1 + dir;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          J_AC[ei[pg->imtrx]->gun_list[var][j]] += weight * det * H * bf[var]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+              weight * det * H * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
@@ -5458,14 +5748,14 @@ int compute_volume_integrand(const int quantity,
       if (dir == -1)
         GOMA_EH(GOMA_ERROR, "compute_volume_integrand(): ACK! I'm confused!\n");
 
-      alpha = params == NULL ? ls->Length_Scale : 2.0 * params[0];
+      alpha = params == NULL ? goma_ctx->fem.ls->Length_Scale : 2.0 * params[0];
 
       load_lsi(alpha);
 
       /* Positive or negative H? */
-      H = sign > 0.0 ? lsi->H : 1.0 - lsi->H;
+      H = sign > 0.0 ? goma_ctx->fem.lsi->H : 1.0 - goma_ctx->fem.lsi->H;
 
-      *sum += weight * det * H * fv->x[dir];
+      *sum += weight * det * H * goma_ctx->fem.fv->x[dir];
 
       if (J_AC != NULL) {
 
@@ -5473,9 +5763,9 @@ int compute_volume_integrand(const int quantity,
         load_lsi_derivs();
 
         var = LS;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-              weight * det * (sign * lsi->d_H_dF[j]) * fv->x[dir];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          J_AC[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[var][j]] +=
+              weight * det * (sign * goma_ctx->fem.lsi->d_H_dF[j]) * goma_ctx->fem.fv->x[dir];
         }
 
         /* MOVING MESH NOT HANDLED YET */
@@ -5490,26 +5780,27 @@ int compute_volume_integrand(const int quantity,
     }
     break;
   case I_POROUS_LIQUID_INV: {
-    if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN]) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN]) {
       dbl height = porous_shell_closed_height_model();
 
-      *sum += weight * det * pmv->bulk_density[0] * height;
+      *sum += weight * det * goma_ctx->fem.pmv->bulk_density[0] * height;
     }
 
-    if (pd->e[pg->imtrx][R_SHELL_SAT_1]) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1]) {
       dbl height = porous_shell_height_model(0);
       dbl porosity = porous_shell_porosity_model(0);
 
-      *sum += weight * det * mp->density * height * porosity * fv->sh_sat_1;
+      *sum +=
+          weight * det * goma_ctx->fem.mp->density * height * porosity * goma_ctx->fem.fv->sh_sat_1;
     }
 
-    if (pd->e[pg->imtrx][R_TFMP_MASS]) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_MASS]) {
       dbl saturation, height;
       double H_U, dH_U_dtime, H_L, dH_L_dtime;
       double dH_U_dX[DIM], dH_L_dX[DIM], dH_U_dp, dH_U_ddh, dH_dF[MDE];
       height = height_function_model(&H_U, &dH_U_dtime, &H_L, &dH_L_dtime, dH_U_dX, dH_L_dX,
                                      &dH_U_dp, &dH_U_ddh, dH_dF, time, delta_t);
-      saturation = fv->tfmp_sat;
+      saturation = goma_ctx->fem.fv->tfmp_sat;
       *sum += weight * det * saturation * height;
     }
 
@@ -5520,19 +5811,21 @@ int compute_volume_integrand(const int quantity,
 
   } break;
   case I_POROUS_LIQUID_INV_2: {
-    if (pd->e[pg->imtrx][R_SHELL_SAT_2]) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_2]) {
       dbl height = porous_shell_height_model(1);
       dbl porosity = porous_shell_porosity_model(1);
 
-      *sum += weight * det * mp->density * height * porosity * fv->sh_sat_2;
+      *sum +=
+          weight * det * goma_ctx->fem.mp->density * height * porosity * goma_ctx->fem.fv->sh_sat_2;
     }
   } break;
   case I_POROUS_LIQUID_INV_3: {
-    if (pd->e[pg->imtrx][R_SHELL_SAT_3]) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3]) {
       dbl height = porous_shell_height_model(2);
       dbl porosity = porous_shell_porosity_model(2);
 
-      *sum += weight * det * mp->density * height * porosity * fv->sh_sat_3;
+      *sum +=
+          weight * det * goma_ctx->fem.mp->density * height * porosity * goma_ctx->fem.fv->sh_sat_3;
     }
   } break;
   case I_ELOADX:
@@ -5542,16 +5835,16 @@ int compute_volume_integrand(const int quantity,
     double factor = 1.0;
     dir = (quantity == I_ELOADX ? 0 : (quantity == I_ELOADY ? 1 : (quantity == I_ELOADZ ? 2 : -1)));
 
-    if (pd->e[pg->imtrx][R_MASS])
-      factor = fv->c[species_no];
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS])
+      factor = goma_ctx->fem.fv->c[species_no];
 
     if (params != NULL)
       factor *= params[0];
 
-    if (pd->e[pg->imtrx][R_EFIELD1]) {
-      *sum += factor * weight * det * fv->E_field[dir];
-    } else if (pd->e[pg->imtrx][R_POTENTIAL]) {
-      *sum += factor * weight * det * (-fv->grad_V[dir]);
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EFIELD1]) {
+      *sum += factor * weight * det * goma_ctx->fem.fv->E_field[dir];
+    } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
+      *sum += factor * weight * det * (-goma_ctx->fem.fv->grad_V[dir]);
     } else
       GOMA_EH(GOMA_ERROR, "You need to include the potential and/or electric field variables to "
                           "compute this integrated quantity\n/");
@@ -5561,12 +5854,12 @@ int compute_volume_integrand(const int quantity,
   break;
 
   case I_TFMP_FORCE:
-    if (pd->e[pg->imtrx][R_TFMP_MASS]) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_MASS]) {
       dbl pressure;
-      pressure = fv->tfmp_pres;
+      pressure = goma_ctx->fem.fv->tfmp_pres;
       // atmospheric pressure, as defined at the boundary
       // maybe this should be a material property.
-      dbl Patm = mp->tfmp_density_const[3];
+      dbl Patm = goma_ctx->fem.mp->tfmp_density_const[3];
 
       /* do this part later
       dbl surface_tension = ;//[cgs please]
@@ -5576,13 +5869,14 @@ int compute_volume_integrand(const int quantity,
     break;
 
   case I_EM_ABSORB_CROSS_SECTION: {
-    const double c0 = 1.0 / (sqrt(upd->Free_Space_Permittivity * upd->Free_Space_Permeability));
-    const double eps0 = upd->Free_Space_Permittivity;
-    const double mu0 = upd->Free_Space_Permeability;
-    dbl x = fv->x[0];
-    dbl y = fv->x[1];
-    dbl z = fv->x[2];
-    dbl freq = upd->EM_Frequency;
+    const double c0 = 1.0 / (sqrt(goma_ctx->fem.upd->Free_Space_Permittivity *
+                                  goma_ctx->fem.upd->Free_Space_Permeability));
+    const double eps0 = goma_ctx->fem.upd->Free_Space_Permittivity;
+    const double mu0 = goma_ctx->fem.upd->Free_Space_Permeability;
+    dbl x = goma_ctx->fem.fv->x[0];
+    dbl y = goma_ctx->fem.fv->x[1];
+    dbl z = goma_ctx->fem.fv->x[2];
+    dbl freq = goma_ctx->fem.upd->EM_Frequency;
     dbl lambda0 = c0 / freq;
     dbl k0 = 2 * M_PI / lambda0;
     complex double permittivity;
@@ -5602,7 +5896,8 @@ int compute_volume_integrand(const int quantity,
     incident_wave(x, y, z, k0, wave, curl_wave);
     dbl E_mag = 0;
     for (int i = 0; i < DIM; i++) {
-      E_mag += fv->em_er[i] * fv->em_er[i] + fv->em_ei[i] * fv->em_ei[i];
+      E_mag += goma_ctx->fem.fv->em_er[i] * goma_ctx->fem.fv->em_er[i] +
+               goma_ctx->fem.fv->em_ei[i] * goma_ctx->fem.fv->em_ei[i];
     }
     dbl omega = k0 / sqrt(eps0 * mu0);
     *sum += creal(weight * det * invS0 * 0.5 * omega * eps0 * cimag(permittivity) * E_mag);
@@ -5677,8 +5972,8 @@ double evaluate_global_flux(const Exo_DB *exo,
         err = load_elem_dofptr(elem, exo, x, x, x, x, 0);
         GOMA_EH(err, "load_elem_dofptr");
 
-        elem_type = ei[pg->imtrx]->ielem_type;
-        ip_total = elem_info(NQUAD_SURF, ei[pg->imtrx]->ielem_type);
+        elem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type;
+        ip_total = elem_info(NQUAD_SURF, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
 
         for (j = 0; j < num_exterior_faces; j++) {
           id_side = exterior_faces[j] + 1;
@@ -5687,11 +5982,12 @@ double evaluate_global_flux(const Exo_DB *exo,
 
           for (ip = 0; ip < ip_total; ip++) {
 
-            find_surf_st(ip, elem_type, id_side, ei[pg->imtrx]->ielem_dim, xi, &s, &t, &u);
+            find_surf_st(ip, elem_type, id_side,
+                         goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim, xi, &s, &t, &u);
 
-            fv->wt = Gq_surf_weight(ip, elem_type);
+            goma_ctx->fem.fv->wt = Gq_surf_weight(ip, elem_type);
 
-            err = load_basis_functions(xi, bfd);
+            err = load_basis_functions(xi, goma_ctx->fem.bfd);
             GOMA_EH(err, "problem from load_basis_functions");
 
             err = beer_belly();
@@ -5705,8 +6001,10 @@ double evaluate_global_flux(const Exo_DB *exo,
             GOMA_EH(err, "load_bf_grad");
 
             surface_determinant_and_normal(
-                elem, ei[pg->imtrx]->iconnect_ptr, ei[pg->imtrx]->num_local_nodes,
-                ei[pg->imtrx]->ielem_dim - 1, id_side, nodes_per_side, id_local_elem_coord);
+                elem, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr,
+                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
+                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim - 1, id_side, nodes_per_side,
+                id_local_elem_coord);
 
             /*
              * Load up physical space gradients of field variables at this
@@ -5722,7 +6020,8 @@ double evaluate_global_flux(const Exo_DB *exo,
             delta_sum = sum - sum0;
 
             if (goma_ctx->num_proc > 1 &&
-                dpi->elem_owner[ei[pg->imtrx]->ielem] == goma_ctx->proc_id) {
+                dpi->elem_owner[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem] ==
+                    goma_ctx->proc_id) {
               proc_sum += delta_sum;
             }
 
@@ -5752,22 +6051,23 @@ void compute_surface_integrand(const int quantity,
                                const double *params,
                                double *sum,
                                double J_AC[]) {
-  double weight = fv->wt;
+  double weight = goma_ctx->fem.fv->wt;
   double det;
-  int a, dim = pd->Num_Dim;
+  int a, dim = goma_ctx->fem.pd->Num_Dim;
 
-  det = fv->sdet * fv->h3;
+  det = goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->h3;
 
-  if (upd->CoordinateSystem == CYLINDRICAL || upd->CoordinateSystem == SWIRLING) {
+  if (goma_ctx->fem.upd->CoordinateSystem == CYLINDRICAL ||
+      goma_ctx->fem.upd->CoordinateSystem == SWIRLING) {
     weight *= 2. * M_PIE;
-    det = fv->sdet;
+    det = goma_ctx->fem.fv->sdet;
   }
 
   switch (quantity) {
 
   case VOLUME_FLUX:
     for (a = 0; a < dim; a++)
-      *sum += weight * fv->v[a] * fv->snormal[a] * det;
+      *sum += weight * goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a] * det;
 
     if (J_AC != NULL) {
       GOMA_EH(GOMA_ERROR, "Global surface sentivities are on my to-do list.");
@@ -5780,15 +6080,15 @@ void compute_surface_integrand(const int quantity,
     double H = 0.0;
     double alpha;
 
-    alpha = params == NULL ? ls->Length_Scale : 2.0 * params[0];
+    alpha = params == NULL ? goma_ctx->fem.ls->Length_Scale : 2.0 * params[0];
 
     load_lsi(alpha);
 
-    H = (quantity == POS_LS_FLUX ? lsi->H : (1.0 - lsi->H));
+    H = (quantity == POS_LS_FLUX ? goma_ctx->fem.lsi->H : (1.0 - goma_ctx->fem.lsi->H));
 
     for (a = 0; a < dim; a++)
 
-      *sum += weight * det * H * fv->v[a] * fv->snormal[a];
+      *sum += weight * det * H * goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a];
 
     if (J_AC != NULL) {
       GOMA_EH(GOMA_ERROR, "Global surface sentivities are on my to-do list.");
@@ -5951,15 +6251,15 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
   /*  variables for adaptive quadrature weight calculation   */
   double ls_F[9], ad_wt[9];
   int ierr = 0, wt_type;
-  const int Jac_state = af->Assemble_Jacobian;
+  const int Jac_state = goma_ctx->fem.af->Assemble_Jacobian;
 
   memset(Torque, 0, sizeof(double) * DIM);
   memset(TT_sens, 0, sizeof(double) * MAX_PDIM * MAX_PDIM);
 
-  dim = pd_glob[0]->Num_Dim;
+  dim = goma_ctx->fem.pd_glob[0]->Num_Dim;
   /* load eqn and variable number in tensor form */
   err = stress_eqn_pointer(v_s);
-  af->Assemble_Jacobian = TRUE;
+  goma_ctx->fem.af->Assemble_Jacobian = TRUE;
 
   /* first right time stamp or run stamp to separate the sets */
 
@@ -6014,9 +6314,9 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
       /* Now start element sweep */
 
       for (i = 0; i < num_elem_in_set; i++) {
-        ei[pg->imtrx]->ielem = elem_list[i];
+        goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem = elem_list[i];
 
-        mn = find_mat_number(ei[pg->imtrx]->ielem, exo);
+        mn = find_mat_number(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, exo);
 
         /**    only do integration if the requested material number  **/
 
@@ -6029,72 +6329,73 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
           err = load_elem_dofptr(elem_list[i], exo, x, x_sens_p[vector_id], xdot, xdot, 0);
           GOMA_EH(err, "load_elem_dofptr");
 
-          err = bf_mp_init(pd);
+          err = bf_mp_init(goma_ctx->fem.pd);
           GOMA_EH(err, "bf_mp_init");
 
-          iconnect_ptr = ei[pg->imtrx]->iconnect_ptr;
-          ielem_type = ei[pg->imtrx]->ielem_type;
+          iconnect_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr;
+          ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type;
           ip_total = elem_info(NQUAD_SURF, ielem_type);
-          num_local_nodes = ei[pg->imtrx]->num_local_nodes;
-          ielem_dim = ei[pg->imtrx]->ielem_dim;
+          num_local_nodes = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
+          ielem_dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
 
-          id_side = find_id_side(ei[pg->imtrx]->ielem, num_nodes_on_side,
-                                 &exo->ss_node_list[current_id][num_nodes_on_side * i],
-                                 id_local_elem_coord, exo);
+          id_side = find_id_side(
+              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, num_nodes_on_side,
+              &exo->ss_node_list[current_id][num_nodes_on_side * i], id_local_elem_coord, exo);
 
           /* Calculates the ID side correctly for tets */
           if (ielem_type == LINEAR_TET)
-            id_side = find_id_side_SS(ei[pg->imtrx]->ielem, current_id, exo);
+            id_side =
+                find_id_side_SS(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, current_id, exo);
 
-          if (ls != NULL && ielem_dim == 2 &&
+          if (goma_ctx->fem.ls != NULL && ielem_dim == 2 &&
               (quantity == POS_LS_FLUX || quantity == NEG_LS_FLUX || quantity == DELTA ||
                quantity == LS_DCA)) {
-            if (ls->var != LS)
+            if (goma_ctx->fem.ls->var != LS)
               GOMA_WH(-1, "Level-set variable is not LS!");
             switch (id_side) {
             case 1:
-              ls_F[0] = *esp->F[0];
-              ls_F[1] = *esp->F[1];
-              ls_F[2] = *esp->F[4];
+              ls_F[0] = *goma_ctx->fem.esp->F[0];
+              ls_F[1] = *goma_ctx->fem.esp->F[1];
+              ls_F[2] = *goma_ctx->fem.esp->F[4];
               break;
             case 2:
-              ls_F[0] = *esp->F[1];
-              ls_F[1] = *esp->F[2];
-              ls_F[2] = *esp->F[5];
+              ls_F[0] = *goma_ctx->fem.esp->F[1];
+              ls_F[1] = *goma_ctx->fem.esp->F[2];
+              ls_F[2] = *goma_ctx->fem.esp->F[5];
               break;
             case 3:
-              ls_F[0] = *esp->F[3];
-              ls_F[1] = *esp->F[2];
-              ls_F[2] = *esp->F[6];
+              ls_F[0] = *goma_ctx->fem.esp->F[3];
+              ls_F[1] = *goma_ctx->fem.esp->F[2];
+              ls_F[2] = *goma_ctx->fem.esp->F[6];
               break;
             case 4:
-              ls_F[0] = *esp->F[0];
-              ls_F[1] = *esp->F[3];
-              ls_F[2] = *esp->F[7];
+              ls_F[0] = *goma_ctx->fem.esp->F[0];
+              ls_F[1] = *goma_ctx->fem.esp->F[3];
+              ls_F[2] = *goma_ctx->fem.esp->F[7];
               break;
             }
             if (species_id > 0) {
               var = species_id - 1;
               switch (id_side) {
               case 1:
-                ls_F[0] = *esp->pF[var][0];
-                ls_F[1] = *esp->pF[var][1];
-                ls_F[2] = *esp->pF[var][4];
+                ls_F[0] = *goma_ctx->fem.esp->pF[var][0];
+                ls_F[1] = *goma_ctx->fem.esp->pF[var][1];
+                ls_F[2] = *goma_ctx->fem.esp->pF[var][4];
                 break;
               case 2:
-                ls_F[0] = *esp->pF[var][1];
-                ls_F[1] = *esp->pF[var][2];
-                ls_F[2] = *esp->pF[var][5];
+                ls_F[0] = *goma_ctx->fem.esp->pF[var][1];
+                ls_F[1] = *goma_ctx->fem.esp->pF[var][2];
+                ls_F[2] = *goma_ctx->fem.esp->pF[var][5];
                 break;
               case 3:
-                ls_F[0] = *esp->pF[var][3];
-                ls_F[1] = *esp->pF[var][2];
-                ls_F[2] = *esp->pF[var][6];
+                ls_F[0] = *goma_ctx->fem.esp->pF[var][3];
+                ls_F[1] = *goma_ctx->fem.esp->pF[var][2];
+                ls_F[2] = *goma_ctx->fem.esp->pF[var][6];
                 break;
               case 4:
-                ls_F[0] = *esp->pF[var][0];
-                ls_F[1] = *esp->pF[var][3];
-                ls_F[2] = *esp->pF[var][7];
+                ls_F[0] = *goma_ctx->fem.esp->pF[var][0];
+                ls_F[1] = *goma_ctx->fem.esp->pF[var][3];
+                ls_F[2] = *goma_ctx->fem.esp->pF[var][7];
                 break;
               }
             }
@@ -6119,16 +6420,17 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             }
 
             ierr = adaptive_weight(ad_wt, ip_total, ielem_dim - 1, ls_F, 0.0, wt_type,
-                                   ei[pg->imtrx]->ielem_type);
+                                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
             if (ierr == -1)
               printf("adaptive wt problem %d %g %g %g\n", ierr, ls_F[0], ls_F[1], ls_F[2]);
           }
 
-          if (ls != NULL && ls->elem_overlap_state && ls->Integration_Depth > 0) {
+          if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->elem_overlap_state &&
+              goma_ctx->fem.ls->Integration_Depth > 0) {
             Subgrid_Int.active = TRUE;
 
             get_subgrid_integration_pts(Subgrid_Tree, &element_search_grid, &Subgrid_Int.s,
-                                        &Subgrid_Int.wt, ls->Length_Scale);
+                                        &Subgrid_Int.wt, goma_ctx->fem.ls->Length_Scale);
 
             find_surf_center_st(ielem_type, id_side, ielem_dim, surface_centroid, &s, &t);
             ip_total = gather_surface_subgrid_integration_pts(
@@ -6142,8 +6444,9 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             local_q = local_qconv = 0.;
             memset(local_Torque, 0, DIM * sizeof(double));
 
-            if (ls != NULL && ls->elem_overlap_state && ls->Integration_Depth > 0) {
-              ls->Elem_Sign = 0;
+            if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->elem_overlap_state &&
+                goma_ctx->fem.ls->Integration_Depth > 0) {
+              goma_ctx->fem.ls->Elem_Sign = 0;
               xi[0] = Subgrid_Int.s[ip][0];
               xi[1] = Subgrid_Int.s[ip][1];
               xi[2] = Subgrid_Int.s[ip][2];
@@ -6161,7 +6464,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             }
 
             /* ****************************************/
-            err = load_basis_functions(xi, bfd);
+            err = load_basis_functions(xi, goma_ctx->fem.bfd);
             GOMA_EH(err, "problem from load_basis_functions");
 
             err = beer_belly();
@@ -6177,9 +6480,9 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             err = load_bf_grad();
             GOMA_EH(err, "load_bf_grad");
 
-            surface_determinant_and_normal(ei[pg->imtrx]->ielem, iconnect_ptr, num_local_nodes,
-                                           ielem_dim - 1, id_side, num_nodes_on_side,
-                                           id_local_elem_coord);
+            surface_determinant_and_normal(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem,
+                                           iconnect_ptr, num_local_nodes, ielem_dim - 1, id_side,
+                                           num_nodes_on_side, id_local_elem_coord);
 
             /*
              * Load up physical space gradients of field variables at this
@@ -6194,9 +6497,10 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             err = load_fv_mesh_derivs(1);
             GOMA_EH(err, "load_fv_mesh_derivs");
 
-            if (TimeIntegration != STEADY && pd->e[pg->imtrx][MESH_DISPLACEMENT1]) {
+            if (TimeIntegration != STEADY &&
+                goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
               for (j = 0; j < ielem_dim; j++) {
-                x_dot[j] = fv_dot->x[j];
+                x_dot[j] = goma_ctx->fem.fv_dot->x[j];
               }
             } else {
               for (j = 0; j < ielem_dim; j++) {
@@ -6207,21 +6511,22 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             do_LSA_mods(LSA_SURFACE);
 
             if (ielem_dim != 3) {
-              calc_surf_tangent(ei[pg->imtrx]->ielem, iconnect_ptr, num_local_nodes, ielem_dim - 1,
-                                num_nodes_on_side, id_local_elem_coord);
+              calc_surf_tangent(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, iconnect_ptr,
+                                num_local_nodes, ielem_dim - 1, num_nodes_on_side,
+                                id_local_elem_coord);
             }
 
             weight = wt;
-            det = fv->sdet * fv->h3;
+            det = goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->h3;
 
-            if (pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN)
+            if (goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN)
               GOMA_EH(GOMA_ERROR, "evalute_flux_sens has not been updated for the "
                                   "PROJECTED_CARTESIAN coordinate system.");
 
-            if (pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
-                pd_glob[0]->CoordinateSystem == SWIRLING) {
+            if (goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+                goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING) {
               weight = 2. * M_PIE * wt;
-              det = fv->sdet;
+              det = goma_ctx->fem.fv->sdet;
             }
 
             /*  normal and tangent vector sensitivities   */
@@ -6230,15 +6535,18 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             for (a = 0; a < ielem_dim; a++) {
               for (b = 0; b < ielem_dim; b++) {
                 var = MESH_DISPLACEMENT1 + b;
-                if (pd->v[pg->imtrx][var]) {
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                    normal_sens[a] +=
-                        fv->dsnormal_dx[a][b][j] * bf[var]->phi[j] * (*esp_old->d[b][j]);
-                    tangent_sens[0][a] +=
-                        fv->dstangent_dx[0][a][b][j] * bf[var]->phi[j] * (*esp_old->d[b][j]);
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                    normal_sens[a] += goma_ctx->fem.fv->dsnormal_dx[a][b][j] *
+                                      goma_ctx->fem.bf[var]->phi[j] *
+                                      (*goma_ctx->fem.esp_old->d[b][j]);
+                    tangent_sens[0][a] += goma_ctx->fem.fv->dstangent_dx[0][a][b][j] *
+                                          goma_ctx->fem.bf[var]->phi[j] *
+                                          (*goma_ctx->fem.esp_old->d[b][j]);
                     if (ielem_dim != 3) {
-                      tangent_sens[1][a] +=
-                          fv->dstangent_dx[1][a][b][j] * bf[var]->phi[j] * (*esp_old->d[b][j]);
+                      tangent_sens[1][a] += goma_ctx->fem.fv->dstangent_dx[1][a][b][j] *
+                                            goma_ctx->fem.bf[var]->phi[j] *
+                                            (*goma_ctx->fem.esp_old->d[b][j]);
                     }
                   }
                 }
@@ -6251,10 +6559,11 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
             /**   get solid stresses  **/
 
-            dim = pd_glob[0]->Num_Dim;
+            dim = goma_ctx->fem.pd_glob[0]->Num_Dim;
 
-            if (pd->e[pg->imtrx][R_MESH1] && cr->MeshMotion != ARBITRARY) {
-              err = belly_flop(elc->lame_mu);
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] &&
+                goma_ctx->fem.cr->MeshMotion != ARBITRARY) {
+              err = belly_flop(goma_ctx->fem.elc->lame_mu);
               GOMA_EH(err, "error in belly flop");
               if (err == 2)
                 exit(-1);
@@ -6264,13 +6573,13 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                * Guess what the 4 new args will have to be and bloat accordingly.
                */
 
-              err = mesh_stress_tensor(TT, dTT_dx, dTT_dp, dTT_dc, dTT_dp_liq, dTT_dp_gas,
-                                       dTT_dporosity, dTT_dsink_mass, dTT_dT, dTT_dmax_strain,
-                                       dTT_dcur_strain, elc->lame_mu, elc->lame_lambda, delta_t,
-                                       ielem, ip, ip_total);
+              err = mesh_stress_tensor(
+                  TT, dTT_dx, dTT_dp, dTT_dc, dTT_dp_liq, dTT_dp_gas, dTT_dporosity, dTT_dsink_mass,
+                  dTT_dT, dTT_dmax_strain, dTT_dcur_strain, goma_ctx->fem.elc->lame_mu,
+                  goma_ctx->fem.elc->lame_lambda, delta_t, ielem, ip, ip_total);
 
               /* For LINEAR ELASTICITY */
-              if (cr->MeshFluxModel == LINEAR) {
+              if (goma_ctx->fem.cr->MeshFluxModel == LINEAR) {
                 if (dim == 2) {
                   TT[2][2] = 1.;
                   TT[1][2] = 0.;
@@ -6280,10 +6589,13 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               /*  For Hookian Elasticity and shrinkage */
               else {
                 if (dim == 2) {
-                  elast_modulus = elc->lame_mu;
-                  if (cr->MeshFluxModel == NONLINEAR || cr->MeshFluxModel == HOOKEAN_PSTRAIN ||
-                      cr->MeshFluxModel == INCOMP_PSTRAIN)
-                    TT[2][2] = (1. - pow(fv->volume_change, 2. / 3.)) * elast_modulus - fv->P;
+                  elast_modulus = goma_ctx->fem.elc->lame_mu;
+                  if (goma_ctx->fem.cr->MeshFluxModel == NONLINEAR ||
+                      goma_ctx->fem.cr->MeshFluxModel == HOOKEAN_PSTRAIN ||
+                      goma_ctx->fem.cr->MeshFluxModel == INCOMP_PSTRAIN)
+                    TT[2][2] =
+                        (1. - pow(goma_ctx->fem.fv->volume_change, 2. / 3.)) * elast_modulus -
+                        goma_ctx->fem.fv->P;
                   /*              if (cr->MeshFluxModel == INCOMP_PSTRESS) */
                   else
                     TT[2][2] = 0.;
@@ -6294,8 +6606,9 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             } /* end of STRESS_TENSOR */
 
             /* calculate real-solid stress here !!*/
-            if (pd->e[pg->imtrx][R_SOLID1] && cr->MeshMotion != ARBITRARY) {
-              mu = elc_rs->lame_mu;
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SOLID1] &&
+                goma_ctx->fem.cr->MeshMotion != ARBITRARY) {
+              mu = goma_ctx->fem.elc_rs->lame_mu;
               err = belly_flop_rs(mu);
               GOMA_EH(err, "error in belly flop");
               if (err == 2)
@@ -6304,15 +6617,17 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                * Total mesh stress tensor...
                */
               err = solid_stress_tensor(TT, dTT_dx, dTT_drs, dTT_dp, dTT_dc, dTT_dp_liq, dTT_dp_gas,
-                                        dTT_dporosity, dTT_dT, dTT_dmax_strain, elc_rs->lame_mu,
-                                        elc_rs->lame_lambda);
+                                        dTT_dporosity, dTT_dT, dTT_dmax_strain,
+                                        goma_ctx->fem.elc_rs->lame_mu,
+                                        goma_ctx->fem.elc_rs->lame_lambda);
               if (dim == 2) {
-                elast_modulus = elc_rs->lame_mu;
+                elast_modulus = goma_ctx->fem.elc_rs->lame_mu;
 
-                if (cr->RealSolidFluxModel == NONLINEAR ||
-                    cr->RealSolidFluxModel == HOOKEAN_PSTRAIN ||
-                    cr->RealSolidFluxModel == INCOMP_PSTRAIN)
-                  TT[2][2] = (1. - pow(fv->volume_change, 2. / 3.)) * elast_modulus - fv->P;
+                if (goma_ctx->fem.cr->RealSolidFluxModel == NONLINEAR ||
+                    goma_ctx->fem.cr->RealSolidFluxModel == HOOKEAN_PSTRAIN ||
+                    goma_ctx->fem.cr->RealSolidFluxModel == INCOMP_PSTRAIN)
+                  TT[2][2] = (1. - pow(goma_ctx->fem.fv->volume_change, 2. / 3.)) * elast_modulus -
+                             goma_ctx->fem.fv->P;
                 /*              if (cr->MeshFluxModel == INCOMP_PSTRESS) */
                 else
                   TT[2][2] = 0.;
@@ -6328,12 +6643,12 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
              */
             memset(ves_sens, 0, sizeof(dbl) * DIM * DIM);
             memset(ves, 0, sizeof(dbl) * DIM * DIM);
-            if (pd->v[pg->imtrx][POLYMER_STRESS11]) {
+            if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
               for (a = 0; a < WIM; a++) {
                 for (b = 0; b < VIM; b++) {
-                  for (ve_mode = 0; ve_mode < vn->modes; ve_mode++) {
-                    ves_sens[a][b] += fv_sens->S[ve_mode][a][b];
-                    ves[a][b] += fv->S[ve_mode][a][b];
+                  for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
+                    ves_sens[a][b] += goma_ctx->fem.fv_sens->S[ve_mode][a][b];
+                    ves[a][b] += goma_ctx->fem.fv->S[ve_mode][a][b];
                   }
                 }
               }
@@ -6343,23 +6658,24 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
              * OK, let's simplify things by computing the viscous
              * stress tensor upfront.
              */
-            if (cr->MeshMotion == ARBITRARY) {
+            if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
               for (a = 0; a < WIM; a++) {
                 for (b = 0; b < VIM; b++) {
-                  gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
-                  gamma_sens[a][b] = fv_sens->grad_v[a][b] + fv_sens->grad_v[b][a];
+                  gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
+                  gamma_sens[a][b] =
+                      goma_ctx->fem.fv_sens->grad_v[a][b] + goma_ctx->fem.fv_sens->grad_v[b][a];
                 }
               }
 
-              mu = viscosity(gn, gamma, d_mu);
+              mu = viscosity(goma_ctx->fem.gn, gamma, d_mu);
 
               /*  compute implicit viscosity sensitivities  */
               mu_sens = 0.;
               v = TEMPERATURE;
-              if (pd->v[pg->imtrx][v]) {
-                dofs = ei[pg->imtrx]->dof[v];
+              if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+                dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
                 for (j = 0; j < dofs; j++) {
-                  mu_sens += *esp_old->T[j] * d_mu->T[j];
+                  mu_sens += *goma_ctx->fem.esp_old->T[j] * d_mu->T[j];
                 }
               }
 
@@ -6367,10 +6683,10 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
               for (a = 0; a < WIM; a++) {
                 v = VELOCITY1 + a;
-                if (pd->v[pg->imtrx][v]) {
-                  dofs = ei[pg->imtrx]->dof[v];
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+                  dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
                   for (j = 0; j < dofs; j++) {
-                    mu_sens += *esp_old->v[a][j] * d_mu->v[a][j];
+                    mu_sens += *goma_ctx->fem.esp_old->v[a][j] * d_mu->v[a][j];
                   }
                 }
               }
@@ -6379,10 +6695,10 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
               for (a = 0; a < dim; a++) {
                 v = MESH_DISPLACEMENT1 + a;
-                if (pd->v[pg->imtrx][v]) {
-                  dofs = ei[pg->imtrx]->dof[v];
+                if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+                  dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
                   for (j = 0; j < dofs; j++) {
-                    mu_sens += *esp_old->d[a][j] * d_mu->X[a][j];
+                    mu_sens += *goma_ctx->fem.esp_old->d[a][j] * d_mu->X[a][j];
                   }
                 }
               }
@@ -6390,31 +6706,31 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               /* Pressure...  */
 
               v = PRESSURE;
-              if (pd->v[pg->imtrx][v]) {
-                dofs = ei[pg->imtrx]->dof[v];
+              if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+                dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
                 for (j = 0; j < dofs; j++) {
-                  mu_sens += *esp_old->P[j] * d_mu->P[j];
+                  mu_sens += *goma_ctx->fem.esp_old->P[j] * d_mu->P[j];
                 }
               }
 
               /*  Concentration  */
 
               v = MASS_FRACTION;
-              if (pd->v[pg->imtrx][v]) {
-                for (a = 0; a < pd->Num_Species_Eqn; a++) {
-                  dofs = ei[pg->imtrx]->dof[v];
+              if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+                for (a = 0; a < goma_ctx->fem.pd->Num_Species_Eqn; a++) {
+                  dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
                   for (j = 0; j < dofs; j++) {
-                    mu_sens += *esp_old->c[a][j] * d_mu->C[a][j];
+                    mu_sens += *goma_ctx->fem.esp_old->c[a][j] * d_mu->C[a][j];
                   }
                 }
               }
               /* * Fill...  */
 
               v = FILL;
-              if (pd->v[pg->imtrx][v]) {
-                dofs = ei[pg->imtrx]->dof[v];
+              if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+                dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
                 for (j = 0; j < dofs; j++) {
-                  mu_sens += *esp_old->F[j] * d_mu->F[j];
+                  mu_sens += *goma_ctx->fem.esp_old->F[j] * d_mu->F[j];
                 }
               }
               /***
@@ -6424,9 +6740,9 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
               for (a = 0; a < WIM; a++) {
                 for (b = 0; b < VIM; b++) {
-                  vs_sens[a][b] =
-                      mu * gamma_sens[a][b] - fv_sens->P * delta(a, b) + gamma[a][b] * mu_sens;
-                  vs[a][b] = mu * gamma[a][b] - fv->P * delta(a, b);
+                  vs_sens[a][b] = mu * gamma_sens[a][b] - goma_ctx->fem.fv_sens->P * delta(a, b) +
+                                  gamma[a][b] * mu_sens;
+                  vs[a][b] = mu * gamma[a][b] - goma_ctx->fem.fv->P * delta(a, b);
                 }
               }
             }
@@ -6436,12 +6752,12 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
              */
             memset(es, 0, sizeof(dbl) * DIM * DIM);
             memset(es_sens, 0, sizeof(dbl) * DIM * DIM);
-            if (pd->e[pg->imtrx][R_POTENTIAL]) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
               efield_sqr = 0.0;
               efield_sqr_sens = 0.0;
               for (a = 0; a < VIM; a++) {
-                efield[a] = -fv->grad_V[a];
-                efield_sens[a] = -fv_sens->grad_V[a];
+                efield[a] = -goma_ctx->fem.fv->grad_V[a];
+                efield_sens[a] = -goma_ctx->fem.fv_sens->grad_V[a];
                 efield_sqr += efield[a] * efield[a];
                 efield_sqr_sens += 2. * efield[a] * efield_sens[a];
               }
@@ -6457,22 +6773,22 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             /*
              * load surface tension for variable models
              */
-            if (mp->SurfaceTensionModel == CONSTANT) {
+            if (goma_ctx->fem.mp->SurfaceTensionModel == CONSTANT) {
               dsigmadT = 0.0;
               for (a = 0; a < MAX_CONC; a++) {
                 dsigmadC[a] = 0.0;
               }
             }
             sigma_sens = 0.0;
-            if (mp->SurfaceTensionModel != CONSTANT) {
+            if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
               load_surface_tension(dsigma_dx);
             }
-            if (mp->SurfaceTensionModel == USER) {
-              dsigmadT = mp->d_surface_tension[TEMPERATURE];
-              sigma_sens = dsigmadT * fv_sens->T;
+            if (goma_ctx->fem.mp->SurfaceTensionModel == USER) {
+              dsigmadT = goma_ctx->fem.mp->d_surface_tension[TEMPERATURE];
+              sigma_sens = dsigmadT * goma_ctx->fem.fv_sens->T;
               for (a = 0; a < MAX_CONC; a++) {
-                dsigmadC[a] = mp->d_surface_tension[MAX_VARIABLE_TYPES + a];
-                sigma_sens += dsigmadC[a] * fv_sens->c[a];
+                dsigmadC[a] = goma_ctx->fem.mp->d_surface_tension[MAX_VARIABLE_TYPES + a];
+                sigma_sens += dsigmadC[a] * goma_ctx->fem.fv_sens->c[a];
               }
             }
 
@@ -6482,48 +6798,55 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
               /* finally we can add up the outgoing flux and area */
               /* but first evaluate properties if variable */
-              if (mp->ConductivityModel == USER) {
-                err = usr_thermal_conductivity(mp->u_thermal_conductivity, time_value);
+              if (goma_ctx->fem.mp->ConductivityModel == USER) {
+                err =
+                    usr_thermal_conductivity(goma_ctx->fem.mp->u_thermal_conductivity, time_value);
               }
               /*  heat capacity  */
-              if (mp->HeatCapacityModel == USER) {
-                err = usr_heat_capacity(mp->u_heat_capacity, time_value);
-                Cp = mp->heat_capacity;
-              } else if (mp->HeatCapacityModel == CONSTANT) {
-                Cp = mp->heat_capacity;
-              } else if (mp->HeatCapacityModel == ENTHALPY) {
+              if (goma_ctx->fem.mp->HeatCapacityModel == USER) {
+                err = usr_heat_capacity(goma_ctx->fem.mp->u_heat_capacity, time_value);
+                Cp = goma_ctx->fem.mp->heat_capacity;
+              } else if (goma_ctx->fem.mp->HeatCapacityModel == CONSTANT) {
+                Cp = goma_ctx->fem.mp->heat_capacity;
+              } else if (goma_ctx->fem.mp->HeatCapacityModel == ENTHALPY) {
                 Cp = enthalpy_heat_capacity_model(d_Cp);
               } else {
                 GOMA_EH(GOMA_ERROR, "Unrecognized heat capacity model");
               }
 
-              if (cr->HeatFluxModel == CR_HF_FOURIER_0) {
+              if (goma_ctx->fem.cr->HeatFluxModel == CR_HF_FOURIER_0) {
                 for (j = 0; j < VIM; j++) {
-                  local_q += (mp->thermal_conductivity * fv->snormal[j] * fv_sens->grad_T[j]);
-                  local_qconv += (rho * Cp * fv->T * fv->snormal[j] * (fv_sens->v[j] - x_dot[j]));
+                  local_q += (goma_ctx->fem.mp->thermal_conductivity *
+                              goma_ctx->fem.fv->snormal[j] * goma_ctx->fem.fv_sens->grad_T[j]);
+                  local_qconv += (rho * Cp * goma_ctx->fem.fv->T * goma_ctx->fem.fv->snormal[j] *
+                                  (goma_ctx->fem.fv_sens->v[j] - x_dot[j]));
                 }
-              } else if (cr->HeatFluxModel == CR_HF_USER) {
+              } else if (goma_ctx->fem.cr->HeatFluxModel == CR_HF_USER) {
 
-                usr_heat_flux(fv->grad_T, q, dq_gradT, dq_dX, time_value);
+                usr_heat_flux(goma_ctx->fem.fv->grad_T, q, dq_gradT, dq_dX, time_value);
                 printf("untested\n");
                 exit(-1);
                 for (j = 0; j < VIM; j++) {
                   for (a = 0; a < VIM; a++) {
-                    local_q += fv->snormal[j] * dq_gradT[j][a] * fv_sens->grad_T[a];
+                    local_q += goma_ctx->fem.fv->snormal[j] * dq_gradT[j][a] *
+                               goma_ctx->fem.fv_sens->grad_T[a];
                   }
                 }
               }
-              local_flux += weight * fv->sdet * fv->h3 * local_q;
-              local_flux_conv += weight * fv->sdet * fv->h3 * local_qconv;
+              local_flux += weight * goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->h3 * local_q;
+              local_flux_conv +=
+                  weight * goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->h3 * local_qconv;
               break;
 
             case VOLUME_FLUX:
               for (j = 0; j < WIM; j++) {
-                if (cr->MeshMotion == ARBITRARY)
-                  local_q += (fv->snormal[j] * (fv_sens->v[j] - x_dot[j]) +
-                              normal_sens[j] * (fv->v[j] - x_dot[j]));
-                else if (pd->v[pg->imtrx][MESH_DISPLACEMENT1])
-                  local_q += fv->snormal[j] * fv_sens->d[j] + normal_sens[j] * fv->d[j];
+                if (goma_ctx->fem.cr->MeshMotion == ARBITRARY)
+                  local_q +=
+                      (goma_ctx->fem.fv->snormal[j] * (goma_ctx->fem.fv_sens->v[j] - x_dot[j]) +
+                       normal_sens[j] * (goma_ctx->fem.fv->v[j] - x_dot[j]));
+                else if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1])
+                  local_q += goma_ctx->fem.fv->snormal[j] * goma_ctx->fem.fv_sens->d[j] +
+                             normal_sens[j] * goma_ctx->fem.fv->d[j];
                 else
                   GOMA_EH(GOMA_ERROR,
                           "Inconsistency in volume-flux specification. Contact Developers");
@@ -6535,13 +6858,14 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             case PVELOCITY2:
             case PVELOCITY3:
               for (j = 0; j < WIM; j++) {
-                local_q += fv->snormal[j] * fv_sens->pv[j] + normal_sens[j] * fv->pv[j];
+                local_q += goma_ctx->fem.fv->snormal[j] * goma_ctx->fem.fv_sens->pv[j] +
+                           normal_sens[j] * goma_ctx->fem.fv->pv[j];
               }
               local_flux += weight * det * local_q;
               break;
 
             case EXT_VELOCITY:
-              local_q += fv_sens->ext_v;
+              local_q += goma_ctx->fem.fv_sens->ext_v;
 
               local_flux += weight * det * local_q;
               break;
@@ -6550,33 +6874,40 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             case EFIELD2:
             case EFIELD3:
               for (j = 0; j < VIM; j++) {
-                local_q += fv->snormal[j] * fv_sens->E_field[j] + normal_sens[j] * fv->E_field[j];
+                local_q += goma_ctx->fem.fv->snormal[j] * goma_ctx->fem.fv_sens->E_field[j] +
+                           normal_sens[j] * goma_ctx->fem.fv->E_field[j];
               }
               local_flux += weight * det * local_q;
               break;
 
             case SPECIES_FLUX:
               for (j = 0; j < WIM; j++) {
-                local_q += (mp->diffusivity[species_id] *
-                            (fv->snormal[j] * fv_sens->grad_c[species_id][j] +
-                             normal_sens[j] * fv->grad_c[species_id][j]));
+                local_q +=
+                    (goma_ctx->fem.mp->diffusivity[species_id] *
+                     (goma_ctx->fem.fv->snormal[j] * goma_ctx->fem.fv_sens->grad_c[species_id][j] +
+                      normal_sens[j] * goma_ctx->fem.fv->grad_c[species_id][j]));
 
-                local_qconv += (fv->snormal[j] * ((fv_sens->v[j] - x_dot[j]) * fv->c[species_id] +
-                                                  (fv->v[j] - x_dot[j]) * fv_sens->c[species_id]) +
-                                normal_sens[j] * (fv->v[j] - x_dot[j]) * fv->c[species_id]);
+                local_qconv +=
+                    (goma_ctx->fem.fv->snormal[j] * ((goma_ctx->fem.fv_sens->v[j] - x_dot[j]) *
+                                                         goma_ctx->fem.fv->c[species_id] +
+                                                     (goma_ctx->fem.fv->v[j] - x_dot[j]) *
+                                                         goma_ctx->fem.fv_sens->c[species_id]) +
+                     normal_sens[j] * (goma_ctx->fem.fv->v[j] - x_dot[j]) *
+                         goma_ctx->fem.fv->c[species_id]);
               }
               local_flux += weight * det * local_q;
               local_flux_conv += weight * det * local_qconv;
               break;
 
             case TORQUE:
-              if (pd->CoordinateSystem == PROJECTED_CARTESIAN ||
-                  pd->CoordinateSystem == CARTESIAN_2pt5D)
+              if (goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+                  goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D)
                 GOMA_EH(
                     GOMA_ERROR,
                     "TORQUE has not been updated for the PROJECTED_CARTESIAN coordinate system.");
 
-              if (pd->CoordinateSystem == SWIRLING || pd->CoordinateSystem == CYLINDRICAL) {
+              if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+                  goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL) {
                 for (a = 0; a < WIM; a++) {
                   for (b = 0; b < WIM; b++) {
                     /*
@@ -6584,39 +6915,42 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                      * the h3 factor has been incorporated already into sdet
                      * the moment arm is incorporated into sideset.
                      */
-                    local_q += e_theta[a] * ((fv->x[1] * (vs_sens[a][b] + ves_sens[a][b]) +
-                                              fv_sens->x[1] * (vs[a][b] + ves[a][b])) *
-                                                 fv->snormal[b] +
-                                             normal_sens[b] * (fv->x[1] * (vs[a][b] + ves[a][b])));
+                    local_q += e_theta[a] *
+                               ((goma_ctx->fem.fv->x[1] * (vs_sens[a][b] + ves_sens[a][b]) +
+                                 goma_ctx->fem.fv_sens->x[1] * (vs[a][b] + ves[a][b])) *
+                                    goma_ctx->fem.fv->snormal[b] +
+                                normal_sens[b] * (goma_ctx->fem.fv->x[1] * (vs[a][b] + ves[a][b])));
                   }
                 }
                 local_flux += weight * det * local_q;
-              } else if (pd->CoordinateSystem == CARTESIAN) {
+              } else if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN) {
                 if (WIM == 2) {
-                  fv->x[2] = 0.0;
-                  fv->snormal[2] = 0.0;
+                  goma_ctx->fem.fv->x[2] = 0.0;
+                  goma_ctx->fem.fv->snormal[2] = 0.0;
                   normal_sens[2] = 0.0;
                   vs[0][2] = 0.0;
                   vs[1][2] = 0.0;
                   vs[2][0] = 0.0;
                   vs[2][1] = 0.0;
-                  vs[2][2] = -fv->P;
+                  vs[2][2] = -goma_ctx->fem.fv->P;
                 }
                 for (a = 0; a < DIM; a++) {
                   Tract[a] = 0.0;
                   Tract_sens[a] = 0.0;
                   for (b = 0; b < DIM; b++) {
-                    Tract[a] += (vs[a][b] + ves[a][b]) * fv->snormal[b];
-                    Tract_sens[a] += (vs_sens[a][b] + ves_sens[a][b]) * fv->snormal[b] +
-                                     normal_sens[b] * (vs[a][b] + ves[a][b]);
+                    Tract[a] += (vs[a][b] + ves[a][b]) * goma_ctx->fem.fv->snormal[b];
+                    Tract_sens[a] +=
+                        (vs_sens[a][b] + ves_sens[a][b]) * goma_ctx->fem.fv->snormal[b] +
+                        normal_sens[b] * (vs[a][b] + ves[a][b]);
                   }
                 }
 
                 for (a = 0; a < DIM; a++) {
                   for (b = 0; b < DIM; b++) {
                     for (c = 0; c < DIM; c++) {
-                      local_Torque[a] += (permute(b, c, a) *
-                                          (fv->x[b] * Tract_sens[c] + fv_sens->x[b] * Tract[c]));
+                      local_Torque[a] +=
+                          (permute(b, c, a) * (goma_ctx->fem.fv->x[b] * Tract_sens[c] +
+                                               goma_ctx->fem.fv_sens->x[b] * Tract[c]));
                     }
                   }
                 }
@@ -6631,20 +6965,23 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               break;
 
             case FORCE_NORMAL:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < WIM; a++) {
                   for (b = 0; b < WIM; b++) {
-                    local_q += (fv->snormal[a] * (vs_sens[a][b] + ves_sens[a][b]) * fv->snormal[b] +
-                                (vs[a][b] + ves[a][b]) * (fv->snormal[a] * normal_sens[b] +
-                                                          normal_sens[a] * fv->snormal[b]));
+                    local_q +=
+                        (goma_ctx->fem.fv->snormal[a] * (vs_sens[a][b] + ves_sens[a][b]) *
+                             goma_ctx->fem.fv->snormal[b] +
+                         (vs[a][b] + ves[a][b]) * (goma_ctx->fem.fv->snormal[a] * normal_sens[b] +
+                                                   normal_sens[a] * goma_ctx->fem.fv->snormal[b]));
                     local_qconv +=
                         rho *
-                        (fv->snormal[a] *
-                             ((fv->v[a] - x_dot[a]) * fv_sens->v[b] +
-                              (fv_sens->v[a] - x_dot[a]) * fv->v[b]) *
-                             fv->snormal[b] +
-                         (fv->v[a] - x_dot[a]) * fv->v[b] *
-                             (fv->snormal[a] * normal_sens[b] + normal_sens[a] * fv->snormal[b]));
+                        (goma_ctx->fem.fv->snormal[a] *
+                             ((goma_ctx->fem.fv->v[a] - x_dot[a]) * goma_ctx->fem.fv_sens->v[b] +
+                              (goma_ctx->fem.fv_sens->v[a] - x_dot[a]) * goma_ctx->fem.fv->v[b]) *
+                             goma_ctx->fem.fv->snormal[b] +
+                         (goma_ctx->fem.fv->v[a] - x_dot[a]) * goma_ctx->fem.fv->v[b] *
+                             (goma_ctx->fem.fv->snormal[a] * normal_sens[b] +
+                              normal_sens[a] * goma_ctx->fem.fv->snormal[b]));
                   }
                 }
                 local_flux += weight * det * local_q;
@@ -6653,9 +6990,10 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
                 for (a = 0; a < VIM; a++) {
                   for (b = 0; b < VIM; b++) {
-                    local_q += (fv->snormal[a] * TT_sens[a][b] * fv->snormal[b] +
-                                TT[a][b] * (fv->snormal[a] * normal_sens[b] +
-                                            normal_sens[a] * fv->snormal[b]));
+                    local_q += (goma_ctx->fem.fv->snormal[a] * TT_sens[a][b] *
+                                    goma_ctx->fem.fv->snormal[b] +
+                                TT[a][b] * (goma_ctx->fem.fv->snormal[a] * normal_sens[b] +
+                                            normal_sens[a] * goma_ctx->fem.fv->snormal[b]));
                   }
                 }
                 local_flux += weight * det * local_q;
@@ -6664,15 +7002,16 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
             case FORCE_TANGENT1:
 
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < WIM; a++) {
                   for (b = 0; b < WIM; b++) {
-                    local_q +=
-                        (fv->stangent[0][a] * (vs_sens[a][b] + ves_sens[a][b]) * fv->snormal[b]);
-                    local_qconv += (rho * fv->stangent[0][a] *
-                                    ((fv->v[a] - x_dot[a]) * fv_sens->v[b] +
-                                     (fv_sens->v[a] - x_dot[a]) * fv->v[b]) *
-                                    fv->snormal[b]);
+                    local_q += (goma_ctx->fem.fv->stangent[0][a] *
+                                (vs_sens[a][b] + ves_sens[a][b]) * goma_ctx->fem.fv->snormal[b]);
+                    local_qconv +=
+                        (rho * goma_ctx->fem.fv->stangent[0][a] *
+                         ((goma_ctx->fem.fv->v[a] - x_dot[a]) * goma_ctx->fem.fv_sens->v[b] +
+                          (goma_ctx->fem.fv_sens->v[a] - x_dot[a]) * goma_ctx->fem.fv->v[b]) *
+                         goma_ctx->fem.fv->snormal[b]);
                   }
                 }
                 local_flux += weight * det * local_q;
@@ -6681,7 +7020,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
                 for (a = 0; a < VIM; a++) {
                   for (b = 0; b < VIM; b++) {
-                    local_q += (fv->stangent[0][a] * TT_sens[a][b] * fv->snormal[b]);
+                    local_q += (goma_ctx->fem.fv->stangent[0][a] * TT_sens[a][b] *
+                                goma_ctx->fem.fv->snormal[b]);
                   }
                 }
                 local_flux += weight * det * local_q;
@@ -6690,16 +7030,18 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
             case FORCE_TANGENT2:
 
-              if (cr->MeshMotion == ARBITRARY) {
-                if (pd->Num_Dim == 3 || upd->CoordinateSystem == SWIRLING) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
+                if (goma_ctx->fem.pd->Num_Dim == 3 ||
+                    goma_ctx->fem.upd->CoordinateSystem == SWIRLING) {
                   for (a = 0; a < WIM; a++) {
                     for (b = 0; b < WIM; b++) {
-                      local_q +=
-                          (fv->stangent[1][a] * (vs_sens[a][b] + ves_sens[a][b]) * fv->snormal[b]);
-                      local_qconv += (rho * fv->stangent[1][a] *
-                                      ((fv->v[a] - x_dot[a]) * fv_sens->v[b] +
-                                       (fv_sens->v[a] - x_dot[a]) * fv->v[b]) *
-                                      fv->snormal[b]);
+                      local_q += (goma_ctx->fem.fv->stangent[1][a] *
+                                  (vs_sens[a][b] + ves_sens[a][b]) * goma_ctx->fem.fv->snormal[b]);
+                      local_qconv +=
+                          (rho * goma_ctx->fem.fv->stangent[1][a] *
+                           ((goma_ctx->fem.fv->v[a] - x_dot[a]) * goma_ctx->fem.fv_sens->v[b] +
+                            (goma_ctx->fem.fv_sens->v[a] - x_dot[a]) * goma_ctx->fem.fv->v[b]) *
+                           goma_ctx->fem.fv->snormal[b]);
                     }
                   }
                   local_flux += weight * det * local_q;
@@ -6711,7 +7053,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
                 for (a = 0; a < VIM; a++) {
                   for (b = 0; b < VIM; b++) {
-                    local_q += (fv->stangent[1][a] * TT_sens[a][b] * fv->snormal[b]);
+                    local_q += (goma_ctx->fem.fv->stangent[1][a] * TT_sens[a][b] *
+                                goma_ctx->fem.fv->snormal[b]);
                   }
                 }
                 local_flux += weight * det * local_q;
@@ -6719,36 +7062,40 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               break;
 
             case FORCE_X:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < VIM; a++) {
-                  local_q += ((vs_sens[0][a] + ves_sens[0][a]) * fv->snormal[a] +
+                  local_q += ((vs_sens[0][a] + ves_sens[0][a]) * goma_ctx->fem.fv->snormal[a] +
                               normal_sens[a] * (vs[0][a] + ves[0][a]));
 
-                  local_qconv += rho * (((fv->v[0] - x_dot[0]) * fv_sens->v[a] +
-                                         (fv_sens->v[0] - x_dot[0]) * fv->v[a]) *
-                                            fv->snormal[a] +
-                                        normal_sens[a] * (fv->v[0] - x_dot[0]) * fv->v[a]);
+                  local_qconv +=
+                      rho * (((goma_ctx->fem.fv->v[0] - x_dot[0]) * goma_ctx->fem.fv_sens->v[a] +
+                              (goma_ctx->fem.fv_sens->v[0] - x_dot[0]) * goma_ctx->fem.fv->v[a]) *
+                                 goma_ctx->fem.fv->snormal[a] +
+                             normal_sens[a] * (goma_ctx->fem.fv->v[0] - x_dot[0]) *
+                                 goma_ctx->fem.fv->v[a]);
                 }
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT_sens[0][a] * fv->snormal[a] + TT[0][a] * normal_sens[a]);
+                  local_q +=
+                      (TT_sens[0][a] * goma_ctx->fem.fv->snormal[a] + TT[0][a] * normal_sens[a]);
                 }
                 local_flux += weight * det * local_q;
               }
               break;
 
             case FORCE_X_POS:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < VIM; a++) {
-                  local_q += ((vs_sens[0][a] + ves_sens[0][a]) * fv->snormal[a]);
+                  local_q += ((vs_sens[0][a] + ves_sens[0][a]) * goma_ctx->fem.fv->snormal[a]);
 
-                  local_qconv += (rho *
-                                  ((fv->v[0] - x_dot[0]) * fv_sens->v[a] +
-                                   (fv_sens->v[0] - x_dot[0]) * fv->v[a]) *
-                                  fv->snormal[a]);
+                  local_qconv +=
+                      (rho *
+                       ((goma_ctx->fem.fv->v[0] - x_dot[0]) * goma_ctx->fem.fv_sens->v[a] +
+                        (goma_ctx->fem.fv_sens->v[0] - x_dot[0]) * goma_ctx->fem.fv->v[a]) *
+                       goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
                   local_q = 0;
@@ -6758,7 +7105,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT_sens[0][a] * fv->snormal[a]);
+                  local_q += (TT_sens[0][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
                   local_q = 0;
@@ -6768,14 +7115,15 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               break;
 
             case FORCE_X_NEG:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < VIM; a++) {
-                  local_q += ((vs_sens[0][a] + ves_sens[0][a]) * fv->snormal[a]);
+                  local_q += ((vs_sens[0][a] + ves_sens[0][a]) * goma_ctx->fem.fv->snormal[a]);
 
-                  local_qconv += (rho *
-                                  ((fv->v[0] - x_dot[0]) * fv_sens->v[a] +
-                                   (fv_sens->v[0] - x_dot[0]) * fv->v[a]) *
-                                  fv->snormal[a]);
+                  local_qconv +=
+                      (rho *
+                       ((goma_ctx->fem.fv->v[0] - x_dot[0]) * goma_ctx->fem.fv_sens->v[a] +
+                        (goma_ctx->fem.fv_sens->v[0] - x_dot[0]) * goma_ctx->fem.fv->v[a]) *
+                       goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
                   local_q = 0;
@@ -6785,7 +7133,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT_sens[0][a] * fv->snormal[a]);
+                  local_q += (TT_sens[0][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
                   local_q = 0;
@@ -6795,35 +7143,37 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               break;
 
             case FORCE_Y:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < VIM; a++) {
-                  local_q += ((vs_sens[1][a] + ves_sens[1][a]) * fv->snormal[a]);
+                  local_q += ((vs_sens[1][a] + ves_sens[1][a]) * goma_ctx->fem.fv->snormal[a]);
 
-                  local_qconv += (rho *
-                                  ((fv->v[1] - x_dot[1]) * fv_sens->v[a] +
-                                   (fv_sens->v[1] - x_dot[1]) * fv->v[a]) *
-                                  fv->snormal[a]);
+                  local_qconv +=
+                      (rho *
+                       ((goma_ctx->fem.fv->v[1] - x_dot[1]) * goma_ctx->fem.fv_sens->v[a] +
+                        (goma_ctx->fem.fv_sens->v[1] - x_dot[1]) * goma_ctx->fem.fv->v[a]) *
+                       goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT_sens[1][a] * fv->snormal[a]);
+                  local_q += (TT_sens[1][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
               }
               break;
 
             case FORCE_Y_POS:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < VIM; a++) {
-                  local_q += ((vs_sens[1][a] + ves_sens[1][a]) * fv->snormal[a]);
+                  local_q += ((vs_sens[1][a] + ves_sens[1][a]) * goma_ctx->fem.fv->snormal[a]);
 
-                  local_qconv += (rho *
-                                  ((fv->v[1] - x_dot[1]) * fv_sens->v[a] +
-                                   (fv_sens->v[1] - x_dot[1]) * fv->v[a]) *
-                                  fv->snormal[a]);
+                  local_qconv +=
+                      (rho *
+                       ((goma_ctx->fem.fv->v[1] - x_dot[1]) * goma_ctx->fem.fv_sens->v[a] +
+                        (goma_ctx->fem.fv_sens->v[1] - x_dot[1]) * goma_ctx->fem.fv->v[a]) *
+                       goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
                   local_q = 0;
@@ -6833,7 +7183,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT_sens[1][a] * fv->snormal[a]);
+                  local_q += (TT_sens[1][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
                   local_q = 0;
@@ -6843,14 +7193,15 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               break;
 
             case FORCE_Y_NEG:
-              if (cr->MeshMotion == ARBITRARY) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 for (a = 0; a < VIM; a++) {
-                  local_q += ((vs_sens[1][a] + ves_sens[1][a]) * fv->snormal[a]);
+                  local_q += ((vs_sens[1][a] + ves_sens[1][a]) * goma_ctx->fem.fv->snormal[a]);
 
-                  local_qconv += (rho *
-                                  ((fv->v[1] - x_dot[1]) * fv_sens->v[a] +
-                                   (fv_sens->v[1] - x_dot[1]) * fv->v[a]) *
-                                  fv->snormal[a]);
+                  local_qconv +=
+                      (rho *
+                       ((goma_ctx->fem.fv->v[1] - x_dot[1]) * goma_ctx->fem.fv_sens->v[a] +
+                        (goma_ctx->fem.fv_sens->v[1] - x_dot[1]) * goma_ctx->fem.fv->v[a]) *
+                       goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
                   local_q = 0;
@@ -6860,7 +7211,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT_sens[1][a] * fv->snormal[a]);
+                  local_q += (TT_sens[1][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
                   local_q = 0;
@@ -6870,15 +7221,16 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               break;
 
             case FORCE_Z:
-              if (cr->MeshMotion == ARBITRARY) {
-                if (pd->Num_Dim == 3) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
+                if (goma_ctx->fem.pd->Num_Dim == 3) {
                   for (a = 0; a < VIM; a++) {
-                    local_q += ((vs_sens[2][a] + ves_sens[2][a]) * fv->snormal[a]);
+                    local_q += ((vs_sens[2][a] + ves_sens[2][a]) * goma_ctx->fem.fv->snormal[a]);
 
-                    local_qconv += (rho *
-                                    ((fv->v[2] - x_dot[2]) * fv_sens->v[a] +
-                                     (fv_sens->v[2] - x_dot[2]) * fv->v[a]) *
-                                    fv->snormal[a]);
+                    local_qconv +=
+                        (rho *
+                         ((goma_ctx->fem.fv->v[2] - x_dot[2]) * goma_ctx->fem.fv_sens->v[a] +
+                          (goma_ctx->fem.fv_sens->v[2] - x_dot[2]) * goma_ctx->fem.fv->v[a]) *
+                         goma_ctx->fem.fv->snormal[a]);
                   }
                   local_flux += weight * det * local_q;
                   local_flux_conv += weight * det * local_qconv;
@@ -6888,22 +7240,23 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT_sens[2][a] * fv->snormal[a]);
+                  local_q += (TT_sens[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
               }
               break;
 
             case FORCE_Z_POS:
-              if (cr->MeshMotion == ARBITRARY) {
-                if (pd->Num_Dim == 3) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
+                if (goma_ctx->fem.pd->Num_Dim == 3) {
                   for (a = 0; a < VIM; a++) {
-                    local_q += ((vs_sens[2][a] + ves_sens[2][a]) * fv->snormal[a]);
+                    local_q += ((vs_sens[2][a] + ves_sens[2][a]) * goma_ctx->fem.fv->snormal[a]);
 
-                    local_qconv += (rho *
-                                    ((fv->v[2] - x_dot[2]) * fv_sens->v[a] +
-                                     (fv_sens->v[2] - x_dot[2]) * fv->v[a]) *
-                                    fv->snormal[a]);
+                    local_qconv +=
+                        (rho *
+                         ((goma_ctx->fem.fv->v[2] - x_dot[2]) * goma_ctx->fem.fv_sens->v[a] +
+                          (goma_ctx->fem.fv_sens->v[2] - x_dot[2]) * goma_ctx->fem.fv->v[a]) *
+                         goma_ctx->fem.fv->snormal[a]);
                   }
                   if (local_q < 0) {
                     local_q = 0;
@@ -6916,7 +7269,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT_sens[2][a] * fv->snormal[a]);
+                  local_q += (TT_sens[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
                   local_q = 0;
@@ -6926,15 +7279,16 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               break;
 
             case FORCE_Z_NEG:
-              if (cr->MeshMotion == ARBITRARY) {
-                if (pd->Num_Dim == 3) {
+              if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
+                if (goma_ctx->fem.pd->Num_Dim == 3) {
                   for (a = 0; a < VIM; a++) {
-                    local_q += ((vs_sens[2][a] + ves_sens[2][a]) * fv->snormal[a]);
+                    local_q += ((vs_sens[2][a] + ves_sens[2][a]) * goma_ctx->fem.fv->snormal[a]);
 
-                    local_qconv += (rho *
-                                    ((fv->v[2] - x_dot[2]) * fv_sens->v[a] +
-                                     (fv_sens->v[2] - x_dot[2]) * fv->v[a]) *
-                                    fv->snormal[a]);
+                    local_qconv +=
+                        (rho *
+                         ((goma_ctx->fem.fv->v[2] - x_dot[2]) * goma_ctx->fem.fv_sens->v[a] +
+                          (goma_ctx->fem.fv_sens->v[2] - x_dot[2]) * goma_ctx->fem.fv->v[a]) *
+                         goma_ctx->fem.fv->snormal[a]);
                   }
                   if (local_q > 0) {
                     local_q = 0;
@@ -6947,7 +7301,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
                 for (a = 0; a < VIM; a++) {
-                  local_q += (TT_sens[2][a] * fv->snormal[a]);
+                  local_q += (TT_sens[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
                   local_q = 0;
@@ -6967,8 +7321,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             if (profile_flag && print_flag) {
               FILE *jfp = 0;
               if ((filenm != NULL) && ((jfp = fopen(filenm, "a")) != NULL)) {
-                fprintf(jfp, " %g  %g  %g  %g  %g\n", fv->x[0], fv->x[1], fv->x[2], local_q,
-                        local_qconv);
+                fprintf(jfp, " %g  %g  %g  %g  %g\n", goma_ctx->fem.fv->x[0],
+                        goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], local_q, local_qconv);
                 fflush(jfp);
               }
               fclose(jfp);
@@ -7023,22 +7377,23 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               err = load_elem_dofptr(corner_elem, exo, x, x_sens_p[vector_id], xdot, xdot, 0);
               GOMA_EH(err, "load_elem_dofptr");
 
-              err = bf_mp_init(pd);
+              err = bf_mp_init(goma_ctx->fem.pd);
               GOMA_EH(err, "bf_mp_init");
 
-              iconnect_ptr = ei[pg->imtrx]->iconnect_ptr;
-              ielem_type = ei[pg->imtrx]->ielem_type;
+              iconnect_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr;
+              ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type;
               ip_total = elem_info(NQUAD_SURF, ielem_type);
-              num_local_nodes = ei[pg->imtrx]->num_local_nodes;
-              ielem_dim = ei[pg->imtrx]->ielem_dim;
+              num_local_nodes = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
+              ielem_dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
 
-              id_side = find_id_side(ei[pg->imtrx]->ielem, num_nodes_on_side,
-                                     &exo->ss_node_list[sset_id][num_nodes_on_side * i],
-                                     id_local_elem_coord, exo);
+              id_side = find_id_side(
+                  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, num_nodes_on_side,
+                  &exo->ss_node_list[sset_id][num_nodes_on_side * i], id_local_elem_coord, exo);
 
-              find_nodal_stu(local_node, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
+              find_nodal_stu(local_node, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, xi,
+                             xi + 1, xi + 2);
 
-              err = load_basis_functions(xi, bfd);
+              err = load_basis_functions(xi, goma_ctx->fem.bfd);
               GOMA_EH(err, "problem from load_basis_functions");
 
               err = beer_belly();
@@ -7057,8 +7412,10 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               GOMA_EH(err, "load_bf_mesh_derivs");
 
               surface_determinant_and_normal(
-                  corner_elem, exo->elem_node_pntr[corner_elem], ei[pg->imtrx]->num_local_nodes,
-                  ei[pg->imtrx]->ielem_dim - 1, id_side, num_nodes_on_side, id_local_elem_coord);
+                  corner_elem, exo->elem_node_pntr[corner_elem],
+                  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
+                  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim - 1, id_side,
+                  num_nodes_on_side, id_local_elem_coord);
               err = load_fv_grads();
               GOMA_EH(err, "load_fv_grads");
 
@@ -7072,7 +7429,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 calc_surf_tangent(corner_elem, iconnect_ptr, num_local_nodes, ielem_dim - 1,
                                   num_nodes_on_side, id_local_elem_coord);
               }
-              dim = pd_glob[0]->Num_Dim;
+              dim = goma_ctx->fem.pd_glob[0]->Num_Dim;
 
               /*  normal and tangent vector sensitivities   */
               memset(normal_sens, 0, sizeof(dbl) * MAX_PDIM);
@@ -7080,15 +7437,18 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               for (a = 0; a < ielem_dim; a++) {
                 for (b = 0; b < ielem_dim; b++) {
                   var = MESH_DISPLACEMENT1 + b;
-                  if (pd->v[pg->imtrx][var]) {
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                      normal_sens[a] +=
-                          fv->dsnormal_dx[a][b][j] * bf[var]->phi[j] * (*esp_old->d[b][j]);
-                      tangent_sens[0][a] +=
-                          fv->dstangent_dx[0][a][b][j] * bf[var]->phi[j] * (*esp_old->d[b][j]);
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                      normal_sens[a] += goma_ctx->fem.fv->dsnormal_dx[a][b][j] *
+                                        goma_ctx->fem.bf[var]->phi[j] *
+                                        (*goma_ctx->fem.esp_old->d[b][j]);
+                      tangent_sens[0][a] += goma_ctx->fem.fv->dstangent_dx[0][a][b][j] *
+                                            goma_ctx->fem.bf[var]->phi[j] *
+                                            (*goma_ctx->fem.esp_old->d[b][j]);
                       if (ielem_dim != 3) {
-                        tangent_sens[1][a] +=
-                            fv->dstangent_dx[1][a][b][j] * bf[var]->phi[j] * (*esp_old->d[b][j]);
+                        tangent_sens[1][a] += goma_ctx->fem.fv->dstangent_dx[1][a][b][j] *
+                                              goma_ctx->fem.bf[var]->phi[j] *
+                                              (*goma_ctx->fem.esp_old->d[b][j]);
                       }
                     }
                   }
@@ -7097,22 +7457,22 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               /*
                * load surface tension for variable models
                */
-              if (mp->SurfaceTensionModel == CONSTANT) {
+              if (goma_ctx->fem.mp->SurfaceTensionModel == CONSTANT) {
                 dsigmadT = 0.0;
                 for (a = 0; a < MAX_CONC; a++) {
                   dsigmadC[a] = 0.0;
                 }
               }
               sigma_sens = 0.0;
-              if (mp->SurfaceTensionModel != CONSTANT) {
+              if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
                 load_surface_tension(dsigma_dx);
               }
-              if (mp->SurfaceTensionModel == USER) {
-                dsigmadT = mp->d_surface_tension[TEMPERATURE];
-                sigma_sens = dsigmadT * fv_sens->T;
+              if (goma_ctx->fem.mp->SurfaceTensionModel == USER) {
+                dsigmadT = goma_ctx->fem.mp->d_surface_tension[TEMPERATURE];
+                sigma_sens = dsigmadT * goma_ctx->fem.fv_sens->T;
                 for (a = 0; a < MAX_CONC; a++) {
-                  dsigmadC[a] = mp->d_surface_tension[MAX_VARIABLE_TYPES + a];
-                  sigma_sens += dsigmadC[a] * fv_sens->c[a];
+                  dsigmadC[a] = goma_ctx->fem.mp->d_surface_tension[MAX_VARIABLE_TYPES + a];
+                  sigma_sens += dsigmadC[a] * goma_ctx->fem.fv_sens->c[a];
                 }
               }
               switch (quantity) {
@@ -7146,16 +7506,19 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                                                                                  ? 2
                                                                                  : -1)))))))));
 
-                if (cr->MeshMotion == ARBITRARY) {
-                  if (pd->CoordinateSystem == CARTESIAN) {
-                    local_flux += sign * (mp->surface_tension * tangent_sens[0][dir] +
-                                          sigma_sens * fv->stangent[0][dir]);
-                  } else if (pd->CoordinateSystem == SWIRLING ||
-                             pd->CoordinateSystem == CYLINDRICAL) {
-                    local_flux += 2 * M_PIE * sign *
-                                  (fv_sens->x[1] * mp->surface_tension * fv->stangent[0][dir] +
-                                   fv->x[1] * sigma_sens * fv->stangent[0][dir] +
-                                   fv->x[1] * mp->surface_tension * tangent_sens[0][dir]);
+                if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
+                  if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN) {
+                    local_flux += sign * (goma_ctx->fem.mp->surface_tension * tangent_sens[0][dir] +
+                                          sigma_sens * goma_ctx->fem.fv->stangent[0][dir]);
+                  } else if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+                             goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL) {
+                    local_flux +=
+                        2 * M_PIE * sign *
+                        (goma_ctx->fem.fv_sens->x[1] * goma_ctx->fem.mp->surface_tension *
+                             goma_ctx->fem.fv->stangent[0][dir] +
+                         goma_ctx->fem.fv->x[1] * sigma_sens * goma_ctx->fem.fv->stangent[0][dir] +
+                         goma_ctx->fem.fv->x[1] * goma_ctx->fem.mp->surface_tension *
+                             tangent_sens[0][dir]);
                   } else {
                     GOMA_EH(GOMA_ERROR, "Point force has not been updated for the "
                                         "PROJECTED_CARTESIAN coordinate system.");
@@ -7209,7 +7572,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
       fclose(jfp);
     }
   } /*  end of print_flag conditional */
-  af->Assemble_Jacobian = Jac_state;
+  goma_ctx->fem.af->Assemble_Jacobian = Jac_state;
   return (local_flux + local_flux_conv); /* failsafe default? */
 }
 /***  end of evaluate_flux_sens  **/
@@ -7268,18 +7631,18 @@ static int load_fv_sens(void) {
   /* load eqn and variable number in tensor form */
   stress_eqn_pointer(v_s);
 
-  dim = ei[pg->imtrx]->ielem_dim;
+  dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
 
   /*
    * Temperature...
    */
 
   v = TEMPERATURE;
-  fv_sens->T = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->T = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->T += *esp_old->T[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->T += *goma_ctx->fem.esp_old->T[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7288,11 +7651,11 @@ static int load_fv_sens(void) {
    */
 
   v = FILL;
-  fv_sens->F = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->F = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->F += *esp_old->F[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->F += *goma_ctx->fem.esp_old->F[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7301,11 +7664,11 @@ static int load_fv_sens(void) {
    */
 
   v = VOLTAGE;
-  fv_sens->V = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->V = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->V += *esp_old->V[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->V += *goma_ctx->fem.esp_old->V[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7314,11 +7677,11 @@ static int load_fv_sens(void) {
    */
 
   v = SURF_CHARGE;
-  fv_sens->qs = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->qs = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->qs += *esp_old->qs[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->qs += *goma_ctx->fem.esp_old->qs[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7327,20 +7690,21 @@ static int load_fv_sens(void) {
    */
 
   v = SHELL_CURVATURE;
-  fv_sens->sh_K = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_K = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_K += *esp_old->sh_K[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_K += *goma_ctx->fem.esp_old->sh_K[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_CURVATURE2;
-  fv_sens->sh_K2 = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_K2 = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_K2 += *esp_old->sh_K2[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_K2 +=
+          *goma_ctx->fem.esp_old->sh_K2[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7349,11 +7713,12 @@ static int load_fv_sens(void) {
    */
 
   v = SHELL_TENSION;
-  fv_sens->sh_tens = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_tens = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_tens += *esp_old->sh_tens[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_tens +=
+          *goma_ctx->fem.esp_old->sh_tens[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7362,11 +7727,11 @@ static int load_fv_sens(void) {
    */
 
   v = SHELL_X;
-  fv_sens->sh_x = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_x = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_x += *esp_old->sh_x[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_x += *goma_ctx->fem.esp_old->sh_x[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7375,11 +7740,11 @@ static int load_fv_sens(void) {
    */
 
   v = SHELL_Y;
-  fv_sens->sh_y = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_y = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_y += *esp_old->sh_y[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_y += *goma_ctx->fem.esp_old->sh_y[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7388,11 +7753,11 @@ static int load_fv_sens(void) {
    */
 
   v = SHELL_USER;
-  fv_sens->sh_u = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_u = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_u += *esp_old->sh_u[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_u += *goma_ctx->fem.esp_old->sh_u[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7404,11 +7769,12 @@ static int load_fv_sens(void) {
   for (p = 0; p < velodim - 1; p++) {
 
     v = SHELL_ANGLE1 + p;
-    fv_sens->sh_ang[p] = 0.;
-    if (pd->v[pg->imtrx][v]) {
-      dofs = ei[pg->imtrx]->dof[v];
+    goma_ctx->fem.fv_sens->sh_ang[p] = 0.;
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
       for (i = 0; i < dofs; i++) {
-        fv_sens->sh_ang[p] += *esp_old->sh_ang[p][i] * bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->sh_ang[p] +=
+            *goma_ctx->fem.esp_old->sh_ang[p][i] * goma_ctx->fem.bf[v]->phi[i];
       }
     }
   }
@@ -7418,38 +7784,42 @@ static int load_fv_sens(void) {
    */
 
   v = EDDY_NU;
-  fv_sens->eddy_nu = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->eddy_nu = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->eddy_nu += *esp_old->eddy_nu[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->eddy_nu +=
+          *goma_ctx->fem.esp_old->eddy_nu[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = TURB_K;
-  fv_sens->turb_k = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->turb_k = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->turb_k += *esp_old->turb_k[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->turb_k +=
+          *goma_ctx->fem.esp_old->turb_k[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = TURB_OMEGA;
-  fv_sens->turb_omega = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->turb_omega = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->turb_omega += *esp_old->turb_omega[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->turb_omega +=
+          *goma_ctx->fem.esp_old->turb_omega[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = FILM_HEIGHT;
-  fv_sens->film_height = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->film_height = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->film_height += *esp_old->film_height[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->film_height +=
+          *goma_ctx->fem.esp_old->film_height[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7458,301 +7828,327 @@ static int load_fv_sens(void) {
    */
 
   v = ACOUS_PREAL;
-  fv_sens->apr = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->apr = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->apr += *esp_old->apr[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->apr += *goma_ctx->fem.esp_old->apr[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
   v = ACOUS_PIMAG;
-  fv_sens->api = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->api = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->api += *esp_old->api[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->api += *goma_ctx->fem.esp_old->api[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = ACOUS_REYN_STRESS;
-  fv_sens->ars = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->ars = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->ars += *esp_old->ars[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->ars += *goma_ctx->fem.esp_old->ars[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_BDYVELO;
-  fv_sens->sh_bv = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_bv = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_bv += *esp_old->sh_bv[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_bv +=
+          *goma_ctx->fem.esp_old->sh_bv[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_LUBP;
-  fv_sens->sh_p = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_p = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_p += *esp_old->sh_p[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_p += *goma_ctx->fem.esp_old->sh_p[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = LUBP;
-  fv_sens->lubp = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->lubp = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->lubp += *esp_old->lubp[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->lubp += *goma_ctx->fem.esp_old->lubp[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = LUBP_2;
-  fv_sens->lubp_2 = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->lubp_2 = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->lubp_2 += *esp_old->lubp_2[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->lubp_2 +=
+          *goma_ctx->fem.esp_old->lubp_2[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_FILMP;
-  fv_sens->sh_fp = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_fp = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_fp += *esp_old->sh_fp[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_fp +=
+          *goma_ctx->fem.esp_old->sh_fp[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_FILMH;
-  fv_sens->sh_fh = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_fh = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_fh += *esp_old->sh_fh[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_fh +=
+          *goma_ctx->fem.esp_old->sh_fh[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_PARTC;
-  fv_sens->sh_pc = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_pc = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_pc += *esp_old->sh_pc[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_pc +=
+          *goma_ctx->fem.esp_old->sh_pc[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_SAT_CLOSED;
-  fv_sens->sh_sat_closed = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_sat_closed = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_sat_closed += *esp_old->sh_sat_closed[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_sat_closed +=
+          *goma_ctx->fem.esp_old->sh_sat_closed[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = LIGHT_INTP;
-  fv_sens->poynt[0] = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->poynt[0] = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->poynt[0] += *esp_old->poynt[0][i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->poynt[0] +=
+          *goma_ctx->fem.esp_old->poynt[0][i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = LIGHT_INTM;
-  fv_sens->poynt[1] = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->poynt[1] = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->poynt[1] += *esp_old->poynt[1][i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->poynt[1] +=
+          *goma_ctx->fem.esp_old->poynt[1][i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = LIGHT_INTD;
-  fv_sens->poynt[2] = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->poynt[2] = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->poynt[2] += *esp_old->poynt[2][i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->poynt[2] +=
+          *goma_ctx->fem.esp_old->poynt[2][i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = MOMENT0;
-  if (pd->v[pg->imtrx][v]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     for (w = 0; w < MAX_MOMENTS; w++) {
-      dofs = ei[pg->imtrx]->dof[v];
-      fv_sens->moment[w] = 0.0;
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+      goma_ctx->fem.fv_sens->moment[w] = 0.0;
       for (i = 0; i < dofs; i++) {
-        fv_sens->moment[w] += *esp_old->moment[w][i] * bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->moment[w] +=
+            *goma_ctx->fem.esp_old->moment[w][i] * goma_ctx->fem.bf[v]->phi[i];
       }
     }
   } else {
     for (w = 0; w < MAX_MOMENTS; w++) {
-      fv_sens->moment[w] = 0.0;
+      goma_ctx->fem.fv_sens->moment[w] = 0.0;
     }
   }
   v = RESTIME;
-  fv_sens->restime = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->restime = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->restime += *esp_old->restime[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->restime +=
+          *goma_ctx->fem.esp_old->restime[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = DENSITY_EQN;
-  fv_sens->rho = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->rho = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->rho += *esp_old->rho[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->rho += *goma_ctx->fem.esp_old->rho[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
   v = SHELL_PRESS_OPEN;
-  fv_sens->sh_p_open = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_p_open = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_p_open += *esp_old->sh_p_open[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_p_open +=
+          *goma_ctx->fem.esp_old->sh_p_open[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_PRESS_OPEN_2;
-  fv_sens->sh_p_open_2 = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_p_open_2 = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_p_open_2 += *esp_old->sh_p_open_2[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_p_open_2 +=
+          *goma_ctx->fem.esp_old->sh_p_open_2[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_SAT_1;
-  fv_sens->sh_sat_1 = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_sat_1 = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_sat_1 += *esp_old->sh_sat_1[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_sat_1 +=
+          *goma_ctx->fem.esp_old->sh_sat_1[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_SAT_2;
-  fv_sens->sh_sat_2 = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_sat_2 = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_sat_2 += *esp_old->sh_sat_2[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_sat_2 +=
+          *goma_ctx->fem.esp_old->sh_sat_2[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_SAT_3;
-  fv_sens->sh_sat_3 = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_sat_3 = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_sat_3 += *esp_old->sh_sat_3[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_sat_3 +=
+          *goma_ctx->fem.esp_old->sh_sat_3[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_TEMPERATURE;
-  fv_sens->sh_t = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_t = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_t += *esp_old->sh_t[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_t += *goma_ctx->fem.esp_old->sh_t[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_DELTAH;
-  fv_sens->sh_dh = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_dh = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_dh += *esp_old->sh_dh[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_dh +=
+          *goma_ctx->fem.esp_old->sh_dh[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_LUB_CURV;
-  fv_sens->sh_l_curv = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_l_curv = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_l_curv += *esp_old->sh_l_curv[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_l_curv +=
+          *goma_ctx->fem.esp_old->sh_l_curv[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_LUB_CURV_2;
-  fv_sens->sh_l_curv_2 = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_l_curv_2 = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_l_curv_2 += *esp_old->sh_l_curv_2[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_l_curv_2 +=
+          *goma_ctx->fem.esp_old->sh_l_curv_2[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_SAT_GASN;
-  fv_sens->sh_sat_gasn = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_sat_gasn = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_sat_gasn += *esp_old->sh_sat_gasn[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_sat_gasn +=
+          *goma_ctx->fem.esp_old->sh_sat_gasn[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
   v = POR_SINK_MASS;
-  fv_sens->sink_mass = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sink_mass = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sink_mass += *esp_old->sink_mass[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sink_mass +=
+          *goma_ctx->fem.esp_old->sink_mass[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_SHEAR_TOP;
-  fv_sens->sh_shear_top = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_shear_top = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_shear_top += *esp_old->sh_shear_top[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_shear_top +=
+          *goma_ctx->fem.esp_old->sh_shear_top[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_SHEAR_BOT;
-  fv_sens->sh_shear_bot = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_shear_bot = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_shear_bot += *esp_old->sh_shear_bot[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_shear_bot +=
+          *goma_ctx->fem.esp_old->sh_shear_bot[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = SHELL_CROSS_SHEAR;
-  fv_sens->sh_cross_shear = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->sh_cross_shear = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->sh_cross_shear += *esp_old->sh_cross_shear[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->sh_cross_shear +=
+          *goma_ctx->fem.esp_old->sh_cross_shear[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = MAX_STRAIN;
-  fv_sens->max_strain = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->max_strain = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->max_strain += *esp_old->max_strain[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->max_strain +=
+          *goma_ctx->fem.esp_old->max_strain[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = CUR_STRAIN;
-  fv_sens->cur_strain = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->cur_strain = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->cur_strain += *esp_old->cur_strain[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->cur_strain +=
+          *goma_ctx->fem.esp_old->cur_strain[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7761,11 +8157,11 @@ static int load_fv_sens(void) {
    */
 
   v = PRESSURE;
-  fv_sens->P = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->P = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->P += *esp_old->P[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->P += *goma_ctx->fem.esp_old->P[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7780,19 +8176,21 @@ static int load_fv_sens(void) {
    */
 
   for (p = dim; p < DIM; p++) {
-    fv_sens->x[p] = 0.;
-    fv_sens->d[p] = 0.;
+    goma_ctx->fem.fv_sens->x[p] = 0.;
+    goma_ctx->fem.fv_sens->d[p] = 0.;
   }
 
   for (p = 0; p < dim; p++) {
     v = MESH_DISPLACEMENT1 + p;
-    if (pd->v[pg->imtrx][v]) {
-      dofs = ei[pg->imtrx]->dof[v];
-      fv_sens->x[p] = 0.;
-      fv_sens->d[p] = 0.;
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+      goma_ctx->fem.fv_sens->x[p] = 0.;
+      goma_ctx->fem.fv_sens->d[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->d[p] += *esp_old->d[p][i] * bf[v]->phi[i];
-        fv_sens->x[p] += *esp_old->d[p][i] * bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->d[p] +=
+            *goma_ctx->fem.esp_old->d[p][i] * goma_ctx->fem.bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->x[p] +=
+            *goma_ctx->fem.esp_old->d[p][i] * goma_ctx->fem.bf[v]->phi[i];
       }
     }
   }
@@ -7803,21 +8201,22 @@ static int load_fv_sens(void) {
    */
 
   for (p = dim; p < DIM; p++) {
-    fv_sens->d_rs[p] = 0.;
+    goma_ctx->fem.fv_sens->d_rs[p] = 0.;
   }
 
   for (p = 0; p < dim; p++) {
     v = SOLID_DISPLACEMENT1 + p;
-    if (pd->v[pg->imtrx][v]) {
-      dofs = ei[pg->imtrx]->dof[v];
-      fv_sens->d_rs[p] = 0.;
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+      goma_ctx->fem.fv_sens->d_rs[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->d_rs[p] += *esp_old->d_rs[p][i] * bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->d_rs[p] +=
+            *goma_ctx->fem.esp_old->d_rs[p][i] * goma_ctx->fem.bf[v]->phi[i];
       }
     }
   }
 
-  status = load_coordinate_scales(pd->CoordinateSystem, fv);
+  status = load_coordinate_scales(goma_ctx->fem.pd->CoordinateSystem, goma_ctx->fem.fv);
   GOMA_EH(status, "load_coordinate_scales(fv)");
 
   /*
@@ -7825,27 +8224,29 @@ static int load_fv_sens(void) {
    */
 
   velodim = dim; /* Later, this might include v_theta... */
-  if (pd->CoordinateSystem == SWIRLING || pd->CoordinateSystem == PROJECTED_CARTESIAN ||
-      pd->CoordinateSystem == CARTESIAN_2pt5D)
+  if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+      goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+      goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D)
     velodim = dim + 1; /* Later is Now!  Woo!!! */
 
   /*
    * Default: all velocities are zero...
    */
   for (p = velodim; p < DIM; p++) {
-    fv_sens->v[p] = 0.;
+    goma_ctx->fem.fv_sens->v[p] = 0.;
   }
 
   for (p = 0; p < velodim; p++) {
     v = VELOCITY1 + p;
-    if (pd->v[pg->imtrx][v]) {
-      dofs = ei[pg->imtrx]->dof[v];
-      fv_sens->v[p] = 0.;
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+      goma_ctx->fem.fv_sens->v[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->v[p] += *esp_old->v[p][i] * bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->v[p] +=
+            *goma_ctx->fem.esp_old->v[p][i] * goma_ctx->fem.bf[v]->phi[i];
       }
     } else {
-      fv_sens->v[p] = 0.;
+      goma_ctx->fem.fv_sens->v[p] = 0.;
     }
   }
 
@@ -7856,11 +8257,12 @@ static int load_fv_sens(void) {
   for (p = 0; p < velodim; p++) {
 
     v = PVELOCITY1 + p;
-    fv_sens->pv[p] = 0.;
-    if (pd->v[pg->imtrx][v]) {
-      dofs = ei[pg->imtrx]->dof[v];
+    goma_ctx->fem.fv_sens->pv[p] = 0.;
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
       for (i = 0; i < dofs; i++) {
-        fv_sens->pv[p] += *esp_old->pv[p][i] * bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->pv[p] +=
+            *goma_ctx->fem.esp_old->pv[p][i] * goma_ctx->fem.bf[v]->phi[i];
       }
     }
   }
@@ -7870,11 +8272,12 @@ static int load_fv_sens(void) {
    */
 
   v = EXT_VELOCITY;
-  fv_sens->ext_v = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->ext_v = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->ext_v += *esp_old->ext_v[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->ext_v +=
+          *goma_ctx->fem.esp_old->ext_v[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7885,11 +8288,12 @@ static int load_fv_sens(void) {
   for (p = 0; p < velodim; p++) {
 
     v = NORMAL1 + p;
-    fv_sens->n[p] = 0.;
-    if (pd->v[pg->imtrx][v]) {
-      dofs = ei[pg->imtrx]->dof[v];
+    goma_ctx->fem.fv_sens->n[p] = 0.;
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
       for (i = 0; i < dofs; i++) {
-        fv_sens->n[p] += *esp_old->n[p][i] * bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->n[p] +=
+            *goma_ctx->fem.esp_old->n[p][i] * goma_ctx->fem.bf[v]->phi[i];
       }
     }
   }
@@ -7899,11 +8303,11 @@ static int load_fv_sens(void) {
    */
 
   v = SHELL_DIFF_FLUX;
-  fv_sens->ext_v = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->ext_v = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->ext_v += *esp_old->sh_J[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->ext_v += *goma_ctx->fem.esp_old->sh_J[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7912,11 +8316,12 @@ static int load_fv_sens(void) {
    */
 
   v = SHELL_DIFF_CURVATURE;
-  fv_sens->ext_v = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->ext_v = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->ext_v += *esp_old->sh_Kd[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->ext_v +=
+          *goma_ctx->fem.esp_old->sh_Kd[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -7924,14 +8329,15 @@ static int load_fv_sens(void) {
    *  Shell surface normal vecotr
    */
 
-  for (p = 0; p < pd->Num_Dim; p++) {
+  for (p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
 
     v = SHELL_NORMAL1 + p;
-    fv_sens->n[p] = 0.;
-    if (pd->v[pg->imtrx][v]) {
-      dofs = ei[pg->imtrx]->dof[v];
+    goma_ctx->fem.fv_sens->n[p] = 0.;
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
       for (i = 0; i < dofs; i++) {
-        fv_sens->n[p] += *esp_old->n[p][i] * bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->n[p] +=
+            *goma_ctx->fem.esp_old->n[p][i] * goma_ctx->fem.bf[v]->phi[i];
       }
     }
   }
@@ -7943,11 +8349,12 @@ static int load_fv_sens(void) {
   for (p = 0; p < velodim; p++) {
 
     v = EFIELD1 + p;
-    fv_sens->pv[p] = 0.;
-    if (pd->v[pg->imtrx][v]) {
-      dofs = ei[pg->imtrx]->dof[v];
+    goma_ctx->fem.fv_sens->pv[p] = 0.;
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
       for (i = 0; i < dofs; i++) {
-        fv_sens->E_field[p] += *esp_old->E_field[p][i] * bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->E_field[p] +=
+            *goma_ctx->fem.esp_old->E_field[p][i] * goma_ctx->fem.bf[v]->phi[i];
       }
     }
   }
@@ -7955,22 +8362,23 @@ static int load_fv_sens(void) {
   /*
    * Polymer Stress (tensor)...
    */
-  for (mode = 0; mode < vn->modes; mode++) {
+  for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
         if (p <= q) {
           /* good default behavior */
-          fv_sens->S[mode][p][q] = 0.;
+          goma_ctx->fem.fv_sens->S[mode][p][q] = 0.;
 
           v = v_s[mode][p][q];
-          if (pd->v[pg->imtrx][v]) {
-            dofs = ei[pg->imtrx]->dof[v];
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+            dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
             for (i = 0; i < dofs; i++) {
-              fv_sens->S[mode][p][q] += *esp_old->S[mode][p][q][i] * bf[v]->phi[i];
+              goma_ctx->fem.fv_sens->S[mode][p][q] +=
+                  *goma_ctx->fem.esp_old->S[mode][p][q][i] * goma_ctx->fem.bf[v]->phi[i];
             }
           }
           /* form the entire symmetric stress matrix for the momentum equation */
-          fv_sens->S[mode][q][p] = fv_sens->S[mode][p][q];
+          goma_ctx->fem.fv_sens->S[mode][q][p] = goma_ctx->fem.fv_sens->S[mode][p][q];
         }
       }
     }
@@ -7983,13 +8391,14 @@ static int load_fv_sens(void) {
   for (p = 0; p < VIM; p++) {
     for (q = 0; q < VIM; q++) {
       /* good default behavior */
-      fv_sens->G[p][q] = 0.;
+      goma_ctx->fem.fv_sens->G[p][q] = 0.;
 
       v = v_g[p][q];
-      if (pd->v[pg->imtrx][v]) {
-        dofs = ei[pg->imtrx]->dof[v];
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+        dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
         for (i = 0; i < dofs; i++) {
-          fv_sens->G[p][q] += *esp_old->G[p][q][i] * bf[v]->phi[i];
+          goma_ctx->fem.fv_sens->G[p][q] +=
+              *goma_ctx->fem.esp_old->G[p][q][i] * goma_ctx->fem.bf[v]->phi[i];
         }
       }
     }
@@ -8000,17 +8409,18 @@ static int load_fv_sens(void) {
    */
 
   v = MASS_FRACTION;
-  if (pd->v[pg->imtrx][v]) {
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      dofs = ei[pg->imtrx]->dof[v];
-      fv_sens->c[w] = 0.0;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+      goma_ctx->fem.fv_sens->c[w] = 0.0;
       for (i = 0; i < dofs; i++) {
-        fv_sens->c[w] += *esp_old->c[w][i] * bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->c[w] +=
+            *goma_ctx->fem.esp_old->c[w][i] * goma_ctx->fem.bf[v]->phi[i];
       }
     }
   } else {
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      fv_sens->c[w] = 0.0;
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      goma_ctx->fem.fv_sens->c[w] = 0.0;
     }
   }
 
@@ -8019,20 +8429,22 @@ static int load_fv_sens(void) {
    */
 
   v = TFMP_PRES;
-  fv_sens->tfmp_pres = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->tfmp_pres = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->tfmp_pres += *esp_old->tfmp_pres[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->tfmp_pres +=
+          *goma_ctx->fem.esp_old->tfmp_pres[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
   v = TFMP_SAT;
-  fv_sens->tfmp_sat = 0.;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  goma_ctx->fem.fv_sens->tfmp_sat = 0.;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
-      fv_sens->tfmp_sat += *esp_old->tfmp_sat[i] * bf[v]->phi[i];
+      goma_ctx->fem.fv_sens->tfmp_sat +=
+          *goma_ctx->fem.esp_old->tfmp_sat[i] * goma_ctx->fem.bf[v]->phi[i];
     }
   }
 
@@ -8041,13 +8453,14 @@ static int load_fv_sens(void) {
    */
 
   v = EXTERNAL;
-  if (efv->ev) {
-    for (w = 0; w < efv->Num_external_field; w++) {
-      dofs = ei[pg->imtrx]->dof_ext[w];
-      fv_sens->external_field[w] = 0.;
-      if (efv->i[w] != I_TABLE) {
+  if (goma_ctx->fem.efv->ev) {
+    for (w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_ext[w];
+      goma_ctx->fem.fv_sens->external_field[w] = 0.;
+      if (goma_ctx->fem.efv->i[w] != I_TABLE) {
         for (i = 0; i < dofs; i++) {
-          fv_sens->external_field[w] += *evp->external_field[w][i] * bfex[w]->phi[i];
+          goma_ctx->fem.fv_sens->external_field[w] +=
+              *goma_ctx->fem.evp->external_field[w][i] * goma_ctx->fem.bfex[w]->phi[i];
         }
       }
 
@@ -8055,71 +8468,79 @@ static int load_fv_sens(void) {
        * If the variable name is velocity, and the momentum equations are not active,
        * load the external_fields into the velocity fv for use in Advection-diffusion analysis
        */
-      if (strcmp(efv->name[w], "VX") == 0 && !pd->v[pg->imtrx][VELOCITY1]) {
-        fv_sens->v[0] = fv_sens->external_field[w];
+      if (strcmp(goma_ctx->fem.efv->name[w], "VX") == 0 &&
+          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
+        goma_ctx->fem.fv_sens->v[0] = goma_ctx->fem.fv_sens->external_field[w];
       }
-      if (strcmp(efv->name[w], "VY") == 0 && !pd->v[pg->imtrx][VELOCITY2]) {
-        fv_sens->v[1] = fv_sens->external_field[w];
+      if (strcmp(goma_ctx->fem.efv->name[w], "VY") == 0 &&
+          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY2]) {
+        goma_ctx->fem.fv_sens->v[1] = goma_ctx->fem.fv_sens->external_field[w];
       }
-      if (strcmp(efv->name[w], "VZ") == 0 && !pd->v[pg->imtrx][VELOCITY3]) {
-        fv_sens->v[2] = fv_sens->external_field[w];
+      if (strcmp(goma_ctx->fem.efv->name[w], "VZ") == 0 &&
+          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY3]) {
+        goma_ctx->fem.fv_sens->v[2] = goma_ctx->fem.fv_sens->external_field[w];
       }
       /*
        * If the variable name is mesh displacement, and the mesh equations are not active,
        * load the external_fields into the mesh fv
        */
-      if (strcmp(efv->name[w], "DMX") == 0 && !pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
-        fv->d[0] = fv->external_field[w];
-        fv_old->d[0] = fv_old->external_field[w];
-        fv_dot->d[0] = fv_dot->external_field[w];
+      if (strcmp(goma_ctx->fem.efv->name[w], "DMX") == 0 &&
+          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
+        goma_ctx->fem.fv->d[0] = goma_ctx->fem.fv->external_field[w];
+        goma_ctx->fem.fv_old->d[0] = goma_ctx->fem.fv_old->external_field[w];
+        goma_ctx->fem.fv_dot->d[0] = goma_ctx->fem.fv_dot->external_field[w];
       }
-      if (strcmp(efv->name[w], "DMY") == 0 && !pd->v[pg->imtrx][MESH_DISPLACEMENT2]) {
-        fv->d[1] = fv->external_field[w];
-        fv_old->d[1] = fv_old->external_field[w];
-        fv_dot->d[1] = fv_dot->external_field[w];
+      if (strcmp(goma_ctx->fem.efv->name[w], "DMY") == 0 &&
+          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT2]) {
+        goma_ctx->fem.fv->d[1] = goma_ctx->fem.fv->external_field[w];
+        goma_ctx->fem.fv_old->d[1] = goma_ctx->fem.fv_old->external_field[w];
+        goma_ctx->fem.fv_dot->d[1] = goma_ctx->fem.fv_dot->external_field[w];
       }
-      if (strcmp(efv->name[w], "DMZ") == 0 && !pd->v[pg->imtrx][MESH_DISPLACEMENT3]) {
-        fv->d[2] = fv->external_field[w];
-        fv_old->d[2] = fv_old->external_field[w];
-        fv_dot->d[2] = fv_dot->external_field[w];
+      if (strcmp(goma_ctx->fem.efv->name[w], "DMZ") == 0 &&
+          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT3]) {
+        goma_ctx->fem.fv->d[2] = goma_ctx->fem.fv->external_field[w];
+        goma_ctx->fem.fv_old->d[2] = goma_ctx->fem.fv_old->external_field[w];
+        goma_ctx->fem.fv_dot->d[2] = goma_ctx->fem.fv_dot->external_field[w];
       }
       /*
        * If the variable name is porosity, and the porosity equation is not active,
        * load the external_fields into the porosity fv
        */
-      if (strcmp(efv->name[w], "P_POR") == 0 && !pd->v[pg->imtrx][POR_POROSITY]) {
-        fv->porosity = fv->external_field[w];
-        fv_old->porosity = fv_old->external_field[w];
-        fv_dot->porosity = fv_dot->external_field[w];
+      if (strcmp(goma_ctx->fem.efv->name[w], "P_POR") == 0 &&
+          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_POROSITY]) {
+        goma_ctx->fem.fv->porosity = goma_ctx->fem.fv->external_field[w];
+        goma_ctx->fem.fv_old->porosity = goma_ctx->fem.fv_old->external_field[w];
+        goma_ctx->fem.fv_dot->porosity = goma_ctx->fem.fv_dot->external_field[w];
       }
     }
   } else {
-    for (w = 0; w < efv->Num_external_field; w++) {
-      fv_sens->external_field[w] = 0.;
+    for (w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
+      goma_ctx->fem.fv_sens->external_field[w] = 0.;
     }
   }
 
   /* initial displacements for TALE anneals. all for KINEMATIC DISPLACEMENT BC */
-  if (efv->TALE) {
+  if (goma_ctx->fem.efv->TALE) {
     for (w = 0; w < dim; w++) {
       v = MESH_DISPLACEMENT1 + w;
-      dofs = ei[pg->imtrx]->dof[v];
-      fv_sens->initial_displacements[w] = 0.;
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+      goma_ctx->fem.fv_sens->initial_displacements[w] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->initial_displacements[w] += *evp->initial_displacements[w][i] * bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->initial_displacements[w] +=
+            *goma_ctx->fem.evp->initial_displacements[w][i] * goma_ctx->fem.bf[v]->phi[i];
       }
       v = SOLID_DISPLACEMENT1 + w;
-      dofs = ei[pg->imtrx]->dof[v];
-      fv_sens->initial_displacements[w + DIM] = 0.;
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+      goma_ctx->fem.fv_sens->initial_displacements[w + DIM] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->initial_displacements[w + DIM] +=
-            *evp->initial_displacements[w + DIM][i] * bf[v]->phi[i];
+        goma_ctx->fem.fv_sens->initial_displacements[w + DIM] +=
+            *goma_ctx->fem.evp->initial_displacements[w + DIM][i] * goma_ctx->fem.bf[v]->phi[i];
       }
     }
   } else {
     for (w = 0; w < dim; w++) {
-      fv_sens->initial_displacements[w] = 0.;
-      fv_sens->initial_displacements[w + DIM] = 0.;
+      goma_ctx->fem.fv_sens->initial_displacements[w] = 0.;
+      goma_ctx->fem.fv_sens->initial_displacements[w + DIM] = 0.;
     }
   }
 
@@ -8165,7 +8586,7 @@ static int load_fv_grads_sens(void) {
   int p, q, r, s; /* dimension index */
   int dofs;       /* degrees of freedom for a var in the elem */
   int w;          /* concentration species counter */
-  const int dim = pd->Num_Dim;
+  const int dim = goma_ctx->fem.pd->Num_Dim;
   int status;
   int mode;
 
@@ -8175,12 +8596,13 @@ static int load_fv_grads_sens(void) {
    * grad(T)
    */
   v = TEMPERATURE;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (p = 0; p < VIM; p++) {
-      fv_sens->grad_T[p] = 0.;
+      goma_ctx->fem.fv_sens->grad_T[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->grad_T[p] += *esp_old->T[i] * bf[v]->grad_phi[i][p];
+        goma_ctx->fem.fv_sens->grad_T[p] +=
+            *goma_ctx->fem.esp_old->T[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
       }
     }
   }
@@ -8189,12 +8611,13 @@ static int load_fv_grads_sens(void) {
    * grad(P)
    */
   v = PRESSURE;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (p = 0; p < VIM; p++) {
-      fv_sens->grad_P[p] = 0.;
+      goma_ctx->fem.fv_sens->grad_P[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->grad_P[p] += *esp_old->P[i] * bf[v]->grad_phi[i][p];
+        goma_ctx->fem.fv_sens->grad_P[p] +=
+            *goma_ctx->fem.esp_old->P[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
       }
     }
   }
@@ -8203,12 +8626,13 @@ static int load_fv_grads_sens(void) {
    * grad(F)
    */
   v = FILL;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (p = 0; p < VIM; p++) {
-      fv_sens->grad_F[p] = 0.;
+      goma_ctx->fem.fv_sens->grad_F[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->grad_F[p] += *esp_old->F[i] * bf[v]->grad_phi[i][p];
+        goma_ctx->fem.fv_sens->grad_F[p] +=
+            *goma_ctx->fem.esp_old->F[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
       }
     }
   }
@@ -8217,12 +8641,13 @@ static int load_fv_grads_sens(void) {
    * grad(V)
    */
   v = VOLTAGE;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (p = 0; p < VIM; p++) {
-      fv_sens->grad_V[p] = 0.;
+      goma_ctx->fem.fv_sens->grad_V[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->grad_V[p] += *esp_old->V[i] * bf[v]->grad_phi[i][p];
+        goma_ctx->fem.fv_sens->grad_V[p] +=
+            *goma_ctx->fem.esp_old->V[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
       }
     }
   }
@@ -8249,13 +8674,14 @@ static int load_fv_grads_sens(void) {
    */
   for (p = 0; p < VIM; p++) {
     for (q = 0; q < VIM; q++) {
-      fv_sens->grad_d[p][q] = 0.;
+      goma_ctx->fem.fv_sens->grad_d[p][q] = 0.;
       v = MESH_DISPLACEMENT1 + p;
-      if (pd->v[pg->imtrx][v]) {
-        dofs = ei[pg->imtrx]->dof[v];
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+        dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
         for (r = 0; r < VIM; r++) {
           for (i = 0; i < dofs; i++) {
-            fv_sens->grad_d[p][q] += *esp_old->d[r][i] * bf[v]->grad_phi_e[i][r][p][q];
+            goma_ctx->fem.fv_sens->grad_d[p][q] +=
+                *goma_ctx->fem.esp_old->d[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
           }
         }
       }
@@ -8267,13 +8693,14 @@ static int load_fv_grads_sens(void) {
    */
   for (p = 0; p < VIM; p++) {
     for (q = 0; q < VIM; q++) {
-      fv_sens->grad_d_rs[p][q] = 0.;
+      goma_ctx->fem.fv_sens->grad_d_rs[p][q] = 0.;
       v = SOLID_DISPLACEMENT1 + p;
-      if (pd->v[pg->imtrx][v]) {
-        dofs = ei[pg->imtrx]->dof[v];
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+        dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
         for (r = 0; r < VIM; r++) {
           for (i = 0; i < dofs; i++) {
-            fv_sens->grad_d_rs[p][q] += *esp_old->d_rs[r][i] * bf[v]->grad_phi_e[i][r][p][q];
+            goma_ctx->fem.fv_sens->grad_d_rs[p][q] +=
+                *goma_ctx->fem.esp_old->d_rs[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
           }
         }
       }
@@ -8283,31 +8710,32 @@ static int load_fv_grads_sens(void) {
   /*
    * div(d)
    */
-  fv_sens->div_d = 0.;
+  goma_ctx->fem.fv_sens->div_d = 0.;
   for (p = 0; p < VIM; p++) {
-    fv_sens->div_d += fv_sens->grad_d[p][p];
+    goma_ctx->fem.fv_sens->div_d += goma_ctx->fem.fv_sens->grad_d[p][p];
   }
 
   /*
    * div(d_rs)
    */
-  fv_sens->div_d_rs = 0.;
+  goma_ctx->fem.fv_sens->div_d_rs = 0.;
   for (p = 0; p < VIM; p++) {
-    fv_sens->div_d_rs += fv_sens->grad_d_rs[p][p];
+    goma_ctx->fem.fv_sens->div_d_rs += goma_ctx->fem.fv_sens->grad_d_rs[p][p];
   }
 
   /*
    * grad(v)
    */
-  dofs = ei[pg->imtrx]->dof[VELOCITY1];
+  dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
   v = VELOCITY1;
-  if (pd->v[pg->imtrx][v]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
-        fv_sens->grad_v[p][q] = 0.;
+        goma_ctx->fem.fv_sens->grad_v[p][q] = 0.;
         for (r = 0; r < WIM; r++) {
           for (i = 0; i < dofs; i++) {
-            fv_sens->grad_v[p][q] += *esp_old->v[r][i] * bf[v]->grad_phi_e[i][r][p][q];
+            goma_ctx->fem.fv_sens->grad_v[p][q] +=
+                *goma_ctx->fem.esp_old->v[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
           }
         }
       }
@@ -8317,15 +8745,16 @@ static int load_fv_grads_sens(void) {
   /* MMH
    * grad(pv), particle velocity gradients.
    */
-  dofs = ei[pg->imtrx]->dof[PVELOCITY1];
+  dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[PVELOCITY1];
   v = PVELOCITY1;
-  if (pd->v[pg->imtrx][v]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
-        fv_sens->grad_pv[p][q] = 0.0;
+        goma_ctx->fem.fv_sens->grad_pv[p][q] = 0.0;
         for (r = 0; r < WIM; r++) {
           for (i = 0; i < dofs; i++) {
-            fv_sens->grad_pv[p][q] += *esp_old->pv[r][i] * bf[v]->grad_phi_e[i][r][p][q];
+            goma_ctx->fem.fv_sens->grad_pv[p][q] +=
+                *goma_ctx->fem.esp_old->pv[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
           }
         }
       }
@@ -8335,13 +8764,14 @@ static int load_fv_grads_sens(void) {
   /*
    * grad(ext_v), extension velocity gradients.
    */
-  dofs = ei[pg->imtrx]->dof[EXT_VELOCITY];
+  dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EXT_VELOCITY];
   v = EXT_VELOCITY;
-  if (pd->v[pg->imtrx][v]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     for (p = 0; p < VIM; p++) {
-      fv_sens->grad_ext_v[p] = 0.0;
+      goma_ctx->fem.fv_sens->grad_ext_v[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        fv_sens->grad_ext_v[p] += *esp_old->ext_v[i] * bf[v]->grad_phi[i][p];
+        goma_ctx->fem.fv_sens->grad_ext_v[p] +=
+            *goma_ctx->fem.esp_old->ext_v[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
       }
     }
   }
@@ -8350,14 +8780,15 @@ static int load_fv_grads_sens(void) {
    * grad(E_field), Electric Field gradients.
    */
   v = EFIELD1;
-  dofs = ei[pg->imtrx]->dof[v];
-  if (pd->v[pg->imtrx][v]) {
+  dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
-        fv_sens->grad_E_field[p][q] = 0.0;
+        goma_ctx->fem.fv_sens->grad_E_field[p][q] = 0.0;
         for (r = 0; r < VIM; r++) {
           for (i = 0; i < dofs; i++) {
-            fv_sens->grad_E_field[p][q] += *esp_old->E_field[r][i] * bf[v]->grad_phi_e[i][r][p][q];
+            goma_ctx->fem.fv_sens->grad_E_field[p][q] +=
+                *goma_ctx->fem.esp_old->E_field[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
           }
         }
       }
@@ -8368,54 +8799,59 @@ static int load_fv_grads_sens(void) {
    * grad(apr,api)
    */
   v = ACOUS_PREAL;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (p = 0; p < VIM; p++) {
-      fv_sens->grad_apr[p] = 0.;
+      goma_ctx->fem.fv_sens->grad_apr[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->grad_apr[p] += *esp_old->apr[i] * bf[v]->grad_phi[i][p];
+        goma_ctx->fem.fv_sens->grad_apr[p] +=
+            *goma_ctx->fem.esp_old->apr[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
       }
     }
   }
   v = ACOUS_PIMAG;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (p = 0; p < VIM; p++) {
-      fv_sens->grad_api[p] = 0.;
+      goma_ctx->fem.fv_sens->grad_api[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->grad_api[p] += *esp_old->api[i] * bf[v]->grad_phi[i][p];
+        goma_ctx->fem.fv_sens->grad_api[p] +=
+            *goma_ctx->fem.esp_old->api[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
       }
     }
   }
   v = ACOUS_REYN_STRESS;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (p = 0; p < VIM; p++) {
-      fv_sens->grad_ars[p] = 0.;
+      goma_ctx->fem.fv_sens->grad_ars[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->grad_ars[p] += *esp_old->ars[i] * bf[v]->grad_phi[i][p];
+        goma_ctx->fem.fv_sens->grad_ars[p] +=
+            *goma_ctx->fem.esp_old->ars[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
       }
     }
   }
 
   v = SHELL_BDYVELO;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (p = 0; p < VIM; p++) {
-      fv_sens->grad_sh_bv[p] = 0.;
+      goma_ctx->fem.fv_sens->grad_sh_bv[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->grad_sh_bv[p] += *esp_old->sh_bv[i] * bf[v]->grad_phi[i][p];
+        goma_ctx->fem.fv_sens->grad_sh_bv[p] +=
+            *goma_ctx->fem.esp_old->sh_bv[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
       }
     }
   }
 
   v = SHELL_LUBP;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (p = 0; p < VIM; p++) {
-      fv_sens->grad_sh_p[p] = 0.;
+      goma_ctx->fem.fv_sens->grad_sh_p[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        fv_sens->grad_sh_p[p] += *esp_old->sh_p[i] * bf[v]->grad_phi[i][p];
+        goma_ctx->fem.fv_sens->grad_sh_p[p] +=
+            *goma_ctx->fem.esp_old->sh_p[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
       }
     }
   }
@@ -8425,13 +8861,14 @@ static int load_fv_grads_sens(void) {
    */
   if (CURL_V != -1) {
     v = VELOCITY1;
-    dofs = ei[pg->imtrx]->dof[VELOCITY1];
-    if (pd->v[pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
       for (p = 0; p < WIM; p++) {
-        fv_sens->curl_v[p] = 0.0;
+        goma_ctx->fem.fv_sens->curl_v[p] = 0.0;
         for (i = 0; i < dofs; i++)
           for (a = 0; a < WIM; a++)
-            fv_sens->curl_v[p] += *esp_old->v[a][i] * bf[v]->curl_phi_e[i][a][p];
+            goma_ctx->fem.fv_sens->curl_v[p] +=
+                *goma_ctx->fem.esp_old->v[a][i] * goma_ctx->fem.bf[v]->curl_phi_e[i][a][p];
       }
     }
   }
@@ -8439,23 +8876,23 @@ static int load_fv_grads_sens(void) {
   /*
    * div(v)
    */
-  fv_sens->div_v = 0.;
+  goma_ctx->fem.fv_sens->div_v = 0.;
   v = VELOCITY1;
-  if (pd->v[pg->imtrx][v]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
 
     for (p = 0; p < VIM; p++) {
-      fv_sens->div_v += fv_sens->grad_v[p][p];
+      goma_ctx->fem.fv_sens->div_v += goma_ctx->fem.fv_sens->grad_v[p][p];
     }
   }
 
   /* MMH
    * div(pv)
    */
-  fv_sens->div_pv = 0.;
+  goma_ctx->fem.fv_sens->div_pv = 0.;
   v = PVELOCITY1;
-  if (pd->v[pg->imtrx][v]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     for (p = 0; p < VIM; p++) {
-      fv_sens->div_pv += fv_sens->grad_pv[p][p];
+      goma_ctx->fem.fv_sens->div_pv += goma_ctx->fem.fv_sens->grad_pv[p][p];
     }
   }
 
@@ -8463,14 +8900,15 @@ static int load_fv_grads_sens(void) {
    * Concentration...
    */
 
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
     v = MASS_FRACTION;
-    if (pd->v[pg->imtrx][v]) {
-      dofs = ei[pg->imtrx]->dof[v];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
       for (p = 0; p < VIM; p++) {
-        fv_sens->grad_c[w][p] = 0.;
+        goma_ctx->fem.fv_sens->grad_c[w][p] = 0.;
         for (i = 0; i < dofs; i++) {
-          fv_sens->grad_c[w][p] += *esp_old->c[w][i] * bf[v]->grad_phi[i][p];
+          goma_ctx->fem.fv_sens->grad_c[w][p] +=
+              *goma_ctx->fem.esp_old->c[w][i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
         }
       }
     }
@@ -8480,20 +8918,20 @@ static int load_fv_grads_sens(void) {
    * grad(S), mode 0
    */
   v = POLYMER_STRESS11;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
-    for (mode = 0; mode < vn->modes; mode++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       for (p = 0; p < VIM; p++) {
         for (q = 0; q < VIM; q++) {
           for (r = 0; r < VIM; r++) {
-            fv_sens->grad_S[mode][r][p][q] = 0.;
+            goma_ctx->fem.fv_sens->grad_S[mode][r][p][q] = 0.;
             for (i = 0; i < dofs; i++) {
               if (p <= q) {
-                fv_sens->grad_S[mode][r][p][q] +=
-                    *esp_old->S[mode][p][q][i] * bf[v]->grad_phi[i][r];
+                goma_ctx->fem.fv_sens->grad_S[mode][r][p][q] +=
+                    *goma_ctx->fem.esp_old->S[mode][p][q][i] * goma_ctx->fem.bf[v]->grad_phi[i][r];
               } else {
-                fv_sens->grad_S[mode][r][p][q] +=
-                    *esp_old->S[mode][q][p][i] * bf[v]->grad_phi[i][r];
+                goma_ctx->fem.fv_sens->grad_S[mode][r][p][q] +=
+                    *goma_ctx->fem.esp_old->S[mode][q][p][i] * goma_ctx->fem.bf[v]->grad_phi[i][r];
               }
             }
           }
@@ -8504,20 +8942,21 @@ static int load_fv_grads_sens(void) {
        * div(S) - this is a vector!
        */
       for (r = 0; r < VIM; r++) {
-        fv_sens->div_S[mode][r] = 0.;
+        goma_ctx->fem.fv_sens->div_S[mode][r] = 0.;
       }
 
       for (r = 0; r < dim; r++) {
         for (q = 0; q < dim; q++) {
-          fv_sens->div_S[mode][r] += fv_sens->grad_S[mode][q][q][r];
+          goma_ctx->fem.fv_sens->div_S[mode][r] += goma_ctx->fem.fv_sens->grad_S[mode][q][q][r];
         }
       }
 
-      if (pd->CoordinateSystem != CARTESIAN) {
+      if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
         for (s = 0; s < VIM; s++) {
           for (r = 0; r < VIM; r++) {
             for (p = 0; p < VIM; p++) {
-              fv_sens->div_S[mode][s] += fv_sens->S[mode][p][s] * fv_sens->grad_e[p][r][s];
+              goma_ctx->fem.fv_sens->div_S[mode][s] +=
+                  goma_ctx->fem.fv_sens->S[mode][p][s] * goma_ctx->fem.fv_sens->grad_e[p][r][s];
             }
           }
         }
@@ -8525,7 +8964,8 @@ static int load_fv_grads_sens(void) {
         for (s = 0; s < VIM; s++) {
           for (r = 0; r < VIM; r++) {
             for (q = 0; q < VIM; q++) {
-              fv_sens->div_S[mode][s] += fv_sens->S[mode][r][q] * fv_sens->grad_e[q][r][s];
+              goma_ctx->fem.fv_sens->div_S[mode][s] +=
+                  goma_ctx->fem.fv_sens->S[mode][r][q] * goma_ctx->fem.fv_sens->grad_e[q][r][s];
             }
           }
         }
@@ -8538,14 +8978,15 @@ static int load_fv_grads_sens(void) {
    */
 
   v = VELOCITY_GRADIENT11;
-  if (pd->v[pg->imtrx][v]) {
-    dofs = ei[pg->imtrx]->dof[v];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
         for (r = 0; r < VIM; r++) {
-          fv_sens->grad_G[r][p][q] = 0.;
+          goma_ctx->fem.fv_sens->grad_G[r][p][q] = 0.;
           for (i = 0; i < dofs; i++) {
-            fv_sens->grad_G[r][p][q] += *esp_old->G[p][q][i] * bf[v]->grad_phi[i][r];
+            goma_ctx->fem.fv_sens->grad_G[r][p][q] +=
+                *goma_ctx->fem.esp_old->G[p][q][i] * goma_ctx->fem.bf[v]->grad_phi[i][r];
           }
         }
       }
@@ -8555,20 +8996,21 @@ static int load_fv_grads_sens(void) {
      * div(G) - this is a vector!
      */
     for (r = 0; r < VIM; r++) {
-      fv_sens->div_G[r] = 0.;
+      goma_ctx->fem.fv_sens->div_G[r] = 0.;
     }
 
     for (r = 0; r < dim; r++) {
       for (q = 0; q < dim; q++) {
-        fv_sens->div_G[r] += fv_sens->grad_G[q][q][r];
+        goma_ctx->fem.fv_sens->div_G[r] += goma_ctx->fem.fv_sens->grad_G[q][q][r];
       }
     }
 
-    if (pd->CoordinateSystem != CARTESIAN) {
+    if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
       for (s = 0; s < VIM; s++) {
         for (r = 0; r < VIM; r++) {
           for (p = 0; p < VIM; p++) {
-            fv_sens->div_G[s] += fv_sens->G[p][s] * fv_sens->grad_e[p][r][s];
+            goma_ctx->fem.fv_sens->div_G[s] +=
+                goma_ctx->fem.fv_sens->G[p][s] * goma_ctx->fem.fv_sens->grad_e[p][r][s];
           }
         }
       }
@@ -8576,7 +9018,8 @@ static int load_fv_grads_sens(void) {
       for (s = 0; s < VIM; s++) {
         for (r = 0; r < VIM; r++) {
           for (q = 0; q < VIM; q++) {
-            fv_sens->div_G[s] += fv_sens->G[r][q] * fv_sens->grad_e[q][r][s];
+            goma_ctx->fem.fv_sens->div_G[s] +=
+                goma_ctx->fem.fv_sens->G[r][q] * goma_ctx->fem.fv_sens->grad_e[q][r][s];
           }
         }
       }
@@ -8684,8 +9127,8 @@ int adaptive_weight(double w[],
   GOMA_EH(GOMA_ERROR, "Turn off NO_CHEBYSHEV_PLEASE please.\n");
 #else
   int chev_order;
-  if (ls->AdaptIntegration) {
-    chev_order = ls->Adaptive_Order;
+  if (goma_ctx->fem.ls->AdaptIntegration) {
+    chev_order = goma_ctx->fem.ls->Adaptive_Order;
   } else {
     chev_order = 3;
   }
@@ -9617,7 +10060,8 @@ void surfdet_chev_coeff_2DQ(const int interface_type,
   /*  find basis function for level-set field - maybe it should be mesh? */
 
   for (j = 0; j < Num_Basis_Functions; j++) {
-    if (pd_glob[ei[pg->imtrx]->mn]->i[pg->imtrx][FILL] == bfd[j]->interpolation) {
+    if (goma_ctx->fem.pd_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]
+            ->i[goma_ctx->fem.pg->imtrx][FILL] == goma_ctx->fem.bfd[j]->interpolation) {
       fill_interp = j;
     }
   }
@@ -9650,16 +10094,16 @@ void surfdet_chev_coeff_2DQ(const int interface_type,
       xi[1] = sum;
     }
 
-    err = load_basis_functions(xi, bfd);
+    err = load_basis_functions(xi, goma_ctx->fem.bfd);
     GOMA_EH(err, "problem from load_basis_functions");
 
     err = beer_belly();
     GOMA_EH(err, "beer_belly");
 
-    dxdc = bfd[fill_interp]->J[0][0];
-    dxde = bfd[fill_interp]->J[1][0];
-    dydc = bfd[fill_interp]->J[0][1];
-    dyde = bfd[fill_interp]->J[1][1];
+    dxdc = goma_ctx->fem.bfd[fill_interp]->J[0][0];
+    dxde = goma_ctx->fem.bfd[fill_interp]->J[1][0];
+    dydc = goma_ctx->fem.bfd[fill_interp]->J[0][1];
+    dyde = goma_ctx->fem.bfd[fill_interp]->J[1][1];
 
     /*  Should have been able to get the interface slope from the level_set
             derivatives, but using the parabolic interface representation
@@ -9669,8 +10113,8 @@ void surfdet_chev_coeff_2DQ(const int interface_type,
     if (use_total_deriv) {
       dFdc = dFde = 0;
       for (j = 0; j < 9; j++) {
-        dFdc += ls_F[j] * bfd[fill_interp]->dphidxi[j][0];
-        dFde += ls_F[j] * bfd[fill_interp]->dphidxi[j][1];
+        dFdc += ls_F[j] * goma_ctx->fem.bfd[fill_interp]->dphidxi[j][0];
+        dFde += ls_F[j] * goma_ctx->fem.bfd[fill_interp]->dphidxi[j][1];
       }
     }
 

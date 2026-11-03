@@ -68,13 +68,13 @@ void free_solver_data(struct GomaLinearSolverData *data) {
 static void msr_to_triplet(struct GomaLinearSolverData *data) {
   struct MUMPS_data *mumps_data = (struct MUMPS_data *)data->SolverData;
 
-  int N = num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx];
+  int N = num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
   int local_nnz = data->nnz;
 
   int RowOffset;
   MPI_Scan(&N, &RowOffset, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   RowOffset -= N;
-  int *colgids = (int *)malloc((N + num_external_dofs[pg->imtrx]) * sizeof(int));
+  int *colgids = (int *)malloc((N + num_external_dofs[goma_ctx->fem.pg->imtrx]) * sizeof(int));
   for (int i = 0; i < N; i++) {
     colgids[i] = RowOffset + i + 1;
   }
@@ -97,7 +97,7 @@ static void msr_to_triplet(struct GomaLinearSolverData *data) {
         mumps_data->N_global - mumps_data->row_offsets[goma_ctx->num_proc - 1];
   }
 
-  exchange_dof_int(cx[pg->imtrx], DPI_ptr, colgids, pg->imtrx);
+  exchange_dof_int(cx[goma_ctx->fem.pg->imtrx], DPI_ptr, colgids, goma_ctx->fem.pg->imtrx);
   mumps_data->colgids = colgids;
 
   mumps_data->irhs_loc = (int *)malloc(N * sizeof(int));
@@ -204,13 +204,13 @@ static void set_icntl_and_cntl(DMUMPS_STRUC_C *mumps) {
 
   // User defined options
   for (int i = 0; i < 60; i++) {
-    if (upd->solver_info->icntl_user_set[i]) {
-      mumps->icntl[i] = upd->solver_info->icntl[i];
+    if (goma_ctx->fem.upd->solver_info->icntl_user_set[i]) {
+      mumps->icntl[i] = goma_ctx->fem.upd->solver_info->icntl[i];
     }
   }
   for (int i = 0; i < 15; i++) {
-    if (upd->solver_info->cntl_user_set[i]) {
-      mumps->cntl[i] = upd->solver_info->cntl[i];
+    if (goma_ctx->fem.upd->solver_info->cntl_user_set[i]) {
+      mumps->cntl[i] = goma_ctx->fem.upd->solver_info->cntl[i];
     }
   }
 }

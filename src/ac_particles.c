@@ -212,7 +212,7 @@ void initialize_particles(const Exo_DB *exo,
 
   if ((goma_ctx->particles.model == SWIMMER_EXPLICIT ||
        goma_ctx->particles.model == SWIMMER_IMPLICIT) &&
-      pd_glob[0]->CoordinateSystem != CARTESIAN)
+      goma_ctx->fem.pd_glob[0]->CoordinateSystem != CARTESIAN)
     GOMA_EH(GOMA_ERROR, "You probably need to fix something first...");
 
   /* Allocate one of these.  I like the -> references instead of the
@@ -229,16 +229,16 @@ void initialize_particles(const Exo_DB *exo,
   static_resid_vector = resid_vector;
 
   /* Get the appropriate dimension for the coordinate, velocity loops... */
-  pdim = pd_glob[0]->Num_Dim;
-  if (pd_glob[0]->CoordinateSystem == SWIRLING ||
-      pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN ||
-      pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D)
+  pdim = goma_ctx->fem.pd_glob[0]->Num_Dim;
+  if (goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING ||
+      goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN ||
+      goma_ctx->fem.pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D)
     pdim = pdim + 1;
 
   /* Get mesh dimension */
   mdim = static_exo->num_dim;
 
-  if (pd_glob[0]->e[pg->imtrx][R_MESH1])
+  if (goma_ctx->fem.pd_glob[0]->e[goma_ctx->fem.pg->imtrx][R_MESH1])
     GOMA_EH(GOMA_ERROR, "Cannot couple particles and deformable mesh, yet.");
   if (mdim == 2) {
     if (static_exo->eb_elem_itype[0] != BIQUAD_QUAD &&
@@ -1188,7 +1188,7 @@ static void find_exit_wound(const int elem_id,
 
   PBC_id = goma_ctx->particles.element_info[elem_id].PBC_side_id[exit_id1];
 
-  memcpy(x_intersect, fv->x, DIM * sizeof(dbl));
+  memcpy(x_intersect, goma_ctx->fem.fv->x, DIM * sizeof(dbl));
 
   /*
   fprintf(stderr, "  Intersection occured at x = (%g,%g,%g) and xi = (%g,%g,%g)\n",
@@ -1706,13 +1706,15 @@ static dbl fill_element_volumes(const int e_begin, const int e_end) {
 #endif
     this_volume = 0.0;
     load_element_information(i);
-    ip_total = elem_info(NQUAD, ei[pg->imtrx]->ielem_type);
+    ip_total = elem_info(NQUAD, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
     for (ip = 0; ip < ip_total; ip++) {
-      wt = Gq_weight(ip, ei[pg->imtrx]->ielem_type);
-      if (pd_glob[0]->CoordinateSystem == CYLINDRICAL || pd_glob[0]->CoordinateSystem == SWIRLING)
+      wt = Gq_weight(ip, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
+      if (goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+          goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING)
         wt *= 2.0 * M_PIE;
 
-      find_stu(ip, ei[pg->imtrx]->ielem_type, &(xi[0]), &(xi[1]), &(xi[2]));
+      find_stu(ip, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, &(xi[0]), &(xi[1]),
+               &(xi[2]));
 
       /* Although I don't need to actually load_fv, and only need
        * to load_basis_function() (I think), this routine is
@@ -1721,7 +1723,7 @@ static dbl fill_element_volumes(const int e_begin, const int e_end) {
        * deformable mesh. */
       load_field_variables_at_xi(i, xi);
 
-      det = bf[pd->ShapeVar]->detJ * fv->h3;
+      det = goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->detJ * goma_ctx->fem.fv->h3;
 
       this_volume += det * wt;
     }
@@ -1837,8 +1839,8 @@ static void get_boundary_xi_newton(const dbl *const coeff,
   int i, si, iter, index1;
   struct Basis_Functions *map_bf;
 
-  si = in_list(pd->IntegrationMap, 0, Num_Interpolations, Unique_Interpolations);
-  map_bf = bfd[si];
+  si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, Num_Interpolations, Unique_Interpolations);
+  map_bf = goma_ctx->fem.bfd[si];
   if (mdim == 2) {
     index1 = 1 - fixed_index;
   } else {
@@ -1848,7 +1850,7 @@ static void get_boundary_xi_newton(const dbl *const coeff,
   load_field_variables_at_xi(elem_id, xi_tmp);
 
   if (mdim == 2) {
-    f = coeff[0] * fv->x[0] + coeff[1] * fv->x[1] + coeff[2];
+    f = coeff[0] * goma_ctx->fem.fv->x[0] + coeff[1] * goma_ctx->fem.fv->x[1] + coeff[2];
     f_initial = fabs(f);
     f_scale = f_initial;
     xi_norm = fabs(xi_tmp[index1]);
@@ -1872,7 +1874,7 @@ static void get_boundary_xi_newton(const dbl *const coeff,
       xi_tmp[index1] -= f / dfdxi1;
       load_field_variables_at_xi(elem_id, xi_tmp);
 
-      f = coeff[0] * fv->x[0] + coeff[1] * fv->x[1] + coeff[2];
+      f = coeff[0] * goma_ctx->fem.fv->x[0] + coeff[1] * goma_ctx->fem.fv->x[1] + coeff[2];
       f_scale = f_initial;
       xi_norm = fabs(xi_tmp[index1]);
       f_scale *= MAX(1.0, xi_norm);
@@ -2135,7 +2137,7 @@ static void initialize_and_create_new_particle(particle_t *p, const int elem_id)
   if (TimeIntegration == STEADY)
     p->time = 0.0;
   else
-    p->time = tran->init_time;
+    p->time = goma_ctx->fem.tran->init_time;
 
   switch (goma_ctx->particles.model) {
   case INERTIAL_TRACER_EXPLICIT:
@@ -2145,14 +2147,14 @@ static void initialize_and_create_new_particle(particle_t *p, const int elem_id)
   case CHARGED_TRACER_EXPLICIT:
   case CHARGED_TRACER_IMPLICIT:
   case DIELECTROPHORETIC_TRACER_IMPLICIT:
-    memcpy(p->v, fv->v, DIM * sizeof(dbl));
+    memcpy(p->v, goma_ctx->fem.fv->v, DIM * sizeof(dbl));
     break;
   case SWIMMER_IMPLICIT:
   case SWIMMER_EXPLICIT:
     p->theta = p->theta_old = drand48() * 2.0 * M_PIE; /* theta=pi => pointing up! */
     if (pdim == 3)
       p->phi = p->phi_old = 0.0;
-    memcpy(p->v, fv->v, DIM * sizeof(dbl));
+    memcpy(p->v, goma_ctx->fem.fv->v, DIM * sizeof(dbl));
     break;
   default:
     dump1(EXIT, p, "Unknown Particle_Model.  You shouldn't be here.");
@@ -2558,8 +2560,9 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
               continue;
 #endif
 
-            if (pd->CoordinateSystem != CARTESIAN && pd->CoordinateSystem != CYLINDRICAL &&
-                pd->CoordinateSystem != SWIRLING)
+            if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN &&
+                goma_ctx->fem.pd->CoordinateSystem != CYLINDRICAL &&
+                goma_ctx->fem.pd->CoordinateSystem != SWIRLING)
               GOMA_EH(GOMA_ERROR,
                       "Cannot apply volumetric source particles on this coordinate system.");
 
@@ -2569,9 +2572,10 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
             local_ss_node_list =
                 &(static_exo->ss_node_list[j][static_exo->ss_node_side_index[j][k]]);
             for (m = 0; m < num_nodes_on_side; m++) {
-              if ((local_elem_node_id[m] =
-                       in_list(local_ss_node_list[m], 0, nodes_per_element,
-                               &(static_exo->elem_node_list[ei[pg->imtrx]->iconnect_ptr]))) == -1)
+              if ((local_elem_node_id[m] = in_list(
+                       local_ss_node_list[m], 0, nodes_per_element,
+                       &(static_exo->elem_node_list[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
+                                                        ->iconnect_ptr]))) == -1)
                 GOMA_EH(GOMA_ERROR, "Bad id_local_elem_coord lookup");
             }
 
@@ -2582,21 +2586,24 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
 
             /* First we want to get the inflow volume. */
             inflow_volume = 0.0;
-            ip_total = elem_info(NQUAD_SURF, ei[pg->imtrx]->ielem_type);
+            ip_total = elem_info(NQUAD_SURF, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
             for (ip_id = 0; ip_id < ip_total; ip_id++) {
               /* I don't think I want it zero-based according to the comment in rf_bc_const.h */
-              find_surf_st(ip_id, ei[pg->imtrx]->ielem_type, side_id + 1, pd->Num_Dim, xi, &s, &t,
-                           &u);
-              wt = Gq_surf_weight(ip_id, ei[pg->imtrx]->ielem_type);
-              if (pd->CoordinateSystem == CYLINDRICAL || pd->CoordinateSystem == SWIRLING)
+              find_surf_st(ip_id, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type,
+                           side_id + 1, goma_ctx->fem.pd->Num_Dim, xi, &s, &t, &u);
+              wt = Gq_surf_weight(ip_id, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
+              if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL ||
+                  goma_ctx->fem.pd->CoordinateSystem == SWIRLING)
                 wt *= 2.0 * M_PIE;
               load_field_variables_at_xi(elem_id, xi);
               surface_determinant_and_normal(
-                  elem_id, ei[pg->imtrx]->iconnect_ptr, ei[pg->imtrx]->num_local_nodes,
-                  ei[pg->imtrx]->ielem_dim - 1, side_id + 1, num_nodes_on_side, local_elem_node_id);
+                  elem_id, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr,
+                  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
+                  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim - 1, side_id + 1,
+                  num_nodes_on_side, local_elem_node_id);
               for (m = 0; m < mdim; m++)
-                inflow_volume +=
-                    -(fv->v[m] * fv->snormal[m]) * wt * fv->sdet; /* Normal is outward pointing. */
+                inflow_volume += -(goma_ctx->fem.fv->v[m] * goma_ctx->fem.fv->snormal[m]) * wt *
+                                 goma_ctx->fem.fv->sdet; /* Normal is outward pointing. */
             }
             inflow_volume *= dt;
             particle_volume = 4.0 / 3.0 * M_PIE * pow(goma_ctx->particles.radius, 3.0);
@@ -2617,7 +2624,7 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
               p.owning_elem_id = elem_id;
               if (PBC->type == PBC_FREESTREAM_SOURCE) {
                 load_field_variables_at_xi(elem_id, p.xi);
-                memcpy(p.v, fv->v, DIM * sizeof(dbl));
+                memcpy(p.v, goma_ctx->fem.fv->v, DIM * sizeof(dbl));
                 memcpy(p.v_old, p.v, DIM * sizeof(dbl));
               }
               p.time = creation_time;
@@ -2631,7 +2638,7 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
               p.owning_elem_id = elem_id;
               if (PBC->type == PBC_FREESTREAM_SOURCE) {
                 load_field_variables_at_xi(elem_id, p.xi);
-                memcpy(p.v, fv->v, DIM * sizeof(dbl));
+                memcpy(p.v, goma_ctx->fem.fv->v, DIM * sizeof(dbl));
                 memcpy(p.v_old, p.v, DIM * sizeof(dbl));
               }
               p.time = creation_time;
@@ -2733,12 +2740,13 @@ static void load_element_information(const int elem_id) {
 
   /* Not sure if this call is necessary ... I don't know exactly what
    * element information I use laster on. */
-  ei[pg->imtrx]->ielem = elem_id;
-  load_ei(ei[pg->imtrx]->ielem, static_exo, 0, pg->imtrx);
+  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem = elem_id;
+  load_ei(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, static_exo, 0, goma_ctx->fem.pg->imtrx);
 
   velo_interp = -1;
   for (i = 0; i < Num_Basis_Functions; i++)
-    if (pd_glob[ei[pg->imtrx]->mn]->i[pg->imtrx][VELOCITY1] == bfd[i]->interpolation)
+    if (goma_ctx->fem.pd_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]
+            ->i[goma_ctx->fem.pg->imtrx][VELOCITY1] == goma_ctx->fem.bfd[i]->interpolation)
       velo_interp = i;
   if (velo_interp == -1)
     GOMA_EH(GOMA_ERROR, "Could not find velocity interpolation function.");
@@ -2760,12 +2768,12 @@ static void load_element_node_coordinates(const int elem_id) {
 
   i = goma_ctx->mesh.proc_connect_ptr[elem_id];
   for (j = 0; j < mdim; j++) {
-    if (pd->e[pg->imtrx][R_MESH1]) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
       var = MESH_DISPLACEMENT1 + j;
       for (k = 0; k < nodes_per_element; k++) {
-        idof = ei[pg->imtrx]->ln_to_dof[var][k];
+        idof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[var][k];
         node_index = goma_ctx->mesh.proc_elem_connect[i + k];
-        node_coord[k][j] = goma_ctx->mesh.coor[j][node_index] + *esp->d[j][idof];
+        node_coord[k][j] = goma_ctx->mesh.coor[j][node_index] + *goma_ctx->fem.esp->d[j][idof];
       }
     } else
       for (k = 0; k < nodes_per_element; k++) {
@@ -2929,7 +2937,7 @@ static void load_field_variables_at_xi(const int elem_id, dbl *const xi) {
   if (last_elements_fv_loaded != elem_id)
     load_element_information(elem_id);
 
-  err = load_basis_functions(xi, bfd);
+  err = load_basis_functions(xi, goma_ctx->fem.bfd);
   GOMA_EH(err, "Error from load_basis_functions()");
 
   err = beer_belly();
@@ -2939,10 +2947,10 @@ static void load_field_variables_at_xi(const int elem_id, dbl *const xi) {
   GOMA_EH(err, "Error from load_fv()");
   if (TimeIntegration == STEADY) {
     /* The fv_old structures don't even get filled if we're a STEADY run. */
-    if (pd->v[pg->imtrx][VELOCITY1])
-      memcpy(fv_old->v, fv->v, DIM * sizeof(dbl));
-    if (pd->v[pg->imtrx][ENORM])
-      fv_old->Enorm = fv->Enorm;
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1])
+      memcpy(goma_ctx->fem.fv_old->v, goma_ctx->fem.fv->v, DIM * sizeof(dbl));
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][ENORM])
+      goma_ctx->fem.fv_old->Enorm = goma_ctx->fem.fv->Enorm;
   }
 
   /* When I put in deformable meshes, I need to include these two
@@ -2975,13 +2983,13 @@ static int get_element_xi_newton(const int elem_id, const dbl *const x, dbl *xi)
   int i, j, si, iter;
   struct Basis_Functions *map_bf;
 
-  si = in_list(pd->IntegrationMap, 0, Num_Interpolations, Unique_Interpolations);
-  map_bf = bfd[si];
+  si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, Num_Interpolations, Unique_Interpolations);
+  map_bf = goma_ctx->fem.bfd[si];
 
   load_field_variables_at_xi(elem_id, xi);
   memset(resid, 0, DIM * sizeof(dbl));
   for (i = 0; i < mdim; i++)
-    resid[i] = fv->x[i] - x[i];
+    resid[i] = goma_ctx->fem.fv->x[i] - x[i];
   resid_norm = nnorm(mdim, resid);
 
   xi_norm = nnorm(mdim, xi);
@@ -3009,7 +3017,7 @@ resid[1], resid[2]); fflush(stderr);
 
     load_field_variables_at_xi(elem_id, xi);
     for (i = 0; i < mdim; i++)
-      resid[i] = fv->x[i] - x[i];
+      resid[i] = goma_ctx->fem.fv->x[i] - x[i];
     resid_norm = nnorm(mdim, resid);
 
     /* If we're looking at a particle that's definitely out of this
@@ -3032,8 +3040,9 @@ resid[1], resid[2]); fflush(stderr);
             "last update = (%g,%g,%g), xi = (%g,%g,%g)\nresid = (%g,%g,%g), resid norm = %g\n",
             update[0], update[1], update[2], xi[0], xi[1], xi[2], resid[0], resid[1], resid[2],
             resid_norm);
-    fprintf(stderr, "fv->x = (%g,%g,%g), fv->v = (%g,%g,%g)\n", fv->x[0], fv->x[1], fv->x[2],
-            fv->v[0], fv->v[1], fv->v[2]);
+    fprintf(stderr, "fv->x = (%g,%g,%g), fv->v = (%g,%g,%g)\n", goma_ctx->fem.fv->x[0],
+            goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], goma_ctx->fem.fv->v[0],
+            goma_ctx->fem.fv->v[1], goma_ctx->fem.fv->v[2]);
     return -1;
   }
 
@@ -3207,11 +3216,11 @@ static void output_a_particle(particle_t *const p,
    * time step. */
   if (goma_ctx->particles.full_output_stride > 0) {
     strided_output = !((goma_time_step + 1) % goma_ctx->particles.full_output_stride);
-    last_goma_step =
-        ((TimeIntegration == STEADY) &&
-         (goma_time_step == goma_ctx->particles.max_time_steps - 1)) ||
-        ((TimeIntegration == TRANSIENT) &&
-         ((goma_time_step == tran->MaxTimeSteps - 1) || (particle_time == tran->TimeMax)));
+    last_goma_step = ((TimeIntegration == STEADY) &&
+                      (goma_time_step == goma_ctx->particles.max_time_steps - 1)) ||
+                     ((TimeIntegration == TRANSIENT) &&
+                      ((goma_time_step == goma_ctx->fem.tran->MaxTimeSteps - 1) ||
+                       (particle_time == goma_ctx->fem.tran->TimeMax)));
 
     /*
     fprintf(stderr, "Proc%d: In oap/full, strided_output = %d, last_step = %d, last_goma_step = %d,
@@ -3262,13 +3271,13 @@ static void store_particle_data(particle_t *const p) {
     /* Beware hiding longer-lengthed variables names. */
     /* Look into bc_colloc.c:load_variable() */
     if (!strncmp("T", output_var, 1))
-      p->real_data[j++] = fv->T;
+      p->real_data[j++] = goma_ctx->fem.fv->T;
     else if (!strncmp("VX", output_var, 2))
-      p->real_data[j++] = fv->v[0];
+      p->real_data[j++] = goma_ctx->fem.fv->v[0];
     else if (!strncmp("VY", output_var, 2))
-      p->real_data[j++] = fv->v[1];
+      p->real_data[j++] = goma_ctx->fem.fv->v[1];
     else if (!strncmp("VZ", output_var, 2))
-      p->real_data[j++] = fv->v[2];
+      p->real_data[j++] = goma_ctx->fem.fv->v[2];
     else
       dump2(EXIT, p, "Unknown particle output variable: %s.\n", output_var);
   }
@@ -3293,14 +3302,14 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
   memset(forces, 0, sizeof(double) * DIM);
 
   /* Get the index into acceleration vectors for gravity. */
-  if (pd->CoordinateSystem == CARTESIAN)
+  if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN)
     gravity_index = 2 * pdim - 1; /* y or z depending on 2D or 3D */
   else
     gravity_index = pdim; /* z in (z,r) */
 
   min_side_length = get_element_minimum_side_length(p->owning_elem_id);
   particle_speed = nnorm(DIM, p->v);
-  fluid_speed = nnorm(DIM, fv->v);
+  fluid_speed = nnorm(DIM, goma_ctx->fem.fv->v);
   max_speed = MAX(particle_speed, fluid_speed);
   switch (goma_ctx->particles.model) {
   case TRACER_EXPLICIT:
@@ -3325,13 +3334,14 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
              goma_ctx->particles.radius;
     mass = goma_ctx->particles.density * volume;
     /*      fluid_mass = mp->density * volume; */
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    stokes_force_coeff = 6.0 * M_PIE * goma_ctx->fem.mp->viscosity * goma_ctx->particles.radius;
     gravity_force_coeff = goma_ctx->particles.model_data[1];
 
     for (i = 0; i < pdim; i++)
-      vel_rel[i] = fv->v[i] - p->v[i];
+      vel_rel[i] = goma_ctx->fem.fv->v[i] - p->v[i];
     vel_diff = nnorm(pdim, vel_rel);
-    Re_p = goma_ctx->particles.density * vel_diff * 2.0 * goma_ctx->particles.radius / mp->density;
+    Re_p = goma_ctx->particles.density * vel_diff * 2.0 * goma_ctx->particles.radius /
+           goma_ctx->fem.mp->density;
     if (Re_p <= 0.1)
       Re_p_correction = 1.0 + 3.0 / 16.0 * Re_p;
     else
@@ -3350,7 +3360,8 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
     /* Get the acceleration values and from that adjust timestep if necessary.  We assume that the
        fluid velocity doesn't change appreciably over the timestep for CFL purposes. */
     for (i = 0; i < pdim; i++)
-      forces[i] = stokes_force_coeff * (fv->v[i] - p->v[i]) - fv->grad_P[i] * volume;
+      forces[i] = stokes_force_coeff * (goma_ctx->fem.fv->v[i] - p->v[i]) -
+                  goma_ctx->fem.fv->grad_P[i] * volume;
     forces[gravity_index] += gravity_force_coeff * mass;
 
     max_force = fabs(forces[0]);
@@ -3405,7 +3416,7 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
     /* These need to match the same values used in move_particle(). */
     mass = 4.0 / 3.0 * M_PIE * goma_ctx->particles.density * goma_ctx->particles.radius *
            goma_ctx->particles.radius * goma_ctx->particles.radius;
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    stokes_force_coeff = 6.0 * M_PIE * goma_ctx->fem.mp->viscosity * goma_ctx->particles.radius;
     coulombic_force_coeff = -goma_ctx->particles.model_data[1];
 
     /* Starting timestep based on particle info. */
@@ -3423,8 +3434,8 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
     /* This needs to be modified to use old values of v and V, too. */
     max_force = 0.0;
     for (i = 0; i < pdim; i++) {
-      force = fabs(stokes_force_coeff / mass * (fv->v[i] - p->v[i]) +
-                   coulombic_force_coeff / mass * fv->grad_V[i]);
+      force = fabs(stokes_force_coeff / mass * (goma_ctx->fem.fv->v[i] - p->v[i]) +
+                   coulombic_force_coeff / mass * goma_ctx->fem.fv->grad_V[i]);
       max_force = MAX(max_force, force);
     }
     if (max_force > 0.0)
@@ -3448,7 +3459,7 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
     /* These need to match the same values used in move_particle(). */
     mass = 4.0 / 3.0 * M_PIE * goma_ctx->particles.density * goma_ctx->particles.radius *
            goma_ctx->particles.radius * goma_ctx->particles.radius;
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    stokes_force_coeff = 6.0 * M_PIE * goma_ctx->fem.mp->viscosity * goma_ctx->particles.radius;
     /* Compute the Clausius-Mossoti factor, Re(K(omega)) */
     coeff_a = goma_ctx->particles.model_data[1] - goma_ctx->particles.model_data[2];
     coeff_b = (goma_ctx->particles.model_data[4] - goma_ctx->particles.model_data[3]) /
@@ -3487,8 +3498,9 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
     /* This needs to be modified to use old values of v and V, too. */
     max_force = 0.0;
     for (i = 0; i < pdim; i++) {
-      force = fabs(stokes_force_coeff / mass * (fv->v[i] - p->v[i]) +
-                   dielectrophoretic_force_coeff / mass * 2.0 * fv->Enorm * fv->grad_Enorm[i]);
+      force = fabs(stokes_force_coeff / mass * (goma_ctx->fem.fv->v[i] - p->v[i]) +
+                   dielectrophoretic_force_coeff / mass * 2.0 * goma_ctx->fem.fv->Enorm *
+                       goma_ctx->fem.fv->grad_Enorm[i]);
 
       /*
       fprintf(stderr, "\ti=%d sfc/m=%g sfc/m(%g)=%g\n", i, stokes_force_coeff/mass, fv->v[i] -
@@ -3571,14 +3583,15 @@ static int move_particle(particle_t *const p,
   /* Everything needs the fluid velocity, so I can do this here.  This
    * only works for nondeformable meshes... */
   for (i = 0; i < DIM; i++)
-    current_v[i] = (1.0 - time_fraction) * fv_old->v[i] + time_fraction * fv->v[i];
+    current_v[i] =
+        (1.0 - time_fraction) * goma_ctx->fem.fv_old->v[i] + time_fraction * goma_ctx->fem.fv->v[i];
 
   rcubed = goma_ctx->particles.radius * goma_ctx->particles.radius * goma_ctx->particles.radius;
   volume = 4.0 / 3.0 * M_PIE * rcubed;
   mass = volume * goma_ctx->particles.density;
 
   /* Get the index into Newton RHS's for gravity. */
-  if (pd->CoordinateSystem == CARTESIAN)
+  if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN)
     gravity_index = 2 * pdim - 1; /* y or z depending on 2D or 3D */
   else
     gravity_index = pdim; /* z in (z,r) */
@@ -3593,7 +3606,7 @@ static int move_particle(particle_t *const p,
        * 1st parameter is sigma (in fractions of swimming speed) for swimming speed in L/second.
        * 2nd parameter is the swimming speed.
        */
-      beta = 8.0 * M_PIE * mp->viscosity * rcubed;
+      beta = 8.0 * M_PIE * goma_ctx->fem.mp->viscosity * rcubed;
       /* Including moment of inertia => */
       beta *= 2.0 / 5.0 * mass * goma_ctx->particles.radius * goma_ctx->particles.radius;
 
@@ -3661,14 +3674,14 @@ static int move_particle(particle_t *const p,
     /* Get the current grad_V value. */
     fill_my_fv_old();
     for (i = 0; i < pdim; i++)
-      current_grad_V[i] =
-          (1.0 - time_fraction) * (my_fv_old->grad_V[i]) + time_fraction * (fv->grad_V[i]);
+      current_grad_V[i] = (1.0 - time_fraction) * (my_fv_old->grad_V[i]) +
+                          time_fraction * (goma_ctx->fem.fv->grad_V[i]);
 
     /* Fill the coefficients. */
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    stokes_force_coeff = 6.0 * M_PIE * goma_ctx->fem.mp->viscosity * goma_ctx->particles.radius;
     coulombic_force_coeff = -goma_ctx->particles.model_data[1];
 
-    for (i = 0; i < pd->Num_Dim; i++)
+    for (i = 0; i < goma_ctx->fem.pd->Num_Dim; i++)
       total_velocity[i] =
           p->v[i] + particle_dt * (stokes_force_coeff / mass * (current_v[i] - p->v[i]) +
                                    coulombic_force_coeff / mass * current_grad_V[i]);
@@ -3676,7 +3689,7 @@ static int move_particle(particle_t *const p,
     if (Num_Impermeable_PBCs)
       enforce_impermeable_PBCs(p, total_velocity, particle_dt);
 
-    for (i = 0; i < pd->Num_Dim; i++) {
+    for (i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
       p->x[i] += total_velocity[i] * particle_dt;
       p->v[i] = total_velocity[i];
     }
@@ -3688,11 +3701,11 @@ static int move_particle(particle_t *const p,
     /* Get the current grad_V value. */
     fill_my_fv_old();
     for (i = 0; i < pdim; i++)
-      current_grad_V[i] =
-          (1.0 - time_fraction) * (my_fv_old->grad_V[i]) + time_fraction * (fv->grad_V[i]);
+      current_grad_V[i] = (1.0 - time_fraction) * (my_fv_old->grad_V[i]) +
+                          time_fraction * (goma_ctx->fem.fv->grad_V[i]);
 
     /* These need to match the same values used in compute_particle_dt(). */
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    stokes_force_coeff = 6.0 * M_PIE * goma_ctx->fem.mp->viscosity * goma_ctx->particles.radius;
     coulombic_force_coeff = -goma_ctx->particles.model_data[1];
 
     for (i = 0; i < pdim; i++) {
@@ -3733,7 +3746,8 @@ static int move_particle(particle_t *const p,
         J[i][pdim + i] = -particle_dt;
         J[pdim + i][pdim + i] = 1.0 + particle_dt * stokes_force_coeff / mass;
         for (j = 0; j < pdim; j++)
-          J[pdim + i][j] = -particle_dt * stokes_force_coeff / mass * fv->grad_v[j][i];
+          J[pdim + i][j] =
+              -particle_dt * stokes_force_coeff / mass * goma_ctx->fem.fv->grad_v[j][i];
       }
 
       /*
@@ -3777,11 +3791,12 @@ static int move_particle(particle_t *const p,
 
       load_field_variables_at_xi(p->owning_elem_id, p->xi);
       for (i = 0; i < pdim; i++)
-        current_v[i] = (1.0 - time_fraction) * (fv_old->v[i]) + time_fraction * (fv->v[i]);
+        current_v[i] = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->v[i]) +
+                       time_fraction * (goma_ctx->fem.fv->v[i]);
       fill_my_fv_old();
       for (i = 0; i < pdim; i++)
-        current_grad_V[i] =
-            (1.0 - time_fraction) * (my_fv_old->grad_V[i]) + time_fraction * (fv->grad_V[i]);
+        current_grad_V[i] = (1.0 - time_fraction) * (my_fv_old->grad_V[i]) +
+                            time_fraction * (goma_ctx->fem.fv->grad_V[i]);
 
       for (i = 0; i < pdim; i++) {
         b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
@@ -3796,7 +3811,8 @@ static int move_particle(particle_t *const p,
 
     if (newton_iterations == 100 && b_norm > 1.0e-8 && update_norm > 1.0e-8) {
       fprintf(stderr, "\nmove_particle() says:\n");
-      fprintf(stderr, "fv->x = (%g,%g,%g)\n", fv->x[0], fv->x[1], fv->x[2]);
+      fprintf(stderr, "fv->x = (%g,%g,%g)\n", goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
+              goma_ctx->fem.fv->x[2]);
       fprintf(stderr, "update = (%g,%g,%g,%g,%g,%g)\n", -x_sol[0], -x_sol[1], -x_sol[2], -x_sol[3],
               -x_sol[4], -x_sol[5]);
       fprintf(stderr, "resid = (%g,%g,%g,%g,%g,%g), resid_norm = %g\n", b[0], b[1], b[2], b[3],
@@ -3811,13 +3827,14 @@ static int move_particle(particle_t *const p,
   case DIELECTROPHORETIC_TRACER_IMPLICIT:
     /* Get the current grad_V value. */
     fill_my_fv_old();
-    current_Enorm = (1.0 - time_fraction) * (fv_old->Enorm) + time_fraction * (fv->Enorm);
+    current_Enorm = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->Enorm) +
+                    time_fraction * (goma_ctx->fem.fv->Enorm);
     for (i = 0; i < pdim; i++)
-      current_grad_Enorm[i] =
-          (1.0 - time_fraction) * (my_fv_old->grad_Enorm[i]) + time_fraction * (fv->grad_Enorm[i]);
+      current_grad_Enorm[i] = (1.0 - time_fraction) * (my_fv_old->grad_Enorm[i]) +
+                              time_fraction * (goma_ctx->fem.fv->grad_Enorm[i]);
 
     /* These need to match the same values used in compute_particle_dt(). */
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    stokes_force_coeff = 6.0 * M_PIE * goma_ctx->fem.mp->viscosity * goma_ctx->particles.radius;
 
     /* Compute the Clausius-Mossoti factor, Re(K(omega)) */
     coeff_a = goma_ctx->particles.model_data[1] - goma_ctx->particles.model_data[2];
@@ -3877,7 +3894,7 @@ static int move_particle(particle_t *const p,
         J[i][pdim + i] = -particle_dt;
         J[pdim + i][pdim + i] = mass + particle_dt * stokes_force_coeff;
         for (j = 0; j < pdim; j++)
-          J[pdim + i][j] = -particle_dt * (stokes_force_coeff * fv->grad_v[j][i] +
+          J[pdim + i][j] = -particle_dt * (stokes_force_coeff * goma_ctx->fem.fv->grad_v[j][i] +
                                            dielectrophoretic_force_coeff * 2.0 *
                                                current_grad_Enorm[j] * current_grad_Enorm[i]);
       }
@@ -3939,12 +3956,14 @@ static int move_particle(particle_t *const p,
 
       load_field_variables_at_xi(p->owning_elem_id, p->xi);
       for (i = 0; i < pdim; i++)
-        current_v[i] = (1.0 - time_fraction) * (fv_old->v[i]) + time_fraction * (fv->v[i]);
-      current_Enorm = (1.0 - time_fraction) * (fv_old->Enorm) + time_fraction * (fv->Enorm);
+        current_v[i] = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->v[i]) +
+                       time_fraction * (goma_ctx->fem.fv->v[i]);
+      current_Enorm = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->Enorm) +
+                      time_fraction * (goma_ctx->fem.fv->Enorm);
       fill_my_fv_old();
       for (i = 0; i < pdim; i++)
         current_grad_Enorm[i] = (1.0 - time_fraction) * (my_fv_old->grad_Enorm[i]) +
-                                time_fraction * (fv->grad_Enorm[i]);
+                                time_fraction * (goma_ctx->fem.fv->grad_Enorm[i]);
 
       for (i = 0; i < pdim; i++) {
         b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
@@ -4028,7 +4047,7 @@ static int move_particle(particle_t *const p,
           J[i][pdim + i] = -particle_dt;
           J[pdim + i][pdim + i] = mass + particle_dt * stokes_force_coeff;
           for (j = 0; j < pdim; j++)
-            J[pdim + i][j] = -particle_dt * (stokes_force_coeff * fv->grad_v[j][i] +
+            J[pdim + i][j] = -particle_dt * (stokes_force_coeff * goma_ctx->fem.fv->grad_v[j][i] +
                                              dielectrophoretic_force_coeff * 2.0 *
                                                  current_grad_Enorm[j] * current_grad_Enorm[i]);
         }
@@ -4089,12 +4108,14 @@ static int move_particle(particle_t *const p,
 
         load_field_variables_at_xi(p->owning_elem_id, p->xi);
         for (i = 0; i < pdim; i++)
-          current_v[i] = (1.0 - time_fraction) * (fv_old->v[i]) + time_fraction * (fv->v[i]);
-        current_Enorm = (1.0 - time_fraction) * (fv_old->Enorm) + time_fraction * (fv->Enorm);
+          current_v[i] = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->v[i]) +
+                         time_fraction * (goma_ctx->fem.fv->v[i]);
+        current_Enorm = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->Enorm) +
+                        time_fraction * (goma_ctx->fem.fv->Enorm);
         fill_my_fv_old();
         for (i = 0; i < pdim; i++)
           current_grad_Enorm[i] = (1.0 - time_fraction) * (my_fv_old->grad_Enorm[i]) +
-                                  time_fraction * (fv->grad_Enorm[i]);
+                                  time_fraction * (goma_ctx->fem.fv->grad_Enorm[i]);
 
         for (i = 0; i < pdim; i++) {
           b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
@@ -4115,7 +4136,8 @@ static int move_particle(particle_t *const p,
 
       if (newton_iterations_2 == 100 && b_norm > 1.0e-8 && update_norm > 1.0e-8) {
         fprintf(stderr, "\nXI_MAX move_particle() says:\n");
-        fprintf(stderr, "XI_MAX fv->x = (%g,%g,%g)\n", fv->x[0], fv->x[1], fv->x[2]);
+        fprintf(stderr, "XI_MAX fv->x = (%g,%g,%g)\n", goma_ctx->fem.fv->x[0],
+                goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2]);
         fprintf(stderr, "XI_MAX update = (%g,%g,%g,%g,%g,%g)\n", -x_sol[0], -x_sol[1], -x_sol[2],
                 -x_sol[3], -x_sol[4], -x_sol[5]);
         fprintf(stderr, "XI_MAX resid = (%g,%g,%g,%g,%g,%g), resid_norm = %g\n", b[0], b[1], b[2],
@@ -4129,9 +4151,9 @@ static int move_particle(particle_t *const p,
     break;
 
   case INERTIAL_TRACER_EXPLICIT:
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    stokes_force_coeff = 6.0 * M_PIE * goma_ctx->fem.mp->viscosity * goma_ctx->particles.radius;
 
-    for (i = 0; i < pd->Num_Dim; i++) {
+    for (i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
       total_velocity[i] =
           p->v[i] + particle_dt * stokes_force_coeff / mass * (current_v[i] - p->v[i]);
     }
@@ -4139,7 +4161,7 @@ static int move_particle(particle_t *const p,
     if (Num_Impermeable_PBCs)
       enforce_impermeable_PBCs(p, total_velocity, particle_dt);
 
-    for (i = 0; i < pd->Num_Dim; i++) {
+    for (i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
       p->x[i] += total_velocity[i] * particle_dt;
       p->v[i] = total_velocity[i];
     }
@@ -4161,10 +4183,10 @@ static int move_particle(particle_t *const p,
       memset(J_2x2, 0, 4 * sizeof(dbl));
       /* See comments about fv->grad_v on
        * CHARGED_TRACER_IMPLICIT. */
-      J_2x2[0][0] = 1.0 - particle_dt * fv->grad_v[0][0];
-      J_2x2[0][1] = -particle_dt * fv->grad_v[1][0];
-      J_2x2[1][0] = -particle_dt * fv->grad_v[0][1];
-      J_2x2[1][1] = 1.0 - particle_dt * fv->grad_v[1][1];
+      J_2x2[0][0] = 1.0 - particle_dt * goma_ctx->fem.fv->grad_v[0][0];
+      J_2x2[0][1] = -particle_dt * goma_ctx->fem.fv->grad_v[1][0];
+      J_2x2[1][0] = -particle_dt * goma_ctx->fem.fv->grad_v[0][1];
+      J_2x2[1][1] = 1.0 - particle_dt * goma_ctx->fem.fv->grad_v[1][1];
 
       solve_NxN_system(&J_2x2[0][0], b, x_sol, 2, 2);
 
@@ -4190,7 +4212,8 @@ static int move_particle(particle_t *const p,
       }
       load_field_variables_at_xi(p->owning_elem_id, p->xi);
       for (i = 0; i < DIM; i++)
-        current_v[i] = (1.0 - time_fraction) * (fv_old->v[i]) + time_fraction * (fv->v[i]);
+        current_v[i] = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->v[i]) +
+                       time_fraction * (goma_ctx->fem.fv->v[i]);
 
       b[0] = p->x[0] - p->x_old[0] - particle_dt * current_v[0];
       b[1] = p->x[1] - p->x_old[1] - particle_dt * current_v[1];
@@ -4209,13 +4232,14 @@ static int move_particle(particle_t *const p,
   case INERTIAL_TRACER_IMPLICIT:
     /* These need to match the same values used in compute_particle_dt(). */
     /* fluid_mass = 4.0/3.0 * M_PIE * mp->density * rcubed; */
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    stokes_force_coeff = 6.0 * M_PIE * goma_ctx->fem.mp->viscosity * goma_ctx->particles.radius;
     gravity_force_coeff = goma_ctx->particles.model_data[1];
 
     for (i = 0; i < pdim; i++)
-      vel_rel[i] = fv->v[i] - p->v[i];
+      vel_rel[i] = goma_ctx->fem.fv->v[i] - p->v[i];
     vel_diff = nnorm(pdim, vel_rel);
-    Re_p = goma_ctx->particles.density * vel_diff * 2.0 * goma_ctx->particles.radius / mp->density;
+    Re_p = goma_ctx->particles.density * vel_diff * 2.0 * goma_ctx->particles.radius /
+           goma_ctx->fem.mp->density;
     if (Re_p <= 0.1)
       Re_p_correction = 1.0 + 3.0 / 16.0 * Re_p;
     else
@@ -4255,7 +4279,8 @@ static int move_particle(particle_t *const p,
       b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
       b[pdim + i] = p->v[i] - p->v_old[i] -
                     particle_dt / mass *
-                        (stokes_force_coeff * (current_v[i] - p->v[i]) + -fv->grad_P[i] * volume);
+                        (stokes_force_coeff * (current_v[i] - p->v[i]) +
+                         -goma_ctx->fem.fv->grad_P[i] * volume);
     }
     b[gravity_index] -= particle_dt * gravity_force_coeff;
 
@@ -4272,7 +4297,8 @@ static int move_particle(particle_t *const p,
         J[i][pdim + i] = -particle_dt;
         J[pdim + i][pdim + i] = 1.0 + particle_dt * stokes_force_coeff / mass;
         for (j = 0; j < pdim; j++)
-          J[pdim + i][j] = -particle_dt * stokes_force_coeff / mass * fv->grad_v[j][i];
+          J[pdim + i][j] =
+              -particle_dt * stokes_force_coeff / mass * goma_ctx->fem.fv->grad_v[j][i];
       }
 
       solve_NxN_system(&J[0][0], b, x_sol, 2 * pdim, 6);
@@ -4313,13 +4339,15 @@ static int move_particle(particle_t *const p,
       load_field_variables_at_xi(p->owning_elem_id, p->xi);
 
       for (i = 0; i < pdim; i++)
-        current_v[i] = (1.0 - time_fraction) * fv_old->v[i] + time_fraction * fv->v[i];
+        current_v[i] = (1.0 - time_fraction) * goma_ctx->fem.fv_old->v[i] +
+                       time_fraction * goma_ctx->fem.fv->v[i];
 
       for (i = 0; i < pdim; i++) {
         b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
         b[pdim + i] = p->v[i] - p->v_old[i] -
                       particle_dt / mass *
-                          (stokes_force_coeff * (current_v[i] - p->v[i]) + -fv->grad_P[i] * volume);
+                          (stokes_force_coeff * (current_v[i] - p->v[i]) +
+                           -goma_ctx->fem.fv->grad_P[i] * volume);
       }
       b[gravity_index] -= particle_dt * gravity_force_coeff;
 
@@ -4330,7 +4358,8 @@ static int move_particle(particle_t *const p,
 
     if (newton_iterations == 100 && b_norm > 1.0e-8 && update_norm > 1.0e-8) {
       fprintf(stderr, "\nmove_particle() says:\n");
-      fprintf(stderr, "fv->x = (%g,%g,%g)\n", fv->x[0], fv->x[1], fv->x[2]);
+      fprintf(stderr, "fv->x = (%g,%g,%g)\n", goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
+              goma_ctx->fem.fv->x[2]);
       fprintf(stderr, "fv->current_v = (%g,%g,%g)\n", current_v[0], current_v[1], current_v[2]);
       fprintf(stderr, "update = (%g,%g,%g,%g,%g,%g)\n", -x_sol[0], -x_sol[1], -x_sol[2], -x_sol[3],
               -x_sol[4], -x_sol[5]);
@@ -4340,17 +4369,18 @@ static int move_particle(particle_t *const p,
                       "p->v[i]) - fv->grad_P[i] * volume) =\n");
       fprintf(stderr, "  i=0: %g -  %g - %g / %g * (%g * (%g - %g) - %g * %g)\n", p->v[0],
               p->v_old[0], particle_dt, mass, stokes_force_coeff, current_v[0], p->v[0],
-              fv->grad_P[0], volume);
+              goma_ctx->fem.fv->grad_P[0], volume);
       fprintf(stderr, "  i=1: %g -  %g - %g / %g * (%g * (%g - %g) - %g * %g)\n", p->v[1],
               p->v_old[1], particle_dt, mass, stokes_force_coeff, current_v[1], p->v[1],
-              fv->grad_P[1], volume);
+              goma_ctx->fem.fv->grad_P[1], volume);
       fprintf(stderr, "  i=2: %g -  %g - %g / %g * (%g * (%g - %g) - %g * %g)\n", p->v[2],
               p->v_old[2], particle_dt, mass, stokes_force_coeff, current_v[2], p->v[2],
-              fv->grad_P[2], volume);
+              goma_ctx->fem.fv->grad_P[2], volume);
       fprintf(stderr, "b[%d] -= particle_dt * gravity =\n", gravity_index);
       fprintf(stderr, "  b[%d] -= %g * %g\n", gravity_index, particle_dt, gravity_force_coeff);
-      fprintf(stderr, "fv->v = (%g,%g,%g), fv_old->v = (%g,%g,%g)\n", fv->v[0], fv->v[1], fv->v[2],
-              fv_old->v[0], fv_old->v[1], fv_old->v[2]);
+      fprintf(stderr, "fv->v = (%g,%g,%g), fv_old->v = (%g,%g,%g)\n", goma_ctx->fem.fv->v[0],
+              goma_ctx->fem.fv->v[1], goma_ctx->fem.fv->v[2], goma_ctx->fem.fv_old->v[0],
+              goma_ctx->fem.fv_old->v[1], goma_ctx->fem.fv_old->v[2]);
       fprintf(stderr, "particle_dt = %g\n", particle_dt);
       dump1(EXIT, p, "Failed to converge in 100 Newton iterations.");
     }
@@ -4533,21 +4563,23 @@ static void dump_fcn(
 static void fill_my_fv_old(void) {
   int i, j, dofs;
 
-  if (pd->v[pg->imtrx][VOLTAGE]) {
-    dofs = ei[pg->imtrx]->dof[VOLTAGE];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VOLTAGE]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VOLTAGE];
     for (i = 0; i < VIM; i++) {
       my_fv_old->grad_V[i] = 0.0;
       for (j = 0; j < dofs; j++)
-        my_fv_old->grad_V[i] += *esp_old->V[j] * bf[VOLTAGE]->grad_phi[j][i];
+        my_fv_old->grad_V[i] +=
+            *goma_ctx->fem.esp_old->V[j] * goma_ctx->fem.bf[VOLTAGE]->grad_phi[j][i];
     }
   }
 
-  if (pd->v[pg->imtrx][ENORM]) {
-    dofs = ei[pg->imtrx]->dof[ENORM];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][ENORM]) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ENORM];
     for (i = 0; i < VIM; i++) {
       my_fv_old->grad_Enorm[i] = 0.0;
       for (j = 0; j < dofs; j++)
-        my_fv_old->grad_Enorm[i] += *esp_old->Enorm[j] * bf[ENORM]->grad_phi[j][i];
+        my_fv_old->grad_Enorm[i] +=
+            *goma_ctx->fem.esp_old->Enorm[j] * goma_ctx->fem.bf[ENORM]->grad_phi[j][i];
     }
   }
 }
@@ -4864,10 +4896,10 @@ static void couple_to_continuum(void) {
   if (goma_ctx->particles.model == SWIMMER_EXPLICIT ||
       goma_ctx->particles.model == SWIMMER_IMPLICIT) {
     source_eqn = R_MOMENTUM1 + pdim - 1;
-    if (mp->DensityModel != CONSTANT)
+    if (goma_ctx->fem.mp->DensityModel != CONSTANT)
       GOMA_EH(GOMA_ERROR,
               "Sorry, only handling CONSTANT density models right now.  Check back later.");
-    source_mass = 4.0 / 3.0 * M_PIE * (goma_ctx->particles.density - mp->density) *
+    source_mass = 4.0 / 3.0 * M_PIE * (goma_ctx->particles.density - goma_ctx->fem.mp->density) *
                   goma_ctx->particles.radius * goma_ctx->particles.radius *
                   goma_ctx->particles.radius * goma_ctx->particles.ratio;
   }
@@ -4885,10 +4917,10 @@ static void couple_to_continuum(void) {
           fprintf(stderr, "PROC%d: \t\tstate = %d\n", goma_ctx->proc_id, p->state);
         }
 
-        for (j = 0; j < ei[pg->imtrx]->dof[source_eqn]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[source_eqn]; j++) {
           goma_ctx->particles.element_info[p->owning_elem_id].source_term[j] +=
-              source_mass * bf[source_eqn]->phi[j];
-          total_particles += bf[source_eqn]->phi[j];
+              source_mass * goma_ctx->fem.bf[source_eqn]->phi[j];
+          total_particles += goma_ctx->fem.bf[source_eqn]->phi[j];
         }
       }
     }
@@ -5028,7 +5060,7 @@ static void load_restart_file(void) {
       GOMA_EH(GOMA_ERROR, "Could not place particle from restart.");
     load_field_variables_at_xi(p.owning_elem_id, p.xi);
     for (i = 0; i < pdim; i++)
-      if (fabs(fv->x[i] - p.x[i]) > 1.0e-6)
+      if (fabs(goma_ctx->fem.fv->x[i] - p.x[i]) > 1.0e-6)
         GOMA_EH(GOMA_ERROR, "Did not match particle location on restart.");
     p_ptr = create_a_particle(&p, p.owning_elem_id);
     switch (goma_ctx->particles.model) {
@@ -5041,7 +5073,7 @@ static void load_restart_file(void) {
     case CHARGED_TRACER_EXPLICIT:
     case CHARGED_TRACER_IMPLICIT:
     case DIELECTROPHORETIC_TRACER_IMPLICIT:
-      memcpy(p_ptr->v, fv->v, DIM * sizeof(dbl));
+      memcpy(p_ptr->v, goma_ctx->fem.fv->v, DIM * sizeof(dbl));
       break;
     default:
       dump1(EXIT, p_ptr, "Unknown Particle_Model.  You shouldn't be here.");

@@ -328,13 +328,14 @@ static void facet_based_reinitialization_3D(
   std::unordered_set<int> level_set_nodes;
   for (int elem_block = 0; elem_block < exo->num_elem_blocks; elem_block++) {
     int mn = Matilda[elem_block];
-    if (!(pd_glob[mn]->v[pg->imtrx][ls->var]))
+    if (!(goma_ctx->fem.pd_glob[mn]->v[goma_ctx->fem.pg->imtrx][goma_ctx->fem.ls->var]))
       continue;
     int etype = exo->eb_elem_itype[elem_block];
     hexes.clear();
     hex_nodes.clear();
     int ielem_shape = type2shape(etype);
-    int interpolation = pd_glob[mn]->i[pg->imtrx][ls->var];
+    int interpolation =
+        goma_ctx->fem.pd_glob[mn]->i[goma_ctx->fem.pg->imtrx][goma_ctx->fem.ls->var];
     int dofs = getdofs(ielem_shape, interpolation);
     int shape = type2shape(etype);
     bool add_extra_dofs = false;
@@ -357,7 +358,8 @@ static void facet_based_reinitialization_3D(
       std::vector<double> ls_values(ls_dofs);
       for (int ln = 0; ln < dofs; ln++) {
         int gnn = exo->node_list[iconnect + ln];
-        ls_values[ln] = x[Index_Solution(gnn, ls->var, 0, 0, -2, pg->imtrx)];
+        ls_values[ln] =
+            x[Index_Solution(gnn, goma_ctx->fem.ls->var, 0, 0, -2, goma_ctx->fem.pg->imtrx)];
         // if (std::abs(ls_values[ln]) < 1e-3) {
         //   level_set_nodes.insert(gnn);
         // }
@@ -399,14 +401,14 @@ static void facet_based_reinitialization_3D(
 
         // transform local facets to global facets
         if (!local_facets.empty()) {
-          int DeformingMesh = pd->e[pg->imtrx][R_MESH1];
-          load_ei(elem, exo, NULL, pg->imtrx);
+          int DeformingMesh = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1];
+          load_ei(elem, exo, NULL, goma_ctx->fem.pg->imtrx);
           if (DeformingMesh) {
             goma_error err = load_elem_dofptr(elem, exo, x, x, x, x, 0);
             GOMA_EH(err, "load_elem_dofptr");
           }
-          int ShapeVar = pd->ShapeVar;
-          int mdof = ei[pd->mi[ShapeVar]]->dof[ShapeVar];
+          int ShapeVar = goma_ctx->fem.pd->ShapeVar;
+          int mdof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[ShapeVar]]->dof[ShapeVar];
 
           dbl x[DIM] = {0.0, 0.0, 0.0};
           dbl xi[DIM] = {0.0, 0.0, 0.0};
@@ -434,31 +436,35 @@ static void facet_based_reinitialization_3D(
 
                 if (!DeformingMesh) {
                   for (int j = 0; j < mdof; j++) {
-                    int ln = ei[pd->mi[ShapeVar]]->dof_list[ShapeVar][j];
+                    int ln =
+                        goma_ctx->fem.ei[goma_ctx->fem.pd->mi[ShapeVar]]->dof_list[ShapeVar][j];
 
                     int I = exo->node_list[iconnect + ln];
 
                     level_set_nodes.insert(I);
 
                     dbl phi_j =
-                        newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ln, ei[pg->imtrx]->ielem_shape,
-                                 pd->i[pd->mi[ShapeVar]][ShapeVar], j);
+                        newshape(xi, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, PSI, ln,
+                                 goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
+                                 goma_ctx->fem.pd->i[goma_ctx->fem.pd->mi[ShapeVar]][ShapeVar], j);
 
                     x[a] += goma_ctx->mesh.coor[a][I] * phi_j;
                   }
                 } else {
                   for (int j = 0; j < mdof; j++) {
-                    int ln = ei[pd->mi[ShapeVar]]->dof_list[ShapeVar][j];
+                    int ln =
+                        goma_ctx->fem.ei[goma_ctx->fem.pd->mi[ShapeVar]]->dof_list[ShapeVar][j];
 
                     int I = exo->node_list[iconnect + ln];
 
                     level_set_nodes.insert(I);
 
                     dbl phi_j =
-                        newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ln, ei[pg->imtrx]->ielem_shape,
-                                 pd->i[pd->mi[ShapeVar]][ShapeVar], j);
+                        newshape(xi, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, PSI, ln,
+                                 goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
+                                 goma_ctx->fem.pd->i[goma_ctx->fem.pd->mi[ShapeVar]][ShapeVar], j);
 
-                    x[a] += (goma_ctx->mesh.coor[a][I] + *esp->d[a][j]) * phi_j;
+                    x[a] += (goma_ctx->mesh.coor[a][I] + *goma_ctx->fem.esp->d[a][j]) * phi_j;
                   }
                 }
               }
@@ -535,23 +541,24 @@ static void facet_based_reinitialization_3D(
   my_kd_tree_t index(3, pc, nanoflann::KDTreeSingleIndexAdaptorParams(10));
 
   for (int node = 0; node < num_total_nodes; node++) {
-    if (ls->Freeze_Interface_Nodes && level_set_nodes.find(node) != level_set_nodes.end()) {
+    if (goma_ctx->fem.ls->Freeze_Interface_Nodes &&
+        level_set_nodes.find(node) != level_set_nodes.end()) {
       continue;
     }
-    int index_ls = Index_Solution(node, ls->var, 0, 0, -2, pg->imtrx);
+    int index_ls = Index_Solution(node, goma_ctx->fem.ls->var, 0, 0, -2, goma_ctx->fem.pg->imtrx);
     if (index_ls != -1) {
       Point<3> p({goma_ctx->mesh.coor[0][node], goma_ctx->mesh.coor[1][node],
                   goma_ctx->mesh.coor[2][node]});
-      if (pd->gv[MESH_DISPLACEMENT1]) {
-        int index_dx = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, -2, pg->imtrx);
+      if (goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1]) {
+        int index_dx = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, -2, goma_ctx->fem.pg->imtrx);
         if (index_dx != -1) {
           p[0] += x[index_dx];
         }
-        int index_dy = Index_Solution(node, MESH_DISPLACEMENT2, 0, 0, -2, pg->imtrx);
+        int index_dy = Index_Solution(node, MESH_DISPLACEMENT2, 0, 0, -2, goma_ctx->fem.pg->imtrx);
         if (index_dx != -1) {
           p[1] += x[index_dy];
         }
-        int index_dz = Index_Solution(node, MESH_DISPLACEMENT3, 0, 0, -2, pg->imtrx);
+        int index_dz = Index_Solution(node, MESH_DISPLACEMENT3, 0, 0, -2, goma_ctx->fem.pg->imtrx);
         if (index_dz != -1) {
           p[2] += x[index_dz];
         }
@@ -599,7 +606,7 @@ static void facet_based_reinitialization_2D(
 
   for (int elem_block = 0; elem_block < exo->num_elem_blocks; elem_block++) {
     int mn = Matilda[elem_block];
-    if (!(pd_glob[mn]->v[pg->imtrx][ls->var]))
+    if (!(goma_ctx->fem.pd_glob[mn]->v[goma_ctx->fem.pg->imtrx][goma_ctx->fem.ls->var]))
       continue;
     int etype = exo->eb_elem_itype[elem_block];
     triangles.clear();
@@ -607,7 +614,8 @@ static void facet_based_reinitialization_2D(
     quads.clear();
     quad_nodes.clear();
     int ielem_shape = type2shape(etype);
-    int interpolation = pd_glob[mn]->i[pg->imtrx][ls->var];
+    int interpolation =
+        goma_ctx->fem.pd_glob[mn]->i[goma_ctx->fem.pg->imtrx][goma_ctx->fem.ls->var];
     int dofs = getdofs(ielem_shape, interpolation);
     int shape = type2shape(etype);
     bool add_extra_dofs = false;
@@ -637,7 +645,8 @@ static void facet_based_reinitialization_2D(
       std::vector<double> ls_values(ls_dofs);
       for (int ln = 0; ln < dofs; ln++) {
         int gnn = exo->node_list[iconnect + ln];
-        ls_values[ln] = x[Index_Solution(gnn, ls->var, 0, 0, -2, pg->imtrx)];
+        ls_values[ln] =
+            x[Index_Solution(gnn, goma_ctx->fem.ls->var, 0, 0, -2, goma_ctx->fem.pg->imtrx)];
       }
       if (add_extra_dofs && shape == QUADRILATERAL) {
         interp_quad_dofs(ls_values);
@@ -667,14 +676,14 @@ static void facet_based_reinitialization_2D(
 
       // transform local facets to global facets
       if (!local_facets.empty()) {
-        int DeformingMesh = pd->e[pg->imtrx][R_MESH1];
-        load_ei(elem, exo, NULL, pg->imtrx);
+        int DeformingMesh = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1];
+        load_ei(elem, exo, NULL, goma_ctx->fem.pg->imtrx);
         if (DeformingMesh) {
           goma_error err = load_elem_dofptr(elem, exo, x, x, x, x, 0);
           GOMA_EH(err, "load_elem_dofptr");
         }
-        int ShapeVar = pd->ShapeVar;
-        int mdof = ei[pd->mi[ShapeVar]]->dof[ShapeVar];
+        int ShapeVar = goma_ctx->fem.pd->ShapeVar;
+        int mdof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[ShapeVar]]->dof[ShapeVar];
 
         dbl x[DIM] = {0.0, 0.0, 0.0};
         dbl xi[DIM] = {0.0, 0.0, 0.0};
@@ -695,28 +704,30 @@ static void facet_based_reinitialization_2D(
 
               if (!DeformingMesh) {
                 for (int j = 0; j < mdof; j++) {
-                  int ln = ei[pd->mi[ShapeVar]]->dof_list[ShapeVar][j];
+                  int ln = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[ShapeVar]]->dof_list[ShapeVar][j];
 
                   int I = exo->node_list[iconnect + ln];
 
                   level_set_nodes.insert(I);
                   dbl phi_j =
-                      newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ln, ei[pg->imtrx]->ielem_shape,
-                               pd->i[pd->mi[ShapeVar]][ShapeVar], j);
+                      newshape(xi, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, PSI, ln,
+                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
+                               goma_ctx->fem.pd->i[goma_ctx->fem.pd->mi[ShapeVar]][ShapeVar], j);
 
                   x[a] += goma_ctx->mesh.coor[a][I] * phi_j;
                 }
               } else {
                 for (int j = 0; j < mdof; j++) {
-                  int ln = ei[pd->mi[ShapeVar]]->dof_list[ShapeVar][j];
+                  int ln = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[ShapeVar]]->dof_list[ShapeVar][j];
 
                   int I = exo->node_list[iconnect + ln];
                   level_set_nodes.insert(I);
                   dbl phi_j =
-                      newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ln, ei[pg->imtrx]->ielem_shape,
-                               pd->i[pd->mi[ShapeVar]][ShapeVar], j);
+                      newshape(xi, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, PSI, ln,
+                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
+                               goma_ctx->fem.pd->i[goma_ctx->fem.pd->mi[ShapeVar]][ShapeVar], j);
 
-                  x[a] += (goma_ctx->mesh.coor[a][I] + *esp->d[a][j]) * phi_j;
+                  x[a] += (goma_ctx->mesh.coor[a][I] + *goma_ctx->fem.esp->d[a][j]) * phi_j;
                 }
               }
             }
@@ -789,18 +800,19 @@ static void facet_based_reinitialization_2D(
 
   // For each node we will compute the distance to the closest facet
   for (int node = 0; node < num_total_nodes; node++) {
-    if (ls->Freeze_Interface_Nodes && level_set_nodes.find(node) != level_set_nodes.end()) {
+    if (goma_ctx->fem.ls->Freeze_Interface_Nodes &&
+        level_set_nodes.find(node) != level_set_nodes.end()) {
       continue;
     }
-    int index_ls = Index_Solution(node, ls->var, 0, 0, -2, pg->imtrx);
+    int index_ls = Index_Solution(node, goma_ctx->fem.ls->var, 0, 0, -2, goma_ctx->fem.pg->imtrx);
     if (index_ls != -1) {
       Point<2> p = {goma_ctx->mesh.coor[0][node], goma_ctx->mesh.coor[1][node]};
-      if (pd->gv[MESH_DISPLACEMENT1]) {
-        int index_dx = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, -2, pg->imtrx);
+      if (goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1]) {
+        int index_dx = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, -2, goma_ctx->fem.pg->imtrx);
         if (index_dx != -1) {
           p[0] += x[index_dx];
         }
-        int index_dy = Index_Solution(node, MESH_DISPLACEMENT2, 0, 0, -2, pg->imtrx);
+        int index_dy = Index_Solution(node, MESH_DISPLACEMENT2, 0, 0, -2, goma_ctx->fem.pg->imtrx);
         if (index_dx != -1) {
           p[1] += x[index_dy];
         }

@@ -84,7 +84,7 @@ int apply_em_farfield_direct_vec(double func[DIM],
 
   // use mp for inside (subscript 1) ..
 
-  double omega = upd->EM_Frequency;
+  double omega = goma_ctx->fem.upd->EM_Frequency;
   n1 = refractive_index(d_n1, 0.0);
 
   k1 = extinction_index(d_k1, 0.0);
@@ -94,7 +94,7 @@ int apply_em_farfield_direct_vec(double func[DIM],
 
   cpx_refractive_index1 = n1 + _Complex_I * k1;
   cpx_rel_permittivity1 = SQUARE(cpx_refractive_index1);
-  cpx_permittivity1 = cpx_rel_permittivity1 * mp->permittivity;
+  cpx_permittivity1 = cpx_rel_permittivity1 * goma_ctx->fem.mp->permittivity;
 
   impedance1 = csqrt(mag_permeability / cpx_permittivity1);
   kappa1 = omega * impedance1 * cpx_permittivity1;
@@ -109,13 +109,13 @@ int apply_em_farfield_direct_vec(double func[DIM],
 
   cpx_refractive_index2 = n2 + _Complex_I * k2;
   cpx_rel_permittivity2 = SQUARE(cpx_refractive_index2);
-  cpx_permittivity2 = cpx_rel_permittivity2 * mp->permittivity;
+  cpx_permittivity2 = cpx_rel_permittivity2 * goma_ctx->fem.mp->permittivity;
 
   impedance2 = csqrt(mag_permeability / cpx_permittivity2);
 
   // need Surface Normal vector
   for (int p = 0; p < DIM; p++) {
-    normal[p] = fv->snormal[p];
+    normal[p] = goma_ctx->fem.fv->snormal[p];
   }
 
   complex double Gamma, tau, incidentE[DIM];
@@ -162,26 +162,30 @@ int apply_em_farfield_direct_vec(double func[DIM],
   double d_dHRb_Re_curl_H[DIM][DIM][MDE] = {{{0.0}}};
   double d_dHIb_Im_curl_H[DIM][DIM][MDE] = {{{0.0}}};
 
-  for (int p = 0; p < pd->Num_Dim; p++) {
-    for (int q = 0; q < pd->Num_Dim; q++) {
-      for (int r = 0; r < pd->Num_Dim; r++) {
-        Re_curl_E[p] += permute(p, q, r) * fv->grad_em_er[r][q];
-        Im_curl_E[p] += permute(p, q, r) * fv->grad_em_ei[r][q];
-        Re_curl_H[p] += permute(p, q, r) * fv->grad_em_hr[r][q];
-        Im_curl_H[p] += permute(p, q, r) * fv->grad_em_hi[r][q];
+  for (int p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
+    for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
+      for (int r = 0; r < goma_ctx->fem.pd->Num_Dim; r++) {
+        Re_curl_E[p] += permute(p, q, r) * goma_ctx->fem.fv->grad_em_er[r][q];
+        Im_curl_E[p] += permute(p, q, r) * goma_ctx->fem.fv->grad_em_ei[r][q];
+        Re_curl_H[p] += permute(p, q, r) * goma_ctx->fem.fv->grad_em_hr[r][q];
+        Im_curl_H[p] += permute(p, q, r) * goma_ctx->fem.fv->grad_em_hi[r][q];
         // assuming all variables have same degrees of freedom
 
-        for (int b = 0; b < ei[pg->imtrx]->dof[EM_E1_REAL]; b++) {
-          d_dERb_Re_curl_E[p][r][b] += permute(p, q, r) * bf[EM_E1_REAL + r]->grad_phi[b][q];
+        for (int b = 0; b < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EM_E1_REAL]; b++) {
+          d_dERb_Re_curl_E[p][r][b] +=
+              permute(p, q, r) * goma_ctx->fem.bf[EM_E1_REAL + r]->grad_phi[b][q];
         }
-        for (int b = 0; b < ei[pg->imtrx]->dof[EM_E1_IMAG]; b++) {
-          d_dEIb_Im_curl_E[p][r][b] += permute(p, q, r) * bf[EM_E1_IMAG + r]->grad_phi[b][q];
+        for (int b = 0; b < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EM_E1_IMAG]; b++) {
+          d_dEIb_Im_curl_E[p][r][b] +=
+              permute(p, q, r) * goma_ctx->fem.bf[EM_E1_IMAG + r]->grad_phi[b][q];
         }
-        for (int b = 0; b < ei[pg->imtrx]->dof[EM_H1_REAL]; b++) {
-          d_dHRb_Re_curl_H[p][r][b] += permute(p, q, r) * bf[EM_H1_REAL + r]->grad_phi[b][q];
+        for (int b = 0; b < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EM_H1_REAL]; b++) {
+          d_dHRb_Re_curl_H[p][r][b] +=
+              permute(p, q, r) * goma_ctx->fem.bf[EM_H1_REAL + r]->grad_phi[b][q];
         }
-        for (int b = 0; b < ei[pg->imtrx]->dof[EM_H1_IMAG]; b++) {
-          d_dHIb_Im_curl_H[p][r][b] += permute(p, q, r) * bf[EM_H1_IMAG + r]->grad_phi[b][q];
+        for (int b = 0; b < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EM_H1_IMAG]; b++) {
+          d_dHIb_Im_curl_H[p][r][b] +=
+              permute(p, q, r) * goma_ctx->fem.bf[EM_H1_IMAG + r]->grad_phi[b][q];
         }
       }
     }
@@ -196,7 +200,7 @@ int apply_em_farfield_direct_vec(double func[DIM],
     for (int p = 0; p < DIM; p++) {
       cpx_func[p] += (Re_curl_E[p] + _Complex_I * Im_curl_E[p]) * reduction_factor;
     }
-    for (int p = 0; p < pd->Num_Dim; p++) {
+    for (int p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
       for (int q = 0; q < DIM; q++) {
         for (int r = 0; r < DIM; r++) {
           cpx_func[p] += permute(p, q, r) * normal[q] * incidentE[r];
@@ -209,7 +213,7 @@ int apply_em_farfield_direct_vec(double func[DIM],
     for (int p = 0; p < DIM; p++) {
       cpx_func[p] += (Re_curl_H[p] + _Complex_I * Im_curl_H[p]) * reduction_factor;
     }
-    for (int p = 0; p < pd->Num_Dim; p++) {
+    for (int p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
       for (int q = 0; q < DIM; q++) {
         for (int r = 0; r < DIM; r++) {
           cpx_func[p] -= permute(p, q, r) * normal[q] * incidentH[r];
@@ -281,7 +285,7 @@ int apply_em_farfield_direct_vec(double func[DIM],
     break;
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     /*
         for (int j=0; j< ei[pg->imtrx]->dof[EM_E2_REAL]; j++){
               d_func[0][EM_E2_REAL][j] = -bf[EM_E2_REAL]->grad_phi[j][2];
@@ -304,11 +308,11 @@ int apply_em_farfield_direct_vec(double func[DIM],
     }
 //    d_dERb_Re_curl_E[p][r][b]
     */
-    for (int p = 0; p < pd->Num_Dim; p++) {
+    for (int p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
       // for (int q=0; q<pd->Num_Dim; q++) {
-      for (int g = 0; g < pd->Num_Dim; g++) {
+      for (int g = 0; g < goma_ctx->fem.pd->Num_Dim; g++) {
         int gvar = var + g;
-        for (int j = 0; j < ei[pg->imtrx]->dof[gvar]; j++) {
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[gvar]; j++) {
           switch (bc_name) {
           case EM_ER_FARFIELD_DIRECT_BC:
             // d_func[p][gvar][j] += d_dERb_Re_curl_E[p][g][j]*creal(reduction_factor);
@@ -411,7 +415,7 @@ int apply_em_free_vec(double func[DIM],
 
   // need Surface Normal vector
   for (int p = 0; p < DIM; p++) {
-    normal[p] = fv->snormal[p];
+    normal[p] = goma_ctx->fem.fv->snormal[p];
   }
 
   // Evaluate n cross E or n cross H
@@ -420,7 +424,7 @@ int apply_em_free_vec(double func[DIM],
     for (int p = 0; p < DIM; p++) {
       for (int q = 0; q < DIM; q++) {
         for (int r = 0; r < DIM; r++) {
-          func[p] += permute(p, q, r) * normal[q] * fv->em_er[r];
+          func[p] += permute(p, q, r) * normal[q] * goma_ctx->fem.fv->em_er[r];
         }
       }
     }
@@ -429,7 +433,7 @@ int apply_em_free_vec(double func[DIM],
     for (int p = 0; p < DIM; p++) {
       for (int q = 0; q < DIM; q++) {
         for (int r = 0; r < DIM; r++) {
-          func[p] += permute(p, q, r) * normal[q] * fv->em_ei[r];
+          func[p] += permute(p, q, r) * normal[q] * goma_ctx->fem.fv->em_ei[r];
         }
       }
     }
@@ -438,7 +442,7 @@ int apply_em_free_vec(double func[DIM],
     for (int p = 0; p < DIM; p++) {
       for (int q = 0; q < DIM; q++) {
         for (int r = 0; r < DIM; r++) {
-          func[p] += permute(p, q, r) * normal[q] * fv->em_hr[r];
+          func[p] += permute(p, q, r) * normal[q] * goma_ctx->fem.fv->em_hr[r];
         }
       }
     }
@@ -447,7 +451,7 @@ int apply_em_free_vec(double func[DIM],
     for (int p = 0; p < DIM; p++) {
       for (int q = 0; q < DIM; q++) {
         for (int r = 0; r < DIM; r++) {
-          func[p] += permute(p, q, r) * normal[q] * fv->em_hi[r];
+          func[p] += permute(p, q, r) * normal[q] * goma_ctx->fem.fv->em_hi[r];
         }
       }
     }
@@ -498,8 +502,8 @@ int apply_em_sommerfeld_vec(double func[DIM],
    ********************************************************************/
   dbl mag_permeability = 12.57e-07; // H/m
 
-  double impedance = sqrt(mag_permeability / mp->permittivity);
-  double omega = upd->EM_Frequency;
+  double impedance = sqrt(mag_permeability / goma_ctx->fem.mp->permittivity);
+  double omega = goma_ctx->fem.upd->EM_Frequency;
   double n[DIM]; // surface normal vector
 
   // double complex E1[DIM], H1[DIM]; // complex fields inside domain
@@ -508,11 +512,11 @@ int apply_em_sommerfeld_vec(double func[DIM],
   // the material properties are the same on both sides
   // Need the wave number
 
-  double kappa = omega * sqrt(mp->permittivity * mag_permeability);
+  double kappa = omega * sqrt(goma_ctx->fem.mp->permittivity * mag_permeability);
 
   // need Surface Normal vector
   for (int p = 0; p < DIM; p++) {
-    n[p] = fv->snormal[p];
+    n[p] = goma_ctx->fem.fv->snormal[p];
   }
 
   // polarization P and propagation direction k of incident plane wave
@@ -538,9 +542,9 @@ int apply_em_sommerfeld_vec(double func[DIM],
   // Compute E_i
   // E_i = P*exp(i(k DOT x - wt)
   double x[DIM];
-  x[0] = fv->x[0];
-  x[1] = fv->x[1];
-  x[2] = fv->x[2];
+  x[0] = goma_ctx->fem.fv->x[0];
+  x[1] = goma_ctx->fem.fv->x[1];
+  x[2] = goma_ctx->fem.fv->x[2];
 
   double kappa_dot_x = 0.0;
   for (int q = 0; q < DIM; q++) {
@@ -589,7 +593,8 @@ int apply_em_sommerfeld_vec(double func[DIM],
     for (int e = 0; e < DIM; e++) {
       for (int f = 0; f < DIM; f++) {
         for (int g = 0; g < DIM; g++) {
-          CurlE[e] += permute(e, f, g) * (fv->grad_em_er[g][f] + _Complex_I * fv->grad_em_ei[g][f]);
+          CurlE[e] += permute(e, f, g) * (goma_ctx->fem.fv->grad_em_er[g][f] +
+                                          _Complex_I * goma_ctx->fem.fv->grad_em_ei[g][f]);
         }
       }
     }
@@ -628,7 +633,8 @@ int apply_em_sommerfeld_vec(double func[DIM],
     for (int e = 0; e < DIM; e++) {
       for (int f = 0; f < DIM; f++) {
         for (int g = 0; g < DIM; g++) {
-          CurlE[e] += permute(e, f, g) * (fv->grad_em_hr[g][f] + _Complex_I * fv->grad_em_hi[g][f]);
+          CurlE[e] += permute(e, f, g) * (goma_ctx->fem.fv->grad_em_hr[g][f] +
+                                          _Complex_I * goma_ctx->fem.fv->grad_em_hi[g][f]);
         }
       }
     }
@@ -701,7 +707,7 @@ int apply_ewave_planewave_vec(double func[DIM],
    ********************************************************************/
 
   // double impedance = sqrt(mp->magnetic_permeability/mp->permittivity);
-  double omega = upd->EM_Frequency;
+  double omega = goma_ctx->fem.upd->EM_Frequency;
   double n[DIM]; // surface normal vector
 
   // double complex E1[DIM], H1[DIM]; // complex fields inside domain
@@ -710,11 +716,12 @@ int apply_ewave_planewave_vec(double func[DIM],
   // the material properties are the same on both sides
   // Need the wave number
 
-  double kappa = omega * sqrt(mp->permittivity * mp->magnetic_permeability);
+  double kappa =
+      omega * sqrt(goma_ctx->fem.mp->permittivity * goma_ctx->fem.mp->magnetic_permeability);
 
   // need Surface Normal vector
   for (int p = 0; p < DIM; p++) {
-    n[p] = fv->snormal[p];
+    n[p] = goma_ctx->fem.fv->snormal[p];
   }
 
   // polarization P, propagation direction k of incident plane wave
@@ -743,9 +750,9 @@ int apply_ewave_planewave_vec(double func[DIM],
   k[2] = k[2] / k_mag;
 
   double x[DIM];
-  x[0] = fv->x[0] - x_orig[0];
-  x[1] = fv->x[1] - x_orig[1];
-  x[2] = fv->x[2] - x_orig[2];
+  x[0] = goma_ctx->fem.fv->x[0] - x_orig[0];
+  x[1] = goma_ctx->fem.fv->x[1] - x_orig[1];
+  x[2] = goma_ctx->fem.fv->x[2] - x_orig[2];
 
   double kappa_dot_x = 0.0;
   for (int q = 0; q < DIM; q++) {
@@ -850,7 +857,7 @@ int apply_ewave_curlcurl_farfield_vec(double func[DIM],
     }
   */
   // setup wave and material properties
-  double omega = upd->EM_Frequency;
+  double omega = goma_ctx->fem.upd->EM_Frequency;
   dbl n_1; /* Refractive index. */
   CONDUCTIVITY_DEPENDENCE_STRUCT d_n_struct;
   CONDUCTIVITY_DEPENDENCE_STRUCT *d_n = &d_n_struct;
@@ -869,18 +876,20 @@ int apply_ewave_curlcurl_farfield_vec(double func[DIM],
   cpx_refractive_index_1 = n_1 + _Complex_I * k_1; // k > 0 is extinction
   cpx_rel_permittivity_1 = SQUARE(cpx_refractive_index_1);
   cpx_permittivity_1 =
-      cpx_rel_permittivity_1 * mp->permittivity; // better set permittivity to vacuum in input deck?
+      cpx_rel_permittivity_1 *
+      goma_ctx->fem.mp->permittivity; // better set permittivity to vacuum in input deck?
 
   double complex E_1[DIM]; // complex field inside domain
 
   for (int p = 0; p < DIM; p++) {
-    E_1[p] = fv->em_er[p] + _Complex_I * fv->em_ei[p];
+    E_1[p] = goma_ctx->fem.fv->em_er[p] + _Complex_I * goma_ctx->fem.fv->em_ei[p];
   }
 
   // Need the wave number
-  complex double kappa_1 = omega * csqrt(cpx_permittivity_1 * mp->magnetic_permeability);
+  complex double kappa_1 =
+      omega * csqrt(cpx_permittivity_1 * goma_ctx->fem.mp->magnetic_permeability);
   // Need the impedance
-  complex double eta_1 = csqrt(mp->magnetic_permeability / cpx_permittivity_1);
+  complex double eta_1 = csqrt(goma_ctx->fem.mp->magnetic_permeability / cpx_permittivity_1);
 
   // polarization P of incident plane wave
   complex double P[DIM];
@@ -903,9 +912,10 @@ int apply_ewave_curlcurl_farfield_vec(double func[DIM],
   cpx_refractive_index_2 = n_2 + _Complex_I * k_2; // k > 0 is extinction
   cpx_rel_permittivity_2 = SQUARE(cpx_refractive_index_2);
   cpx_permittivity_2 =
-      cpx_rel_permittivity_2 * mp->permittivity; // better set permittivity to vacuum in input deck?
+      cpx_rel_permittivity_2 *
+      goma_ctx->fem.mp->permittivity; // better set permittivity to vacuum in input deck?
   // Need the impedance
-  complex double eta_2 = csqrt(mp->magnetic_permeability / cpx_permittivity_2);
+  complex double eta_2 = csqrt(goma_ctx->fem.mp->magnetic_permeability / cpx_permittivity_2);
 
   complex double cpx_coeff = -_Complex_I * kappa_1 * eta_1 / eta_2;
 
@@ -914,14 +924,14 @@ int apply_ewave_curlcurl_farfield_vec(double func[DIM],
   switch (bc_name) {
   case E_ER_FARFIELD_BC:
 
-    for (int p = 0; p < pd->Num_Dim; p++) {
+    for (int p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
       func[p] = creal(cpx_coeff * (E_1[p] - 2 * P[p]));
-      for (int q = 0; q < pd->Num_Dim; q++) {
+      for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
         int qRvar = EM_E1_REAL + q;
         int qIvar = EM_E1_IMAG + q;
-        for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
-          double Rphi_j = bf[EM_E1_REAL + q]->phi[j];
-          double Iphi_j = bf[EM_E1_IMAG + q]->phi[j];
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EM_E1_REAL]; j++) {
+          double Rphi_j = goma_ctx->fem.bf[EM_E1_REAL + q]->phi[j];
+          double Iphi_j = goma_ctx->fem.bf[EM_E1_IMAG + q]->phi[j];
           // d(Re[f{z}])/d(Re[z]) = Re(f'(z))
           d_func[p][qRvar][j] = delta(p, q) * creal(cpx_coeff * Rphi_j);
 
@@ -959,12 +969,12 @@ int apply_ewave_curlcurl_farfield_vec(double func[DIM],
 
     for (int p = 0; p < DIM; p++) {
       func[p] += cimag(cpx_coeff * (E_1[p] - 2 * P[p]));
-      for (int q = 0; q < pd->Num_Dim; q++) {
+      for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
         int qRvar = EM_E1_REAL + q;
         int qIvar = EM_E1_IMAG + q;
-        for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
-          double Rphi_j = bf[EM_E1_REAL + q]->phi[j];
-          double Iphi_j = bf[EM_E1_IMAG + q]->phi[j];
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EM_E1_IMAG]; j++) {
+          double Rphi_j = goma_ctx->fem.bf[EM_E1_REAL + q]->phi[j];
+          double Iphi_j = goma_ctx->fem.bf[EM_E1_IMAG + q]->phi[j];
 
           // d(Im[f{z}])/d(Re[z]) = Im(f'(z))
           d_func[p][qRvar][j] = delta(p, q) * cimag(cpx_coeff * Rphi_j);
@@ -1039,7 +1049,7 @@ int apply_ewave_mms_vec(double func[DIM],
    *
    ********************************************************************/
 
-  double omega = upd->EM_Frequency;
+  double omega = goma_ctx->fem.upd->EM_Frequency;
   double n[DIM]; // surface normal vector
 
   // double complex E1[DIM], H1[DIM]; // complex fields inside domain
@@ -1048,11 +1058,12 @@ int apply_ewave_mms_vec(double func[DIM],
   // the material properties are the same on both sides
   // Need the wave number
 
-  double kappa = omega * sqrt(mp->permittivity * mp->magnetic_permeability);
+  double kappa =
+      omega * sqrt(goma_ctx->fem.mp->permittivity * goma_ctx->fem.mp->magnetic_permeability);
 
   // need Surface Normal vector
   for (int p = 0; p < DIM; p++) {
-    n[p] = fv->snormal[p];
+    n[p] = goma_ctx->fem.fv->snormal[p];
   }
 
   // polarization P, propagation direction k of incident plane wave
@@ -1081,13 +1092,13 @@ int apply_ewave_mms_vec(double func[DIM],
   k[2] = k[2] / k_mag;
 
   double x[DIM];
-  x[0] = fv->x[0] - x_orig[0];
-  x[1] = fv->x[1] - x_orig[1];
-  x[2] = fv->x[2] - x_orig[2];
+  x[0] = goma_ctx->fem.fv->x[0] - x_orig[0];
+  x[1] = goma_ctx->fem.fv->x[1] - x_orig[1];
+  x[2] = goma_ctx->fem.fv->x[2] - x_orig[2];
 
-  x[0] = fv->x[0];
-  x[1] = fv->x[1];
-  x[2] = fv->x[2];
+  x[0] = goma_ctx->fem.fv->x[0];
+  x[1] = goma_ctx->fem.fv->x[1];
+  x[2] = goma_ctx->fem.fv->x[2];
 
   double kappa_dot_x = 0.0;
   for (int q = 0; q < DIM; q++) {
@@ -1182,23 +1193,23 @@ int apply_ewave_2D(double func[DIM],
   case E_ER_2D_BC:
     // func[0] += fv->grad_em_er[2][0];
     // func[1] += fv->grad_em_er[2][1];
-    func[2] += fv->grad_em_er[2][2];
+    func[2] += goma_ctx->fem.fv->grad_em_er[2][2];
     break;
   case E_EI_2D_BC:
     // func[0] += fv->grad_em_ei[2][0];
     // func[1] += fv->grad_em_ei[2][1];
-    func[2] += fv->grad_em_ei[2][2];
+    func[2] += goma_ctx->fem.fv->grad_em_ei[2][2];
     break;
   }
 
   // Jacobian Components
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     switch (bc_name) {
     case E_ER_2D_BC:
       for (int k = 2; k < DIM; k++) {
         var = EM_E1_REAL + k;
-        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          dphi_j_dx3 = bf[var]->grad_phi[j][2];
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          dphi_j_dx3 = goma_ctx->fem.bf[var]->grad_phi[j][2];
           d_func[k][var][j] += dphi_j_dx3;
         }
       }
@@ -1206,8 +1217,8 @@ int apply_ewave_2D(double func[DIM],
     case E_EI_2D_BC:
       for (int k = 2; k < DIM; k++) {
         var = EM_E1_IMAG + k;
-        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          dphi_j_dx3 = bf[var]->grad_phi[j][2];
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          dphi_j_dx3 = goma_ctx->fem.bf[var]->grad_phi[j][2];
           d_func[k][var][j] += dphi_j_dx3;
         }
       }
@@ -1269,7 +1280,7 @@ int apply_ewave_nedelec_farfield(double func[DIM],
     }
   */
   // setup wave and material properties
-  double omega = upd->EM_Frequency;
+  double omega = goma_ctx->fem.upd->EM_Frequency;
   dbl n_1; /* Refractive index. */
   CONDUCTIVITY_DEPENDENCE_STRUCT d_n_struct;
   CONDUCTIVITY_DEPENDENCE_STRUCT *d_n = &d_n_struct;
@@ -1288,18 +1299,20 @@ int apply_ewave_nedelec_farfield(double func[DIM],
   cpx_refractive_index_1 = n_1 + _Complex_I * k_1; // k > 0 is extinction
   cpx_rel_permittivity_1 = SQUARE(cpx_refractive_index_1);
   cpx_permittivity_1 =
-      cpx_rel_permittivity_1 * mp->permittivity; // better set permittivity to vacuum in input deck?
+      cpx_rel_permittivity_1 *
+      goma_ctx->fem.mp->permittivity; // better set permittivity to vacuum in input deck?
 
   double complex E_1[DIM]; // complex field inside domain
 
   for (int p = 0; p < DIM; p++) {
-    E_1[p] = fv->em_er[p] + _Complex_I * fv->em_ei[p];
+    E_1[p] = goma_ctx->fem.fv->em_er[p] + _Complex_I * goma_ctx->fem.fv->em_ei[p];
   }
 
   // Need the wave number
-  complex double kappa_1 = omega * csqrt(cpx_permittivity_1 * mp->magnetic_permeability);
+  complex double kappa_1 =
+      omega * csqrt(cpx_permittivity_1 * goma_ctx->fem.mp->magnetic_permeability);
   // Need the impedance
-  complex double eta_1 = csqrt(mp->magnetic_permeability / cpx_permittivity_1);
+  complex double eta_1 = csqrt(goma_ctx->fem.mp->magnetic_permeability / cpx_permittivity_1);
 
   // polarization P of incident plane wave
   complex double P[DIM];
@@ -1322,9 +1335,10 @@ int apply_ewave_nedelec_farfield(double func[DIM],
   cpx_refractive_index_2 = n_2 + _Complex_I * k_2; // k > 0 is extinction
   cpx_rel_permittivity_2 = SQUARE(cpx_refractive_index_2);
   cpx_permittivity_2 =
-      cpx_rel_permittivity_2 * mp->permittivity; // better set permittivity to vacuum in input deck?
+      cpx_rel_permittivity_2 *
+      goma_ctx->fem.mp->permittivity; // better set permittivity to vacuum in input deck?
   // Need the impedance
-  complex double eta_2 = csqrt(mp->magnetic_permeability / cpx_permittivity_2);
+  complex double eta_2 = csqrt(goma_ctx->fem.mp->magnetic_permeability / cpx_permittivity_2);
 
   complex double cpx_coeff = -_Complex_I * kappa_1 * eta_1 / eta_2;
 
@@ -1333,11 +1347,11 @@ int apply_ewave_nedelec_farfield(double func[DIM],
   switch (bc_name) {
   case EM_FARFIELD_REAL_NED_BC:
 
-    for (int p = 0; p < pd->Num_Dim; p++) {
+    for (int p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
       func[p] = creal(cpx_coeff * (E_1[p] - 2 * P[p]));
-      for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
-        double Rphi_j = bf[EM_E1_REAL]->phi_e[j][p];
-        double Iphi_j = bf[EM_E1_IMAG]->phi_e[j][p];
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EM_E1_REAL]; j++) {
+        double Rphi_j = goma_ctx->fem.bf[EM_E1_REAL]->phi_e[j][p];
+        double Iphi_j = goma_ctx->fem.bf[EM_E1_IMAG]->phi_e[j][p];
         // d(Re[f{z}])/d(Re[z]) = Re(f'(z))
         d_func[p][EM_E1_REAL][j] = creal(cpx_coeff * Rphi_j);
 
@@ -1350,9 +1364,9 @@ int apply_ewave_nedelec_farfield(double func[DIM],
 
     for (int p = 0; p < DIM; p++) {
       func[p] += cimag(cpx_coeff * (E_1[p] - 2 * P[p]));
-      for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
-        double Rphi_j = bf[EM_E1_REAL]->phi_e[j][p];
-        double Iphi_j = bf[EM_E1_IMAG]->phi_e[j][p];
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EM_E1_IMAG]; j++) {
+        double Rphi_j = goma_ctx->fem.bf[EM_E1_REAL]->phi_e[j][p];
+        double Iphi_j = goma_ctx->fem.bf[EM_E1_IMAG]->phi_e[j][p];
         d_func[p][EM_E1_REAL][j] = cimag(cpx_coeff * Rphi_j);
         d_func[p][EM_E1_IMAG][j] = creal(cpx_coeff * Iphi_j);
       }
@@ -1365,20 +1379,22 @@ int apply_ewave_nedelec_farfield(double func[DIM],
 void em_absorbing_bc_nedelec(int bc_name,
                              dbl *func,
                              double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE]) {
-  const double c0 = 1.0 / (sqrt(upd->Free_Space_Permittivity * upd->Free_Space_Permeability));
+  const double c0 = 1.0 / (sqrt(goma_ctx->fem.upd->Free_Space_Permittivity *
+                                goma_ctx->fem.upd->Free_Space_Permeability));
   ;
-  dbl x = fv->x[0];
-  dbl y = fv->x[1];
-  dbl z = fv->x[2];
-  dbl freq = upd->EM_Frequency;
+  dbl x = goma_ctx->fem.fv->x[0];
+  dbl y = goma_ctx->fem.fv->x[1];
+  dbl z = goma_ctx->fem.fv->x[2];
+  dbl freq = goma_ctx->fem.upd->EM_Frequency;
   dbl lambda0 = c0 / freq;
   dbl k0 = 2 * M_PI / lambda0;
   complex double wave[DIM];
   complex double curl_wave[DIM];
   incident_wave(x, y, z, k0, wave, curl_wave);
   complex double j = _Complex_I;
-  complex double E[DIM] = {fv->em_er[0] + j * fv->em_ei[0], fv->em_er[1] + j * fv->em_ei[1],
-                           fv->em_er[2] + j * fv->em_ei[2]};
+  complex double E[DIM] = {goma_ctx->fem.fv->em_er[0] + j * goma_ctx->fem.fv->em_ei[0],
+                           goma_ctx->fem.fv->em_er[1] + j * goma_ctx->fem.fv->em_ei[1],
+                           goma_ctx->fem.fv->em_er[2] + j * goma_ctx->fem.fv->em_ei[2]};
   switch (bc_name) {
   case EM_ABSORBING_REAL_BC: {
     double wave_r[DIM] = {creal(wave[0]), creal(wave[1]), creal(wave[2])};
@@ -1390,21 +1406,21 @@ void em_absorbing_bc_nedelec(int bc_name,
     double nxWave_r[DIM];
     double nxWave_i[DIM];
 
-    cross_really_simple_vectors(fv->snormal, wave_r, nxWave_r);
-    cross_really_simple_vectors(fv->snormal, wave_i, nxWave_i);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, wave_r, nxWave_r);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, wave_i, nxWave_i);
 
     double nxnxWave_r[DIM];
     double nxnxWave_i[DIM];
 
-    cross_really_simple_vectors(fv->snormal, nxWave_r, nxnxWave_r);
-    cross_really_simple_vectors(fv->snormal, nxWave_i, nxnxWave_i);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, nxWave_r, nxnxWave_r);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, nxWave_i, nxnxWave_i);
 
     dbl ke = k0;
 
     double nxCurlWave_r[DIM];
     double nxCurlWave_i[DIM];
-    cross_really_simple_vectors(fv->snormal, curl_wave_r, nxCurlWave_r);
-    cross_really_simple_vectors(fv->snormal, curl_wave_i, nxCurlWave_i);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, curl_wave_r, nxCurlWave_r);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, curl_wave_i, nxCurlWave_i);
 
     complex double Uinc[DIM];
     for (int i = 0; i < DIM; i++) {
@@ -1418,15 +1434,16 @@ void em_absorbing_bc_nedelec(int bc_name,
     }
 
     dbl nxABC[DIM] = {0.0};
-    cross_really_simple_vectors(fv->snormal, ABC, nxABC);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, ABC, nxABC);
 
     for (int i = 0; i < DIM; i++) {
       func[i] += +(ABC[i] + creal(Uinc[i]));
     }
 
-    for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
-      dbl Ei_imag[DIM] = {-ke * bf[EM_E1_IMAG]->phi_e[j][0], -ke * bf[EM_E1_IMAG]->phi_e[j][1],
-                          -ke * bf[EM_E1_IMAG]->phi_e[j][2]};
+    for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EM_E1_IMAG]; j++) {
+      dbl Ei_imag[DIM] = {-ke * goma_ctx->fem.bf[EM_E1_IMAG]->phi_e[j][0],
+                          -ke * goma_ctx->fem.bf[EM_E1_IMAG]->phi_e[j][1],
+                          -ke * goma_ctx->fem.bf[EM_E1_IMAG]->phi_e[j][2]};
 
       d_func[0][EM_E1_IMAG][j] += Ei_imag[0];
       d_func[1][EM_E1_IMAG][j] += Ei_imag[1];
@@ -1443,21 +1460,21 @@ void em_absorbing_bc_nedelec(int bc_name,
     double nxWave_r[DIM];
     double nxWave_i[DIM];
 
-    cross_really_simple_vectors(fv->snormal, wave_r, nxWave_r);
-    cross_really_simple_vectors(fv->snormal, wave_i, nxWave_i);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, wave_r, nxWave_r);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, wave_i, nxWave_i);
 
     double nxnxWave_r[DIM];
     double nxnxWave_i[DIM];
 
-    cross_really_simple_vectors(fv->snormal, nxWave_r, nxnxWave_r);
-    cross_really_simple_vectors(fv->snormal, nxWave_i, nxnxWave_i);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, nxWave_r, nxnxWave_r);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, nxWave_i, nxnxWave_i);
 
     dbl ke = k0;
 
     double nxCurlWave_r[DIM];
     double nxCurlWave_i[DIM];
-    cross_really_simple_vectors(fv->snormal, curl_wave_r, nxCurlWave_r);
-    cross_really_simple_vectors(fv->snormal, curl_wave_i, nxCurlWave_i);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, curl_wave_r, nxCurlWave_r);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, curl_wave_i, nxCurlWave_i);
 
     complex double Uinc[DIM];
     for (int i = 0; i < DIM; i++) {
@@ -1470,18 +1487,19 @@ void em_absorbing_bc_nedelec(int bc_name,
       ABC[i] = cimag(j * ke * E[i]);
     }
     dbl nxABC[DIM] = {0.0};
-    cross_really_simple_vectors(fv->snormal, ABC, nxABC);
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, ABC, nxABC);
 
     for (int i = 0; i < DIM; i++) {
       func[i] = +(ABC[i] + cimag(Uinc[i]));
     }
 
-    for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
-      dbl Ei_real[DIM] = {ke * bf[EM_E1_REAL]->phi_e[j][0], ke * bf[EM_E1_REAL]->phi_e[j][1],
-                          ke * bf[EM_E1_REAL]->phi_e[j][2]};
+    for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EM_E1_REAL]; j++) {
+      dbl Ei_real[DIM] = {ke * goma_ctx->fem.bf[EM_E1_REAL]->phi_e[j][0],
+                          ke * goma_ctx->fem.bf[EM_E1_REAL]->phi_e[j][1],
+                          ke * goma_ctx->fem.bf[EM_E1_REAL]->phi_e[j][2]};
       dbl deriv[DIM] = {0.0};
-      cross_really_simple_vectors(fv->snormal, Ei_real, deriv);
-      for (int i = 0; i < pd->Num_Dim; i++) {
+      cross_really_simple_vectors(goma_ctx->fem.fv->snormal, Ei_real, deriv);
+      for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
         d_func[i][EM_E1_REAL][j] += Ei_real[i];
       }
     }
@@ -1500,60 +1518,60 @@ void em_mms_nedelec_bc(int bc_name,
   switch (bc_name) {
   case EM_MMS_SIDE_BC: {
     complex double exact[DIM];
-    em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
-    dbl omega = upd->EM_Frequency;
-    dbl x = fv->x[0];
-    dbl y = fv->x[1];
-    dbl z = fv->x[2];
+    em_mms_exact(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], exact);
+    dbl omega = goma_ctx->fem.upd->EM_Frequency;
+    dbl x = goma_ctx->fem.fv->x[0];
+    dbl y = goma_ctx->fem.fv->x[1];
+    dbl z = goma_ctx->fem.fv->x[2];
     complex double wave[DIM];
     complex double curl_wave[DIM];
     incident_wave(x, y, z, omega, wave, curl_wave);
     dbl exact_real[DIM];
-    for (int i = 0; i < pd->Num_Dim; i++) {
+    for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
       exact_real[i] = 0 * creal(wave[i]);
     }
 
-    for (int i = 0; i < pd->Num_Dim; i++) {
-      exact_real[i] += fv->em_er[i];
+    for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
+      exact_real[i] += goma_ctx->fem.fv->em_er[i];
     }
-    cross_really_simple_vectors(fv->snormal, exact_real, func);
-    for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
-      for (int i = 0; i < pd->Num_Dim; i++) {
-        exact_real[i] = bf[EM_E1_REAL]->phi_e[j][i];
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, exact_real, func);
+    for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EM_E1_REAL]; j++) {
+      for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
+        exact_real[i] = goma_ctx->fem.bf[EM_E1_REAL]->phi_e[j][i];
       }
       dbl d_exact[DIM];
-      cross_really_simple_vectors(fv->snormal, exact_real, d_exact);
-      for (int i = 0; i < pd->Num_Dim; i++) {
+      cross_really_simple_vectors(goma_ctx->fem.fv->snormal, exact_real, d_exact);
+      for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
         d_func[i][EM_E1_REAL][j] = d_exact[i];
       }
     }
   } break;
   case EM_MMS_SIDE_IMAG_BC: {
-    dbl omega = upd->EM_Frequency;
-    dbl x = fv->x[0];
-    dbl y = fv->x[1];
-    dbl z = fv->x[2];
+    dbl omega = goma_ctx->fem.upd->EM_Frequency;
+    dbl x = goma_ctx->fem.fv->x[0];
+    dbl y = goma_ctx->fem.fv->x[1];
+    dbl z = goma_ctx->fem.fv->x[2];
     complex double wave[DIM];
     complex double curl_wave[DIM];
     incident_wave(x, y, z, omega, wave, curl_wave);
     complex double exact[DIM];
-    em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
+    em_mms_exact(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2], exact);
     dbl exact_imag[DIM];
-    for (int i = 0; i < pd->Num_Dim; i++) {
+    for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
       exact_imag[i] = 0 * cimag(wave[i]);
     }
 
-    for (int i = 0; i < pd->Num_Dim; i++) {
-      exact_imag[i] += fv->em_ei[i];
+    for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
+      exact_imag[i] += goma_ctx->fem.fv->em_ei[i];
     }
-    cross_really_simple_vectors(fv->snormal, exact_imag, func);
-    for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
-      for (int i = 0; i < pd->Num_Dim; i++) {
-        exact_imag[i] = bf[EM_E1_IMAG]->phi_e[j][i];
+    cross_really_simple_vectors(goma_ctx->fem.fv->snormal, exact_imag, func);
+    for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EM_E1_IMAG]; j++) {
+      for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
+        exact_imag[i] = goma_ctx->fem.bf[EM_E1_IMAG]->phi_e[j][i];
       }
       dbl d_exact[DIM] = {0.0};
-      cross_really_simple_vectors(fv->snormal, exact_imag, d_exact);
-      for (int i = 0; i < pd->Num_Dim; i++) {
+      cross_really_simple_vectors(goma_ctx->fem.fv->snormal, exact_imag, d_exact);
+      for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
         d_func[i][EM_E1_IMAG][j] = d_exact[i];
       }
     }

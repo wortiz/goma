@@ -107,7 +107,7 @@ static void create_complex_mapping(struct GomaLinearSolverData *ams,
    */
   for (int inode = 0; inode < (goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes);
        inode++) {
-    NODAL_VARS_STRUCT *nv = Nodes[inode]->Nodal_Vars_Info[pg->imtrx];
+    NODAL_VARS_STRUCT *nv = Nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     /*
      * Fill the vector list which points to the unknowns defined at this
      * node...
@@ -169,8 +169,9 @@ static void create_complex_mapping(struct GomaLinearSolverData *ams,
       dblColGIDs[i] = -1;
     }
   }
-  exchange_dof(cx[pg->imtrx], dpi, dblColGIDs, pg->imtrx);
-  matrix_data->local_to_global_complex = malloc(sizeof(PetscInt) * num_universe_dofs[pg->imtrx]);
+  exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, dblColGIDs, goma_ctx->fem.pg->imtrx);
+  matrix_data->local_to_global_complex =
+      malloc(sizeof(PetscInt) * num_universe_dofs[goma_ctx->fem.pg->imtrx]);
   // convert back to Int
   int offset = 0;
   for (int i = 0; i < num_cols; i++) {
@@ -211,7 +212,7 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
    * loop over all of the nodes on this processor
    */
   for (int inode = 0; inode < total_nodes; inode++) {
-    NODAL_VARS_STRUCT *nv = Nodes[inode]->Nodal_Vars_Info[pg->imtrx];
+    NODAL_VARS_STRUCT *nv = Nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     /*
      * Fill the vector list which points to the unknowns defined at this
      * node...
@@ -246,7 +247,7 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
         for (int j = exo->node_node_pntr[inode]; j < exo->node_node_pntr[inode + 1]; j++) {
           int inter_node = exo->node_node_list[j];
           NODE_INFO_STRUCT *nodeCol = Nodes[inter_node];
-          NODAL_VARS_STRUCT *nvCol = nodeCol->Nodal_Vars_Info[pg->imtrx];
+          NODAL_VARS_STRUCT *nvCol = nodeCol->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
           /*
            * fill the vector list which points to the unknowns
@@ -282,7 +283,7 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
                * Query the Interaction mask to determine if a jacobian entry
                * should be created
                */
-              int add_var = Inter_Mask[pg->imtrx][rowVarType][colVarType];
+              int add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
 
               /* The following code should be activated when solving DG viscoelastic problems
                * with full Jacobian treatment of upwind element stress terms
@@ -291,16 +292,18 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
                   exo->centroid_list[inter_node] != -1) {
                 int eb1 = exo->elem_eb[exo->centroid_list[inode]];
 
-                if (vn_glob[Matilda[eb1]]->dg_J_model == FULL_DG) {
-                  int i1 = pd_glob[Matilda[eb1]]->i[pg->imtrx][rowVarType];
-                  int i2 = pd_glob[Matilda[eb1]]->i[pg->imtrx][colVarType];
+                if (goma_ctx->fem.vn_glob[Matilda[eb1]]->dg_J_model == FULL_DG) {
+                  int i1 =
+                      goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][rowVarType];
+                  int i2 =
+                      goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][colVarType];
 
                   if ((rowVarType == colVarType) &&
                       (i1 == I_P0 || i1 == I_P1 || i1 == I_PQ1 || i1 == I_PQ2) &&
                       (i2 == I_P0 || i2 == I_P1 || i2 == I_PQ1 || i2 == I_PQ2) &&
                       (rowVarType != PRESSURE) &&
                       (rowVarType > VELOCITY_GRADIENT33 || rowVarType < VELOCITY_GRADIENT11)) {
-                    add_var = Inter_Mask[pg->imtrx][rowVarType][colVarType];
+                    add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
                   } else {
                     add_var = 0;
                   }
@@ -314,7 +317,7 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
                 /*
                  * Determine the equation number of the current unknown
                  */
-                int icol_index = nodeCol->First_Unknown[pg->imtrx] + inter_unknown;
+                int icol_index = nodeCol->First_Unknown[goma_ctx->fem.pg->imtrx] + inter_unknown;
                 if (icol_index < num_rows) {
                   row_nnz++;
                 } else {
@@ -354,11 +357,12 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
   ;
   ams->npn_plus = dpi->num_universe_nodes;
 
-  ams->npu = num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx];
-  ams->npu_plus = num_universe_dofs[pg->imtrx];
+  ams->npu =
+      num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+  ams->npu_plus = num_universe_dofs[goma_ctx->fem.pg->imtrx];
 
-  size_t local_dofs = num_universe_dofs[pg->imtrx];
-  size_t global_dofs = num_universe_dofs[pg->imtrx];
+  size_t local_dofs = num_universe_dofs[goma_ctx->fem.pg->imtrx];
+  size_t global_dofs = num_universe_dofs[goma_ctx->fem.pg->imtrx];
   size_t local_nnz = nnz;
   size_t global_nnz = nnz;
 
@@ -425,7 +429,7 @@ goma_error goma_setup_petsc_matrix_complex(struct GomaLinearSolverData *ams,
   CHKERRQ(err);
 
   char ksp_prefix[25];
-  if (upd->Total_Num_Matrices > 1) {
+  if (goma_ctx->fem.upd->Total_Num_Matrices > 1) {
     snprintf(ksp_prefix, 24, "mat%d_", imtrx);
     err = MatSetOptionsPrefix(matrix_data->mat, ksp_prefix);
     CHKERRQ(err);
@@ -435,7 +439,7 @@ goma_error goma_setup_petsc_matrix_complex(struct GomaLinearSolverData *ams,
     snprintf(ksp_prefix, 24, "res%d_", imtrx);
     err = VecSetOptionsPrefix(matrix_data->residual, ksp_prefix);
     CHKERRQ(err);
-    snprintf(ksp_prefix, 24, "upd%d_", pg->imtrx);
+    snprintf(ksp_prefix, 24, "upd%d_", goma_ctx->fem.pg->imtrx);
     err = VecSetOptionsPrefix(matrix_data->update, ksp_prefix);
     CHKERRQ(err);
   } else {
@@ -496,12 +500,12 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
   }
 
   for (e = V_FIRST; e < V_LAST; e++) {
-    pe = upd->ep[pg->imtrx][e];
+    pe = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][e];
     if (pe != -1) {
       if (e == R_MASS) {
-        for (ke = 0; ke < upd->Max_Num_Species_Eqn; ke++) {
+        for (ke = 0; ke < goma_ctx->fem.upd->Max_Num_Species_Eqn; ke++) {
           pe = MAX_PROB_VAR + ke;
-          dofs = ei[pg->imtrx]->dof[e];
+          dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[e];
           for (i = 0; i < dofs; i++) {
             /*
              * Check to see whether this dof is on a
@@ -509,23 +513,26 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
              * there is no need to fill in the processor
              * residual and Jacobian row for this variable.
              */
-            ledof = ei[pg->imtrx]->lvdof_to_ledof[e][i];
-            if (ei[pg->imtrx]->owned_ledof[ledof]) {
-              gnn = ei[pg->imtrx]->gnn_list[e][i];
-              nvdof = ei[pg->imtrx]->Baby_Dolphin[e][i];
-              je_new = ei[pg->imtrx]->ieqn_ledof[ledof] + ke;
-              row_index =
-                  Index_Solution(gnn, e, ke, nvdof, ei[pg->imtrx]->matID_ledof[ledof], pg->imtrx);
-              resid_vector[row_index] += lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)];
+            ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[e][i];
+            if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owned_ledof[ledof]) {
+              gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[e][i];
+              nvdof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Baby_Dolphin[e][i];
+              je_new = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ieqn_ledof[ledof] + ke;
+              row_index = Index_Solution(
+                  gnn, e, ke, nvdof, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof],
+                  goma_ctx->fem.pg->imtrx);
+              resid_vector[row_index] += goma_ctx->fem.lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)];
 
-              if (af->Assemble_Jacobian) {
+              if (goma_ctx->fem.af->Assemble_Jacobian) {
                 for (v = V_FIRST; v < V_LAST; v++) {
-                  pv = upd->vp[pg->imtrx][v];
-                  if (pv != -1 && (Inter_Mask[pg->imtrx][e][v])) {
-                    ei_ptr = ei[pg->imtrx];
-                    if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
-                      if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
-                        ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
+                  pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
+                  if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
+                    ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
+                    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                        ielem) {
+                      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                          -1) {
+                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
                         if (ei_ptr == 0) {
                           printf("ei_ptr == 0\n");
                           exit(-1);
@@ -533,31 +540,31 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
                       }
                     }
                     if (v == MASS_FRACTION) {
-                      for (kv = 0; kv < upd->Max_Num_Species_Eqn; kv++) {
+                      for (kv = 0; kv < goma_ctx->fem.upd->Max_Num_Species_Eqn; kv++) {
                         pv = MAX_PROB_VAR + kv;
                         for (j = 0; j < ei_ptr->dof[v]; j++) {
                           ledof = ei_ptr->lvdof_to_ledof[v][j];
                           je_new = ei_ptr->ieqn_ledof[ledof] + kv;
-                          col_index = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
-                                                     ei_ptr->Baby_Dolphin[v][j],
-                                                     ei_ptr->matID_ledof[ledof], pg->imtrx);
+                          col_index = Index_Solution(
+                              ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
+                              ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                           GOMA_EH(col_index, "Bad var index.");
 
                           PetscInt global_row = matrix_data->local_to_global[row_index];
                           PetscInt global_col = matrix_data->local_to_global[col_index];
                           MatSetValue(matrix_data->mat, global_row, global_col,
-                                      lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
+                                      goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
                         }
                       }
                     } else {
-                      pv = upd->vp[pg->imtrx][v];
+                      pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
                       kv = 0;
                       for (j = 0; j < ei_ptr->dof[v]; j++) {
                         ledof = ei_ptr->lvdof_to_ledof[v][j];
                         je_new = ei_ptr->ieqn_ledof[ledof];
-                        col_index = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
-                                                   ei_ptr->Baby_Dolphin[v][j],
-                                                   ei_ptr->matID_ledof[ledof], pg->imtrx);
+                        col_index = Index_Solution(
+                            ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
+                            ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                         if (col_index != je_new) {
                           fprintf(stderr, "Oh fiddlesticks: je = %d, je_new = %d\n", col_index,
                                   je_new);
@@ -567,7 +574,7 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
                         PetscInt global_row = matrix_data->local_to_global[row_index];
                         PetscInt global_col = matrix_data->local_to_global[col_index];
                         MatSetValue(matrix_data->mat, global_row, global_col,
-                                    lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
+                                    goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
                       }
                     }
                   }
@@ -577,8 +584,8 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
           }
         }
       } else {
-        pe = upd->ep[pg->imtrx][e];
-        dofs = ei[pg->imtrx]->dof[e];
+        pe = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][e];
+        dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[e];
         for (i = 0; i < dofs; i++) {
           /*
            * Check to see whether this dof is on a
@@ -586,43 +593,45 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
            * there is no need to fill in the processor
            * residual and Jacobian row for this variable.
            */
-          ledof = ei[pg->imtrx]->lvdof_to_ledof[e][i];
-          if (ei[pg->imtrx]->owned_ledof[ledof]) {
-            ei_ptr = ei[pg->imtrx];
-            row_index = ei[pg->imtrx]->gun_list[e][i];
-            resid_vector[row_index] += lec->R[LEC_R_INDEX(pe, i)];
+          ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[e][i];
+          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owned_ledof[ledof]) {
+            ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
+            row_index = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[e][i];
+            resid_vector[row_index] += goma_ctx->fem.lec->R[LEC_R_INDEX(pe, i)];
             if (goma_is_imag_eqn(e)) {
-              row_index =
-                  Index_Solution(ei_ptr->gnn_list[e][i], goma_real_from_imag(e), 0,
-                                 ei_ptr->Baby_Dolphin[e][i], ei_ptr->matID_ledof[ledof], pg->imtrx);
+              row_index = Index_Solution(ei_ptr->gnn_list[e][i], goma_real_from_imag(e), 0,
+                                         ei_ptr->Baby_Dolphin[e][i], ei_ptr->matID_ledof[ledof],
+                                         goma_ctx->fem.pg->imtrx);
             }
 
-            if (af->Assemble_Jacobian) {
+            if (goma_ctx->fem.af->Assemble_Jacobian) {
               for (v = V_FIRST; v < V_LAST; v++) {
-                pv = upd->vp[pg->imtrx][v];
+                pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
                 // We don't add these as they are already in the matrix from imag(e)
                 if (goma_is_imag_eqn(v))
                   continue;
-                if (pv != -1 && (Inter_Mask[pg->imtrx][e][v])) {
+                if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
                   if (v == MASS_FRACTION) {
 
-                    if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
-                      if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
-                        ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
+                    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                        ielem) {
+                      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                          -1) {
+                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
                         if (ei_ptr == 0) {
                           GOMA_EH(GOMA_ERROR, "ei_ptr == 0\n");
                           exit(-1);
                         }
                       }
                     }
-                    for (kv = 0; kv < upd->Max_Num_Species_Eqn; kv++) {
+                    for (kv = 0; kv < goma_ctx->fem.upd->Max_Num_Species_Eqn; kv++) {
                       pv = MAX_PROB_VAR + kv;
                       for (j = 0; j < ei_ptr->dof[v]; j++) {
                         ledof = ei_ptr->lvdof_to_ledof[v][j];
                         je_new = ei_ptr->ieqn_ledof[ledof] + kv;
-                        col_index = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
-                                                   ei_ptr->Baby_Dolphin[v][j],
-                                                   ei_ptr->matID_ledof[ledof], pg->imtrx);
+                        col_index = Index_Solution(
+                            ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
+                            ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                         if (col_index != je_new) {
                           /*
                            * HKM -> another special case. Until we delineate
@@ -630,23 +639,26 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
                            *        dofs, je_new will be wrong here. je
                            *        is correct.
                            */
-                          if (Nodes[ei[pg->imtrx]->gnn_list[v][j]]->Mat_List.Length < 2) {
+                          if (Nodes[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j]]
+                                  ->Mat_List.Length < 2) {
                           }
                         }
                         GOMA_EH(col_index, "Bad var index.");
                         PetscInt global_row = matrix_data->local_to_global[row_index];
                         PetscInt global_col = matrix_data->local_to_global[col_index];
                         MatSetValue(matrix_data->mat, global_row, global_col,
-                                    lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
+                                    goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
                       }
                     }
                   } else {
                     kv = 0;
                     // NEW IMPLEMENTATION
-                    ei_ptr = ei[pg->imtrx];
-                    if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
-                      if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
-                        ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
+                    ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
+                    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                        ielem) {
+                      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                          -1) {
+                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
                         if (ei_ptr == 0) {
                           GOMA_EH(GOMA_ERROR, "ei slave pointer is null");
                           exit(-1);
@@ -661,16 +673,16 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
                       je_new = ei_ptr->ieqn_ledof[ledof];
                       global_row = matrix_data->local_to_global[row_index];
                       if (goma_is_imag_eqn(v)) {
-                        col_index = Index_Solution(ei_ptr->gnn_list[goma_real_from_imag(v)][j],
-                                                   goma_real_from_imag(v), kv,
-                                                   ei_ptr->Baby_Dolphin[goma_real_from_imag(v)][j],
-                                                   ei_ptr->matID_ledof[ledof], pg->imtrx);
+                        col_index = Index_Solution(
+                            ei_ptr->gnn_list[goma_real_from_imag(v)][j], goma_real_from_imag(v), kv,
+                            ei_ptr->Baby_Dolphin[goma_real_from_imag(v)][j],
+                            ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                         GOMA_EH(col_index, "Bad var index.");
                         global_col = matrix_data->local_to_global[col_index];
                       } else {
-                        col_index = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
-                                                   ei_ptr->Baby_Dolphin[v][j],
-                                                   ei_ptr->matID_ledof[ledof], pg->imtrx);
+                        col_index = Index_Solution(
+                            ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
+                            ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                         if (col_index != je_new) {
                           fprintf(stderr, "Oh fiddlesticks: je = %d, je_new = %d\n", col_index,
                                   je_new);
@@ -681,10 +693,10 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
                       }
                       bool add_value = false;
                       if (goma_is_imag_eqn(e) && !goma_is_imag_eqn(v)) {
-                        va = lec->J[LEC_J_INDEX(pe, pv, i, j)] * PETSC_i;
+                        va = goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)] * PETSC_i;
                         add_value = true;
                       } else if (!goma_is_imag_eqn(e) && !goma_is_imag_eqn(v)) {
-                        va = lec->J[LEC_J_INDEX(pe, pv, i, j)];
+                        va = goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)];
                         add_value = true;
                       }
                       if (add_value)

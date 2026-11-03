@@ -81,14 +81,14 @@ static int continuous_surface_tension_old(double st,
 
   int var;
 
-  var = ls->var;
+  var = goma_ctx->fem.ls->var;
 
   if (var != FILL) {
     GOMA_EH(GOMA_ERROR, "Unknown fill variable");
   }
 
   /* Fetch the level set interface functions. */
-  load_lsi_old(ls->Length_Scale, lsi_old);
+  load_lsi_old(goma_ctx->fem.ls->Length_Scale, lsi_old);
 
   /* If we're not near the zero level set, then csf is a zero tensor. */
   if (!lsi_old->near) {
@@ -127,18 +127,18 @@ int assemble_csf_tensor(void) {
   double source, source_etm;
 
   eqn = R_MOMENTUM1;
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (0);
   }
 
-  wt = fv->wt;
-  h3 = fv->h3;
-  if (ls->on_sharp_surf) /* sharp interface */
+  wt = goma_ctx->fem.fv->wt;
+  h3 = goma_ctx->fem.fv->h3;
+  if (goma_ctx->fem.ls->on_sharp_surf) /* sharp interface */
   {
-    det_J = fv->sdet;
+    det_J = goma_ctx->fem.fv->sdet;
   } else /* diffuse interface */
   {
-    det_J = bf[eqn]->detJ;
+    det_J = goma_ctx->fem.bf[eqn]->detJ;
   }
 
   d_area = wt * det_J * h3;
@@ -147,24 +147,24 @@ int assemble_csf_tensor(void) {
   memset(d_csf_dF, 0, sizeof(double) * DIM * DIM * MDE);
   memset(d_csf_dX, 0, sizeof(double) * DIM * DIM * DIM * MDE);
 
-  continuous_surface_tension(mp->surface_tension, csf, d_csf_dF, d_csf_dX);
+  continuous_surface_tension(goma_ctx->fem.mp->surface_tension, csf, d_csf_dF, d_csf_dX);
 
   /* finite difference calculation of path dependencies for
           subelement integration
           */
-  if (ls->CalcSurfDependencies) {
+  if (goma_ctx->fem.ls->CalcSurfDependencies) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      bfm = bf[eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      bfm = goma_ctx->fem.bf[eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           grad_phi_i_e_a = bfm->grad_phi_e[i][a];
 
@@ -177,16 +177,16 @@ int assemble_csf_tensor(void) {
           }
 
           source *= -det_J * wt * h3;
-          source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+          source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][LOG2_SOURCE];
 
           /* J_m_F
            */
           var = LS;
-          pvar = upd->vp[pg->imtrx][var];
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            phi_j = bf[var]->phi[j];
-            lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source * phi_j;
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            phi_j = goma_ctx->fem.bf[var]->phi[j];
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source * phi_j;
           }
         }
       }
@@ -198,20 +198,20 @@ int assemble_csf_tensor(void) {
    * Residuals ____________________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
 
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      bfm = bf[eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      bfm = goma_ctx->fem.bf[eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           grad_phi_i_e_a = bfm->grad_phi_e[i][a];
 
@@ -239,9 +239,9 @@ int assemble_csf_tensor(void) {
 #endif
 
           source *= -det_J * wt * h3;
-          source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+          source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][LOG2_SOURCE];
 
-          lec->R[LEC_R_INDEX(peqn, ii)] += source;
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, ii)] += source;
         }
       }
     }
@@ -251,31 +251,31 @@ int assemble_csf_tensor(void) {
    * Yacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      bfm = bf[eqn];
-      source_etm = pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      bfm = goma_ctx->fem.bf[eqn];
+      source_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][LOG2_SOURCE];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           grad_phi_i_e_a = bfm->grad_phi_e[i][a];
 
           /* J_m_F
            */
           var = LS;
-          if (pd->v[pg->imtrx][var]) {
-            pvar = upd->vp[pg->imtrx][var];
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-              phi_j = bf[var]->phi[j];
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              phi_j = goma_ctx->fem.bf[var]->phi[j];
 
               source = 0.;
 
@@ -305,17 +305,17 @@ int assemble_csf_tensor(void) {
               source *= -d_area;
               source *= source_etm;
 
-              lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
             }
           }
           var = MESH_DISPLACEMENT1;
-          if (pd->v[pg->imtrx][var]) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             for (b = 0; b < VIM; b++) {
               var = MESH_DISPLACEMENT1 + b;
-              pvar = upd->vp[pg->imtrx][var];
+              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                phi_j = bf[var]->phi[j];
+              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                phi_j = goma_ctx->fem.bf[var]->phi[j];
 
                 source = 0.;
 #ifdef DO_NO_UNROLL
@@ -343,7 +343,7 @@ int assemble_csf_tensor(void) {
                 source *= -d_area;
                 source *= source_etm;
 
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
               }
             }
           }
@@ -365,55 +365,56 @@ int assemble_div_n_source(void) {
   double source, source1;
 
   eqn = R_MOMENTUM1;
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (-1);
   }
 
-  wt = fv->wt;
-  h3 = fv->h3;
+  wt = goma_ctx->fem.fv->wt;
+  h3 = goma_ctx->fem.fv->h3;
 
-  if (ls->on_sharp_surf) /* sharp interface */
+  if (goma_ctx->fem.ls->on_sharp_surf) /* sharp interface */
   {
-    det_J = fv->sdet;
+    det_J = goma_ctx->fem.fv->sdet;
   } else /* diffuse interface */
   {
-    det_J = bf[eqn]->detJ;
+    det_J = goma_ctx->fem.bf[eqn]->detJ;
   }
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /* finite difference calculation of path dependencies for
      subelement integration
   */
-  if (ls->CalcSurfDependencies) {
+  if (goma_ctx->fem.ls->CalcSurfDependencies) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      bfm = bf[eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      bfm = goma_ctx->fem.bf[eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           phi_i = bfm->phi[i];
 
-          source = -mp->surface_tension * fv->div_n * fv->n[a] * lsi->delta;
+          source = -goma_ctx->fem.mp->surface_tension * goma_ctx->fem.fv->div_n *
+                   goma_ctx->fem.fv->n[a] * goma_ctx->fem.lsi->delta;
 
           source *= phi_i * wt * det_J * h3;
-          source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+          source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
           /* J_m_F
            */
           var = LS;
-          pvar = upd->vp[pg->imtrx][var];
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            phi_j = bf[var]->phi[j];
-            lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source * phi_j;
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            phi_j = goma_ctx->fem.bf[var]->phi[j];
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source * phi_j;
           }
         }
       }
@@ -426,30 +427,31 @@ int assemble_div_n_source(void) {
    * ________________________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      bfm = bf[eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      bfm = goma_ctx->fem.bf[eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           phi_i = bfm->phi[i];
 
           source = 0.0;
 
-          source = -mp->surface_tension * fv->div_n * fv->n[a] * lsi->delta;
+          source = -goma_ctx->fem.mp->surface_tension * goma_ctx->fem.fv->div_n *
+                   goma_ctx->fem.fv->n[a] * goma_ctx->fem.lsi->delta;
 
           source *= phi_i * wt * det_J * h3;
-          source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+          source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
-          lec->R[LEC_R_INDEX(peqn, ii)] += source;
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, ii)] += source;
         }
       }
     }
@@ -459,19 +461,19 @@ int assemble_div_n_source(void) {
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      bfm = bf[eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      bfm = goma_ctx->fem.bf[eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           phi_i = bfm->phi[i];
 
@@ -481,22 +483,22 @@ int assemble_div_n_source(void) {
 
           for (b = 0; b < dim; b++) {
             var = NORMAL1 + b;
-            if (pd->v[pg->imtrx][var]) {
+            if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-              pvar = upd->vp[pg->imtrx][var];
+              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
-                source = fv->div_n * bf[var]->phi[j] * delta(a, b);
+                source = goma_ctx->fem.fv->div_n * goma_ctx->fem.bf[var]->phi[j] * delta(a, b);
 
                 for (p = 0; p < VIM; p++) {
-                  source += fv->n[a] * bf[var]->grad_phi_e[j][b][p][p];
+                  source += goma_ctx->fem.fv->n[a] * goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][p];
                 }
-                source *= -mp->surface_tension * lsi->delta;
+                source *= -goma_ctx->fem.mp->surface_tension * goma_ctx->fem.lsi->delta;
                 source *= phi_i * wt * det_J * h3;
-                source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
               }
             }
           }
@@ -506,18 +508,19 @@ int assemble_div_n_source(void) {
            */
 
           var = LS;
-          if (pd->v[pg->imtrx][var]) {
-            pvar = upd->vp[pg->imtrx][var];
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               source = 0.0;
 
-              source = -mp->surface_tension * fv->div_n * fv->n[a];
-              source *= lsi->d_delta_dF[j];
+              source = -goma_ctx->fem.mp->surface_tension * goma_ctx->fem.fv->div_n *
+                       goma_ctx->fem.fv->n[a];
+              source *= goma_ctx->fem.lsi->d_delta_dF[j];
               source *= phi_i * wt * det_J * h3;
-              source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+              source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
-              lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
             }
           }
 
@@ -527,23 +530,27 @@ int assemble_div_n_source(void) {
 
           var = MESH_DISPLACEMENT1;
 
-          if (pd->v[pg->imtrx][var]) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             for (b = 0; b < dim; b++) {
               var = MESH_DISPLACEMENT1 + b;
-              pvar = upd->vp[pg->imtrx][var];
+              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                source = -mp->surface_tension * fv->div_n * fv->n[a] * lsi->delta;
+              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                source = -goma_ctx->fem.mp->surface_tension * goma_ctx->fem.fv->div_n *
+                         goma_ctx->fem.fv->n[a] * goma_ctx->fem.lsi->delta;
 
-                source *= bf[var]->d_det_J_dm[b][j] * h3 + fv->dh3dmesh[b][j] * det_J;
+                source *= goma_ctx->fem.bf[var]->d_det_J_dm[b][j] * h3 +
+                          goma_ctx->fem.fv->dh3dmesh[b][j] * det_J;
                 source *= wt * phi_i;
-                source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
-                source1 = -mp->surface_tension * fv->d_div_n_dmesh[b][j] * fv->n[a] * lsi->delta;
+                source1 = -goma_ctx->fem.mp->surface_tension *
+                          goma_ctx->fem.fv->d_div_n_dmesh[b][j] * goma_ctx->fem.fv->n[a] *
+                          goma_ctx->fem.lsi->delta;
                 source1 *= wt * phi_i * det_J * h3;
-                source1 *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                source1 *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source + source1;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source + source1;
               }
             }
           }
@@ -564,55 +571,56 @@ int assemble_div_s_n_source(void) {
   double source, source1, source2, source3;
 
   eqn = R_MOMENTUM1;
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (-1);
   }
 
-  wt = fv->wt;
-  h3 = fv->h3;
+  wt = goma_ctx->fem.fv->wt;
+  h3 = goma_ctx->fem.fv->h3;
 
-  if (ls->on_sharp_surf) /* sharp interface */
+  if (goma_ctx->fem.ls->on_sharp_surf) /* sharp interface */
   {
-    det_J = fv->sdet;
+    det_J = goma_ctx->fem.fv->sdet;
   } else /* diffuse interface */
   {
-    det_J = bf[eqn]->detJ;
+    det_J = goma_ctx->fem.bf[eqn]->detJ;
   }
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /* finite difference calculation of path dependencies for
      subelement integration
    */
-  if (ls->CalcSurfDependencies) {
+  if (goma_ctx->fem.ls->CalcSurfDependencies) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      bfm = bf[eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      bfm = goma_ctx->fem.bf[eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           phi_i = bfm->phi[i];
 
-          source = -mp->surface_tension * fv->div_s_n * fv->n[a] * lsi->delta;
+          source = -goma_ctx->fem.mp->surface_tension * goma_ctx->fem.fv->div_s_n *
+                   goma_ctx->fem.fv->n[a] * goma_ctx->fem.lsi->delta;
 
           source *= phi_i * wt * det_J * h3;
-          source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+          source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
           /* J_m_F
            */
           var = LS;
-          pvar = upd->vp[pg->imtrx][var];
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            phi_j = bf[var]->phi[j];
-            lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source * phi_j;
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            phi_j = goma_ctx->fem.bf[var]->phi[j];
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source * phi_j;
           }
         }
       }
@@ -625,30 +633,31 @@ int assemble_div_s_n_source(void) {
    * ________________________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      bfm = bf[eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      bfm = goma_ctx->fem.bf[eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           phi_i = bfm->phi[i];
 
           source = 0.0;
 
-          source = -mp->surface_tension * fv->div_s_n * fv->n[a] * lsi->delta;
+          source = -goma_ctx->fem.mp->surface_tension * goma_ctx->fem.fv->div_s_n *
+                   goma_ctx->fem.fv->n[a] * goma_ctx->fem.lsi->delta;
 
           source *= phi_i * wt * det_J * h3;
-          source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+          source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
-          lec->R[LEC_R_INDEX(peqn, ii)] += source;
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, ii)] += source;
         }
       }
     }
@@ -658,19 +667,19 @@ int assemble_div_s_n_source(void) {
    * Yacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      bfm = bf[eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      bfm = goma_ctx->fem.bf[eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           phi_i = bfm->phi[i];
 
@@ -680,34 +689,35 @@ int assemble_div_s_n_source(void) {
 
           for (b = 0; b < dim; b++) {
             var = NORMAL1 + b;
-            if (pd->v[pg->imtrx][var]) {
+            if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-              pvar = upd->vp[pg->imtrx][var];
+              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 source1 = 0.0;
                 for (p = 0; p < VIM; p++) {
-                  source1 -= fv->n[p] * fv->grad_n[p][b] + fv->n[p] * fv->grad_n[b][p];
+                  source1 -= goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->grad_n[p][b] +
+                             goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->grad_n[b][p];
                 }
-                source1 *= fv->n[a] * bf[var]->phi[j];
+                source1 *= goma_ctx->fem.fv->n[a] * goma_ctx->fem.bf[var]->phi[j];
 
                 source2 = 0.0;
                 for (p = 0; p < VIM; p++) {
                   for (q = 0; q < VIM; q++) {
-                    source2 +=
-                        (delta(p, q) - fv->n[p] * fv->n[q]) * bf[var]->grad_phi_e[j][b][p][q];
+                    source2 += (delta(p, q) - goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->n[q]) *
+                               goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][q];
                   }
                 }
-                source2 *= fv->n[a];
+                source2 *= goma_ctx->fem.fv->n[a];
 
-                source3 = delta(a, b) * fv->div_s_n * bf[var]->phi[j];
+                source3 = delta(a, b) * goma_ctx->fem.fv->div_s_n * goma_ctx->fem.bf[var]->phi[j];
 
                 source = source1 + source2 + source3;
-                source *= -mp->surface_tension * lsi->delta;
+                source *= -goma_ctx->fem.mp->surface_tension * goma_ctx->fem.lsi->delta;
                 source *= phi_i * wt * det_J * h3;
-                source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
               }
             }
           }
@@ -715,18 +725,19 @@ int assemble_div_s_n_source(void) {
            * J_m_F
            */
           var = FILL;
-          if (pd->v[pg->imtrx][var]) {
-            pvar = upd->vp[pg->imtrx][var];
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               source = 0.0;
 
-              source = -mp->surface_tension * fv->div_s_n * fv->n[a];
-              source *= lsi->d_delta_dF[j];
+              source = -goma_ctx->fem.mp->surface_tension * goma_ctx->fem.fv->div_s_n *
+                       goma_ctx->fem.fv->n[a];
+              source *= goma_ctx->fem.lsi->d_delta_dF[j];
               source *= phi_i * wt * det_J * h3;
-              source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+              source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
-              lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
             }
           }
         }
@@ -757,29 +768,30 @@ int assemble_cap_hysing(double dt, double scale) {
   double diffusion;
 
   eqn = R_MOMENTUM1;
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (0);
   }
 
-  wt = fv->wt;
-  h3 = fv->h3;
-  if (ls->on_sharp_surf) /* sharp interface */
+  wt = goma_ctx->fem.fv->wt;
+  h3 = goma_ctx->fem.fv->h3;
+  if (goma_ctx->fem.ls->on_sharp_surf) /* sharp interface */
   {
-    det_J = fv->sdet;
+    det_J = goma_ctx->fem.fv->sdet;
   } else /* diffuse interface */
   {
-    det_J = bf[eqn]->detJ;
+    det_J = goma_ctx->fem.bf[eqn]->detJ;
   }
 
   memset(csf, 0, sizeof(double) * DIM * DIM);
 
-  continuous_surface_tension_old(mp->surface_tension, csf, lsi_old);
+  continuous_surface_tension_old(goma_ctx->fem.mp->surface_tension, csf, lsi_old);
 
   for (p = 0; p < VIM; p++) {
     for (q = 0; q < VIM; q++) {
-      grad_s_v[p][q] = fv->grad_v[p][q];
+      grad_s_v[p][q] = goma_ctx->fem.fv->grad_v[p][q];
       for (k = 0; k < VIM; k++) {
-        grad_s_v[p][q] -= (lsi_old->normal[p] * lsi_old->normal[k]) * fv->grad_v[k][q];
+        grad_s_v[p][q] -=
+            (lsi_old->normal[p] * lsi_old->normal[k]) * goma_ctx->fem.fv->grad_v[k][q];
       }
     }
   }
@@ -787,7 +799,7 @@ int assemble_cap_hysing(double dt, double scale) {
   /* finite difference calculation of path dependencies for
      subelement integration
   */
-  if (ls->CalcSurfDependencies) {
+  if (goma_ctx->fem.ls->CalcSurfDependencies) {
     GOMA_EH(GOMA_ERROR, "Calc surf dependencies not implemented");
   }
 
@@ -795,20 +807,20 @@ int assemble_cap_hysing(double dt, double scale) {
    * Residuals ____________________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
 
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      bfm = bf[eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      bfm = goma_ctx->fem.bf[eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           grad_phi_i_e_a = bfm->grad_phi_e[i][a];
 
@@ -821,7 +833,7 @@ int assemble_cap_hysing(double dt, double scale) {
           }
 
           source *= -det_J * wt * h3;
-          source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+          source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][LOG2_SOURCE];
 
           diffusion = 0;
           /*
@@ -831,13 +843,14 @@ int assemble_cap_hysing(double dt, double scale) {
            */
           for (p = 0; p < VIM; p++) {
             for (q = 0; q < VIM; q++) {
-              diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * grad_s_v[p][q];
+              diffusion += goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * grad_s_v[p][q];
             }
           }
 
-          diffusion *= -det_J * wt * h3 * (dt * mp->surface_tension * lsi_old->delta * scale);
+          diffusion *=
+              -det_J * wt * h3 * (dt * goma_ctx->fem.mp->surface_tension * lsi_old->delta * scale);
 
-          lec->R[LEC_R_INDEX(peqn, ii)] += source + diffusion;
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, ii)] += source + diffusion;
         }
       }
     }
@@ -847,35 +860,35 @@ int assemble_cap_hysing(double dt, double scale) {
    * Yacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      bfm = bf[eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      bfm = goma_ctx->fem.bf[eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           grad_phi_i_e_a = bfm->grad_phi_e[i][a];
 
           var = VELOCITY1;
-          if (pd->v[pg->imtrx][var]) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             for (b = 0; b < VIM; b++) {
               var = VELOCITY1 + b;
-              pvar = upd->vp[pg->imtrx][var];
+              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 for (p = 0; p < VIM; p++) {
                   for (q = 0; q < VIM; q++) {
-                    d_grad_s_v_dv[p][q] = bf[var]->grad_phi_e[j][b][p][q];
+                    d_grad_s_v_dv[p][q] = goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][q];
                     for (k = 0; k < VIM; k++) {
-                      d_grad_s_v_dv[p][q] -=
-                          lsi_old->normal[p] * lsi_old->normal[k] * bf[var]->grad_phi_e[j][b][k][q];
+                      d_grad_s_v_dv[p][q] -= lsi_old->normal[p] * lsi_old->normal[k] *
+                                             goma_ctx->fem.bf[var]->grad_phi_e[j][b][k][q];
                     }
                   }
                 }
@@ -884,18 +897,20 @@ int assemble_cap_hysing(double dt, double scale) {
 
                 for (p = 0; p < VIM; p++) {
                   for (q = 0; q < VIM; q++) {
-                    diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dv[p][q];
+                    diffusion +=
+                        goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dv[p][q];
                   }
                 }
 
-                diffusion *= -det_J * wt * h3 * (dt * mp->surface_tension * lsi_old->delta * scale);
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+                diffusion *= -det_J * wt * h3 *
+                             (dt * goma_ctx->fem.mp->surface_tension * lsi_old->delta * scale);
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
               }
             }
           }
 
           var = MESH_DISPLACEMENT1;
-          if (pd->v[pg->imtrx][var]) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             GOMA_EH(GOMA_ERROR, "Jacobian terms for hysing capillary wrt mesh not implemented");
           }
         }
@@ -922,29 +937,30 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
   double diffusion;
 
   eqn = R_MOMENTUM1;
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (0);
   }
 
-  load_lsi(ls->Length_Scale);
+  load_lsi(goma_ctx->fem.ls->Length_Scale);
 
-  wt = fv->wt;
-  h3 = fv->h3;
-  if (ls->on_sharp_surf) /* sharp interface */
+  wt = goma_ctx->fem.fv->wt;
+  h3 = goma_ctx->fem.fv->h3;
+  if (goma_ctx->fem.ls->on_sharp_surf) /* sharp interface */
   {
-    det_J = fv->sdet;
+    det_J = goma_ctx->fem.fv->sdet;
   } else /* diffuse interface */
   {
-    det_J = bf[eqn]->detJ;
+    det_J = goma_ctx->fem.bf[eqn]->detJ;
   }
 
   memset(csf, 0, sizeof(double) * DIM * DIM);
 
   for (p = 0; p < VIM; p++) {
     for (q = 0; q < VIM; q++) {
-      grad_s_v[p][q] = fv->grad_v[p][q];
+      grad_s_v[p][q] = goma_ctx->fem.fv->grad_v[p][q];
       for (k = 0; k < VIM; k++) {
-        grad_s_v[p][q] -= (lsi->normal[p] * lsi->normal[k]) * fv->grad_v[k][q];
+        grad_s_v[p][q] -= (goma_ctx->fem.lsi->normal[p] * goma_ctx->fem.lsi->normal[k]) *
+                          goma_ctx->fem.fv->grad_v[k][q];
       }
     }
   }
@@ -952,7 +968,7 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
   /* finite difference calculation of path dependencies for
      subelement integration
   */
-  if (ls->CalcSurfDependencies) {
+  if (goma_ctx->fem.ls->CalcSurfDependencies) {
     GOMA_EH(GOMA_ERROR, "Calc surf dependencies not implemented");
   }
 
@@ -960,31 +976,32 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
    * Residuals ____________________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
 
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           diffusion = 0;
 
           for (p = 0; p < VIM; p++) {
             for (q = 0; q < VIM; q++) {
-              diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * grad_s_v[p][q];
+              diffusion += goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * grad_s_v[p][q];
             }
           }
 
-          diffusion *= -det_J * wt * h3 * (dt * mp->surface_tension * lsi->delta * scale);
+          diffusion *= -det_J * wt * h3 *
+                       (dt * goma_ctx->fem.mp->surface_tension * goma_ctx->fem.lsi->delta * scale);
 
-          lec->R[LEC_R_INDEX(peqn, ii)] += diffusion;
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, ii)] += diffusion;
         }
       }
     }
@@ -994,37 +1011,44 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
    * Yacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           var = LS;
-          if (pd->v[pg->imtrx][var]) {
-            pvar = upd->vp[pg->imtrx][var];
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
               /* grouping lsi->delta into this now */
               for (p = 0; p < VIM; p++) {
                 for (q = 0; q < VIM; q++) {
                   d_grad_s_v_dF[p][q] =
-                      lsi->d_delta_dF[j] * fv->grad_v[p][q] + lsi->delta * fv->grad_v[p][q];
+                      goma_ctx->fem.lsi->d_delta_dF[j] * goma_ctx->fem.fv->grad_v[p][q] +
+                      goma_ctx->fem.lsi->delta * goma_ctx->fem.fv->grad_v[p][q];
                   for (k = 0; k < VIM; k++) {
                     d_grad_s_v_dF[p][q] -=
-                        lsi->d_delta_dF[j] * (lsi->normal[p] * lsi->normal[k]) * fv->grad_v[k][q];
+                        goma_ctx->fem.lsi->d_delta_dF[j] *
+                        (goma_ctx->fem.lsi->normal[p] * goma_ctx->fem.lsi->normal[k]) *
+                        goma_ctx->fem.fv->grad_v[k][q];
                     d_grad_s_v_dF[p][q] -=
-                        lsi->delta * (lsi->d_normal_dF[p][j] * lsi->normal[k]) * fv->grad_v[k][q];
+                        goma_ctx->fem.lsi->delta *
+                        (goma_ctx->fem.lsi->d_normal_dF[p][j] * goma_ctx->fem.lsi->normal[k]) *
+                        goma_ctx->fem.fv->grad_v[k][q];
                     d_grad_s_v_dF[p][q] -=
-                        lsi->delta * (lsi->normal[p] * lsi->d_normal_dF[k][j]) * fv->grad_v[k][q];
+                        goma_ctx->fem.lsi->delta *
+                        (goma_ctx->fem.lsi->normal[p] * goma_ctx->fem.lsi->d_normal_dF[k][j]) *
+                        goma_ctx->fem.fv->grad_v[k][q];
                   }
                 }
               }
@@ -1033,29 +1057,30 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
 
               for (p = 0; p < VIM; p++) {
                 for (q = 0; q < VIM; q++) {
-                  diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dF[p][q];
+                  diffusion += goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dF[p][q];
                 }
               }
 
-              diffusion *= -det_J * wt * h3 * (dt * mp->surface_tension * scale);
-              lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+              diffusion *= -det_J * wt * h3 * (dt * goma_ctx->fem.mp->surface_tension * scale);
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
             }
           }
 
           var = VELOCITY1;
-          if (pd->v[pg->imtrx][var]) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             for (b = 0; b < VIM; b++) {
               var = VELOCITY1 + b;
-              pvar = upd->vp[pg->imtrx][var];
+              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
                 for (p = 0; p < VIM; p++) {
                   for (q = 0; q < VIM; q++) {
-                    d_grad_s_v_dv[p][q] = bf[var]->grad_phi_e[j][b][p][q];
+                    d_grad_s_v_dv[p][q] = goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][q];
                     for (k = 0; k < VIM; k++) {
-                      d_grad_s_v_dv[p][q] -=
-                          lsi->normal[p] * lsi->normal[k] * bf[var]->grad_phi_e[j][b][k][q];
+                      d_grad_s_v_dv[p][q] -= goma_ctx->fem.lsi->normal[p] *
+                                             goma_ctx->fem.lsi->normal[k] *
+                                             goma_ctx->fem.bf[var]->grad_phi_e[j][b][k][q];
                     }
                   }
                 }
@@ -1064,18 +1089,21 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
 
                 for (p = 0; p < VIM; p++) {
                   for (q = 0; q < VIM; q++) {
-                    diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dv[p][q];
+                    diffusion +=
+                        goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dv[p][q];
                   }
                 }
 
-                diffusion *= -det_J * wt * h3 * (dt * mp->surface_tension * lsi->delta * scale);
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+                diffusion *=
+                    -det_J * wt * h3 *
+                    (dt * goma_ctx->fem.mp->surface_tension * goma_ctx->fem.lsi->delta * scale);
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
               }
             }
           }
 
           var = MESH_DISPLACEMENT1;
-          if (pd->v[pg->imtrx][var]) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             GOMA_EH(GOMA_ERROR,
                     "Jacobian terms for denner capillary diffusion wrt mesh not implemented");
           }
@@ -1103,29 +1131,30 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
   double diffusion;
 
   eqn = R_MOMENTUM1;
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (0);
   }
 
-  load_lsi(ls->Length_Scale);
+  load_lsi(goma_ctx->fem.ls->Length_Scale);
 
-  wt = fv->wt;
-  h3 = fv->h3;
-  if (ls->on_sharp_surf) /* sharp interface */
+  wt = goma_ctx->fem.fv->wt;
+  h3 = goma_ctx->fem.fv->h3;
+  if (goma_ctx->fem.ls->on_sharp_surf) /* sharp interface */
   {
-    det_J = fv->sdet;
+    det_J = goma_ctx->fem.fv->sdet;
   } else /* diffuse interface */
   {
-    det_J = bf[eqn]->detJ;
+    det_J = goma_ctx->fem.bf[eqn]->detJ;
   }
 
   memset(csf, 0, sizeof(double) * DIM * DIM);
 
   for (p = 0; p < VIM; p++) {
     for (q = 0; q < VIM; q++) {
-      grad_s_v[p][q] = fv->grad_v[p][q];
+      grad_s_v[p][q] = goma_ctx->fem.fv->grad_v[p][q];
       for (k = 0; k < VIM; k++) {
-        grad_s_v[p][q] -= (fv->n[p] * fv->n[k]) * fv->grad_v[k][q];
+        grad_s_v[p][q] -=
+            (goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->n[k]) * goma_ctx->fem.fv->grad_v[k][q];
       }
     }
   }
@@ -1133,7 +1162,7 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
   /* finite difference calculation of path dependencies for
      subelement integration
   */
-  if (ls->CalcSurfDependencies) {
+  if (goma_ctx->fem.ls->CalcSurfDependencies) {
     GOMA_EH(GOMA_ERROR, "Calc surf dependencies not implemented");
   }
 
@@ -1141,31 +1170,32 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
    * Residuals ____________________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
 
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           diffusion = 0;
 
           for (p = 0; p < VIM; p++) {
             for (q = 0; q < VIM; q++) {
-              diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * grad_s_v[p][q];
+              diffusion += goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * grad_s_v[p][q];
             }
           }
 
-          diffusion *= -det_J * wt * h3 * (dt * mp->surface_tension * lsi->delta * scale);
+          diffusion *= -det_J * wt * h3 *
+                       (dt * goma_ctx->fem.mp->surface_tension * goma_ctx->fem.lsi->delta * scale);
 
-          lec->R[LEC_R_INDEX(peqn, ii)] += diffusion;
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, ii)] += diffusion;
         }
       }
     }
@@ -1175,52 +1205,53 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
    * Yacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
 
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
 
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           var = LS;
-          if (pd->v[pg->imtrx][var]) {
-            pvar = upd->vp[pg->imtrx][var];
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               diffusion = 0;
 
               for (p = 0; p < VIM; p++) {
                 for (q = 0; q < VIM; q++) {
-                  diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * grad_s_v[p][q];
+                  diffusion += goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * grad_s_v[p][q];
                 }
               }
 
-              diffusion *= lsi->d_delta_dF[j];
+              diffusion *= goma_ctx->fem.lsi->d_delta_dF[j];
 
-              diffusion *= -det_J * wt * h3 * (dt * mp->surface_tension * scale);
-              lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+              diffusion *= -det_J * wt * h3 * (dt * goma_ctx->fem.mp->surface_tension * scale);
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
             }
           }
 
           var = VELOCITY1;
-          if (pd->v[pg->imtrx][var]) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             for (b = 0; b < WIM; b++) {
               var = VELOCITY1 + b;
-              pvar = upd->vp[pg->imtrx][var];
+              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
                 for (p = 0; p < WIM; p++) {
                   for (q = 0; q < WIM; q++) {
-                    d_grad_s_v_dv[p][q] = bf[var]->grad_phi_e[j][b][p][q];
+                    d_grad_s_v_dv[p][q] = goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][q];
                     for (k = 0; k < WIM; k++) {
-                      d_grad_s_v_dv[p][q] -= fv->n[p] * fv->n[k] * bf[var]->grad_phi_e[j][b][k][q];
+                      d_grad_s_v_dv[p][q] -= goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->n[k] *
+                                             goma_ctx->fem.bf[var]->grad_phi_e[j][b][k][q];
                     }
                   }
                 }
@@ -1229,29 +1260,36 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
 
                 for (p = 0; p < WIM; p++) {
                   for (q = 0; q < WIM; q++) {
-                    diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dv[p][q];
+                    diffusion +=
+                        goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dv[p][q];
                   }
                 }
 
-                diffusion *= -det_J * wt * h3 * (dt * mp->surface_tension * lsi->delta * scale);
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+                diffusion *=
+                    -det_J * wt * h3 *
+                    (dt * goma_ctx->fem.mp->surface_tension * goma_ctx->fem.lsi->delta * scale);
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
               }
             }
           }
 
           var = R_NORMAL1;
-          if (pd->v[pg->imtrx][var]) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             for (b = 0; b < VIM; b++) {
               var = R_NORMAL1 + b;
-              pvar = upd->vp[pg->imtrx][var];
+              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 for (p = 0; p < VIM; p++) {
                   for (q = 0; q < VIM; q++) {
                     d_grad_s_v_dn[p][q] = 0;
                     for (k = 0; k < VIM; k++) {
-                      d_grad_s_v_dn[p][q] -= bf[var]->phi[j] * fv->n[k] * fv->grad_v[k][q];
-                      d_grad_s_v_dn[p][q] -= fv->n[p] * bf[var]->phi[j] * fv->grad_v[k][q];
+                      d_grad_s_v_dn[p][q] -= goma_ctx->fem.bf[var]->phi[j] *
+                                             goma_ctx->fem.fv->n[k] *
+                                             goma_ctx->fem.fv->grad_v[k][q];
+                      d_grad_s_v_dn[p][q] -= goma_ctx->fem.fv->n[p] *
+                                             goma_ctx->fem.bf[var]->phi[j] *
+                                             goma_ctx->fem.fv->grad_v[k][q];
                     }
                   }
                 }
@@ -1260,18 +1298,21 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
 
                 for (p = 0; p < VIM; p++) {
                   for (q = 0; q < VIM; q++) {
-                    diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dn[p][q];
+                    diffusion +=
+                        goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dn[p][q];
                   }
                 }
 
-                diffusion *= -det_J * wt * h3 * (dt * mp->surface_tension * lsi->delta * scale);
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+                diffusion *=
+                    -det_J * wt * h3 *
+                    (dt * goma_ctx->fem.mp->surface_tension * goma_ctx->fem.lsi->delta * scale);
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
               }
             }
           }
 
           var = MESH_DISPLACEMENT1;
-          if (pd->v[pg->imtrx][var]) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             GOMA_EH(GOMA_ERROR,
                     "Jacobian terms for denner capillary diffusion wrt mesh not implemented");
           }

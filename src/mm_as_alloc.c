@@ -53,53 +53,7 @@ static void init_Viscoplastic_Constitutive(struct Viscoplastic_Constitutive *);
 
 static int shape_list(Exo_DB *);
 
-// Definitions and initializations of global pointers
-/*
- * This is the single location where these are defined.
- */
-
-UPD_STRUCT *upd = NULL;
-PROBLEM_DESCRIPTION_STRUCT **pd_glob = NULL, *pd = NULL;
-PROBLEM_GRAPH_STRUCT *pg = NULL;
-struct Element_Indices **ei = NULL;
-struct Element_Indices **eiRelated = {NULL};
-struct Element_Stiffness_Pointers *esp = NULL;
-struct Element_Quality_Metrics *eqm = NULL;
-struct Element_Variable_Pointers *esp_old = NULL, *esp_dot = NULL, *esp_dbl_dot = NULL, *evp = NULL;
-struct Action_Flags *af = NULL;
-BASIS_FUNCTIONS_STRUCT **bf = NULL;
-BASIS_FUNCTIONS_STRUCT **bfd = NULL;
-BASIS_FUNCTIONS_STRUCT **bfi = NULL;
-BASIS_FUNCTIONS_STRUCT **bfex = NULL;
-struct Shell_Block **shell_blocks = NULL;
-struct Field_Variables *fv = NULL, *fv_sens = NULL;
-struct Diet_Field_Variables *fv_dot_dot = NULL, *fv_dot_dot_old = NULL;
-struct Diet_Field_Variables *fv_old = NULL, *fv_dot = NULL;
-struct Diet_Field_Variables *fv_dot_old = NULL;
-struct Constitutive_Relations **cr_glob = NULL, *cr = NULL;
-struct Local_Element_Contributions *lec = NULL;
-struct Porous_Media_Variables *pmv = NULL, *pmv_old = NULL;
-PMV_ML_STRUCT *pmv_ml = NULL, *pmv_ml_old = NULL;
-struct Porous_Media_Variables_Hysteresis *pmv_hyst = NULL;
-struct Material_Properties *mp = NULL, **mp_glob = NULL, *mp_old = NULL;
-GEN_NEWT_STRUCT *gn = NULL;
-GEN_NEWT_STRUCT **gn_glob = NULL;
-struct Viscoelastic_Constitutive **ve = NULL, ***ve_glob = NULL;
-struct Viscoelastic_Nonmodal *vn = NULL, **vn_glob = NULL;
-struct Elastic_Constitutive *elc = NULL, **elc_glob = NULL, *elc_rs = NULL, **elc_rs_glob = NULL;
-struct Viscoplastic_Constitutive *evpl = NULL, **evpl_glob = NULL;
-struct Transient_Information *tran = NULL;
-struct Library_IO *libio = NULL;
-struct Eigensolver_Info *eigen = NULL;
-struct Continuation_Information *cont = NULL;
-struct Loca_Input *loca_in = NULL;
-struct AC_Information *augc = NULL;
-struct HC_Information *huntc = NULL;
-struct External_Field_Variables *efv = NULL;
-STABILIZATION_PARAMS_STRUCT *Stab = NULL;
-
-struct Lubrication_Auxiliaries *LubAux = NULL;
-struct Lubrication_Auxiliaries *LubAux_old = NULL;
+// The FEM working pointers formerly defined here now live in goma_ctx->fem.
 
 /*
  * This is where these are declared. The pointer is loaded with the
@@ -136,35 +90,35 @@ int pd_alloc(void)
   int status = 0;
   int mn;
   static char yo[] = "pd_alloc";
-  upd = alloc_struct_1(struct Uniform_Problem_Description, 1);
-  upd->Species_Var_Type = SPECIES_UNDEFINED_FORM;
+  goma_ctx->fem.upd = alloc_struct_1(struct Uniform_Problem_Description, 1);
+  goma_ctx->fem.upd->Species_Var_Type = SPECIES_UNDEFINED_FORM;
 
-  pd_glob = (struct Problem_Description **)alloc_ptr_1(MAX_NUMBER_MATLS);
+  goma_ctx->fem.pd_glob = (struct Problem_Description **)alloc_ptr_1(MAX_NUMBER_MATLS);
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    pd_glob[mn] = alloc_struct_1(struct Problem_Description, 1);
-    pd_glob[mn]->Species_Var_Type = SPECIES_UNDEFINED_FORM;
+    goma_ctx->fem.pd_glob[mn] = alloc_struct_1(struct Problem_Description, 1);
+    goma_ctx->fem.pd_glob[mn]->Species_Var_Type = SPECIES_UNDEFINED_FORM;
   }
 
-  pg = alloc_struct_1(struct Problem_Graph, 1);
+  goma_ctx->fem.pg = alloc_struct_1(struct Problem_Graph, 1);
 
   int imtrx;
   for (imtrx = 0; imtrx < MAX_NUM_MATRICES; imtrx++) {
-    pg->time_step_control_disabled[imtrx] = 0;
+    goma_ctx->fem.pg->time_step_control_disabled[imtrx] = 0;
   }
 
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Problem_Description @ %p has %ld bytes", yo, (void *)pd_glob,
+    DPRINTF(stdout, "%s: Problem_Description @ %p has %ld bytes", yo, (void *)goma_ctx->fem.pd_glob,
             (long int)sizeof(struct Problem_Description));
   }
-  if (upd == NULL) {
+  if (goma_ctx->fem.upd == NULL) {
     status = -1;
     GOMA_EH(status, "Hay un problema conseguiendo la memoria para Uniform_Problem_Description");
   }
-  if (pd_glob == NULL) {
+  if (goma_ctx->fem.pd_glob == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Problem_Description");
   }
-  if (pg == NULL) {
+  if (goma_ctx->fem.pg == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Problem_Graph");
   }
@@ -185,17 +139,18 @@ int efv_alloc(void) {
    */
 
   sz = sizeof(struct External_Field_Variables);
-  efv = (struct External_Field_Variables *)array_alloc(1, 1, sz);
+  goma_ctx->fem.efv = (struct External_Field_Variables *)array_alloc(1, 1, sz);
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: External_Field_Variables @ %p has %d bytes", yo, (void *)efv, sz);
+    DPRINTF(stdout, "%s: External_Field_Variables @ %p has %d bytes", yo, (void *)goma_ctx->fem.efv,
+            sz);
   }
 
-  if (efv == NULL) {
+  if (goma_ctx->fem.efv == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for External_Field_Variables");
   }
 
-  memset(efv, 0, sz);
+  memset(goma_ctx->fem.efv, 0, sz);
 
   return (status);
 }
@@ -227,18 +182,19 @@ int mp_alloc(void)
   int mn;
   static char yo[] = "mp_alloc";
 
-  mp_glob = (MATRL_PROP_STRUCT **)alloc_ptr_1(MAX_NUMBER_MATLS);
-  if (mp_glob == NULL) {
+  goma_ctx->fem.mp_glob = (MATRL_PROP_STRUCT **)alloc_ptr_1(MAX_NUMBER_MATLS);
+  if (goma_ctx->fem.mp_glob == NULL) {
     GOMA_EH(-1, "Problem getting memory for Material_Properties");
   }
 
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    mp_glob[mn] = (MATRL_PROP_STRUCT *)alloc_void_struct_1(sizeof(MATRL_PROP_STRUCT), 1);
+    goma_ctx->fem.mp_glob[mn] =
+        (MATRL_PROP_STRUCT *)alloc_void_struct_1(sizeof(MATRL_PROP_STRUCT), 1);
   }
-  mp_old = (MATRL_PROP_STRUCT *)alloc_void_struct_1(sizeof(MATRL_PROP_STRUCT), 1);
+  goma_ctx->fem.mp_old = (MATRL_PROP_STRUCT *)alloc_void_struct_1(sizeof(MATRL_PROP_STRUCT), 1);
 
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Material_Properties @ %p has %lu bytes", yo, (void *)mp,
+    DPRINTF(stdout, "%s: Material_Properties @ %p has %lu bytes", yo, (void *)goma_ctx->fem.mp,
             (long unsigned int)sizeof(MATRL_PROP_STRUCT));
   }
   return 0;
@@ -268,20 +224,21 @@ int cr_alloc(void)
    */
 
   sz = sizeof(struct Constitutive_Relations *);
-  cr_glob = (struct Constitutive_Relations **)array_alloc(1, MAX_NUMBER_MATLS, sz);
+  goma_ctx->fem.cr_glob = (struct Constitutive_Relations **)array_alloc(1, MAX_NUMBER_MATLS, sz);
 
   sz = sizeof(struct Constitutive_Relations);
 
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    cr_glob[mn] = (struct Constitutive_Relations *)array_alloc(1, 1, sz);
-    memset(cr_glob[mn], 0, sz);
+    goma_ctx->fem.cr_glob[mn] = (struct Constitutive_Relations *)array_alloc(1, 1, sz);
+    memset(goma_ctx->fem.cr_glob[mn], 0, sz);
   }
 
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Constitutive_Relations @ %p has %d bytes", yo, (void *)cr, sz);
+    DPRINTF(stdout, "%s: Constitutive_Relations @ %p has %d bytes", yo, (void *)goma_ctx->fem.cr,
+            sz);
   }
 
-  if (cr_glob == NULL) {
+  if (goma_ctx->fem.cr_glob == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Constitutive_Relations");
   }
@@ -305,9 +262,9 @@ int gn_alloc(void) {
    */
 
   sz = sizeof(struct Generalized_Newtonian *);
-  gn_glob = (struct Generalized_Newtonian **)array_alloc(1, MAX_NUMBER_MATLS, sz);
+  goma_ctx->fem.gn_glob = (struct Generalized_Newtonian **)array_alloc(1, MAX_NUMBER_MATLS, sz);
 
-  if (gn_glob == NULL) {
+  if (goma_ctx->fem.gn_glob == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Generalized_Newtonian");
   }
@@ -315,17 +272,18 @@ int gn_alloc(void) {
   sz = sizeof(struct Generalized_Newtonian);
 
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    gn_glob[mn] = (struct Generalized_Newtonian *)array_alloc(1, 1, sz);
+    goma_ctx->fem.gn_glob[mn] = (struct Generalized_Newtonian *)array_alloc(1, 1, sz);
 
-    if (gn_glob[mn] == NULL) {
+    if (goma_ctx->fem.gn_glob[mn] == NULL) {
       status = -1;
       GOMA_EH(status, "Problem getting memory for Generalized_Newtonian material");
     }
-    memset(gn_glob[mn], 0, sz);
+    memset(goma_ctx->fem.gn_glob[mn], 0, sz);
   }
 
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Generalized_Newtonian @ %p has %d bytes", yo, (void *)gn, sz);
+    DPRINTF(stdout, "%s: Generalized_Newtonian @ %p has %d bytes", yo, (void *)goma_ctx->fem.gn,
+            sz);
   }
 
   return (status);
@@ -345,43 +303,45 @@ int ve_alloc(void) {
    */
 
   sz = sizeof(struct Viscoelastic_Nonmodal *);
-  vn_glob = (struct Viscoelastic_Nonmodal **)smalloc(MAX_NUMBER_MATLS * sz);
+  goma_ctx->fem.vn_glob = (struct Viscoelastic_Nonmodal **)smalloc(MAX_NUMBER_MATLS * sz);
 
   sz = sizeof(struct Viscoelastic_Nonmodal);
 
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    vn_glob[mn] = (struct Viscoelastic_Nonmodal *)smalloc(sz);
-    init_Viscoelastic_Nonmodal(vn_glob[mn]);
+    goma_ctx->fem.vn_glob[mn] = (struct Viscoelastic_Nonmodal *)smalloc(sz);
+    init_Viscoelastic_Nonmodal(goma_ctx->fem.vn_glob[mn]);
   }
 
   sz = sizeof(struct Viscoelastic_Constitutive *);
-  ve = (struct Viscoelastic_Constitutive **)smalloc(MAX_MODES * sz);
+  goma_ctx->fem.ve = (struct Viscoelastic_Constitutive **)smalloc(MAX_MODES * sz);
 
   sz = sizeof(struct Viscoelastic_Constitutive *);
-  ve_glob = (struct Viscoelastic_Constitutive ***)array_alloc(2, MAX_NUMBER_MATLS, MAX_MODES, sz);
+  goma_ctx->fem.ve_glob =
+      (struct Viscoelastic_Constitutive ***)array_alloc(2, MAX_NUMBER_MATLS, MAX_MODES, sz);
 
   sz = sizeof(struct Viscoelastic_Constitutive);
 
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
     for (mode = 0; mode < MAX_MODES; mode++) {
-      ve_glob[mn][mode] = (struct Viscoelastic_Constitutive *)smalloc(sz);
-      init_Viscoelastic_Constitutive(ve_glob[mn][mode]);
+      goma_ctx->fem.ve_glob[mn][mode] = (struct Viscoelastic_Constitutive *)smalloc(sz);
+      init_Viscoelastic_Constitutive(goma_ctx->fem.ve_glob[mn][mode]);
     }
   }
 
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
     for (mode = 0; mode < MAX_MODES; mode++) {
-      ve_glob[mn][mode]->gn = alloc_struct_1(GEN_NEWT_STRUCT, 1);
-      ve_glob[mn][mode]->time_const_st = alloc_struct_1(POLYMER_TIME_CONST_STRUCT, 1);
-      init_Generalized_Newtonian(ve_glob[mn][mode]->gn);
+      goma_ctx->fem.ve_glob[mn][mode]->gn = alloc_struct_1(GEN_NEWT_STRUCT, 1);
+      goma_ctx->fem.ve_glob[mn][mode]->time_const_st = alloc_struct_1(POLYMER_TIME_CONST_STRUCT, 1);
+      init_Generalized_Newtonian(goma_ctx->fem.ve_glob[mn][mode]->gn);
     }
   }
 
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Viscoelastic_Constitutive @ %p has %d bytes", yo, (void *)ve_glob, sz);
+    DPRINTF(stdout, "%s: Viscoelastic_Constitutive @ %p has %d bytes", yo,
+            (void *)goma_ctx->fem.ve_glob, sz);
   }
 
-  if (ve_glob == NULL) {
+  if (goma_ctx->fem.ve_glob == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Viscoelastic_Constitutive");
   }
@@ -405,20 +365,21 @@ int elc_alloc(void) {
    */
 
   sz = sizeof(struct Elastic_Constitutive *);
-  elc_glob = (struct Elastic_Constitutive **)smalloc(MAX_NUMBER_MATLS * sz);
+  goma_ctx->fem.elc_glob = (struct Elastic_Constitutive **)smalloc(MAX_NUMBER_MATLS * sz);
 
   sz = sizeof(struct Elastic_Constitutive);
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    elc_glob[mn] = (struct Elastic_Constitutive *)smalloc(sz);
-    memset(elc_glob[mn], 0, sz);
-    init_Elastic_Constitutive(elc_glob[mn]);
+    goma_ctx->fem.elc_glob[mn] = (struct Elastic_Constitutive *)smalloc(sz);
+    memset(goma_ctx->fem.elc_glob[mn], 0, sz);
+    init_Elastic_Constitutive(goma_ctx->fem.elc_glob[mn]);
   }
 
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Elastic Constitutive @ %p has %d bytes", yo, (void *)gn_glob, sz);
+    DPRINTF(stdout, "%s: Elastic Constitutive @ %p has %d bytes", yo, (void *)goma_ctx->fem.gn_glob,
+            sz);
   }
 
-  if (elc_glob == NULL) {
+  if (goma_ctx->fem.elc_glob == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Elastic_Constitutive");
   }
@@ -442,19 +403,20 @@ int evp_alloc(void) {
    */
 
   sz = sizeof(struct Viscoplastic_Constitutive *);
-  evpl_glob = (struct Viscoplastic_Constitutive **)smalloc(MAX_NUMBER_MATLS * sz);
+  goma_ctx->fem.evpl_glob = (struct Viscoplastic_Constitutive **)smalloc(MAX_NUMBER_MATLS * sz);
 
   sz = sizeof(struct Viscoplastic_Constitutive);
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    evpl_glob[mn] = (struct Viscoplastic_Constitutive *)smalloc(sz);
-    init_Viscoplastic_Constitutive(evpl_glob[mn]);
+    goma_ctx->fem.evpl_glob[mn] = (struct Viscoplastic_Constitutive *)smalloc(sz);
+    init_Viscoplastic_Constitutive(goma_ctx->fem.evpl_glob[mn]);
   }
 
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Viscoplastic Constitutive @ %p has %d bytes", yo, (void *)gn_glob, sz);
+    DPRINTF(stdout, "%s: Viscoplastic Constitutive @ %p has %d bytes", yo,
+            (void *)goma_ctx->fem.gn_glob, sz);
   }
 
-  if (evpl_glob == NULL) {
+  if (goma_ctx->fem.evpl_glob == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Viscoplastic_Constitutive");
   }
@@ -475,54 +437,54 @@ int evp_tensor_alloc(Exo_DB *exo) {
    * Viscoplastic global tensors_______________________________________________
    */
 
-  for (mn = 0; mn < upd->Num_Mat; mn++) {
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
     /*Don't bother with allocation if we are not solving an EVP model */
-    if (evpl_glob[mn]->ConstitutiveEquation == EVP_HYPER) {
-      pd_glob[mn]->Num_Dim = goma_ctx->mesh.num_dim; /* from "el_geom.h" */
+    if (goma_ctx->fem.evpl_glob[mn]->ConstitutiveEquation == EVP_HYPER) {
+      goma_ctx->fem.pd_glob[mn]->Num_Dim = goma_ctx->mesh.num_dim; /* from "el_geom.h" */
       ielem0 = exo->eb_ptr[mn];
       ielem_type = Elem_Type(exo, ielem0);     /* element type */
       ip_total = elem_info(NQUAD, ielem_type); /* number of */
       /* quadrature points */
 
-      if (evpl_glob[mn] == NULL) {
+      if (goma_ctx->fem.evpl_glob[mn] == NULL) {
         status = -1;
         GOMA_EH(status, "Problem getting memory for Viscoplastic_Constitutive");
       }
 
-      evpl_glob[mn]->F_vp_glob =
+      goma_ctx->fem.evpl_glob[mn]->F_vp_glob =
           (dbl ****)array_alloc(4, exo->num_elems, ip_total, DIM, DIM, sizeof(dbl));
-      evpl_glob[mn]->F_vp_old_glob =
+      goma_ctx->fem.evpl_glob[mn]->F_vp_old_glob =
           (dbl ****)array_alloc(4, exo->num_elems, ip_total, DIM, DIM, sizeof(dbl));
-      evpl_glob[mn]->TT_glob =
+      goma_ctx->fem.evpl_glob[mn]->TT_glob =
           (dbl ****)array_alloc(4, exo->num_elems, ip_total, DIM, DIM, sizeof(dbl));
-      evpl_glob[mn]->TT_old_glob =
+      goma_ctx->fem.evpl_glob[mn]->TT_old_glob =
           (dbl ****)array_alloc(4, exo->num_elems, ip_total, DIM, DIM, sizeof(dbl));
-      evpl_glob[mn]->dTT_dx_glob =
+      goma_ctx->fem.evpl_glob[mn]->dTT_dx_glob =
           (dbl ******)array_alloc(6, exo->num_elems, ip_total, DIM, DIM, DIM, MDE, sizeof(dbl));
-      evpl_glob[mn]->dTT_dx_old_glob =
+      goma_ctx->fem.evpl_glob[mn]->dTT_dx_old_glob =
           (dbl ******)array_alloc(6, exo->num_elems, ip_total, DIM, DIM, DIM, MDE, sizeof(dbl));
-      evpl_glob[mn]->dTT_dc_glob = (dbl ******)array_alloc(6, exo->num_elems, ip_total, DIM, DIM,
-                                                           MAX_CONC, MDE, sizeof(dbl));
-      evpl_glob[mn]->dTT_dc_old_glob = (dbl ******)array_alloc(6, exo->num_elems, ip_total, DIM,
-                                                               DIM, MAX_CONC, MDE, sizeof(dbl));
+      goma_ctx->fem.evpl_glob[mn]->dTT_dc_glob = (dbl ******)array_alloc(
+          6, exo->num_elems, ip_total, DIM, DIM, MAX_CONC, MDE, sizeof(dbl));
+      goma_ctx->fem.evpl_glob[mn]->dTT_dc_old_glob = (dbl ******)array_alloc(
+          6, exo->num_elems, ip_total, DIM, DIM, MAX_CONC, MDE, sizeof(dbl));
 
       for (i = 0; i < exo->num_elems; i++) {
         for (ip = 0; ip < ip_total; ip++) {
           for (a = 0; a < DIM; a++) {
             for (b = 0; b < DIM; b++) {
-              evpl_glob[mn]->F_vp_old_glob[i][ip][a][b] = 0.;
-              evpl_glob[mn]->F_vp_glob[i][ip][a][b] = 0.;
-              evpl_glob[mn]->TT_glob[i][ip][a][b] = 0.;
-              evpl_glob[mn]->TT_old_glob[i][ip][a][b] = 0.;
+              goma_ctx->fem.evpl_glob[mn]->F_vp_old_glob[i][ip][a][b] = 0.;
+              goma_ctx->fem.evpl_glob[mn]->F_vp_glob[i][ip][a][b] = 0.;
+              goma_ctx->fem.evpl_glob[mn]->TT_glob[i][ip][a][b] = 0.;
+              goma_ctx->fem.evpl_glob[mn]->TT_old_glob[i][ip][a][b] = 0.;
 
               for (k = 0; k < MDE; k++) {
                 for (c = 0; c < DIM; c++) {
-                  evpl_glob[mn]->dTT_dx_glob[i][ip][a][b][c][k] = 0.;
-                  evpl_glob[mn]->dTT_dx_old_glob[i][ip][a][b][c][k] = 0.;
+                  goma_ctx->fem.evpl_glob[mn]->dTT_dx_glob[i][ip][a][b][c][k] = 0.;
+                  goma_ctx->fem.evpl_glob[mn]->dTT_dx_old_glob[i][ip][a][b][c][k] = 0.;
                 }
                 for (w = 0; w < MAX_CONC; w++) {
-                  evpl_glob[mn]->dTT_dc_glob[i][ip][a][b][w][k] = 0.;
-                  evpl_glob[mn]->dTT_dc_old_glob[i][ip][a][b][w][k] = 0.;
+                  goma_ctx->fem.evpl_glob[mn]->dTT_dc_glob[i][ip][a][b][w][k] = 0.;
+                  goma_ctx->fem.evpl_glob[mn]->dTT_dc_old_glob[i][ip][a][b][w][k] = 0.;
                 }
               }
             }
@@ -551,19 +513,20 @@ int elc_rs_alloc(void) {
    */
 
   sz = sizeof(struct Elastic_Constitutive *);
-  elc_rs_glob = (struct Elastic_Constitutive **)smalloc(MAX_NUMBER_MATLS * sz);
+  goma_ctx->fem.elc_rs_glob = (struct Elastic_Constitutive **)smalloc(MAX_NUMBER_MATLS * sz);
 
   sz = sizeof(struct Elastic_Constitutive);
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    elc_rs_glob[mn] = (struct Elastic_Constitutive *)smalloc(sz);
-    init_Elastic_Constitutive(elc_rs_glob[mn]);
+    goma_ctx->fem.elc_rs_glob[mn] = (struct Elastic_Constitutive *)smalloc(sz);
+    init_Elastic_Constitutive(goma_ctx->fem.elc_rs_glob[mn]);
   }
 
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Elastic Constitutive RS @ %p has %d bytes", yo, (void *)gn_glob, sz);
+    DPRINTF(stdout, "%s: Elastic Constitutive RS @ %p has %d bytes", yo,
+            (void *)goma_ctx->fem.gn_glob, sz);
   }
 
-  if (elc_rs_glob == NULL) {
+  if (goma_ctx->fem.elc_rs_glob == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Elastic_Constitutive");
   }
@@ -583,12 +546,13 @@ int tran_alloc(void) {
    */
 
   sz = sizeof(struct Transient_Information);
-  tran = (struct Transient_Information *)array_alloc(1, 1, sz);
+  goma_ctx->fem.tran = (struct Transient_Information *)array_alloc(1, 1, sz);
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Transient_Information @ %p has %d bytes", yo, (void *)tran, sz);
+    DPRINTF(stdout, "%s: Transient_Information @ %p has %d bytes", yo, (void *)goma_ctx->fem.tran,
+            sz);
   }
 
-  if (tran == NULL) {
+  if (goma_ctx->fem.tran == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Transient_Information");
   }
@@ -597,13 +561,13 @@ int tran_alloc(void) {
    * Element_Quality_Metrics___________________________________________________
    */
   sz = sizeof(struct Element_Quality_Metrics);
-  eqm = alloc_struct_1(struct Element_Quality_Metrics, 1);
+  goma_ctx->fem.eqm = alloc_struct_1(struct Element_Quality_Metrics, 1);
 
   if (goma_ctx->debug_flag) {
-    P0PRINTF("%s: Element_Quality_Metrics @ %p has %d bytes", yo, (void *)eqm, sz);
+    P0PRINTF("%s: Element_Quality_Metrics @ %p has %d bytes", yo, (void *)goma_ctx->fem.eqm, sz);
   }
 
-  if (eqm == NULL) {
+  if (goma_ctx->fem.eqm == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Element_Quality_Metrics");
   }
@@ -626,12 +590,12 @@ int libio_alloc(void) {
    */
 
   sz = sizeof(struct Library_IO);
-  libio = (struct Library_IO *)array_alloc(1, 1, sz);
+  goma_ctx->fem.libio = (struct Library_IO *)array_alloc(1, 1, sz);
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Library_IO @ %p has %d bytes", yo, (void *)libio, sz);
+    DPRINTF(stdout, "%s: Library_IO @ %p has %d bytes", yo, (void *)goma_ctx->fem.libio, sz);
   }
 
-  if (libio == NULL) {
+  if (goma_ctx->fem.libio == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Library_IO");
   }
@@ -654,12 +618,12 @@ int eigen_alloc(void) {
    */
 
   sz = sizeof(struct Eigensolver_Info);
-  eigen = (struct Eigensolver_Info *)array_alloc(1, 1, sz);
+  goma_ctx->fem.eigen = (struct Eigensolver_Info *)array_alloc(1, 1, sz);
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Eigensolver_Info @ %p has %d bytes", yo, (void *)eigen, sz);
+    DPRINTF(stdout, "%s: Eigensolver_Info @ %p has %d bytes", yo, (void *)goma_ctx->fem.eigen, sz);
   }
 
-  if (eigen == NULL) {
+  if (goma_ctx->fem.eigen == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Eigensolver_Info");
   }
@@ -682,12 +646,13 @@ int cont_alloc(void) {
    */
 
   sz = sizeof(struct Continuation_Information);
-  cont = (struct Continuation_Information *)array_alloc(1, 1, sz);
+  goma_ctx->fem.cont = (struct Continuation_Information *)array_alloc(1, 1, sz);
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Continuation_Information @ %p has %d bytes", yo, (void *)cont, sz);
+    DPRINTF(stdout, "%s: Continuation_Information @ %p has %d bytes", yo,
+            (void *)goma_ctx->fem.cont, sz);
   }
 
-  if (cont == NULL) {
+  if (goma_ctx->fem.cont == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Continuation_Information");
   }
@@ -710,12 +675,12 @@ int loca_alloc(void) {
    */
 
   sz = sizeof(struct Loca_Input);
-  loca_in = (struct Loca_Input *)array_alloc(1, 1, sz);
+  goma_ctx->fem.loca_in = (struct Loca_Input *)array_alloc(1, 1, sz);
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Loca_Input @ %p has %d bytes", yo, (void *)cont, sz);
+    DPRINTF(stdout, "%s: Loca_Input @ %p has %d bytes", yo, (void *)goma_ctx->fem.cont, sz);
   }
 
-  if (loca_in == NULL) {
+  if (goma_ctx->fem.loca_in == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Loca_Input");
   }
@@ -834,17 +799,19 @@ int assembly_alloc(Exo_DB *exo)
    * Element_Indices___________________________________________________________
    */
 
-  ei = malloc(sizeof(struct Element_Indices *) * upd->Total_Num_Matrices);
-  for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-    ei[pg->imtrx] = alloc_struct_1(struct Element_Indices, 1);
-    Element_Indices_alloc(ei[pg->imtrx]);
+  goma_ctx->fem.ei =
+      malloc(sizeof(struct Element_Indices *) * goma_ctx->fem.upd->Total_Num_Matrices);
+  for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+       goma_ctx->fem.pg->imtrx++) {
+    goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx] = alloc_struct_1(struct Element_Indices, 1);
+    Element_Indices_alloc(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]);
   }
-  pg->imtrx = 0;
+  goma_ctx->fem.pg->imtrx = 0;
 
-  eiRelated = (struct Element_Indices **)alloc_ptr_1(MAX_ELEMENT_INDICES_RELATED);
+  goma_ctx->fem.ei_related = (struct Element_Indices **)alloc_ptr_1(MAX_ELEMENT_INDICES_RELATED);
   for (mn = 0; mn < MAX_ELEMENT_INDICES_RELATED; mn++) {
-    eiRelated[mn] = alloc_struct_1(struct Element_Indices, 1);
-    Element_Indices_alloc(eiRelated[mn]);
+    goma_ctx->fem.ei_related[mn] = alloc_struct_1(struct Element_Indices, 1);
+    Element_Indices_alloc(goma_ctx->fem.ei_related[mn]);
   }
 
   /*
@@ -852,16 +819,17 @@ int assembly_alloc(Exo_DB *exo)
    */
 
   sz = sizeof(struct Element_Variable_Pointers);
-  esp_old = (struct Element_Variable_Pointers *)array_alloc(1, 1, sz);
-  esp_dot = (struct Element_Variable_Pointers *)array_alloc(1, 1, sz);
-  esp_dbl_dot = (struct Element_Variable_Pointers *)array_alloc(1, 1, sz);
-  evp = (struct Element_Variable_Pointers *)array_alloc(1, 1, sz);
+  goma_ctx->fem.esp_old = (struct Element_Variable_Pointers *)array_alloc(1, 1, sz);
+  goma_ctx->fem.esp_dot = (struct Element_Variable_Pointers *)array_alloc(1, 1, sz);
+  goma_ctx->fem.esp_dbl_dot = (struct Element_Variable_Pointers *)array_alloc(1, 1, sz);
+  goma_ctx->fem.evp = (struct Element_Variable_Pointers *)array_alloc(1, 1, sz);
 
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Element_Variable_Pointers @ %p has %d bytes", yo, (void *)esp_old, sz);
+    DPRINTF(stdout, "%s: Element_Variable_Pointers @ %p has %d bytes", yo,
+            (void *)goma_ctx->fem.esp_old, sz);
   }
 
-  if ((esp_old == NULL) || (esp_dot == NULL)) {
+  if ((goma_ctx->fem.esp_old == NULL) || (goma_ctx->fem.esp_dot == NULL)) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Element_Variable_Pointers");
   }
@@ -870,17 +838,17 @@ int assembly_alloc(Exo_DB *exo)
    * Element_Stiffness_Pointers________________________________________________
    */
   sz = sizeof(struct Element_Stiffness_Pointers);
-  esp = alloc_struct_1(struct Element_Stiffness_Pointers, 1);
+  goma_ctx->fem.esp = alloc_struct_1(struct Element_Stiffness_Pointers, 1);
 
   if (goma_ctx->debug_flag) {
-    P0PRINTF("%s: Element_Stiffness_Pointers @ %p has %d bytes", yo, (void *)esp, sz);
+    P0PRINTF("%s: Element_Stiffness_Pointers @ %p has %d bytes", yo, (void *)goma_ctx->fem.esp, sz);
   }
 
   /*
    *  num_species_eqn is equal to the maximum number of species equations
    *  in any one domain
    */
-  num_species_eqn = upd->Max_Num_Species_Eqn;
+  num_species_eqn = goma_ctx->fem.upd->Max_Num_Species_Eqn;
 
   sz = MDE;
 
@@ -890,19 +858,19 @@ int assembly_alloc(Exo_DB *exo)
    * particle velocity
    */
 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     /* ENERGY */
     if (Num_Var_In_Type[imtrx][TEMPERATURE]) {
-      esp->T = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->T = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* MOMENTUM  */
     if (Num_Var_In_Type[imtrx][VELOCITY1]) {
-      esp->v = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->v = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
 
     if (Num_Var_In_Type[imtrx][USTAR]) {
-      esp->v_star = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->v_star = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
 
     /* MMH
@@ -911,346 +879,346 @@ int assembly_alloc(Exo_DB *exo)
      */
     /* PARTICLE MOMENTUM */
     if (Num_Var_In_Type[imtrx][PVELOCITY1]) {
-      esp->pv = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->pv = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
 
     /* MESH_DISPLACEMENT  */
     if (Num_Var_In_Type[imtrx][MESH_DISPLACEMENT1]) {
-      esp->d = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->d = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
 
     /* SOLID_DISPLACEMENT  */
     if (Num_Var_In_Type[imtrx][SOLID_DISPLACEMENT1]) {
-      esp->d_rs = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->d_rs = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
 
     /* SPECIES CONTINUITY */
     if (Num_Var_In_Type[imtrx][MASS_FRACTION]) {
-      esp->c = (dbl ***)alloc_ptr_2(num_species_eqn, MDE);
+      goma_ctx->fem.esp->c = (dbl ***)alloc_ptr_2(num_species_eqn, MDE);
     }
 
     /*CONTINUITY */
     if (Num_Var_In_Type[imtrx][PRESSURE]) {
-      esp->P = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->P = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][PSTAR]) {
-      esp->P_star = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->P_star = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* POLYMER STRESS for all modes */
     if (Num_Var_In_Type[imtrx][POLYMER_STRESS11]) {
       int sdim = VIM;
-      for (int i = 0; i < upd->Total_Num_Matrices; i++) {
+      for (int i = 0; i < goma_ctx->fem.upd->Total_Num_Matrices; i++) {
         if (Num_Var_In_Type[i][FILM_HEIGHT])
           sdim = 3;
       }
-      esp->S = (dbl *****)array_alloc(4, MAX_MODES, sdim, sdim, MDE, sizeof(dbl *));
-      (void)memset(esp->S[0][0][0], 0, MAX_MODES * sdim * sdim * MDE * sizeof(dbl *));
+      goma_ctx->fem.esp->S = (dbl *****)array_alloc(4, MAX_MODES, sdim, sdim, MDE, sizeof(dbl *));
+      (void)memset(goma_ctx->fem.esp->S[0][0][0], 0, MAX_MODES * sdim * sdim * MDE * sizeof(dbl *));
     }
 
     /* VELOCITY_GRADIENT */
     if (Num_Var_In_Type[imtrx][VELOCITY_GRADIENT11]) {
       int sdim = VIM;
-      for (int i = 0; i < upd->Total_Num_Matrices; i++) {
+      for (int i = 0; i < goma_ctx->fem.upd->Total_Num_Matrices; i++) {
         if (Num_Var_In_Type[i][FILM_HEIGHT])
           sdim = 3;
       }
-      esp->G = (dbl ****)array_alloc(3, sdim, sdim, MDE, sizeof(dbl *));
-      (void)memset(esp->G[0][0], 0, sdim * sdim * MDE * sizeof(dbl *));
+      goma_ctx->fem.esp->G = (dbl ****)array_alloc(3, sdim, sdim, MDE, sizeof(dbl *));
+      (void)memset(goma_ctx->fem.esp->G[0][0], 0, sdim * sdim * MDE * sizeof(dbl *));
     }
 
     /* POTENTIAL */
     if (Num_Var_In_Type[imtrx][VOLTAGE]) {
-      esp->V = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->V = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* SURF_CHARGE */
     if (Num_Var_In_Type[imtrx][SURF_CHARGE]) {
-      esp->qs = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->qs = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* FILL */
     if (Num_Var_In_Type[imtrx][FILL]) {
-      esp->F = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->F = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* SHEAR_RATE INVARIANT */
     if (Num_Var_In_Type[imtrx][SHEAR_RATE]) {
-      esp->SH = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->SH = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* ENORM, |E| */
     if (Num_Var_In_Type[imtrx][ENORM]) {
-      esp->Enorm = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->Enorm = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* LEVEL SET CURVATURE */
     if (Num_Var_In_Type[imtrx][CURVATURE]) {
-      esp->H = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->H = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* LEVEL SET NORMAL VECTOR */
     if (Num_Var_In_Type[imtrx][NORMAL1]) {
-      esp->n = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->n = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
 
     /* POROUS MEDIA VARS */
     if (Num_Var_In_Type[imtrx][POR_LIQ_PRES]) {
-      esp->p_liq = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->p_liq = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][POR_GAS_PRES]) {
-      esp->p_gas = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->p_gas = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][POR_POROSITY]) {
-      esp->porosity = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->porosity = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][POR_TEMP]) {
-      esp->T = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->T = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* VORTICITY PRINCIPLE FLOW DIRECTION
      * This is always 3D */
     if (Num_Var_In_Type[imtrx][VORT_DIR1]) {
-      esp->vd = (dbl ***)alloc_ptr_2(DIM, MDE);
+      goma_ctx->fem.esp->vd = (dbl ***)alloc_ptr_2(DIM, MDE);
     }
 
     /* Lagrange Multipliers */
     if (Num_Var_In_Type[imtrx][LAGR_MULT1]) {
-      esp->lm = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->lm = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
 
     /* Structural Shell equations */
     if (Num_Var_In_Type[imtrx][SHELL_CURVATURE]) {
-      esp->sh_K = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_K = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][SHELL_CURVATURE2]) {
-      esp->sh_K2 = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_K2 = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][SHELL_TENSION]) {
-      esp->sh_tens = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_tens = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][SHELL_X]) {
-      esp->sh_x = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_x = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][SHELL_Y]) {
-      esp->sh_y = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_y = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][SHELL_USER]) {
-      esp->sh_u = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_u = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* Shell orientation angles */
     if (Num_Var_In_Type[imtrx][SHELL_ANGLE1]) {
-      esp->sh_ang = (dbl ***)alloc_ptr_2(DIM - 1, MDE);
+      goma_ctx->fem.esp->sh_ang = (dbl ***)alloc_ptr_2(DIM - 1, MDE);
     }
 
     /*Sundry pieces for Surface Rheological Const. Eqn. */
     if (Num_Var_In_Type[imtrx][R_SHELL_SURF_DIV_V]) {
-      esp->div_s_v = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->div_s_v = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][R_SHELL_SURF_CURV]) {
-      esp->curv = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->curv = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][R_N_DOT_CURL_V]) {
-      esp->n_dot_curl_s_v = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->n_dot_curl_s_v = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][R_GRAD_S_V_DOT_N1]) {
-      esp->grad_v_dot_n = (dbl ***)alloc_ptr_2(DIM, MDE);
+      goma_ctx->fem.esp->grad_v_dot_n = (dbl ***)alloc_ptr_2(DIM, MDE);
     }
 
     if (Num_Var_In_Type[imtrx][R_SHELL_DIFF_FLUX]) {
-      esp->sh_J = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_J = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][R_SHELL_DIFF_CURVATURE]) {
-      esp->sh_Kd = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_Kd = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][R_SHELL_NORMAL1]) {
-      esp->n = (dbl ***)alloc_ptr_2(DIM, MDE);
+      goma_ctx->fem.esp->n = (dbl ***)alloc_ptr_2(DIM, MDE);
     }
 
     /* EIGENVALUE FOR VORTICITY PRINCIPLE FLOW DIRECTION
      * This is always 3D */
     if (Num_Var_In_Type[imtrx][VORT_LAMBDA]) {
-      esp->vlambda = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->vlambda = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* BOND Evolution
      * associated with structure formation during flow */
     if (Num_Var_In_Type[imtrx][BOND_EVOLUTION]) {
-      esp->nn = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->nn = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* Extension Velocity */
     if (Num_Var_In_Type[imtrx][EXT_VELOCITY]) {
-      esp->ext_v = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->ext_v = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* Electric Field */
     if (Num_Var_In_Type[imtrx][EFIELD1]) {
-      esp->E_field = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->E_field = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
 
     /* Phase function */
     if (Num_Var_In_Type[imtrx][PHASE1]) {
-      esp->pF = (dbl ***)alloc_ptr_2(pfd->num_phase_funcs, MDE);
+      goma_ctx->fem.esp->pF = (dbl ***)alloc_ptr_2(goma_ctx->fem.pfd->num_phase_funcs, MDE);
     }
     /* Acoustic pressure */
     if (Num_Var_In_Type[imtrx][ACOUS_PREAL]) {
-      esp->apr = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->apr = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][ACOUS_PIMAG]) {
-      esp->api = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->api = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][ACOUS_REYN_STRESS]) {
-      esp->ars = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->ars = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][EM_CONT_REAL]) {
-      esp->epr = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->epr = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][EM_CONT_IMAG]) {
-      esp->epi = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->epi = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_BDYVELO]) {
-      esp->sh_bv = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_bv = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_LUBP]) {
-      esp->sh_p = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_p = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][LUBP]) {
-      esp->lubp = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->lubp = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][LUBP_2]) {
-      esp->lubp_2 = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->lubp_2 = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_FILMP]) {
-      esp->sh_fp = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_fp = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_FILMH]) {
-      esp->sh_fh = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_fh = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_PARTC]) {
-      esp->sh_pc = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_pc = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_SAT_CLOSED]) {
-      esp->sh_sat_closed = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_sat_closed = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_PRESS_OPEN]) {
-      esp->sh_p_open = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_p_open = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_PRESS_OPEN_2]) {
-      esp->sh_p_open_2 = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_p_open_2 = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_TEMPERATURE]) {
-      esp->sh_t = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_t = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_DELTAH]) {
-      esp->sh_dh = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_dh = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_LUB_CURV]) {
-      esp->sh_l_curv = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_l_curv = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_LUB_CURV_2]) {
-      esp->sh_l_curv_2 = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_l_curv_2 = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_SAT_GASN]) {
-      esp->sh_sat_gasn = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_sat_gasn = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][POR_SINK_MASS]) {
-      esp->sink_mass = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sink_mass = (dbl **)alloc_ptr_1(MDE);
     }
     /* Poynting Vector  */
     if (Num_Var_In_Type[imtrx][LIGHT_INTP] || Num_Var_In_Type[imtrx][LIGHT_INTM] ||
         Num_Var_In_Type[imtrx][LIGHT_INTD]) {
-      esp->poynt = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->poynt = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
     /* EM_wave components  */
     if (Num_Var_In_Type[imtrx][EM_E1_REAL] || Num_Var_In_Type[imtrx][EM_E2_REAL] ||
         Num_Var_In_Type[imtrx][EM_E3_REAL]) {
-      esp->em_er = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->em_er = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
     if (Num_Var_In_Type[imtrx][EM_E1_IMAG] || Num_Var_In_Type[imtrx][EM_E2_IMAG] ||
         Num_Var_In_Type[imtrx][EM_E3_IMAG]) {
-      esp->em_ei = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->em_ei = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
     if (Num_Var_In_Type[imtrx][EM_H1_REAL] || Num_Var_In_Type[imtrx][EM_H2_REAL] ||
         Num_Var_In_Type[imtrx][EM_H3_REAL]) {
-      esp->em_hr = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->em_hr = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
     if (Num_Var_In_Type[imtrx][EM_H1_IMAG] || Num_Var_In_Type[imtrx][EM_H2_IMAG] ||
         Num_Var_In_Type[imtrx][EM_H3_IMAG]) {
-      esp->em_hi = (dbl ***)alloc_ptr_2(VIM, MDE);
+      goma_ctx->fem.esp->em_hi = (dbl ***)alloc_ptr_2(VIM, MDE);
     }
 
     if (Num_Var_In_Type[imtrx][TFMP_PRES]) {
-      esp->tfmp_pres = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->tfmp_pres = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][TFMP_SAT]) {
-      esp->tfmp_sat = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->tfmp_sat = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][RESTIME]) {
-      esp->restime = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->restime = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][MOMENT0]) {
-      esp->moment = (dbl ***)alloc_ptr_2(MAX_MOMENTS, MDE);
+      goma_ctx->fem.esp->moment = (dbl ***)alloc_ptr_2(MAX_MOMENTS, MDE);
     }
 
     if (Num_Var_In_Type[imtrx][DENSITY_EQN]) {
-      esp->rho = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->rho = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][SHELL_SHEAR_TOP]) {
-      esp->sh_shear_top = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_shear_top = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_SHEAR_BOT]) {
-      esp->sh_shear_bot = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_shear_bot = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_CROSS_SHEAR]) {
-      esp->sh_cross_shear = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_cross_shear = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][MAX_STRAIN]) {
-      esp->max_strain = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->max_strain = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][CUR_STRAIN]) {
-      esp->cur_strain = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->cur_strain = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][SHELL_SAT_1]) {
-      esp->sh_sat_1 = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_sat_1 = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_SAT_2]) {
-      esp->sh_sat_2 = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_sat_2 = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][SHELL_SAT_3]) {
-      esp->sh_sat_3 = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->sh_sat_3 = (dbl **)alloc_ptr_1(MDE);
     }
 
     if (Num_Var_In_Type[imtrx][EDDY_NU]) {
-      esp->eddy_nu = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->eddy_nu = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][TURB_K]) {
-      esp->turb_k = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->turb_k = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][TURB_OMEGA]) {
-      esp->turb_omega = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->turb_omega = (dbl **)alloc_ptr_1(MDE);
     }
     if (Num_Var_In_Type[imtrx][FILM_HEIGHT]) {
-      esp->film_height = (dbl **)alloc_ptr_1(MDE);
+      goma_ctx->fem.esp->film_height = (dbl **)alloc_ptr_1(MDE);
     }
 
   } /* End of loop over matrices */
@@ -1258,9 +1226,9 @@ int assembly_alloc(Exo_DB *exo)
   /*
    * Action_Flags______________________________________________________________
    */
-  af = alloc_struct_1(struct Action_Flags, 1);
+  goma_ctx->fem.af = alloc_struct_1(struct Action_Flags, 1);
   if (goma_ctx->debug_flag) {
-    P0PRINTF("%s: Action_Flags @ %p has %lu bytes", yo, (void *)af,
+    P0PRINTF("%s: Action_Flags @ %p has %lu bytes", yo, (void *)goma_ctx->fem.af,
              (long unsigned int)sizeof(struct Action_Flags));
   }
 
@@ -1314,10 +1282,10 @@ int assembly_alloc(Exo_DB *exo)
    */
   Num_Basis_Functions = Num_Shapes * Num_Interpolations;
 
-  bfd = (struct Basis_Functions **)alloc_ptr_1(Num_Basis_Functions);
-  bfi = (struct Basis_Functions **)alloc_ptr_1(MAX_INTERP_TYPES);
-  bf = (struct Basis_Functions **)alloc_ptr_1(MAX_VARIABLE_TYPES);
-  bfex = (struct Basis_Functions **)alloc_ptr_1(MAX_EXTERNAL_FIELD);
+  goma_ctx->fem.bfd = (struct Basis_Functions **)alloc_ptr_1(Num_Basis_Functions);
+  goma_ctx->fem.bfi = (struct Basis_Functions **)alloc_ptr_1(MAX_INTERP_TYPES);
+  goma_ctx->fem.bf = (struct Basis_Functions **)alloc_ptr_1(MAX_VARIABLE_TYPES);
+  goma_ctx->fem.bfex = (struct Basis_Functions **)alloc_ptr_1(MAX_EXTERNAL_FIELD);
 
   sz = sizeof(struct Basis_Functions);
 
@@ -1328,11 +1296,12 @@ int assembly_alloc(Exo_DB *exo)
   type = 0;
   for (si = 0; si < Num_Shapes; si++) {
     for (interp = 0; interp < Num_Interpolations; interp++) {
-      bfd[type] = alloc_struct_1(struct Basis_Functions, 1);
-      bfd[type]->Var_Type_MatID = alloc_int_1(upd->Num_Mat, -1);
-      bfd[type]->interpolation = Unique_Interpolations[interp];
-      bfd[type]->element_shape = Unique_Shapes[si];
-      bfd[type]->Max_Dofs_Interpolation = getdofs(Unique_Shapes[si], Unique_Interpolations[interp]);
+      goma_ctx->fem.bfd[type] = alloc_struct_1(struct Basis_Functions, 1);
+      goma_ctx->fem.bfd[type]->Var_Type_MatID = alloc_int_1(goma_ctx->fem.upd->Num_Mat, -1);
+      goma_ctx->fem.bfd[type]->interpolation = Unique_Interpolations[interp];
+      goma_ctx->fem.bfd[type]->element_shape = Unique_Shapes[si];
+      goma_ctx->fem.bfd[type]->Max_Dofs_Interpolation =
+          getdofs(Unique_Shapes[si], Unique_Interpolations[interp]);
       /*
        * Find a representative variable type in each material
        * that employs the current interpolation.
@@ -1342,11 +1311,13 @@ int assembly_alloc(Exo_DB *exo)
        * the intersection of an element shape and a material
        * type is never tried.
        */
-      for (mn = 0; mn < upd->Num_Mat; mn++) {
-        for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-          for (vi = 0; ((bfd[type]->Var_Type_MatID[mn] == -1) && (vi < MAX_VARIABLE_TYPES)); vi++) {
-            if (pd_glob[mn]->i[imtrx][vi] == bfd[type]->interpolation) {
-              bfd[type]->Var_Type_MatID[mn] = vi;
+      for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+        for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+          for (vi = 0;
+               ((goma_ctx->fem.bfd[type]->Var_Type_MatID[mn] == -1) && (vi < MAX_VARIABLE_TYPES));
+               vi++) {
+            if (goma_ctx->fem.pd_glob[mn]->i[imtrx][vi] == goma_ctx->fem.bfd[type]->interpolation) {
+              goma_ctx->fem.bfd[type]->Var_Type_MatID[mn] = vi;
             }
           }
         }
@@ -1358,7 +1329,7 @@ int assembly_alloc(Exo_DB *exo)
   /* set pointers for basis function interpolation types */
   for (interp = 0; interp < Num_Interpolations; interp++) {
     type = Unique_Interpolations[interp];
-    bfi[type] = bfd[interp];
+    goma_ctx->fem.bfi[type] = goma_ctx->fem.bfd[interp];
   }
   /* so now bfi[pd_glob[mn]->i[eqn]] points to a basis function with
      the correct interpolation */
@@ -1367,38 +1338,39 @@ int assembly_alloc(Exo_DB *exo)
    * Field_Variables___________________________________________________________
    */
 
-  fv = alloc_struct_1(struct Field_Variables, 1);
+  goma_ctx->fem.fv = alloc_struct_1(struct Field_Variables, 1);
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Field_Variables @ %p has %ld bytes", yo, (void *)fv,
+    DPRINTF(stdout, "%s: Field_Variables @ %p has %ld bytes", yo, (void *)goma_ctx->fem.fv,
             (long int)sizeof(struct Field_Variables));
   }
-  if (fv == NULL) {
+  if (goma_ctx->fem.fv == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Field_Variables");
   }
-  memset(fv, 0, sizeof(struct Field_Variables));
+  memset(goma_ctx->fem.fv, 0, sizeof(struct Field_Variables));
 
-  fv_sens = alloc_struct_1(struct Field_Variables, 1);
+  goma_ctx->fem.fv_sens = alloc_struct_1(struct Field_Variables, 1);
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Field_Variables Sensitivity @ %p has %lu bytes", yo, (void *)fv_sens,
-            sizeof(struct Field_Variables));
+    DPRINTF(stdout, "%s: Field_Variables Sensitivity @ %p has %lu bytes", yo,
+            (void *)goma_ctx->fem.fv_sens, sizeof(struct Field_Variables));
   }
-  if (fv_sens == NULL) {
+  if (goma_ctx->fem.fv_sens == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Field_Variables (sens)");
   }
-  memset(fv_sens, 0, sizeof(struct Field_Variables));
+  memset(goma_ctx->fem.fv_sens, 0, sizeof(struct Field_Variables));
 
   sz = sizeof(struct Diet_Field_Variables);
-  fv_old = alloc_struct_1(struct Diet_Field_Variables, 1);
-  fv_dot = alloc_struct_1(struct Diet_Field_Variables, 1);
-  fv_dot_dot = alloc_struct_1(struct Diet_Field_Variables, 1);
-  fv_dot_old = alloc_struct_1(struct Diet_Field_Variables, 1);
-  fv_dot_dot_old = alloc_struct_1(struct Diet_Field_Variables, 1);
+  goma_ctx->fem.fv_old = alloc_struct_1(struct Diet_Field_Variables, 1);
+  goma_ctx->fem.fv_dot = alloc_struct_1(struct Diet_Field_Variables, 1);
+  goma_ctx->fem.fv_dot_dot = alloc_struct_1(struct Diet_Field_Variables, 1);
+  goma_ctx->fem.fv_dot_old = alloc_struct_1(struct Diet_Field_Variables, 1);
+  goma_ctx->fem.fv_dot_dot_old = alloc_struct_1(struct Diet_Field_Variables, 1);
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Diet_Field_Variables @ %p has %d bytes", yo, (void *)fv_old, sz);
+    DPRINTF(stdout, "%s: Diet_Field_Variables @ %p has %d bytes", yo, (void *)goma_ctx->fem.fv_old,
+            sz);
   }
-  if (fv_old == NULL) {
+  if (goma_ctx->fem.fv_old == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Diet_Field_Variables");
   }
@@ -1406,48 +1378,48 @@ int assembly_alloc(Exo_DB *exo)
   /*
    * Porous_Media_Variables__(if needed)_________________________________________
    */
-  for (mn = 0; mn < upd->Num_Mat && pmv == NULL; mn++) {
-    if (mp_glob[mn]->PorousMediaType == POROUS_SATURATED ||
-        mp_glob[mn]->PorousMediaType == POROUS_UNSATURATED ||
-        mp_glob[mn]->PorousMediaType == POROUS_TWO_PHASE ||
-        mp_glob[mn]->PorousMediaType == POROUS_SHELL_UNSATURATED) {
-      pmv = alloc_struct_1(struct Porous_Media_Variables, 1);
-      pmv_old = alloc_struct_1(struct Porous_Media_Variables, 1);
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat && goma_ctx->fem.pmv == NULL; mn++) {
+    if (goma_ctx->fem.mp_glob[mn]->PorousMediaType == POROUS_SATURATED ||
+        goma_ctx->fem.mp_glob[mn]->PorousMediaType == POROUS_UNSATURATED ||
+        goma_ctx->fem.mp_glob[mn]->PorousMediaType == POROUS_TWO_PHASE ||
+        goma_ctx->fem.mp_glob[mn]->PorousMediaType == POROUS_SHELL_UNSATURATED) {
+      goma_ctx->fem.pmv = alloc_struct_1(struct Porous_Media_Variables, 1);
+      goma_ctx->fem.pmv_old = alloc_struct_1(struct Porous_Media_Variables, 1);
       break;
     }
   }
-  for (mn = 0; mn < upd->Num_Mat && pmv_ml == NULL; mn++) {
-    if (mp_glob[mn]->PorousMediaType == POROUS_SATURATED ||
-        mp_glob[mn]->PorousMediaType == POROUS_UNSATURATED ||
-        mp_glob[mn]->PorousMediaType == POROUS_TWO_PHASE ||
-        mp_glob[mn]->PorousMediaType == POROUS_SHELL_UNSATURATED) {
-      if ((mp_glob[mn]->Porous_Mass_Lump) ||
-          (mp_glob[mn]->PorousMediaType == POROUS_SHELL_UNSATURATED)) {
-        pmv_ml = alloc_struct_1(PMV_ML_STRUCT, 1);
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat && goma_ctx->fem.pmv_ml == NULL; mn++) {
+    if (goma_ctx->fem.mp_glob[mn]->PorousMediaType == POROUS_SATURATED ||
+        goma_ctx->fem.mp_glob[mn]->PorousMediaType == POROUS_UNSATURATED ||
+        goma_ctx->fem.mp_glob[mn]->PorousMediaType == POROUS_TWO_PHASE ||
+        goma_ctx->fem.mp_glob[mn]->PorousMediaType == POROUS_SHELL_UNSATURATED) {
+      if ((goma_ctx->fem.mp_glob[mn]->Porous_Mass_Lump) ||
+          (goma_ctx->fem.mp_glob[mn]->PorousMediaType == POROUS_SHELL_UNSATURATED)) {
+        goma_ctx->fem.pmv_ml = alloc_struct_1(PMV_ML_STRUCT, 1);
       }
       break;
     }
   }
-  for (mn = 0; mn < upd->Num_Mat && pmv_hyst == NULL; mn++) {
-    if (mp_glob[mn]->PorousMediaType == POROUS_SHELL_UNSATURATED) {
-      for (ipore = 0; ipore < pd_glob[mn]->Num_Porous_Shell_Eqn; ipore++) {
-        if ((mp_glob[mn]->PorousShellCapPresModel[ipore] == VAN_GENUCHTEN_HYST) ||
-            (mp_glob[mn]->PorousShellCapPresModel[ipore] == VAN_GENUCHTEN_HYST_EXT)) {
-          pmv_hyst = alloc_struct_1(struct Porous_Media_Variables_Hysteresis, 1);
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat && goma_ctx->fem.pmv_hyst == NULL; mn++) {
+    if (goma_ctx->fem.mp_glob[mn]->PorousMediaType == POROUS_SHELL_UNSATURATED) {
+      for (ipore = 0; ipore < goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn; ipore++) {
+        if ((goma_ctx->fem.mp_glob[mn]->PorousShellCapPresModel[ipore] == VAN_GENUCHTEN_HYST) ||
+            (goma_ctx->fem.mp_glob[mn]->PorousShellCapPresModel[ipore] == VAN_GENUCHTEN_HYST_EXT)) {
+          goma_ctx->fem.pmv_hyst = alloc_struct_1(struct Porous_Media_Variables_Hysteresis, 1);
           break;
         }
       }
-      if (pmv_hyst != NULL) {
-        for (ipore = 0; ipore < pd_glob[mn]->Num_Porous_Shell_Eqn; ipore++) {
-          pmv_hyst->curve_type[ipore] = alloc_int_1(exo->num_nodes, -1);
-          pmv_hyst->curve_type_old[ipore] = alloc_int_1(exo->num_nodes, -1);
-          pmv_hyst->curve_switch[ipore] = alloc_int_1(exo->num_nodes, -1);
-          pmv_hyst->num_switch[ipore] = alloc_int_1(exo->num_nodes, -1);
+      if (goma_ctx->fem.pmv_hyst != NULL) {
+        for (ipore = 0; ipore < goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn; ipore++) {
+          goma_ctx->fem.pmv_hyst->curve_type[ipore] = alloc_int_1(exo->num_nodes, -1);
+          goma_ctx->fem.pmv_hyst->curve_type_old[ipore] = alloc_int_1(exo->num_nodes, -1);
+          goma_ctx->fem.pmv_hyst->curve_switch[ipore] = alloc_int_1(exo->num_nodes, -1);
+          goma_ctx->fem.pmv_hyst->num_switch[ipore] = alloc_int_1(exo->num_nodes, -1);
 
-          pmv_hyst->sat_switch[ipore] = alloc_dbl_1(exo->num_nodes, 0.0);
-          pmv_hyst->cap_pres_switch[ipore] = alloc_dbl_1(exo->num_nodes, 0.0);
-          pmv_hyst->sat_min_imbibe[ipore] = alloc_dbl_1(exo->num_nodes, 0.0);
-          pmv_hyst->sat_max_drain[ipore] = alloc_dbl_1(exo->num_nodes, 0.0);
+          goma_ctx->fem.pmv_hyst->sat_switch[ipore] = alloc_dbl_1(exo->num_nodes, 0.0);
+          goma_ctx->fem.pmv_hyst->cap_pres_switch[ipore] = alloc_dbl_1(exo->num_nodes, 0.0);
+          goma_ctx->fem.pmv_hyst->sat_min_imbibe[ipore] = alloc_dbl_1(exo->num_nodes, 0.0);
+          goma_ctx->fem.pmv_hyst->sat_max_drain[ipore] = alloc_dbl_1(exo->num_nodes, 0.0);
         }
       }
       break;
@@ -1457,11 +1429,13 @@ int assembly_alloc(Exo_DB *exo)
   /*
    * Stabilization_Variables__(if needed)___________________________________
    */
-  for (mn = 0; mn < upd->Num_Mat && Stab == NULL; mn++) {
-    mp = mp_glob[mn];
-    if (mp->Porous_wt_funcModel == SUPG || vn_glob[mn]->wt_funcModel == SUPG ||
-        mp->Spwt_funcModel == SUPG || mp->Mwt_funcModel == SUPG || mp->Ewt_funcModel == SUPG) {
-      Stab = alloc_struct_1(STABILIZATION_PARAMS_STRUCT, 1);
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat && goma_ctx->fem.stab == NULL; mn++) {
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
+    if (goma_ctx->fem.mp->Porous_wt_funcModel == SUPG ||
+        goma_ctx->fem.vn_glob[mn]->wt_funcModel == SUPG ||
+        goma_ctx->fem.mp->Spwt_funcModel == SUPG || goma_ctx->fem.mp->Mwt_funcModel == SUPG ||
+        goma_ctx->fem.mp->Ewt_funcModel == SUPG) {
+      goma_ctx->fem.stab = alloc_struct_1(STABILIZATION_PARAMS_STRUCT, 1);
       break;
     }
   }
@@ -1469,12 +1443,12 @@ int assembly_alloc(Exo_DB *exo)
   /*
    * Local_Element_Contributions___________________________________________
    */
-  lec = alloc_struct_1(struct Local_Element_Contributions, 1);
+  goma_ctx->fem.lec = alloc_struct_1(struct Local_Element_Contributions, 1);
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Local_Element_Contributions @ %p has %ld bytes", yo, (void *)lec,
-            (long int)sizeof(struct Local_Element_Contributions));
+    DPRINTF(stdout, "%s: Local_Element_Contributions @ %p has %ld bytes", yo,
+            (void *)goma_ctx->fem.lec, (long int)sizeof(struct Local_Element_Contributions));
   }
-  if (lec == NULL) {
+  if (goma_ctx->fem.lec == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Local_Element_Contributions");
   }
@@ -1482,27 +1456,27 @@ int assembly_alloc(Exo_DB *exo)
   /*
    * Lubrication Auxiliaries_________________________________________________
    */
-  LubAux = alloc_struct_1(struct Lubrication_Auxiliaries, 1);
+  goma_ctx->fem.lub_aux = alloc_struct_1(struct Lubrication_Auxiliaries, 1);
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Lubrication_Auxiliaries @ %p has %ld bytes", yo, (void *)LubAux,
-            (long int)sizeof(struct Lubrication_Auxiliaries));
+    DPRINTF(stdout, "%s: Lubrication_Auxiliaries @ %p has %ld bytes", yo,
+            (void *)goma_ctx->fem.lub_aux, (long int)sizeof(struct Lubrication_Auxiliaries));
   }
-  if (LubAux == NULL) {
+  if (goma_ctx->fem.lub_aux == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Lubrication_Auxiliaries");
   }
-  memset(LubAux, 0, sizeof(struct Lubrication_Auxiliaries));
+  memset(goma_ctx->fem.lub_aux, 0, sizeof(struct Lubrication_Auxiliaries));
 
-  LubAux_old = alloc_struct_1(struct Lubrication_Auxiliaries, 1);
+  goma_ctx->fem.lub_aux_old = alloc_struct_1(struct Lubrication_Auxiliaries, 1);
   if (goma_ctx->debug_flag) {
-    DPRINTF(stdout, "%s: Lubrication_Auxiliaries Old @ %p has %ld bytes", yo, (void *)LubAux_old,
-            (long int)sizeof(struct Lubrication_Auxiliaries));
+    DPRINTF(stdout, "%s: Lubrication_Auxiliaries Old @ %p has %ld bytes", yo,
+            (void *)goma_ctx->fem.lub_aux_old, (long int)sizeof(struct Lubrication_Auxiliaries));
   }
-  if (LubAux_old == NULL) {
+  if (goma_ctx->fem.lub_aux_old == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Lubrication_Auxiliaries Old");
   }
-  memset(LubAux_old, 0, sizeof(struct Lubrication_Auxiliaries));
+  memset(goma_ctx->fem.lub_aux_old, 0, sizeof(struct Lubrication_Auxiliaries));
 
   return (status);
 }
@@ -1546,31 +1520,31 @@ int bf_init(Exo_DB *exo)
       type = Elem_Type(exo, el);
       shape = type2shape(type);
 
-      for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+      for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
         for (v = 0; v < MAX_VARIABLE_TYPES; v++) {
           /*
            * Is this variable active in the problem?
            */
-          if (pd_glob[m]->v[imtrx][v]) {
+          if (goma_ctx->fem.pd_glob[m]->v[imtrx][v]) {
             /*
              * If so, then check to see which prototype basis function of
              * bfd[] is its match...
              * NEW: Check both interpolation AND element shape!
              */
             for (t = 0; t < Num_Basis_Functions; t++) {
-              if (pd_glob[m]->i[imtrx][v] == bfd[t]->interpolation &&
-                  shape == bfd[t]->element_shape) {
-                if (bf[v] != 0) {
-                  if (bf[v] != bfd[t]) {
+              if (goma_ctx->fem.pd_glob[m]->i[imtrx][v] == goma_ctx->fem.bfd[t]->interpolation &&
+                  shape == goma_ctx->fem.bfd[t]->element_shape) {
+                if (goma_ctx->fem.bf[v] != 0) {
+                  if (goma_ctx->fem.bf[v] != goma_ctx->fem.bfd[t]) {
                     GOMA_WH(-1, "bf[] struct isn't general enough to handle"
                                 " variables with multiple interpolations in a single problem\n"
                                 " We will carefully reset bf for each element");
                   }
                 }
-                bf[v] = bfd[t];
+                goma_ctx->fem.bf[v] = goma_ctx->fem.bfd[t];
               }
             }
-            if (bf[v] == NULL) {
+            if (goma_ctx->fem.bf[v] == NULL) {
               GOMA_EH(-1, "Could not find a match for variable.");
             }
           }
@@ -1602,7 +1576,7 @@ int bf_mp_init(struct Problem_Description *pd) {
   t = 0;
 
   /* This is needed to check for matching element shapes */
-  ishape = ei[pg->imtrx]->ielem_shape;
+  ishape = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape;
 
   /*
    * For now, assume variable interpolations
@@ -1619,22 +1593,24 @@ int bf_mp_init(struct Problem_Description *pd) {
      *  for internal-boundary problems to work correctly.
      */
     int imtrx;
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       if (pd->v[imtrx][v]) {
         /*
          * If so, then check to see which prototype basis function of
          * bfd[] is its match...
          * Check both interpolation AND element shape!
          */
-        bf[v] = NULL;
+        goma_ctx->fem.bf[v] = NULL;
         for (t = 0; t < Num_Basis_Functions; t++) {
-          if ((pd->i[imtrx][v] == bfd[t]->interpolation) && (ishape == bfd[t]->element_shape))
+          if ((pd->i[imtrx][v] == goma_ctx->fem.bfd[t]->interpolation) &&
+              (ishape == goma_ctx->fem.bfd[t]->element_shape))
 
-            if ((pd->i[imtrx][v] == bfd[t]->interpolation) && (ishape == bfd[t]->element_shape)) {
-              bf[v] = bfd[t];
+            if ((pd->i[imtrx][v] == goma_ctx->fem.bfd[t]->interpolation) &&
+                (ishape == goma_ctx->fem.bfd[t]->element_shape)) {
+              goma_ctx->fem.bf[v] = goma_ctx->fem.bfd[t];
             }
         }
-        if (bf[v] == NULL) {
+        if (goma_ctx->fem.bf[v] == NULL) {
           GOMA_EH(-1, "Could not find a match for variable.");
         }
       }
@@ -1647,24 +1623,24 @@ int bf_mp_init(struct Problem_Description *pd) {
   /*
    * Are there external fields defined in the problem?
    */
-  if (efv->ev) {
-    for (v = 0; v < efv->Num_external_field; v++) {
+  if (goma_ctx->fem.efv->ev) {
+    for (v = 0; v < goma_ctx->fem.efv->Num_external_field; v++) {
       /*
        * If so, then check to see which prototype basis function of
        * bfd[] is its match...
        */
       ifound = 0;
       for (t = 0; t < Num_Basis_Functions; t++) {
-        if (efv->i[v] == bfd[t]->interpolation) {
-          bfex[v] = bfd[t];
+        if (goma_ctx->fem.efv->i[v] == goma_ctx->fem.bfd[t]->interpolation) {
+          goma_ctx->fem.bfex[v] = goma_ctx->fem.bfd[t];
           ifound = 1;
         }
       }
-      if (!ifound && efv->i[v] != I_TABLE) {
+      if (!ifound && goma_ctx->fem.efv->i[v] != I_TABLE) {
         GOMA_EH(GOMA_ERROR, "Could not find a match for EXTERNAL variable. Match some active field "
                             "interpolation with those of external variables");
       }
-      if (bfex[v] == NULL && efv->i[v] != I_TABLE) {
+      if (goma_ctx->fem.bfex[v] == NULL && goma_ctx->fem.efv->i[v] != I_TABLE) {
         GOMA_EH(-1, "Could not find a match for EXTERNAL variable.");
       }
     }
@@ -1679,11 +1655,11 @@ int bf_mp_init(struct Problem_Description *pd) {
 void bf_reset(void) {
   int v;
   for (v = 0; v < MAX_VARIABLE_TYPES; v++) {
-    bf[v] = NULL;
+    goma_ctx->fem.bf[v] = NULL;
   }
-  if (efv->ev) {
-    for (v = 0; v < efv->Num_external_field; v++) {
-      bfex[v] = NULL;
+  if (goma_ctx->fem.efv->ev) {
+    for (v = 0; v < goma_ctx->fem.efv->Num_external_field; v++) {
+      goma_ctx->fem.bfex[v] = NULL;
     }
   }
 }

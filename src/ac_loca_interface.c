@@ -437,12 +437,12 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
    * is aware of...
    */
 
-  numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
+  numProcUnknowns = NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
 
   /* allocate memory for Volume Constraint Jacobian */
   if (nAC > 0)
     for (iAC = 0; iAC < nAC; iAC++)
-      augc[iAC].d_evol_dx = (double *)malloc(numProcUnknowns * sizeof(double));
+      goma_ctx->fem.augc[iAC].d_evol_dx = (double *)malloc(numProcUnknowns * sizeof(double));
 
   asdv(&resid_vector, numProcUnknowns);
   asdv(&resid_vector_sens, numProcUnknowns);
@@ -482,35 +482,35 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     cl_aux = fopen("goma-cl.txt", "w+");
 
     fprintf(cl_aux, "goma -a -i input ");
-    fprintf(cl_aux, "-cb %10.6e ", cont->BegParameterValue);
-    fprintf(cl_aux, "-ce %10.6e ", cont->EndParameterValue);
-    fprintf(cl_aux, "-cd %10.6e ", cont->Delta_s0);
-    fprintf(cl_aux, "-cn %d ", cont->MaxPathSteps);
+    fprintf(cl_aux, "-cb %10.6e ", goma_ctx->fem.cont->BegParameterValue);
+    fprintf(cl_aux, "-ce %10.6e ", goma_ctx->fem.cont->EndParameterValue);
+    fprintf(cl_aux, "-cd %10.6e ", goma_ctx->fem.cont->Delta_s0);
+    fprintf(cl_aux, "-cn %d ", goma_ctx->fem.cont->MaxPathSteps);
     fprintf(cl_aux, "-cm %d ", Continuation);
-    fprintf(cl_aux, "-ct %d ", cont->upType);
+    fprintf(cl_aux, "-ct %d ", goma_ctx->fem.cont->upType);
 
-    switch (cont->upType) {
+    switch (goma_ctx->fem.cont->upType) {
     case 1: /* BC TYPE */
     case 3: /* AC TYPE */
-      fprintf(cl_aux, "-c_bc %d ", cont->upBCID);
-      fprintf(cl_aux, "-c_df %d ", cont->upDFID);
+      fprintf(cl_aux, "-c_bc %d ", goma_ctx->fem.cont->upBCID);
+      fprintf(cl_aux, "-c_df %d ", goma_ctx->fem.cont->upDFID);
       break;
     case 2: /* MAT TYPE */
-      fprintf(cl_aux, "-c_mn %d ", cont->upMTID + 1);
-      fprintf(cl_aux, "-c_mp %d ", cont->upMPID);
+      fprintf(cl_aux, "-c_mn %d ", goma_ctx->fem.cont->upMTID + 1);
+      fprintf(cl_aux, "-c_mp %d ", goma_ctx->fem.cont->upMPID);
       break;
     case 4: /* USER MAT TYPE */
-      fprintf(cl_aux, "-c_mn %d ", cont->upMTID + 1);
-      fprintf(cl_aux, "-c_mp %d ", cont->upMPID);
-      fprintf(cl_aux, "-c_md %d ", cont->upMDID);
+      fprintf(cl_aux, "-c_mn %d ", goma_ctx->fem.cont->upMTID + 1);
+      fprintf(cl_aux, "-c_mp %d ", goma_ctx->fem.cont->upMPID);
+      fprintf(cl_aux, "-c_md %d ", goma_ctx->fem.cont->upMDID);
       break;
     case 5: /* USER-DEFINED FUNCTION TYPE */
     case 6: /* ANGULAR PARAMETER TYPE */
       /* NOTE:  These are not available via the command line! */
       break;
     default:
-      if (loca_in->Cont_Alg != LOCA_LSA_ONLY) {
-        fprintf(stderr, "%s: Bad cont->upType, %d\n", yo, cont->upType);
+      if (goma_ctx->fem.loca_in->Cont_Alg != LOCA_LSA_ONLY) {
+        fprintf(stderr, "%s: Bad cont->upType, %d\n", yo, goma_ctx->fem.cont->upType);
         GOMA_EH(GOMA_ERROR, "Bad cont->upType");
       }
       break; /* duh */
@@ -551,25 +551,25 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   }
 
   /* Initialize the starting parameter value, lambda */
-  if (loca_in->Cont_Alg != LOCA_LSA_ONLY) {
-    lambda = cont->BegParameterValue;
-    delta_s = cont->Delta_s0;
+  if (goma_ctx->fem.loca_in->Cont_Alg != LOCA_LSA_ONLY) {
+    lambda = goma_ctx->fem.cont->BegParameterValue;
+    delta_s = goma_ctx->fem.cont->Delta_s0;
     update_parameterC(0, lambda, x, xdot, x_AC, delta_s, cx, exo, dpi);
   } else {
     lambda = delta_s = 0.0;
   }
   con_par_ptr = &lambda;
 
-  pg->matrices = malloc(sizeof(struct Matrix_Data));
-  pg->matrices[pg->imtrx].ams = ams[JAC];
-  pg->matrices[pg->imtrx].x = x;
-  pg->matrices[pg->imtrx].x_old = x_old;
-  pg->matrices[pg->imtrx].x_older = x_older;
-  pg->matrices[pg->imtrx].xdot = xdot;
-  pg->matrices[pg->imtrx].xdot_old = xdot_old;
-  pg->matrices[pg->imtrx].x_update = x_update;
-  pg->matrices[pg->imtrx].scale = scale;
-  pg->matrices[pg->imtrx].resid_vector = resid_vector;
+  goma_ctx->fem.pg->matrices = malloc(sizeof(struct Matrix_Data));
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].ams = ams[JAC];
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x = x;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old = x_old;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_older = x_older;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot = xdot;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot_old = xdot_old;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_update = x_update;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].scale = scale;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].resid_vector = resid_vector;
 
   if (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0) {
     GOMA_EH(GOMA_ERROR, "Error epetra Matrix format not currently supported with loca interface");
@@ -582,9 +582,10 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
      * An attic to store external dofs column names is needed when
      * running in parallel.
      */
-    alloc_extern_ija_buffer(num_universe_dofs[pg->imtrx],
-                            num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx], ija,
-                            &ija_attic);
+    alloc_extern_ija_buffer(num_universe_dofs[goma_ctx->fem.pg->imtrx],
+                            num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                                num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+                            ija, &ija_attic);
     /*
      * Any necessary one time initialization of the linear
      * solver package (Aztec).
@@ -606,11 +607,14 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     ams[JAC]->npn_plus =
         dpi->num_internal_nodes + dpi->num_boundary_nodes + dpi->num_external_nodes;
 
-    ams[JAC]->npu = num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx];
-    ams[JAC]->npu_plus = num_universe_dofs[pg->imtrx];
+    ams[JAC]->npu =
+        num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+    ams[JAC]->npu_plus = num_universe_dofs[goma_ctx->fem.pg->imtrx];
 
-    ams[JAC]->nnz = ija[num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]] - 1;
-    ams[JAC]->nnz_plus = ija[num_universe_dofs[pg->imtrx]];
+    ams[JAC]->nnz = ija[num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                        num_boundary_dofs[goma_ctx->fem.pg->imtrx]] -
+                    1;
+    ams[JAC]->nnz_plus = ija[num_universe_dofs[goma_ctx->fem.pg->imtrx]];
   }
 
   /* Allocate sparse matrix (VBR format) */
@@ -630,7 +634,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   init_vec(x, cx, exo, dpi, x_AC, nAC, &timeValueRead);
 
   /*  if read ACs, update data floats */
-  if (nAC > 0 && augc[0].iread == 1) {
+  if (nAC > 0 && goma_ctx->fem.augc[0].iread == 1) {
     for (iAC = 0; iAC < nAC; iAC++) {
       update_parameterAC(iAC, x, xdot, x_AC, cx, exo, dpi);
     }
@@ -666,7 +670,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   /* set boundary conditions on the initial conditions */
   nullify_dirichlet_bcs();
   find_and_set_Dirichlet(x, xdot, exo, dpi);
-  exchange_dof(cx, dpi, x, pg->imtrx);
+  exchange_dof(cx, dpi, x, goma_ctx->fem.pg->imtrx);
 
   /*
    * Set passdown structure -- variables needed in the argument
@@ -685,14 +689,14 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   passdown.sv_count = NULL;
 
   /* Initialize mass matrix and shifted matrix as needed */
-  if (loca_in->Cont_Alg == HP_CONTINUATION || Linear_Stability) {
+  if (goma_ctx->fem.loca_in->Cont_Alg == HP_CONTINUATION || Linear_Stability) {
     passdown.mass_matrix = (double *)array_alloc(1, goma_ctx->solver.nzeros + 5, sizeof(double));
     init_vec_value(passdown.mass_matrix, 0.0, goma_ctx->solver.nzeros + 5);
 
     /* Create AZ_MATRIX version for VBR matrix format */
 #ifdef GOMA_ENABLE_AZTEC
     if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
-      passdown.mmat = AZ_matrix_create(NumUnknowns[pg->imtrx]);
+      passdown.mmat = AZ_matrix_create(NumUnknowns[goma_ctx->fem.pg->imtrx]);
       AZ_set_VBR(passdown.mmat, ams[JAC]->rpntr, ams[JAC]->cpntr, ams[JAC]->bpntr, ams[JAC]->indx,
                  ams[JAC]->bindx, passdown.mass_matrix, ams[JAC]->data_org, 0, NULL, AZ_LOCAL);
     } else
@@ -749,7 +753,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 #ifdef GOMA_ENABLE_AZTEC
   /* This is required for VBR matrix-vector multiply calls: */
   if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
-    passdown.amat = AZ_matrix_create(NumUnknowns[pg->imtrx]);
+    passdown.amat = AZ_matrix_create(NumUnknowns[goma_ctx->fem.pg->imtrx]);
     AZ_set_VBR(passdown.amat, passdown.ams->rpntr, passdown.ams->cpntr, passdown.ams->bpntr,
                passdown.ams->indx, passdown.ams->bindx, passdown.ams->val, passdown.ams->data_org,
                0, NULL, AZ_LOCAL);
@@ -816,14 +820,15 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 
   con.general_info.param = lambda;
   con.general_info.x = passdown.x;
-  con.general_info.numUnks = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
-  con.general_info.numOwnedUnks = NumUnknowns[pg->imtrx];
-  con.general_info.perturb = loca_in->perturb;
+  con.general_info.numUnks =
+      NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
+  con.general_info.numOwnedUnks = NumUnknowns[goma_ctx->fem.pg->imtrx];
+  con.general_info.perturb = goma_ctx->fem.loca_in->perturb;
   if (goma_ctx->proc_id == 0) {
-    if (loca_in->Cont_Alg == LOCA_LSA_ONLY) {
+    if (goma_ctx->fem.loca_in->Cont_Alg == LOCA_LSA_ONLY) {
       con.general_info.printproc = 5;
     } else {
-      con.general_info.printproc = loca_in->debug;
+      con.general_info.printproc = goma_ctx->fem.loca_in->debug;
     }
   } else {
     con.general_info.printproc = 0;
@@ -835,14 +840,14 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
    * (see following arclength_info structure as well)
    */
 
-  con.stepping_info.first_step = cont->Delta_s0;
+  con.stepping_info.first_step = goma_ctx->fem.cont->Delta_s0;
   con.stepping_info.base_step = 1;
-  con.stepping_info.max_steps = cont->MaxPathSteps - 1;
+  con.stepping_info.max_steps = goma_ctx->fem.cont->MaxPathSteps - 1;
   con.stepping_info.last_step = FALSE;
-  con.stepping_info.max_param = cont->EndParameterValue;
-  con.stepping_info.min_delta_p = cont->Delta_s_min;
-  con.stepping_info.max_delta_p = cont->Delta_s_max;
-  con.stepping_info.step_ctrl = loca_in->StepAggr;
+  con.stepping_info.max_param = goma_ctx->fem.cont->EndParameterValue;
+  con.stepping_info.min_delta_p = goma_ctx->fem.cont->Delta_s_min;
+  con.stepping_info.max_delta_p = goma_ctx->fem.cont->Delta_s_max;
+  con.stepping_info.step_ctrl = goma_ctx->fem.loca_in->StepAggr;
   con.stepping_info.max_newton_its = goma_ctx->solver.max_newton_steps;
 
   /*
@@ -861,40 +866,40 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 
   con.general_info.nv_restart = FALSE;
   con.general_info.nv_save = FALSE;
-  switch (loca_in->Cont_Alg) {
+  switch (goma_ctx->fem.loca_in->Cont_Alg) {
   case CONTINUATION:
-    if (loca_in->Cont_Order == 0)
+    if (goma_ctx->fem.loca_in->Cont_Order == 0)
       con.general_info.method = ZERO_ORDER_CONTINUATION;
 
-    else if (loca_in->Cont_Order == 1)
+    else if (goma_ctx->fem.loca_in->Cont_Order == 1)
       con.general_info.method = FIRST_ORDER_CONTINUATION;
 
-    else if (loca_in->Cont_Order == 2)
+    else if (goma_ctx->fem.loca_in->Cont_Order == 2)
       con.general_info.method = ARC_LENGTH_CONTINUATION;
 
     /* Set variables in the con.arclength_info structure: */
-    con.arclength_info.dp_ds2_goal = loca_in->DpDs2;
-    con.arclength_info.dp_ds_max = loca_in->DpDsHi;
-    con.arclength_info.tang_exp = loca_in->Texp;
-    con.arclength_info.tang_step_limit = loca_in->MaxTS;
+    con.arclength_info.dp_ds2_goal = goma_ctx->fem.loca_in->DpDs2;
+    con.arclength_info.dp_ds_max = goma_ctx->fem.loca_in->DpDsHi;
+    con.arclength_info.tang_exp = goma_ctx->fem.loca_in->Texp;
+    con.arclength_info.tang_step_limit = goma_ctx->fem.loca_in->MaxTS;
     break;
 
   case TP_CONTINUATION:
     con.general_info.method = TURNING_POINT_CONTINUATION;
-    if (loca_in->NVSave)
+    if (goma_ctx->fem.loca_in->NVSave)
       con.general_info.nv_save = TRUE;
 
     /* Set variables in the con.turning_point_info structure: */
-    con.turning_point_info.bif_param = loca_in->TPGuess;
-    if (loca_in->NVRestart) {
+    con.turning_point_info.bif_param = goma_ctx->fem.loca_in->TPGuess;
+    if (goma_ctx->fem.loca_in->NVRestart) {
       con.turning_point_info.nv =
           (double *)array_alloc(1, con.general_info.numUnks, sizeof(double));
       con.general_info.nv_restart = TRUE;
       if (goma_ctx->num_proc > 1)
-        multiname(loca_in->NV_exoII_infile, goma_ctx->proc_id, goma_ctx->num_proc);
+        multiname(goma_ctx->fem.loca_in->NV_exoII_infile, goma_ctx->proc_id, goma_ctx->num_proc);
       DPRINTF(stdout, "Reading previous null vector ...\n");
-      err = rd_vectors_from_exoII(con.turning_point_info.nv, loca_in->NV_exoII_infile, 0, 0,
-                                  INT_MAX, &timeValueRead, exo);
+      err = rd_vectors_from_exoII(con.turning_point_info.nv, goma_ctx->fem.loca_in->NV_exoII_infile,
+                                  0, 0, INT_MAX, &timeValueRead, exo);
       if (err != 0) {
         DPRINTF(stderr, "do_loca:  err from rd_vectors_from_exoII\n");
         con.general_info.nv_restart = FALSE;
@@ -906,13 +911,13 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     con.general_info.method = PITCHFORK_CONTINUATION;
 
     /* Set variables in the con.pitchfork_info structure: */
-    con.pitchfork_info.bif_param = loca_in->TPGuess;
+    con.pitchfork_info.bif_param = goma_ctx->fem.loca_in->TPGuess;
     con.pitchfork_info.psi = (double *)array_alloc(1, con.general_info.numUnks, sizeof(double));
     if (goma_ctx->num_proc > 1)
-      multiname(loca_in->NV_exoII_infile, goma_ctx->proc_id, goma_ctx->num_proc);
+      multiname(goma_ctx->fem.loca_in->NV_exoII_infile, goma_ctx->proc_id, goma_ctx->num_proc);
     DPRINTF(stdout, "Reading previous null vector ...\n");
-    err = rd_vectors_from_exoII(con.pitchfork_info.psi, loca_in->NV_exoII_infile, 0, 0, INT_MAX,
-                                &timeValueRead, exo);
+    err = rd_vectors_from_exoII(con.pitchfork_info.psi, goma_ctx->fem.loca_in->NV_exoII_infile, 0,
+                                0, INT_MAX, &timeValueRead, exo);
     if (err != 0) {
       DPRINTF(stderr, "do_loca:  err from rd_vectors_from_exoII\n");
       exit(-1);
@@ -929,15 +934,15 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 #endif
 
     /* Set variables in the con.hopf_info structure: */
-    con.hopf_info.bif_param = loca_in->TPGuess;
-    con.hopf_info.omega = loca_in->omega;
+    con.hopf_info.bif_param = goma_ctx->fem.loca_in->TPGuess;
+    con.hopf_info.omega = goma_ctx->fem.loca_in->omega;
     /* con.hopf_info.mass_flag = loca_in->mass_flag; */
     con.hopf_info.mass_flag = TRUE;
 
     /* Get Exodus file names for both parts of initial null vector */
     if (goma_ctx->num_proc > 1) {
-      multiname(loca_in->NV_exoII_infile, goma_ctx->proc_id, goma_ctx->num_proc);
-      multiname(loca_in->NV_imag_infile, goma_ctx->proc_id, goma_ctx->num_proc);
+      multiname(goma_ctx->fem.loca_in->NV_exoII_infile, goma_ctx->proc_id, goma_ctx->num_proc);
+      multiname(goma_ctx->fem.loca_in->NV_imag_infile, goma_ctx->proc_id, goma_ctx->num_proc);
     }
 
     /* Allocate arrays for real and imaginary parts of null vector */
@@ -946,13 +951,13 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 
     /* Load y_vec and z_vec from these files */
     DPRINTF(stdout, "Reading previous null vector (real part) ...\n");
-    err = rd_vectors_from_exoII(con.hopf_info.y_vec, loca_in->NV_exoII_infile, 0, 0, INT_MAX,
-                                &timeValueRead, exo);
+    err = rd_vectors_from_exoII(con.hopf_info.y_vec, goma_ctx->fem.loca_in->NV_exoII_infile, 0, 0,
+                                INT_MAX, &timeValueRead, exo);
     if (err != 0)
       GOMA_EH(GOMA_ERROR, "do_loca: error reading real part of null vector");
     DPRINTF(stdout, "Reading previous null vector (imaginary part) ...\n");
-    err = rd_vectors_from_exoII(con.hopf_info.z_vec, loca_in->NV_imag_infile, 0, 0, INT_MAX,
-                                &timeValueRead, exo);
+    err = rd_vectors_from_exoII(con.hopf_info.z_vec, goma_ctx->fem.loca_in->NV_imag_infile, 0, 0,
+                                INT_MAX, &timeValueRead, exo);
     if (err != 0)
       GOMA_EH(GOMA_ERROR, "do_loca: error reading imag. part of null vector");
 
@@ -960,7 +965,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     /* If using MSR matrix format, instantiate amat (struct AZ_MATRIX).
        VBR case was already handled above. */
     if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
-      passdown.amat = AZ_matrix_create(NumUnknowns[pg->imtrx]);
+      passdown.amat = AZ_matrix_create(NumUnknowns[goma_ctx->fem.pg->imtrx]);
       AZ_set_MSR(passdown.amat, passdown.ams->bindx, passdown.ams->val, passdown.ams->data_org, 0,
                  NULL, AZ_LOCAL);
     }
@@ -987,7 +992,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     break;
 
   default:
-    printf("ERROR %s: Unknown Continuation method: %d\n", yo, loca_in->Cont_Alg);
+    printf("ERROR %s: Unknown Continuation method: %d\n", yo, goma_ctx->fem.loca_in->Cont_Alg);
     exit(-1);
   }
   passdown.method = con.general_info.method;
@@ -996,22 +1001,22 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 
   con.eigen_info.Num_Eigenvalues = 0;
   if (Linear_Stability) {
-    con.eigen_info.Num_Eigenvalues = eigen->Eigen_NEV_WANT;
-    con.eigen_info.Num_Eigenvectors = eigen->Eigen_Record_Modes;
+    con.eigen_info.Num_Eigenvalues = goma_ctx->fem.eigen->Eigen_NEV_WANT;
+    con.eigen_info.Num_Eigenvectors = goma_ctx->fem.eigen->Eigen_Record_Modes;
     if (con.eigen_info.Num_Eigenvalues > 0) {
-      con.eigen_info.Shift_Point[0] = eigen->Eigen_Cayley_Sigma;
-      if (eigen->Eigen_Algorithm == LSA_CAYLEY) {
-        con.eigen_info.Shift_Point[1] = eigen->Eigen_Cayley_Mu;
+      con.eigen_info.Shift_Point[0] = goma_ctx->fem.eigen->Eigen_Cayley_Sigma;
+      if (goma_ctx->fem.eigen->Eigen_Algorithm == LSA_CAYLEY) {
+        con.eigen_info.Shift_Point[1] = goma_ctx->fem.eigen->Eigen_Cayley_Mu;
       } else {
-        con.eigen_info.Shift_Point[1] = eigen->Eigen_Cayley_Sigma;
+        con.eigen_info.Shift_Point[1] = goma_ctx->fem.eigen->Eigen_Cayley_Sigma;
       }
       con.eigen_info.Shift_Point[2] = 1.0; /* This is a default */
-      con.eigen_info.Shift_Point[3] = eigen->Eigen_SI_Tol_Param;
-      con.eigen_info.Arnoldi = eigen->Eigen_Krylov_Subspace;
-      con.eigen_info.Residual_Tol[0] = eigen->Eigen_Relative_Tol;
-      con.eigen_info.Residual_Tol[1] = eigen->Eigen_Linear_Tol;
-      con.eigen_info.Max_Iter = eigen->Eigen_Maximum_Outer_Iterations;
-      con.eigen_info.Every_n_Steps = eigen->Eigen_Solve_Freq;
+      con.eigen_info.Shift_Point[3] = goma_ctx->fem.eigen->Eigen_SI_Tol_Param;
+      con.eigen_info.Arnoldi = goma_ctx->fem.eigen->Eigen_Krylov_Subspace;
+      con.eigen_info.Residual_Tol[0] = goma_ctx->fem.eigen->Eigen_Relative_Tol;
+      con.eigen_info.Residual_Tol[1] = goma_ctx->fem.eigen->Eigen_Linear_Tol;
+      con.eigen_info.Max_Iter = goma_ctx->fem.eigen->Eigen_Maximum_Outer_Iterations;
+      con.eigen_info.Every_n_Steps = goma_ctx->fem.eigen->Eigen_Solve_Freq;
       con.eigen_info.sort = TRUE;
     } else
       GOMA_EH(GOMA_ERROR, "Number of eigenvalues must be specified!");
@@ -1026,8 +1031,9 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   /* First, handle single pass for eigensolver (if LOCA_LSA_ONLY) */
 
   if (con.general_info.method == LOCA_LSA_ONLY) {
-    initialize_util_routines(NumUnknowns[pg->imtrx],
-                             NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx]);
+    initialize_util_routines(NumUnknowns[goma_ctx->fem.pg->imtrx],
+                             NumUnknowns[goma_ctx->fem.pg->imtrx] +
+                                 NumExtUnknowns[goma_ctx->fem.pg->imtrx]);
     con.private_info.step_num = 0;
     err = nonlinear_solver_conwrap(x, (void *)&con, 0, 0.0, 0.0);
     solution_output_conwrap(1, x, 0.0, NULL, 0.0, NULL, 0.0, 0, err, &con);
@@ -1049,64 +1055,64 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     fclose(passdown.file);
 
   /* Write null vector to file if requested */
-  if (loca_in->NVSave && (passdown.method == TURNING_POINT_CONTINUATION ||
-                          passdown.method == PITCHFORK_CONTINUATION)) {
+  if (goma_ctx->fem.loca_in->NVSave && (passdown.method == TURNING_POINT_CONTINUATION ||
+                                        passdown.method == PITCHFORK_CONTINUATION)) {
 
     /* Open a new ExodusII file */
     if (goma_ctx->num_proc > 1)
-      multiname(loca_in->NV_exoII_outfile, goma_ctx->proc_id, goma_ctx->num_proc);
+      multiname(goma_ctx->fem.loca_in->NV_exoII_outfile, goma_ctx->proc_id, goma_ctx->num_proc);
     one_base(exo, goma_ctx->num_proc);
-    wr_mesh_exo(exo, loca_in->NV_exoII_outfile, 0);
-    wr_result_prelim_exo(rd, exo, loca_in->NV_exoII_outfile, NULL);
+    wr_mesh_exo(exo, goma_ctx->fem.loca_in->NV_exoII_outfile, 0);
+    wr_result_prelim_exo(rd, exo, goma_ctx->fem.loca_in->NV_exoII_outfile, NULL);
     if (goma_ctx->num_proc > 1)
-      wr_dpi(dpi, loca_in->NV_exoII_outfile);
+      wr_dpi(dpi, goma_ctx->fem.loca_in->NV_exoII_outfile);
     *passdown.nprint = 0;
 
     /* Write the null vector to this file */
-    write_solution(loca_in->NV_exoII_outfile, passdown.resid_vector, con.private_info.x_tang,
-                   passdown.x_sens_p, passdown.x_old, passdown.xdot, passdown.xdot_old,
-                   passdown.tev, passdown.tev_post, passdown.gv, passdown.rd, passdown.gvec,
-                   passdown.gvec_elem, passdown.nprint, 0.0, passdown.theta, 0.0, NULL,
-                   passdown.exo, passdown.dpi);
+    write_solution(goma_ctx->fem.loca_in->NV_exoII_outfile, passdown.resid_vector,
+                   con.private_info.x_tang, passdown.x_sens_p, passdown.x_old, passdown.xdot,
+                   passdown.xdot_old, passdown.tev, passdown.tev_post, passdown.gv, passdown.rd,
+                   passdown.gvec, passdown.gvec_elem, passdown.nprint, 0.0, passdown.theta, 0.0,
+                   NULL, passdown.exo, passdown.dpi);
     zero_base(exo);
   }
 
   /* Write null vector to files if requested (Hopf tracking case) */
 #ifdef ENABLE_KOMPLEX
-  if (loca_in->NVSave && passdown.method == HOPF_CONTINUATION) {
+  if (goma_ctx->fem.loca_in->NVSave && passdown.method == HOPF_CONTINUATION) {
 
     /* Open two new ExodusII files */
     if (goma_ctx->num_proc > 1) {
-      multiname(loca_in->NV_exoII_outfile, goma_ctx->proc_id, goma_ctx->num_proc);
-      multiname(loca_in->NV_imag_outfile, goma_ctx->proc_id, goma_ctx->num_proc);
+      multiname(goma_ctx->fem.loca_in->NV_exoII_outfile, goma_ctx->proc_id, goma_ctx->num_proc);
+      multiname(goma_ctx->fem.loca_in->NV_imag_outfile, goma_ctx->proc_id, goma_ctx->num_proc);
     }
     one_base(exo, goma_ctx->num_proc);
 
     /* First write real part (y_vec) to NV_exoII_outfile */
-    wr_mesh_exo(exo, loca_in->NV_exoII_outfile, 0);
-    wr_result_prelim_exo(rd, exo, loca_in->NV_exoII_outfile, NULL);
+    wr_mesh_exo(exo, goma_ctx->fem.loca_in->NV_exoII_outfile, 0);
+    wr_result_prelim_exo(rd, exo, goma_ctx->fem.loca_in->NV_exoII_outfile, NULL);
     if (goma_ctx->num_proc > 1)
-      wr_dpi(dpi, loca_in->NV_exoII_outfile);
+      wr_dpi(dpi, goma_ctx->fem.loca_in->NV_exoII_outfile);
     *passdown.nprint = 0;
 
-    write_solution(loca_in->NV_exoII_outfile, passdown.resid_vector, con.hopf_info.y_vec,
-                   passdown.x_sens_p, passdown.x_old, passdown.xdot, passdown.xdot_old,
-                   passdown.tev, passdown.tev_post, passdown.gv, passdown.rd, passdown.gvec,
-                   passdown.gvec_elem, passdown.nprint, 0.0, passdown.theta, 0.0, NULL,
-                   passdown.exo, passdown.dpi);
+    write_solution(goma_ctx->fem.loca_in->NV_exoII_outfile, passdown.resid_vector,
+                   con.hopf_info.y_vec, passdown.x_sens_p, passdown.x_old, passdown.xdot,
+                   passdown.xdot_old, passdown.tev, passdown.tev_post, passdown.gv, passdown.rd,
+                   passdown.gvec, passdown.gvec_elem, passdown.nprint, 0.0, passdown.theta, 0.0,
+                   NULL, passdown.exo, passdown.dpi);
 
     /* Then write imaginary part (z_vec) to NV_imag_outfile */
-    wr_mesh_exo(exo, loca_in->NV_imag_outfile, 0);
-    wr_result_prelim_exo(rd, exo, loca_in->NV_imag_outfile, NULL);
+    wr_mesh_exo(exo, goma_ctx->fem.loca_in->NV_imag_outfile, 0);
+    wr_result_prelim_exo(rd, exo, goma_ctx->fem.loca_in->NV_imag_outfile, NULL);
     if (goma_ctx->num_proc > 1)
-      wr_dpi(dpi, loca_in->NV_imag_outfile);
+      wr_dpi(dpi, goma_ctx->fem.loca_in->NV_imag_outfile);
     *passdown.nprint = 0;
 
-    write_solution(loca_in->NV_imag_outfile, passdown.resid_vector, con.hopf_info.z_vec,
-                   passdown.x_sens_p, passdown.x_old, passdown.xdot, passdown.xdot_old,
-                   passdown.tev, passdown.tev_post, passdown.gv, passdown.rd, passdown.gvec,
-                   passdown.gvec_elem, passdown.nprint, 0.0, passdown.theta, 0.0, NULL,
-                   passdown.exo, passdown.dpi);
+    write_solution(goma_ctx->fem.loca_in->NV_imag_outfile, passdown.resid_vector,
+                   con.hopf_info.z_vec, passdown.x_sens_p, passdown.x_old, passdown.xdot,
+                   passdown.xdot_old, passdown.tev, passdown.tev_post, passdown.gv, passdown.rd,
+                   passdown.gvec, passdown.gvec_elem, passdown.nprint, 0.0, passdown.theta, 0.0,
+                   NULL, passdown.exo, passdown.dpi);
 
     zero_base(exo);
   }
@@ -1144,9 +1150,9 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   }
   safer_free((void **)&gvec);
   safer_free((void **)&gv);
-  safer_free((void **)&cpcc);
-  if (tpcc != NULL)
-    safer_free((void **)&tpcc);
+  safer_free((void **)&goma_ctx->fem.cpcc);
+  if (goma_ctx->fem.tpcc != NULL)
+    safer_free((void **)&goma_ctx->fem.tpcc);
 
   i = 0;
   for (eb_indx = 0; eb_indx < exo->num_elem_blocks; eb_indx++) {
@@ -1164,10 +1170,10 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 
   for (i = 0; i < MAX_NUMBER_MATLS; i++) {
     for (n = 0; n < MAX_MODES; n++) {
-      safer_free((void **)&(ve_glob[i][n]->gn));
-      safer_free((void **)&(ve_glob[i][n]));
+      safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]->gn));
+      safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]));
     }
-    safer_free((void **)&(vn_glob[i]));
+    safer_free((void **)&(goma_ctx->fem.vn_glob[i]));
   }
 
   safer_free((void **)&gvec_elem);
@@ -1189,7 +1195,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   safer_free((void **)&con.hopf_info.y_vec);
   safer_free((void **)&con.hopf_info.z_vec);
 
-  free(pg->matrices);
+  free(goma_ctx->fem.pg->matrices);
 
   return nstep;
 } /**************** END of do_loca() *****************************************/
@@ -1231,7 +1237,7 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
   /* set up boundary conditions */
   nullify_dirichlet_bcs();
   find_and_set_Dirichlet(x, passdown.xdot, passdown.exo, passdown.dpi);
-  exchange_dof(passdown.cx, passdown.dpi, x, pg->imtrx);
+  exchange_dof(passdown.cx, passdown.dpi, x, goma_ctx->fem.pg->imtrx);
 
   /* show continuation type */
   if (goma_ctx->proc_id == 0) {
@@ -1266,56 +1272,63 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
 
     /* Print step information */
     if (passdown.method != LOCA_LSA_ONLY) {
-      nCC = cpcc[0].nCC;
-      DPRINTF(stdout, "\n\tStep number: %4d of %4d (max)", step_num + 1, cont->MaxPathSteps);
-      theta =
-          (lambda - cont->BegParameterValue) / (cont->EndParameterValue - cont->BegParameterValue);
+      nCC = goma_ctx->fem.cpcc[0].nCC;
+      DPRINTF(stdout, "\n\tStep number: %4d of %4d (max)", step_num + 1,
+              goma_ctx->fem.cont->MaxPathSteps);
+      theta = (lambda - goma_ctx->fem.cont->BegParameterValue) /
+              (goma_ctx->fem.cont->EndParameterValue - goma_ctx->fem.cont->BegParameterValue);
       if (nCC > 1 || nUC > 0) {
         DPRINTF(stdout, "\n\tAttempting solution at: theta = %g", theta);
       } else {
         DPRINTF(stdout, "\n\tAttempting solution at:");
       }
-      if (cont->upType == 5 && nUC > 0) {
+      if (goma_ctx->fem.cont->upType == 5 && nUC > 0) {
         for (iUC = 0; iUC < nUC; iUC++) {
-          switch (cpuc[iUC].Type) {
+          switch (goma_ctx->fem.cpuc[iUC].Type) {
           case 1: /* BC */
-            DPRINTF(stdout, "\n\tBCID=%3d DFID=%5d", cpuc[iUC].BCID, cpuc[iUC].DFID);
+            DPRINTF(stdout, "\n\tBCID=%3d DFID=%5d", goma_ctx->fem.cpuc[iUC].BCID,
+                    goma_ctx->fem.cpuc[iUC].DFID);
             break;
           case 2: /* MT */
-            DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d", cpuc[iUC].MTID, cpuc[iUC].MPID);
+            DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d", goma_ctx->fem.cpuc[iUC].MTID,
+                    goma_ctx->fem.cpuc[iUC].MPID);
             break;
           case 3: /* AC */
-            DPRINTF(stdout, "\n\tACID=%3d DFID=%5d", cpuc[iUC].BCID, cpuc[iUC].DFID);
+            DPRINTF(stdout, "\n\tACID=%3d DFID=%5d", goma_ctx->fem.cpuc[iUC].BCID,
+                    goma_ctx->fem.cpuc[iUC].DFID);
             break;
           case 4: /* UM */
-            DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d FLOAT=%3d", cpuc[iUC].MTID, cpuc[iUC].MPID,
-                    cpuc[iUC].MDID);
+            DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d FLOAT=%3d", goma_ctx->fem.cpuc[iUC].MTID,
+                    goma_ctx->fem.cpuc[iUC].MPID, goma_ctx->fem.cpuc[iUC].MDID);
             break;
           case 5: /* UF */
             break;
           default:
-            DPRINTF(stderr, "%s: Bad condition type, %d\n", yo, cpcc[iUC].Type);
+            DPRINTF(stderr, "%s: Bad condition type, %d\n", yo, goma_ctx->fem.cpcc[iUC].Type);
             exit(-1);
             break;
           }
-          DPRINTF(stdout, " Parameter= %10.6e delta_s= %10.6e", cpuc[iUC].value,
-                  cpuc[iUC].value - cpuc[iUC].old_value);
+          DPRINTF(stdout, " Parameter= %10.6e delta_s= %10.6e", goma_ctx->fem.cpuc[iUC].value,
+                  goma_ctx->fem.cpuc[iUC].value - goma_ctx->fem.cpuc[iUC].old_value);
         }
       } else {
         for (iCC = 0; iCC < nCC; iCC++) {
-          switch (cpcc[iCC].Type) {
+          switch (goma_ctx->fem.cpcc[iCC].Type) {
           case 1: /* BC */
-            DPRINTF(stdout, "\n\tBCID=%3d DFID=%5d", cpcc[iCC].BCID, cpcc[iCC].DFID);
+            DPRINTF(stdout, "\n\tBCID=%3d DFID=%5d", goma_ctx->fem.cpcc[iCC].BCID,
+                    goma_ctx->fem.cpcc[iCC].DFID);
             break;
           case 2: /* MT */
-            DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d", cpcc[iCC].MTID, cpcc[iCC].MPID);
+            DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d", goma_ctx->fem.cpcc[iCC].MTID,
+                    goma_ctx->fem.cpcc[iCC].MPID);
             break;
           case 3: /* AC */
-            DPRINTF(stdout, "\n\tACID=%3d DFID=%5d", cpcc[iCC].BCID, cpcc[iCC].DFID);
+            DPRINTF(stdout, "\n\tACID=%3d DFID=%5d", goma_ctx->fem.cpcc[iCC].BCID,
+                    goma_ctx->fem.cpcc[iCC].DFID);
             break;
           case 4: /* UM */
-            DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d FLOAT=%3d", cpcc[iCC].MTID, cpcc[iCC].MPID,
-                    cpcc[iCC].MDID);
+            DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d FLOAT=%3d", goma_ctx->fem.cpcc[iCC].MTID,
+                    goma_ctx->fem.cpcc[iCC].MPID, goma_ctx->fem.cpcc[iCC].MDID);
             break;
           case 5: /* UF */
             break;
@@ -1324,19 +1337,20 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
               DPRINTF(stdout, "\n\tAngular");
             break;
           default:
-            DPRINTF(stderr, "%s: Bad condition type, %d\n", yo, cpcc[iCC].Type);
+            DPRINTF(stderr, "%s: Bad condition type, %d\n", yo, goma_ctx->fem.cpcc[iCC].Type);
             exit(-1);
             break;
           }
           DPRINTF(stdout, " Parameter= %10.6e delta_s= %10.6e",
                   /*                    cpcc[iCC].value, cpcc[iCC].ratio * delta_s); */
-                  cpcc[iCC].value, cpcc[iCC].value - cpcc[iCC].old_value);
+                  goma_ctx->fem.cpcc[iCC].value,
+                  goma_ctx->fem.cpcc[iCC].value - goma_ctx->fem.cpcc[iCC].old_value);
         }
       }
     } /* End of "passdown.method != LOCA_LSA_ONLY" block */
   } /* End of print block */
 
-  passdown.theta = tran->theta;
+  passdown.theta = goma_ctx->fem.tran->theta;
 
   err = solve_nonlinear_problem(
       ams, x, passdown.delta_t, passdown.theta, passdown.x_old, passdown.x_older, passdown.xdot,
@@ -1369,9 +1383,9 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
     /* Save continuation parameter values */
     if (passdown.method != LOCA_LSA_ONLY) {
       for (iCC = 0; iCC < nCC; iCC++)
-        cpcc[iCC].old_value = cpcc[iCC].value;
+        goma_ctx->fem.cpcc[iCC].old_value = goma_ctx->fem.cpcc[iCC].value;
       for (iTC = 0; iTC < nTC; iTC++)
-        tpcc[iTC].old_value = tpcc[iTC].value;
+        goma_ctx->fem.tpcc[iTC].old_value = goma_ctx->fem.tpcc[iTC].value;
     }
 
     /* PRINT OUT VALUES OF EXTRA UNKNOWNS FROM AUGMENTING CONDITIONS */
@@ -1382,35 +1396,37 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
       DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
 
       for (iAC = 0; iAC < nAC; iAC++) {
-        if (augc[iAC].Type == AC_USERBC) {
-          DPRINTF(stdout, "\tBC[%4d] DF[%4d] = %10.6e\n", augc[iAC].BCID, augc[iAC].DFID,
-                  passdown.x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_USERMAT || augc[iAC].Type == AC_FLUX_MAT) {
-          DPRINTF(stdout, "\n New MT[%4d] MP[%4d] = %10.6e\n", augc[iAC].MTID, augc[iAC].MPID,
-                  passdown.x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_VOLUME) {
-          evol_local = augc[iAC].evol;
+        if (goma_ctx->fem.augc[iAC].Type == AC_USERBC) {
+          DPRINTF(stdout, "\tBC[%4d] DF[%4d] = %10.6e\n", goma_ctx->fem.augc[iAC].BCID,
+                  goma_ctx->fem.augc[iAC].DFID, passdown.x_AC[iAC]);
+        } else if (goma_ctx->fem.augc[iAC].Type == AC_USERMAT ||
+                   goma_ctx->fem.augc[iAC].Type == AC_FLUX_MAT) {
+          DPRINTF(stdout, "\n New MT[%4d] MP[%4d] = %10.6e\n", goma_ctx->fem.augc[iAC].MTID,
+                  goma_ctx->fem.augc[iAC].MPID, passdown.x_AC[iAC]);
+        } else if (goma_ctx->fem.augc[iAC].Type == AC_VOLUME) {
+          evol_local = goma_ctx->fem.augc[iAC].evol;
 #ifdef PARALLEL
           if (goma_ctx->num_proc > 1) {
             MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
           }
           evol_local = evol_global;
 #endif
-          DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
-                  augc[iAC].VOLID, evol_local, passdown.x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_POSITION || augc[iAC].Type == AC_POSITION_MT) {
-          evol_local = augc[iAC].evol;
+          DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n", goma_ctx->fem.augc[iAC].MTID,
+                  goma_ctx->fem.augc[iAC].VOLID, evol_local, passdown.x_AC[iAC]);
+        } else if (goma_ctx->fem.augc[iAC].Type == AC_POSITION ||
+                   goma_ctx->fem.augc[iAC].Type == AC_POSITION_MT) {
+          evol_local = goma_ctx->fem.augc[iAC].evol;
 #ifdef PARALLEL
           if (goma_ctx->num_proc > 1) {
             MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
           }
           evol_local = evol_global;
 #endif
-          DPRINTF(stdout, "\tMT[%4d] XY[%4d]=%10.6e Param=%13.9e\n", augc[iAC].MTID,
-                  augc[iAC].VOLID, evol_local, passdown.x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_FLUX) {
-          DPRINTF(stdout, "\tBC[%4d] DF[%4d]=%10.6e\n", augc[iAC].BCID, augc[iAC].DFID,
-                  passdown.x_AC[iAC]);
+          DPRINTF(stdout, "\tMT[%4d] XY[%4d]=%10.6e Param=%13.9e\n", goma_ctx->fem.augc[iAC].MTID,
+                  goma_ctx->fem.augc[iAC].VOLID, evol_local, passdown.x_AC[iAC]);
+        } else if (goma_ctx->fem.augc[iAC].Type == AC_FLUX) {
+          DPRINTF(stdout, "\tBC[%4d] DF[%4d]=%10.6e\n", goma_ctx->fem.augc[iAC].BCID,
+                  goma_ctx->fem.augc[iAC].DFID, passdown.x_AC[iAC]);
         }
       }
     }
@@ -1500,7 +1516,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
 
   /* Additional values for frontal solver */
 
-  int numUnks = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
+  int numUnks = NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
   double *xr = NULL;
 
   /* Create temporary vector to pass RHS to solver - EDW 6/1/2000 */
@@ -1525,9 +1541,10 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
       Factor_Flag = 0;
     /*  */
     matr_form = 1;
-    goma_ctx->solver.loca_umf_id = SL_UMF(
-        goma_ctx->solver.loca_umf_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
-        &NumUnknowns[pg->imtrx], &goma_ctx->solver.nzeros, &ija[0], &ija[0], &a[0], &xr[0], &x[0]);
+    goma_ctx->solver.loca_umf_id =
+        SL_UMF(goma_ctx->solver.loca_umf_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
+               &NumUnknowns[goma_ctx->fem.pg->imtrx], &goma_ctx->solver.nzeros, &ija[0], &ija[0],
+               &a[0], &xr[0], &x[0]);
     /*  */
     first_linear_solver_call = FALSE;
     strcpy(stringer, " 1 ");
@@ -1537,8 +1554,9 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
     if (strcmp(goma_ctx->solver.matrix_format, "msr"))
       GOMA_EH(GOMA_ERROR, "ERROR: lu solver needs msr matrix format");
 
-    dcopy1(NumUnknowns[pg->imtrx], xr, x);
-    lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija, x, 2);
+    dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], xr, x);
+    lu(NumUnknowns[goma_ctx->fem.pg->imtrx], NumExtUnknowns[goma_ctx->fem.pg->imtrx],
+       goma_ctx->solver.nzeros, a, ija, x, 2);
     first_linear_solver_call = FALSE;
     /*
      * Note that sl_lu has static variables to keep track of
@@ -1638,7 +1656,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
       GOMA_EH(GOMA_ERROR, " Sorry, only MSR and Epetra matrix formats are currently supported with "
                           "the Amesos solver suite\n");
     }
-    amesos_solve(goma_ctx->solver.amesos_package, ams, x, xr, 1, pg->imtrx);
+    amesos_solve(goma_ctx->solver.amesos_package, ams, x, xr, 1, goma_ctx->fem.pg->imtrx);
     strcpy(stringer, " 1 ");
     break;
 #endif
@@ -1658,7 +1676,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
      * it is the first call or not.
      */
 #ifdef HARWELL
-    error = cmsr_ma28(NumUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija, x, xr);
+    error = cmsr_ma28(NumUnknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros, a, ija, x, xr);
 #endif
 #ifndef HARWELL
     GOMA_EH(GOMA_ERROR, "That linear solver package is not implemented.");
@@ -1690,10 +1708,10 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
 
   /* Backup old solutions if not previously done */
   if (passdown.method == FIRST_ORDER_CONTINUATION) {
-    dcopy1(NumUnknowns[pg->imtrx], passdown.x_older, passdown.x_oldest);
-    dcopy1(NumUnknowns[pg->imtrx], passdown.x_old, passdown.x_older);
-    dcopy1(NumUnknowns[pg->imtrx], passdown.x, passdown.x_old);
-    dcopy1(NumUnknowns[pg->imtrx], passdown.x_sens_temp, passdown.x_sens);
+    dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], passdown.x_older, passdown.x_oldest);
+    dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], passdown.x_old, passdown.x_older);
+    dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], passdown.x, passdown.x_old);
+    dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], passdown.x_sens_temp, passdown.x_sens);
   }
 
   safe_free((void *)xr);
@@ -1736,7 +1754,7 @@ int komplex_linear_solver_conwrap(KOMPLEX_UNUSED double *c,
 
   /* Declare Variables */
   struct GomaLinearSolverData *ams = &(passdown.ams[JAC]);
-  int numUnks = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
+  int numUnks = NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
   int i;
   int tmp_pre_calc;
   int why;
@@ -1777,7 +1795,7 @@ int komplex_linear_solver_conwrap(KOMPLEX_UNUSED double *c,
   /* Apply scaling to the entire system */
   row_sum_scaling_scale(ams, c, passdown.scale);
   matrix_scaling(ams, passdown.mass_matrix, 1.0, passdown.scale);
-  vector_scaling(NumUnknowns[pg->imtrx], d, passdown.scale);
+  vector_scaling(NumUnknowns[goma_ctx->fem.pg->imtrx], d, passdown.scale);
 
   /*
    * Construct Elements of the Komplex Matrix:
@@ -1867,8 +1885,8 @@ void matrix_residual_fill_conwrap(double *x, double *rhs, int matflag)
   /* For eigensolver, Jacobian matrix is assembled along with mass matrix */
   if (passdown.LSA_flag)
     return;
-  af->Assemble_LSA_Jacobian_Matrix = FALSE;
-  af->Assemble_LSA_Mass_Matrix = FALSE;
+  goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix = FALSE;
+  goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
 
   /* If this call is for the first resolve, set save_flag */
   if (matflag == RHS_MATRIX_SAVE) {
@@ -1878,8 +1896,8 @@ void matrix_residual_fill_conwrap(double *x, double *rhs, int matflag)
   }
 
   /* Get global element size and velocity norm if needed for PSPG or Cont_GLS */
-  if ((goma_ctx->solver.pspg && Num_Var_In_Type[pg->imtrx][PRESSURE]) ||
-      (goma_ctx->solver.cont_gls && Num_Var_In_Type[pg->imtrx][VELOCITY1])) {
+  if ((goma_ctx->solver.pspg && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][PRESSURE]) ||
+      (goma_ctx->solver.cont_gls && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][VELOCITY1])) {
     h_elem_avg = global_h_elem_siz(x, passdown.x_old, passdown.xdot, passdown.resid_vector,
                                    passdown.exo, passdown.dpi);
     U_norm = global_velocity_norm(x, passdown.exo, passdown.dpi);
@@ -1890,27 +1908,27 @@ void matrix_residual_fill_conwrap(double *x, double *rhs, int matflag)
 
   switch (matflag) {
   case RHS_ONLY:
-    init_vec_value(passdown.resid_vector, 0.0, NumUnknowns[pg->imtrx]);
-    af->Assemble_Residual = TRUE;
-    af->Assemble_Jacobian = FALSE;
+    init_vec_value(passdown.resid_vector, 0.0, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+    goma_ctx->fem.af->Assemble_Residual = TRUE;
+    goma_ctx->fem.af->Assemble_Jacobian = FALSE;
     passdown.num_res_fills++;
     break;
   case MATRIX_ONLY:
     init_vec_value(ams->val, 0.0, goma_ctx->solver.nzeros);
-    af->Assemble_Residual = FALSE;
-    af->Assemble_Jacobian = TRUE;
+    goma_ctx->fem.af->Assemble_Residual = FALSE;
+    goma_ctx->fem.af->Assemble_Jacobian = TRUE;
     passdown.num_mat_fills++;
     break;
   case RHS_MATRIX:
-    init_vec_value(passdown.resid_vector, 0.0, NumUnknowns[pg->imtrx]);
+    init_vec_value(passdown.resid_vector, 0.0, NumUnknowns[goma_ctx->fem.pg->imtrx]);
     init_vec_value(ams->val, 0.0, goma_ctx->solver.nzeros);
-    af->Assemble_Residual = TRUE;
-    af->Assemble_Jacobian = TRUE;
+    goma_ctx->fem.af->Assemble_Residual = TRUE;
+    goma_ctx->fem.af->Assemble_Jacobian = TRUE;
     passdown.num_res_fills++;
     passdown.num_mat_fills++;
     break;
   }
-  af->Assemble_LSA_Mass_Matrix = FALSE;
+  goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
 
   /* Recover old Jacobian only */
 
@@ -1920,11 +1938,11 @@ void matrix_residual_fill_conwrap(double *x, double *rhs, int matflag)
   /* Remaining cases: perform requested fill */
   else {
 
-    exchange_dof(passdown.cx, passdown.dpi, x, pg->imtrx);
+    exchange_dof(passdown.cx, passdown.dpi, x, goma_ctx->fem.pg->imtrx);
 
     (void)matrix_fill_full(ams, x, rhs, passdown.x_old, passdown.x_older, passdown.xdot,
                            passdown.xdot_old, passdown.x_update, &(passdown.delta_t),
-                           &(passdown.theta), First_Elem_Side_BC_Array[pg->imtrx],
+                           &(passdown.theta), First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx],
                            &(passdown.time_value), passdown.exo, passdown.dpi,
                            &(passdown.dpi->num_universe_nodes), &(h_elem_avg), &(U_norm), NULL);
   }
@@ -1961,11 +1979,11 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
   double h_elem_avg, U_norm;
 
   /* Initialize arrays */
-  zero = (double *)array_alloc(1, NumUnknowns[pg->imtrx], sizeof(double));
-  init_vec_value(&zero[0], 0.0, NumUnknowns[pg->imtrx]);
+  zero = (double *)array_alloc(1, NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
+  init_vec_value(&zero[0], 0.0, NumUnknowns[goma_ctx->fem.pg->imtrx]);
 
-  scale = (double *)array_alloc(1, NumUnknowns[pg->imtrx], sizeof(double));
-  init_vec_value(scale, 1.0, NumUnknowns[pg->imtrx]);
+  scale = (double *)array_alloc(1, NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
+  init_vec_value(scale, 1.0, NumUnknowns[goma_ctx->fem.pg->imtrx]);
 
   /* Initialize tmp_matrix array for 3D of 2D stability if needed */
   if (passdown.do_3D_of_2D) {
@@ -1975,26 +1993,27 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
     passes = 1;
 
   /* Resolve difference between x and x_old to get correct mass matrix terms */
-  exchange_dof(passdown.cx, passdown.dpi, x, pg->imtrx);
-  dcopy1(NumUnknowns[pg->imtrx], passdown.x, passdown.x_old);
-  dcopy1(NumUnknowns[pg->imtrx], passdown.x, passdown.x_older);
+  exchange_dof(passdown.cx, passdown.dpi, x, goma_ctx->fem.pg->imtrx);
+  dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], passdown.x, passdown.x_old);
+  dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], passdown.x, passdown.x_older);
 
   nnodes = passdown.dpi->num_universe_nodes;
 
   /* Save original e and etm arrays */
   theta_save = passdown.theta;
-  e_save = (int **)array_alloc(2, upd->Num_Mat, MAX_EQNS, sizeof(int));
-  etm_save = (dbl ***)array_alloc(3, upd->Num_Mat, MAX_EQNS, MAX_TERM_TYPES, sizeof(dbl));
-  for (mn = 0; mn < upd->Num_Mat; mn++)
+  e_save = (int **)array_alloc(2, goma_ctx->fem.upd->Num_Mat, MAX_EQNS, sizeof(int));
+  etm_save =
+      (dbl ***)array_alloc(3, goma_ctx->fem.upd->Num_Mat, MAX_EQNS, MAX_TERM_TYPES, sizeof(dbl));
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++)
     for (i = 0; i < MAX_EQNS; i++) {
-      e_save[mn][i] = pd_glob[mn]->e[pg->imtrx][i];
+      e_save[mn][i] = goma_ctx->fem.pd_glob[mn]->e[goma_ctx->fem.pg->imtrx][i];
       for (j = 0; j < MAX_TERM_TYPES; j++)
-        etm_save[mn][i][j] = pd_glob[mn]->etm[pg->imtrx][i][j];
+        etm_save[mn][i][j] = goma_ctx->fem.pd_glob[mn]->etm[goma_ctx->fem.pg->imtrx][i][j];
     }
 
   /* Get global element size and velocity norm if needed for PSPG or Cont_GLS */
-  if ((goma_ctx->solver.pspg && Num_Var_In_Type[pg->imtrx][PRESSURE]) ||
-      (goma_ctx->solver.cont_gls && Num_Var_In_Type[pg->imtrx][VELOCITY1])) {
+  if ((goma_ctx->solver.pspg && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][PRESSURE]) ||
+      (goma_ctx->solver.cont_gls && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][VELOCITY1])) {
     h_elem_avg = global_h_elem_siz(x, passdown.x_old, passdown.xdot, passdown.resid_vector,
                                    passdown.exo, passdown.dpi);
     U_norm = global_velocity_norm(x, passdown.exo, passdown.dpi);
@@ -2023,16 +2042,16 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
 
     for (j = 0; j < goma_ctx->solver.nzeros + 1; j++)
       ams->val[j] = 0.0;
-    af->Assemble_Residual = TRUE;
-    af->Assemble_Jacobian = TRUE;
-    af->Assemble_LSA_Jacobian_Matrix = TRUE;
-    af->Assemble_LSA_Mass_Matrix = FALSE;
+    goma_ctx->fem.af->Assemble_Residual = TRUE;
+    goma_ctx->fem.af->Assemble_Jacobian = TRUE;
+    goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix = TRUE;
+    goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
 
-    exchange_dof(passdown.cx, passdown.dpi, x, pg->imtrx);
+    exchange_dof(passdown.cx, passdown.dpi, x, goma_ctx->fem.pg->imtrx);
 
     (void)matrix_fill_full(ams, x, rhs, passdown.x_old, passdown.x_older, passdown.xdot,
                            passdown.xdot_old, passdown.x_update, &(passdown.delta_t),
-                           &(passdown.theta), First_Elem_Side_BC_Array[pg->imtrx],
+                           &(passdown.theta), First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx],
                            &(passdown.time_value), passdown.exo, passdown.dpi, &(nnodes),
                            &(h_elem_avg), &(U_norm), NULL);
 
@@ -2055,14 +2074,14 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
   /* theta = 0 makes the method implicit */
   passdown.theta = 0.0;
   TimeIntegration = TRANSIENT;
-  for (mn = 0; mn < upd->Num_Mat; mn++) {
-    pd_glob[mn]->TimeIntegration = TRANSIENT;
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+    goma_ctx->fem.pd_glob[mn]->TimeIntegration = TRANSIENT;
     for (i = 0; i < MAX_EQNS; i++)
-      if (pd_glob[mn]->e[pg->imtrx][i]) {
-        pd_glob[mn]->e[pg->imtrx][i] = T_MASS;
+      if (goma_ctx->fem.pd_glob[mn]->e[goma_ctx->fem.pg->imtrx][i]) {
+        goma_ctx->fem.pd_glob[mn]->e[goma_ctx->fem.pg->imtrx][i] = T_MASS;
         for (j = 0; j < MAX_TERM_TYPES; j++)
-          pd_glob[mn]->etm[pg->imtrx][i][j] = 0.0;
-        pd_glob[mn]->etm[pg->imtrx][i][LOG2_MASS] = 1.0;
+          goma_ctx->fem.pd_glob[mn]->etm[goma_ctx->fem.pg->imtrx][i][j] = 0.0;
+        goma_ctx->fem.pd_glob[mn]->etm[goma_ctx->fem.pg->imtrx][i][LOG2_MASS] = 1.0;
       }
   }
 
@@ -2083,16 +2102,16 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
 
     for (j = 0; j < goma_ctx->solver.nzeros + 1; j++)
       ams->val[j] = 0.0;
-    af->Assemble_Residual = TRUE;
-    af->Assemble_Jacobian = TRUE;
-    af->Assemble_LSA_Jacobian_Matrix = FALSE;
-    af->Assemble_LSA_Mass_Matrix = TRUE;
+    goma_ctx->fem.af->Assemble_Residual = TRUE;
+    goma_ctx->fem.af->Assemble_Jacobian = TRUE;
+    goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix = FALSE;
+    goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = TRUE;
     passdown.delta_t = 1.0;
-    tran->delta_t = 1.0; /*for Newmark-Beta terms in Lagrangian Solid*/
+    goma_ctx->fem.tran->delta_t = 1.0; /*for Newmark-Beta terms in Lagrangian Solid*/
 
     (void)matrix_fill_full(ams, x, rhs, passdown.x_old, passdown.x_older, passdown.xdot,
                            passdown.xdot_old, passdown.x_update, &(passdown.delta_t),
-                           &(passdown.theta), First_Elem_Side_BC_Array[pg->imtrx],
+                           &(passdown.theta), First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx],
                            &(passdown.time_value), passdown.exo, passdown.dpi, &(nnodes),
                            &(h_elem_avg), &(U_norm), NULL);
 
@@ -2112,25 +2131,25 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
   }
   for (j = 0; j < goma_ctx->solver.nzeros + 1; j++)
     passdown.mass_matrix[j] *= -1.0;
-  dcopy1(NumUnknowns[pg->imtrx], scale, passdown.scale);
+  dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], scale, passdown.scale);
 
   /* Restore original e and etm values */
   TimeIntegration = STEADY;
   passdown.theta = theta_save;
-  for (mn = 0; mn < upd->Num_Mat; mn++)
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++)
     for (i = 0; i < MAX_EQNS; i++) {
-      pd_glob[mn]->TimeIntegration = STEADY;
-      pd_glob[mn]->e[pg->imtrx][i] = e_save[mn][i];
+      goma_ctx->fem.pd_glob[mn]->TimeIntegration = STEADY;
+      goma_ctx->fem.pd_glob[mn]->e[goma_ctx->fem.pg->imtrx][i] = e_save[mn][i];
       for (j = 0; j < MAX_TERM_TYPES; j++)
-        pd_glob[mn]->etm[pg->imtrx][i][j] = etm_save[mn][i][j];
+        goma_ctx->fem.pd_glob[mn]->etm[goma_ctx->fem.pg->imtrx][i][j] = etm_save[mn][i][j];
     }
 
   /* Print matrices -- Careful, these can be big disk space hogs!! */
-  if (eigen->Eigen_Matrix_Output) {
+  if (goma_ctx->fem.eigen->Eigen_Matrix_Output) {
     if (!passdown.do_3D_of_2D)
       LSA_3D_of_2D_wave_number = -1.0;
     output_stability_matrices(passdown.mass_matrix, jacobian_matrix, ija, nnodes,
-                              NumUnknowns[pg->imtrx], goma_ctx->solver.nzeros);
+                              NumUnknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros);
   }
 
   /* Clean up */
@@ -2167,7 +2186,7 @@ void matvec_mult_conwrap(double *x, double *y)
   int N, nzeros;
 
   /* exchange boundary info */
-  exchange_dof(passdown.cx, passdown.dpi, x, pg->imtrx);
+  exchange_dof(passdown.cx, passdown.dpi, x, goma_ctx->fem.pg->imtrx);
 
   /* First, handle MSR matrices */
   if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0)
@@ -2175,7 +2194,7 @@ void matvec_mult_conwrap(double *x, double *y)
   /* Note: This routine borrowed from "az_matvec_mult.c"! - EDW */
   {
 
-    N = num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx];
+    N = num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
 
     for (irow = 0; irow < N; irow++) {
 
@@ -2234,7 +2253,7 @@ void mass_matvec_mult_conwrap(double *x, double *y)
   int N, nzeros;
 
   /* exchange boundary info */
-  exchange_dof(passdown.cx, passdown.dpi, x, pg->imtrx);
+  exchange_dof(passdown.cx, passdown.dpi, x, goma_ctx->fem.pg->imtrx);
 
   /* First, handle MSR matrices */
   if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0)
@@ -2242,7 +2261,7 @@ void mass_matvec_mult_conwrap(double *x, double *y)
   /* Note: This routine borrowed from "az_matvec_mult.c"! - EDW */
   {
 
-    N = num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx];
+    N = num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
 
     for (irow = 0; irow < N; irow++) {
 
@@ -2369,8 +2388,8 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
     /*  */
     matr_form = 1;
     stab_umf_id = SL_UMF(stab_umf_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
-                         &NumUnknowns[pg->imtrx], &goma_ctx->solver.nzeros, &ija[0], &ija[0], &a[0],
-                         &x[0], &y[0]);
+                         &NumUnknowns[goma_ctx->fem.pg->imtrx], &goma_ctx->solver.nzeros, &ija[0],
+                         &ija[0], &a[0], &x[0], &y[0]);
     /*  */
     first_linear_solver_call = FALSE;
     strcpy(stringer, " 1 ");
@@ -2380,8 +2399,9 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
     if (strcmp(goma_ctx->solver.matrix_format, "msr"))
       GOMA_EH(GOMA_ERROR, "ERROR: lu solver needs msr matrix format");
 
-    dcopy1(NumUnknowns[pg->imtrx], x, y);
-    lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija, y, 2);
+    dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], x, y);
+    lu(NumUnknowns[goma_ctx->fem.pg->imtrx], NumExtUnknowns[goma_ctx->fem.pg->imtrx],
+       goma_ctx->solver.nzeros, a, ija, y, 2);
     first_linear_solver_call = FALSE;
     /*
      * Note that sl_lu has static variables to keep track of
@@ -2397,7 +2417,7 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
       GOMA_EH(GOMA_ERROR, " Sorry, only MSR and Epetra matrix formats are currently supported with "
                           "the Amesos solver suite\n");
     }
-    amesos_solve(goma_ctx->solver.amesos_package, ams, y, x, 1, pg->imtrx);
+    amesos_solve(goma_ctx->solver.amesos_package, ams, y, x, 1, goma_ctx->fem.pg->imtrx);
     first_linear_solver_call = FALSE;
     strcpy(stringer, " 1 ");
     break;
@@ -2520,7 +2540,7 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
      * it is the first call or not.
      */
 #ifdef HARWELL
-    err = cmsr_ma28(NumUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija, y, x);
+    err = cmsr_ma28(NumUnknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros, a, ija, y, x);
 #endif
 #ifndef HARWELL
     GOMA_EH(GOMA_ERROR, "That linear solver package is not implemented.");
@@ -2574,48 +2594,57 @@ void assign_parameter_conwrap(double param)
   if (passdown.method == LOCA_LSA_ONLY)
     return;
 
-  delta = param - cont->BegParameterValue;
+  delta = param - goma_ctx->fem.cont->BegParameterValue;
 
   /*
    * Angular continuation parameters are handled differently
    * Here, param is the continuation angle (in degrees)
    */
-  if (cont->upType == 6) /* AN */
+  if (goma_ctx->fem.cont->upType == 6) /* AN */
   {
     theta = param * M_PIE / 180.0;
     for (iCC = 1; iCC < nCC; iCC++) {
-      switch (cpcc[iCC].fn_flag) {
+      switch (goma_ctx->fem.cpcc[iCC].fn_flag) {
       case 0:
-        cpcc[iCC].value = cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * sin(theta);
+        goma_ctx->fem.cpcc[iCC].value =
+            goma_ctx->fem.cpcc[iCC].coeff_0 + goma_ctx->fem.cpcc[iCC].coeff_1 * sin(theta);
         break;
       case 1:
-        cpcc[iCC].value = cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * cos(theta);
+        goma_ctx->fem.cpcc[iCC].value =
+            goma_ctx->fem.cpcc[iCC].coeff_0 + goma_ctx->fem.cpcc[iCC].coeff_1 * cos(theta);
         break;
       case 2:
-        cpcc[iCC].value = cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * tan(theta);
+        goma_ctx->fem.cpcc[iCC].value =
+            goma_ctx->fem.cpcc[iCC].coeff_0 + goma_ctx->fem.cpcc[iCC].coeff_1 * tan(theta);
         break;
       case 3:
-        cpcc[iCC].value =
-            cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * sin(theta) + cpcc[iCC].coeff_2 * cos(theta);
+        goma_ctx->fem.cpcc[iCC].value = goma_ctx->fem.cpcc[iCC].coeff_0 +
+                                        goma_ctx->fem.cpcc[iCC].coeff_1 * sin(theta) +
+                                        goma_ctx->fem.cpcc[iCC].coeff_2 * cos(theta);
         break;
       }
 
-      update_parameterC(iCC, cpcc[iCC].value, passdown.x, passdown.xdot, passdown.x_AC,
-                        cont->Delta_s0, passdown.cx, passdown.exo, passdown.dpi);
+      update_parameterC(iCC, goma_ctx->fem.cpcc[iCC].value, passdown.x, passdown.xdot,
+                        passdown.x_AC, goma_ctx->fem.cont->Delta_s0, passdown.cx, passdown.exo,
+                        passdown.dpi);
     }
   } else {
     for (iCC = 0; iCC < nCC; iCC++) {
       /* This is for the variable-exponent special case */
-      if (cpcc[iCC].fn_flag == 3) {
-        cpcc[iCC].value = cpcc[iCC].coeff_0 + cpcc[iCC].coeff_1 * pow(param, cpcc[iCC].coeff_2);
+      if (goma_ctx->fem.cpcc[iCC].fn_flag == 3) {
+        goma_ctx->fem.cpcc[iCC].value =
+            goma_ctx->fem.cpcc[iCC].coeff_0 +
+            goma_ctx->fem.cpcc[iCC].coeff_1 * pow(param, goma_ctx->fem.cpcc[iCC].coeff_2);
       }
       /* This is for all other continuation types (simple linear relation) */
       else {
-        cpcc[iCC].value = cpcc[iCC].Beg_CC_Value + cpcc[iCC].ratio * delta;
+        goma_ctx->fem.cpcc[iCC].value =
+            goma_ctx->fem.cpcc[iCC].Beg_CC_Value + goma_ctx->fem.cpcc[iCC].ratio * delta;
       }
 
-      update_parameterC(iCC, cpcc[iCC].value, passdown.x, passdown.xdot, passdown.x_AC,
-                        cont->Delta_s0, passdown.cx, passdown.exo, passdown.dpi);
+      update_parameterC(iCC, goma_ctx->fem.cpcc[iCC].value, passdown.x, passdown.xdot,
+                        passdown.x_AC, goma_ctx->fem.cont->Delta_s0, passdown.cx, passdown.exo,
+                        passdown.dpi);
     }
   }
   return;
@@ -2636,50 +2665,59 @@ void assign_bif_parameter_conwrap(double bif_param)
   int iTC;
   double delta, theta;
 
-  delta = bif_param - tpcc[0].Beg_CC_Value;
+  delta = bif_param - goma_ctx->fem.tpcc[0].Beg_CC_Value;
 
   /*
    * Angular continuation parameters are handled differently
    * Here, bif_param is the continuation angle (in degrees)
    */
-  if (loca_in->TPupType == 6) /* AN */
+  if (goma_ctx->fem.loca_in->TPupType == 6) /* AN */
   {
     theta = bif_param * M_PIE / 180.0;
     for (iTC = 1; iTC < nTC; iTC++) {
-      switch (tpcc[iTC].fn_flag) {
+      switch (goma_ctx->fem.tpcc[iTC].fn_flag) {
       case 0:
-        tpcc[iTC].value = tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * sin(theta);
+        goma_ctx->fem.tpcc[iTC].value =
+            goma_ctx->fem.tpcc[iTC].coeff_0 + goma_ctx->fem.tpcc[iTC].coeff_1 * sin(theta);
         break;
       case 1:
-        tpcc[iTC].value = tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * cos(theta);
+        goma_ctx->fem.tpcc[iTC].value =
+            goma_ctx->fem.tpcc[iTC].coeff_0 + goma_ctx->fem.tpcc[iTC].coeff_1 * cos(theta);
         break;
       case 2:
-        tpcc[iTC].value = tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * tan(theta);
+        goma_ctx->fem.tpcc[iTC].value =
+            goma_ctx->fem.tpcc[iTC].coeff_0 + goma_ctx->fem.tpcc[iTC].coeff_1 * tan(theta);
         break;
       case 3:
-        tpcc[iTC].value =
-            tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * sin(theta) + tpcc[iTC].coeff_2 * cos(theta);
+        goma_ctx->fem.tpcc[iTC].value = goma_ctx->fem.tpcc[iTC].coeff_0 +
+                                        goma_ctx->fem.tpcc[iTC].coeff_1 * sin(theta) +
+                                        goma_ctx->fem.tpcc[iTC].coeff_2 * cos(theta);
         break;
       }
 
-      update_parameterTP(iTC, tpcc[iTC].value, passdown.x, passdown.xdot, passdown.x_AC,
-                         cont->Delta_s0, passdown.cx, passdown.exo, passdown.dpi);
+      update_parameterTP(iTC, goma_ctx->fem.tpcc[iTC].value, passdown.x, passdown.xdot,
+                         passdown.x_AC, goma_ctx->fem.cont->Delta_s0, passdown.cx, passdown.exo,
+                         passdown.dpi);
     }
   }
   /* This is for all other continuation types (simple linear relation) */
   else {
     for (iTC = 0; iTC < nTC; iTC++) {
       /* This is for the variable-exponent special case */
-      if (tpcc[iTC].fn_flag == 3) {
-        tpcc[iTC].value = tpcc[iTC].coeff_0 + tpcc[iTC].coeff_1 * pow(bif_param, tpcc[iTC].coeff_2);
+      if (goma_ctx->fem.tpcc[iTC].fn_flag == 3) {
+        goma_ctx->fem.tpcc[iTC].value =
+            goma_ctx->fem.tpcc[iTC].coeff_0 +
+            goma_ctx->fem.tpcc[iTC].coeff_1 * pow(bif_param, goma_ctx->fem.tpcc[iTC].coeff_2);
       }
       /* This is for all other continuation types (simple linear relation) */
       else {
-        tpcc[iTC].value = tpcc[iTC].Beg_CC_Value + tpcc[iTC].ratio * delta;
+        goma_ctx->fem.tpcc[iTC].value =
+            goma_ctx->fem.tpcc[iTC].Beg_CC_Value + goma_ctx->fem.tpcc[iTC].ratio * delta;
       }
 
-      update_parameterTP(iTC, tpcc[iTC].value, passdown.x, passdown.xdot, passdown.x_AC,
-                         cont->Delta_s0, passdown.cx, passdown.exo, passdown.dpi);
+      update_parameterTP(iTC, goma_ctx->fem.tpcc[iTC].value, passdown.x, passdown.xdot,
+                         passdown.x_AC, goma_ctx->fem.cont->Delta_s0, passdown.cx, passdown.exo,
+                         passdown.dpi);
     }
   }
   return;
@@ -2730,23 +2768,23 @@ void calc_scale_vec_conwrap(double *x, double *scale_vec, int numUnks)
     if (sv_init) {
 
       /* Determine if discontinuous (P1) pressure interpolation is being used */
-      for (i = 0; i < upd->Num_Mat; i++) {
+      for (i = 0; i < goma_ctx->fem.upd->Num_Mat; i++) {
 
         /* Adjust nvd to allow for separate treatment of the three pressure vars */
-        if (pd_glob[i]->i[pg->imtrx][p] == ip1)
+        if (goma_ctx->fem.pd_glob[i]->i[goma_ctx->fem.pg->imtrx][p] == ip1)
           passdown.nvd += 2;
       }
 
       /* Allocate arrays needed to calculate scale vector */
-      passdown.sv_index = (int *)array_alloc(1, NumUnknowns[pg->imtrx], sizeof(int));
+      passdown.sv_index = (int *)array_alloc(1, NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(int));
       passdown.sv_count = (double *)array_alloc(1, passdown.nvd, sizeof(double));
       init_vec_value(passdown.sv_count, 0.0, passdown.nvd);
 
       /* Loop over only this processor's owned unknowns */
-      for (iunk = 0; iunk < NumUnknowns[pg->imtrx]; iunk++) {
+      for (iunk = 0; iunk < NumUnknowns[goma_ctx->fem.pg->imtrx]; iunk++) {
 
         /* Get vd structure for this unknown */
-        vdi = Index_Solution_Inv(iunk, NULL, &ivd, NULL, &idof, pg->imtrx);
+        vdi = Index_Solution_Inv(iunk, NULL, &ivd, NULL, &idof, goma_ctx->fem.pg->imtrx);
         index = vdi->List_Index;
 
         /* P1: The second and third pressure vars are stored at the back of the array */
@@ -2778,7 +2816,7 @@ void calc_scale_vec_conwrap(double *x, double *scale_vec, int numUnks)
     init_vec_value(sv_sum, 0.0, passdown.nvd);
 
     /* Calculate the scale vector for the current x */
-    for (iunk = 0; iunk < NumUnknowns[pg->imtrx]; iunk++) {
+    for (iunk = 0; iunk < NumUnknowns[goma_ctx->fem.pg->imtrx]; iunk++) {
 
       /* Add each value to the appropriate index of sv_sum */
       index = passdown.sv_index[iunk];
@@ -2801,7 +2839,7 @@ void calc_scale_vec_conwrap(double *x, double *scale_vec, int numUnks)
     }
 
     /* Assign average reciprocals to scale_vec */
-    for (iunk = 0; iunk < NumUnknowns[pg->imtrx]; iunk++) {
+    for (iunk = 0; iunk < NumUnknowns[goma_ctx->fem.pg->imtrx]; iunk++) {
       index = passdown.sv_index[iunk];
       scale_vec[iunk] = 1.0 / sv_sum[index];
     }
@@ -2811,7 +2849,7 @@ void calc_scale_vec_conwrap(double *x, double *scale_vec, int numUnks)
 
   /* Otherwise, just set scale_vec to all ones */
   else {
-    for (i = 0; i < NumUnknowns[pg->imtrx]; i++)
+    for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++)
       scale_vec[i] = 1.0;
   }
 
@@ -2973,7 +3011,7 @@ void perturb_solution_conwrap(double *x, double *x_old, double *scale_vec, int n
   for (i = 0; i < numOwnedUnks; i++)
     x[i] = x_old[i] + 1.0e-5 * x[i] / scale_vec[i];
 
-  exchange_dof(passdown.cx, passdown.dpi, x, pg->imtrx);
+  exchange_dof(passdown.cx, passdown.dpi, x, goma_ctx->fem.pg->imtrx);
 }
 /*****************************************************************************/
 /*****************************************************************************/
@@ -3011,7 +3049,7 @@ void solution_output_conwrap(int num_soln_flag,
 
 #ifdef GOMA_ENABLE_ARPACK
   int i, n;
-  int freq = eigen->Eigen_Solve_Freq;
+  int freq = goma_ctx->fem.eigen->Eigen_Solve_Freq;
 #endif
 
   char *yo = "do_loca";
@@ -3025,7 +3063,7 @@ void solution_output_conwrap(int num_soln_flag,
   i_print = FALSE;
   if (nt == step_print) {
     i_print = TRUE;
-    step_print += cont->print_freq;
+    step_print += goma_ctx->fem.cont->print_freq;
   }
 
   /*
@@ -3040,8 +3078,8 @@ void solution_output_conwrap(int num_soln_flag,
   }
 
   if (i_print) {
-    error = write_ascii_soln(x, passdown.resid_vector, NumUnknowns[pg->imtrx], passdown.x_AC, nAC,
-                             param1, passdown.file);
+    error = write_ascii_soln(x, passdown.resid_vector, NumUnknowns[goma_ctx->fem.pg->imtrx],
+                             passdown.x_AC, nAC, param1, passdown.file);
     if (error)
       DPRINTF(stdout, "%s:  error writing ASCII soln file\n", yo);
     if (goma_ctx->write_intermediate_solutions == 0 && goma_ctx->unlimited_output) {
@@ -3056,8 +3094,8 @@ void solution_output_conwrap(int num_soln_flag,
   /* determine whether to anneal mesh if there is a mesh displacement field */
   displacement_somewhere = FALSE;
 
-  for (m = 0; m < upd->Num_Mat; m++)
-    displacement_somewhere |= (pd_glob[m]->gv[R_MESH1]);
+  for (m = 0; m < goma_ctx->fem.upd->Num_Mat; m++)
+    displacement_somewhere |= (goma_ctx->fem.pd_glob[m]->gv[R_MESH1]);
 
   /*
    * Backup old solutions
@@ -3065,10 +3103,10 @@ void solution_output_conwrap(int num_soln_flag,
    * For first-order algorithm, defer this until after resolve.
    */
   if (passdown.method != FIRST_ORDER_CONTINUATION) {
-    dcopy1(NumUnknowns[pg->imtrx], passdown.x_older, passdown.x_oldest);
-    dcopy1(NumUnknowns[pg->imtrx], passdown.x_old, passdown.x_older);
-    dcopy1(NumUnknowns[pg->imtrx], passdown.x, passdown.x_old);
-    dcopy1(NumUnknowns[pg->imtrx], passdown.x_sens_temp, passdown.x_sens);
+    dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], passdown.x_older, passdown.x_oldest);
+    dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], passdown.x_old, passdown.x_older);
+    dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], passdown.x, passdown.x_old);
+    dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], passdown.x_sens_temp, passdown.x_sens);
   }
 
   /* If Eigenvalues requested using ARPACK, calculate them here */
@@ -3169,11 +3207,11 @@ void eigenvector_output_conwrap(int j,
   static int nprint = -1;
   int i_print;
   /*  int n = LSA_current_wave_number; */
-  int freq = eigen->Eigen_Write_Freq;
+  int freq = goma_ctx->fem.eigen->Eigen_Write_Freq;
   char efile[MAX_FNL];
   int m, displacement_somewhere;
 
-  if (j >= eigen->Eigen_Record_Modes)
+  if (j >= goma_ctx->fem.eigen->Eigen_Record_Modes)
     return;
 
   /* Decide whether to output eigenvectors on this call */
@@ -3190,15 +3228,15 @@ void eigenvector_output_conwrap(int j,
     nprint++;
 
   /* Get the eigenvector file name */
-  strcpy(efile, eigen->Eigen_Output_File);
+  strcpy(efile, goma_ctx->fem.eigen->Eigen_Output_File);
   get_eigen_outfile_name(efile, j, LSA_current_wave_number);
 
   /* determine whether to add steady state mesh displacement
      if there is a mesh displacement field */
   displacement_somewhere = FALSE;
 
-  for (m = 0; m < upd->Num_Mat; m++)
-    displacement_somewhere |= (pd_glob[m]->gv[R_MESH1]);
+  for (m = 0; m < goma_ctx->fem.upd->Num_Mat; m++)
+    displacement_somewhere |= (goma_ctx->fem.pd_glob[m]->gv[R_MESH1]);
 
   if (displacement_somewhere) {
     add_displacement_LSA(xr, passdown.exo, saved_displacement);
@@ -3216,7 +3254,7 @@ void eigenvector_output_conwrap(int j,
 
   /* Write the imag vector using the imag eigenvalue part as the time stamp */
   if (num_soln_flag == 2) {
-    if (j == (eigen->Eigen_Record_Modes - 1)) {
+    if (j == (goma_ctx->fem.eigen->Eigen_Record_Modes - 1)) {
       DPRINTF(stderr, "Not enough modes requested - cannot write imaginary part!");
     } else
 
@@ -3227,7 +3265,7 @@ void eigenvector_output_conwrap(int j,
         add_displacement_LSA(xi, passdown.exo, saved_displacement);
       }
 
-      strcpy(efile, eigen->Eigen_Output_File);
+      strcpy(efile, goma_ctx->fem.eigen->Eigen_Output_File);
       get_eigen_outfile_name(efile, j + 1, LSA_current_wave_number);
       write_solution(efile, passdown.resid_vector, xi, passdown.x_sens_p, passdown.x_old,
                      passdown.xdot, passdown.xdot_old, passdown.tev, passdown.tev_post, passdown.gv,

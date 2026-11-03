@@ -570,9 +570,10 @@ void wr_result_prelim_exo_segregated(struct Results_Description **rd,
   int total_nev = 0;
   int total_nnv = 0;
 
-  for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-    total_nev += rd[pg->imtrx]->nev;
-    total_nnv += rd[pg->imtrx]->nnv;
+  for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+       goma_ctx->fem.pg->imtrx++) {
+    total_nev += rd[goma_ctx->fem.pg->imtrx]->nev;
+    total_nnv += rd[goma_ctx->fem.pg->imtrx]->nnv;
   }
 
   /*
@@ -640,21 +641,22 @@ void wr_result_prelim_exo_segregated(struct Results_Description **rd,
   if (total_nev > 0) {
     error = ex_put_variable_param(exo->exoid, EX_ELEM_BLOCK, total_nev);
     GOMA_EH(error, "ex_put_variable_param elem block");
-    pg->imtrx = 0;
+    goma_ctx->fem.pg->imtrx = 0;
     int count = 0;
     i = 0;
     while (count < total_nev) {
-      while (i >= rd[pg->imtrx]->nev && pg->imtrx < upd->Total_Num_Matrices) {
+      while (i >= rd[goma_ctx->fem.pg->imtrx]->nev &&
+             goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices) {
         i = 0;
-        pg->imtrx++;
+        goma_ctx->fem.pg->imtrx++;
       }
 
-      if (pg->imtrx >= upd->Total_Num_Matrices) {
+      if (goma_ctx->fem.pg->imtrx >= goma_ctx->fem.upd->Total_Num_Matrices) {
         GOMA_EH(GOMA_ERROR, "Error counting element variables");
         return;
       }
 
-      var_names[count] = rd[pg->imtrx]->evname[i];
+      var_names[count] = rd[goma_ctx->fem.pg->imtrx]->evname[i];
       i++;
       count++;
     }
@@ -672,21 +674,22 @@ void wr_result_prelim_exo_segregated(struct Results_Description **rd,
   if (total_nnv > 0) {
     error = ex_put_variable_param(exo->exoid, EX_NODAL, total_nnv);
     GOMA_EH(error, "ex_put_variable_param EX_NODAL");
-    pg->imtrx = 0;
+    goma_ctx->fem.pg->imtrx = 0;
     int count = 0;
     i = 0;
     while (count < total_nnv) {
-      while (i >= rd[pg->imtrx]->nnv && pg->imtrx < upd->Total_Num_Matrices) {
+      while (i >= rd[goma_ctx->fem.pg->imtrx]->nnv &&
+             goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices) {
         i = 0;
-        pg->imtrx++;
+        goma_ctx->fem.pg->imtrx++;
       }
 
-      if (pg->imtrx >= upd->Total_Num_Matrices) {
+      if (goma_ctx->fem.pg->imtrx >= goma_ctx->fem.upd->Total_Num_Matrices) {
         GOMA_EH(GOMA_ERROR, "Error counting nodal variables");
         return;
       }
 
-      var_names[count] = rd[pg->imtrx]->nvname[i];
+      var_names[count] = rd[goma_ctx->fem.pg->imtrx]->nvname[i];
       i++;
       count++;
     }
@@ -905,10 +908,10 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
       if (mat_num < 0) {
         continue;
       }
-      for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+      for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
         for (j = V_FIRST; j < V_LAST; j++) {
-          if (pd_glob[mat_num]->v[imtrx][j] != V_NOTHING) {
-            if (pd_glob[mat_num]->i[imtrx][j] == I_P0) {
+          if (goma_ctx->fem.pd_glob[mat_num]->v[imtrx][j] != V_NOTHING) {
+            if (goma_ctx->fem.pd_glob[mat_num]->i[imtrx][j] == I_P0) {
               if (Num_Var_In_Type[imtrx][j] > 1) {
                 fprintf(stderr,
                         "%s: Too many components in variable type for element variable %s (%s)\n",
@@ -921,7 +924,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
                 exo->truth_table_existance_key[j - V_FIRST] = 1;
               }
             }
-            if (pd_glob[mat_num]->i[imtrx][j] == I_P1) {
+            if (goma_ctx->fem.pd_glob[mat_num]->i[imtrx][j] == I_P1) {
               if (exo->truth_table_existance_key[j - V_FIRST] == 0) {
                 /* We just found a candidate for an element variable */
                 int dofs = getdofs(type2shape(exo->eb_elem_itype[eb_indx]), I_P1);
@@ -935,7 +938,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
       /* Now pick up all the post processing variables for this block
          - yes, for now they must
          each be listed separately and painfully */
-      for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+      for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
         if (ERROR_ZZ_VEL != -1 && Num_Var_In_Type[imtrx][R_MOMENTUM1]) {
           tev++;
           if (ERROR_ZZ_VEL_ELSIZE != -1) {
@@ -950,12 +953,13 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
         }
       }
       check = 0;
-      for (i = 0; i < upd->Num_Mat; i++) {
-        if (pd_glob[i]->MeshMotion == LAGRANGIAN || pd_glob[i]->MeshMotion == DYNAMIC_LAGRANGIAN)
+      for (i = 0; i < goma_ctx->fem.upd->Num_Mat; i++) {
+        if (goma_ctx->fem.pd_glob[i]->MeshMotion == LAGRANGIAN ||
+            goma_ctx->fem.pd_glob[i]->MeshMotion == DYNAMIC_LAGRANGIAN)
           check = 1;
       }
 
-      for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+      for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
         if (ERROR_ZZ_P != -1 && (Num_Var_In_Type[imtrx][R_MOMENTUM1] || check)) {
           tev++;
           if (ERROR_ZZ_P_ELSIZE != -1) {
@@ -967,13 +971,13 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
        * variables, e.g. for saturation hysteresis function
        */
       mat_num = Matilda[eb_indx];
-      mp = mp_glob[mat_num];
+      goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mat_num];
       eb_ptr = Element_Blocks + eb_indx;
       ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
-      if ((mp->PorousMediaType == POROUS_UNSATURATED ||
-           mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
-           mp->PorousMediaType == POROUS_TWO_PHASE) &&
-          mp->SaturationModel == TANH_HYST && !if_ev) {
+      if ((goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+           goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
+           goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) &&
+          goma_ctx->fem.mp->SaturationModel == TANH_HYST && !if_ev) {
         for (j = 0; j < ip_total; j++) {
           if (SAT_CURVE_TYPE != -1)
             tev++; /*For Sat curve type */
@@ -1007,11 +1011,11 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
          for this block */
       mat_num = Matilda[eb_indx];
       ev_indx = 0;
-      for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+      for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
         for (j = V_FIRST; j < V_LAST; j++) {
           found_match = FALSE;
-          if (pd_glob[mat_num]->v[imtrx][j] != V_NOTHING) {
-            if (pd_glob[mat_num]->i[imtrx][j] == I_P0) {
+          if (goma_ctx->fem.pd_glob[mat_num]->v[imtrx][j] != V_NOTHING) {
+            if (goma_ctx->fem.pd_glob[mat_num]->i[imtrx][j] == I_P0) {
               if (Num_Var_In_Type[imtrx][j] > 1) {
                 fprintf(stderr,
                         "%s: Too many components in variable type for element variable %s (%s)\n",
@@ -1032,7 +1036,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
                 asdv(&gvec_elem[eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
               }
             }
-            if (pd_glob[mat_num]->i[imtrx][j] == I_P1) {
+            if (goma_ctx->fem.pd_glob[mat_num]->i[imtrx][j] == I_P1) {
               int dof = getdofs(type2shape(exo->eb_elem_itype[eb_indx]), I_P1);
               /* We just found a candidate for an element variable */
               for (int k = 0; k < dof; k++) {
@@ -1064,7 +1068,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
          - yes, for now they must
          each be listed separately and painfully */
 
-      for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+      for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
         if (ERROR_ZZ_VEL != -1 && Num_Var_In_Type[imtrx][R_MOMENTUM1]) {
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
@@ -1120,13 +1124,13 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
         }
       }
       check = 0;
-      for (iii = 0; iii < upd->Num_Mat; iii++) {
-        if (pd_glob[iii]->MeshMotion == LAGRANGIAN ||
-            pd_glob[iii]->MeshMotion == DYNAMIC_LAGRANGIAN)
+      for (iii = 0; iii < goma_ctx->fem.upd->Num_Mat; iii++) {
+        if (goma_ctx->fem.pd_glob[iii]->MeshMotion == LAGRANGIAN ||
+            goma_ctx->fem.pd_glob[iii]->MeshMotion == DYNAMIC_LAGRANGIAN)
           check = 1;
       }
 
-      for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+      for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
         if (ERROR_ZZ_P != -1 && (Num_Var_In_Type[imtrx][R_MOMENTUM1] || check)) {
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
@@ -1205,8 +1209,9 @@ void create_truth_table_segregated(struct Results_Description **rd,
   static const char yo[] = "create_truth_table";
 
   total_nev = 0;
-  for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-    total_nev += rd[pg->imtrx]->nev;
+  for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+       goma_ctx->fem.pg->imtrx++) {
+    total_nev += rd[goma_ctx->fem.pg->imtrx]->nev;
   }
   tev = 0;
   i = 0;
@@ -1242,11 +1247,13 @@ void create_truth_table_segregated(struct Results_Description **rd,
     if (mat_num < 0) {
       continue;
     }
-    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+    for (goma_ctx->fem.pg->imtrx = 0;
+         goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+         goma_ctx->fem.pg->imtrx++) {
       for (j = V_FIRST; j < V_LAST; j++) {
-        if (pd_glob[mat_num]->v[pg->imtrx][j] != V_NOTHING) {
-          if (pd_glob[mat_num]->i[pg->imtrx][j] == I_P0) {
-            if (Num_Var_In_Type[pg->imtrx][j] > 1) {
+        if (goma_ctx->fem.pd_glob[mat_num]->v[goma_ctx->fem.pg->imtrx][j] != V_NOTHING) {
+          if (goma_ctx->fem.pd_glob[mat_num]->i[goma_ctx->fem.pg->imtrx][j] == I_P0) {
+            if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][j] > 1) {
               fprintf(stderr,
                       "%s: Too many components in variable type for element variable %s (%s)\n", yo,
                       Exo_Var_Names[j].name2, Exo_Var_Names[j].name1);
@@ -1254,10 +1261,10 @@ void create_truth_table_segregated(struct Results_Description **rd,
             }
             if (exo->truth_table_existance_key[j - V_FIRST] == 0) {
               /* We just found a candidate for an element variable */
-              tev += Num_Var_In_Type[pg->imtrx][j];
+              tev += Num_Var_In_Type[goma_ctx->fem.pg->imtrx][j];
               exo->truth_table_existance_key[j - V_FIRST] = 1;
             }
-          } else if (pd_glob[mat_num]->i[pg->imtrx][j] == I_P1) {
+          } else if (goma_ctx->fem.pd_glob[mat_num]->i[goma_ctx->fem.pg->imtrx][j] == I_P1) {
             if (exo->truth_table_existance_key[j - V_FIRST] == 0) {
               /* We just found a candidate for an element variable */
               int dofs = getdofs(type2shape(exo->eb_elem_itype[eb_indx]), I_P1);
@@ -1271,14 +1278,16 @@ void create_truth_table_segregated(struct Results_Description **rd,
     /* Now pick up all the post processing variables for this block
        - yes, for now they must
        each be listed separately and painfully */
-    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-      if (ERROR_ZZ_VEL != -1 && Num_Var_In_Type[pg->imtrx][R_MOMENTUM1]) {
+    for (goma_ctx->fem.pg->imtrx = 0;
+         goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+         goma_ctx->fem.pg->imtrx++) {
+      if (ERROR_ZZ_VEL != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
         tev++;
         if (ERROR_ZZ_VEL_ELSIZE != -1) {
           tev++;
         }
       }
-      if (ERROR_ZZ_Q != -1 && Num_Var_In_Type[pg->imtrx][R_ENERGY]) {
+      if (ERROR_ZZ_Q != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
         tev++;
         if (ERROR_ZZ_Q_ELSIZE != -1) {
           tev++;
@@ -1286,13 +1295,16 @@ void create_truth_table_segregated(struct Results_Description **rd,
       }
     }
     check = 0;
-    for (i = 0; i < upd->Num_Mat; i++) {
-      if (pd_glob[i]->MeshMotion == LAGRANGIAN || pd_glob[i]->MeshMotion == DYNAMIC_LAGRANGIAN)
+    for (i = 0; i < goma_ctx->fem.upd->Num_Mat; i++) {
+      if (goma_ctx->fem.pd_glob[i]->MeshMotion == LAGRANGIAN ||
+          goma_ctx->fem.pd_glob[i]->MeshMotion == DYNAMIC_LAGRANGIAN)
         check = 1;
     }
 
-    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-      if (ERROR_ZZ_P != -1 && (Num_Var_In_Type[pg->imtrx][R_MOMENTUM1] || check)) {
+    for (goma_ctx->fem.pg->imtrx = 0;
+         goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+         goma_ctx->fem.pg->imtrx++) {
+      if (ERROR_ZZ_P != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
         tev++;
         if (ERROR_ZZ_P_ELSIZE != -1) {
           tev++;
@@ -1303,13 +1315,13 @@ void create_truth_table_segregated(struct Results_Description **rd,
      * variables, e.g. for saturation hysteresis function
      */
     mat_num = Matilda[eb_indx];
-    mp = mp_glob[mat_num];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mat_num];
     eb_ptr = Element_Blocks + eb_indx;
     ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
-    if ((mp->PorousMediaType == POROUS_UNSATURATED ||
-         mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
-         mp->PorousMediaType == POROUS_TWO_PHASE) &&
-        mp->SaturationModel == TANH_HYST && !if_ev) {
+    if ((goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+         goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
+         goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) &&
+        goma_ctx->fem.mp->SaturationModel == TANH_HYST && !if_ev) {
       for (j = 0; j < ip_total; j++) {
         if (SAT_CURVE_TYPE != -1)
           tev++; /*For Sat curve type */
@@ -1342,12 +1354,14 @@ void create_truth_table_segregated(struct Results_Description **rd,
        for this block */
     mat_num = Matilda[eb_indx];
     ev_indx = 0;
-    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+    for (goma_ctx->fem.pg->imtrx = 0;
+         goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+         goma_ctx->fem.pg->imtrx++) {
       for (j = V_FIRST; j < V_LAST; j++) {
         found_match = FALSE;
-        if (pd_glob[mat_num]->v[pg->imtrx][j] != V_NOTHING) {
-          if (pd_glob[mat_num]->i[pg->imtrx][j] == I_P0) {
-            if (Num_Var_In_Type[pg->imtrx][j] > 1) {
+        if (goma_ctx->fem.pd_glob[mat_num]->v[goma_ctx->fem.pg->imtrx][j] != V_NOTHING) {
+          if (goma_ctx->fem.pd_glob[mat_num]->i[goma_ctx->fem.pg->imtrx][j] == I_P0) {
+            if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][j] > 1) {
               fprintf(stderr,
                       "%s: Too many components in variable type for element variable %s (%s)\n", yo,
                       Exo_Var_Names[j].name2, Exo_Var_Names[j].name1);
@@ -1364,9 +1378,10 @@ void create_truth_table_segregated(struct Results_Description **rd,
                  is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                  and hence create_truth_table, which would realloc this dim of gvec_elem.
                  this test will prevent that. - RRL */
-              asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
+              asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
+                   exo->eb_num_elems[eb_indx]);
             }
-          } else if (pd_glob[mat_num]->i[pg->imtrx][j] == I_P1) {
+          } else if (goma_ctx->fem.pd_glob[mat_num]->i[goma_ctx->fem.pg->imtrx][j] == I_P1) {
             int dof = getdofs(type2shape(exo->eb_elem_itype[eb_indx]), I_P1);
             /* We just found a candidate for an element variable */
             for (int k = 0; k < dof; k++) {
@@ -1381,7 +1396,8 @@ void create_truth_table_segregated(struct Results_Description **rd,
                    is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                    and hence create_truth_table, which would realloc this dim of gvec_elem.
                    this test will prevent that. - RRL */
-                asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
+                asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
+                     exo->eb_num_elems[eb_indx]);
               }
             }
           }
@@ -1396,8 +1412,10 @@ void create_truth_table_segregated(struct Results_Description **rd,
        - yes, for now they must
        each be listed separately and painfully */
 
-    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-      if (ERROR_ZZ_VEL != -1 && Num_Var_In_Type[pg->imtrx][R_MOMENTUM1]) {
+    for (goma_ctx->fem.pg->imtrx = 0;
+         goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+         goma_ctx->fem.pg->imtrx++) {
+      if (ERROR_ZZ_VEL != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
         /* malloc the entry for this block by number of elems for this block
@@ -1407,7 +1425,8 @@ void create_truth_table_segregated(struct Results_Description **rd,
              is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
              and hence create_truth_table, which would realloc this dim of gvec_elem.
              this test will prevent that. - RRL */
-          asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
+          asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
+               exo->eb_num_elems[eb_indx]);
         }
         if (ERROR_ZZ_VEL_ELSIZE != -1) {
           exo->elem_var_tab[i++] = 1;
@@ -1419,12 +1438,13 @@ void create_truth_table_segregated(struct Results_Description **rd,
                is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                and hence create_truth_table, which would realloc this dim of gvec_elem.
                this test will prevent that. - RRL */
-            asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
+            asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
+                 exo->eb_num_elems[eb_indx]);
           }
         }
       }
 
-      if (ERROR_ZZ_Q != -1 && Num_Var_In_Type[pg->imtrx][R_ENERGY]) {
+      if (ERROR_ZZ_Q != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
         /* malloc the entry for this block by number of elems for this block
@@ -1434,7 +1454,8 @@ void create_truth_table_segregated(struct Results_Description **rd,
              is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
              and hence create_truth_table, which would realloc this dim of gvec_elem.
              this test will prevent that. - RRL */
-          asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
+          asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
+               exo->eb_num_elems[eb_indx]);
         }
         if (ERROR_ZZ_Q_ELSIZE != -1) {
           exo->elem_var_tab[i++] = 1;
@@ -1446,19 +1467,23 @@ void create_truth_table_segregated(struct Results_Description **rd,
                is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                and hence create_truth_table, which would realloc this dim of gvec_elem.
                this test will prevent that. - RRL */
-            asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
+            asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
+                 exo->eb_num_elems[eb_indx]);
           }
         }
       }
     }
     check = 0;
-    for (iii = 0; iii < upd->Num_Mat; iii++) {
-      if (pd_glob[iii]->MeshMotion == LAGRANGIAN || pd_glob[iii]->MeshMotion == DYNAMIC_LAGRANGIAN)
+    for (iii = 0; iii < goma_ctx->fem.upd->Num_Mat; iii++) {
+      if (goma_ctx->fem.pd_glob[iii]->MeshMotion == LAGRANGIAN ||
+          goma_ctx->fem.pd_glob[iii]->MeshMotion == DYNAMIC_LAGRANGIAN)
         check = 1;
     }
 
-    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-      if (ERROR_ZZ_P != -1 && (Num_Var_In_Type[pg->imtrx][R_MOMENTUM1] || check)) {
+    for (goma_ctx->fem.pg->imtrx = 0;
+         goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+         goma_ctx->fem.pg->imtrx++) {
+      if (ERROR_ZZ_P != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
         /* malloc the entry for this block by number of elems for this block
@@ -1468,7 +1493,8 @@ void create_truth_table_segregated(struct Results_Description **rd,
              is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
              and hence create_truth_table, which would realloc this dim of gvec_elem.
              this test will prevent that. - RRL */
-          asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
+          asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
+               exo->eb_num_elems[eb_indx]);
         }
         if (ERROR_ZZ_P_ELSIZE != -1) {
           exo->elem_var_tab[i++] = 1;
@@ -1480,7 +1506,8 @@ void create_truth_table_segregated(struct Results_Description **rd,
                is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                and hence create_truth_table, which would realloc this dim of gvec_elem.
                this test will prevent that. - RRL */
-            asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
+            asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
+                 exo->eb_num_elems[eb_indx]);
             has_been_called++;
           }
         }
@@ -1497,17 +1524,20 @@ void create_truth_table_segregated(struct Results_Description **rd,
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
         if (has_been_called == 0) {
-          asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
+          asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
+               exo->eb_num_elems[eb_indx]);
         }
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
         if (has_been_called == 0) {
-          asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
+          asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
+               exo->eb_num_elems[eb_indx]);
         }
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
         if (has_been_called == 0) {
-          asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
+          asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
+               exo->eb_num_elems[eb_indx]);
         }
       }
     }

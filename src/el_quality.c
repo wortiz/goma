@@ -118,41 +118,45 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
   DPRINTF(stderr, "\n ELEMENT QUALITY METRIC         AVG              MIN\n");
 
   /* Compute each requested metric */
-  if (eqm->do_jac) {
+  if (goma_ctx->fem.eqm->do_jac) {
     mavg = jacobian_metric(exo, x, proc_config);
-    DPRINTF(stderr, "               Jacobian         %8g         %8g\n", mavg, eqm->eq_jac);
-    tavg += eqm->wt_jac * mavg;
-    wt_min += eqm->wt_jac * eqm->eq_jac;
-    wt_sum += eqm->wt_jac;
-    if (eqm->eq_jac < qmin)
-      qmin = eqm->eq_jac;
+    DPRINTF(stderr, "               Jacobian         %8g         %8g\n", mavg,
+            goma_ctx->fem.eqm->eq_jac);
+    tavg += goma_ctx->fem.eqm->wt_jac * mavg;
+    wt_min += goma_ctx->fem.eqm->wt_jac * goma_ctx->fem.eqm->eq_jac;
+    wt_sum += goma_ctx->fem.eqm->wt_jac;
+    if (goma_ctx->fem.eqm->eq_jac < qmin)
+      qmin = goma_ctx->fem.eqm->eq_jac;
   }
-  if (eqm->do_vol && !first_call) {
+  if (goma_ctx->fem.eqm->do_vol && !first_call) {
     mavg = volume_metric(proc_config);
-    DPRINTF(stderr, "               Volume change    %8g         %8g\n", mavg, eqm->eq_vol);
-    tavg += eqm->wt_vol * mavg;
-    wt_min += eqm->wt_vol * eqm->eq_vol;
-    wt_sum += eqm->wt_vol;
-    if (eqm->eq_vol < qmin)
-      qmin = eqm->eq_vol;
+    DPRINTF(stderr, "               Volume change    %8g         %8g\n", mavg,
+            goma_ctx->fem.eqm->eq_vol);
+    tavg += goma_ctx->fem.eqm->wt_vol * mavg;
+    wt_min += goma_ctx->fem.eqm->wt_vol * goma_ctx->fem.eqm->eq_vol;
+    wt_sum += goma_ctx->fem.eqm->wt_vol;
+    if (goma_ctx->fem.eqm->eq_vol < qmin)
+      qmin = goma_ctx->fem.eqm->eq_vol;
   }
-  if (eqm->do_ang) {
+  if (goma_ctx->fem.eqm->do_ang) {
     mavg = angle_metric(exo, x, proc_config);
-    DPRINTF(stderr, "               Angle            %8g         %8g\n", mavg, eqm->eq_ang);
-    tavg += eqm->wt_ang * mavg;
-    wt_min += eqm->wt_ang * eqm->eq_ang;
-    wt_sum += eqm->wt_ang;
-    if (eqm->eq_ang < qmin)
-      qmin = eqm->eq_ang;
+    DPRINTF(stderr, "               Angle            %8g         %8g\n", mavg,
+            goma_ctx->fem.eqm->eq_ang);
+    tavg += goma_ctx->fem.eqm->wt_ang * mavg;
+    wt_min += goma_ctx->fem.eqm->wt_ang * goma_ctx->fem.eqm->eq_ang;
+    wt_sum += goma_ctx->fem.eqm->wt_ang;
+    if (goma_ctx->fem.eqm->eq_ang < qmin)
+      qmin = goma_ctx->fem.eqm->eq_ang;
   }
-  if (eqm->do_tri) {
+  if (goma_ctx->fem.eqm->do_tri) {
     mavg = triangle_metric(exo, x, proc_config);
-    DPRINTF(stderr, "               Triangle         %8g         %8g\n", mavg, eqm->eq_tri);
-    tavg += eqm->wt_tri * mavg;
-    wt_min += eqm->wt_tri * eqm->eq_tri;
-    wt_sum += eqm->wt_tri;
-    if (eqm->eq_tri < qmin)
-      qmin = eqm->eq_tri;
+    DPRINTF(stderr, "               Triangle         %8g         %8g\n", mavg,
+            goma_ctx->fem.eqm->eq_tri);
+    tavg += goma_ctx->fem.eqm->wt_tri * mavg;
+    wt_min += goma_ctx->fem.eqm->wt_tri * goma_ctx->fem.eqm->eq_tri;
+    wt_sum += goma_ctx->fem.eqm->wt_tri;
+    if (goma_ctx->fem.eqm->eq_tri < qmin)
+      qmin = goma_ctx->fem.eqm->eq_tri;
   }
 
   /* Combined metric based on each requested method */
@@ -164,17 +168,17 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
   }
 
   /* Assign quality value according to specified tolerance type */
-  if (eqm->tol_type == EQM_AVG) {
+  if (goma_ctx->fem.eqm->tol_type == EQM_AVG) {
     quality = tavg;
-  } else if (eqm->tol_type == EQM_JAC && eqm->do_jac) {
-    quality = eqm->eq_jac;
-  } else if (eqm->tol_type == EQM_VOL && eqm->do_vol) {
-    quality = eqm->eq_vol;
-  } else if (eqm->tol_type == EQM_ANG && eqm->do_ang) {
-    quality = eqm->eq_ang;
-  } else if (eqm->tol_type == EQM_TRI && eqm->do_tri) {
-    quality = eqm->eq_tri;
-  } else if (eqm->tol_type == EQM_WTMIN) {
+  } else if (goma_ctx->fem.eqm->tol_type == EQM_JAC && goma_ctx->fem.eqm->do_jac) {
+    quality = goma_ctx->fem.eqm->eq_jac;
+  } else if (goma_ctx->fem.eqm->tol_type == EQM_VOL && goma_ctx->fem.eqm->do_vol) {
+    quality = goma_ctx->fem.eqm->eq_vol;
+  } else if (goma_ctx->fem.eqm->tol_type == EQM_ANG && goma_ctx->fem.eqm->do_ang) {
+    quality = goma_ctx->fem.eqm->eq_ang;
+  } else if (goma_ctx->fem.eqm->tol_type == EQM_TRI && goma_ctx->fem.eqm->do_tri) {
+    quality = goma_ctx->fem.eqm->eq_tri;
+  } else if (goma_ctx->fem.eqm->tol_type == EQM_WTMIN) {
     quality = wt_min;
   } else {
     quality = qmin;
@@ -182,8 +186,8 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
 
   /* Check quality against tolerance and return */
   first_call = FALSE;
-  if (quality < eqm->eq_tol) {
-    DPRINTF(stderr, "Element quality below tolerance of %g\n", eqm->eq_tol);
+  if (quality < goma_ctx->fem.eqm->eq_tol) {
+    DPRINTF(stderr, "Element quality below tolerance of %g\n", goma_ctx->fem.eqm->eq_tol);
     DPRINTF(stderr, "\tREMESHING IS REQUIRED!\n");
     return (FALSE);
   } else {
@@ -212,17 +216,19 @@ static double jacobian_metric(Exo_DB *exo, double *x, int *proc_config) {
   for (ielem = e_start; ielem < e_end; ielem++) {
 
     /* Set up ei pointers and get node coordinates */
-    bd = ((pd->e[pg->imtrx][R_MESH1]) ? bf[R_MESH1] : bf[pd->ShapeVar]);
-    load_ei(ielem, exo, 0, pg->imtrx);
-    ngp = elem_info(NQUAD, ei[pg->imtrx]->ielem_type);
-    dofs = ei[pg->imtrx]->dof[pd->ShapeVar];
+    bd = ((goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1])
+              ? goma_ctx->fem.bf[R_MESH1]
+              : goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]);
+    load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
+    ngp = elem_info(NQUAD, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[goma_ctx->fem.pd->ShapeVar];
     load_vertex_xy(exo, ielem, dofs, x, xy);
     store_shape = bd->element_shape;
 
     /* Loop over Gauss quadrature points */
-    if (ei[pg->imtrx]->ielem_dim == 2) {
-      if (bd->element_shape != ei[pg->imtrx]->ielem_shape) {
-        bd->element_shape = ei[pg->imtrx]->ielem_shape;
+    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim == 2) {
+      if (bd->element_shape != goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape) {
+        bd->element_shape = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape;
       }
       Jw_sum = 0.0;
       Jw_min = 99999.9;
@@ -233,9 +239,10 @@ static double jacobian_metric(Exo_DB *exo, double *x, int *proc_config) {
         dj01 = 0.0;
         dj10 = 0.0;
         dj11 = 0.0;
-        find_stu(igp, ei[pg->imtrx]->ielem_type, &xi[0], &xi[1], &xi[2]);
-        load_basis_functions(xi, bfd);
-        gwt = Gq_weight(igp, ei[pg->imtrx]->ielem_type);
+        find_stu(igp, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, &xi[0], &xi[1],
+                 &xi[2]);
+        load_basis_functions(xi, goma_ctx->fem.bfd);
+        gwt = Gq_weight(igp, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
 
         /* Sum components of elemental Jacobian */
         for (k = 0; k < dofs; k++) {
@@ -274,7 +281,7 @@ static double jacobian_metric(Exo_DB *exo, double *x, int *proc_config) {
     eqmin = goma_gmin_double(eqmin);
   }
   eqavg = eqsum / els;
-  eqm->eq_jac = eqmin;
+  goma_ctx->fem.eqm->eq_jac = eqmin;
   return eqavg;
 } /* End of function jacobian_metric */
 
@@ -284,17 +291,17 @@ static double volume_metric(int *proc_config)
  * Now, just do parallel processing and report back.
  */
 {
-  double points = (int)eqm->vol_count;
-  double sum = eqm->vol_sum;
-  double low = eqm->vol_low;
+  double points = (int)goma_ctx->fem.eqm->vol_count;
+  double sum = goma_ctx->fem.eqm->vol_sum;
+  double low = goma_ctx->fem.eqm->vol_low;
 
   if (goma_ctx->num_proc > 1) {
-    points = (int)goma_gsum_int(eqm->vol_count);
-    sum = goma_gsum_double(eqm->vol_sum);
-    low = goma_gmin_double(eqm->vol_low);
+    points = (int)goma_gsum_int(goma_ctx->fem.eqm->vol_count);
+    sum = goma_gsum_double(goma_ctx->fem.eqm->vol_sum);
+    low = goma_gmin_double(goma_ctx->fem.eqm->vol_low);
   }
 
-  eqm->eq_vol = low;
+  goma_ctx->fem.eqm->eq_vol = low;
 
   if (points == 0.0) {
     return -1.0;
@@ -369,7 +376,7 @@ static double angle_metric(Exo_DB *exo, double *x, int *proc_config) {
 
   /* Set quality to -1 if a bad element (angle over 180 degrees) was found */
   if (bad_elem)
-    eqm->eq_ang = -1.0;
+    goma_ctx->fem.eqm->eq_ang = -1.0;
 
   /* Return results */
   els = (double)(e_end - e_start);
@@ -380,7 +387,7 @@ static double angle_metric(Exo_DB *exo, double *x, int *proc_config) {
   }
   eqavg = eqsum / els;
   if (!bad_elem)
-    eqm->eq_ang = eqmin;
+    goma_ctx->fem.eqm->eq_ang = eqmin;
 
   safer_free((void **)&xy);
   return eqavg;
@@ -474,7 +481,7 @@ static double triangle_metric(Exo_DB *exo, double *x, int *proc_config) {
 
   /* Set quality to -1 if a bad element (angle over 180 degrees) was found */
   if (bad_elem)
-    eqm->eq_tri = -1.0;
+    goma_ctx->fem.eqm->eq_tri = -1.0;
 
   /* Return results */
   els = (double)(e_end - e_start);
@@ -485,7 +492,7 @@ static double triangle_metric(Exo_DB *exo, double *x, int *proc_config) {
   }
   eqavg = eqsum / els;
   if (!bad_elem)
-    eqm->eq_tri = eqmin;
+    goma_ctx->fem.eqm->eq_tri = eqmin;
 
   safer_free((void **)&xy);
   return eqavg;
@@ -495,18 +502,20 @@ static void load_vertex_xy(Exo_DB *exo, int ielem, int dofs, double *x, double *
   int node, i, k, index, nd;
   int DM = FALSE;
 
-  load_ei(ielem, exo, 0, pg->imtrx);
-  DM = (pd_glob[ei[pg->imtrx]->mn]->e[pg->imtrx][R_MESH1]);
-  for (i = 0; i < pd->Num_Dim; i++) {
+  load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
+  DM = (goma_ctx->fem.pd_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]
+            ->e[goma_ctx->fem.pg->imtrx][R_MESH1]);
+  for (i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
     for (k = 0; k < dofs; k++) {
       if (DM) {
-        node = ei[pg->imtrx]->dof_list[R_MESH1 + i][k];
+        node = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[R_MESH1 + i][k];
         index = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ielem] + node];
-        nd = Index_Solution(index, MESH_DISPLACEMENT1 + i, 0, 0, ei[pg->imtrx]->mn, pg->imtrx);
+        nd = Index_Solution(index, MESH_DISPLACEMENT1 + i, 0, 0,
+                            goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn, goma_ctx->fem.pg->imtrx);
         GOMA_EH(nd, "Bad displacement unknown index!");
         xy[i][k] = goma_ctx->mesh.coor[i][index] + x[nd];
       } else {
-        node = ei[pg->imtrx]->dof_list[pd->ShapeVar][k];
+        node = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[goma_ctx->fem.pd->ShapeVar][k];
         index = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ielem] + node];
         xy[i][k] = goma_ctx->mesh.coor[i][index];
       }

@@ -111,7 +111,7 @@ static void associate_bc_to_matrix(void) {
   int imtrx;
   int mn;
 
-  if (upd->Total_Num_Matrices == 1) {
+  if (goma_ctx->fem.upd->Total_Num_Matrices == 1) {
     /* Preserve legacy behavior */
     for (ibc = 0; ibc < Num_BC; ibc++) {
 
@@ -128,9 +128,9 @@ static void associate_bc_to_matrix(void) {
       BC_Types[ibc].matrix = -1;
 
       if (eqn >= V_FIRST && eqn < V_LAST) {
-        for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-          for (mn = 0; mn < upd->Num_Mat; mn++) {
-            if (pd_glob[mn]->e[imtrx][eqn]) {
+        for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+          for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+            if (goma_ctx->fem.pd_glob[mn]->e[imtrx][eqn]) {
               BC_Types[ibc].matrix = imtrx;
             }
           }
@@ -152,35 +152,35 @@ void set_matrix_index_and_global_v(void) {
   int imtrx;
 
   /* Initialize matrix indices */
-  for (mn = 0; mn < upd->Num_Mat; mn++) {
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
     for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
-      pd_glob[mn]->mi[i] = -1;
-      upd->matrix_index[i] = -1;
+      goma_ctx->fem.pd_glob[mn]->mi[i] = -1;
+      goma_ctx->fem.upd->matrix_index[i] = -1;
     }
   }
 
-  for (mn = 0; mn < upd->Num_Mat; mn++) {
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
-        if (pd_glob[mn]->v[imtrx][i]) {
-          pd_glob[mn]->mi[i] = imtrx;
-          upd->matrix_index[i] = imtrx;
+        if (goma_ctx->fem.pd_glob[mn]->v[imtrx][i]) {
+          goma_ctx->fem.pd_glob[mn]->mi[i] = imtrx;
+          goma_ctx->fem.upd->matrix_index[i] = imtrx;
         }
       }
     }
   }
 
-  for (mn = 0; mn < upd->Num_Mat; mn++) {
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
     for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
-      pd_glob[mn]->gv[i] = 0;
+      goma_ctx->fem.pd_glob[mn]->gv[i] = 0;
     }
   }
 
-  for (mn = 0; mn < upd->Num_Mat; mn++) {
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
-        if (pd_glob[mn]->v[imtrx][i]) {
-          pd_glob[mn]->gv[i] = 1;
+        if (goma_ctx->fem.pd_glob[mn]->v[imtrx][i]) {
+          goma_ctx->fem.pd_glob[mn]->gv[i] = 1;
         }
       }
     }
@@ -366,19 +366,23 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    *  if necessary
    */
   if (goma_ctx->debug_flag) {
-    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-      print_setup_Surf_BC(First_Elem_Side_BC_Array[pg->imtrx]);
+    for (goma_ctx->fem.pg->imtrx = 0;
+         goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+         goma_ctx->fem.pg->imtrx++) {
+      print_setup_Surf_BC(First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx]);
     }
   }
 
   /*
    *  Malloc structures of size Num_Var_Info_Records
    */
-  for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-    ei[pg->imtrx]->VDindex_to_Lvdesc = alloc_int_1(Num_Var_Info_Records, -1);
+  for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+       goma_ctx->fem.pg->imtrx++) {
+    goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->VDindex_to_Lvdesc =
+        alloc_int_1(Num_Var_Info_Records, -1);
   }
   for (i = 0; i < MAX_ELEMENT_INDICES_RELATED; i++) {
-    eiRelated[i]->VDindex_to_Lvdesc = alloc_int_1(Num_Var_Info_Records, -1);
+    goma_ctx->fem.ei_related[i]->VDindex_to_Lvdesc = alloc_int_1(Num_Var_Info_Records, -1);
   }
 
   /*
@@ -396,27 +400,30 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
   /* Communicate non-shared but needed BC information */
   exchange_bc_info();
 
-  lec->max_dof = 0;
+  goma_ctx->fem.lec->max_dof = 0;
   int e_start = exo->eb_ptr[0];
   int e_end = exo->eb_ptr[exo->num_elem_blocks];
 
-  for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (int ielem = e_start; ielem < e_end; ielem++) {
       load_ei(ielem, exo, 0, imtrx);
       for (int v = V_FIRST; v < V_LAST; v++) {
-        if (lec->max_dof < ei[imtrx]->dof[v]) {
-          lec->max_dof = ei[imtrx]->dof[v];
+        if (goma_ctx->fem.lec->max_dof < goma_ctx->fem.ei[imtrx]->dof[v]) {
+          goma_ctx->fem.lec->max_dof = goma_ctx->fem.ei[imtrx]->dof[v];
         }
       }
     }
   }
 
-  lec->R = (dbl *)smalloc(MAX_LOCAL_VAR_DESC * lec->max_dof * sizeof(dbl));
-  lec->J = (dbl *)smalloc(MAX_LOCAL_VAR_DESC * MAX_LOCAL_VAR_DESC * lec->max_dof * lec->max_dof *
-                          sizeof(dbl));
-  lec->J_stress_neighbor =
-      (dbl *)smalloc(4 * lec->max_dof * MAX_LOCAL_VAR_DESC * lec->max_dof * sizeof(dbl));
-  pd = pd_glob[0]; // issues if not set currently
+  goma_ctx->fem.lec->R =
+      (dbl *)smalloc(MAX_LOCAL_VAR_DESC * goma_ctx->fem.lec->max_dof * sizeof(dbl));
+  goma_ctx->fem.lec->J =
+      (dbl *)smalloc(MAX_LOCAL_VAR_DESC * MAX_LOCAL_VAR_DESC * goma_ctx->fem.lec->max_dof *
+                     goma_ctx->fem.lec->max_dof * sizeof(dbl));
+  goma_ctx->fem.lec->J_stress_neighbor =
+      (dbl *)smalloc(4 * goma_ctx->fem.lec->max_dof * MAX_LOCAL_VAR_DESC *
+                     goma_ctx->fem.lec->max_dof * sizeof(dbl));
+  goma_ctx->fem.pd = goma_ctx->fem.pd_glob[0]; // issues if not set currently
   return 0;
 }
 /************************************************************************/
@@ -575,8 +582,8 @@ int coordinate_discontinuous_variables(Exo_DB *exo, Dpi *dpi)
                */
               for (imat = 0; imat < num_mat; imat++) {
                 mat_index = (curr_mat_list->List)[imat];
-                curr_pd = pd_glob[mat_index];
-                for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+                curr_pd = goma_ctx->fem.pd_glob[mat_index];
+                for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
                   if (eqn_type == R_MOMENTUM1) {
                     turn_on_discontinuous(curr_pd, R_MOMENTUM1, imtrx);
                     turn_on_discontinuous(curr_pd, R_MOMENTUM2, imtrx);
@@ -607,9 +614,9 @@ int coordinate_discontinuous_variables(Exo_DB *exo, Dpi *dpi)
    */
 #ifdef PARALLEL
   ivec = alloc_int_1(V_LAST, 0);
-  for (imat = 0; imat < upd->Num_Mat; imat++) {
-    curr_pd = pd_glob[imat];
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imat = 0; imat < goma_ctx->fem.upd->Num_Mat; imat++) {
+    curr_pd = goma_ctx->fem.pd_glob[imat];
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       for (k = 0; k < V_LAST; k++) {
         ivec[k] = curr_pd->v[imtrx][k];
       }
@@ -702,7 +709,7 @@ static void bc_matrl_index_print(struct Boundary_Condition *bc_ptr,
   printf("\tbc_matrl_index statistics for ibc = %d on Proc %d:\n", ibc, goma_ctx->proc_id);
   printf("\t  Matrl_index    bin_matrl    [bin_matrl_elem]\n");
   printf("\t===================================================\n");
-  for (i = 0; i < upd->Num_Mat; i++) {
+  for (i = 0; i < goma_ctx->fem.upd->Num_Mat; i++) {
     printf("\t %6d            %6d ", i, bin_matrl[i]);
     if (!strcmp(bc_ptr->Set_Type, "SS")) {
       printf("      %6d", bin_matrl_elem[i]);
@@ -900,9 +907,9 @@ void bc_matrl_index(Exo_DB *exo)
   struct Boundary_Condition *bc_ptr;
   static char *yo = "bc_matrl_index :";
 
-  bin_matrl = alloc_int_1(upd->Num_Mat * 4, INT_NOINIT);
-  ind_matrl = bin_matrl + upd->Num_Mat;
-  bin_matrl_elem = ind_matrl + upd->Num_Mat;
+  bin_matrl = alloc_int_1(goma_ctx->fem.upd->Num_Mat * 4, INT_NOINIT);
+  ind_matrl = bin_matrl + goma_ctx->fem.upd->Num_Mat;
+  bin_matrl_elem = ind_matrl + goma_ctx->fem.upd->Num_Mat;
   node_flag_1ss = alloc_int_1(exo->num_nodes, INT_NOINIT);
 
   for (ibc = 0; ibc < Num_BC; ibc++) {
@@ -953,7 +960,7 @@ void bc_matrl_index(Exo_DB *exo)
     /*
      * Initialize quantities
      */
-    for (i = 0; i < 4 * upd->Num_Mat; i++)
+    for (i = 0; i < 4 * goma_ctx->fem.upd->Num_Mat; i++)
       bin_matrl[i] = 0;
     for (i = 0; i < exo->num_nodes; i++)
       node_flag_1ss[i] = 0;
@@ -1113,7 +1120,7 @@ void bc_matrl_index(Exo_DB *exo)
      */
 
     if (found && n_flagged_nodes > 0) {
-      matrl_first = find_next_max(bin_matrl, ind_matrl, upd->Num_Mat);
+      matrl_first = find_next_max(bin_matrl, ind_matrl, goma_ctx->fem.upd->Num_Mat);
       success = assign_matrl_2(bc_ptr, matrl_first);
       if (success < 0) {
         printf("%s P_%d: problem in assigning first matrl index in ibc %d, %d:\n", yo,
@@ -1121,7 +1128,7 @@ void bc_matrl_index(Exo_DB *exo)
         bc_matrl_index_print(bc_ptr, bin_matrl, bin_matrl_elem, min_node_matrl, max_node_matrl,
                              node_matrl_1, node_matrl_2, node_matrl_3, node_matrl_4, ibc);
       }
-      matrl_first = find_next_max(bin_matrl, ind_matrl, upd->Num_Mat);
+      matrl_first = find_next_max(bin_matrl, ind_matrl, goma_ctx->fem.upd->Num_Mat);
       if (matrl_first >= 0) {
         success = assign_matrl_2(bc_ptr, matrl_first);
         if (success < 0) {

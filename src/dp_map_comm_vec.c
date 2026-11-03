@@ -160,7 +160,7 @@ void setup_nodal_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
   exchange_neighbor_proc_info(dpi->num_neighbors, np_base);
 
   for (p = 0; p < dpi->num_neighbors; p++) {
-    for (int imtrx = 1; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (int imtrx = 1; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       cx[imtrx][p].neighbor_name = cx[0][p].neighbor_name;
       cx[imtrx][p].num_nodes_recv = cx[0][p].num_nodes_recv;
       cx[imtrx][p].num_nodes_send = cx[0][p].num_nodes_send;
@@ -347,12 +347,12 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    * Gather the frequency profile of requested dofs for each external
    * processor. Look through every external node.
    */
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (p = 0; p < dpi->num_neighbors; p++) {
       cx[imtrx][p].num_dofs_recv = 0;
     }
   }
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < dpi->num_external_nodes; i++) {
       local_node_number = dpi->num_internal_nodes + dpi->num_boundary_nodes + i;
       owner = dpi->node_owner[local_node_number];
@@ -368,7 +368,7 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    *
    */
   for (p = 0; p < dpi->num_neighbors; p++) {
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       cx[imtrx][p].num_dofs_send = 0;
       for (i = ptr_node_send[p]; i < ptr_node_send[p + 1]; i++) {
         local_node_number = list_node_send[i];
@@ -384,8 +384,8 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    *
    *    ptr_dof_send[] gets allocated here, and is never freed.
    */
-  ptr_dof_send = malloc(sizeof(int *) * upd->Total_Num_Matrices);
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  ptr_dof_send = malloc(sizeof(int *) * goma_ctx->fem.upd->Total_Num_Matrices);
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     ptr_dof_send[imtrx] = alloc_int_1(dpi->num_neighbors + 1, 0);
     for (p = 0; p < dpi->num_neighbors; p++) {
       ptr_dof_send[imtrx][p + 1] = ptr_dof_send[imtrx][p] + cx[imtrx][p].num_dofs_send;
@@ -401,14 +401,14 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    *
    *     list_dof_send[] is allocated here, and is never freed.
    */
-  list_dof_send = malloc(sizeof(int *) * upd->Total_Num_Matrices);
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  list_dof_send = malloc(sizeof(int *) * goma_ctx->fem.upd->Total_Num_Matrices);
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     if (ptr_dof_send[imtrx][dpi->num_neighbors] > 0) {
       list_dof_send[imtrx] = alloc_int_1(ptr_dof_send[imtrx][dpi->num_neighbors], -1);
     }
   }
 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     index = 0;
     for (i = 0; i < ptr_node_send[dpi->num_neighbors]; i++) {
       local_node_number = list_node_send[i];
@@ -520,7 +520,7 @@ void output_comm_stats(Dpi *dpi, Comm_Ex **cx)
   gmin_neighbor = gminloc_int(dpi->num_neighbors, goma_ctx->proc_id, &gmin_neighbor_proc);
   gavg_neighbor = gavg_double((double)dpi->num_neighbors);
 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (p = 0; p < dpi->num_neighbors; p++) {
       max_mesg = MAX(max_mesg, cx[imtrx][p].num_dofs_send);
       min_mesg = MIN(min_mesg, cx[imtrx][p].num_dofs_send);

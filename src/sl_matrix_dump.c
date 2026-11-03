@@ -119,7 +119,7 @@ get_columnNodeList_msr(const double *a, const int *ija, const int ieqn, UMI_LIST
   /*
    * Add the diagonal term
    */
-  vd = Index_Solution_Inv(ieqn, &inode, NULL, NULL, NULL, pg->imtrx);
+  vd = Index_Solution_Inv(ieqn, &inode, NULL, NULL, NULL, goma_ctx->fem.pg->imtrx);
   add_to_umi_int_list(ls_ptr, inode);
   /*
    * Loop through all of the individual terms for the current equation
@@ -127,7 +127,7 @@ get_columnNodeList_msr(const double *a, const int *ija, const int ieqn, UMI_LIST
    */
   for (j = ija[ieqn]; j < ija[ieqn + 1]; j++) {
     ieqnCol = ija[j];
-    vd = Index_Solution_Inv(ieqnCol, &inode, NULL, NULL, NULL, pg->imtrx);
+    vd = Index_Solution_Inv(ieqnCol, &inode, NULL, NULL, NULL, goma_ctx->fem.pg->imtrx);
     add_to_umi_int_list(ls_ptr, inode);
   }
   return ls_ptr->Length;
@@ -418,14 +418,14 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
          *  -> Let's compare against First_Unknown[pg->imtrx] in the node structure
          *     to be sure everything is OK.
          */
-        ieqn_row = node->First_Unknown[pg->imtrx];
+        ieqn_row = node->First_Unknown[goma_ctx->fem.pg->imtrx];
 
         /*
          *  m1 = number of rows in the current row block This is equal
          *  to num_unknonws_node, the number of unknowns located at the
          *  current node.
          */
-        num_unknowns_node = (int)node->Nodal_Vars_Info[pg->imtrx]->Num_Unknowns;
+        num_unknowns_node = (int)node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx]->Num_Unknowns;
 
         /*
          *  Determine the total number of nonzero block columns for the
@@ -454,7 +454,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
           nodeC = Nodes[jblk];
           gNodeS[j] = nodeC->Global_Node_Num;
           iorder[j] = j;
-          n1 = nodeC->Nodal_Vars_Info[pg->imtrx]->Num_Unknowns;
+          n1 = nodeC->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx]->Num_Unknowns;
           blkMatrix[j] = alloc_dbl_1(num_unknowns_node * n1, 0.0);
         }
 
@@ -478,7 +478,8 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
           inode = iblk_row;
           for (j = ija[ieqn]; j < ija[ieqn + 1]; j++) {
             ieqnCol = ija[j];
-            vdC = Index_Solution_Inv(ieqnCol, &inode, NULL, &joffset, NULL, pg->imtrx);
+            vdC =
+                Index_Solution_Inv(ieqnCol, &inode, NULL, &joffset, NULL, goma_ctx->fem.pg->imtrx);
             icol = bin_search_max(col_list_umi.List, num_cols, inode);
             a_blk = blkMatrix[icol];
             a_blk[i + joffset * num_unknowns_node] = a[j];
@@ -541,7 +542,8 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
          *    variable type, sub_variable type, and checking the node number.
          */
         for (i = 0; i < num_unknowns_node; i++) {
-          vdT = Index_Solution_Inv(ieqn, &inode, &i_Var_Desc, &i_offset, &idof, pg->imtrx);
+          vdT = Index_Solution_Inv(ieqn, &inode, &i_Var_Desc, &i_offset, &idof,
+                                   goma_ctx->fem.pg->imtrx);
           nodeT = Nodes[inode];
           /*
            * Output specific information about the variable
@@ -595,13 +597,13 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
            *  Calculate the equation number for the first unknown
            *  in the current block column
            */
-          ib1 = nodeC->First_Unknown[pg->imtrx];
+          ib1 = nodeC->First_Unknown[goma_ctx->fem.pg->imtrx];
 
           /*
            *   Calculate the number of columns in the current block column
            *   and cross check.
            */
-          n1 = nodeC->Nodal_Vars_Info[pg->imtrx]->Num_Unknowns;
+          n1 = nodeC->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx]->Num_Unknowns;
 
           /*
            *     Print out an ascii header information
@@ -640,7 +642,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
            *         Output the identity of first unknown at the current
            *         block column
            */
-          ieqn = nodeC->First_Unknown[pg->imtrx];
+          ieqn = nodeC->First_Unknown[goma_ctx->fem.pg->imtrx];
           CHECK_XDR(xdr_int(xdrs, &ieqn));
 
           /*
@@ -648,7 +650,8 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
            *         block column
            */
           for (i = 0; i < n1; i++) {
-            vdT = Index_Solution_Inv(ieqn, &inode, &i_Var_Desc, &i_offset, &idof, pg->imtrx);
+            vdT = Index_Solution_Inv(ieqn, &inode, &i_Var_Desc, &i_offset, &idof,
+                                     goma_ctx->fem.pg->imtrx);
             /*
              * Output specific information about the variable
              */
@@ -1025,7 +1028,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
          *  node struct
          */
 
-        num_unknowns_node = (int)node->Nodal_Vars_Info[pg->imtrx]->Num_Unknowns;
+        num_unknowns_node = (int)node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx]->Num_Unknowns;
         /*
          *   Calculate the starting index of current row block
          */
@@ -1113,7 +1116,8 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
          *    variable type, sub_variable type, and checking the node number.
          */
         for (i = 0; i < num_unknowns_node; i++) {
-          vdT = Index_Solution_Inv(ieqn, &inode, &i_Var_Desc, &i_offset, &idof, pg->imtrx);
+          vdT = Index_Solution_Inv(ieqn, &inode, &i_Var_Desc, &i_offset, &idof,
+                                   goma_ctx->fem.pg->imtrx);
           nodeT = Nodes[inode];
           /*
            * Output specific information about the variable
@@ -1215,7 +1219,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
            *         Output the identity of first unknown at the current
            *         block column
            */
-          ieqn = nodeC->First_Unknown[pg->imtrx];
+          ieqn = nodeC->First_Unknown[goma_ctx->fem.pg->imtrx];
           CHECK_XDR(xdr_int(xdrs, &ieqn));
 
           /*
@@ -1223,7 +1227,8 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
            *         block column
            */
           for (i = 0; i < n1; i++) {
-            vdT = Index_Solution_Inv(ieqn, &inode, &i_Var_Desc, &i_offset, &idof, pg->imtrx);
+            vdT = Index_Solution_Inv(ieqn, &inode, &i_Var_Desc, &i_offset, &idof,
+                                     goma_ctx->fem.pg->imtrx);
             nodeT = Nodes[inode];
             /*
              * Output specific information about the variable

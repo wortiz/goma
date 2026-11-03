@@ -426,7 +426,7 @@ int main(int argc, char **argv)
   // We can enable floating point exceptions on all processors here
 #if defined(__linux__)
 #ifndef DISABLE_GNU_EXTENSIONS
-  if (upd->fpe_enabled) {
+  if (goma_ctx->fem.upd->fpe_enabled) {
     feenableexcept((FE_OVERFLOW | FE_DIVBYZERO | FE_INVALID));
   }
 #endif
@@ -470,9 +470,9 @@ int main(int argc, char **argv)
 
 #endif /* End of ifdef PARALLEL */
 
-  if (efv->Num_external_field != 0) {
-    for (i = 0; i < efv->Num_external_field; i++) {
-      memcpy(efv->file_nm_serial[i], efv->file_nm[i], MAX_FNL);
+  if (goma_ctx->fem.efv->Num_external_field != 0) {
+    for (i = 0; i < goma_ctx->fem.efv->Num_external_field; i++) {
+      memcpy(goma_ctx->fem.efv->file_nm_serial[i], goma_ctx->fem.efv->file_nm[i], MAX_FNL);
     }
   }
 
@@ -489,12 +489,12 @@ int main(int argc, char **argv)
       n_files++;
     }
 
-    if (efv->Num_external_field != 0) {
-      for (i = 0; i < efv->Num_external_field; i++) {
-        if (efv->ipix[i] == 1 || efv->ipix[i] == 2)
+    if (goma_ctx->fem.efv->Num_external_field != 0) {
+      for (i = 0; i < goma_ctx->fem.efv->Num_external_field; i++) {
+        if (goma_ctx->fem.efv->ipix[i] == 1 || goma_ctx->fem.efv->ipix[i] == 2)
           continue;
         filenames[n_files] = malloc(sizeof(char) * MAX_FNL);
-        memcpy(filenames[n_files], efv->file_nm[i], MAX_FNL);
+        memcpy(filenames[n_files], goma_ctx->fem.efv->file_nm[i], MAX_FNL);
         n_files++;
       }
     }
@@ -620,9 +620,9 @@ int main(int argc, char **argv)
       multiname(goma_ctx->exo_aux_file, goma_ctx->proc_id, goma_ctx->num_proc);
     }
 
-    if (efv->Num_external_field != 0) {
-      for (i = 0; i < efv->Num_external_field; i++) {
-        multiname(efv->file_nm[i], goma_ctx->proc_id, goma_ctx->num_proc);
+    if (goma_ctx->fem.efv->Num_external_field != 0) {
+      for (i = 0; i < goma_ctx->fem.efv->Num_external_field; i++) {
+        multiname(goma_ctx->fem.efv->file_nm[i], goma_ctx->proc_id, goma_ctx->num_proc);
       }
     }
   }
@@ -669,11 +669,11 @@ int main(int argc, char **argv)
    * Allocate space for each communication exchange description.
    */
 #ifdef PARALLEL
-  cx = malloc(sizeof(Comm_Ex *) * upd->Total_Num_Matrices);
+  cx = malloc(sizeof(Comm_Ex *) * goma_ctx->fem.upd->Total_Num_Matrices);
   if (DPI_ptr->num_neighbors > 0) {
 
     int imtrx;
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       cx[imtrx] = alloc_struct_1(Comm_Ex, DPI_ptr->num_neighbors);
       goma_ctx->request =
           alloc_struct_1(MPI_Request, goma_ctx->num_requests * DPI_ptr->num_neighbors);
@@ -743,8 +743,8 @@ int main(int argc, char **argv)
    *                           SOLVE THE PROBLEM
    */
 
-  if (upd->Total_Num_Matrices == 1) {
-    pg->imtrx = 0;
+  if (goma_ctx->fem.upd->Total_Num_Matrices == 1) {
+    goma_ctx->fem.pg->imtrx = 0;
 
     if (goma_ctx->debug_flag) {
       switch (Continuation) {
@@ -794,7 +794,7 @@ int main(int argc, char **argv)
       break;
     default:
       log_msg("Solving problem");
-      if (loca_in->Cont_Alg == LOCA_LSA_ONLY) {
+      if (goma_ctx->fem.loca_in->Cont_Alg == LOCA_LSA_ONLY) {
         error = do_loca(cx[0], EXO_ptr, DPI_ptr);
       } else if (TimeIntegration != TRANSIENT) {
         solve_problem(EXO_ptr, DPI_ptr, NULL);

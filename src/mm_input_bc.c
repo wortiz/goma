@@ -225,14 +225,14 @@ void rd_bc_specs(FILE *ifp, char *input) {
       (void)strncpy(BC_Types[ibc].Set_Type, "NS", 3);
     } else if (!strcmp(input, "NC")) {
       (void)strncpy(BC_Types[ibc].Set_Type, "NS", 3);
-      cont->upBCID = ibc;
-      printf("BC Continuation: BCID = %4d\n", cont->upBCID);
+      goma_ctx->fem.cont->upBCID = ibc;
+      printf("BC Continuation: BCID = %4d\n", goma_ctx->fem.cont->upBCID);
     } else if (!strcmp(input, "SS")) {
       (void)strncpy(BC_Types[ibc].Set_Type, "SS", 3);
     } else if (!strcmp(input, "SC")) {
       (void)strncpy(BC_Types[ibc].Set_Type, "SS", 3);
-      cont->upBCID = ibc;
-      printf("BC Continuation: BCID = %4d\n", cont->upBCID);
+      goma_ctx->fem.cont->upBCID = ibc;
+      printf("BC Continuation: BCID = %4d\n", goma_ctx->fem.cont->upBCID);
     } else if (!strcmp(input, "LS")) {
       (void)strncpy(BC_Types[ibc].Set_Type, "LS", 3);
 
@@ -3123,11 +3123,12 @@ void rd_bc_specs(FILE *ifp, char *input) {
        * an array of one
        */
 
-      if (augc == NULL) {
-        augc = alloc_struct_1(struct AC_Information, 1);
+      if (goma_ctx->fem.augc == NULL) {
+        goma_ctx->fem.augc = alloc_struct_1(struct AC_Information, 1);
         nAC = 1;
       } else {
-        augc = realloc_struct_1(augc, struct AC_Information, nAC + 1, nAC);
+        goma_ctx->fem.augc =
+            realloc_struct_1(goma_ctx->fem.augc, struct AC_Information, nAC + 1, nAC);
         nAC++;
       }
 
@@ -3138,15 +3139,19 @@ void rd_bc_specs(FILE *ifp, char *input) {
       /*
        * Next up...fill in the pieces of the AC structure with the appropriate info.
        */
-      augc[nAC - 1].Type = AC_LGRM;     /* Attached AC is a Lagrange multiplier constraint */
-      augc[nAC - 1].MTID = -1;          /* this integrates over all blocks sharing sideset */
-      augc[nAC - 1].MFID = VOLUME_FLUX; /* This flux type used in evaluate_flux */
-      augc[nAC - 1].COMPID = 0.0;
-      augc[nAC - 1].SSID = BC_Types[ibc].BC_ID;               /* Sideset set id */
-      augc[nAC - 1].CONSTV = -BC_Types[ibc].BC_Data_Float[0]; /* Store the flow rate value */
-      augc[nAC - 1].BCID = ibc; /* record which boundary condition AC is attached to */
-      augc[nAC - 1].DFID = 0;   /* record index of flow rate parameter (for continuation */
-      augc[nAC - 1].iread = 0;
+      goma_ctx->fem.augc[nAC - 1].Type =
+          AC_LGRM;                           /* Attached AC is a Lagrange multiplier constraint */
+      goma_ctx->fem.augc[nAC - 1].MTID = -1; /* this integrates over all blocks sharing sideset */
+      goma_ctx->fem.augc[nAC - 1].MFID = VOLUME_FLUX; /* This flux type used in evaluate_flux */
+      goma_ctx->fem.augc[nAC - 1].COMPID = 0.0;
+      goma_ctx->fem.augc[nAC - 1].SSID = BC_Types[ibc].BC_ID; /* Sideset set id */
+      goma_ctx->fem.augc[nAC - 1].CONSTV =
+          -BC_Types[ibc].BC_Data_Float[0]; /* Store the flow rate value */
+      goma_ctx->fem.augc[nAC - 1].BCID =
+          ibc; /* record which boundary condition AC is attached to */
+      goma_ctx->fem.augc[nAC - 1].DFID =
+          0; /* record index of flow rate parameter (for continuation */
+      goma_ctx->fem.augc[nAC - 1].iread = 0;
 
       /*
        * Now check the BC card again to see if we are suppose to
@@ -3154,20 +3159,20 @@ void rd_bc_specs(FILE *ifp, char *input) {
        */
 
       if (!strcmp(input, "read"))
-        augc[nAC - 1].iread = 1;
+        goma_ctx->fem.augc[nAC - 1].iread = 1;
 
       /*
        * Lastly,  DataFlt[0] gets the starting LM guess from BC_Data_Float[1]
        *
        */
 
-      augc[nAC - 1].DataFlt = alloc_dbl_1(1, -BC_Types[ibc].BC_Data_Float[1]);
-      augc[nAC - 1].len_AC = 1;
+      goma_ctx->fem.augc[nAC - 1].DataFlt = alloc_dbl_1(1, -BC_Types[ibc].BC_Data_Float[1]);
+      goma_ctx->fem.augc[nAC - 1].len_AC = 1;
 
       /* Oh, one more thing..reset the nAC value in all the AC's */
 
       for (i = 0; i < nAC; i++)
-        augc[i].nAC = nAC;
+        goma_ctx->fem.augc[i].nAC = nAC;
 
       break;
 
@@ -3187,10 +3192,11 @@ void rd_bc_specs(FILE *ifp, char *input) {
     /* check hunting BC data floats for out-of-bounds*/
     if (nHC) {
       for (i = 0; i < nHC; i++) {
-        if (hunt[i].Type == 1 && hunt[i].BCID == ibc) {
-          if (hunt[i].DFID >= BC_Types[ibc].max_DFlt) {
+        if (goma_ctx->fem.hunt[i].Type == 1 && goma_ctx->fem.hunt[i].BCID == ibc) {
+          if (goma_ctx->fem.hunt[i].DFID >= BC_Types[ibc].max_DFlt) {
             GOMA_WH(-1, "Whoa.... hunting data float outside range\n");
-            fprintf(stderr, " HC %d BC %d of %d\n", i, hunt[i].DFID, BC_Types[ibc].max_DFlt);
+            fprintf(stderr, " HC %d BC %d of %d\n", i, goma_ctx->fem.hunt[i].DFID,
+                    BC_Types[ibc].max_DFlt);
           }
         }
       }
@@ -3198,8 +3204,8 @@ void rd_bc_specs(FILE *ifp, char *input) {
     /* check loca BC data floats for out-of-bounds*/
     if (nCC) {
       for (i = 0; i < nCC; i++) {
-        if (cpcc[i].Type == 1 && cpcc[i].BCID == ibc) {
-          if (cpcc[i].DFID >= BC_Types[ibc].max_DFlt)
+        if (goma_ctx->fem.cpcc[i].Type == 1 && goma_ctx->fem.cpcc[i].BCID == ibc) {
+          if (goma_ctx->fem.cpcc[i].DFID >= BC_Types[ibc].max_DFlt)
             GOMA_WH(-1, "Whoa.... loca data float outside range\n");
         }
       }

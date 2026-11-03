@@ -739,8 +739,8 @@ goma_error setup_rotated_bc_nodes(
     // }
   }
 
-  int old_assemble_jacobian_setting = af->Assemble_Jacobian;
-  af->Assemble_Jacobian = true;
+  int old_assemble_jacobian_setting = goma_ctx->fem.af->Assemble_Jacobian;
+  goma_ctx->fem.af->Assemble_Jacobian = true;
   int err = 0;
   for (int bc_index = 0; bc_index < num_bc; bc_index++) {
     if (bc_is_rotated[bc_index]) {
@@ -753,16 +753,18 @@ goma_error setup_rotated_bc_nodes(
       for (int e = 0; e < exo->ss_num_sides[ss_index]; e++) {
         int ielem = exo->ss_elem_list[exo->ss_elem_index[ss_index] + e];
 
-        err = load_elem_dofptr(ielem, exo, pg->matrices[pg->imtrx].x, pg->matrices[pg->imtrx].x_old,
-                               pg->matrices[pg->imtrx].xdot, pg->matrices[pg->imtrx].xdot_old, 0);
+        err = load_elem_dofptr(ielem, exo, goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x,
+                               goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old,
+                               goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot,
+                               goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot_old, 0);
         GOMA_EH(err, "load_elem_dofptr");
-        err = bf_mp_init(pd);
+        err = bf_mp_init(goma_ctx->fem.pd);
         GOMA_EH(err, "bf_mp_init");
 
-        int iconnect_ptr = ei[pg->imtrx]->iconnect_ptr;
-        int ielem_type = ei[pg->imtrx]->ielem_type;
-        int num_local_nodes = ei[pg->imtrx]->num_local_nodes;
-        int ielem_dim = ei[pg->imtrx]->ielem_dim;
+        int iconnect_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr;
+        int ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type;
+        int num_local_nodes = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
+        int ielem_dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
         int local_side_node_list[MAX_NODES_PER_SIDE];
 
         /* find SIDE info for primary side */
@@ -782,13 +784,15 @@ goma_error setup_rotated_bc_nodes(
         /* use nodal points only!! */
         for (int k = 0; k < num_ROT_nodes; k++) {
           int id = elem_node_id[k];
-          int I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + id];
+          int I =
+              goma_ctx->mesh
+                  .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + id];
           if (!side_set_seen[ss_index]) {
             /* Find the local element node number for the current node */
             double xi[DIM];
             /* make sure we still need to calculate rotation vectors */
             find_nodal_stu(id, ielem_type, &xi[0], &xi[1], &xi[2]);
-            err = load_basis_functions(xi, bfd);
+            err = load_basis_functions(xi, goma_ctx->fem.bfd);
             GOMA_EH(err, "problem from load_basis_functions");
             err = beer_belly();
             GOMA_EH(err, "beer_belly");
@@ -802,9 +806,9 @@ goma_error setup_rotated_bc_nodes(
             /* put NORMAL vector into array */
             /* calculate the determinant of the surface jacobian  and the normal to
              * the surface all at one time */
-            surface_determinant_and_normal(ei[pg->imtrx]->ielem, iconnect_ptr, num_local_nodes,
-                                           ielem_dim - 1, id_side, num_nodes_on_side,
-                                           local_side_node_list);
+            surface_determinant_and_normal(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem,
+                                           iconnect_ptr, num_local_nodes, ielem_dim - 1, id_side,
+                                           num_nodes_on_side, local_side_node_list);
 
             int n_index = node_normals[I].n_normals;
             node_normals[I].n_normals++;
@@ -818,17 +822,20 @@ goma_error setup_rotated_bc_nodes(
               GOMA_EH(GOMA_ERROR, "GOMA_MAX_NORMALS_PER_NODE too small, currently %d",
                       GOMA_MAX_NORMALS_PER_NODE);
             }
-            gds_vector_set(node_normals[I].normals[n_index]->normal, 0, fv->snormal[0]);
-            gds_vector_set(node_normals[I].normals[n_index]->normal, 1, fv->snormal[1]);
-            gds_vector_set(node_normals[I].normals[n_index]->normal, 2, fv->snormal[2]);
+            gds_vector_set(node_normals[I].normals[n_index]->normal, 0,
+                           goma_ctx->fem.fv->snormal[0]);
+            gds_vector_set(node_normals[I].normals[n_index]->normal, 1,
+                           goma_ctx->fem.fv->snormal[1]);
+            gds_vector_set(node_normals[I].normals[n_index]->normal, 2,
+                           goma_ctx->fem.fv->snormal[2]);
             for (int i = 0; i < 3; i++) {
               for (int j = 0; j < MDE; j++) {
                 gds_vector_set(node_normals[I].normals[n_index]->d_normal_dx[i][j], 0,
-                               fv->dsnormal_dx[0][i][j]);
+                               goma_ctx->fem.fv->dsnormal_dx[0][i][j]);
                 gds_vector_set(node_normals[I].normals[n_index]->d_normal_dx[i][j], 1,
-                               fv->dsnormal_dx[1][i][j]);
+                               goma_ctx->fem.fv->dsnormal_dx[1][i][j]);
                 gds_vector_set(node_normals[I].normals[n_index]->d_normal_dx[i][j], 2,
-                               fv->dsnormal_dx[2][i][j]);
+                               goma_ctx->fem.fv->dsnormal_dx[2][i][j]);
               }
             }
           }
@@ -840,7 +847,7 @@ goma_error setup_rotated_bc_nodes(
       side_set_seen[ss_index] = true;
     }
   }
-  af->Assemble_Jacobian = old_assemble_jacobian_setting;
+  goma_ctx->fem.af->Assemble_Jacobian = old_assemble_jacobian_setting;
 
   free(side_set_seen);
 

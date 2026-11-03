@@ -244,18 +244,18 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
     double d_z = 0;
 
     // Get displacements to Anneal the mesh
-    if (pd->gv[R_MESH1]) {
-      int x_idx = Index_Solution(idx, R_MESH1, 0, 0, -1, pd->mi[R_MESH1]);
-      int y_idx = Index_Solution(idx, R_MESH2, 0, 0, -1, pd->mi[R_MESH2]);
+    if (goma_ctx->fem.pd->gv[R_MESH1]) {
+      int x_idx = Index_Solution(idx, R_MESH1, 0, 0, -1, goma_ctx->fem.pd->mi[R_MESH1]);
+      int y_idx = Index_Solution(idx, R_MESH2, 0, 0, -1, goma_ctx->fem.pd->mi[R_MESH2]);
       int z_idx = -1;
       if (exo->num_dim == 3) {
-        z_idx = Index_Solution(idx, R_MESH3, 0, 0, -1, pd->mi[R_MESH3]);
+        z_idx = Index_Solution(idx, R_MESH3, 0, 0, -1, goma_ctx->fem.pd->mi[R_MESH3]);
       }
 
-      d_x = x[pd->mi[R_MESH1]][x_idx];
-      d_y = x[pd->mi[R_MESH2]][y_idx];
+      d_x = x[goma_ctx->fem.pd->mi[R_MESH1]][x_idx];
+      d_y = x[goma_ctx->fem.pd->mi[R_MESH2]][y_idx];
       if (exo->num_dim == 3) {
-        d_z = x[pd->mi[R_MESH3]][z_idx];
+        d_z = x[goma_ctx->fem.pd->mi[R_MESH3]][z_idx];
       }
     }
 
@@ -278,11 +278,11 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
     exo_to_global.insert(std::pair<LO, LO>(exo_index, node));
   }
   for (int j = V_FIRST; j < V_LAST; j++) {
-    int imtrx = upd->matrix_index[j];
+    int imtrx = goma_ctx->fem.upd->matrix_index[j];
 
     if (imtrx >= 0) {
       if (j == MASS_FRACTION) {
-        for (int mf = 0; mf < upd->Max_Num_Species; mf++) {
+        for (int mf = 0; mf < goma_ctx->fem.upd->Max_Num_Species; mf++) {
           auto var_values = Omega_h::Write<Omega_h::Real>(mesh->nverts());
           for (int i = 0; i < exo->num_nodes; i++) {
             if (exo_to_global.find(i) != exo_to_global.end()) {
@@ -303,18 +303,19 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
             int ja = Index_Solution(i, j, 0, 0, -2, imtrx);
             GOMA_EH(ja, "could not find solution");
             var_values[gnode] = x[imtrx][ja];
-            if (tran->ale_adapt && (j >= R_MESH1 && j <= R_MESH3)) {
+            if (goma_ctx->fem.tran->ale_adapt && (j >= R_MESH1 && j <= R_MESH3)) {
               var_values[gnode] = 0;
             }
           }
         }
         mesh->add_tag(Omega_h::VERT, Exo_Var_Names[j].name2, 1, Omega_h::Reals(var_values));
 
-        if (tran->ale_adapt && j == R_MESH1 && ((ls == NULL) || (!ls->adapt))) {
+        if (goma_ctx->fem.tran->ale_adapt && j == R_MESH1 &&
+            ((goma_ctx->fem.ls == NULL) || (!goma_ctx->fem.ls->adapt))) {
           auto target_metrics =
               Omega_h::Write<Omega_h::Real>(mesh->nverts() * Omega_h::symm_ncomps(mesh->dim()));
           auto f0 = OMEGA_H_LAMBDA(Omega_h::LO index) {
-            auto iso_size = tran->ale_adapt_iso_size;
+            auto iso_size = goma_ctx->fem.tran->ale_adapt_iso_size;
             if (mesh->dim() == 2) {
               auto target_metric = Omega_h::compose_metric(Omega_h::identity_matrix<2, 2>(),
                                                            Omega_h::vector_2(iso_size, iso_size));
@@ -330,14 +331,14 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
           Omega_h::parallel_for(mesh->nverts(), f0, "set_iso_metric_values");
           mesh->add_tag(Omega_h::VERT, "iso_size_metric", Omega_h::symm_ncomps(mesh->dim()),
                         Omega_h::Reals(target_metrics));
-        } else if (ls != NULL && ls->adapt && (j == FILL)) {
+        } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->adapt && (j == FILL)) {
           auto target_metrics =
               Omega_h::Write<Omega_h::Real>(mesh->nverts() * Omega_h::symm_ncomps(mesh->dim()));
           auto f0 = OMEGA_H_LAMBDA(Omega_h::LO index) {
             auto F = var_values[index];
-            auto iso_size = ls->adapt_outer_size;
-            if (std::abs(F) < ls->adapt_width) {
-              iso_size = ls->adapt_inner_size;
+            auto iso_size = goma_ctx->fem.ls->adapt_outer_size;
+            if (std::abs(F) < goma_ctx->fem.ls->adapt_width) {
+              iso_size = goma_ctx->fem.ls->adapt_inner_size;
             }
             if (mesh->dim() == 2) {
               auto target_metric = Omega_h::compose_metric(Omega_h::identity_matrix<2, 2>(),
@@ -359,15 +360,15 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
     }
   }
 
-  for (int w = 0; w < efv->Num_external_field; w++) {
+  for (int w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
     auto var_values = Omega_h::Write<Omega_h::Real>(mesh->nverts());
     for (int i = 0; i < exo->num_nodes; i++) {
       if (exo_to_global.find(i) != exo_to_global.end()) {
         auto gnode = exo_to_global[i];
-        var_values[gnode] = efv->ext_fld_ndl_val[w][i];
+        var_values[gnode] = goma_ctx->fem.efv->ext_fld_ndl_val[w][i];
       }
     }
-    mesh->add_tag(Omega_h::VERT, efv->name[w], 1, Omega_h::Reals(var_values));
+    mesh->add_tag(Omega_h::VERT, goma_ctx->fem.efv->name[w], 1, Omega_h::Reals(var_values));
   }
 
   std::vector<int> side_set_ids(std::size_t(dpi->num_side_sets_global));
@@ -1109,7 +1110,7 @@ void convert_omega_h_to_goma(
 
   CALL(ex_close(exoid));
 
-  for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     free(idv[imtrx]);
   }
   free(idv);
@@ -1130,13 +1131,13 @@ void convert_omega_h_to_goma(
   if (rotation_allocated) {
     for (int i = 0; i < exo->num_nodes; i++) {
       for (int j = 0; j < NUM_VECTOR_EQUATIONS; j++) {
-        free(rotation[i][j]);
+        free(goma_ctx->fem.rotation[i][j]);
       }
-      free(rotation[i]);
+      free(goma_ctx->fem.rotation[i]);
       free(local_ROT_list[i]);
     }
-    free(rotation);
-    rotation = NULL;
+    free(goma_ctx->fem.rotation);
+    goma_ctx->fem.rotation = NULL;
     free(local_ROT_list);
     local_ROT_list = NULL;
     rotation_allocated = FALSE;
@@ -1165,7 +1166,7 @@ void convert_omega_h_to_goma(
   multiname(goma_ctx->exo_file_out, goma_ctx->proc_id, goma_ctx->num_proc);
   int num_total_nodes = dpi->num_internal_nodes + dpi->num_boundary_nodes + dpi->num_external_nodes;
 
-  for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (int i = 0; i < num_total_nodes; i++) {
       free(Local_Offset[imtrx][i]);
       free(Dolphin[imtrx][i]);
@@ -1191,7 +1192,7 @@ void convert_omega_h_to_goma(
     }
   }
   if (dpi->num_neighbors > 0) {
-    for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       free(cx[imtrx]);
       free(goma_ctx->request);
       free(goma_ctx->status);
@@ -1226,10 +1227,10 @@ void adapt_mesh(Omega_h::Mesh &mesh) {
 
   Omega_h::AdaptOpts opts(&mesh);
   for (int j = V_FIRST; j < V_LAST; j++) {
-    int imtrx = upd->matrix_index[j];
+    int imtrx = goma_ctx->fem.upd->matrix_index[j];
     if (imtrx >= 0) {
       if (j == MASS_FRACTION) {
-        for (int mf = 0; mf < upd->Max_Num_Species; mf++) {
+        for (int mf = 0; mf < goma_ctx->fem.upd->Max_Num_Species; mf++) {
           std::string species_name = Exo_Var_Names[j].name2 + std::to_string(mf);
           opts.xfer_opts.type_map[species_name] = OMEGA_H_LINEAR_INTERP;
         }
@@ -1238,8 +1239,8 @@ void adapt_mesh(Omega_h::Mesh &mesh) {
       }
     }
   }
-  for (int w = 0; w < efv->Num_external_field; w++) {
-    opts.xfer_opts.type_map[efv->name[w]] = OMEGA_H_LINEAR_INTERP;
+  for (int w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
+    opts.xfer_opts.type_map[goma_ctx->fem.efv->name[w]] = OMEGA_H_LINEAR_INTERP;
   }
   opts.max_length_allowed = 5;
   opts.max_length_desired = 1.8;
@@ -1281,10 +1282,10 @@ extern "C" {
 
 void copy_solution(Exo_DB *exo, Dpi *dpi, double **x, Omega_h::Mesh &mesh) {
   for (int j = V_FIRST; j < V_LAST; j++) {
-    int imtrx = upd->matrix_index[j];
+    int imtrx = goma_ctx->fem.upd->matrix_index[j];
     if (imtrx >= 0) {
       if (j == MASS_FRACTION) {
-        for (int mf = 0; mf < upd->Max_Num_Species; mf++) {
+        for (int mf = 0; mf < goma_ctx->fem.upd->Max_Num_Species; mf++) {
           std::string species_name = Exo_Var_Names[j].name2 + std::to_string(mf);
           auto var_values = mesh.get_array<Omega_h::Real>(Omega_h::VERT, species_name);
 
@@ -1313,14 +1314,14 @@ void copy_solution(Exo_DB *exo, Dpi *dpi, double **x, Omega_h::Mesh &mesh) {
       }
     }
   }
-  for (int w = 0; w < efv->Num_external_field; w++) {
-    auto var_values = mesh.get_array<Omega_h::Real>(Omega_h::VERT, efv->name[w]);
+  for (int w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
+    auto var_values = mesh.get_array<Omega_h::Real>(Omega_h::VERT, goma_ctx->fem.efv->name[w]);
     for (int i = 0; i < (dpi->num_internal_nodes + dpi->num_boundary_nodes); i++) {
       int index = i;
       if (dpi->exodus_to_omega_h_node != NULL) {
         index = dpi->exodus_to_omega_h_node[exo->ghost_node_to_base[i]];
       }
-      efv->ext_fld_ndl_val[w][i] = var_values[index];
+      goma_ctx->fem.efv->ext_fld_ndl_val[w][i] = var_values[index];
     }
   }
 }
@@ -1374,7 +1375,7 @@ void adapt_mesh_omega_h(struct GomaLinearSolverData **ams,
 
   resetup_problem(exo, dpi);
 
-  for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     int numProcUnknowns = NumUnknowns[imtrx] + NumExtUnknowns[imtrx];
     realloc_dbl_1(&x[imtrx], numProcUnknowns, 0);
     realloc_dbl_1(&x_old[imtrx], numProcUnknowns, 0);
@@ -1386,19 +1387,19 @@ void adapt_mesh_omega_h(struct GomaLinearSolverData **ams,
     realloc_dbl_1(&resid_vector[imtrx], numProcUnknowns, 0);
     realloc_dbl_1(&scale[imtrx], numProcUnknowns, 0);
     realloc_dbl_1(&x_update[imtrx], numProcUnknowns + numProcUnknowns, 0);
-    pg->matrices[imtrx].ams = ams[imtrx];
-    pg->matrices[imtrx].x = x[imtrx];
-    pg->matrices[imtrx].x_old = x_old[imtrx];
-    pg->matrices[imtrx].x_older = x_older[imtrx];
-    pg->matrices[imtrx].xdot = xdot[imtrx];
-    pg->matrices[imtrx].xdot_old = xdot_old[imtrx];
-    pg->matrices[imtrx].x_update = x_update[imtrx];
-    pg->matrices[imtrx].scale = scale[imtrx];
-    pg->matrices[imtrx].resid_vector = resid_vector[imtrx];
+    goma_ctx->fem.pg->matrices[imtrx].ams = ams[imtrx];
+    goma_ctx->fem.pg->matrices[imtrx].x = x[imtrx];
+    goma_ctx->fem.pg->matrices[imtrx].x_old = x_old[imtrx];
+    goma_ctx->fem.pg->matrices[imtrx].x_older = x_older[imtrx];
+    goma_ctx->fem.pg->matrices[imtrx].xdot = xdot[imtrx];
+    goma_ctx->fem.pg->matrices[imtrx].xdot_old = xdot_old[imtrx];
+    goma_ctx->fem.pg->matrices[imtrx].x_update = x_update[imtrx];
+    goma_ctx->fem.pg->matrices[imtrx].scale = scale[imtrx];
+    goma_ctx->fem.pg->matrices[imtrx].resid_vector = resid_vector[imtrx];
   }
 
-  for (int w = 0; w < efv->Num_external_field; w++) {
-    realloc_dbl_1(&efv->ext_fld_ndl_val[w],
+  for (int w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
+    realloc_dbl_1(&goma_ctx->fem.efv->ext_fld_ndl_val[w],
                   dpi->num_internal_nodes + dpi->num_boundary_nodes + dpi->num_external_nodes, 0);
   }
   resetup_matrix(ams, exo, dpi);

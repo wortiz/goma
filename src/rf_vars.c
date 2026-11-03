@@ -340,7 +340,7 @@ VARIABLE_DESCRIPTION_STRUCT *find_or_create_vd(
    * should equal -1 also.
    */
   if (mn >= 0) {
-    pd_ptr = pd_glob[mn];
+    pd_ptr = goma_ctx->fem.pd_glob[mn];
     matID = -1;
     if (pd_ptr->v[imtrx][var_type] & V_MATSPECIFIC) {
       matID = mn;
@@ -505,8 +505,8 @@ void vdesc_augment(void)
   /*
    * Next look for a specific mass fraction unknown
    */
-  for (i = 0; i < upd->Num_Mat; i++) {
-    mp_local = mp_glob[i];
+  for (i = 0; i < goma_ctx->fem.upd->Num_Mat; i++) {
+    mp_local = goma_ctx->fem.mp_glob[i];
     vd = get_vd_ptr(MASS_FRACTION, i, 0);
     if (vd) {
       have_MF = TRUE;
@@ -515,17 +515,17 @@ void vdesc_augment(void)
   }
   if (have_MF) {
     if (have_generic) {
-      for (k = 0; k < upd->Max_Num_Species; k++) {
-        for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+      for (k = 0; k < goma_ctx->fem.upd->Max_Num_Species; k++) {
+        for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
           vd = find_or_create_vd(MASS_FRACTION, 1, -1, k, imtrx);
         }
       }
     }
     if (have_specific_MF) {
-      for (i = 0; i < upd->Num_Mat; i++) {
-        mp_local = mp_glob[i];
+      for (i = 0; i < goma_ctx->fem.upd->Num_Mat; i++) {
+        mp_local = goma_ctx->fem.mp_glob[i];
         for (k = 0; k < mp_local->Num_Species; k++) {
-          for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+          for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
             vd = find_or_create_vd(MASS_FRACTION, 1, i, k, imtrx);
           }
         }
@@ -708,10 +708,14 @@ void assign_var_name(const int varType,
   int sr;
   if (varType == MASS_FRACTION) {
     assign_species_name(idof, mp_ptr, species_name, species_desc, matID);
-  } else if (matID != -1 && pd_glob[matID]->i[upd->matrix_index[varType]][varType] == I_P0) {
+  } else if (matID != -1 &&
+             goma_ctx->fem.pd_glob[matID]->i[goma_ctx->fem.upd->matrix_index[varType]][varType] ==
+                 I_P0) {
     sprintf(species_name, "%s_E", Var_Name[varType].name2);
     strcpy(species_desc, Var_Name[varType].name1);
-  } else if (matID != -1 && pd_glob[matID]->i[upd->matrix_index[varType]][varType] == I_P1) {
+  } else if (matID != -1 &&
+             goma_ctx->fem.pd_glob[matID]->i[goma_ctx->fem.upd->matrix_index[varType]][varType] ==
+                 I_P1) {
     sprintf(species_name, "%s_E%d", Var_Name[varType].name2, idof + 1);
     strcpy(species_desc, Var_Name[varType].name1);
   } else {

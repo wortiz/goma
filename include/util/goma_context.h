@@ -211,6 +211,115 @@ typedef struct GomaSolver {
   int visc_sens_factor;
 } GomaSolver;
 
+/* FEM data structures referenced from GomaFem; defined in mm_as_structs.h / mm_mp_structs.h */
+struct AC_Information;
+struct Action_Flags;
+struct Basis_Functions;
+struct Constitutive_Relations;
+struct Continuation_Conditions;
+struct Continuation_Information;
+struct Diet_Field_Variables;
+struct Eigensolver_Info;
+struct Elastic_Constitutive;
+struct Element_Indices;
+struct Element_Quality_Metrics;
+struct Element_Stiffness_Pointers;
+struct Element_Variable_Pointers;
+struct External_Field_Variables;
+struct Field_Variables;
+struct Generalized_Newtonian;
+struct HC_Information;
+struct Level_Set_Data;
+struct Level_Set_Interface;
+struct Library_IO;
+struct Local_Element_Contributions;
+struct Loca_Input;
+struct Lubrication_Auxiliaries;
+struct Material_Properties;
+struct Phase_Function_Data;
+struct Porous_Media_Variables;
+struct Porous_Media_Variables_Hysteresis;
+struct Porous_Media_Variables_ML;
+struct Problem_Description;
+struct Problem_Graph;
+struct Rotation_Vectors;
+struct Shell_Block;
+struct Stabilization_Params;
+struct Transient_Information;
+struct Uniform_Problem_Description;
+struct User_Continuation_Info;
+struct Viscoelastic_Constitutive;
+struct Viscoelastic_Nonmodal;
+struct Viscoplastic_Constitutive;
+
+/*
+ * Problem description, material properties and per-element working storage,
+ * formerly global pointers defined in mm_as_alloc.c (declared in mm_as.h and mm_mp.h).
+ *
+ * The *_glob arrays are indexed by material number; pd, mp, cr, gn, ve, vn, elc,
+ * elc_rs and evpl point at the entry for the current material.
+ */
+typedef struct GomaFem {
+  /* Problem description */
+  struct Uniform_Problem_Description *upd;
+  struct Problem_Description **pd_glob, *pd;
+  struct Problem_Graph *pg;
+  struct Action_Flags *af;
+
+  /* Material properties and constitutive models */
+  struct Material_Properties *mp, **mp_glob, *mp_old;
+  struct Constitutive_Relations **cr_glob, *cr;
+  struct Generalized_Newtonian *gn, **gn_glob;
+  struct Viscoelastic_Constitutive **ve, ***ve_glob;
+  struct Viscoelastic_Nonmodal *vn, **vn_glob;
+  struct Elastic_Constitutive *elc, **elc_glob, *elc_rs, **elc_rs_glob;
+  struct Viscoplastic_Constitutive *evpl, **evpl_glob;
+
+  /* Element indices, stiffness pointers and quality metrics */
+  struct Element_Indices **ei;
+  struct Element_Indices **ei_related;
+  struct Element_Stiffness_Pointers *esp;
+  struct Element_Variable_Pointers *esp_old, *esp_dot, *esp_dbl_dot, *evp;
+  struct Element_Quality_Metrics *eqm;
+  struct Local_Element_Contributions *lec;
+
+  /* Basis functions */
+  struct Basis_Functions **bf;   /* by variable type */
+  struct Basis_Functions **bfd;  /* distinct basis functions */
+  struct Basis_Functions **bfi;  /* by interpolation type */
+  struct Basis_Functions **bfex; /* external fields */
+  struct Shell_Block **shell_blocks;
+
+  /* Field variables at the current quadrature point */
+  struct Field_Variables *fv, *fv_sens;
+  struct Diet_Field_Variables *fv_old, *fv_dot, *fv_dot_old, *fv_dot_dot, *fv_dot_dot_old;
+  struct External_Field_Variables *efv;
+  struct Porous_Media_Variables *pmv, *pmv_old;
+  struct Porous_Media_Variables_Hysteresis *pmv_hyst;
+  struct Porous_Media_Variables_ML *pmv_ml;
+  struct Lubrication_Auxiliaries *lub_aux, *lub_aux_old;
+  struct Stabilization_Params *stab;
+
+  /* Level set / phase functions */
+  struct Level_Set_Data *ls;
+  struct Level_Set_Interface *lsi;
+  struct Phase_Function_Data *pfd;
+
+  /* Time integration, continuation, eigen and library I/O controls */
+  struct Transient_Information *tran;
+  struct Continuation_Information *cont;
+  struct Continuation_Conditions *cpcc, *tpcc;
+  struct User_Continuation_Info *cpuc, *tpuc;
+  struct HC_Information *hunt;
+  struct AC_Information *augc;
+  struct Loca_Input *loca_in;
+  struct Eigensolver_Info *eigen;
+  struct Library_IO *libio;
+
+  /* Rotated boundary condition vectors */
+  struct Rotation_Vectors ****rotation;
+} GomaFem;
+
 /*
  * GomaContext collects process-wide state that used to live in individual
  * global variables: MPI/parallel information and I/O / run configuration.
@@ -279,6 +388,7 @@ typedef struct GomaContext {
   GomaMesh mesh;           /* legacy mesh description */
   GomaParticles particles; /* particle tracking */
   GomaSolver solver;       /* linear and nonlinear solver options */
+  GomaFem fem;             /* problem description, materials and element working storage */
 } GomaContext;
 
 /*

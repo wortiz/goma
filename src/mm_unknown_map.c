@@ -249,11 +249,11 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
    *  other pointer arrays into the solution vector. The Variable_Mask
    *  structure is an array of bit fields.
    */
-  First_Unknown = (int **)malloc((upd->Total_Num_Matrices) * sizeof(int *));
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  First_Unknown = (int **)malloc((goma_ctx->fem.upd->Total_Num_Matrices) * sizeof(int *));
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     First_Unknown[imtrx] = (int *)malloc(total_nodes * sizeof(int));
   }
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
       First_Unknown[imtrx][i] = -1;
     }
@@ -262,8 +262,8 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
    *  Allocate temporary memory for holding the Nodal vars information
    *  for this processor. It will be released at the end of the routine.
    */
-  tmp_nodal_vars = (NODAL_VARS_STRUCT **)alloc_ptr_1(upd->Total_Num_Matrices);
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  tmp_nodal_vars = (NODAL_VARS_STRUCT **)alloc_ptr_1(goma_ctx->fem.upd->Total_Num_Matrices);
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     tmp_nodal_vars[imtrx] = alloc_struct_1(NODAL_VARS_STRUCT, total_nodes);
     for (i = 0; i < total_nodes; i++) {
       tmp_nodal_vars[imtrx][i].list_index = i;
@@ -284,9 +284,9 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
    *
    */
 
-  Dolphin = (int ***)malloc((upd->Total_Num_Matrices) * sizeof(int **));
-  Local_Offset = (int ***)malloc((upd->Total_Num_Matrices) * sizeof(int **));
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  Dolphin = (int ***)malloc((goma_ctx->fem.upd->Total_Num_Matrices) * sizeof(int **));
+  Local_Offset = (int ***)malloc((goma_ctx->fem.upd->Total_Num_Matrices) * sizeof(int **));
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     Dolphin[imtrx] = (int **)malloc(total_nodes * sizeof(int *));
     Local_Offset[imtrx] = (int **)malloc(total_nodes * sizeof(int *));
     for (i = 0; i < total_nodes; i++) {
@@ -294,7 +294,7 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
       Local_Offset[imtrx][i] = (int *)malloc(MAX_VARIABLE_TYPES * sizeof(int));
     }
   }
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
       for (var_type = V_FIRST; var_type < V_LAST; var_type++) {
         Dolphin[imtrx][i][var_type] = -1;
@@ -344,8 +344,8 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
     if (mn < 0) {
       continue;
     }
-    pd = pd_glob[mn];
-    mp = mp_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
 
     for (e = e_start; e < e_end; e++) {
 
@@ -383,7 +383,7 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
          * interpolation, decide how many, if any, degrees of freedom
          * it has at this node...
          */
-        for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+        for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
           for (var_type = V_FIRST; var_type < V_LAST; var_type++) {
 
             /*
@@ -393,7 +393,7 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
              *  to the current material index.
              */
             nun[imtrx][var_type] =
-                dof_lnode_var_type(n, elementType, i, var_type, pd_glob[mn], imtrx);
+                dof_lnode_var_type(n, elementType, i, var_type, goma_ctx->fem.pd_glob[mn], imtrx);
             if (nun[imtrx][var_type] > 0) {
               /*
                * Find a variable structure that matches this one
@@ -413,7 +413,7 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
                * -> HKM: this will go away eventually
                */
               if (var_type == MASS_FRACTION) {
-                for (j = 1; j < mp->Num_Species_Eqn; j++) {
+                for (j = 1; j < goma_ctx->fem.mp->Num_Species_Eqn; j++) {
                   var_ptr = find_or_create_vd(var_type, nun[imtrx][var_type], mn, j, imtrx);
                   add_var_to_nv_struct(var_ptr, tmp_nodal_vars[imtrx] + i);
                 }
@@ -441,7 +441,7 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
    *  Loop though nodes this time calculating the real nodal_vars
    *  structures for each node.
    */
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
       nv = copy_and_rearrange_nv(tmp_nodal_vars[imtrx] + i);
 
@@ -480,7 +480,7 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
    *  Unmalloc the tmp_nodal_vars variable and all of the underlying
    *  malloced structures
    */
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
       nodal_vars_free(tmp_nodal_vars[imtrx] + i);
     }
@@ -531,7 +531,7 @@ void print_vars_at_nodes(void)
   printf("Local  Global|   MatIDs |  Node   Num    |   VARIABLES:\n");
   printf("Node#  Node# |   Present|  Type  Unknowns|             \n ");
   fprint_line(stdout, "-", 80);
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
       node_ptr = Nodes[i];
       nv = node_ptr->Nodal_Vars_Info[imtrx];
@@ -607,11 +607,11 @@ void setup_external_nodal_vars(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
 
   if (dpi->num_neighbors > 0) {
 
-    nvp_send = (struct nv_packed **)alloc_ptr_1(upd->Total_Num_Matrices);
-    nvp_recv = (struct nv_packed **)alloc_ptr_1(upd->Total_Num_Matrices);
-    nvp = (struct nv_packed **)alloc_ptr_1(upd->Total_Num_Matrices);
+    nvp_send = (struct nv_packed **)alloc_ptr_1(goma_ctx->fem.upd->Total_Num_Matrices);
+    nvp_recv = (struct nv_packed **)alloc_ptr_1(goma_ctx->fem.upd->Total_Num_Matrices);
+    nvp = (struct nv_packed **)alloc_ptr_1(goma_ctx->fem.upd->Total_Num_Matrices);
 
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       nvp_send[imtrx] =
           alloc_struct_1(struct nv_packed, ptr_node_send[dpi->num_neighbors] * MaxVarPerNode);
 
@@ -621,12 +621,12 @@ void setup_external_nodal_vars(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
       //			             ptr_node_recv[dpi->num_neighbors] * MaxVarPerNode);
     }
 
-    np_base = (COMM_NP_STRUCT **)alloc_ptr_1(upd->Total_Num_Matrices);
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    np_base = (COMM_NP_STRUCT **)alloc_ptr_1(goma_ctx->fem.upd->Total_Num_Matrices);
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       np_base[imtrx] = alloc_struct_1(COMM_NP_STRUCT, dpi->num_neighbors);
     }
 
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       for (i = 0; i < ptr_node_send[dpi->num_neighbors]; i++) {
         node_num = list_node_send[i];
         nvp[imtrx] = nvp_send[imtrx] + i * MaxVarPerNode;
@@ -692,7 +692,7 @@ void setup_external_nodal_vars(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
      */
 
     if (dpi->num_neighbors > 0) {
-      for (int i = 0; i < upd->Total_Num_Matrices; i++) {
+      for (int i = 0; i < goma_ctx->fem.upd->Total_Num_Matrices; i++) {
         free(np_base[i]);
         //        free(nvp_save[i]);
         free(nvp_send[i]);
@@ -787,7 +787,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    */
 
   gcount = 0;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
 
       /*
@@ -807,7 +807,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
            */
           if (var_type == MASS_FRACTION) {
             Local_Offset[imtrx][i][var_type] = count;
-            liver = Dolphin[imtrx][i][var_type] * upd->Max_Num_Species_Eqn;
+            liver = Dolphin[imtrx][i][var_type] * goma_ctx->fem.upd->Max_Num_Species_Eqn;
             count += liver;
           } else {
             Local_Offset[imtrx][i][var_type] = count;
@@ -828,7 +828,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    * Should verify that all nodes have been assigned something other
    * than "-1" as a number of unknowns...
    */
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
       nv = Nodes[i]->Nodal_Vars_Info[imtrx];
       if (nv->Num_Unknowns == -1) {
@@ -844,16 +844,16 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    * and the number that will be communicated from other Procs
    */
 
-  num_internal_dofs = (int *)malloc(upd->Total_Num_Matrices * sizeof(int));
-  num_boundary_dofs = (int *)malloc(upd->Total_Num_Matrices * sizeof(int));
-  num_external_dofs = (int *)malloc(upd->Total_Num_Matrices * sizeof(int));
-  num_universe_dofs = (int *)malloc(upd->Total_Num_Matrices * sizeof(int));
+  num_internal_dofs = (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
+  num_boundary_dofs = (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
+  num_external_dofs = (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
+  num_universe_dofs = (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
 
   /*
    * How many degrees of freedom I own that I do not have to communicate to
    * any other processor.
    */
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     num_internal_dofs[imtrx] = 0;
     for (i = 0; i < goma_ctx->mesh.num_internal_nodes; i++) {
       nv = Nodes[i]->Nodal_Vars_Info[imtrx];
@@ -864,7 +864,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    * How many degrees of freedom I own from which I will have to communicate
    * some to neighboring processors.
    */
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     num_boundary_dofs[imtrx] = 0;
     for (i = goma_ctx->mesh.num_internal_nodes;
          i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes; i++) {
@@ -877,7 +877,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    * How many degrees of freedom at nodes I do not own that I expect to receive
    * from other processors.
    */
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     num_external_dofs[imtrx] = 0;
     for (i = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes;
          i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
@@ -891,7 +891,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
   /*
    * Count up the total number of degrees of freedom.
    */
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     num_universe_dofs[imtrx] =
         num_internal_dofs[imtrx] + num_boundary_dofs[imtrx] + num_external_dofs[imtrx];
   }
@@ -925,10 +925,10 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    * Setup legacy variables...
    */
 
-  NumUnknowns = (int *)malloc(upd->Total_Num_Matrices * sizeof(int));
-  NumExtUnknowns = (int *)malloc(upd->Total_Num_Matrices * sizeof(int));
+  NumUnknowns = (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
+  NumExtUnknowns = (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     NumUnknowns[imtrx] = num_internal_dofs[imtrx] + num_boundary_dofs[imtrx];
     NumExtUnknowns[imtrx] = num_external_dofs[imtrx];
   }
@@ -966,7 +966,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    * unknowns at each node.
    */
 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     index = 0;
     for (i = 0; i < total_nodes; i++) {
       First_Unknown[imtrx][i] = index;
@@ -989,8 +989,8 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
   if (dofname == NULL) {
     if (goma_ctx->debug_flag < 0 || goma_ctx->debug_flag > 1 ||
         goma_ctx->write_intermediate_solutions || (goma_ctx->iout == 1)) {
-      dofname = (char ***)malloc(upd->Total_Num_Matrices * sizeof(int **));
-      for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+      dofname = (char ***)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int **));
+      for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
         dofname[imtrx] = alloc_VecFixedStrings(NumUnknowns[imtrx] + NumExtUnknowns[imtrx], 80);
       }
     }
@@ -1001,8 +1001,8 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    */
   if (resname == NULL) {
     if (goma_ctx->debug_flag < 0 || goma_ctx->iout == 1) {
-      resname = (char ***)malloc(upd->Total_Num_Matrices * sizeof(int **));
-      for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+      resname = (char ***)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int **));
+      for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
         resname[imtrx] = alloc_VecFixedStrings(NumUnknowns[imtrx] + NumExtUnknowns[imtrx], 80);
       }
     }
@@ -1012,8 +1012,8 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    * Allocate only if unallocated...
    */
   if (idv == NULL) {
-    idv = (int ***)malloc(upd->Total_Num_Matrices * sizeof(int **));
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    idv = (int ***)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int **));
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       idv[imtrx] = alloc_int_2(NumUnknowns[imtrx] + NumExtUnknowns[imtrx], 3, -1);
     }
   }
@@ -1021,7 +1021,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
   /* Here this is a worst-case approach, used mainly for the post processing
    * We will have to revisit this if we want to go on with parallel processing
    */
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
       nv = Nodes[i]->Nodal_Vars_Info[imtrx];
       gcount = First_Unknown[imtrx][i];
@@ -1065,7 +1065,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
            */
 
           if (var_type == MASS_FRACTION) {
-            num = upd->Max_Num_Species_Eqn;
+            num = goma_ctx->fem.upd->Max_Num_Species_Eqn;
           } else {
             num = 1;
           }
@@ -1229,7 +1229,7 @@ static void set_interaction_masks(Exo_DB *exo)
   /* try setting up Inter_Mask based on variables actually used
    *   in the equations
    */
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (e = 0; e < MAX_EQNS; e++) {
       switch (e) {
       case R_MOMENTUM1:
@@ -5246,8 +5246,8 @@ static void set_interaction_masks(Exo_DB *exo)
      explicit fill function and are choosing to ignore the
      dependencies on fill
    */
-  if (ls != NULL && ls->Ignore_F_deps) {
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->Ignore_F_deps) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       for (e = 0; e < MAX_EQNS; e++) {
         for (v = 0; v < MAX_VARIABLE_TYPES; v++) {
           if ((e == R_FILL && v != FILL) || (e != R_FILL && v == FILL))
@@ -5257,7 +5257,7 @@ static void set_interaction_masks(Exo_DB *exo)
     }
   }
 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (e = 0; e < MAX_EQNS; e++) {
       for (v = 0; v < MAX_VARIABLE_TYPES; v++) {
         if (Ignore_Deps[imtrx][e][v])
@@ -5277,10 +5277,11 @@ static void set_interaction_masks(Exo_DB *exo)
     if (mn < 0) {
       continue;
     }
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       for (e = 0; e < MAX_EQNS; e++) {
         for (v = 0; v < MAX_VARIABLE_TYPES; v++) {
-          Inter_Mask[imtrx][e][v] |= (pd_glob[mn]->e[imtrx][e] & eqn_var_mask[imtrx][e][v]) ? 1 : 0;
+          Inter_Mask[imtrx][e][v] |=
+              (goma_ctx->fem.pd_glob[mn]->e[imtrx][e] & eqn_var_mask[imtrx][e][v]) ? 1 : 0;
         }
       }
     }
@@ -5288,7 +5289,7 @@ static void set_interaction_masks(Exo_DB *exo)
 
   if (goma_ctx->debug_flag > 2) {
     printf("\n\nProc: %d\n", goma_ctx->proc_id);
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       for (n = 0; n < MAX_VARIABLE_TYPES; n++) {
         printf("\n");
         for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
@@ -5377,11 +5378,11 @@ int Index_Solution(const int nodeNum,
 
   if (varType == MASS_FRACTION) {
     ifound = 0;
-    if (subvarIndex >= upd->Max_Num_Species_Eqn) {
+    if (subvarIndex >= goma_ctx->fem.upd->Max_Num_Species_Eqn) {
       printf("ERROR Index_Solution: subvarIndex is bad: %d\n", subvarIndex);
       GOMA_EH(GOMA_ERROR, "ERROR Index_Solution: subvarIndex is bad");
     }
-    index = nv->Num_Var_Desc_Per_Type[varType] / upd->Max_Num_Species_Eqn;
+    index = nv->Num_Var_Desc_Per_Type[varType] / goma_ctx->fem.upd->Max_Num_Species_Eqn;
     for (i = 0; i < nv->Num_Var_Desc; i++) {
       vd = nv->Var_Desc_List[i];
       if ((vd->Variable_Type == MASS_FRACTION) && (vd->Subvar_Index == subvarIndex)) {
@@ -5519,10 +5520,10 @@ int variable_type_nodalInterp(int var)
   int i, post_flag, i_type;
   struct Problem_Description *pd_local;
   post_flag = 0;
-  if (Num_Var_In_Type[pg->imtrx][var]) {
-    for (i = 0; i < upd->Num_Mat; i++) {
-      pd_local = pd_glob[i];
-      i_type = pd_local->i[pg->imtrx][var];
+  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
+    for (i = 0; i < goma_ctx->fem.upd->Num_Mat; i++) {
+      pd_local = goma_ctx->fem.pd_glob[i];
+      i_type = pd_local->i[goma_ctx->fem.pg->imtrx][var];
       if (i_type == I_Q1 || i_type == I_Q2 || i_type == I_Q1_G || i_type == I_Q2_G ||
           i_type == I_Q1_GP || i_type == I_Q2_GP || i_type == I_Q1_GN || i_type == I_Q2_GN ||
           i_type == I_Q1_XV || i_type == I_Q2_XV || i_type == I_Q1_XG || i_type == I_Q2_XG ||
@@ -5709,7 +5710,7 @@ void dofname40(const int unknown, char *str)
   if (unknown < 0)
     return;
 
-  vd = Index_Solution_Inv(unknown, &inode, &i_Var_Desc, &i_offset, &idof, pg->imtrx);
+  vd = Index_Solution_Inv(unknown, &inode, &i_Var_Desc, &i_offset, &idof, goma_ctx->fem.pg->imtrx);
   if (vd == NULL)
     return;
   var_type = vd->Variable_Type;

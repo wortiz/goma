@@ -304,11 +304,11 @@ int do_user_update(int n,
 
   /* Store new and old values */
   if (param_type == 1) {
-    cpuc[n].old_value = cpuc[n].value;
-    cpuc[n].value = value;
+    goma_ctx->fem.cpuc[n].old_value = goma_ctx->fem.cpuc[n].value;
+    goma_ctx->fem.cpuc[n].value = value;
   } else if (param_type == 2) {
-    tpuc[n].old_value = tpuc[n].value;
-    tpuc[n].value = value;
+    goma_ctx->fem.tpuc[n].old_value = goma_ctx->fem.tpuc[n].value;
+    goma_ctx->fem.tpuc[n].value = value;
   }
 
   /* Call the appropriate update function */
@@ -318,13 +318,13 @@ int do_user_update(int n,
 
     /* Store ID info on first call */
     if (first_cp == 1) {
-      cpuc[n].Type = 1;
-      cpuc[n].BCID = BCID;
-      cpuc[n].DFID = DFID;
+      goma_ctx->fem.cpuc[n].Type = 1;
+      goma_ctx->fem.cpuc[n].BCID = BCID;
+      goma_ctx->fem.cpuc[n].DFID = DFID;
     } else if (first_tp == 1) {
-      tpuc[n].Type = 1;
-      tpuc[n].BCID = BCID;
-      tpuc[n].DFID = DFID;
+      goma_ctx->fem.tpuc[n].Type = 1;
+      goma_ctx->fem.tpuc[n].BCID = BCID;
+      goma_ctx->fem.tpuc[n].DFID = DFID;
     }
     break;
 
@@ -333,13 +333,13 @@ int do_user_update(int n,
 
     /* Store ID info on first call */
     if (first_cp == 1) {
-      cpuc[n].Type = 2;
-      cpuc[n].MTID = MTID - 1;
-      cpuc[n].MPID = MPID;
+      goma_ctx->fem.cpuc[n].Type = 2;
+      goma_ctx->fem.cpuc[n].MTID = MTID - 1;
+      goma_ctx->fem.cpuc[n].MPID = MPID;
     } else if (first_tp == 1) {
-      tpuc[n].Type = 2;
-      tpuc[n].MTID = MTID - 1;
-      tpuc[n].MPID = MPID;
+      goma_ctx->fem.tpuc[n].Type = 2;
+      goma_ctx->fem.tpuc[n].MTID = MTID - 1;
+      goma_ctx->fem.tpuc[n].MPID = MPID;
     }
     break;
 
@@ -348,13 +348,13 @@ int do_user_update(int n,
 
     /* Store ID info on first call */
     if (first_cp == 1) {
-      cpuc[n].Type = 3;
-      cpuc[n].BCID = BCID;
-      cpuc[n].DFID = DFID;
+      goma_ctx->fem.cpuc[n].Type = 3;
+      goma_ctx->fem.cpuc[n].BCID = BCID;
+      goma_ctx->fem.cpuc[n].DFID = DFID;
     } else if (first_tp == 1) {
-      tpuc[n].Type = 3;
-      tpuc[n].BCID = BCID;
-      tpuc[n].DFID = DFID;
+      goma_ctx->fem.tpuc[n].Type = 3;
+      goma_ctx->fem.tpuc[n].BCID = BCID;
+      goma_ctx->fem.tpuc[n].DFID = DFID;
     }
     break;
 
@@ -363,15 +363,15 @@ int do_user_update(int n,
 
     /* Store ID info on first call */
     if (first_cp == 1) {
-      cpuc[n].Type = 4;
-      cpuc[n].MTID = MTID - 1;
-      cpuc[n].MPID = MPID;
-      cpuc[n].MDID = MDID;
+      goma_ctx->fem.cpuc[n].Type = 4;
+      goma_ctx->fem.cpuc[n].MTID = MTID - 1;
+      goma_ctx->fem.cpuc[n].MPID = MPID;
+      goma_ctx->fem.cpuc[n].MDID = MDID;
     } else if (first_tp == 1) {
-      tpuc[n].Type = 4;
-      tpuc[n].MTID = MTID - 1;
-      tpuc[n].MPID = MPID;
-      tpuc[n].MDID = MDID;
+      goma_ctx->fem.tpuc[n].Type = 4;
+      goma_ctx->fem.tpuc[n].MTID = MTID - 1;
+      goma_ctx->fem.tpuc[n].MPID = MPID;
+      goma_ctx->fem.tpuc[n].MDID = MDID;
     }
     break;
   }

@@ -90,8 +90,8 @@ int find_id_elem(const double x, /* x-coordinate */
       sum_xcoord = sum_ycoord = sum_zcoord = 0.;
       for (id = 0; id < num_local_nodes; id++) {
         I = exo->node_list[iconn_ptr + id];
-        i = Index_Solution(I, MESH_DISPLACEMENT1, 0, 0, -1, pg->imtrx);
-        if (i == -1 && pd_glob[mn]->IntegrationMap != SUBPARAMETRIC) {
+        i = Index_Solution(I, MESH_DISPLACEMENT1, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+        if (i == -1 && goma_ctx->fem.pd_glob[mn]->IntegrationMap != SUBPARAMETRIC) {
           sum_xcoord += goma_ctx->mesh.coor[0][I];
           sum_ycoord += goma_ctx->mesh.coor[1][I];
           if (exo->num_dim > 2)
@@ -157,7 +157,7 @@ int invert_isoparametric_map(int *current_ielem, /* initial element of search */
   double Jinv[MAX_PDIM][MAX_PDIM]; /*  store old element Jac inverse */
   double rot[MAX_PDIM][MAX_PDIM];  /*  isopar. coord rotation tensor */
 
-  dim = ei[pg->imtrx]->ielem_dim;
+  dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
 
   if (xv == x_static) /* be the least disruptive possible */
   {
@@ -173,7 +173,7 @@ int invert_isoparametric_map(int *current_ielem, /* initial element of search */
   inewton = 0;
 
   while ((!converged) && (inewton < 50)) {
-    err = load_basis_functions(xi, bfd);
+    err = load_basis_functions(xi, goma_ctx->fem.bfd);
     GOMA_EH(err, "problem from load_basis_functions");
 
     /*
@@ -194,7 +194,7 @@ int invert_isoparametric_map(int *current_ielem, /* initial element of search */
     /* form residual equations */
 
     for (a = 0; a < dim; a++) {
-      R[a] = coordinate[a] - fv->x[a];
+      R[a] = coordinate[a] - goma_ctx->fem.fv->x[a];
     }
 
     /* Solve matrix system with inverted Jacobian from beer_belly */
@@ -206,7 +206,7 @@ int invert_isoparametric_map(int *current_ielem, /* initial element of search */
     for (a = 0; a < dim; a++) {
       for (b = 0; b < dim; b++) {
 
-        update[a] += bfd[*velo_interp]->B[b][a] * R[b];
+        update[a] += goma_ctx->fem.bfd[*velo_interp]->B[b][a] * R[b];
       }
     }
 
@@ -281,7 +281,7 @@ int invert_isoparametric_map(int *current_ielem, /* initial element of search */
         xi_tmp[2] = 1.;
         break;
       }
-      err = load_basis_functions(xi_tmp, bfd);
+      err = load_basis_functions(xi_tmp, goma_ctx->fem.bfd);
       GOMA_EH(err, "problem from load_basis_functions");
 
       err = beer_belly();
@@ -289,7 +289,7 @@ int invert_isoparametric_map(int *current_ielem, /* initial element of search */
 
       for (a = 0; a < dim; a++) {
         for (b = 0; b < dim; b++) {
-          Jinv[a][b] = bfd[*velo_interp]->B[a][b];
+          Jinv[a][b] = goma_ctx->fem.bfd[*velo_interp]->B[a][b];
         }
       }
 
@@ -308,7 +308,7 @@ int invert_isoparametric_map(int *current_ielem, /* initial element of search */
             newface = a;
         }
 
-        load_ei(*current_ielem, exo, 0, pg->imtrx);
+        load_ei(*current_ielem, exo, 0, goma_ctx->fem.pg->imtrx);
 
         if (xv == x_static) /* be the least disruptive possible */
         {
@@ -357,7 +357,7 @@ int invert_isoparametric_map(int *current_ielem, /* initial element of search */
           break;
         }
 
-        err = load_basis_functions(xi_tmp, bfd);
+        err = load_basis_functions(xi_tmp, goma_ctx->fem.bfd);
         GOMA_EH(err, "problem from load_basis_functions");
 
         err = beer_belly();
@@ -370,7 +370,7 @@ int invert_isoparametric_map(int *current_ielem, /* initial element of search */
         for (a = 0; a < dim; a++) {
           for (b = 0; b < dim; b++) {
             for (c = 0; c < dim; c++) {
-              rot[a][c] += bfd[*velo_interp]->J[a][b] * Jinv[b][c];
+              rot[a][c] += goma_ctx->fem.bfd[*velo_interp]->J[a][b] * Jinv[b][c];
             }
           }
         }

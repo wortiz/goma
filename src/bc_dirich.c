@@ -76,17 +76,18 @@ int put_dirichlet_in_matrix(double x[], const int num_total_nodes)
   if (goma_ctx->debug_flag < 0)
     return 0;
 
-  for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-    I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
+  for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+    I = goma_ctx->mesh
+            .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
     node = Nodes[I];
-    if (node->DBC[pg->imtrx] && I < num_total_nodes) {
-      nv = node->Nodal_Vars_Info[pg->imtrx];
+    if (node->DBC[goma_ctx->fem.pg->imtrx] && I < num_total_nodes) {
+      nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
       offset = 0;
       for (lvdesc = 0; lvdesc < nv->Num_Var_Desc; lvdesc++) {
         vd = nv->Var_Desc_List[lvdesc];
         for (idof = 0; idof < vd->Ndof; idof++) {
-          if (node->DBC[pg->imtrx][offset] != -1) {
-            ibc = node->DBC[pg->imtrx][offset];
+          if (node->DBC[goma_ctx->fem.pg->imtrx][offset] != -1) {
+            ibc = node->DBC[goma_ctx->fem.pg->imtrx][offset];
             var_type = vd->Variable_Type;
             matID = vd->MatID;
             /*
@@ -96,10 +97,10 @@ int put_dirichlet_in_matrix(double x[], const int num_total_nodes)
              * in the local element stiffness matrix lvdof
              * ordering.
              */
-            ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[var_type][i];
-            for (j = 0, found = FALSE; j < Dolphin[pg->imtrx][I][var_type]; j++) {
-              ledof = ei[pg->imtrx]->lvdof_to_ledof[var_type][ldof_eqn];
-              matID_dof = ei[pg->imtrx]->matID_ledof[ledof];
+            ldof_eqn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[var_type][i];
+            for (j = 0, found = FALSE; j < Dolphin[goma_ctx->fem.pg->imtrx][I][var_type]; j++) {
+              ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var_type][ldof_eqn];
+              matID_dof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
               if (matID == matID_dof || matID == -1) {
                 found = TRUE;
                 break;
@@ -113,13 +114,13 @@ int put_dirichlet_in_matrix(double x[], const int num_total_nodes)
               eqn = MAX_PROB_VAR + vd->Subvar_Index;
               var = eqn;
             } else {
-              eqn = upd->ep[pg->imtrx][var_type];
-              var = upd->vp[pg->imtrx][var_type];
+              eqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][var_type];
+              var = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var_type];
             }
 
-            if (pd->e[pg->imtrx][var_type]) /*Big test here.  We are no longer applying
-                                  dirichlets from materials that the variables
-                                  isn't defined */
+            if (goma_ctx->fem.pd
+                    ->e[goma_ctx->fem.pg->imtrx][var_type]) /*Big test here.  We are no longer
+                      applying dirichlets from materials that the variables isn't defined */
             {
               // Add for F_DIODE_BC if((var_type != FILL) )
               // Add for F_DIOD_BC  {
@@ -127,16 +128,18 @@ int put_dirichlet_in_matrix(double x[], const int num_total_nodes)
               if (BC_Types[ibc].BC_Name != DX_NOTHING_BC &&
                   BC_Types[ibc].BC_Name != DY_NOTHING_BC &&
                   BC_Types[ibc].BC_Name != DZ_NOTHING_BC) {
-                zero_lec_row(lec->J, eqn, ldof_eqn);
-                if (!(af->Assemble_LSA_Mass_Matrix)) {
-                  lec->J[LEC_J_INDEX(eqn, var, ldof_eqn, ldof_eqn)] = DIRICHLET_PENALTY;
+                zero_lec_row(goma_ctx->fem.lec->J, eqn, ldof_eqn);
+                if (!(goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)) {
+                  goma_ctx->fem.lec->J[LEC_J_INDEX(eqn, var, ldof_eqn, ldof_eqn)] =
+                      DIRICHLET_PENALTY;
                 }
                 if (BC_Types[ibc].BC_relax == -1.0) {
-                  lec->R[LEC_R_INDEX(eqn, ldof_eqn)] = 0.0;
+                  goma_ctx->fem.lec->R[LEC_R_INDEX(eqn, ldof_eqn)] = 0.0;
                 } else {
-                  ieqn = node->First_Unknown[pg->imtrx] + offset;
+                  ieqn = node->First_Unknown[goma_ctx->fem.pg->imtrx] + offset;
                   V_set = BC_Types[ibc].BC_Data_Float[0];
-                  lec->R[LEC_R_INDEX(eqn, ldof_eqn)] = DIRICHLET_PENALTY * (x[ieqn] - V_set);
+                  goma_ctx->fem.lec->R[LEC_R_INDEX(eqn, ldof_eqn)] =
+                      DIRICHLET_PENALTY * (x[ieqn] - V_set);
                 }
               } /* end of DX_NOTHING test  */
               // Add for F_DIODE_BC   }

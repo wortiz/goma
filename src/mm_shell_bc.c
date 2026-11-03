@@ -144,15 +144,15 @@ void shell_n_dot_flow_bc_confined(double func[DIM],
   double grad_phi_j[DIM], grad_II_phi_j[DIM], d_grad_II_phi_j_dmesh[DIM][DIM][MDE];
   double bound_normal[DIM], bound_dnormal_dx[DIM][DIM][MDE];
 
-  if (ei[pg->imtrx]->ielem_dim == 3)
+  if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim == 3)
     return;
   /* Save the boundary normal vector */
 
-  for (ii = 0; ii < pd->Num_Dim; ii++) {
-    bound_normal[ii] = fv->snormal[ii];
-    for (jj = 0; jj < pd->Num_Dim; jj++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
-        bound_dnormal_dx[ii][jj][j] = fv->dsnormal_dx[ii][jj][j];
+  for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+    bound_normal[ii] = goma_ctx->fem.fv->snormal[ii];
+    for (jj = 0; jj < goma_ctx->fem.pd->Num_Dim; jj++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
+        bound_dnormal_dx[ii][jj][j] = goma_ctx->fem.fv->dsnormal_dx[ii][jj][j];
       }
     }
   }
@@ -167,49 +167,50 @@ void shell_n_dot_flow_bc_confined(double func[DIM],
 
   calculate_lub_q_v(R_LUBP, time, dt, xi, exo);
 
-  if (af->Assemble_LSA_Mass_Matrix) {
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
     return;
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = LUBP;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         /* Load basis functions (j) */
         ShellBF(var, j, &phi_j, grad_phi_j, grad_II_phi_j, d_grad_II_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
 
-        for (ii = 0; ii < pd->Num_Dim; ii++) {
-          d_func[0][var][j] += LubAux->dq_dp2[ii] * phi_j * bound_normal[ii];
-          for (jj = 0; jj < pd->Num_Dim; jj++) {
-            d_func[0][var][j] += LubAux->dq_dgradp[ii][jj] * grad_II_phi_j[jj] * bound_normal[ii];
+        for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+          d_func[0][var][j] += goma_ctx->fem.lub_aux->dq_dp2[ii] * phi_j * bound_normal[ii];
+          for (jj = 0; jj < goma_ctx->fem.pd->Num_Dim; jj++) {
+            d_func[0][var][j] +=
+                goma_ctx->fem.lub_aux->dq_dgradp[ii][jj] * grad_II_phi_j[jj] * bound_normal[ii];
           }
         }
       }
     }
 
     var = SHELL_SHEAR_TOP;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         /* Load basis functions (j) */
         ShellBF(var, j, &phi_j, grad_phi_j, grad_II_phi_j, d_grad_II_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
 
-        for (ii = 0; ii < pd->Num_Dim; ii++) {
-          d_func[0][var][j] += LubAux->dq_dshrw[ii] * phi_j * bound_normal[ii];
+        for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+          d_func[0][var][j] += goma_ctx->fem.lub_aux->dq_dshrw[ii] * phi_j * bound_normal[ii];
         }
       }
     }
 
     var = SHELL_TEMPERATURE;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         /* Load basis functions (j) */
         ShellBF(var, j, &phi_j, grad_phi_j, grad_II_phi_j, d_grad_II_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
 
-        for (ii = 0; ii < pd->Num_Dim; ii++) {
-          d_func[0][var][j] += LubAux->dq_dT[ii] * phi_j * bound_normal[ii];
+        for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+          d_func[0][var][j] += goma_ctx->fem.lub_aux->dq_dT[ii] * phi_j * bound_normal[ii];
         }
       }
     }
@@ -218,28 +219,30 @@ void shell_n_dot_flow_bc_confined(double func[DIM],
      * J_lubp_DMX
      */
     var = MESH_DISPLACEMENT1;
-    if (pd->v[pg->imtrx][var] &&
-        (mp->FSIModel == FSI_MESH_CONTINUUM || mp->FSIModel == FSI_REALSOLID_CONTINUUM ||
-         mp->FSIModel == FSI_MESH_UNDEF || mp->FSIModel == FSI_SHELL_ONLY_MESH ||
-         mp->FSIModel == FSI_SHELL_ONLY_UNDEF)) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] &&
+        (goma_ctx->fem.mp->FSIModel == FSI_MESH_CONTINUUM ||
+         goma_ctx->fem.mp->FSIModel == FSI_REALSOLID_CONTINUUM ||
+         goma_ctx->fem.mp->FSIModel == FSI_MESH_UNDEF ||
+         goma_ctx->fem.mp->FSIModel == FSI_SHELL_ONLY_MESH ||
+         goma_ctx->fem.mp->FSIModel == FSI_SHELL_ONLY_UNDEF)) {
 
       /*** Loop over dimensions of mesh displacement ***/
-      for (jj = 0; jj < pd->Num_Dim; jj++) {
+      for (jj = 0; jj < goma_ctx->fem.pd->Num_Dim; jj++) {
         var = MESH_DISPLACEMENT1 + jj;
 
         /*** Loop over DOFs (j) ***/
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          phi_j = bf[var]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          phi_j = goma_ctx->fem.bf[var]->phi[j];
           jk = dof_map[j];
 
           /* Load basis functions (j) */
           ShellBF(var, j, &phi_j, grad_phi_j, grad_II_phi_j, d_grad_II_phi_j_dmesh,
                   n_dof[MESH_DISPLACEMENT1], dof_map);
 
-          if (pd->e[pg->imtrx][var]) {
-            for (ii = 0; ii < pd->Num_Dim; ii++) {
-              d_func[0][var][j] += LubAux->dq_dx[ii][jj][j] * bound_normal[ii];
-              d_func[0][var][j] += LubAux->q[ii] * bound_dnormal_dx[ii][jj][jk];
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+            for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+              d_func[0][var][j] += goma_ctx->fem.lub_aux->dq_dx[ii][jj][j] * bound_normal[ii];
+              d_func[0][var][j] += goma_ctx->fem.lub_aux->q[ii] * bound_dnormal_dx[ii][jj][jk];
             }
           }
         }
@@ -249,10 +252,10 @@ void shell_n_dot_flow_bc_confined(double func[DIM],
 
   /* Calculate the residual contribution        */
   if (bc_id == GRAD_LUB_PRESS_BC) {
-    func[0] = -flowrate - flow_gap * pow(LubAux->H, 2 + 1. / pwr_index);
+    func[0] = -flowrate - flow_gap * pow(goma_ctx->fem.lub_aux->H, 2 + 1. / pwr_index);
   }
-  for (ii = 0; ii < pd->Num_Dim; ii++) {
-    func[0] += LubAux->q[ii] * bound_normal[ii];
+  for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+    func[0] += goma_ctx->fem.lub_aux->q[ii] * bound_normal[ii];
   }
 
   /* clean-up */
@@ -314,15 +317,15 @@ void shell_n_dot_curv_bc(double func[DIM],
   double curvX, diffX = 1.0;
 
   int eqn = R_SHELL_LUB_CURV;
-  if (ei[pg->imtrx]->ielem_dim == 3)
+  if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim == 3)
     return;
   /* Save the boundary normal vector */
 
-  for (ii = 0; ii < pd->Num_Dim; ii++) {
-    bound_normal[ii] = fv->snormal[ii];
-    for (jj = 0; jj < pd->Num_Dim; jj++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
-        bound_dnormal_dx[ii][jj][j] = fv->dsnormal_dx[ii][jj][j];
+  for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+    bound_normal[ii] = goma_ctx->fem.fv->snormal[ii];
+    for (jj = 0; jj < goma_ctx->fem.pd->Num_Dim; jj++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
+        bound_dnormal_dx[ii][jj][j] = goma_ctx->fem.fv->dsnormal_dx[ii][jj][j];
       }
     }
   }
@@ -336,7 +339,7 @@ void shell_n_dot_curv_bc(double func[DIM],
   /* Calculate the flow rate and its sensitivties */
 
   /* Load level set fields */
-  load_lsi(ls->Length_Scale);
+  load_lsi(goma_ctx->fem.ls->Length_Scale);
   load_lsi_derivs();
 
   /* Rotate grad(F) and grad(kappa) to shell coordinates */
@@ -347,16 +350,17 @@ void shell_n_dot_curv_bc(double func[DIM],
   memset(d_grad_kappa_dmesh, 0.0, sizeof(double) * DIM * DIM * MDE);
   for (ii = 0; ii < DIM; ii++) {
     for (jj = 0; jj < DIM; jj++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
         jk = dof_map[j];
-        d_grad_F_dmesh[ii][jj][jk] = fv->d_grad_F_dmesh[ii][jj][j];
-        d_grad_kappa_dmesh[ii][jj][jk] = fv->d_grad_sh_l_curv_dmesh[ii][jj][j];
+        d_grad_F_dmesh[ii][jj][jk] = goma_ctx->fem.fv->d_grad_F_dmesh[ii][jj][j];
+        d_grad_kappa_dmesh[ii][jj][jk] = goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[ii][jj][j];
       }
     }
   }
-  ShellRotate(fv->grad_F, d_grad_F_dmesh, gradII_F, d_gradII_F_dmesh, n_dof[MESH_DISPLACEMENT1]);
-  ShellRotate(fv->grad_sh_l_curv, d_grad_kappa_dmesh, gradII_kappa, d_gradII_kappa_dmesh,
+  ShellRotate(goma_ctx->fem.fv->grad_F, d_grad_F_dmesh, gradII_F, d_gradII_F_dmesh,
               n_dof[MESH_DISPLACEMENT1]);
+  ShellRotate(goma_ctx->fem.fv->grad_sh_l_curv, d_grad_kappa_dmesh, gradII_kappa,
+              d_gradII_kappa_dmesh, n_dof[MESH_DISPLACEMENT1]);
 
   /* Calculate rotated level set normal */
   dbl LSnormal[DIM], LSnormal_mag = 0, LSnormal_maginv;
@@ -398,7 +402,7 @@ void shell_n_dot_curv_bc(double func[DIM],
   memset(d_LSnormal_mag_dF, 0.0, sizeof(double) * MDE);
   memset(d_LSnormal_dF, 0.0, sizeof(double) * MDE * DIM);
   var = FILL;
-  for (ii = 0; ii < ei[pg->imtrx]->dof[FILL]; ii++) {
+  for (ii = 0; ii < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[FILL]; ii++) {
 
     /* Basis functions */
     ShellBF(eqn, ii, &phi_i, grad_phi_i, grad_II_phi_i, d_grad_II_phi_i_dmesh,
@@ -417,19 +421,19 @@ void shell_n_dot_curv_bc(double func[DIM],
   }
 
   /* Prepare weighting for artificial diffusion term */
-  double K_diff = mp->Lub_Curv_Diff;
-  if (mp->Lub_Curv_Modulation) {
+  double K_diff = goma_ctx->fem.mp->Lub_Curv_Diff;
+  if (goma_ctx->fem.mp->Lub_Curv_Modulation) {
     curvX = 0.;
     curv_near = 0;
-    if (fabs(fv->F) < 2. * lsi->alpha) {
+    if (fabs(goma_ctx->fem.fv->F) < 2. * goma_ctx->fem.lsi->alpha) {
       curv_near = 1;
-      if (lsi->near) {
+      if (goma_ctx->fem.lsi->near) {
         curvX = 1.;
       } else {
-        curvX = 2. - SGN(fv->F) * fv->F / lsi->alpha;
+        curvX = 2. - SGN(goma_ctx->fem.fv->F) * goma_ctx->fem.fv->F / goma_ctx->fem.lsi->alpha;
       }
     }
-    if (!mp->Lub_Isotropic_Curv_Diffusion)
+    if (!goma_ctx->fem.mp->Lub_Isotropic_Curv_Diffusion)
       K_diff *= curvX;
   } else {
     curvX = 1.;
@@ -439,42 +443,43 @@ void shell_n_dot_curv_bc(double func[DIM],
   /* If we want anisotropic curvature diffusion -- i.e., want to constrain the
      curvature field to the interface zone -- set the diffusion and curvature
      multipliers to be equal to each other  */
-  if (!mp->Lub_Isotropic_Curv_Diffusion)
+  if (!goma_ctx->fem.mp->Lub_Isotropic_Curv_Diffusion)
     diffX = curvX;
 
-  if (af->Assemble_LSA_Mass_Matrix) {
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
     return;
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     /*
      * J_Curv_DMX
      */
     var = MESH_DISPLACEMENT1;
-    if (pd->v[pg->imtrx][var] && lsi->near &&
-        (mp->FSIModel == FSI_MESH_CONTINUUM || mp->FSIModel == FSI_MESH_UNDEF)) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] && goma_ctx->fem.lsi->near &&
+        (goma_ctx->fem.mp->FSIModel == FSI_MESH_CONTINUUM ||
+         goma_ctx->fem.mp->FSIModel == FSI_MESH_UNDEF)) {
 
       /*** Loop over dimensions of mesh displacement ***/
-      for (jj = 0; jj < pd->Num_Dim; jj++) {
+      for (jj = 0; jj < goma_ctx->fem.pd->Num_Dim; jj++) {
         var = MESH_DISPLACEMENT1 + jj;
 
         /*** Loop over DOFs (j) ***/
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           jk = dof_map[j];
 
           /* Load basis functions (j) */
           ShellBF(var, j, &phi_j, grad_phi_j, grad_II_phi_j, d_grad_II_phi_j_dmesh,
                   n_dof[MESH_DISPLACEMENT1], dof_map);
 
-          if (pd->e[pg->imtrx][var]) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
             if (ibc_flag != -1) {
-              for (ii = 0; ii < pd->Num_Dim; ii++) {
+              for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
                 d_func[0][var][j] -= d_LSnormal_dmesh[ii][jj][jk] * bound_normal[ii];
                 d_func[0][var][j] -= LSnormal[ii] * bound_dnormal_dx[ii][jj][jk];
               }
               d_func[0][var][j] *= curvX;
             }
-            for (ii = 0; ii < pd->Num_Dim; ii++) {
+            for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
               d_func[0][var][j] += diffX * K_diff * hsquared[ii] *
                                    (gradII_kappa[ii] * bound_dnormal_dx[ii][jj][jk] +
                                     d_gradII_kappa_dmesh[ii][jj][j]);
@@ -487,37 +492,38 @@ void shell_n_dot_curv_bc(double func[DIM],
      * J_Curv_DF
      */
     var = FILL;
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       double div1 = 0.0, diff1 = 0.0;
-      if (curv_near || !mp->Lub_Curv_Modulation) {
+      if (curv_near || !goma_ctx->fem.mp->Lub_Curv_Modulation) {
         for (ii = 0; ii < VIM; ii++) {
           div1 += LSnormal[ii] * grad_II_phi_i[ii];
           diff1 += hsquared[ii] * gradII_kappa[ii] * grad_II_phi_i[ii];
         }
-        if (mp->Lub_Curv_Combine) {
-          div1 -= LubAux->op_curv * phi_i;
+        if (goma_ctx->fem.mp->Lub_Curv_Combine) {
+          div1 -= goma_ctx->fem.lub_aux->op_curv * phi_i;
         }
       }
 
       /* Loop over DOFs (j) */
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        if (pd->e[pg->imtrx][var]) {
-          if (curv_near && !mp->Lub_Isotropic_Curv_Diffusion) {
-            if (!lsi->near && mp->Lub_Curv_Modulation) {
-              d_func[0][var][j] += SGN(fv->F) / lsi->alpha * phi_j * diff1 * K_diff;
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+          if (curv_near && !goma_ctx->fem.mp->Lub_Isotropic_Curv_Diffusion) {
+            if (!goma_ctx->fem.lsi->near && goma_ctx->fem.mp->Lub_Curv_Modulation) {
+              d_func[0][var][j] +=
+                  SGN(goma_ctx->fem.fv->F) / goma_ctx->fem.lsi->alpha * phi_j * diff1 * K_diff;
             }
           }
 
           if (ibc_flag != -1) {
-            for (ii = 0; ii < pd->Num_Dim; ii++) {
+            for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
               d_func[0][var][j] -= curvX * d_LSnormal_dF[ii][j] * bound_normal[ii];
             }
-            if (mp->Lub_Curv_Combine) {
-              d_func[0][var][j] += curvX * LubAux->dop_curv_df[j] * phi_i;
+            if (goma_ctx->fem.mp->Lub_Curv_Combine) {
+              d_func[0][var][j] += curvX * goma_ctx->fem.lub_aux->dop_curv_df[j] * phi_i;
             }
-            if (curv_near && !mp->Lub_Isotropic_Curv_Diffusion) {
-              if (!lsi->near && mp->Lub_Curv_Modulation) {
-                d_func[0][var][j] -= SGN(fv->F) / lsi->alpha * div1;
+            if (curv_near && !goma_ctx->fem.mp->Lub_Isotropic_Curv_Diffusion) {
+              if (!goma_ctx->fem.lsi->near && goma_ctx->fem.mp->Lub_Curv_Modulation) {
+                d_func[0][var][j] -= SGN(goma_ctx->fem.fv->F) / goma_ctx->fem.lsi->alpha * div1;
               }
             }
           }
@@ -526,15 +532,15 @@ void shell_n_dot_curv_bc(double func[DIM],
     } // End of FILL assembly
     /*** SHELL_LUB_CURV ***/
     var = SHELL_LUB_CURV;
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       /* Loop over DOFs (j) */
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         /* Prepare basis funcitons (j) */
         ShellBF(var, j, &phi_j, grad_phi_j, grad_II_phi_j, d_grad_II_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
         Inn(grad_phi_j, grad_II_phi_j);
-        if (pd->e[pg->imtrx][var]) {
-          for (ii = 0; ii < pd->Num_Dim; ii++) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+          for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
             d_func[0][var][j] +=
                 diffX * K_diff * hsquared[ii] * bound_normal[ii] * grad_II_phi_j[ii];
           }
@@ -545,17 +551,17 @@ void shell_n_dot_curv_bc(double func[DIM],
   } /* end of if Assemble_Jacobian */
 
   /* Calculate the residual contribution        */
-  if (curv_near || !mp->Lub_Curv_Modulation) {
+  if (curv_near || !goma_ctx->fem.mp->Lub_Curv_Modulation) {
     if (ibc_flag == -1) {
       func[0] -= curvX * cos(M_PIE * theta_deg / 180.);
     } else {
-      for (ii = 0; ii < pd->Num_Dim; ii++) {
+      for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
         func[0] -= curvX * LSnormal[ii] * bound_normal[ii];
       }
     }
   }
   /* Diffusion boundary term */
-  for (ii = 0; ii < pd->Num_Dim; ii++) {
+  for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
     func[0] += diffX * K_diff * hsquared[ii] * gradII_kappa[ii] * bound_normal[ii];
   }
 
@@ -609,10 +615,10 @@ void shell_conc_ls_bc(double func[DIM],
   int *n_dof = NULL;
   int dof_map[MDE];
 
-  if (ei[pg->imtrx]->ielem_dim == 3)
+  if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim == 3)
     return;
 
-  if (af->Assemble_LSA_Mass_Matrix) {
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
     return;
   }
   /*
@@ -625,29 +631,29 @@ void shell_conc_ls_bc(double func[DIM],
 
   /* Add contributions from level set side of boundary to flux */
 
-  load_lsi_adjmatr(ls->Length_Scale);
+  load_lsi_adjmatr(goma_ctx->fem.ls->Length_Scale);
 
   /* Calculate the residual contribution        */
-  func[0] += fv->c[spec_id];
-  func[0] -= conc_liq * (1. - lsi->H) + conc_gas * lsi->H;
+  func[0] += goma_ctx->fem.fv->c[spec_id];
+  func[0] -= conc_liq * (1. - goma_ctx->fem.lsi->H) + conc_gas * goma_ctx->fem.lsi->H;
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     /*
      * J_Conc_DF
      */
     var = FILL;
-    if (pd->v[pg->imtrx][var] && lsi->near) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        if (pd->e[pg->imtrx][var]) {
-          d_func[0][var][j] += (conc_liq - conc_gas) * lsi->d_H_dF[j];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] && goma_ctx->fem.lsi->near) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+          d_func[0][var][j] += (conc_liq - conc_gas) * goma_ctx->fem.lsi->d_H_dF[j];
         }
       } // End of loop over DOFs (j)
     } // End of FILL assembly
     var = MASS_FRACTION;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        if (pd->e[pg->imtrx][var]) {
-          d_func[0][MAX_VARIABLE_TYPES + spec_id][j] += bf[var]->phi[j];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+          d_func[0][MAX_VARIABLE_TYPES + spec_id][j] += goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
@@ -715,7 +721,7 @@ void lub_static_pressure(double func[DIM],
    * Prepare geometry
    */
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
   lubrication_shell_initialize(n_dof, dof_map, -1, xi, exo, 0);
@@ -738,71 +744,77 @@ void lub_static_pressure(double func[DIM],
   memset(D_H_DP, 0.0, sizeof(double) * MDE);
 
   /* Deform height */
-  switch (mp->FSIModel) {
+  switch (goma_ctx->fem.mp->FSIModel) {
   case FSI_MESH_CONTINUUM:
   case FSI_MESH_UNDEF:
   case FSI_SHELL_ONLY_UNDEF:
     for (i = 0; i < dim; i++) {
-      H -= fv->snormal[i] * fv->d[i];
+      H -= goma_ctx->fem.fv->snormal[i] * goma_ctx->fem.fv->d[i];
     }
     break;
   case FSI_SHELL_ONLY_MESH:
-    if (pd->e[pg->imtrx][R_SHELL_NORMAL1] && pd->e[pg->imtrx][R_SHELL_NORMAL2] &&
-        pd->e[pg->imtrx][R_SHELL_NORMAL3]) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1] &&
+        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL2] &&
+        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL3]) {
       for (i = 0; i < dim; i++) {
-        H -= fv->n[i] * fv->d[i];
+        H -= goma_ctx->fem.fv->n[i] * goma_ctx->fem.fv->d[i];
       }
     } else {
       for (i = 0; i < dim; i++) {
-        H -= fv->snormal[i] * fv->d[i];
+        H -= goma_ctx->fem.fv->snormal[i] * goma_ctx->fem.fv->d[i];
       }
     }
     break;
   case FSI_REALSOLID_CONTINUUM:
     for (i = 0; i < dim; i++) {
-      H -= fv->snormal[i] * fv->d_rs[i];
+      H -= goma_ctx->fem.fv->snormal[i] * goma_ctx->fem.fv->d_rs[i];
     }
     break;
   }
 
   /* Calculate height sensitivity to mesh */
-  switch (mp->FSIModel) {
+  switch (goma_ctx->fem.mp->FSIModel) {
   case FSI_MESH_CONTINUUM:
   case FSI_MESH_UNDEF:
   case FSI_SHELL_ONLY_UNDEF:
     for (i = 0; i < dim; i++) {
       for (j = 0; j < dim; j++) {
-        for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+        for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
           jk = dof_map[k];
-          D_H_DX[j][jk] += delta(i, j) * (dH_U_dX[i] - dH_L_dX[i]) * bf[MESH_DISPLACEMENT1]->phi[k];
-          D_H_DX[j][jk] -= fv->dsnormal_dx[i][j][jk] * fv->d[i];
-          D_H_DX[j][jk] -= fv->snormal[i] * delta(i, j) * bf[MESH_DISPLACEMENT1]->phi[k];
+          D_H_DX[j][jk] += delta(i, j) * (dH_U_dX[i] - dH_L_dX[i]) *
+                           goma_ctx->fem.bf[MESH_DISPLACEMENT1]->phi[k];
+          D_H_DX[j][jk] -= goma_ctx->fem.fv->dsnormal_dx[i][j][jk] * goma_ctx->fem.fv->d[i];
+          D_H_DX[j][jk] -= goma_ctx->fem.fv->snormal[i] * delta(i, j) *
+                           goma_ctx->fem.bf[MESH_DISPLACEMENT1]->phi[k];
         }
       }
     }
     break;
   case FSI_SHELL_ONLY_MESH:
-    if ((pd->e[pg->imtrx][R_SHELL_NORMAL1]) && (pd->e[pg->imtrx][R_SHELL_NORMAL2]) &&
-        (pd->e[pg->imtrx][R_SHELL_NORMAL3])) {
+    if ((goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1]) &&
+        (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL2]) &&
+        (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL3])) {
       for (i = 0; i < dim; i++) {
         for (j = 0; j < dim; j++) {
-          for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+          for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
             jk = dof_map[k];
-            D_H_DX[j][jk] +=
-                delta(i, j) * (dH_U_dX[i] - dH_L_dX[i]) * bf[MESH_DISPLACEMENT1]->phi[k];
-            D_H_DX[j][jk] -= fv->n[i] * delta(i, j) * bf[MESH_DISPLACEMENT1]->phi[k];
+            D_H_DX[j][jk] += delta(i, j) * (dH_U_dX[i] - dH_L_dX[i]) *
+                             goma_ctx->fem.bf[MESH_DISPLACEMENT1]->phi[k];
+            D_H_DX[j][jk] -=
+                goma_ctx->fem.fv->n[i] * delta(i, j) * goma_ctx->fem.bf[MESH_DISPLACEMENT1]->phi[k];
           }
         }
       }
     } else {
       for (i = 0; i < dim; i++) {
         for (j = 0; j < dim; j++) {
-          for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+          for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
             jk = dof_map[k];
-            D_H_DX[j][jk] +=
-                delta(i, j) * (dH_U_dX[i] - dH_L_dX[i]) * bf[MESH_DISPLACEMENT1]->phi[k];
-            D_H_DX[j][jk] -= fv->dsnormal_dx[i][j][jk] * fv->d[i];
-            D_H_DX[j][jk] -= fv->snormal[i] * delta(i, j) * bf[MESH_DISPLACEMENT1]->phi[k];
+            D_H_DX[j][jk] += delta(i, j) * (dH_U_dX[i] - dH_L_dX[i]) *
+                             goma_ctx->fem.bf[MESH_DISPLACEMENT1]->phi[k];
+            D_H_DX[j][jk] -= goma_ctx->fem.fv->dsnormal_dx[i][j][jk] * goma_ctx->fem.fv->d[i];
+            D_H_DX[j][jk] -= goma_ctx->fem.fv->snormal[i] * delta(i, j) *
+                             goma_ctx->fem.bf[MESH_DISPLACEMENT1]->phi[k];
           }
         }
       }
@@ -811,14 +823,16 @@ void lub_static_pressure(double func[DIM],
   case FSI_REALSOLID_CONTINUUM:
     for (i = 0; i < dim; i++) {
       for (j = 0; j < dim; j++) {
-        for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+        for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
           jk = dof_map[k];
-          D_H_DX[j][jk] += delta(i, j) * (dH_U_dX[i] - dH_L_dX[i]) * bf[MESH_DISPLACEMENT1]->phi[k];
-          D_H_DX[j][jk] -= fv->dsnormal_dx[i][j][jk] * fv->d_rs[i];
+          D_H_DX[j][jk] += delta(i, j) * (dH_U_dX[i] - dH_L_dX[i]) *
+                           goma_ctx->fem.bf[MESH_DISPLACEMENT1]->phi[k];
+          D_H_DX[j][jk] -= goma_ctx->fem.fv->dsnormal_dx[i][j][jk] * goma_ctx->fem.fv->d_rs[i];
         }
-        for (k = 0; k < ei[pg->imtrx]->dof[SOLID_DISPLACEMENT1]; k++) {
+        for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SOLID_DISPLACEMENT1]; k++) {
           jk = dof_map[k];
-          D_H_DRS[j][jk] -= fv->snormal[i] * delta(i, j) * bf[SOLID_DISPLACEMENT1]->phi[jk];
+          D_H_DRS[j][jk] -= goma_ctx->fem.fv->snormal[i] * delta(i, j) *
+                            goma_ctx->fem.bf[SOLID_DISPLACEMENT1]->phi[jk];
         }
       }
     }
@@ -826,15 +840,17 @@ void lub_static_pressure(double func[DIM],
   }
 
   /* Calculate height sensitivity to shell normal */
-  switch (mp->FSIModel) {
+  switch (goma_ctx->fem.mp->FSIModel) {
 
   case FSI_SHELL_ONLY_MESH:
-    if ((pd->e[pg->imtrx][R_SHELL_NORMAL1]) && (pd->e[pg->imtrx][R_SHELL_NORMAL2]) &&
-        (pd->e[pg->imtrx][R_SHELL_NORMAL3])) {
+    if ((goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1]) &&
+        (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL2]) &&
+        (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL3])) {
       for (i = 0; i < dim; i++) {
         for (j = 0; j < dim; j++) {
-          for (k = 0; k < ei[pg->imtrx]->dof[SHELL_NORMAL1]; k++) {
-            D_H_DNORMAL[j][k] -= delta(i, j) * bf[SHELL_NORMAL1]->phi[k] * fv->d[i];
+          for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SHELL_NORMAL1]; k++) {
+            D_H_DNORMAL[j][k] -=
+                delta(i, j) * goma_ctx->fem.bf[SHELL_NORMAL1]->phi[k] * goma_ctx->fem.fv->d[i];
           }
         }
       }
@@ -849,16 +865,16 @@ void lub_static_pressure(double func[DIM],
   memset(D_Hn_DF, 0.0, sizeof(double) * MDE);
   memset(D_Hn_DX, 0.0, sizeof(double) * DIM * MDE);
 
-  if (pd->v[pg->imtrx][FILL]) {
-    load_lsi(ls->Length_Scale);
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][FILL]) {
+    load_lsi(goma_ctx->fem.ls->Length_Scale);
     load_lsi_derivs();
-    Hn = 1.0 - lsi->Hn;
+    Hn = 1.0 - goma_ctx->fem.lsi->Hn;
   }
 
   /* Calculate F sensitivity */
-  if (pd->v[pg->imtrx][FILL]) {
-    for (i = 0; i < ei[pg->imtrx]->dof[FILL]; i++) {
-      D_Hn_DF[i] = -lsi->d_Hn_dF[i];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][FILL]) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[FILL]; i++) {
+      D_Hn_DF[i] = -goma_ctx->fem.lsi->d_Hn_dF[i];
     }
   }
 
@@ -873,35 +889,35 @@ void lub_static_pressure(double func[DIM],
   /* Curvature - analytic in the "z" direction  */
   dbl dcaU, dcaL, slopeU, slopeL;
   dcaU = dcaL = slopeU = slopeL = 0;
-  if (pd->v[pg->imtrx][FILL]) {
-    dcaU = mp->dcaU * M_PIE / 180.0;
-    dcaL = mp->dcaL * M_PIE / 180.0;
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][FILL]) {
+    dcaU = goma_ctx->fem.mp->dcaU * M_PIE / 180.0;
+    dcaL = goma_ctx->fem.mp->dcaL * M_PIE / 180.0;
     slopeU = slopeL = 0.;
     for (i = 0; i < dim; i++) {
-      slopeU += dH_U_dX[i] * lsi->normal[i];
-      slopeL += dH_L_dX[i] * lsi->normal[i];
+      slopeU += dH_U_dX[i] * goma_ctx->fem.lsi->normal[i];
+      slopeL += dH_L_dX[i] * goma_ctx->fem.lsi->normal[i];
     }
     CURV += (cos(M_PIE - dcaU - atan(slopeU)) + cos(M_PIE - dcaL - atan(-slopeL))) / H;
   }
 
   /* Sensitivity to height */
-  if (pd->v[pg->imtrx][FILL])
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][FILL])
     D_CURV_DH = -(cos(M_PIE - dcaU - atan(slopeU)) + cos(M_PIE - dcaL - atan(-slopeL))) / (H * H);
 
   /* Sensitivity to level set F */
-  if (pd->v[pg->imtrx][FILL]) {
-    for (i = 0; i < ei[pg->imtrx]->dof[FILL]; i++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][FILL]) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[FILL]; i++) {
       for (j = 0; j < dim; j++) {
         D_CURV_DF[i] += sin(dcaU + atan(slopeU)) / (H * (1 + slopeU * slopeU)) * dH_U_dX[j] *
-                        *lsi->d_normal_dF[j];
+                        *goma_ctx->fem.lsi->d_normal_dF[j];
         D_CURV_DF[i] += sin(dcaL + atan(slopeL)) / (H * (1 + slopeL * slopeL)) * dH_L_dX[j] *
-                        *lsi->d_normal_dF[j];
+                        *goma_ctx->fem.lsi->d_normal_dF[j];
       }
     }
   }
 
   /* Sensitivity to mesh */
-  if (pd->v[pg->imtrx][FILL]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][FILL]) {
     for (i = 0; i < dim; i++) {
       for (j = 0; j < n_dof[MESH_DISPLACEMENT1]; j++) {
         D_CURV_DX[i][j] += D_CURV_DH * D_H_DX[i][j];
@@ -911,37 +927,39 @@ void lub_static_pressure(double func[DIM],
 
   /***** CALCULATE RESIDUAL CONTRIBUTION *****/
 
-  func[0] = fv->lubp - (P_atm + mp->surface_tension * Hn * CURV);
+  func[0] = goma_ctx->fem.fv->lubp - (P_atm + goma_ctx->fem.mp->surface_tension * Hn * CURV);
 
   /***** CALCULATE JACOBIAN CONTRIBUTION *****/
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     /* Sensitivity w.r.t. pressure */
     var = LUBP;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        phi_j = bf[var]->phi[j];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-        d_func[0][var][j] = phi_j - mp->surface_tension * Hn * D_CURV_DH * D_H_DP[j];
+        d_func[0][var][j] = phi_j - goma_ctx->fem.mp->surface_tension * Hn * D_CURV_DH * D_H_DP[j];
       }
     }
 
     /* Sensitivity w.r.t. level set */
     var = FILL;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_func[0][var][j] = -mp->surface_tension * (D_Hn_DF[j] * CURV + Hn * D_CURV_DF[j]);
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_func[0][var][j] =
+            -goma_ctx->fem.mp->surface_tension * (D_Hn_DF[j] * CURV + Hn * D_CURV_DF[j]);
       }
     }
 
     /* Sensitivity w.r.t. mesh */
-    if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (i = 0; i < dim; i++) {
         var = MESH_DISPLACEMENT1 + i;
 
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          d_func[0][var][j] = -mp->surface_tension * (D_Hn_DX[i][j] * CURV + Hn * D_CURV_DX[i][j]);
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          d_func[0][var][j] =
+              -goma_ctx->fem.mp->surface_tension * (D_Hn_DX[i][j] * CURV + Hn * D_CURV_DX[i][j]);
         }
       }
     }
@@ -1001,7 +1019,9 @@ void lub_press_hydro(double *func,
  *
  ********************************************************************/
 {
-  *func = fv->lubp - (p_0 + delta_p_x * fv->x[0] + delta_p_y * fv->x[1] + delta_p_z * fv->x[2]);
+  *func = goma_ctx->fem.fv->lubp -
+          (p_0 + delta_p_x * goma_ctx->fem.fv->x[0] + delta_p_y * goma_ctx->fem.fv->x[1] +
+           delta_p_z * goma_ctx->fem.fv->x[2]);
   d_func[LUBP] = 1.0;
 
 } /* END of routine lub_press_hydro  */
@@ -1060,8 +1080,8 @@ void shell_n_dot_flow_bc_film(double func[DIM],
 
   /* Save the boundary normal vector */
 
-  for (ii = 0; ii < pd->Num_Dim; ii++) {
-    bound_normal[ii] = fv->snormal[ii];
+  for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+    bound_normal[ii] = goma_ctx->fem.fv->snormal[ii];
   }
 
   /*
@@ -1074,55 +1094,57 @@ void shell_n_dot_flow_bc_film(double func[DIM],
 
   calculate_lub_q_v(R_SHELL_FILMP, time, dt, xi, exo);
 
-  if (af->Assemble_LSA_Mass_Matrix) {
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
     return;
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = SHELL_FILMP;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        for (ii = 0; ii < pd->Num_Dim; ii++) {
-          grad_phi_j[ii] = bf[var]->grad_phi[j][ii];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+          grad_phi_j[ii] = goma_ctx->fem.bf[var]->grad_phi[j][ii];
           grad_II_phi_j[ii] = 0.0;
         }
 
         Inn(grad_phi_j, grad_II_phi_j);
 
-        for (ii = 0; ii < pd->Num_Dim; ii++) {
-          for (jj = 0; jj < pd->Num_Dim; jj++) {
-            d_func[0][var][j] += LubAux->dq_dgradp[ii][jj] * grad_II_phi_j[jj] * bound_normal[ii];
+        for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+          for (jj = 0; jj < goma_ctx->fem.pd->Num_Dim; jj++) {
+            d_func[0][var][j] +=
+                goma_ctx->fem.lub_aux->dq_dgradp[ii][jj] * grad_II_phi_j[jj] * bound_normal[ii];
           }
         }
       }
     }
 
     var = SHELL_FILMH;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        phi_j = bf[var]->phi[j];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-        for (ii = 0; ii < pd->Num_Dim; ii++) {
-          grad_phi_j[ii] = bf[var]->grad_phi[j][ii];
+        for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+          grad_phi_j[ii] = goma_ctx->fem.bf[var]->grad_phi[j][ii];
           grad_II_phi_j[ii] = 0.0;
         }
 
         Inn(grad_phi_j, grad_II_phi_j);
 
-        for (ii = 0; ii < pd->Num_Dim; ii++) {
-          d_func[0][var][j] += LubAux->dq_dh1[ii][j] * grad_II_phi_j[ii] * bound_normal[ii];
-          d_func[0][var][j] += LubAux->dq_dh2[ii][j] * phi_j * bound_normal[ii];
+        for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+          d_func[0][var][j] +=
+              goma_ctx->fem.lub_aux->dq_dh1[ii][j] * grad_II_phi_j[ii] * bound_normal[ii];
+          d_func[0][var][j] += goma_ctx->fem.lub_aux->dq_dh2[ii][j] * phi_j * bound_normal[ii];
         }
       }
     }
 
     var = SHELL_PARTC;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        phi_j = bf[var]->phi[j];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-        for (ii = 0; ii < pd->Num_Dim; ii++) {
-          d_func[0][var][j] += LubAux->dq_dc[ii][j] * phi_j * bound_normal[ii];
+        for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+          d_func[0][var][j] += goma_ctx->fem.lub_aux->dq_dc[ii][j] * phi_j * bound_normal[ii];
         }
       }
     }
@@ -1132,8 +1154,8 @@ void shell_n_dot_flow_bc_film(double func[DIM],
   /* Calculate the residual contribution	*/
 
   func[0] = -flowrate;
-  for (ii = 0; ii < pd->Num_Dim; ii++) {
-    func[0] += LubAux->q[ii] * bound_normal[ii];
+  for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+    func[0] += goma_ctx->fem.lub_aux->q[ii] * bound_normal[ii];
   }
 
   /* clean-up */
@@ -1193,8 +1215,8 @@ void shell_n_dot_gradp_bc(double func[DIM],
 
   /* Save the boundary normal vector */
 
-  for (ii = 0; ii < pd->Num_Dim; ii++) {
-    bound_normal[ii] = fv->snormal[ii];
+  for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+    bound_normal[ii] = goma_ctx->fem.fv->snormal[ii];
   }
 
   /*
@@ -1205,47 +1227,48 @@ void shell_n_dot_gradp_bc(double func[DIM],
 
   /* Calculate pressure gradient  */
 
-  Inn(fv->grad_sh_fp, grad_P);
+  Inn(goma_ctx->fem.fv->grad_sh_fp, grad_P);
 
   /* Calculate disjoining pressure gradient and its sensitivities */
 
-  disjoining_pressure_model(fv->sh_fh, fv->grad_sh_fh, n_dof, dof_map, grad_DisjPress,
-                            dgrad_DisjPress_dH1, dgrad_DisjPress_dH2, dgrad_DisjPress_dH);
+  disjoining_pressure_model(goma_ctx->fem.fv->sh_fh, goma_ctx->fem.fv->grad_sh_fh, n_dof, dof_map,
+                            grad_DisjPress, dgrad_DisjPress_dH1, dgrad_DisjPress_dH2,
+                            dgrad_DisjPress_dH);
 
-  if (af->Assemble_LSA_Mass_Matrix) {
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
     return;
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = SHELL_FILMP;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        for (ii = 0; ii < pd->Num_Dim; ii++) {
-          grad_phi_j[ii] = bf[var]->grad_phi[j][ii];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+          grad_phi_j[ii] = goma_ctx->fem.bf[var]->grad_phi[j][ii];
           grad_II_phi_j[ii] = 0.0;
         }
 
         Inn(grad_phi_j, grad_II_phi_j);
 
-        for (ii = 0; ii < pd->Num_Dim; ii++) {
+        for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
           d_func[0][var][j] += -grad_II_phi_j[ii] * bound_normal[ii];
         }
       }
     }
 
     var = SHELL_FILMH;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        phi_j = bf[var]->phi[j];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-        for (ii = 0; ii < pd->Num_Dim; ii++) {
-          grad_phi_j[ii] = bf[var]->grad_phi[j][ii];
+        for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
+          grad_phi_j[ii] = goma_ctx->fem.bf[var]->grad_phi[j][ii];
           grad_II_phi_j[ii] = 0.0;
         }
 
         Inn(grad_phi_j, grad_II_phi_j);
 
-        for (ii = 0; ii < pd->Num_Dim; ii++) {
+        for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
           d_func[0][var][j] += dgrad_DisjPress_dH1[ii][j] * grad_II_phi_j[ii] * bound_normal[ii];
           d_func[0][var][j] += dgrad_DisjPress_dH2[ii][j] * phi_j * bound_normal[ii];
         }
@@ -1256,7 +1279,7 @@ void shell_n_dot_gradp_bc(double func[DIM],
 
   /* Calculate the residual contribution	*/
 
-  for (ii = 0; ii < pd->Num_Dim; ii++) {
+  for (ii = 0; ii < goma_ctx->fem.pd->Num_Dim; ii++) {
     func[0] += (-grad_P[ii] + grad_DisjPress[ii]) * bound_normal[ii];
   }
 
@@ -1312,37 +1335,39 @@ void shell_n_dot_gradh_bc(double func[DIM],
 
   for (ii = 0; ii < VIM; ii++) {
     grad_II_H[ii] = 0.;
-    bound_normal[ii] = fv->snormal[ii];
+    bound_normal[ii] = goma_ctx->fem.fv->snormal[ii];
   }
 
   /* Get the vector normal to the shell plane */
 
-  shell_determinant_and_normal(ei[pg->imtrx]->ielem, ei[pg->imtrx]->iconnect_ptr,
-                               ei[pg->imtrx]->num_local_nodes, ei[pg->imtrx]->ielem_dim, 1);
+  shell_determinant_and_normal(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem,
+                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr,
+                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
+                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim, 1);
 
   for (ii = 0; ii < VIM; ii++) {
-    shell_normal[ii] = fv->snormal[ii];
+    shell_normal[ii] = goma_ctx->fem.fv->snormal[ii];
   }
 
   /* grad H = (I - nn) dot grad sh fh */
 
   for (ii = 0; ii < VIM; ii++) {
     for (jj = 0; jj < VIM; jj++) {
-      grad_II_H[ii] += (delta(ii, jj) * fv->grad_sh_fh[jj] -
-                        shell_normal[ii] * shell_normal[jj] * fv->grad_sh_fh[jj]);
+      grad_II_H[ii] += (delta(ii, jj) * goma_ctx->fem.fv->grad_sh_fh[jj] -
+                        shell_normal[ii] * shell_normal[jj] * goma_ctx->fem.fv->grad_sh_fh[jj]);
     }
   }
 
-  if (af->Assemble_LSA_Mass_Matrix) {
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
     return;
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = SHELL_FILMH;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         for (ii = 0; ii < VIM; ii++) {
-          grad_phi_j[ii] = bf[var]->grad_phi[j][ii];
+          grad_phi_j[ii] = goma_ctx->fem.bf[var]->grad_phi[j][ii];
           grad_II_phi_j[ii] = 0.0;
         }
         for (ii = 0; ii < VIM; ii++) {
@@ -1423,10 +1448,10 @@ void shell_n_dot_pflux_bc(double func[DIM],
   VISCOSITY_DEPENDENCE_STRUCT d_mu_struct; /* viscosity dependence */
   VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
 
-  H = fv->sh_fh;
-  mu = viscosity(gn, NULL, d_mu);
+  H = goma_ctx->fem.fv->sh_fh;
+  mu = viscosity(goma_ctx->fem.gn, NULL, d_mu);
   diff_coeff = diffusion_coefficient_model(mu, &ddiff_dmu);
-  dmu_dc = mp->d_viscosity[SHELL_PARTC];
+  dmu_dc = goma_ctx->fem.mp->d_viscosity[SHELL_PARTC];
   ddiff_dc = ddiff_dmu * dmu_dc;
   velocity_function_model(veloU, veloL, time, dt);
 
@@ -1434,35 +1459,37 @@ void shell_n_dot_pflux_bc(double func[DIM],
 
   for (ii = 0; ii < VIM; ii++) {
     grad_C[ii] = 0.0;
-    bound_normal[ii] = fv->snormal[ii];
+    bound_normal[ii] = goma_ctx->fem.fv->snormal[ii];
   }
 
-  shell_determinant_and_normal(ei[pg->imtrx]->ielem, ei[pg->imtrx]->iconnect_ptr,
-                               ei[pg->imtrx]->num_local_nodes, ei[pg->imtrx]->ielem_dim, 1);
+  shell_determinant_and_normal(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem,
+                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr,
+                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
+                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim, 1);
 
   for (ii = 0; ii < VIM; ii++) {
-    shell_normal[ii] = fv->snormal[ii];
+    shell_normal[ii] = goma_ctx->fem.fv->snormal[ii];
   }
 
   /* Peform I- nn to gradient operator */
 
   for (ii = 0; ii < VIM; ii++) {
     for (jj = 0; jj < VIM; jj++) {
-      grad_C[ii] += (delta(ii, jj) * fv->grad_sh_pc[jj] -
-                     shell_normal[ii] * shell_normal[jj] * fv->grad_sh_pc[jj]);
+      grad_C[ii] += (delta(ii, jj) * goma_ctx->fem.fv->grad_sh_pc[jj] -
+                     shell_normal[ii] * shell_normal[jj] * goma_ctx->fem.fv->grad_sh_pc[jj]);
     }
   }
 
-  if (af->Assemble_LSA_Mass_Matrix) {
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
     return;
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     var = SHELL_FILMH;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        phi_j = bf[var]->phi[j];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
 
         if (fabs(flux) < 1.0e-10) {
           d_func[0][var][j] += 0.0;
@@ -1475,12 +1502,12 @@ void shell_n_dot_pflux_bc(double func[DIM],
     }
 
     var = SHELL_PARTC;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        phi_j = bf[var]->phi[j];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
 
         for (ii = 0; ii < VIM; ii++) {
-          grad_phi_j[ii] = bf[var]->grad_phi[j][ii];
+          grad_phi_j[ii] = goma_ctx->fem.bf[var]->grad_phi[j][ii];
           grad_phi_j_corrected[ii] = 0.0;
         }
         for (ii = 0; ii < VIM; ii++) {
@@ -1580,7 +1607,7 @@ void apply_shell_traction_bc(double func[DIM],
   /************** PRECALCULATION ***********************/
 
   /* Unpack variables from structures for local convenience... */
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /******* TANGENTS AND THEIR SENSITIVITIES **********/
 
@@ -1605,7 +1632,7 @@ void apply_shell_traction_bc(double func[DIM],
   for (b = 0; b < dim; b++) {
     var = MESH_DISPLACEMENT1 + b;
 
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       for (a = 0; a < dim; a++) {
         if (BC_name == SH_S11_WEAK_BC) {
           de_dx[a][b][j] = dt0_dx[a][b][j];
@@ -1619,7 +1646,7 @@ void apply_shell_traction_bc(double func[DIM],
   for (b = 0; b < dim; b++) {
     var = SHELL_NORMAL1 + b;
 
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       for (a = 0; a < dim; a++) {
         if (BC_name == SH_S11_WEAK_BC) {
           de_dnormal[a][b][j] = dt0_dnormal[a][b][j];
@@ -1634,29 +1661,29 @@ void apply_shell_traction_bc(double func[DIM],
 
   func[0] = e[0] * tx + e[1] * ty + e[2] * tz;
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     var = MESH_DISPLACEMENT1;
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
       /*** Loop over dimensions of mesh displacement ***/
       for (b = 0; b < dim; b++) {
         var = MESH_DISPLACEMENT1 + b;
 
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_func[0][var][j] = de_dx[0][b][j] * tx + de_dx[1][b][j] * ty + de_dx[2][b][j] * tz;
         }
       }
     }
 
     var = SHELL_NORMAL1;
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
       /*** Loop over dimensions of shell normal ***/
       for (b = 0; b < dim; b++) {
         var = SHELL_NORMAL1 + b;
 
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_func[0][var][j] =
               de_dnormal[0][b][j] * tx + de_dnormal[1][b][j] * ty + de_dnormal[2][b][j] * tz;
         }
@@ -1697,14 +1724,14 @@ void match_lubrication_film_pressure(double func[DIM],
    *  simply grab the lubrication pressue from the element and add it to the residual.
    */
   if (Current_EB_ptr->Elem_Blk_Id == eb_mat_lubp) {
-    func[0] += fv->lubp;
+    func[0] += goma_ctx->fem.fv->lubp;
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
 
       var = LUBP;
-      for (j_id = 0; j_id < ei[pg->imtrx]->dof[var]; j_id++) {
-        if (pd->v[pg->imtrx][var]) {
-          phi_j = bf[var]->phi[j_id];
+      for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          phi_j = goma_ctx->fem.bf[var]->phi[j_id];
           d_func[0][var][j_id] += phi_j;
         }
       }
@@ -1718,14 +1745,14 @@ void match_lubrication_film_pressure(double func[DIM],
    * add it to the residual.
    */
   else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_filmp) {
-    func[0] -= fv->sh_fp;
+    func[0] -= goma_ctx->fem.fv->sh_fp;
 
-    if (af->Assemble_Jacobian) {
+    if (goma_ctx->fem.af->Assemble_Jacobian) {
 
       var = SHELL_FILMP;
-      for (j_id = 0; j_id < ei[pg->imtrx]->dof[var]; j_id++) {
-        if (pd->v[pg->imtrx][var]) {
-          phi_j = bf[var]->phi[j_id];
+      for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          phi_j = goma_ctx->fem.bf[var]->phi[j_id];
           d_func[0][var][j_id] -= phi_j;
         }
       }
@@ -1767,17 +1794,17 @@ void put_lub_flux_in_film(int id,                   /* local element node number
   int peqn_lubp, peqn_filmp;
   int ieqn_lubp, ieqn_filmp;
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /*
    * if you are in the film phase, return without doing anything
    * In the solid phase, there are no fluid momentum equations.
    */
-  if (!pd->e[pg->imtrx][R_LUBP])
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP])
     return;
 
-  id_doflubp = ei[pg->imtrx]->ln_to_dof[R_LUBP][id];
-  id_doffilmp = ei[pg->imtrx]->ln_to_dof[R_SHELL_FILMP][id];
+  id_doflubp = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[R_LUBP][id];
+  id_doffilmp = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[R_SHELL_FILMP][id];
 
   if (Current_EB_ptr->Elem_Blk_Id != i_mat_lubp) {
     if (Current_EB_ptr->Elem_Blk_Id != i_mat_filmp) {
@@ -1803,9 +1830,9 @@ void put_lub_flux_in_film(int id,                   /* local element node number
    * check to make sure that both lubp dof and sh_fp
    * dof exist at this node
    */
-  if (Dolphin[pg->imtrx][I][R_LUBP] <= 0)
+  if (Dolphin[goma_ctx->fem.pg->imtrx][I][R_LUBP] <= 0)
     return;
-  if (Dolphin[pg->imtrx][I][R_SHELL_FILMP] <= 0)
+  if (Dolphin[goma_ctx->fem.pg->imtrx][I][R_SHELL_FILMP] <= 0)
     return;
 
   /*
@@ -1813,26 +1840,28 @@ void put_lub_flux_in_film(int id,                   /* local element node number
    * into local contribution for filmp equation while
    * decrementing the filmp equation
    */
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     ieqn_lubp = R_LUBP;
     ieqn_filmp = R_SHELL_FILMP;
-    id_doflubp = ei[pg->imtrx]->ln_to_dof[ieqn_lubp][id];
-    id_doffilmp = ei[pg->imtrx]->ln_to_dof[ieqn_filmp][id];
-    lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][ieqn_filmp], id_doffilmp)] =
-        -lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][ieqn_lubp], id_doflubp)];
+    id_doflubp = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ieqn_lubp][id];
+    id_doffilmp = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ieqn_filmp][id];
+    goma_ctx->fem.lec
+        ->R[LEC_R_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][ieqn_filmp], id_doffilmp)] =
+        -goma_ctx->fem.lec->R[LEC_R_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][ieqn_lubp],
+                                          id_doflubp)];
   }
 
   /*
    * loop over directions and add local contribution to lubp
    * eqution into local contribution for filmp equation
    */
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     ieqn_lubp = R_LUBP;
-    peqn_lubp = upd->ep[pg->imtrx][ieqn_lubp];
+    peqn_lubp = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][ieqn_lubp];
     ieqn_filmp = R_SHELL_FILMP;
-    peqn_filmp = upd->ep[pg->imtrx][ieqn_filmp];
-    id_doflubp = ei[pg->imtrx]->ln_to_dof[ieqn_lubp][id];
-    id_doffilmp = ei[pg->imtrx]->ln_to_dof[ieqn_filmp][id];
+    peqn_filmp = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][ieqn_filmp];
+    id_doflubp = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ieqn_lubp][id];
+    id_doffilmp = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ieqn_filmp][id];
 
     /* Add contributions due to all nodal sensitivities in filmp element */
 
@@ -1841,11 +1870,11 @@ void put_lub_flux_in_film(int id,                   /* local element node number
      */
     for (q = 0; q < dim; q++) {
       var = MESH_DISPLACEMENT1 + q;
-      if (pd->v[pg->imtrx][var]) {
-        pvar = upd->vp[pg->imtrx][var];
-        for (j_id = 0; j_id < ei[pg->imtrx]->dof[var]; j_id++) {
-          lec->J[LEC_J_INDEX(peqn_filmp, pvar, id_doffilmp, j_id)] =
-              -lec->J[LEC_J_INDEX(peqn_lubp, pvar, id_doflubp, j_id)];
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_filmp, pvar, id_doffilmp, j_id)] =
+              -goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_lubp, pvar, id_doflubp, j_id)];
         }
       }
     }
@@ -1854,11 +1883,11 @@ void put_lub_flux_in_film(int id,                   /* local element node number
      * local J_lubp_lubp -> J_filmp_lubp
      */
     var = LUBP;
-    if (pd->v[pg->imtrx][var]) {
-      pvar = upd->vp[pg->imtrx][var];
-      for (j_id = 0; j_id < ei[pg->imtrx]->dof[var]; j_id++) {
-        lec->J[LEC_J_INDEX(peqn_filmp, pvar, id_doffilmp, j_id)] =
-            -lec->J[LEC_J_INDEX(peqn_lubp, pvar, id_doflubp, j_id)];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+      for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
+        goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_filmp, pvar, id_doffilmp, j_id)] =
+            -goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_lubp, pvar, id_doflubp, j_id)];
       }
     }
 
@@ -1928,13 +1957,13 @@ void shell_n_dot_liq_velo_bc_tfmp(double func[DIM],
   memset(bound_normal, 0.0, sizeof(double) * DIM);
   memset(dbound_normal_dx, 0.0, sizeof(double) * DIM * DIM * MDE);
 
-  switch (mp->ehl_integration_kind) {
+  switch (goma_ctx->fem.mp->ehl_integration_kind) {
   case SIK_XY:;
-    for (k = 0; k < pd->Num_Dim; k++) {
-      bound_normal[k] = fv->snormal[k];
+    for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
+      bound_normal[k] = goma_ctx->fem.fv->snormal[k];
       for (l = 0; l < DIM; l++) {
-        for (j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
-          dbound_normal_dx[k][l][j] = fv->dsnormal_dx[k][l][j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
+          dbound_normal_dx[k][l][j] = goma_ctx->fem.fv->dsnormal_dx[k][l][j];
         }
       }
     }
@@ -1954,7 +1983,7 @@ void shell_n_dot_liq_velo_bc_tfmp(double func[DIM],
   lubrication_shell_initialize(n_dof, dof_map, -1, xi, exo, 0);
 
   /* Gather necessary values (S, h, Krg, gradII_P)*/
-  S = fv->tfmp_sat;
+  S = goma_ctx->fem.fv->tfmp_sat;
 
   // need pure phase viscosities
   double mu_l, mu_g;
@@ -1992,35 +2021,36 @@ void shell_n_dot_liq_velo_bc_tfmp(double func[DIM],
   double Krl, dKrl_dS, Krg, dKrg_dS;
   load_relative_permeability_model(S, &Krl, &dKrl_dS, &Krg, &dKrg_dS);
 
-  ShellRotate(fv->grad_tfmp_pres, fv->d_grad_tfmp_pres_dmesh, gradII_P, dgradII_P_dmesh,
-              n_dof[MESH_DISPLACEMENT1]);
+  ShellRotate(goma_ctx->fem.fv->grad_tfmp_pres, goma_ctx->fem.fv->d_grad_tfmp_pres_dmesh, gradII_P,
+              dgradII_P_dmesh, n_dof[MESH_DISPLACEMENT1]);
 
   // because I didn't fix ShellRotate to work with domain_s integration
   double csigrad[DIM];
   double det_J;
   double d_det_J_dmeshkj[DIM][MDE];
 
-  if (mp->ehl_integration_kind == SIK_S) {
+  if (goma_ctx->fem.mp->ehl_integration_kind == SIK_S) {
     // fill mapping determinate and sensitivity to mesh motion
     detJ_2d_bar(&det_J, d_det_J_dmeshkj);
 
     double *grad;
 
-    if (pd->Num_Dim == 2 && ei[pg->imtrx]->ielem_type == LINEAR_BAR) {
+    if (goma_ctx->fem.pd->Num_Dim == 2 &&
+        goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type == LINEAR_BAR) {
       // only one dimension to integrate over, s.
       var = TFMP_PRES;
       grad = gradII_P;
 
       memset(grad, 0.0, sizeof(double) * DIM);
       memset(csigrad, 0.0, sizeof(double) * DIM);
-      for (int i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
-        csigrad[0] += *esp->tfmp_pres[i] * bf[var]->dphidxi[i][0];
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
+        csigrad[0] += *goma_ctx->fem.esp->tfmp_pres[i] * goma_ctx->fem.bf[var]->dphidxi[i][0];
       }
 
       grad[0] = csigrad[0] / det_J;
 
       for (int k = 0; k < DIM; k++) {
-        for (int i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
+        for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
           dgradII_P_dmesh[0][k][i] = csigrad[0] * (-1.0) / det_J / det_J * d_det_J_dmeshkj[k][i];
         }
       }
@@ -2037,10 +2067,10 @@ void shell_n_dot_liq_velo_bc_tfmp(double func[DIM],
   double d_gradII_phi_j_dmesh[DIM][DIM][MDE];
 
   /* Calculate Jacobian contributions */
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = TFMP_PRES;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         ShellBF(var, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
 
@@ -2056,8 +2086,8 @@ void shell_n_dot_liq_velo_bc_tfmp(double func[DIM],
     }
 
     var = TFMP_SAT;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         ShellBF(R_TFMP_MASS, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
         n_dot_grad_P = 0.0;
@@ -2073,8 +2103,8 @@ void shell_n_dot_liq_velo_bc_tfmp(double func[DIM],
 
     for (l = 0; l < DIM; l++) {
       var = MESH_DISPLACEMENT1 + l;
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           gradIIP_dot_bound_normal = 0.0;
           dgradIIP_dmesh_dot_bound_normal = 0.0;
           gradIIP_dot_dbound_normal_dmesh = 0.0;
@@ -2097,8 +2127,8 @@ void shell_n_dot_liq_velo_bc_tfmp(double func[DIM],
 
     for (l = 0; l < DIM; l++) {
       var = SHELL_NORMAL1 + l;
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           gradIIP_dot_bound_normal = 0.0;
           // AMCTODO - is bound_normal sensitive to normal?
           // for ds: no
@@ -2174,8 +2204,8 @@ void shell_num_diff_bc_tfmp(double func[DIM],
 
   /* Save the boundary normal vector */
 
-  for (k = 0; k < pd->Num_Dim; k++) {
-    bound_normal[k] = fv->snormal[k];
+  for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
+    bound_normal[k] = goma_ctx->fem.fv->snormal[k];
   }
   Inn(bound_normal, bound_normalII);
   /*
@@ -2186,32 +2216,32 @@ void shell_num_diff_bc_tfmp(double func[DIM],
 
   /* Gather necessary values (S, D, Krd)*/
 
-  S = fv->tfmp_sat;
+  S = goma_ctx->fem.fv->tfmp_sat;
 
   // Artificial diffusion constant
   double D, Krd, dKrd_dS;
   load_molecular_diffusion_model(S, &D, &Krd, &dKrd_dS);
 
-  Inn(fv->grad_tfmp_sat, gradII_S);
+  Inn(goma_ctx->fem.fv->grad_tfmp_sat, gradII_S);
 
   /* Calculate residual contribution */
   func[0] = 0.0;
-  for (k = 0; k < pd->Num_Dim; k++) {
+  for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
     func[0] += bound_normalII[k] * gradII_S[k] * D * Krd;
   }
 
   double d_gradII_phi_j_dmesh[DIM][DIM][MDE];
 
   /* Calculate Jacobian contributions */
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = TFMP_SAT;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         ShellBF(var, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
         gradS_dot_n = 0.0;
         gradphi_j_dot_n = 0.0;
-        for (k = 0; k < pd->Num_Dim; k++) {
+        for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
           gradS_dot_n += gradII_S[k] * bound_normalII[k];
           gradphi_j_dot_n += gradII_phi_j[k] * bound_normalII[k];
         }
@@ -2279,13 +2309,13 @@ void shell_tfmp_avg_plate_velo_liq(double func[DIM],
   memset(bound_normal, 0.0, sizeof(double) * DIM);
   memset(dbound_normal_dx, 0.0, sizeof(double) * DIM * DIM * MDE);
 
-  switch (mp->ehl_integration_kind) {
+  switch (goma_ctx->fem.mp->ehl_integration_kind) {
   case SIK_XY:;
-    for (k = 0; k < pd->Num_Dim; k++) {
-      bound_normal[k] = fv->snormal[k];
+    for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
+      bound_normal[k] = goma_ctx->fem.fv->snormal[k];
       for (l = 0; l < DIM; l++) {
-        for (j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
-          dbound_normal_dx[k][l][j] = fv->dsnormal_dx[k][l][j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
+          dbound_normal_dx[k][l][j] = goma_ctx->fem.fv->dsnormal_dx[k][l][j];
         }
       }
     }
@@ -2306,7 +2336,7 @@ void shell_tfmp_avg_plate_velo_liq(double func[DIM],
 
   /* Gather necessary values (S, h, v_avg)*/
 
-  S = fv->tfmp_sat;
+  S = goma_ctx->fem.fv->tfmp_sat;
   /* Use the height_function_model */
   double H_U, dH_U_dtime, H_L, dH_L_dtime;
   double dH_U_dX[DIM], dH_L_dX[DIM], dH_U_dp, dH_U_ddh, dH_dF[MDE];
@@ -2339,7 +2369,7 @@ void shell_tfmp_avg_plate_velo_liq(double func[DIM],
 
   velocity_function_model(veloU, veloL, time, delta_t);
 
-  for (k = 0; k < ei[pg->imtrx]->ielem_dim; k++) {
+  for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; k++) {
     v_avg[k] = (veloU[k] + veloL[k]) / 2.;
   }
   v_avg[2] = 0.0;
@@ -2352,12 +2382,12 @@ void shell_tfmp_avg_plate_velo_liq(double func[DIM],
 
   func[0] += h * S * n_dot_v_avg;
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     var = TFMP_SAT;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        phi_j = bf[var]->phi[j];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
         for (k = 0; k < DIM; k++) {
           d_func[0][var][j] += bound_normal[k] * v_avg[k] * h * phi_j;
         }
@@ -2366,15 +2396,15 @@ void shell_tfmp_avg_plate_velo_liq(double func[DIM],
 
     for (l = 0; l < DIM; l++) {
       var = MESH_DISPLACEMENT1 + l;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_func[0][var][j] += n_dot_v_avg * S * dh_dmesh[l][j];
         }
       }
       var = SHELL_NORMAL1 + l;
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_func[0][var][j] += n_dot_v_avg * S * dh_dnormal[l][j];
         }
       }
@@ -2434,8 +2464,8 @@ void shell_tfmp_n_dot_grad_s(double func[DIM],
 
   /* Save the boundary normal vector */
 
-  for (k = 0; k < pd->Num_Dim; k++) {
-    bound_normal[k] = fv->snormal[k];
+  for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
+    bound_normal[k] = goma_ctx->fem.fv->snormal[k];
   }
   Inn(bound_normal, bound_normalII);
   /*
@@ -2446,19 +2476,19 @@ void shell_tfmp_n_dot_grad_s(double func[DIM],
 
   /* Gather necessary values (S, D, Krd)*/
 
-  Inn(fv->grad_tfmp_sat, gradII_S);
+  Inn(goma_ctx->fem.fv->grad_tfmp_sat, gradII_S);
   /* Calculate residual contribution */
 
-  for (k = 0; k < pd->Num_Dim; k++) {
+  for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
     func[0] += bound_normalII[k] * gradII_S[k];
   }
   double d_gradII_phi_j_dmesh[DIM][DIM][MDE];
   /* Calculate Jacobian contributions */
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     var = TFMP_SAT;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         ShellBF(var, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
         gradphi_j_dot_n = 0.0;
@@ -2471,8 +2501,8 @@ void shell_tfmp_n_dot_grad_s(double func[DIM],
 
     for (l = 0; l < DIM; l++) {
       var = SHELL_NORMAL1 + l;
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           ShellBF(var, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
                   n_dof[MESH_DISPLACEMENT1], dof_map);
           for (k = 0; k < DIM; k++) {
@@ -2545,13 +2575,13 @@ void shell_n_dot_gas_velo_bc_tfmp(double func[DIM],
   memset(bound_normal, 0.0, sizeof(double) * DIM);
   memset(dbound_normal_dx, 0.0, sizeof(double) * DIM * DIM * MDE);
 
-  switch (mp->ehl_integration_kind) {
+  switch (goma_ctx->fem.mp->ehl_integration_kind) {
   case SIK_XY:;
-    for (k = 0; k < pd->Num_Dim; k++) {
-      bound_normal[k] = fv->snormal[k];
+    for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
+      bound_normal[k] = goma_ctx->fem.fv->snormal[k];
       for (l = 0; l < DIM; l++) {
-        for (j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
-          dbound_normal_dx[k][l][j] = fv->dsnormal_dx[k][l][j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
+          dbound_normal_dx[k][l][j] = goma_ctx->fem.fv->dsnormal_dx[k][l][j];
         }
       }
     }
@@ -2577,7 +2607,7 @@ void shell_n_dot_gas_velo_bc_tfmp(double func[DIM],
 
   load_tfmp_viscosity_model(&mu_l, &mu_g);
 
-  S = fv->tfmp_sat;
+  S = goma_ctx->fem.fv->tfmp_sat;
 
   // here dh_dtime is not used, so it doesn't matter what tt is.
   double tt = 1.0;
@@ -2635,35 +2665,36 @@ void shell_n_dot_gas_velo_bc_tfmp(double func[DIM],
   double Krl, dKrl_dS, Krg, dKrg_dS;
   load_relative_permeability_model(S, &Krl, &dKrl_dS, &Krg, &dKrg_dS);
 
-  ShellRotate(fv->grad_tfmp_pres, fv->d_grad_tfmp_pres_dmesh, gradII_P, dgradII_P_dmesh,
-              n_dof[MESH_DISPLACEMENT1]);
+  ShellRotate(goma_ctx->fem.fv->grad_tfmp_pres, goma_ctx->fem.fv->d_grad_tfmp_pres_dmesh, gradII_P,
+              dgradII_P_dmesh, n_dof[MESH_DISPLACEMENT1]);
 
   // because I didn't fix ShellRotate to work with domain_s integration
   double csigrad[DIM];
   double det_J;
   double d_det_J_dmeshkj[DIM][MDE];
 
-  if (mp->ehl_integration_kind == SIK_S) {
+  if (goma_ctx->fem.mp->ehl_integration_kind == SIK_S) {
     // fill mapping determinate and sensitivity to mesh motion
     detJ_2d_bar(&det_J, d_det_J_dmeshkj);
 
     double *grad;
 
-    if (pd->Num_Dim == 2 && ei[pg->imtrx]->ielem_type == LINEAR_BAR) {
+    if (goma_ctx->fem.pd->Num_Dim == 2 &&
+        goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type == LINEAR_BAR) {
       // only one dimension to integrate over, s.
       var = TFMP_PRES;
       grad = gradII_P;
 
       memset(grad, 0.0, sizeof(double) * DIM);
       memset(csigrad, 0.0, sizeof(double) * DIM);
-      for (int i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
-        csigrad[0] += *esp->tfmp_pres[i] * bf[var]->dphidxi[i][0];
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
+        csigrad[0] += *goma_ctx->fem.esp->tfmp_pres[i] * goma_ctx->fem.bf[var]->dphidxi[i][0];
       }
 
       grad[0] = csigrad[0] / det_J;
 
       for (int k = 0; k < DIM; k++) {
-        for (int i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
+        for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
           dgradII_P_dmesh[0][k][i] = csigrad[0] * (-1.0) / det_J / det_J * d_det_J_dmeshkj[k][i];
         }
       }
@@ -2671,7 +2702,7 @@ void shell_n_dot_gas_velo_bc_tfmp(double func[DIM],
   }
 
   /* Calculate residual contribution */
-  for (k = 0; k < pd->Num_Dim; k++) {
+  for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
     func[0] += -h * h * h / 12.0 / mu_g * Krg * gradII_P[k] * bound_normal[k];
   }
 
@@ -2683,10 +2714,10 @@ void shell_n_dot_gas_velo_bc_tfmp(double func[DIM],
   double d_gradII_phi_j_dmesh[DIM][DIM][MDE];
 
   /* Calculate Jacobian contributions */
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = TFMP_PRES;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         ShellBF(var, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
         n_dot_grad_phi_j = 0.0;
@@ -2699,8 +2730,8 @@ void shell_n_dot_gas_velo_bc_tfmp(double func[DIM],
     }
 
     var = TFMP_SAT;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         ShellBF(var, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
         n_dot_grad_P = 0.0;
@@ -2716,8 +2747,8 @@ void shell_n_dot_gas_velo_bc_tfmp(double func[DIM],
 
     for (l = 0; l < DIM; l++) {
       var = MESH_DISPLACEMENT1 + l;
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           gradIIP_dot_bound_normal = 0.0;
           dgradIIP_dmesh_dot_bound_normal = 0.0;
           gradIIP_dot_dbound_normal_dmesh = 0.0;
@@ -2740,8 +2771,8 @@ void shell_n_dot_gas_velo_bc_tfmp(double func[DIM],
 
     for (l = 0; l < DIM; l++) {
       var = SHELL_NORMAL1 + l;
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           gradIIP_dot_bound_normal = 0.0;
           // AMCTODO - is bound_normal sensitive to normal?
           for (k = 0; k < DIM; k++) {
@@ -2816,8 +2847,8 @@ void shell_lubrication_outflow(double func[DIM],
 
   double gradII_P[DIM];
   double dgradII_P_dmesh[DIM][DIM][MDE];
-  ShellRotate(fv->grad_tfmp_pres, fv->d_grad_tfmp_pres_dmesh, gradII_P, dgradII_P_dmesh,
-              n_dof[MESH_DISPLACEMENT1]);
+  ShellRotate(goma_ctx->fem.fv->grad_tfmp_pres, goma_ctx->fem.fv->d_grad_tfmp_pres_dmesh, gradII_P,
+              dgradII_P_dmesh, n_dof[MESH_DISPLACEMENT1]);
 
   double phi_j, grad_phi_j[DIM], gradII_phi_j[DIM], d_gradII_phi_j_dmesh[DIM][DIM][MDE];
 
@@ -2829,27 +2860,28 @@ void shell_lubrication_outflow(double func[DIM],
   // double gradII_curv[DIM];
   // double dgradII_curv_dmesh[DIM][DIM][MDE];
 
-  if (mp->ehl_integration_kind == SIK_S) {
+  if (goma_ctx->fem.mp->ehl_integration_kind == SIK_S) {
     // fill mapping determinate and sensitivity to mesh motion
     detJ_2d_bar(&det_J, d_det_J_dmeshkj);
 
     double *grad;
 
-    if (pd->Num_Dim == 2 && ei[pg->imtrx]->ielem_type == LINEAR_BAR) {
+    if (goma_ctx->fem.pd->Num_Dim == 2 &&
+        goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type == LINEAR_BAR) {
       // only one dimension to integrate over, s.
       var = TFMP_PRES;
       grad = gradII_P;
 
       memset(grad, 0.0, sizeof(double) * DIM);
       memset(csigrad, 0.0, sizeof(double) * DIM);
-      for (int i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
-        csigrad[0] += *esp->tfmp_pres[i] * bf[var]->dphidxi[i][0];
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
+        csigrad[0] += *goma_ctx->fem.esp->tfmp_pres[i] * goma_ctx->fem.bf[var]->dphidxi[i][0];
       }
 
       grad[0] = csigrad[0] / det_J;
 
       for (int k = 0; k < DIM; k++) {
-        for (int i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
+        for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
           dgradII_P_dmesh[0][k][i] = csigrad[0] * (-1.0) / det_J / det_J * d_det_J_dmeshkj[k][i];
         }
       }
@@ -2876,16 +2908,16 @@ void shell_lubrication_outflow(double func[DIM],
 
   double scale_factor = 1.0;
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     func[0] += scale_factor * h * (-h * h / 12.0 / mu_l * gradII_P[0]);
     // func[0] = fv->tfmp_pres;
     // func[0] = gradII_P[0];
     func[0] = -h * h * h / 12.0 / mu_l * gradII_P[0];
   }
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = TFMP_PRES;
 
-    for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       ShellBF(var, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
               n_dof[MESH_DISPLACEMENT1], dof_map);
       // d_func[0][var][j] += scale_factor*h*(-h*h/12.0f/mu_l*gradII_phi_j[0]);
@@ -2893,20 +2925,20 @@ void shell_lubrication_outflow(double func[DIM],
     }
 
     var = SHELL_CURVATURE;
-    for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       ShellBF(var, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
               n_dof[MESH_DISPLACEMENT1], dof_map);
       // d_func[0][var][j] += scale_factor*h*(-h*h/12.0/mu_l*fv->sh_tens*gradII_phi_j[0]);
     }
     var = SHELL_TENSION;
-    for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       // ShellBF(var, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
       // n_dof[MESH_DISPLACEMENT1], dof_map); d_func[0][var][j] +=
       // scale_factor*h*(-h*h/12.0/mu_l*phi_j*gradII_curv[0]);
     }
-    for (int l = 0; l < pd->Num_Dim; l++) {
+    for (int l = 0; l < goma_ctx->fem.pd->Num_Dim; l++) {
       var = MESH_DISPLACEMENT1 + l;
-      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         ShellBF(var, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
         // d_func[0][var][j] += -scale_factor*3.0*h*h*dh_dmesh[l][j]/12.0/mu_l*gradII_P[0];
@@ -2914,7 +2946,7 @@ void shell_lubrication_outflow(double func[DIM],
         d_func[0][var][j] += -h * h * h / 12.0 / mu_l * dgradII_P_dmesh[0][l][j];
       }
       var = SHELL_NORMAL1 + l;
-      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         ShellBF(var, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
         // d_func[0][var][j] += -scale_factor*3.0*h*h*dh_dnormal[l][j]/12.0/mu_l*gradII_P[0];
@@ -2977,8 +3009,8 @@ void shell_tfmp_avg_plate_velo_gas(double func[DIM],
   double gas_flux_density[DIM];
   /* Save the boundary normal vector */
 
-  for (k = 0; k < pd->Num_Dim; k++) {
-    bound_normal[k] = fv->snormal[k];
+  for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
+    bound_normal[k] = goma_ctx->fem.fv->snormal[k];
     /*
     for (l = 0; l<DIM; l++) {
       for (j = 0; j <ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
@@ -2996,7 +3028,7 @@ void shell_tfmp_avg_plate_velo_gas(double func[DIM],
 
   /* Gather necessary values (S, h, v_avg)*/
 
-  S = fv->tfmp_sat;
+  S = goma_ctx->fem.fv->tfmp_sat;
   /* Use the height_function_model */
   double H_U, dH_U_dtime, H_L, dH_L_dtime;
   double dH_U_dX[DIM], dH_L_dX[DIM], dH_U_dp, dH_U_ddh, dH_dF[MDE];
@@ -3040,10 +3072,10 @@ void shell_tfmp_avg_plate_velo_gas(double func[DIM],
   }
 
   double d_gradII_phi_j_dmesh[DIM][DIM][MDE];
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = TFMP_SAT;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         ShellBF(var, j, &phi_j, grad_phi_j, gradII_phi_j, d_gradII_phi_j_dmesh,
                 n_dof[MESH_DISPLACEMENT1], dof_map);
         for (k = 0; k < DIM; k++) {
@@ -3054,16 +3086,16 @@ void shell_tfmp_avg_plate_velo_gas(double func[DIM],
 
     for (l = 0; l < DIM; l++) {
       var = MESH_DISPLACEMENT1 + l;
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (k = 0; k < DIM; k++) {
             d_func[0][var][j] += bound_normal[k] * v_avg[k] * (1.0 - S) * dh_dmesh[k][j];
           }
         }
       }
       var = SHELL_NORMAL1 + l;
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (k = 0; k < DIM; k++) {
             d_func[0][var][j] += bound_normal[k] * v_avg[k] * (1.0 - S) * dh_dnormal[k][j];
           }
@@ -3126,16 +3158,16 @@ void apply_sdet(double func[DIM],
   double factor = 1.0;
   func[0] += factor * 0.5 * det_J * det_J;
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = MESH_DISPLACEMENT1;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         d_func[0][var][j] += factor * det_J * d_det_J_dmeshkj[0][j];
       }
     }
     var = MESH_DISPLACEMENT2;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         d_func[0][var][j] += factor * det_J * d_det_J_dmeshkj[1][j];
       }
     }
@@ -3201,11 +3233,12 @@ void apply_sh_weak(double func[DIM],
 
   memset(d_sh_y_dcsi_dmesh, 0.0, sizeof(double) * DIM * MDE);
 
-  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-    node = ei[pg->imtrx]->dof_list[R_MESH2][i];
-    index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
-    d_phi_dcsi[i] = bf[eqn]->dphidxi[i][0];
-    d_sh_y_dcsi += (goma_ctx->mesh.coor[1][index] + *esp->d[1][i]) * d_phi_dcsi[i];
+  for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+    node = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[R_MESH2][i];
+    index = goma_ctx->mesh
+                .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + node];
+    d_phi_dcsi[i] = goma_ctx->fem.bf[eqn]->dphidxi[i][0];
+    d_sh_y_dcsi += (goma_ctx->mesh.coor[1][index] + *goma_ctx->fem.esp->d[1][i]) * d_phi_dcsi[i];
 
     // don't need to loop over k, it's just sensitive to d[1];
     d_sh_y_dcsi_dmesh[1][i] += d_phi_dcsi[i];
@@ -3217,7 +3250,7 @@ void apply_sh_weak(double func[DIM],
   double d_det_J_dmeshkj[DIM][MDE];
   detJ_2d_bar(&det_J, d_det_J_dmeshkj);
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     if (dy_ds == 0.0) {
       func[0] += -d_sh_y_dcsi / det_J;
     } else { // use input value
@@ -3225,10 +3258,10 @@ void apply_sh_weak(double func[DIM],
     }
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = MESH_DISPLACEMENT1;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         if (dy_ds == 0.0) {
           d_func[0][var][j] += d_sh_y_dcsi / det_J / det_J * d_det_J_dmeshkj[0][j];
         } else { // use input value (not sensitive to anything)
@@ -3237,8 +3270,8 @@ void apply_sh_weak(double func[DIM],
       }
     }
     var = MESH_DISPLACEMENT2;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         if (dy_ds == 0.0) {
           d_func[0][var][j] += d_sh_y_dcsi / det_J / det_J * d_det_J_dmeshkj[1][j];
           d_func[0][var][j] += -d_phi_dcsi[j] / det_J;

@@ -90,7 +90,7 @@ double user_mat_init(const int var,
     T_init = init_value;
     e_time = 0.; /* negative elapsed time since deposition  */
     for (dir = 0; dir < DIM; dir++) {
-      e_time += efv->ext_fld_ndl_val[dir][node] * (xpt[dir] - xpt0[dir]);
+      e_time += goma_ctx->fem.efv->ext_fld_ndl_val[dir][node] * (xpt[dir] - xpt0[dir]);
     }
     e_time /= speed;
 
@@ -123,12 +123,12 @@ double user_mat_init(const int var,
 
     e_time = 0.; /* negative elapsed time since deposition  */
     for (dir = 0; dir < DIM; dir++) {
-      e_time += efv->ext_fld_ndl_val[dir][node] * (xpt[dir] - xpt0[dir]);
+      e_time += goma_ctx->fem.efv->ext_fld_ndl_val[dir][node] * (xpt[dir] - xpt0[dir]);
     }
     e_time /= speed;
     /*  "y-coord" value */
-    distv = -efv->ext_fld_ndl_val[1][node] * (xpt[0] - xpt0[0]) +
-            +efv->ext_fld_ndl_val[0][node] * (xpt[1] - xpt0[1]) + 0.5 * width;
+    distv = -goma_ctx->fem.efv->ext_fld_ndl_val[1][node] * (xpt[0] - xpt0[0]) +
+            +goma_ctx->fem.efv->ext_fld_ndl_val[0][node] * (xpt[1] - xpt0[1]) + 0.5 * width;
     distz = xpt[2] - xpt0[2] + 0.5 * ht; /*  distance from bottom  */
     /* homogeneous boundary solution */
     sum = 0.;
@@ -182,11 +182,11 @@ int user_initialize(const int var,
   }
 
   if (var > -1) {
-    if (upd->vp[pg->imtrx][var] > -1) {
+    if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var] > -1) {
       for (i = 0; i < DPI_ptr->num_owned_nodes; i++) {
         var_somewhere = FALSE;
-        for (mn = 0; mn < upd->Num_Mat; mn++) {
-          idv = Index_Solution(i, var, 0, 0, mn, pg->imtrx);
+        for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+          idv = Index_Solution(i, var, 0, 0, mn, goma_ctx->fem.pg->imtrx);
           if (idv != -1) {
             var_somewhere = TRUE;
             break;

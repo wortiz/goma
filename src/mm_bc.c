@@ -431,16 +431,16 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
     for (n = 0; n < num_nodes; n++) {
       inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + n];
       node = Nodes[inode];
-      nv = node->Nodal_Vars_Info[pg->imtrx];
-      if (Dolphin[pg->imtrx][inode][PRESSURE] > 0 && datum_set) {
+      nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+      if (Dolphin[goma_ctx->fem.pg->imtrx][inode][PRESSURE] > 0 && datum_set) {
         datum_set = 0;
-        if (!node->DBC[pg->imtrx]) {
-          node->DBC[pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
+        if (!node->DBC[goma_ctx->fem.pg->imtrx]) {
+          node->DBC[goma_ctx->fem.pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
         }
         offset = get_nodal_unknown_offset(nv, PRESSURE, mn, 0, &vd);
 
-        node->DBC[pg->imtrx][offset] = 0;
-        ie = Index_Solution(inode, PRESSURE, 0, 0, mn, pg->imtrx);
+        node->DBC[goma_ctx->fem.pg->imtrx][offset] = 0;
+        ie = Index_Solution(inode, PRESSURE, 0, 0, mn, goma_ctx->fem.pg->imtrx);
         x[ie] = pressure_datum_value;
         xdot[ie] = 0.0;
         log_msg("Setting pressure datum");
@@ -480,7 +480,7 @@ static int set_nodal_Dirichlet_BC(int inode,
   int eqn, w, ieqn, offset;
   int ndof = 0;
   NODE_INFO_STRUCT *node = Nodes[inode];
-  NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[pg->imtrx];
+  NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
   VARIABLE_DESCRIPTION_STRUCT *vd;
   /*
    * Fill in the correct bit field in Variable_Mask depending
@@ -496,11 +496,11 @@ static int set_nodal_Dirichlet_BC(int inode,
     if (eqn != R_MASS) {
       offset = get_nodal_unknown_offset(nv, eqn, matID, 0, &vd);
       if (offset >= 0) {
-        if (node->DBC[pg->imtrx] == NULL) {
-          node->DBC[pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
+        if (node->DBC[goma_ctx->fem.pg->imtrx] == NULL) {
+          node->DBC[goma_ctx->fem.pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
         }
-        node->DBC[pg->imtrx][offset] = (short int)ibc;
-        ieqn = node->First_Unknown[pg->imtrx] + offset;
+        node->DBC[goma_ctx->fem.pg->imtrx][offset] = (short int)ibc;
+        ieqn = node->First_Unknown[goma_ctx->fem.pg->imtrx] + offset;
         /*
          *  If BC_relax is set to default, set the boundary
          *  condition here without including it in the residual.
@@ -553,18 +553,18 @@ static int set_nodal_Dirichlet_BC(int inode,
        * Obtain the species number from the first integer
        */
       w = boundary_condition->BC_Data_Int[0];
-      if (w >= (upd->Max_Num_Species)) {
+      if (w >= (goma_ctx->fem.upd->Max_Num_Species)) {
         GOMA_EH(GOMA_ERROR, "Species number on BC Y card exceeds number of species available");
       }
       offset = get_nodal_unknown_offset(nv, eqn, matID, w, &vd);
       if (offset < 0) {
         GOMA_WH(-1, "Y BC applied to material without species equation");
       } else {
-        if (node->DBC[pg->imtrx] == NULL) {
-          node->DBC[pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
+        if (node->DBC[goma_ctx->fem.pg->imtrx] == NULL) {
+          node->DBC[goma_ctx->fem.pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
         }
-        node->DBC[pg->imtrx][offset] = (short int)ibc;
-        ieqn = node->First_Unknown[pg->imtrx] + offset;
+        node->DBC[goma_ctx->fem.pg->imtrx][offset] = (short int)ibc;
+        ieqn = node->First_Unknown[goma_ctx->fem.pg->imtrx] + offset;
         /*
          *  If BC_relax is set to default, set the boundary
          *  condition here without including it in the residual
@@ -653,21 +653,21 @@ static int set_nodal_Dirichlet_BC(int inode,
      * Encode original position for reference, using the last available chunks
      * of the bc input float data
      */
-    ieqn = Index_Solution(inode, MESH_DISPLACEMENT1, 0, ndof, matID, pg->imtrx);
+    ieqn = Index_Solution(inode, MESH_DISPLACEMENT1, 0, ndof, matID, goma_ctx->fem.pg->imtrx);
     boundary_condition->BC_Data_Float[7] =
         boundary_condition->BC_Data_Float[4] - (goma_ctx->mesh.coor[0][inode]);
     if (boundary_condition->BC_Data_Int[0]) {
       xdot[ieqn] = 0.;
     }
-    ieqn = Index_Solution(inode, MESH_DISPLACEMENT2, 0, ndof, matID, pg->imtrx);
+    ieqn = Index_Solution(inode, MESH_DISPLACEMENT2, 0, ndof, matID, goma_ctx->fem.pg->imtrx);
     boundary_condition->BC_Data_Float[8] =
         boundary_condition->BC_Data_Float[5] - (goma_ctx->mesh.coor[1][inode]);
     if (boundary_condition->BC_Data_Int[0]) {
       xdot[ieqn] = 0.;
     }
     boundary_condition->BC_Data_Float[9] = 0.;
-    if (pd_glob[0]->Num_Dim == 3) {
-      ieqn = Index_Solution(inode, MESH_DISPLACEMENT3, 0, ndof, matID, pg->imtrx);
+    if (goma_ctx->fem.pd_glob[0]->Num_Dim == 3) {
+      ieqn = Index_Solution(inode, MESH_DISPLACEMENT3, 0, ndof, matID, goma_ctx->fem.pg->imtrx);
       boundary_condition->BC_Data_Float[9] =
           boundary_condition->BC_Data_Float[6] - (goma_ctx->mesh.coor[2][inode]);
       if (boundary_condition->BC_Data_Int[0]) {
@@ -686,10 +686,10 @@ static int set_nodal_Dirichlet_BC(int inode,
       if (eqn != R_MASS) {
         offset = get_nodal_unknown_offset(nv, eqn, matID, 0, &vd);
         if (offset >= 0) {
-          if (node->DBC[pg->imtrx] == NULL) {
-            node->DBC[pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
+          if (node->DBC[goma_ctx->fem.pg->imtrx] == NULL) {
+            node->DBC[goma_ctx->fem.pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
           }
-          node->DBC[pg->imtrx][offset] = (short int)ibc;
+          node->DBC[goma_ctx->fem.pg->imtrx][offset] = (short int)ibc;
         }
       } else {
         /*
@@ -697,17 +697,17 @@ static int set_nodal_Dirichlet_BC(int inode,
          * Obtain the species number from the first integer
          */
         w = boundary_condition->BC_Data_Int[1];
-        if (w >= (upd->Max_Num_Species)) {
+        if (w >= (goma_ctx->fem.upd->Max_Num_Species)) {
           GOMA_EH(GOMA_ERROR, "Species number on BC Y card exceeds number of species available");
         }
         offset = get_nodal_unknown_offset(nv, eqn, matID, w, &vd);
         if (offset < 0) {
           GOMA_WH(-1, "Y BC applied to material without species equation");
         } else {
-          if (node->DBC[pg->imtrx] == NULL) {
-            node->DBC[pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
+          if (node->DBC[goma_ctx->fem.pg->imtrx] == NULL) {
+            node->DBC[goma_ctx->fem.pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
           }
-          node->DBC[pg->imtrx][offset] = (short int)ibc;
+          node->DBC[goma_ctx->fem.pg->imtrx][offset] = (short int)ibc;
         }
       }
     }
@@ -775,10 +775,10 @@ void alloc_First_Elem_BC(struct elem_side_bc_struct ****First_Elem_Side_BC_Array
 
   size_t sz_side = sizeof(struct elem_side_bc_struct ***);
   size_t sz_edge = sizeof(struct elem_edge_bc_struct ***);
-  *First_Elem_Side_BC_Array = malloc(sz_side * (size_t)upd->Total_Num_Matrices);
-  *First_Elem_Edge_BC_Array = malloc(sz_edge * (size_t)upd->Total_Num_Matrices);
+  *First_Elem_Side_BC_Array = malloc(sz_side * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
+  *First_Elem_Edge_BC_Array = malloc(sz_edge * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     (*First_Elem_Side_BC_Array)[imtrx] =
         (struct elem_side_bc_struct **)alloc_ptr_1(num_internal_elems);
     (*First_Elem_Edge_BC_Array)[imtrx] =
@@ -1276,12 +1276,12 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
   }
 
   /* Initialize rotation variables and lists */
-  mesh_rotate_node = calloc((size_t)upd->Total_Num_Matrices, sizeof(int *));
-  mesh_rotate_ss = calloc((size_t)upd->Total_Num_Matrices, sizeof(int *));
-  num_mesh_rotate = calloc((size_t)upd->Total_Num_Matrices, sizeof(int));
-  mom_rotate_node = calloc((size_t)upd->Total_Num_Matrices, sizeof(int *));
-  mom_rotate_ss = calloc((size_t)upd->Total_Num_Matrices, sizeof(int *));
-  num_mom_rotate = calloc((size_t)upd->Total_Num_Matrices, sizeof(int));
+  mesh_rotate_node = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
+  mesh_rotate_ss = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
+  num_mesh_rotate = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int));
+  mom_rotate_node = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
+  mom_rotate_ss = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
+  num_mom_rotate = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int));
 
   if (Num_ROT == 0 && exo->num_dim < 3) {
     check_for_bc_conflicts2D(exo, dpi);
@@ -1306,7 +1306,7 @@ void free_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo_D
 
   e_start = exo->eb_ptr[0];
   e_end = exo->eb_ptr[exo->num_elem_blocks];
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (ielem = e_start; ielem < e_end; ielem++) {
       if (First_Elem_Side_BC_Array[imtrx][ielem] != NULL) {
         current_bc = First_Elem_Side_BC_Array[imtrx][ielem];
@@ -1338,7 +1338,7 @@ void free_Edge_BC(struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[], Exo_D
 
   e_start = exo->eb_ptr[0];
   e_end = exo->eb_ptr[exo->num_elem_blocks];
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (ielem = e_start; ielem < e_end; ielem++) {
       if (First_Elem_Edge_BC_Array[imtrx][ielem] != NULL) {
         current_bc = First_Elem_Edge_BC_Array[imtrx][ielem];
@@ -1772,14 +1772,14 @@ void set_up_Embedded_BC(void)
    *  input file and make list of those applied on level set surfaces
    */
 
-  if (ls == NULL && pfd == NULL)
+  if (goma_ctx->fem.ls == NULL && goma_ctx->fem.pfd == NULL)
     return;
 
-  if (ls != NULL)
-    ls->embedded_bc = NULL;
-  if (pfd != NULL) {
-    for (pf = 0; pf < pfd->num_phase_funcs; pf++) {
-      pfd->ls[pf]->embedded_bc = NULL;
+  if (goma_ctx->fem.ls != NULL)
+    goma_ctx->fem.ls->embedded_bc = NULL;
+  if (goma_ctx->fem.pfd != NULL) {
+    for (pf = 0; pf < goma_ctx->fem.pfd->num_phase_funcs; pf++) {
+      goma_ctx->fem.pfd->ls[pf]->embedded_bc = NULL;
     }
   }
 
@@ -1789,13 +1789,13 @@ void set_up_Embedded_BC(void)
 
       bc = (struct LS_Embedded_BC *)smalloc(sizeof(struct LS_Embedded_BC));
 
-      if (ls == NULL) {
+      if (goma_ctx->fem.ls == NULL) {
         GOMA_EH(GOMA_ERROR,
                 "Attempt to apply bc on LS but level set is not active, did you intend PF?\n");
       }
 
-      bc->next = ls->embedded_bc;
-      ls->embedded_bc = bc;
+      bc->next = goma_ctx->fem.ls->embedded_bc;
+      goma_ctx->fem.ls->embedded_bc = bc;
 
       bc->bc_input_id = ibc;
 
@@ -1806,16 +1806,16 @@ void set_up_Embedded_BC(void)
       bc = (struct LS_Embedded_BC *)smalloc(sizeof(struct LS_Embedded_BC));
       pf = abs(BC_Types[ibc].BC_ID) - 1;
 
-      if (pfd == NULL) {
+      if (goma_ctx->fem.pfd == NULL) {
         GOMA_EH(GOMA_ERROR, "Attempt to apply bc on PF but phase functions are not active.\n");
       }
 
-      if (pf >= pfd->num_phase_funcs) {
+      if (pf >= goma_ctx->fem.pfd->num_phase_funcs) {
         GOMA_EH(GOMA_ERROR, "Attempt to apply bc to invalid phase function.\n");
       }
 
-      bc->next = pfd->ls[pf]->embedded_bc;
-      pfd->ls[pf]->embedded_bc = bc;
+      bc->next = goma_ctx->fem.pfd->ls[pf]->embedded_bc;
+      goma_ctx->fem.pfd->ls[pf]->embedded_bc = bc;
 
       bc->bc_input_id = ibc;
 
@@ -1880,7 +1880,7 @@ int find_bc_unk_offset(struct Boundary_Condition *bc,
   struct BC_descriptions *bc_desc = bc->desc;
   int ieqn = bc_desc->equation + p;
   NODE_INFO_STRUCT *node = Nodes[inode];
-  NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[pg->imtrx];
+  NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
   PROBLEM_DESCRIPTION_STRUCT *pd_curr = 0;
   int bc_name = bc_desc->BC_Name;
   /*
@@ -1928,13 +1928,13 @@ int find_bc_unk_offset(struct Boundary_Condition *bc,
   if (curr_mat == -2) {
     for (imat = 0; imat < node->Mat_List.Length; imat++) {
       matIndex = node->Mat_List.List[imat];
-      pd_curr = pd_glob[matIndex];
-      if (pd_curr->e[pg->imtrx][ieqn])
+      pd_curr = goma_ctx->fem.pd_glob[matIndex];
+      if (pd_curr->e[goma_ctx->fem.pg->imtrx][ieqn])
         break;
     }
   } else {
     matIndex = curr_mat;
-    pd_curr = pd_glob[matIndex];
+    pd_curr = goma_ctx->fem.pd_glob[matIndex];
   }
 
   /*
@@ -1954,7 +1954,7 @@ int find_bc_unk_offset(struct Boundary_Condition *bc,
    * the corresponding equation, in this case velocity,
    * exists on both sides of the boundary.
    */
-  if (!pd_curr->e[pg->imtrx][ieqn]) {
+  if (!pd_curr->e[goma_ctx->fem.pg->imtrx][ieqn]) {
     /*
      *  Return here if we are on part of the interface contained
      *  in a material that doesn't have a valid volumetric
@@ -2612,7 +2612,7 @@ static void elem_side_matrl_list(struct elem_side_bc_struct *side)
   NODE_INFO_STRUCT *node;
   num_nodes = side->num_nodes_on_side;
   node_list = side->local_node_id;
-  matrl_list = alloc_int_1(upd->Num_Mat, 0);
+  matrl_list = alloc_int_1(goma_ctx->fem.upd->Num_Mat, 0);
   for (i = 0; i < num_nodes; i++) {
     node = Nodes[node_list[i]];
     mlist = &(node->Mat_List);
@@ -2626,7 +2626,7 @@ static void elem_side_matrl_list(struct elem_side_bc_struct *side)
       matrl_list[mlist->List[j]]++;
     }
   }
-  for (i = 0, j = 0; i < upd->Num_Mat; i++) {
+  for (i = 0, j = 0; i < goma_ctx->fem.upd->Num_Mat; i++) {
     if (matrl_list[i] == num_nodes) {
       side->MatID_List[j] = i;
       j++;

@@ -216,16 +216,17 @@ void init_nodes(Exo_DB *exo, Dpi *dpi)
      *  None of this has been made compatible with parallel processing
      */
     Nodes[i]->Proc_Node_Num = i;
-    Nodes[i]->First_Unknown = (int *)malloc((upd->Total_Num_Matrices) * sizeof(int));
+    Nodes[i]->First_Unknown = (int *)malloc((goma_ctx->fem.upd->Total_Num_Matrices) * sizeof(int));
     Nodes[i]->Global_Node_Num = dpi->node_index_global[i];
     Nodes[i]->Type.Internal = FALSE;
     Nodes[i]->Type.Border = FALSE;
     Nodes[i]->Type.External = FALSE;
     Nodes[i]->Proc = goma_ctx->proc_id;
-    Nodes[i]->Nodal_Vars_Info = (NODAL_VARS_STRUCT **)alloc_ptr_1(upd->Total_Num_Matrices);
-    Nodes[i]->DBC = malloc(sizeof(short int *) * upd->Total_Num_Matrices);
+    Nodes[i]->Nodal_Vars_Info =
+        (NODAL_VARS_STRUCT **)alloc_ptr_1(goma_ctx->fem.upd->Total_Num_Matrices);
+    Nodes[i]->DBC = malloc(sizeof(short int *) * goma_ctx->fem.upd->Total_Num_Matrices);
 
-    for (k = 0; k < upd->Total_Num_Matrices; k++) {
+    for (k = 0; k < goma_ctx->fem.upd->Total_Num_Matrices; k++) {
       Nodes[i]->DBC[k] = NULL;
     }
 
@@ -299,7 +300,7 @@ void free_nodes(void)
   for (i = 0; i < goma_ctx->mesh.num_node; i++) {
     node_ptr = Nodes[i];
     free_umi_list(&(node_ptr->Mat_List));
-    for (k = 0; k < upd->Total_Num_Matrices; k++) {
+    for (k = 0; k < goma_ctx->fem.upd->Total_Num_Matrices; k++) {
       safer_free((void **)&(node_ptr->DBC[k]));
     }
     free(node_ptr->First_Unknown);
@@ -723,10 +724,10 @@ void nullify_dirichlet_bcs(void)
                 goma_ctx->mesh.num_external_nodes;
   for (i = 0; i < total_nodes; i++) {
     node = Nodes[i];
-    if (node->DBC[pg->imtrx]) {
-      nv = node->Nodal_Vars_Info[pg->imtrx];
+    if (node->DBC[goma_ctx->fem.pg->imtrx]) {
+      nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
       for (v = 0; v < nv->Num_Unknowns; v++) {
-        node->DBC[pg->imtrx][v] = -1;
+        node->DBC[goma_ctx->fem.pg->imtrx][v] = -1;
       }
     }
   }

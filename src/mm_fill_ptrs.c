@@ -107,11 +107,11 @@ linkParent_ei(const int elem, const int relatedElem, const int v, const Exo_DB *
    *
    */
   int slot = -1;
-  int mn = ei[imtrx]->mn;
+  int mn = goma_ctx->fem.ei[imtrx]->mn;
   // int ebn = ei_ptr->elem_blk_index;
   bool alreadyDone = 0;
   for (i = 0; i < MAX_ELEMENT_INDICES_RELATED; i++) {
-    if (ei[imtrx]->linkedEIelems[i] == relatedElem) {
+    if (goma_ctx->fem.ei[imtrx]->linkedEIelems[i] == relatedElem) {
       slot = i;
       alreadyDone = 1;
       break;
@@ -119,7 +119,7 @@ linkParent_ei(const int elem, const int relatedElem, const int v, const Exo_DB *
   }
   if (slot == -1) {
     for (i = 0; i < MAX_ELEMENT_INDICES_RELATED; i++) {
-      if (ei[imtrx]->linkedEIelems[i] == -1) {
+      if (goma_ctx->fem.ei[imtrx]->linkedEIelems[i] == -1) {
         slot = i;
         break;
       }
@@ -128,15 +128,15 @@ linkParent_ei(const int elem, const int relatedElem, const int v, const Exo_DB *
       fprintf(stderr, "Ran out of slots in \n");
       exit(-1);
     }
-    ei[imtrx]->linkedEIelems[i] = relatedElem;
+    goma_ctx->fem.ei[imtrx]->linkedEIelems[i] = relatedElem;
   }
   /*
    *  We check this condition here. But, I think it should already be
    *  redundant.
    */
-  if (ei[imtrx]->owningElementForColVar[v] != relatedElem) {
+  if (goma_ctx->fem.ei[imtrx]->owningElementForColVar[v] != relatedElem) {
     fprintf(stderr, "inconsistent entry in ei[imtrx]->owningElementForColVar[%d], %d, %d\n", v,
-            ei[imtrx]->owningElementForColVar[v], relatedElem);
+            goma_ctx->fem.ei[imtrx]->owningElementForColVar[v], relatedElem);
     GOMA_EH(GOMA_ERROR, "linkedParent_ei() error\n");
   }
 
@@ -145,24 +145,24 @@ linkParent_ei(const int elem, const int relatedElem, const int v, const Exo_DB *
    *  in the eiRelated vector of pointers. What we are saying is that
    *  the column unknowns for this variable will be handled by eiRelated[slot]
    */
-  ei[imtrx]->owningElement_ei_ptr[v] = eiRelated[slot];
+  goma_ctx->fem.ei[imtrx]->owningElement_ei_ptr[v] = goma_ctx->fem.ei_related[slot];
 
   /*
    * Ok, if we haven't already done so, fill up the slave ei structure.
    */
   if (!alreadyDone) {
-    load_ei(relatedElem, exo, ei[imtrx]->owningElement_ei_ptr[v], imtrx);
+    load_ei(relatedElem, exo, goma_ctx->fem.ei[imtrx]->owningElement_ei_ptr[v], imtrx);
 
-    pd = pd_glob[mn];
-    Current_EB_ptr = Element_Blocks + ei[imtrx]->elem_blk_index;
-    pd = pd_glob[mn];         /* Problem Description */
-    mp = mp_glob[mn];         /* Material Properties */
-    cr = cr_glob[mn];         /* Constitutive Relations */
-    elc = elc_glob[mn];       /* Elastic Constitutive */
-    elc_rs = elc_rs_glob[mn]; /* Elastic Constitutive */
-    gn = gn_glob[mn];         /* Generalized Newtonian */
-    vn = vn_glob[mn];         /* Viscoelastic Nonmodal */
-    evpl = evpl_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    Current_EB_ptr = Element_Blocks + goma_ctx->fem.ei[imtrx]->elem_blk_index;
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];         /* Problem Description */
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];         /* Material Properties */
+    goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];         /* Constitutive Relations */
+    goma_ctx->fem.elc = goma_ctx->fem.elc_glob[mn];       /* Elastic Constitutive */
+    goma_ctx->fem.elc_rs = goma_ctx->fem.elc_rs_glob[mn]; /* Elastic Constitutive */
+    goma_ctx->fem.gn = goma_ctx->fem.gn_glob[mn];         /* Generalized Newtonian */
+    goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];         /* Viscoelastic Nonmodal */
+    goma_ctx->fem.evpl = goma_ctx->fem.evpl_glob[mn];
   }
 }
 /***************************************************************************/
@@ -211,7 +211,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
   struct Element_Indices *ei_ptr;
 
   int mode = 0;
-  ei_ptr = ei[imtrx];
+  ei_ptr = goma_ctx->fem.ei[imtrx];
   if (ei_ptr_fill != 0) {
     mode = 1;
     ei_ptr = ei_ptr_fill;
@@ -256,27 +256,27 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
    */
   if (mode == 0) {
     Current_EB_ptr = Element_Blocks + ei_ptr->elem_blk_index;
-    pd = pd_glob[mn];         /* Problem Description */
-    mp = mp_glob[mn];         /* Material Properties */
-    cr = cr_glob[mn];         /* Constitutive Relations */
-    elc = elc_glob[mn];       /* Elastic Constitutive */
-    elc_rs = elc_rs_glob[mn]; /* Elastic Constitutive */
-    gn = gn_glob[mn];         /* Generalized Newtonian */
-    vn = vn_glob[mn];         /* Viscoelastic Nonmodal */
-    evpl = evpl_glob[mn];     /* Viscplastic Constitutive */
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];         /* Problem Description */
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];         /* Material Properties */
+    goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];         /* Constitutive Relations */
+    goma_ctx->fem.elc = goma_ctx->fem.elc_glob[mn];       /* Elastic Constitutive */
+    goma_ctx->fem.elc_rs = goma_ctx->fem.elc_rs_glob[mn]; /* Elastic Constitutive */
+    goma_ctx->fem.gn = goma_ctx->fem.gn_glob[mn];         /* Generalized Newtonian */
+    goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];         /* Viscoelastic Nonmodal */
+    goma_ctx->fem.evpl = goma_ctx->fem.evpl_glob[mn];     /* Viscplastic Constitutive */
   } else {
     // set to zero so that it will core dump and we can see what's going on
-    pd = 0;
+    goma_ctx->fem.pd = 0;
     Current_EB_ptr = 0;
-    mp = 0;
-    cr = 0;
-    elc = 0;
-    elc_rs = 0;
-    gn = 0;
-    vn = 0;
-    evpl = 0;
+    goma_ctx->fem.mp = 0;
+    goma_ctx->fem.cr = 0;
+    goma_ctx->fem.elc = 0;
+    goma_ctx->fem.elc_rs = 0;
+    goma_ctx->fem.gn = 0;
+    goma_ctx->fem.vn = 0;
+    goma_ctx->fem.evpl = 0;
   }
-  PROBLEM_DESCRIPTION_STRUCT *pd_ptr = pd_glob[mn];
+  PROBLEM_DESCRIPTION_STRUCT *pd_ptr = goma_ctx->fem.pd_glob[mn];
 
   /*
    *  Assign values to the scalar members of ei.
@@ -307,7 +307,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
     for (i = 0; i < num_elem_friends[ei_ptr->ielem]; i++) {
       n_eb = find_elemblock_index(elem_friends[ei_ptr->ielem][i], exo);
       n_mn = Matilda[n_eb];
-      if (pd_glob[n_mn]->e[imtrx][R_MESH1]) {
+      if (goma_ctx->fem.pd_glob[n_mn]->e[imtrx][R_MESH1]) {
         ei_ptr->deforming_mesh = TRUE;
       }
     }
@@ -856,8 +856,8 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
    * Here we'll count up the dofs for the external variables,
    * if any exist
    */
-  if (efv->ev) {
-    for (v = 0; v < efv->Num_external_field; v++) {
+  if (goma_ctx->fem.efv->ev) {
+    for (v = 0; v < goma_ctx->fem.efv->Num_external_field; v++) {
       ei_ptr->dof_ext[v] = 0;
       for (ln = 0; ln < nnodes; ln++) {
 
@@ -901,7 +901,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
         n_eb_Parent = find_elemblock_index(elem_Parent, exo);
         /* Get the material number of the parent element */
         n_mn_Parent = Matilda[n_eb_Parent];
-        PROBLEM_DESCRIPTION_STRUCT *pd_Parent = pd_glob[n_mn_Parent];
+        PROBLEM_DESCRIPTION_STRUCT *pd_Parent = goma_ctx->fem.pd_glob[n_mn_Parent];
 
         /* Get the element type of the parent */
         n_ielem_type_Parent = Elem_Type(exo, elem_Parent);
@@ -945,12 +945,13 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
                *
                *  The pd->e[imtrx][v] stuff is for the mesh equations.
                */
-              if (ei_ptr->owningElementForColVar[v] == -1 || ((pd_glob[mn])->e[imtrx][v] == 0)) {
+              if (ei_ptr->owningElementForColVar[v] == -1 ||
+                  ((goma_ctx->fem.pd_glob[mn])->e[imtrx][v] == 0)) {
                 if (enunks) {
                   ei_ptr->owningElementForColVar[v] = elem_Parent;
                   if (mode == 0) {
                     linkParent_ei(elem, elem_Parent, v, exo, imtrx);
-                    pd = pd_glob[mn];
+                    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
                   }
                 }
               } else if (ei_ptr->owningElementForColVar[v] == elem) {
@@ -981,7 +982,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
         /* Get the material number of the parent element */
         n_mn_Parent = Matilda[n_eb_Parent];
 
-        PROBLEM_DESCRIPTION_STRUCT *pd_Parent = pd_glob[n_mn_Parent];
+        PROBLEM_DESCRIPTION_STRUCT *pd_Parent = goma_ctx->fem.pd_glob[n_mn_Parent];
 
         /* Get the element type of the parent */
         n_ielem_type_Parent = Elem_Type(exo, elem_Parent);
@@ -1016,7 +1017,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
                   ei_ptr->owningElementForColVar[v] = elem_Parent;
                   if (mode == 0) {
                     linkParent_ei(elem, elem_Parent, v, exo, imtrx);
-                    pd = pd_glob[mn];
+                    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
                   }
                 }
               } else if (ei_ptr->owningElementForColVar[v] == elem) {
@@ -1037,7 +1038,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
       for (i = 0; i < num_elem_friends[elem]; i++) {
         n_eb = find_elemblock_index(elem_friends[elem][i], exo);
         n_mn = Matilda[n_eb];
-        if (pd_glob[n_mn]->e[imtrx][R_MESH1]) {
+        if (goma_ctx->fem.pd_glob[n_mn]->e[imtrx][R_MESH1]) {
           ei_ptr->deforming_mesh = TRUE;
         }
       }
@@ -1062,11 +1063,11 @@ static void load_varType_Interpolation_ptrs(const int varType,
  ************************************************************************/
 {
   int i, ie, dofs, ledof;
-  int *lvdof_to_ledof_tmp = ei[pg->imtrx]->lvdof_to_ledof[varType];
-  dofs = ei[pg->imtrx]->dof[varType];
+  int *lvdof_to_ledof_tmp = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[varType];
+  dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[varType];
   for (i = 0; i < dofs; i++) {
     ledof = lvdof_to_ledof_tmp[i];
-    ie = ei[pg->imtrx]->ieqn_ledof[ledof];
+    ie = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ieqn_ledof[ledof];
     esp_ptr[i] = x_static + ie;
     esp_old_ptr[i] = x_old_static + ie;
     esp_dot_ptr[i] = xdot_static + ie;
@@ -1086,11 +1087,11 @@ static void load_varType_Interpolation_ptrs_mat(
  ************************************************************************/
 {
   int i, ie, dofs, ledof;
-  int *lvdof_to_ledof_tmp = ei[imtrx]->lvdof_to_ledof[varType];
-  dofs = ei[imtrx]->dof[varType];
+  int *lvdof_to_ledof_tmp = goma_ctx->fem.ei[imtrx]->lvdof_to_ledof[varType];
+  dofs = goma_ctx->fem.ei[imtrx]->dof[varType];
   for (i = 0; i < dofs; i++) {
     ledof = lvdof_to_ledof_tmp[i];
-    ie = ei[imtrx]->ieqn_ledof[ledof];
+    ie = goma_ctx->fem.ei[imtrx]->ieqn_ledof[ledof];
     esp_ptr[i] = x_static + ie;
     esp_old_ptr[i] = x_old_static + ie;
     esp_dot_ptr[i] = xdot_static + ie;
@@ -1163,8 +1164,8 @@ int load_elem_dofptr(const int ielem,
   x_old_static = x_old;
   xdot_static = xdot;
   xdot_old_static = xdot_old;
-  x_dbl_dot_static = tran->xdbl_dot;
-  x_dbl_dot_old_static = tran->xdbl_dot_old;
+  x_dbl_dot_static = goma_ctx->fem.tran->xdbl_dot;
+  x_dbl_dot_old_static = goma_ctx->fem.tran->xdbl_dot_old;
 
   /* load eqn and variable number in tensor form */
   (void)stress_eqn_pointer(R_s);
@@ -1191,7 +1192,7 @@ int load_elem_dofptr(const int ielem,
    * They've moved to a more suitable residence in the function load_ei.
    */
   int imtrx;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     load_ei(ielem, exo, 0, imtrx);
   }
 
@@ -1212,53 +1213,56 @@ int load_elem_dofptr(const int ielem,
    * we do them at the same time...
    */
   eqn = R_MESH1;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->d[0], esp_old->d[0], esp_dot->d[0]);
-    if (tran->solid_inertia) {
-      dofs = ei[pg->imtrx]->dof[eqn];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->d[0], goma_ctx->fem.esp_old->d[0],
+                                    goma_ctx->fem.esp_dot->d[0]);
+    if (goma_ctx->fem.tran->solid_inertia) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn];
       for (i = 0; i < dofs; i++) {
-        gnn = ei[pg->imtrx]->gnn_list[eqn][i];
-        ie = Index_Solution(gnn, eqn, 0, 0, -1, pg->imtrx);
-        esp_dbl_dot->d[0][i] = tran->xdbl_dot + ie;
+        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[eqn][i];
+        ie = Index_Solution(gnn, eqn, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+        goma_ctx->fem.esp_dbl_dot->d[0][i] = goma_ctx->fem.tran->xdbl_dot + ie;
       }
     }
   }
 
   eqn = R_MESH2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->d[1], esp_old->d[1], esp_dot->d[1]);
-    if (tran->solid_inertia) {
-      dofs = ei[pg->imtrx]->dof[eqn];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->d[1], goma_ctx->fem.esp_old->d[1],
+                                    goma_ctx->fem.esp_dot->d[1]);
+    if (goma_ctx->fem.tran->solid_inertia) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn];
       for (i = 0; i < dofs; i++) {
-        gnn = ei[pg->imtrx]->gnn_list[eqn][i];
-        ie = Index_Solution(gnn, eqn, 0, 0, -1, pg->imtrx);
-        esp_dbl_dot->d[1][i] = tran->xdbl_dot + ie;
+        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[eqn][i];
+        ie = Index_Solution(gnn, eqn, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+        goma_ctx->fem.esp_dbl_dot->d[1][i] = goma_ctx->fem.tran->xdbl_dot + ie;
       }
     }
   }
 
   eqn = R_MESH3;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->d[2], esp_old->d[2], esp_dot->d[2]);
-    if (tran->solid_inertia) {
-      dofs = ei[pg->imtrx]->dof[eqn];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->d[2], goma_ctx->fem.esp_old->d[2],
+                                    goma_ctx->fem.esp_dot->d[2]);
+    if (goma_ctx->fem.tran->solid_inertia) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn];
       for (i = 0; i < dofs; i++) {
-        gnn = ei[pg->imtrx]->gnn_list[eqn][i];
-        ie = Index_Solution(gnn, eqn, 0, 0, -1, pg->imtrx);
-        esp_dbl_dot->d[2][i] = tran->xdbl_dot + ie;
+        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[eqn][i];
+        ie = Index_Solution(gnn, eqn, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+        goma_ctx->fem.esp_dbl_dot->d[2][i] = goma_ctx->fem.tran->xdbl_dot + ie;
       }
     }
-  } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
-              pd_glob[0]->CoordinateSystem == SWIRLING ||
-              pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
-              pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
-             upd->ep[pg->imtrx][R_MESH1] >= 0) {
-    dofs = ei[pg->imtrx]->dof[R_MESH1];
+  } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+              goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING ||
+              goma_ctx->fem.pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
+              goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
+             goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1] >= 0) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
     for (i = 0; i < dofs; i++) {
-      esp->d[2][i] = p0;
-      esp_old->d[2][i] = p0;
-      esp_dot->d[2][i] = p0;
-      esp_dbl_dot->d[2][i] = p0;
+      goma_ctx->fem.esp->d[2][i] = p0;
+      goma_ctx->fem.esp_old->d[2][i] = p0;
+      goma_ctx->fem.esp_dot->d[2][i] = p0;
+      goma_ctx->fem.esp_dbl_dot->d[2][i] = p0;
     }
   }
 
@@ -1268,159 +1272,173 @@ int load_elem_dofptr(const int ielem,
   }
 
   eqn = R_SOLID1;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->d_rs[0], esp_old->d_rs[0], esp_dot->d_rs[0]);
-    if (tran->solid_inertia) {
-      dofs = ei[pg->imtrx]->dof[eqn];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->d_rs[0], goma_ctx->fem.esp_old->d_rs[0],
+                                    goma_ctx->fem.esp_dot->d_rs[0]);
+    if (goma_ctx->fem.tran->solid_inertia) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn];
       for (i = 0; i < dofs; i++) {
-        gnn = ei[pg->imtrx]->gnn_list[eqn][i];
-        ie = Index_Solution(gnn, eqn, 0, 0, -1, pg->imtrx);
-        esp_dbl_dot->d_rs[0][i] = tran->xdbl_dot + ie;
+        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[eqn][i];
+        ie = Index_Solution(gnn, eqn, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+        goma_ctx->fem.esp_dbl_dot->d_rs[0][i] = goma_ctx->fem.tran->xdbl_dot + ie;
       }
     }
   }
 
   eqn = R_SOLID2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->d_rs[1], esp_old->d_rs[1], esp_dot->d_rs[1]);
-    if (tran->solid_inertia) {
-      dofs = ei[pg->imtrx]->dof[eqn];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->d_rs[1], goma_ctx->fem.esp_old->d_rs[1],
+                                    goma_ctx->fem.esp_dot->d_rs[1]);
+    if (goma_ctx->fem.tran->solid_inertia) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn];
       for (i = 0; i < dofs; i++) {
-        gnn = ei[pg->imtrx]->gnn_list[eqn][i];
-        ie = Index_Solution(gnn, eqn, 0, 0, -1, pg->imtrx);
-        esp_dbl_dot->d_rs[1][i] = tran->xdbl_dot + ie;
+        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[eqn][i];
+        ie = Index_Solution(gnn, eqn, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+        goma_ctx->fem.esp_dbl_dot->d_rs[1][i] = goma_ctx->fem.tran->xdbl_dot + ie;
       }
     }
   }
 
   eqn = R_SOLID3;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->d_rs[2], esp_old->d_rs[2], esp_dot->d_rs[2]);
-    if (tran->solid_inertia) {
-      dofs = ei[pg->imtrx]->dof[eqn];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->d_rs[2], goma_ctx->fem.esp_old->d_rs[2],
+                                    goma_ctx->fem.esp_dot->d_rs[2]);
+    if (goma_ctx->fem.tran->solid_inertia) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn];
       for (i = 0; i < dofs; i++) {
-        gnn = ei[pg->imtrx]->gnn_list[eqn][i];
-        ie = Index_Solution(gnn, eqn, 0, 0, -1, pg->imtrx);
-        esp_dbl_dot->d_rs[2][i] = tran->xdbl_dot + ie;
+        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[eqn][i];
+        ie = Index_Solution(gnn, eqn, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+        goma_ctx->fem.esp_dbl_dot->d_rs[2][i] = goma_ctx->fem.tran->xdbl_dot + ie;
       }
     }
-  } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
-              pd_glob[0]->CoordinateSystem == SWIRLING ||
-              pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
-              pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
-             upd->ep[pg->imtrx][R_SOLID1] >= 0) {
-    dofs = ei[pg->imtrx]->dof[R_SOLID1];
+  } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+              goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING ||
+              goma_ctx->fem.pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
+              goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
+             goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_SOLID1] >= 0) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_SOLID1];
     for (i = 0; i < dofs; i++) {
-      esp->d_rs[2][i] = p0;
-      esp_old->d_rs[2][i] = p0;
-      esp_dot->d_rs[2][i] = p0;
-      esp_dbl_dot->d_rs[2][i] = p0;
+      goma_ctx->fem.esp->d_rs[2][i] = p0;
+      goma_ctx->fem.esp_old->d_rs[2][i] = p0;
+      goma_ctx->fem.esp_dot->d_rs[2][i] = p0;
+      goma_ctx->fem.esp_dbl_dot->d_rs[2][i] = p0;
     }
   }
 
   eqn = R_ENERGY;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->T, esp_old->T, esp_dot->T);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->T, goma_ctx->fem.esp_old->T,
+                                    goma_ctx->fem.esp_dot->T);
   }
 
   eqn = R_POTENTIAL;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->V, esp_old->V, esp_dot->V);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->V, goma_ctx->fem.esp_old->V,
+                                    goma_ctx->fem.esp_dot->V);
   }
 
   eqn = R_SURF_CHARGE;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->qs, esp_old->qs, esp_dot->qs);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->qs, goma_ctx->fem.esp_old->qs,
+                                    goma_ctx->fem.esp_dot->qs);
   }
 
   eqn = R_FILL;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->F, esp_old->F, esp_dot->F);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->F, goma_ctx->fem.esp_old->F,
+                                    goma_ctx->fem.esp_dot->F);
   }
 
   eqn = R_CURVATURE;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->H, esp_old->H, esp_dot->H);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->H, goma_ctx->fem.esp_old->H,
+                                    goma_ctx->fem.esp_dot->H);
   }
 
   eqn = R_NORMAL1;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->n[0], esp_old->n[0], esp_dot->n[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->n[0], goma_ctx->fem.esp_old->n[0],
+                                    goma_ctx->fem.esp_dot->n[0]);
   }
 
   eqn = R_NORMAL2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->n[1], esp_old->n[1], esp_dot->n[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->n[1], goma_ctx->fem.esp_old->n[1],
+                                    goma_ctx->fem.esp_dot->n[1]);
   }
 
   eqn = R_NORMAL3;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->n[2], esp_old->n[2], esp_dot->n[2]);
-  } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
-              pd_glob[0]->CoordinateSystem == SWIRLING ||
-              pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
-              pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
-             upd->ep[pg->imtrx][R_NORMAL1] >= 0) {
-    dofs = ei[pg->imtrx]->dof[R_NORMAL1];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->n[2], goma_ctx->fem.esp_old->n[2],
+                                    goma_ctx->fem.esp_dot->n[2]);
+  } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+              goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING ||
+              goma_ctx->fem.pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
+              goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
+             goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_NORMAL1] >= 0) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_NORMAL1];
     for (i = 0; i < dofs; i++) {
-      esp->n[2][i] = p0;
-      esp_old->n[2][i] = p0;
-      esp_dot->n[2][i] = p0;
+      goma_ctx->fem.esp->n[2][i] = p0;
+      goma_ctx->fem.esp_old->n[2][i] = p0;
+      goma_ctx->fem.esp_dot->n[2][i] = p0;
     }
   }
 
   for (p = 0; p < DIM; p++) {
     eqn = R_VORT_DIR1 + p;
-    if (upd->ep[pg->imtrx][eqn] >= 0) {
-      dofs = ei[pg->imtrx]->dof[eqn];
+    if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn];
       for (i = 0; i < dofs; i++) {
-        ie = ei[pg->imtrx]->gun_list[eqn][i];
-        esp->vd[p][i] = x + ie;
+        ie = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[eqn][i];
+        goma_ctx->fem.esp->vd[p][i] = x + ie;
       }
     }
   }
 
   eqn = R_VORT_LAMBDA;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    dofs = ei[pg->imtrx]->dof[eqn];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn];
     for (i = 0; i < dofs; i++) {
-      ie = ei[pg->imtrx]->gun_list[eqn][i];
-      esp->vlambda[i] = x + ie;
+      ie = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[eqn][i];
+      goma_ctx->fem.esp->vlambda[i] = x + ie;
     }
   }
 
   eqn = R_BOND_EVOLUTION;
-  if (pd->e[pg->imtrx][eqn]) {
-    load_varType_Interpolation_ptrs(eqn, esp->nn, esp_old->nn, esp_dot->nn);
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->nn, goma_ctx->fem.esp_old->nn,
+                                    goma_ctx->fem.esp_dot->nn);
   }
 
   eqn = R_SHEAR_RATE;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    dofs = ei[pg->imtrx]->dof[eqn];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn];
     for (i = 0; i < dofs; i++) {
-      ie = ei[pg->imtrx]->gun_list[eqn][i];
-      esp->SH[i] = x + ie;
+      ie = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[eqn][i];
+      goma_ctx->fem.esp->SH[i] = x + ie;
     }
   }
 
   eqn = R_ENORM;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    dofs = ei[pg->imtrx]->dof[eqn];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn];
     for (i = 0; i < dofs; i++) {
-      ie = ei[pg->imtrx]->gun_list[eqn][i];
-      esp->Enorm[i] = x + ie;
-      esp_old->Enorm[i] = x_old + ie;
+      ie = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[eqn][i];
+      goma_ctx->fem.esp->Enorm[i] = x + ie;
+      goma_ctx->fem.esp_old->Enorm[i] = x_old + ie;
     }
   }
 
   eqn = R_MOMENTUM1;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->v[0], esp_old->v[0], esp_dot->v[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->v[0], goma_ctx->fem.esp_old->v[0],
+                                    goma_ctx->fem.esp_dot->v[0]);
   }
 
   eqn = R_MOMENTUM2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->v[1], esp_old->v[1], esp_dot->v[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->v[1], goma_ctx->fem.esp_old->v[1],
+                                    goma_ctx->fem.esp_dot->v[1]);
   }
 
   if (*p0 != 0.) {
@@ -1428,26 +1446,31 @@ int load_elem_dofptr(const int ielem,
   }
 
   eqn = R_MOMENTUM3;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->v[2], esp_old->v[2], esp_dot->v[2]);
-  } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL) &&
-             upd->ep[pg->imtrx][R_MOMENTUM1] >= 0) {
-    dofs = ei[pg->imtrx]->dof[R_MOMENTUM1];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->v[2], goma_ctx->fem.esp_old->v[2],
+                                    goma_ctx->fem.esp_dot->v[2]);
+  } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL) &&
+             goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] >= 0) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MOMENTUM1];
     for (i = 0; i < dofs; i++) {
-      esp->v[2][i] = p0;
-      esp_old->v[2][i] = p0;
-      esp_dot->v[2][i] = p0;
+      goma_ctx->fem.esp->v[2][i] = p0;
+      goma_ctx->fem.esp_old->v[2][i] = p0;
+      goma_ctx->fem.esp_dot->v[2][i] = p0;
     }
   }
 
   eqn = USTAR;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->v_star[0], esp_old->v_star[0], esp_dot->v_star[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->v_star[0],
+                                    goma_ctx->fem.esp_old->v_star[0],
+                                    goma_ctx->fem.esp_dot->v_star[0]);
   }
 
   eqn = VSTAR;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->v_star[1], esp_old->v_star[1], esp_dot->v_star[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->v_star[1],
+                                    goma_ctx->fem.esp_old->v_star[1],
+                                    goma_ctx->fem.esp_dot->v_star[1]);
   }
 
   if (*p0 != 0.) {
@@ -1455,486 +1478,604 @@ int load_elem_dofptr(const int ielem,
   }
 
   eqn = WSTAR;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->v_star[2], esp_old->v_star[2], esp_dot->v_star[2]);
-  } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL) && upd->ep[pg->imtrx][USTAR] >= 0) {
-    dofs = ei[pg->imtrx]->dof[USTAR];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->v_star[2],
+                                    goma_ctx->fem.esp_old->v_star[2],
+                                    goma_ctx->fem.esp_dot->v_star[2]);
+  } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL) &&
+             goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][USTAR] >= 0) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[USTAR];
     for (i = 0; i < dofs; i++) {
-      esp->v_star[2][i] = p0;
-      esp_old->v_star[2][i] = p0;
-      esp_dot->v_star[2][i] = p0;
+      goma_ctx->fem.esp->v_star[2][i] = p0;
+      goma_ctx->fem.esp_old->v_star[2][i] = p0;
+      goma_ctx->fem.esp_dot->v_star[2][i] = p0;
     }
   }
 
   eqn = PSTAR;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->P_star, esp_old->P_star, esp_dot->P_star);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->P_star, goma_ctx->fem.esp_old->P_star,
+                                    goma_ctx->fem.esp_dot->P_star);
   }
 
   eqn = R_EXT_VELOCITY;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->ext_v, esp_old->ext_v, esp_dot->ext_v);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->ext_v, goma_ctx->fem.esp_old->ext_v,
+                                    goma_ctx->fem.esp_dot->ext_v);
   }
 
   eqn = R_EFIELD1;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->E_field[0], esp_old->E_field[0], esp_dot->E_field[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->E_field[0],
+                                    goma_ctx->fem.esp_old->E_field[0],
+                                    goma_ctx->fem.esp_dot->E_field[0]);
   }
 
   eqn = R_EFIELD2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->E_field[1], esp_old->E_field[1], esp_dot->E_field[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->E_field[1],
+                                    goma_ctx->fem.esp_old->E_field[1],
+                                    goma_ctx->fem.esp_dot->E_field[1]);
   }
 
   eqn = R_EFIELD3;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->E_field[2], esp_old->E_field[2], esp_dot->E_field[2]);
-  } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL) && upd->ep[pg->imtrx][R_EFIELD1] >= 0) {
-    dofs = ei[pg->imtrx]->dof[R_EFIELD1];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->E_field[2],
+                                    goma_ctx->fem.esp_old->E_field[2],
+                                    goma_ctx->fem.esp_dot->E_field[2]);
+  } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL) &&
+             goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_EFIELD1] >= 0) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_EFIELD1];
     for (i = 0; i < dofs; i++) {
-      esp->E_field[2][i] = p0;
-      esp_old->E_field[2][i] = p0;
-      esp_dot->E_field[2][i] = p0;
+      goma_ctx->fem.esp->E_field[2][i] = p0;
+      goma_ctx->fem.esp_old->E_field[2][i] = p0;
+      goma_ctx->fem.esp_dot->E_field[2][i] = p0;
     }
   }
 
   eqn = R_PMOMENTUM1;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->pv[0], esp_old->pv[0], esp_dot->pv[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->pv[0], goma_ctx->fem.esp_old->pv[0],
+                                    goma_ctx->fem.esp_dot->pv[0]);
   }
 
   eqn = R_PMOMENTUM2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->pv[1], esp_old->pv[1], esp_dot->pv[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->pv[1], goma_ctx->fem.esp_old->pv[1],
+                                    goma_ctx->fem.esp_dot->pv[1]);
   }
 
   eqn = R_PMOMENTUM3;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->pv[2], esp_old->pv[2], esp_dot->pv[2]);
-  } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
-              pd_glob[0]->CoordinateSystem == SWIRLING ||
-              pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
-              pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
-             upd->ep[pg->imtrx][R_PMOMENTUM1] >= 0) {
-    dofs = ei[pg->imtrx]->dof[R_PMOMENTUM1];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->pv[2], goma_ctx->fem.esp_old->pv[2],
+                                    goma_ctx->fem.esp_dot->pv[2]);
+  } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+              goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING ||
+              goma_ctx->fem.pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
+              goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
+             goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1] >= 0) {
+    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_PMOMENTUM1];
     for (i = 0; i < dofs; i++) {
-      esp->pv[2][i] = p0;
-      esp_old->pv[2][i] = p0;
-      esp_dot->pv[2][i] = p0;
+      goma_ctx->fem.esp->pv[2][i] = p0;
+      goma_ctx->fem.esp_old->pv[2][i] = p0;
+      goma_ctx->fem.esp_dot->pv[2][i] = p0;
     }
   }
 
   eqn = R_PRESSURE;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->P, esp_old->P, esp_dot->P);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->P, goma_ctx->fem.esp_old->P,
+                                    goma_ctx->fem.esp_dot->P);
   }
 
   eqn = R_LAGR_MULT1;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->lm[0], esp_old->lm[0], esp_dot->lm[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->lm[0], goma_ctx->fem.esp_old->lm[0],
+                                    goma_ctx->fem.esp_dot->lm[0]);
   }
 
   eqn = R_LAGR_MULT2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->lm[1], esp_old->lm[1], esp_dot->lm[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->lm[1], goma_ctx->fem.esp_old->lm[1],
+                                    goma_ctx->fem.esp_dot->lm[1]);
   }
 
   eqn = R_LAGR_MULT3;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->lm[2], esp_old->lm[2], esp_dot->lm[2]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->lm[2], goma_ctx->fem.esp_old->lm[2],
+                                    goma_ctx->fem.esp_dot->lm[2]);
   }
 
   eqn = R_SHELL_CURVATURE;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_K, esp_old->sh_K, esp_dot->sh_K);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_K, goma_ctx->fem.esp_old->sh_K,
+                                    goma_ctx->fem.esp_dot->sh_K);
   }
 
   eqn = R_SHELL_CURVATURE2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_K2, esp_old->sh_K2, esp_dot->sh_K2);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_K2, goma_ctx->fem.esp_old->sh_K2,
+                                    goma_ctx->fem.esp_dot->sh_K2);
   }
 
   eqn = R_SHELL_TENSION;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_tens, esp_old->sh_tens, esp_dot->sh_tens);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_tens, goma_ctx->fem.esp_old->sh_tens,
+                                    goma_ctx->fem.esp_dot->sh_tens);
   }
 
   eqn = R_SHELL_X;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_x, esp_old->sh_x, esp_dot->sh_x);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_x, goma_ctx->fem.esp_old->sh_x,
+                                    goma_ctx->fem.esp_dot->sh_x);
   }
 
   eqn = R_SHELL_Y;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_y, esp_old->sh_y, esp_dot->sh_y);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_y, goma_ctx->fem.esp_old->sh_y,
+                                    goma_ctx->fem.esp_dot->sh_y);
   }
 
   eqn = R_SHELL_USER;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_u, esp_old->sh_u, esp_dot->sh_u);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_u, goma_ctx->fem.esp_old->sh_u,
+                                    goma_ctx->fem.esp_dot->sh_u);
   }
 
   eqn = R_SHELL_ANGLE1;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_ang[0], esp_old->sh_ang[0], esp_dot->sh_ang[0]);
-    for (i = 0; i < ei[pg->imtrx]->dof[R_SHELL_ANGLE1]; i++) {
-      if (*esp->sh_ang[0][i] > M_PIE)
-        *esp->sh_ang[0][i] -= 2. * M_PIE;
-      else if (*esp->sh_ang[0][i] < -M_PIE)
-        *esp->sh_ang[0][i] += 2. * M_PIE;
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_ang[0],
+                                    goma_ctx->fem.esp_old->sh_ang[0],
+                                    goma_ctx->fem.esp_dot->sh_ang[0]);
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_SHELL_ANGLE1]; i++) {
+      if (*goma_ctx->fem.esp->sh_ang[0][i] > M_PIE)
+        *goma_ctx->fem.esp->sh_ang[0][i] -= 2. * M_PIE;
+      else if (*goma_ctx->fem.esp->sh_ang[0][i] < -M_PIE)
+        *goma_ctx->fem.esp->sh_ang[0][i] += 2. * M_PIE;
     }
   }
 
   eqn = R_SHELL_ANGLE2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_ang[1], esp_old->sh_ang[1], esp_dot->sh_ang[1]);
-    for (i = 0; i < ei[pg->imtrx]->dof[R_SHELL_ANGLE2]; i++) {
-      if (*esp->sh_ang[1][i] > M_PIE)
-        *esp->sh_ang[1][i] -= 2. * M_PIE;
-      else if (*esp->sh_ang[1][i] < -M_PIE)
-        *esp->sh_ang[1][i] += 2. * M_PIE;
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_ang[1],
+                                    goma_ctx->fem.esp_old->sh_ang[1],
+                                    goma_ctx->fem.esp_dot->sh_ang[1]);
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_SHELL_ANGLE2]; i++) {
+      if (*goma_ctx->fem.esp->sh_ang[1][i] > M_PIE)
+        *goma_ctx->fem.esp->sh_ang[1][i] -= 2. * M_PIE;
+      else if (*goma_ctx->fem.esp->sh_ang[1][i] < -M_PIE)
+        *goma_ctx->fem.esp->sh_ang[1][i] += 2. * M_PIE;
     }
   }
 
   eqn = R_SHELL_SURF_DIV_V;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->div_s_v, esp_old->div_s_v, esp_dot->div_s_v);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->div_s_v, goma_ctx->fem.esp_old->div_s_v,
+                                    goma_ctx->fem.esp_dot->div_s_v);
   }
 
   eqn = R_SHELL_SURF_CURV;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->curv, esp_old->curv, esp_dot->curv);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->curv, goma_ctx->fem.esp_old->curv,
+                                    goma_ctx->fem.esp_dot->curv);
   }
 
   eqn = R_N_DOT_CURL_V;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->n_dot_curl_s_v, esp_old->n_dot_curl_s_v,
-                                    esp_dot->n_dot_curl_s_v);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->n_dot_curl_s_v,
+                                    goma_ctx->fem.esp_old->n_dot_curl_s_v,
+                                    goma_ctx->fem.esp_dot->n_dot_curl_s_v);
   }
 
   eqn = R_GRAD_S_V_DOT_N1;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->grad_v_dot_n[0], esp_old->grad_v_dot_n[0],
-                                    esp_dot->grad_v_dot_n[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->grad_v_dot_n[0],
+                                    goma_ctx->fem.esp_old->grad_v_dot_n[0],
+                                    goma_ctx->fem.esp_dot->grad_v_dot_n[0]);
   }
 
   eqn = R_GRAD_S_V_DOT_N2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->grad_v_dot_n[1], esp_old->grad_v_dot_n[1],
-                                    esp_dot->grad_v_dot_n[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->grad_v_dot_n[1],
+                                    goma_ctx->fem.esp_old->grad_v_dot_n[1],
+                                    goma_ctx->fem.esp_dot->grad_v_dot_n[1]);
   }
 
   eqn = R_GRAD_S_V_DOT_N3;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->grad_v_dot_n[2], esp_old->grad_v_dot_n[2],
-                                    esp_dot->grad_v_dot_n[2]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->grad_v_dot_n[2],
+                                    goma_ctx->fem.esp_old->grad_v_dot_n[2],
+                                    goma_ctx->fem.esp_dot->grad_v_dot_n[2]);
   }
 
   eqn = R_SHELL_DIFF_FLUX;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_J, esp_old->sh_J, esp_dot->sh_J);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_J, goma_ctx->fem.esp_old->sh_J,
+                                    goma_ctx->fem.esp_dot->sh_J);
   }
 
   eqn = R_SHELL_DIFF_CURVATURE;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_Kd, esp_old->sh_Kd, esp_dot->sh_Kd);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_Kd, goma_ctx->fem.esp_old->sh_Kd,
+                                    goma_ctx->fem.esp_dot->sh_Kd);
   }
 
   eqn = R_SHELL_NORMAL1;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->n[0], esp_old->n[0], esp_dot->n[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->n[0], goma_ctx->fem.esp_old->n[0],
+                                    goma_ctx->fem.esp_dot->n[0]);
   }
 
   eqn = R_SHELL_NORMAL2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->n[1], esp_old->n[1], esp_dot->n[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->n[1], goma_ctx->fem.esp_old->n[1],
+                                    goma_ctx->fem.esp_dot->n[1]);
   }
 
   eqn = R_SHELL_NORMAL3;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->n[2], esp_old->n[2], esp_dot->n[2]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->n[2], goma_ctx->fem.esp_old->n[2],
+                                    goma_ctx->fem.esp_dot->n[2]);
   }
 
   for (b = 0; b < MAX_PHASE_FUNC; b++) {
     eqn = R_PHASE1 + b;
-    if (upd->ep[pg->imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs(eqn, esp->pF[b], esp_old->pF[b], esp_dot->pF[b]);
+    if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->pF[b], goma_ctx->fem.esp_old->pF[b],
+                                      goma_ctx->fem.esp_dot->pF[b]);
     }
   }
 
   eqn = R_ACOUS_PREAL;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->apr, esp_old->apr, esp_dot->apr);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->apr, goma_ctx->fem.esp_old->apr,
+                                    goma_ctx->fem.esp_dot->apr);
   }
   eqn = R_ACOUS_PIMAG;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->api, esp_old->api, esp_dot->api);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->api, goma_ctx->fem.esp_old->api,
+                                    goma_ctx->fem.esp_dot->api);
   }
   eqn = R_ACOUS_REYN_STRESS;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->ars, esp_old->ars, esp_dot->ars);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->ars, goma_ctx->fem.esp_old->ars,
+                                    goma_ctx->fem.esp_dot->ars);
   }
   eqn = R_EM_CONT_REAL;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->epr, esp_old->epr, esp_dot->epr);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->epr, goma_ctx->fem.esp_old->epr,
+                                    goma_ctx->fem.esp_dot->epr);
   }
   eqn = R_EM_CONT_IMAG;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->epi, esp_old->epi, esp_dot->epi);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->epi, goma_ctx->fem.esp_old->epi,
+                                    goma_ctx->fem.esp_dot->epi);
   }
   eqn = R_SHELL_BDYVELO;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_bv, esp_old->sh_bv, esp_dot->sh_bv);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_bv, goma_ctx->fem.esp_old->sh_bv,
+                                    goma_ctx->fem.esp_dot->sh_bv);
   }
   eqn = R_SHELL_LUBP;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_p, esp_old->sh_p, esp_dot->sh_p);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_p, goma_ctx->fem.esp_old->sh_p,
+                                    goma_ctx->fem.esp_dot->sh_p);
   }
   eqn = R_LUBP;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->lubp, esp_old->lubp, esp_dot->lubp);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->lubp, goma_ctx->fem.esp_old->lubp,
+                                    goma_ctx->fem.esp_dot->lubp);
   }
   eqn = R_LUBP_2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->lubp_2, esp_old->lubp_2, esp_dot->lubp_2);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->lubp_2, goma_ctx->fem.esp_old->lubp_2,
+                                    goma_ctx->fem.esp_dot->lubp_2);
   }
   eqn = R_SHELL_FILMP;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_fp, esp_old->sh_fp, esp_dot->sh_fp);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_fp, goma_ctx->fem.esp_old->sh_fp,
+                                    goma_ctx->fem.esp_dot->sh_fp);
   }
   eqn = R_SHELL_FILMH;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_fh, esp_old->sh_fh, esp_dot->sh_fh);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_fh, goma_ctx->fem.esp_old->sh_fh,
+                                    goma_ctx->fem.esp_dot->sh_fh);
   }
   eqn = R_SHELL_PARTC;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_pc, esp_old->sh_pc, esp_dot->sh_pc);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_pc, goma_ctx->fem.esp_old->sh_pc,
+                                    goma_ctx->fem.esp_dot->sh_pc);
   }
   eqn = R_SHELL_SAT_CLOSED;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_sat_closed, esp_old->sh_sat_closed,
-                                    esp_dot->sh_sat_closed);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_sat_closed,
+                                    goma_ctx->fem.esp_old->sh_sat_closed,
+                                    goma_ctx->fem.esp_dot->sh_sat_closed);
   }
   eqn = R_SHELL_SAT_OPEN;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_p_open, esp_old->sh_p_open, esp_dot->sh_p_open);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_p_open,
+                                    goma_ctx->fem.esp_old->sh_p_open,
+                                    goma_ctx->fem.esp_dot->sh_p_open);
   }
   eqn = R_SHELL_SAT_OPEN_2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_p_open_2, esp_old->sh_p_open_2,
-                                    esp_dot->sh_p_open_2);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_p_open_2,
+                                    goma_ctx->fem.esp_old->sh_p_open_2,
+                                    goma_ctx->fem.esp_dot->sh_p_open_2);
   }
 
   eqn = R_SHELL_SAT_1;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_sat_1, esp_old->sh_sat_1, esp_dot->sh_sat_1);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_sat_1,
+                                    goma_ctx->fem.esp_old->sh_sat_1,
+                                    goma_ctx->fem.esp_dot->sh_sat_1);
   }
 
   eqn = R_SHELL_SAT_2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_sat_2, esp_old->sh_sat_2, esp_dot->sh_sat_2);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_sat_2,
+                                    goma_ctx->fem.esp_old->sh_sat_2,
+                                    goma_ctx->fem.esp_dot->sh_sat_2);
   }
 
   eqn = R_SHELL_SAT_3;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_sat_3, esp_old->sh_sat_3, esp_dot->sh_sat_3);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_sat_3,
+                                    goma_ctx->fem.esp_old->sh_sat_3,
+                                    goma_ctx->fem.esp_dot->sh_sat_3);
   }
 
   eqn = R_SHELL_ENERGY;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_t, esp_old->sh_t, esp_dot->sh_t);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_t, goma_ctx->fem.esp_old->sh_t,
+                                    goma_ctx->fem.esp_dot->sh_t);
   }
   eqn = R_SHELL_DELTAH;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_dh, esp_old->sh_dh, esp_dot->sh_dh);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_dh, goma_ctx->fem.esp_old->sh_dh,
+                                    goma_ctx->fem.esp_dot->sh_dh);
   }
   eqn = R_SHELL_LUB_CURV;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_l_curv, esp_old->sh_l_curv, esp_dot->sh_l_curv);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_l_curv,
+                                    goma_ctx->fem.esp_old->sh_l_curv,
+                                    goma_ctx->fem.esp_dot->sh_l_curv);
   }
   eqn = R_SHELL_LUB_CURV_2;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_l_curv_2, esp_old->sh_l_curv_2,
-                                    esp_dot->sh_l_curv_2);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_l_curv_2,
+                                    goma_ctx->fem.esp_old->sh_l_curv_2,
+                                    goma_ctx->fem.esp_dot->sh_l_curv_2);
   }
   eqn = R_SHELL_SAT_GASN;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_sat_gasn, esp_old->sh_sat_gasn,
-                                    esp_dot->sh_sat_gasn);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_sat_gasn,
+                                    goma_ctx->fem.esp_old->sh_sat_gasn,
+                                    goma_ctx->fem.esp_dot->sh_sat_gasn);
   }
   eqn = R_POR_SINK_MASS;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sink_mass, esp_old->sink_mass, esp_dot->sink_mass);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sink_mass,
+                                    goma_ctx->fem.esp_old->sink_mass,
+                                    goma_ctx->fem.esp_dot->sink_mass);
   }
   eqn = R_LIGHT_INTP;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->poynt[0], esp_old->poynt[0], esp_dot->poynt[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->poynt[0],
+                                    goma_ctx->fem.esp_old->poynt[0],
+                                    goma_ctx->fem.esp_dot->poynt[0]);
   }
   eqn = R_LIGHT_INTM;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->poynt[1], esp_old->poynt[1], esp_dot->poynt[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->poynt[1],
+                                    goma_ctx->fem.esp_old->poynt[1],
+                                    goma_ctx->fem.esp_dot->poynt[1]);
   }
   eqn = R_LIGHT_INTD;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->poynt[2], esp_old->poynt[2], esp_dot->poynt[2]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->poynt[2],
+                                    goma_ctx->fem.esp_old->poynt[2],
+                                    goma_ctx->fem.esp_dot->poynt[2]);
   }
   eqn = R_EM_E1_REAL;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->em_er[0], esp_old->em_er[0], esp_dot->em_er[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->em_er[0],
+                                    goma_ctx->fem.esp_old->em_er[0],
+                                    goma_ctx->fem.esp_dot->em_er[0]);
   }
   eqn = R_EM_E2_REAL;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->em_er[1], esp_old->em_er[1], esp_dot->em_er[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->em_er[1],
+                                    goma_ctx->fem.esp_old->em_er[1],
+                                    goma_ctx->fem.esp_dot->em_er[1]);
   }
   eqn = R_EM_E3_REAL;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->em_er[2], esp_old->em_er[2], esp_dot->em_er[2]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->em_er[2],
+                                    goma_ctx->fem.esp_old->em_er[2],
+                                    goma_ctx->fem.esp_dot->em_er[2]);
   }
   eqn = R_EM_E1_IMAG;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->em_ei[0], esp_old->em_ei[0], esp_dot->em_ei[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->em_ei[0],
+                                    goma_ctx->fem.esp_old->em_ei[0],
+                                    goma_ctx->fem.esp_dot->em_ei[0]);
   }
   eqn = R_EM_E2_IMAG;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->em_ei[1], esp_old->em_ei[1], esp_dot->em_ei[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->em_ei[1],
+                                    goma_ctx->fem.esp_old->em_ei[1],
+                                    goma_ctx->fem.esp_dot->em_ei[1]);
   }
   eqn = R_EM_E3_IMAG;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->em_ei[2], esp_old->em_ei[2], esp_dot->em_ei[2]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->em_ei[2],
+                                    goma_ctx->fem.esp_old->em_ei[2],
+                                    goma_ctx->fem.esp_dot->em_ei[2]);
   }
   eqn = R_EM_H1_REAL;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->em_hr[0], esp_old->em_hr[0], esp_dot->em_hr[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->em_hr[0],
+                                    goma_ctx->fem.esp_old->em_hr[0],
+                                    goma_ctx->fem.esp_dot->em_hr[0]);
   }
   eqn = R_EM_H2_REAL;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->em_hr[1], esp_old->em_hr[1], esp_dot->em_hr[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->em_hr[1],
+                                    goma_ctx->fem.esp_old->em_hr[1],
+                                    goma_ctx->fem.esp_dot->em_hr[1]);
   }
   eqn = R_EM_H3_REAL;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->em_hr[2], esp_old->em_hr[2], esp_dot->em_hr[2]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->em_hr[2],
+                                    goma_ctx->fem.esp_old->em_hr[2],
+                                    goma_ctx->fem.esp_dot->em_hr[2]);
   }
   eqn = R_EM_H1_IMAG;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->em_hi[0], esp_old->em_hi[0], esp_dot->em_hi[0]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->em_hi[0],
+                                    goma_ctx->fem.esp_old->em_hi[0],
+                                    goma_ctx->fem.esp_dot->em_hi[0]);
   }
   eqn = R_EM_H2_IMAG;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->em_hi[1], esp_old->em_hi[1], esp_dot->em_hi[1]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->em_hi[1],
+                                    goma_ctx->fem.esp_old->em_hi[1],
+                                    goma_ctx->fem.esp_dot->em_hi[1]);
   }
   eqn = R_EM_H3_IMAG;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->em_hi[2], esp_old->em_hi[2], esp_dot->em_hi[2]);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->em_hi[2],
+                                    goma_ctx->fem.esp_old->em_hi[2],
+                                    goma_ctx->fem.esp_dot->em_hi[2]);
   }
 
   eqn = R_RESTIME;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->restime, esp_old->restime, esp_dot->restime);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->restime, goma_ctx->fem.esp_old->restime,
+                                    goma_ctx->fem.esp_dot->restime);
   }
 
   eqn = R_SHELL_SHEAR_TOP;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_shear_top, esp_old->sh_shear_top,
-                                    esp_dot->sh_shear_top);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_shear_top,
+                                    goma_ctx->fem.esp_old->sh_shear_top,
+                                    goma_ctx->fem.esp_dot->sh_shear_top);
   }
 
   eqn = R_SHELL_SHEAR_BOT;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_shear_bot, esp_old->sh_shear_bot,
-                                    esp_dot->sh_shear_bot);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_shear_bot,
+                                    goma_ctx->fem.esp_old->sh_shear_bot,
+                                    goma_ctx->fem.esp_dot->sh_shear_bot);
   }
 
   eqn = R_SHELL_CROSS_SHEAR;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->sh_cross_shear, esp_old->sh_cross_shear,
-                                    esp_dot->sh_cross_shear);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->sh_cross_shear,
+                                    goma_ctx->fem.esp_old->sh_cross_shear,
+                                    goma_ctx->fem.esp_dot->sh_cross_shear);
   }
 
   eqn = R_MAX_STRAIN;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->max_strain, esp_old->max_strain, esp_dot->max_strain);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->max_strain,
+                                    goma_ctx->fem.esp_old->max_strain,
+                                    goma_ctx->fem.esp_dot->max_strain);
   }
 
   eqn = R_CUR_STRAIN;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->cur_strain, esp_old->cur_strain, esp_dot->cur_strain);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->cur_strain,
+                                    goma_ctx->fem.esp_old->cur_strain,
+                                    goma_ctx->fem.esp_dot->cur_strain);
   }
 
   eqn = R_EDDY_NU;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->eddy_nu, esp_old->eddy_nu, esp_dot->eddy_nu);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->eddy_nu, goma_ctx->fem.esp_old->eddy_nu,
+                                    goma_ctx->fem.esp_dot->eddy_nu);
   }
 
   eqn = R_TURB_K;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->turb_k, esp_old->turb_k, esp_dot->turb_k);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->turb_k, goma_ctx->fem.esp_old->turb_k,
+                                    goma_ctx->fem.esp_dot->turb_k);
   }
 
   eqn = R_TURB_OMEGA;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->turb_omega, esp_old->turb_omega, esp_dot->turb_omega);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->turb_omega,
+                                    goma_ctx->fem.esp_old->turb_omega,
+                                    goma_ctx->fem.esp_dot->turb_omega);
   }
   eqn = R_FILM_HEIGHT;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->film_height, esp_old->film_height,
-                                    esp_dot->film_height);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->film_height,
+                                    goma_ctx->fem.esp_old->film_height,
+                                    goma_ctx->fem.esp_dot->film_height);
   }
 
   eqn = R_STRESS11;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
     /* This should loop through all the stress variables
      * for all the modes.
      */
     int sdim = VIM;
-    if (pd->gv[FILM_HEIGHT])
+    if (goma_ctx->fem.pd->gv[FILM_HEIGHT])
       sdim = 3;
-    for (mode = 0; mode < vn->modes; mode++) {
+    for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       for (b = 0; b < sdim; b++) {
         for (c = 0; c < sdim; c++) {
           if (b <= c) {
             eqn = R_s[mode][b][c];
-            if (upd->ep[pg->imtrx][eqn] >= 0) {
-              load_varType_Interpolation_ptrs(eqn, esp->S[mode][b][c], esp_old->S[mode][b][c],
-                                              esp_dot->S[mode][b][c]);
+            if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+              load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->S[mode][b][c],
+                                              goma_ctx->fem.esp_old->S[mode][b][c],
+                                              goma_ctx->fem.esp_dot->S[mode][b][c]);
             } else {
-              dofs = ei[pg->imtrx]->dof[R_STRESS11];
+              dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_STRESS11];
               for (i = 0; i < dofs; i++) {
-                esp->S[mode][b][c][i] = p0;
-                esp_old->S[mode][b][c][i] = p0;
-                esp_dot->S[mode][b][c][i] = p0;
+                goma_ctx->fem.esp->S[mode][b][c][i] = p0;
+                goma_ctx->fem.esp_old->S[mode][b][c][i] = p0;
+                goma_ctx->fem.esp_dot->S[mode][b][c][i] = p0;
               }
             }
           }
         }
       }
     }
-    if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL || pd_glob[0]->CoordinateSystem == SWIRLING ||
-         pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
-         pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN)) {
-      if (upd->ep[pg->imtrx][R_STRESS33] == -1)
+    if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+         goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING ||
+         goma_ctx->fem.pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
+         goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN)) {
+      if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_STRESS33] == -1)
         GOMA_EH(GOMA_ERROR, "Hey,the STRESS33 is needed in CYLINDRICAL VE problems!");
     }
   }
 
   eqn = R_GRADIENT11;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
     /* This should loop through all the velocity gradient
      * components of the tensor
      */
     int sdim = VIM;
-    if (pd->gv[FILM_HEIGHT])
+    if (goma_ctx->fem.pd->gv[FILM_HEIGHT])
       sdim = 3;
     for (b = 0; b < sdim; b++) {
       for (c = 0; c < sdim; c++) {
         eqn = R_g[b][c];
-        if (upd->ep[pg->imtrx][eqn] >= 0) {
-          load_varType_Interpolation_ptrs(eqn, esp->G[b][c], esp_old->G[b][c], esp_dot->G[b][c]);
+        if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+          load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->G[b][c],
+                                          goma_ctx->fem.esp_old->G[b][c],
+                                          goma_ctx->fem.esp_dot->G[b][c]);
         } else {
-          dofs = ei[pg->imtrx]->dof[R_GRADIENT11];
+          dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_GRADIENT11];
           for (i = 0; i < dofs; i++) {
-            esp->G[b][c][i] = p0;
-            esp_old->G[b][c][i] = p0;
-            esp_dot->G[b][c][i] = p0;
+            goma_ctx->fem.esp->G[b][c][i] = p0;
+            goma_ctx->fem.esp_old->G[b][c][i] = p0;
+            goma_ctx->fem.esp_dot->G[b][c][i] = p0;
           }
         }
       }
@@ -1942,65 +2083,79 @@ int load_elem_dofptr(const int ielem,
   }
 
   eqn = R_POR_LIQ_PRES;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->p_liq, esp_old->p_liq, esp_dot->p_liq);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->p_liq, goma_ctx->fem.esp_old->p_liq,
+                                    goma_ctx->fem.esp_dot->p_liq);
   }
 
   eqn = R_POR_GAS_PRES;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->p_gas, esp_old->p_gas, esp_dot->p_gas);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->p_gas, goma_ctx->fem.esp_old->p_gas,
+                                    goma_ctx->fem.esp_dot->p_gas);
   }
 
   eqn = R_POR_POROSITY;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->porosity, esp_old->porosity, esp_dot->porosity);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->porosity,
+                                    goma_ctx->fem.esp_old->porosity,
+                                    goma_ctx->fem.esp_dot->porosity);
   }
 
   eqn = R_POR_ENERGY;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->T, esp_old->T, esp_dot->T);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->T, goma_ctx->fem.esp_old->T,
+                                    goma_ctx->fem.esp_dot->T);
   }
 
   eqn = R_POR_SATURATION;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
     GOMA_EH(GOMA_ERROR, "Saturation-based formulation not implemented yet");
   }
 
   eqn = R_TFMP_MASS;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->tfmp_sat, esp_old->tfmp_sat, esp_dot->tfmp_sat);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->tfmp_sat,
+                                    goma_ctx->fem.esp_old->tfmp_sat,
+                                    goma_ctx->fem.esp_dot->tfmp_sat);
   }
 
   eqn = R_TFMP_BOUND;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->tfmp_pres, esp_old->tfmp_pres, esp_dot->tfmp_pres);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->tfmp_pres,
+                                    goma_ctx->fem.esp_old->tfmp_pres,
+                                    goma_ctx->fem.esp_dot->tfmp_pres);
   }
 
   eqn = R_MASS;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    for (k = 0; k < pd->Num_Species_Eqn; k++) {
-      dofs = ei[pg->imtrx]->dof[eqn];
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    for (k = 0; k < goma_ctx->fem.pd->Num_Species_Eqn; k++) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn];
       for (i = 0; i < dofs; i++) {
-        gnn = ei[pg->imtrx]->gnn_list[eqn][i];
-        nvdof = ei[pg->imtrx]->Baby_Dolphin[eqn][i];
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-        ie = Index_Solution(gnn, R_MASS, k, nvdof, ei[pg->imtrx]->matID_ledof[ledof], pg->imtrx);
-        esp->c[k][i] = x + ie;
-        esp_old->c[k][i] = x_old + ie;
-        esp_dot->c[k][i] = xdot + ie;
+        gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[eqn][i];
+        nvdof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Baby_Dolphin[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+        ie = Index_Solution(gnn, R_MASS, k, nvdof,
+                            goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof],
+                            goma_ctx->fem.pg->imtrx);
+        goma_ctx->fem.esp->c[k][i] = x + ie;
+        goma_ctx->fem.esp_old->c[k][i] = x_old + ie;
+        goma_ctx->fem.esp_dot->c[k][i] = xdot + ie;
       }
     }
   }
 
   for (k = 0; k < MAX_MOMENTS; k++) {
     eqn = R_MOMENT0 + k;
-    if (upd->ep[pg->imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs(eqn, esp->moment[k], esp_old->moment[k], esp_dot->moment[k]);
+    if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->moment[k],
+                                      goma_ctx->fem.esp_old->moment[k],
+                                      goma_ctx->fem.esp_dot->moment[k]);
     }
   }
   eqn = R_DENSITY_EQN;
-  if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->rho, esp_old->rho, esp_dot->rho);
+  if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, goma_ctx->fem.esp->rho, goma_ctx->fem.esp_old->rho,
+                                    goma_ctx->fem.esp_dot->rho);
   }
 
   /*
@@ -2009,13 +2164,14 @@ int load_elem_dofptr(const int ielem,
    * kindof hazy
    */
 
-  if (efv->ev) {
-    for (k = 0; k < efv->Num_external_field; k++) {
-      if (efv->i[k] != I_TABLE) {
-        dofs = ei[pg->imtrx]->dof_ext[k];
+  if (goma_ctx->fem.efv->ev) {
+    for (k = 0; k < goma_ctx->fem.efv->Num_external_field; k++) {
+      if (goma_ctx->fem.efv->i[k] != I_TABLE) {
+        dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_ext[k];
         for (i = 0; i < dofs; i++) {
-          ie = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-          evp->external_field[k][i] = efv->ext_fld_ndl_val[k] + ie;
+          ie = goma_ctx->mesh
+                   .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+          goma_ctx->fem.evp->external_field[k][i] = goma_ctx->fem.efv->ext_fld_ndl_val[k] + ie;
         }
       }
     }
@@ -2026,17 +2182,21 @@ int load_elem_dofptr(const int ielem,
    * Warning - here the distinction between nodes and dof's gets
    * kindof hazy
    */
-  if (efv->TALE) {
+  if (goma_ctx->fem.efv->TALE) {
     for (k = 0; k < exo->num_dim; k++) {
-      dofs = ei[pg->imtrx]->dof[MESH_DISPLACEMENT1 + k];
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1 + k];
       for (i = 0; i < dofs; i++) {
-        ie = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-        evp->initial_displacements[k][i] = efv->init_displacement_ndl_val[k] + ie;
+        ie = goma_ctx->mesh
+                 .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+        goma_ctx->fem.evp->initial_displacements[k][i] =
+            goma_ctx->fem.efv->init_displacement_ndl_val[k] + ie;
       }
-      dofs = ei[pg->imtrx]->dof[SOLID_DISPLACEMENT1 + k];
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SOLID_DISPLACEMENT1 + k];
       for (i = 0; i < dofs; i++) {
-        ie = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-        evp->initial_displacements[k + DIM][i] = efv->init_displacement_ndl_val[k + DIM] + ie;
+        ie = goma_ctx->mesh
+                 .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+        goma_ctx->fem.evp->initial_displacements[k + DIM][i] =
+            goma_ctx->fem.efv->init_displacement_ndl_val[k + DIM] + ie;
       }
     }
   }
@@ -2045,16 +2205,17 @@ int load_elem_dofptr(const int ielem,
   GOMA_EH(err, "load_elem_dofptr_all");
 
   /* extra setup needed for level set problems */
-  if (ls != NULL)
+  if (goma_ctx->fem.ls != NULL)
     determine_ls_elem_overlap_state();
-  ls_old = ls;
-  if (pfd != NULL) {
-    if (pfd->ls[0]->Evolution == LS_EVOLVE_SLAVE || pd->e[pg->imtrx][R_EXT_VELOCITY]) {
-      ls = pfd->ls[0];
+  ls_old = goma_ctx->fem.ls;
+  if (goma_ctx->fem.pfd != NULL) {
+    if (goma_ctx->fem.pfd->ls[0]->Evolution == LS_EVOLVE_SLAVE ||
+        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EXT_VELOCITY]) {
+      goma_ctx->fem.ls = goma_ctx->fem.pfd->ls[0];
       determine_ls_elem_overlap_state();
     }
   }
-  ls = ls_old;
+  goma_ctx->fem.ls = ls_old;
 
   /* extra setup needed for XFEM */
   if (xfem != NULL)
@@ -2109,7 +2270,7 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
   int k;
   int R_s[MAX_MODES][DIM][DIM], R_g[DIM][DIM];
 
-  if (upd->Total_Num_Matrices == 1)
+  if (goma_ctx->fem.upd->Total_Num_Matrices == 1)
     return 0;
 
   /* load eqn and variable number in tensor form */
@@ -2131,7 +2292,7 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
 
   status = 0;
 
-  if (upd->Total_Num_Matrices == 1)
+  if (goma_ctx->fem.upd->Total_Num_Matrices == 1)
     return 0;
 
   /*
@@ -2140,14 +2301,14 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
    * They've moved to a more suitable residence in the function load_ei.
    */
   int imtrx;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    if (pg->imtrx == imtrx)
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (goma_ctx->fem.pg->imtrx == imtrx)
       continue;
     load_ei(ielem, exo, 0, imtrx);
-    x_static = pg->matrices[imtrx].x;
-    x_old_static = pg->matrices[imtrx].x_old;
-    xdot_static = pg->matrices[imtrx].xdot;
-    xdot_old_static = pg->matrices[imtrx].xdot_old;
+    x_static = goma_ctx->fem.pg->matrices[imtrx].x;
+    x_old_static = goma_ctx->fem.pg->matrices[imtrx].x_old;
+    xdot_static = goma_ctx->fem.pg->matrices[imtrx].xdot;
+    xdot_old_static = goma_ctx->fem.pg->matrices[imtrx].xdot_old;
     x_dbl_dot_static = NULL;
     x_dbl_dot_old_static = NULL;
 
@@ -2172,210 +2333,227 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
      * we do them at the same time...
      */
     eqn = R_MESH1;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->d[0], esp_old->d[0], esp_dot->d[0]);
-      if (tran->solid_inertia) {
-        dofs = ei[imtrx]->dof[eqn];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->d[0],
+                                          goma_ctx->fem.esp_old->d[0], goma_ctx->fem.esp_dot->d[0]);
+      if (goma_ctx->fem.tran->solid_inertia) {
+        dofs = goma_ctx->fem.ei[imtrx]->dof[eqn];
         for (i = 0; i < dofs; i++) {
-          gnn = ei[imtrx]->gnn_list[eqn][i];
+          gnn = goma_ctx->fem.ei[imtrx]->gnn_list[eqn][i];
           ie = Index_Solution(gnn, eqn, 0, 0, -1, imtrx);
-          esp_dbl_dot->d[0][i] = tran->xdbl_dot + ie;
+          goma_ctx->fem.esp_dbl_dot->d[0][i] = goma_ctx->fem.tran->xdbl_dot + ie;
         }
       }
     }
 
     eqn = R_MESH2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->d[1], esp_old->d[1], esp_dot->d[1]);
-      if (tran->solid_inertia) {
-        dofs = ei[imtrx]->dof[eqn];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->d[1],
+                                          goma_ctx->fem.esp_old->d[1], goma_ctx->fem.esp_dot->d[1]);
+      if (goma_ctx->fem.tran->solid_inertia) {
+        dofs = goma_ctx->fem.ei[imtrx]->dof[eqn];
         for (i = 0; i < dofs; i++) {
-          gnn = ei[imtrx]->gnn_list[eqn][i];
+          gnn = goma_ctx->fem.ei[imtrx]->gnn_list[eqn][i];
           ie = Index_Solution(gnn, eqn, 0, 0, -1, imtrx);
-          esp_dbl_dot->d[1][i] = tran->xdbl_dot + ie;
+          goma_ctx->fem.esp_dbl_dot->d[1][i] = goma_ctx->fem.tran->xdbl_dot + ie;
         }
       }
     }
 
     eqn = R_MESH3;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->d[2], esp_old->d[2], esp_dot->d[2]);
-      if (tran->solid_inertia) {
-        dofs = ei[imtrx]->dof[eqn];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->d[2],
+                                          goma_ctx->fem.esp_old->d[2], goma_ctx->fem.esp_dot->d[2]);
+      if (goma_ctx->fem.tran->solid_inertia) {
+        dofs = goma_ctx->fem.ei[imtrx]->dof[eqn];
         for (i = 0; i < dofs; i++) {
-          gnn = ei[imtrx]->gnn_list[eqn][i];
+          gnn = goma_ctx->fem.ei[imtrx]->gnn_list[eqn][i];
           ie = Index_Solution(gnn, eqn, 0, 0, -1, imtrx);
-          esp_dbl_dot->d[2][i] = tran->xdbl_dot + ie;
+          goma_ctx->fem.esp_dbl_dot->d[2][i] = goma_ctx->fem.tran->xdbl_dot + ie;
         }
       }
-    } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
-                pd_glob[0]->CoordinateSystem == SWIRLING ||
-                pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
-               upd->ep[imtrx][R_MESH1] >= 0) {
-      dofs = ei[imtrx]->dof[R_MESH1];
+    } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+                goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING ||
+                goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
+               goma_ctx->fem.upd->ep[imtrx][R_MESH1] >= 0) {
+      dofs = goma_ctx->fem.ei[imtrx]->dof[R_MESH1];
       for (i = 0; i < dofs; i++) {
-        esp->d[2][i] = p0;
-        esp_old->d[2][i] = p0;
-        esp_dot->d[2][i] = p0;
-        esp_dbl_dot->d[2][i] = p0;
+        goma_ctx->fem.esp->d[2][i] = p0;
+        goma_ctx->fem.esp_old->d[2][i] = p0;
+        goma_ctx->fem.esp_dot->d[2][i] = p0;
+        goma_ctx->fem.esp_dbl_dot->d[2][i] = p0;
       }
     }
 
     eqn = R_SOLID1;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->d_rs[0], esp_old->d_rs[0],
-                                          esp_dot->d_rs[0]);
-      if (tran->solid_inertia) {
-        dofs = ei[imtrx]->dof[eqn];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->d_rs[0],
+                                          goma_ctx->fem.esp_old->d_rs[0],
+                                          goma_ctx->fem.esp_dot->d_rs[0]);
+      if (goma_ctx->fem.tran->solid_inertia) {
+        dofs = goma_ctx->fem.ei[imtrx]->dof[eqn];
         for (i = 0; i < dofs; i++) {
-          gnn = ei[imtrx]->gnn_list[eqn][i];
+          gnn = goma_ctx->fem.ei[imtrx]->gnn_list[eqn][i];
           ie = Index_Solution(gnn, eqn, 0, 0, -1, imtrx);
-          esp_dbl_dot->d_rs[0][i] = tran->xdbl_dot + ie;
+          goma_ctx->fem.esp_dbl_dot->d_rs[0][i] = goma_ctx->fem.tran->xdbl_dot + ie;
         }
       }
     }
 
     eqn = R_SOLID2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->d_rs[1], esp_old->d_rs[1],
-                                          esp_dot->d_rs[1]);
-      if (tran->solid_inertia) {
-        dofs = ei[imtrx]->dof[eqn];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->d_rs[1],
+                                          goma_ctx->fem.esp_old->d_rs[1],
+                                          goma_ctx->fem.esp_dot->d_rs[1]);
+      if (goma_ctx->fem.tran->solid_inertia) {
+        dofs = goma_ctx->fem.ei[imtrx]->dof[eqn];
         for (i = 0; i < dofs; i++) {
-          gnn = ei[imtrx]->gnn_list[eqn][i];
+          gnn = goma_ctx->fem.ei[imtrx]->gnn_list[eqn][i];
           ie = Index_Solution(gnn, eqn, 0, 0, -1, imtrx);
-          esp_dbl_dot->d_rs[1][i] = tran->xdbl_dot + ie;
+          goma_ctx->fem.esp_dbl_dot->d_rs[1][i] = goma_ctx->fem.tran->xdbl_dot + ie;
         }
       }
     }
 
     eqn = R_SOLID3;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->d_rs[2], esp_old->d_rs[2],
-                                          esp_dot->d_rs[2]);
-      if (tran->solid_inertia) {
-        dofs = ei[imtrx]->dof[eqn];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->d_rs[2],
+                                          goma_ctx->fem.esp_old->d_rs[2],
+                                          goma_ctx->fem.esp_dot->d_rs[2]);
+      if (goma_ctx->fem.tran->solid_inertia) {
+        dofs = goma_ctx->fem.ei[imtrx]->dof[eqn];
         for (i = 0; i < dofs; i++) {
-          gnn = ei[imtrx]->gnn_list[eqn][i];
+          gnn = goma_ctx->fem.ei[imtrx]->gnn_list[eqn][i];
           ie = Index_Solution(gnn, eqn, 0, 0, -1, imtrx);
-          esp_dbl_dot->d_rs[2][i] = tran->xdbl_dot + ie;
+          goma_ctx->fem.esp_dbl_dot->d_rs[2][i] = goma_ctx->fem.tran->xdbl_dot + ie;
         }
       }
-    } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
-                pd_glob[0]->CoordinateSystem == SWIRLING ||
-                pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
-               upd->ep[imtrx][R_SOLID1] >= 0) {
-      dofs = ei[imtrx]->dof[R_SOLID1];
+    } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+                goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING ||
+                goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
+               goma_ctx->fem.upd->ep[imtrx][R_SOLID1] >= 0) {
+      dofs = goma_ctx->fem.ei[imtrx]->dof[R_SOLID1];
       for (i = 0; i < dofs; i++) {
-        esp->d_rs[2][i] = p0;
-        esp_old->d_rs[2][i] = p0;
-        esp_dot->d_rs[2][i] = p0;
-        esp_dbl_dot->d_rs[2][i] = p0;
+        goma_ctx->fem.esp->d_rs[2][i] = p0;
+        goma_ctx->fem.esp_old->d_rs[2][i] = p0;
+        goma_ctx->fem.esp_dot->d_rs[2][i] = p0;
+        goma_ctx->fem.esp_dbl_dot->d_rs[2][i] = p0;
       }
     }
 
     eqn = R_ENERGY;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->T, esp_old->T, esp_dot->T);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->T,
+                                          goma_ctx->fem.esp_old->T, goma_ctx->fem.esp_dot->T);
     }
 
     eqn = R_POTENTIAL;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->V, esp_old->V, esp_dot->V);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->V,
+                                          goma_ctx->fem.esp_old->V, goma_ctx->fem.esp_dot->V);
     }
 
     eqn = R_SURF_CHARGE;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->qs, esp_old->qs, esp_dot->qs);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->qs,
+                                          goma_ctx->fem.esp_old->qs, goma_ctx->fem.esp_dot->qs);
     }
 
     eqn = R_FILL;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->F, esp_old->F, esp_dot->F);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->F,
+                                          goma_ctx->fem.esp_old->F, goma_ctx->fem.esp_dot->F);
     }
 
     eqn = R_CURVATURE;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->H, esp_old->H, esp_dot->H);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->H,
+                                          goma_ctx->fem.esp_old->H, goma_ctx->fem.esp_dot->H);
     }
 
     eqn = R_NORMAL1;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->n[0], esp_old->n[0], esp_dot->n[0]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->n[0],
+                                          goma_ctx->fem.esp_old->n[0], goma_ctx->fem.esp_dot->n[0]);
     }
 
     eqn = R_NORMAL2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->n[1], esp_old->n[1], esp_dot->n[1]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->n[1],
+                                          goma_ctx->fem.esp_old->n[1], goma_ctx->fem.esp_dot->n[1]);
     }
 
     eqn = R_NORMAL3;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->n[2], esp_old->n[2], esp_dot->n[2]);
-    } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
-                pd_glob[0]->CoordinateSystem == SWIRLING ||
-                pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
-               upd->ep[imtrx][R_NORMAL1] >= 0) {
-      dofs = ei[imtrx]->dof[R_NORMAL1];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->n[2],
+                                          goma_ctx->fem.esp_old->n[2], goma_ctx->fem.esp_dot->n[2]);
+    } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+                goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING ||
+                goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
+               goma_ctx->fem.upd->ep[imtrx][R_NORMAL1] >= 0) {
+      dofs = goma_ctx->fem.ei[imtrx]->dof[R_NORMAL1];
       for (i = 0; i < dofs; i++) {
-        esp->n[2][i] = p0;
-        esp_old->n[2][i] = p0;
-        esp_dot->n[2][i] = p0;
+        goma_ctx->fem.esp->n[2][i] = p0;
+        goma_ctx->fem.esp_old->n[2][i] = p0;
+        goma_ctx->fem.esp_dot->n[2][i] = p0;
       }
     }
 
     for (p = 0; p < DIM; p++) {
       eqn = R_VORT_DIR1 + p;
-      if (upd->ep[imtrx][eqn] >= 0) {
-        dofs = ei[imtrx]->dof[eqn];
+      if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+        dofs = goma_ctx->fem.ei[imtrx]->dof[eqn];
         for (i = 0; i < dofs; i++) {
-          ie = ei[imtrx]->gun_list[eqn][i];
-          esp->vd[p][i] = x + ie;
+          ie = goma_ctx->fem.ei[imtrx]->gun_list[eqn][i];
+          goma_ctx->fem.esp->vd[p][i] = x + ie;
         }
       }
     }
 
     eqn = R_VORT_LAMBDA;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      dofs = ei[imtrx]->dof[eqn];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      dofs = goma_ctx->fem.ei[imtrx]->dof[eqn];
       for (i = 0; i < dofs; i++) {
-        ie = ei[imtrx]->gun_list[eqn][i];
-        esp->vlambda[i] = x + ie;
+        ie = goma_ctx->fem.ei[imtrx]->gun_list[eqn][i];
+        goma_ctx->fem.esp->vlambda[i] = x + ie;
       }
     }
 
     eqn = R_BOND_EVOLUTION;
-    if (pd->e[imtrx][eqn]) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->nn, esp_old->nn, esp_dot->nn);
+    if (goma_ctx->fem.pd->e[imtrx][eqn]) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->nn,
+                                          goma_ctx->fem.esp_old->nn, goma_ctx->fem.esp_dot->nn);
     }
 
     eqn = R_SHEAR_RATE;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      dofs = ei[imtrx]->dof[eqn];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      dofs = goma_ctx->fem.ei[imtrx]->dof[eqn];
       for (i = 0; i < dofs; i++) {
-        ie = ei[imtrx]->gun_list[eqn][i];
-        esp->SH[i] = x + ie;
+        ie = goma_ctx->fem.ei[imtrx]->gun_list[eqn][i];
+        goma_ctx->fem.esp->SH[i] = x + ie;
       }
     }
 
     eqn = R_ENORM;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      dofs = ei[imtrx]->dof[eqn];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      dofs = goma_ctx->fem.ei[imtrx]->dof[eqn];
       for (i = 0; i < dofs; i++) {
-        ie = ei[imtrx]->gun_list[eqn][i];
-        esp->Enorm[i] = x + ie;
-        esp_old->Enorm[i] = x_old + ie;
+        ie = goma_ctx->fem.ei[imtrx]->gun_list[eqn][i];
+        goma_ctx->fem.esp->Enorm[i] = x + ie;
+        goma_ctx->fem.esp_old->Enorm[i] = x_old + ie;
       }
     }
 
     eqn = R_MOMENTUM1;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->v[0], esp_old->v[0], esp_dot->v[0]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->v[0],
+                                          goma_ctx->fem.esp_old->v[0], goma_ctx->fem.esp_dot->v[0]);
     }
 
     eqn = R_MOMENTUM2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->v[1], esp_old->v[1], esp_dot->v[1]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->v[1],
+                                          goma_ctx->fem.esp_old->v[1], goma_ctx->fem.esp_dot->v[1]);
     }
 
     if (*p0 != 0.) {
@@ -2383,27 +2561,31 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
     }
 
     eqn = R_MOMENTUM3;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->v[2], esp_old->v[2], esp_dot->v[2]);
-    } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL) && upd->ep[imtrx][R_MOMENTUM1] >= 0) {
-      dofs = ei[imtrx]->dof[R_MOMENTUM1];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->v[2],
+                                          goma_ctx->fem.esp_old->v[2], goma_ctx->fem.esp_dot->v[2]);
+    } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL) &&
+               goma_ctx->fem.upd->ep[imtrx][R_MOMENTUM1] >= 0) {
+      dofs = goma_ctx->fem.ei[imtrx]->dof[R_MOMENTUM1];
       for (i = 0; i < dofs; i++) {
-        esp->v[2][i] = p0;
-        esp_old->v[2][i] = p0;
-        esp_dot->v[2][i] = p0;
+        goma_ctx->fem.esp->v[2][i] = p0;
+        goma_ctx->fem.esp_old->v[2][i] = p0;
+        goma_ctx->fem.esp_dot->v[2][i] = p0;
       }
     }
 
     eqn = R_USTAR;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->v_star[0], esp_old->v_star[0],
-                                          esp_dot->v_star[0]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->v_star[0],
+                                          goma_ctx->fem.esp_old->v_star[0],
+                                          goma_ctx->fem.esp_dot->v_star[0]);
     }
 
     eqn = R_VSTAR;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->v_star[1], esp_old->v_star[1],
-                                          esp_dot->v_star[1]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->v_star[1],
+                                          goma_ctx->fem.esp_old->v_star[1],
+                                          goma_ctx->fem.esp_dot->v_star[1]);
     }
 
     if (*p0 != 0.) {
@@ -2411,443 +2593,528 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
     }
 
     eqn = R_WSTAR;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->v_star[2], esp_old->v_star[2],
-                                          esp_dot->v_star[2]);
-    } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL) && upd->ep[imtrx][R_USTAR] >= 0) {
-      dofs = ei[imtrx]->dof[R_USTAR];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->v_star[2],
+                                          goma_ctx->fem.esp_old->v_star[2],
+                                          goma_ctx->fem.esp_dot->v_star[2]);
+    } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL) &&
+               goma_ctx->fem.upd->ep[imtrx][R_USTAR] >= 0) {
+      dofs = goma_ctx->fem.ei[imtrx]->dof[R_USTAR];
       for (i = 0; i < dofs; i++) {
-        esp->v_star[2][i] = p0;
-        esp_old->v_star[2][i] = p0;
-        esp_dot->v_star[2][i] = p0;
+        goma_ctx->fem.esp->v_star[2][i] = p0;
+        goma_ctx->fem.esp_old->v_star[2][i] = p0;
+        goma_ctx->fem.esp_dot->v_star[2][i] = p0;
       }
     }
 
     eqn = PSTAR;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->P_star, esp_old->P_star,
-                                          esp_dot->P_star);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->P_star,
+                                          goma_ctx->fem.esp_old->P_star,
+                                          goma_ctx->fem.esp_dot->P_star);
     }
 
     eqn = R_EXT_VELOCITY;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->ext_v, esp_old->ext_v, esp_dot->ext_v);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->ext_v,
+                                          goma_ctx->fem.esp_old->ext_v,
+                                          goma_ctx->fem.esp_dot->ext_v);
     }
 
     eqn = R_EFIELD1;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->E_field[0], esp_old->E_field[0],
-                                          esp_dot->E_field[0]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->E_field[0],
+                                          goma_ctx->fem.esp_old->E_field[0],
+                                          goma_ctx->fem.esp_dot->E_field[0]);
     }
 
     eqn = R_EFIELD2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->E_field[1], esp_old->E_field[1],
-                                          esp_dot->E_field[1]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->E_field[1],
+                                          goma_ctx->fem.esp_old->E_field[1],
+                                          goma_ctx->fem.esp_dot->E_field[1]);
     }
 
     eqn = R_EFIELD3;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->E_field[2], esp_old->E_field[2],
-                                          esp_dot->E_field[2]);
-    } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL) && upd->ep[imtrx][R_EFIELD1] >= 0) {
-      dofs = ei[imtrx]->dof[R_EFIELD1];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->E_field[2],
+                                          goma_ctx->fem.esp_old->E_field[2],
+                                          goma_ctx->fem.esp_dot->E_field[2]);
+    } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL) &&
+               goma_ctx->fem.upd->ep[imtrx][R_EFIELD1] >= 0) {
+      dofs = goma_ctx->fem.ei[imtrx]->dof[R_EFIELD1];
       for (i = 0; i < dofs; i++) {
-        esp->E_field[2][i] = p0;
-        esp_old->E_field[2][i] = p0;
-        esp_dot->E_field[2][i] = p0;
+        goma_ctx->fem.esp->E_field[2][i] = p0;
+        goma_ctx->fem.esp_old->E_field[2][i] = p0;
+        goma_ctx->fem.esp_dot->E_field[2][i] = p0;
       }
     }
 
     eqn = R_PMOMENTUM1;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->pv[0], esp_old->pv[0], esp_dot->pv[0]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->pv[0],
+                                          goma_ctx->fem.esp_old->pv[0],
+                                          goma_ctx->fem.esp_dot->pv[0]);
     }
 
     eqn = R_PMOMENTUM2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->pv[1], esp_old->pv[1], esp_dot->pv[1]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->pv[1],
+                                          goma_ctx->fem.esp_old->pv[1],
+                                          goma_ctx->fem.esp_dot->pv[1]);
     }
 
     eqn = R_PMOMENTUM3;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->pv[2], esp_old->pv[2], esp_dot->pv[2]);
-    } else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
-                pd_glob[0]->CoordinateSystem == SWIRLING ||
-                pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
-               upd->ep[imtrx][R_PMOMENTUM1] >= 0) {
-      dofs = ei[imtrx]->dof[R_PMOMENTUM1];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->pv[2],
+                                          goma_ctx->fem.esp_old->pv[2],
+                                          goma_ctx->fem.esp_dot->pv[2]);
+    } else if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+                goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING ||
+                goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
+               goma_ctx->fem.upd->ep[imtrx][R_PMOMENTUM1] >= 0) {
+      dofs = goma_ctx->fem.ei[imtrx]->dof[R_PMOMENTUM1];
       for (i = 0; i < dofs; i++) {
-        esp->pv[2][i] = p0;
-        esp_old->pv[2][i] = p0;
-        esp_dot->pv[2][i] = p0;
+        goma_ctx->fem.esp->pv[2][i] = p0;
+        goma_ctx->fem.esp_old->pv[2][i] = p0;
+        goma_ctx->fem.esp_dot->pv[2][i] = p0;
       }
     }
 
     eqn = R_PRESSURE;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->P, esp_old->P, esp_dot->P);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->P,
+                                          goma_ctx->fem.esp_old->P, goma_ctx->fem.esp_dot->P);
     }
 
     eqn = R_LAGR_MULT1;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->lm[0], esp_old->lm[0], esp_dot->lm[0]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->lm[0],
+                                          goma_ctx->fem.esp_old->lm[0],
+                                          goma_ctx->fem.esp_dot->lm[0]);
     }
 
     eqn = R_LAGR_MULT2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->lm[1], esp_old->lm[1], esp_dot->lm[1]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->lm[1],
+                                          goma_ctx->fem.esp_old->lm[1],
+                                          goma_ctx->fem.esp_dot->lm[1]);
     }
 
     eqn = R_LAGR_MULT3;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->lm[2], esp_old->lm[2], esp_dot->lm[2]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->lm[2],
+                                          goma_ctx->fem.esp_old->lm[2],
+                                          goma_ctx->fem.esp_dot->lm[2]);
     }
 
     eqn = R_SHELL_CURVATURE;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_K, esp_old->sh_K, esp_dot->sh_K);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_K,
+                                          goma_ctx->fem.esp_old->sh_K, goma_ctx->fem.esp_dot->sh_K);
     }
 
     eqn = R_SHELL_TENSION;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_tens, esp_old->sh_tens,
-                                          esp_dot->sh_tens);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_tens,
+                                          goma_ctx->fem.esp_old->sh_tens,
+                                          goma_ctx->fem.esp_dot->sh_tens);
     }
 
     eqn = R_SHELL_X;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_x, esp_old->sh_x, esp_dot->sh_x);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_x,
+                                          goma_ctx->fem.esp_old->sh_x, goma_ctx->fem.esp_dot->sh_x);
     }
 
     eqn = R_SHELL_Y;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_y, esp_old->sh_y, esp_dot->sh_y);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_y,
+                                          goma_ctx->fem.esp_old->sh_y, goma_ctx->fem.esp_dot->sh_y);
     }
 
     eqn = R_SHELL_USER;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_u, esp_old->sh_u, esp_dot->sh_u);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_u,
+                                          goma_ctx->fem.esp_old->sh_u, goma_ctx->fem.esp_dot->sh_u);
     }
 
     eqn = R_SHELL_ANGLE1;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_ang[0], esp_old->sh_ang[0],
-                                          esp_dot->sh_ang[0]);
-      for (i = 0; i < ei[imtrx]->dof[R_SHELL_ANGLE1]; i++) {
-        if (*esp->sh_ang[0][i] > M_PIE)
-          *esp->sh_ang[0][i] -= 2. * M_PIE;
-        else if (*esp->sh_ang[0][i] < -M_PIE)
-          *esp->sh_ang[0][i] += 2. * M_PIE;
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_ang[0],
+                                          goma_ctx->fem.esp_old->sh_ang[0],
+                                          goma_ctx->fem.esp_dot->sh_ang[0]);
+      for (i = 0; i < goma_ctx->fem.ei[imtrx]->dof[R_SHELL_ANGLE1]; i++) {
+        if (*goma_ctx->fem.esp->sh_ang[0][i] > M_PIE)
+          *goma_ctx->fem.esp->sh_ang[0][i] -= 2. * M_PIE;
+        else if (*goma_ctx->fem.esp->sh_ang[0][i] < -M_PIE)
+          *goma_ctx->fem.esp->sh_ang[0][i] += 2. * M_PIE;
       }
     }
 
     eqn = R_SHELL_ANGLE2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_ang[1], esp_old->sh_ang[1],
-                                          esp_dot->sh_ang[1]);
-      for (i = 0; i < ei[imtrx]->dof[R_SHELL_ANGLE2]; i++) {
-        if (*esp->sh_ang[1][i] > M_PIE)
-          *esp->sh_ang[1][i] -= 2. * M_PIE;
-        else if (*esp->sh_ang[1][i] < -M_PIE)
-          *esp->sh_ang[1][i] += 2. * M_PIE;
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_ang[1],
+                                          goma_ctx->fem.esp_old->sh_ang[1],
+                                          goma_ctx->fem.esp_dot->sh_ang[1]);
+      for (i = 0; i < goma_ctx->fem.ei[imtrx]->dof[R_SHELL_ANGLE2]; i++) {
+        if (*goma_ctx->fem.esp->sh_ang[1][i] > M_PIE)
+          *goma_ctx->fem.esp->sh_ang[1][i] -= 2. * M_PIE;
+        else if (*goma_ctx->fem.esp->sh_ang[1][i] < -M_PIE)
+          *goma_ctx->fem.esp->sh_ang[1][i] += 2. * M_PIE;
       }
     }
 
     eqn = R_SHELL_SURF_DIV_V;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->div_s_v, esp_old->div_s_v,
-                                          esp_dot->div_s_v);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->div_s_v,
+                                          goma_ctx->fem.esp_old->div_s_v,
+                                          goma_ctx->fem.esp_dot->div_s_v);
     }
 
     eqn = R_SHELL_SURF_CURV;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->curv, esp_old->curv, esp_dot->curv);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->curv,
+                                          goma_ctx->fem.esp_old->curv, goma_ctx->fem.esp_dot->curv);
     }
 
     eqn = R_N_DOT_CURL_V;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->n_dot_curl_s_v, esp_old->n_dot_curl_s_v,
-                                          esp_dot->n_dot_curl_s_v);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->n_dot_curl_s_v,
+                                          goma_ctx->fem.esp_old->n_dot_curl_s_v,
+                                          goma_ctx->fem.esp_dot->n_dot_curl_s_v);
     }
 
     eqn = R_GRAD_S_V_DOT_N1;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->grad_v_dot_n[0],
-                                          esp_old->grad_v_dot_n[0], esp_dot->grad_v_dot_n[0]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->grad_v_dot_n[0],
+                                          goma_ctx->fem.esp_old->grad_v_dot_n[0],
+                                          goma_ctx->fem.esp_dot->grad_v_dot_n[0]);
     }
 
     eqn = R_GRAD_S_V_DOT_N2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->grad_v_dot_n[1],
-                                          esp_old->grad_v_dot_n[1], esp_dot->grad_v_dot_n[1]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->grad_v_dot_n[1],
+                                          goma_ctx->fem.esp_old->grad_v_dot_n[1],
+                                          goma_ctx->fem.esp_dot->grad_v_dot_n[1]);
     }
 
     eqn = R_GRAD_S_V_DOT_N3;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->grad_v_dot_n[2],
-                                          esp_old->grad_v_dot_n[2], esp_dot->grad_v_dot_n[2]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->grad_v_dot_n[2],
+                                          goma_ctx->fem.esp_old->grad_v_dot_n[2],
+                                          goma_ctx->fem.esp_dot->grad_v_dot_n[2]);
     }
 
     eqn = R_SHELL_DIFF_FLUX;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_J, esp_old->sh_J, esp_dot->sh_J);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_J,
+                                          goma_ctx->fem.esp_old->sh_J, goma_ctx->fem.esp_dot->sh_J);
     }
 
     eqn = R_SHELL_DIFF_CURVATURE;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_Kd, esp_old->sh_Kd, esp_dot->sh_Kd);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_Kd,
+                                          goma_ctx->fem.esp_old->sh_Kd,
+                                          goma_ctx->fem.esp_dot->sh_Kd);
     }
 
     eqn = R_SHELL_NORMAL1;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->n[0], esp_old->n[0], esp_dot->n[0]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->n[0],
+                                          goma_ctx->fem.esp_old->n[0], goma_ctx->fem.esp_dot->n[0]);
     }
 
     eqn = R_SHELL_NORMAL2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->n[1], esp_old->n[1], esp_dot->n[1]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->n[1],
+                                          goma_ctx->fem.esp_old->n[1], goma_ctx->fem.esp_dot->n[1]);
     }
 
     for (b = 0; b < MAX_PHASE_FUNC; b++) {
       eqn = R_PHASE1 + b;
-      if (upd->ep[imtrx][eqn] >= 0) {
-        load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->pF[b], esp_old->pF[b], esp_dot->pF[b]);
+      if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+        load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->pF[b],
+                                            goma_ctx->fem.esp_old->pF[b],
+                                            goma_ctx->fem.esp_dot->pF[b]);
       }
     }
 
     eqn = R_ACOUS_PREAL;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->apr, esp_old->apr, esp_dot->apr);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->apr,
+                                          goma_ctx->fem.esp_old->apr, goma_ctx->fem.esp_dot->apr);
     }
     eqn = R_ACOUS_PIMAG;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->api, esp_old->api, esp_dot->api);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->api,
+                                          goma_ctx->fem.esp_old->api, goma_ctx->fem.esp_dot->api);
     }
     eqn = R_ACOUS_REYN_STRESS;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->ars, esp_old->ars, esp_dot->ars);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->ars,
+                                          goma_ctx->fem.esp_old->ars, goma_ctx->fem.esp_dot->ars);
     }
     eqn = R_EM_CONT_REAL;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->epr, esp_old->epr, esp_dot->epr);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->epr,
+                                          goma_ctx->fem.esp_old->epr, goma_ctx->fem.esp_dot->epr);
     }
     eqn = R_EM_CONT_IMAG;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->epi, esp_old->epi, esp_dot->epi);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->epi,
+                                          goma_ctx->fem.esp_old->epi, goma_ctx->fem.esp_dot->epi);
     }
     eqn = R_SHELL_BDYVELO;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_bv, esp_old->sh_bv, esp_dot->sh_bv);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_bv,
+                                          goma_ctx->fem.esp_old->sh_bv,
+                                          goma_ctx->fem.esp_dot->sh_bv);
     }
     eqn = R_SHELL_LUBP;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_p, esp_old->sh_p, esp_dot->sh_p);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_p,
+                                          goma_ctx->fem.esp_old->sh_p, goma_ctx->fem.esp_dot->sh_p);
     }
     eqn = R_LUBP;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->lubp, esp_old->lubp, esp_dot->lubp);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->lubp,
+                                          goma_ctx->fem.esp_old->lubp, goma_ctx->fem.esp_dot->lubp);
     }
     eqn = R_LUBP_2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->lubp_2, esp_old->lubp_2,
-                                          esp_dot->lubp_2);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->lubp_2,
+                                          goma_ctx->fem.esp_old->lubp_2,
+                                          goma_ctx->fem.esp_dot->lubp_2);
     }
     eqn = R_SHELL_FILMP;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_fp, esp_old->sh_fp, esp_dot->sh_fp);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_fp,
+                                          goma_ctx->fem.esp_old->sh_fp,
+                                          goma_ctx->fem.esp_dot->sh_fp);
     }
     eqn = R_SHELL_FILMH;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_fh, esp_old->sh_fh, esp_dot->sh_fh);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_fh,
+                                          goma_ctx->fem.esp_old->sh_fh,
+                                          goma_ctx->fem.esp_dot->sh_fh);
     }
     eqn = R_SHELL_PARTC;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_pc, esp_old->sh_pc, esp_dot->sh_pc);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_pc,
+                                          goma_ctx->fem.esp_old->sh_pc,
+                                          goma_ctx->fem.esp_dot->sh_pc);
     }
     eqn = R_SHELL_SAT_CLOSED;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_sat_closed, esp_old->sh_sat_closed,
-                                          esp_dot->sh_sat_closed);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_sat_closed,
+                                          goma_ctx->fem.esp_old->sh_sat_closed,
+                                          goma_ctx->fem.esp_dot->sh_sat_closed);
     }
     eqn = R_SHELL_SAT_OPEN;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_p_open, esp_old->sh_p_open,
-                                          esp_dot->sh_p_open);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_p_open,
+                                          goma_ctx->fem.esp_old->sh_p_open,
+                                          goma_ctx->fem.esp_dot->sh_p_open);
     }
     eqn = R_SHELL_SAT_OPEN_2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_p_open_2, esp_old->sh_p_open_2,
-                                          esp_dot->sh_p_open_2);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_p_open_2,
+                                          goma_ctx->fem.esp_old->sh_p_open_2,
+                                          goma_ctx->fem.esp_dot->sh_p_open_2);
     }
     eqn = R_SHELL_SAT_1;
-    if (upd->ep[pg->imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_sat_1, esp_old->sh_sat_1,
-                                          esp_dot->sh_sat_1);
+    if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_sat_1,
+                                          goma_ctx->fem.esp_old->sh_sat_1,
+                                          goma_ctx->fem.esp_dot->sh_sat_1);
     }
 
     eqn = R_SHELL_SAT_2;
-    if (upd->ep[pg->imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_sat_2, esp_old->sh_sat_2,
-                                          esp_dot->sh_sat_2);
+    if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_sat_2,
+                                          goma_ctx->fem.esp_old->sh_sat_2,
+                                          goma_ctx->fem.esp_dot->sh_sat_2);
     }
 
     eqn = R_SHELL_SAT_3;
-    if (upd->ep[pg->imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_sat_3, esp_old->sh_sat_3,
-                                          esp_dot->sh_sat_3);
+    if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_sat_3,
+                                          goma_ctx->fem.esp_old->sh_sat_3,
+                                          goma_ctx->fem.esp_dot->sh_sat_3);
     }
 
     eqn = R_SHELL_ENERGY;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_t, esp_old->sh_t, esp_dot->sh_t);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_t,
+                                          goma_ctx->fem.esp_old->sh_t, goma_ctx->fem.esp_dot->sh_t);
     }
     eqn = R_SHELL_DELTAH;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_dh, esp_old->sh_dh, esp_dot->sh_dh);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_dh,
+                                          goma_ctx->fem.esp_old->sh_dh,
+                                          goma_ctx->fem.esp_dot->sh_dh);
     }
     eqn = R_SHELL_LUB_CURV;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_l_curv, esp_old->sh_l_curv,
-                                          esp_dot->sh_l_curv);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_l_curv,
+                                          goma_ctx->fem.esp_old->sh_l_curv,
+                                          goma_ctx->fem.esp_dot->sh_l_curv);
     }
     eqn = R_SHELL_LUB_CURV_2;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_l_curv_2, esp_old->sh_l_curv_2,
-                                          esp_dot->sh_l_curv_2);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_l_curv_2,
+                                          goma_ctx->fem.esp_old->sh_l_curv_2,
+                                          goma_ctx->fem.esp_dot->sh_l_curv_2);
     }
     eqn = R_SHELL_SAT_GASN;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_sat_gasn, esp_old->sh_sat_gasn,
-                                          esp_dot->sh_sat_gasn);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_sat_gasn,
+                                          goma_ctx->fem.esp_old->sh_sat_gasn,
+                                          goma_ctx->fem.esp_dot->sh_sat_gasn);
     }
     eqn = R_POR_SINK_MASS;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sink_mass, esp_old->sink_mass,
-                                          esp_dot->sink_mass);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sink_mass,
+                                          goma_ctx->fem.esp_old->sink_mass,
+                                          goma_ctx->fem.esp_dot->sink_mass);
     }
     eqn = R_LIGHT_INTP;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->poynt[0], esp_old->poynt[0],
-                                          esp_dot->poynt[0]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->poynt[0],
+                                          goma_ctx->fem.esp_old->poynt[0],
+                                          goma_ctx->fem.esp_dot->poynt[0]);
     }
     eqn = R_LIGHT_INTM;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->poynt[1], esp_old->poynt[1],
-                                          esp_dot->poynt[1]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->poynt[1],
+                                          goma_ctx->fem.esp_old->poynt[1],
+                                          goma_ctx->fem.esp_dot->poynt[1]);
     }
     eqn = R_LIGHT_INTD;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->poynt[2], esp_old->poynt[2],
-                                          esp_dot->poynt[2]);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->poynt[2],
+                                          goma_ctx->fem.esp_old->poynt[2],
+                                          goma_ctx->fem.esp_dot->poynt[2]);
     }
 
     eqn = R_SHELL_SHEAR_TOP;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_shear_top, esp_old->sh_shear_top,
-                                          esp_dot->sh_shear_top);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_shear_top,
+                                          goma_ctx->fem.esp_old->sh_shear_top,
+                                          goma_ctx->fem.esp_dot->sh_shear_top);
     }
 
     eqn = R_SHELL_SHEAR_BOT;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_shear_bot, esp_old->sh_shear_bot,
-                                          esp_dot->sh_shear_bot);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_shear_bot,
+                                          goma_ctx->fem.esp_old->sh_shear_bot,
+                                          goma_ctx->fem.esp_dot->sh_shear_bot);
     }
 
     eqn = R_SHELL_CROSS_SHEAR;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->sh_cross_shear, esp_old->sh_cross_shear,
-                                          esp_dot->sh_cross_shear);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->sh_cross_shear,
+                                          goma_ctx->fem.esp_old->sh_cross_shear,
+                                          goma_ctx->fem.esp_dot->sh_cross_shear);
     }
 
     eqn = R_MAX_STRAIN;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->max_strain, esp_old->max_strain,
-                                          esp_dot->max_strain);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->max_strain,
+                                          goma_ctx->fem.esp_old->max_strain,
+                                          goma_ctx->fem.esp_dot->max_strain);
     }
 
     eqn = R_CUR_STRAIN;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->cur_strain, esp_old->cur_strain,
-                                          esp_dot->cur_strain);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->cur_strain,
+                                          goma_ctx->fem.esp_old->cur_strain,
+                                          goma_ctx->fem.esp_dot->cur_strain);
     }
 
     eqn = R_EDDY_NU;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->eddy_nu, esp_old->eddy_nu,
-                                          esp_dot->eddy_nu);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->eddy_nu,
+                                          goma_ctx->fem.esp_old->eddy_nu,
+                                          goma_ctx->fem.esp_dot->eddy_nu);
     }
     eqn = R_TURB_K;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->turb_k, esp_old->turb_k,
-                                          esp_dot->turb_k);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->turb_k,
+                                          goma_ctx->fem.esp_old->turb_k,
+                                          goma_ctx->fem.esp_dot->turb_k);
     }
 
     eqn = R_TURB_OMEGA;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->turb_omega, esp_old->turb_omega,
-                                          esp_dot->turb_omega);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->turb_omega,
+                                          goma_ctx->fem.esp_old->turb_omega,
+                                          goma_ctx->fem.esp_dot->turb_omega);
     }
 
     eqn = R_FILM_HEIGHT;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->film_height, esp_old->film_height,
-                                          esp_dot->film_height);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->film_height,
+                                          goma_ctx->fem.esp_old->film_height,
+                                          goma_ctx->fem.esp_dot->film_height);
     }
 
     eqn = R_STRESS11;
-    if (upd->ep[imtrx][eqn] >= 0) {
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
       /* This should loop through all the stress variables
        * for all the modes.
        */
       int sdim = VIM;
-      if (pd->gv[FILM_HEIGHT])
+      if (goma_ctx->fem.pd->gv[FILM_HEIGHT])
         sdim = 3;
-      for (mode = 0; mode < vn->modes; mode++) {
+      for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
         for (b = 0; b < sdim; b++) {
           for (c = 0; c < sdim; c++) {
             if (b <= c) {
               eqn = R_s[mode][b][c];
-              if (upd->ep[imtrx][eqn] >= 0) {
-                load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->S[mode][b][c],
-                                                    esp_old->S[mode][b][c], esp_dot->S[mode][b][c]);
+              if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+                load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->S[mode][b][c],
+                                                    goma_ctx->fem.esp_old->S[mode][b][c],
+                                                    goma_ctx->fem.esp_dot->S[mode][b][c]);
               } else {
-                dofs = ei[imtrx]->dof[R_STRESS11];
+                dofs = goma_ctx->fem.ei[imtrx]->dof[R_STRESS11];
                 for (i = 0; i < dofs; i++) {
-                  esp->S[mode][b][c][i] = p0;
-                  esp_old->S[mode][b][c][i] = p0;
-                  esp_dot->S[mode][b][c][i] = p0;
+                  goma_ctx->fem.esp->S[mode][b][c][i] = p0;
+                  goma_ctx->fem.esp_old->S[mode][b][c][i] = p0;
+                  goma_ctx->fem.esp_dot->S[mode][b][c][i] = p0;
                 }
               }
             }
           }
         }
       }
-      if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
-           pd_glob[0]->CoordinateSystem == SWIRLING ||
-           pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN)) {
-        if (upd->ep[imtrx][R_STRESS33] == -1)
+      if ((goma_ctx->fem.pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+           goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING ||
+           goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN)) {
+        if (goma_ctx->fem.upd->ep[imtrx][R_STRESS33] == -1)
           GOMA_EH(GOMA_ERROR, "Hey,the STRESS33 is needed in CYLINDRICAL VE problems!");
       }
     }
 
     eqn = R_GRADIENT11;
-    if (upd->ep[imtrx][eqn] >= 0) {
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
       /* This should loop through all the velocity gradient
        * components of the tensor
        */
       for (b = 0; b < VIM; b++) {
         for (c = 0; c < VIM; c++) {
           eqn = R_g[b][c];
-          if (upd->ep[imtrx][eqn] >= 0) {
-            load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->G[b][c], esp_old->G[b][c],
-                                                esp_dot->G[b][c]);
+          if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+            load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->G[b][c],
+                                                goma_ctx->fem.esp_old->G[b][c],
+                                                goma_ctx->fem.esp_dot->G[b][c]);
           } else {
-            dofs = ei[imtrx]->dof[R_GRADIENT11];
+            dofs = goma_ctx->fem.ei[imtrx]->dof[R_GRADIENT11];
             for (i = 0; i < dofs; i++) {
-              esp->G[b][c][i] = p0;
-              esp_old->G[b][c][i] = p0;
-              esp_dot->G[b][c][i] = p0;
+              goma_ctx->fem.esp->G[b][c][i] = p0;
+              goma_ctx->fem.esp_old->G[b][c][i] = p0;
+              goma_ctx->fem.esp_dot->G[b][c][i] = p0;
             }
           }
         }
@@ -2855,64 +3122,73 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
     }
 
     eqn = R_POR_LIQ_PRES;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->p_liq, esp_old->p_liq, esp_dot->p_liq);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->p_liq,
+                                          goma_ctx->fem.esp_old->p_liq,
+                                          goma_ctx->fem.esp_dot->p_liq);
     }
 
     eqn = R_POR_GAS_PRES;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->p_gas, esp_old->p_gas, esp_dot->p_gas);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->p_gas,
+                                          goma_ctx->fem.esp_old->p_gas,
+                                          goma_ctx->fem.esp_dot->p_gas);
     }
 
     eqn = R_POR_POROSITY;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->porosity, esp_old->porosity,
-                                          esp_dot->porosity);
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->porosity,
+                                          goma_ctx->fem.esp_old->porosity,
+                                          goma_ctx->fem.esp_dot->porosity);
     }
 
     eqn = R_POR_ENERGY;
-    if (pd->e[imtrx][eqn]) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->T, esp_old->T, esp_dot->T);
+    if (goma_ctx->fem.pd->e[imtrx][eqn]) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->T,
+                                          goma_ctx->fem.esp_old->T, goma_ctx->fem.esp_dot->T);
     }
 
     eqn = R_POR_SATURATION;
-    if (upd->ep[imtrx][eqn] >= 0) {
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
       GOMA_EH(GOMA_ERROR, "Saturation-based formulation not implemented yet");
     }
 
     eqn = R_MASS;
-    if (upd->ep[imtrx][eqn] >= 0) {
-      for (k = 0; k < pd->Num_Species_Eqn; k++) {
-        dofs = ei[imtrx]->dof[eqn];
+    if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+      for (k = 0; k < goma_ctx->fem.pd->Num_Species_Eqn; k++) {
+        dofs = goma_ctx->fem.ei[imtrx]->dof[eqn];
         for (i = 0; i < dofs; i++) {
-          gnn = ei[imtrx]->gnn_list[eqn][i];
-          nvdof = ei[imtrx]->Baby_Dolphin[eqn][i];
-          ledof = ei[imtrx]->lvdof_to_ledof[eqn][i];
-          ie = Index_Solution(gnn, R_MASS, k, nvdof, ei[imtrx]->matID_ledof[ledof], imtrx);
-          esp->c[k][i] = x + ie;
-          esp_old->c[k][i] = x_old + ie;
-          esp_dot->c[k][i] = xdot + ie;
+          gnn = goma_ctx->fem.ei[imtrx]->gnn_list[eqn][i];
+          nvdof = goma_ctx->fem.ei[imtrx]->Baby_Dolphin[eqn][i];
+          ledof = goma_ctx->fem.ei[imtrx]->lvdof_to_ledof[eqn][i];
+          ie = Index_Solution(gnn, R_MASS, k, nvdof, goma_ctx->fem.ei[imtrx]->matID_ledof[ledof],
+                              imtrx);
+          goma_ctx->fem.esp->c[k][i] = x + ie;
+          goma_ctx->fem.esp_old->c[k][i] = x_old + ie;
+          goma_ctx->fem.esp_dot->c[k][i] = xdot + ie;
         }
       }
     }
 
     for (k = 0; k < MAX_MOMENTS; k++) {
       eqn = R_MOMENT0 + k;
-      if (upd->ep[imtrx][eqn] >= 0) {
-        load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->moment[k], esp_old->moment[k],
-                                            esp_dot->moment[k]);
+      if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
+        load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->moment[k],
+                                            goma_ctx->fem.esp_old->moment[k],
+                                            goma_ctx->fem.esp_dot->moment[k]);
       }
     }
     eqn = R_DENSITY_EQN;
-    if (pd->e[imtrx][eqn]) {
-      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->rho, esp_old->rho, esp_dot->rho);
+    if (goma_ctx->fem.pd->e[imtrx][eqn]) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->rho,
+                                          goma_ctx->fem.esp_old->rho, goma_ctx->fem.esp_dot->rho);
     }
   }
 
-  x_static = pg->matrices[pg->imtrx].x;
-  x_old_static = pg->matrices[pg->imtrx].x_old;
-  xdot_static = pg->matrices[pg->imtrx].xdot;
-  xdot_old_static = pg->matrices[pg->imtrx].xdot_old;
+  x_static = goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x;
+  x_old_static = goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old;
+  xdot_static = goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot;
+  xdot_old_static = goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot_old;
   x_dbl_dot_static = NULL;
   x_dbl_dot_old_static = NULL;
 
@@ -2950,12 +3226,14 @@ static void print_ei_index_desc()
 {
   int i, j, ln, ledof, *numidofs;
   VARIABLE_DESCRIPTION_STRUCT *vd;
-  int nnodes = ei[pg->imtrx]->num_local_nodes;
+  int nnodes = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
   numidofs = alloc_int_1(nnodes, 0);
   printf("\n");
   fprint_line(stdout, "+", 80);
-  printf(" Element Number = %d, MatID = %d\n", ei[pg->imtrx]->ielem, ei[pg->imtrx]->mn);
-  printf(" Number of variable descriptions in the element: %d\n", ei[pg->imtrx]->Num_Lvdesc);
+  printf(" Element Number = %d, MatID = %d\n", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem,
+         goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn);
+  printf(" Number of variable descriptions in the element: %d\n",
+         goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Num_Lvdesc);
 
   /*
    *  SECTION 1
@@ -2969,13 +3247,13 @@ static void print_ei_index_desc()
   printf("     ");
   fprint_line(stdout, "-", 60);
   printf("\n");
-  for (i = 0; i < ei[pg->imtrx]->Num_Lvdesc; i++) {
-    vd = ei[pg->imtrx]->Lvdesc_vd_ptr[i];
+  for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Num_Lvdesc; i++) {
+    vd = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_vd_ptr[i];
     printf("     ");
     printf("%-5d", i);
-    pvn(ei[pg->imtrx]->Lvdesc_to_Var_Type[i], vd);
-    printf("  %-5d", ei[pg->imtrx]->Lvdesc_to_MatID[i]);
-    printf("  %-5d", ei[pg->imtrx]->Lvdesc_Numdof[i]);
+    pvn(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_Var_Type[i], vd);
+    printf("  %-5d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_MatID[i]);
+    printf("  %-5d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_Numdof[i]);
     printf("\n");
   }
   printf("     ");
@@ -2995,33 +3273,35 @@ static void print_ei_index_desc()
   printf("     ");
   fprint_line(stdout, "=", 75);
   printf("\n");
-  for (i = 0; i < ei[pg->imtrx]->Num_Lvdesc; i++) {
-    vd = ei[pg->imtrx]->Lvdesc_vd_ptr[i];
+  for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Num_Lvdesc; i++) {
+    vd = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_vd_ptr[i];
     printf("     ");
     fprint_line(stdout, "=", 65);
     printf("\n");
     printf("     ");
     printf("LVDESC = %-d, Var = ", i);
-    pvn(ei[pg->imtrx]->Lvdesc_to_Var_Type[i], vd);
-    printf(", MatID = %-5d", ei[pg->imtrx]->Lvdesc_to_MatID[i]);
+    pvn(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_Var_Type[i], vd);
+    printf(", MatID = %-5d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_MatID[i]);
     printf("\n");
     printf("        ");
     printf("i_vdesc  lnn  lvdof   ledof   gnn   gun  active owned\n");
     printf("        ");
     fprint_line(stdout, "-", 60);
-    for (j = 0; j < ei[pg->imtrx]->Lvdesc_Numdof[i]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_Numdof[i]; j++) {
       printf("        ");
       printf("  %-5d", j);
-      printf("  %-5d ", ei[pg->imtrx]->Lvdesc_to_Lnn[i][j]);
-      printf("  %-5d ", ei[pg->imtrx]->Lvdesc_to_lvdof[i][j]);
-      ledof = ei[pg->imtrx]->Lvdesc_to_ledof[i][j];
+      printf("  %-5d ", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_Lnn[i][j]);
+      printf("  %-5d ", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_lvdof[i][j]);
+      ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_ledof[i][j];
       printf(" %-5d ", ledof);
-      printf("%-6d", ei[pg->imtrx]->Lvdesc_to_Gnn[i][j]);
-      printf("%-6d ", ei[pg->imtrx]->Lvdesc_to_Gun[i][j]);
-      printf("%-6d ", ei[pg->imtrx]->active_interp_ledof[ledof]);
-      printf("%-6d ", ei[pg->imtrx]->owned_ledof[ledof]);
-      if (ei[pg->imtrx]->ieqn_ledof[ledof] != ei[pg->imtrx]->Lvdesc_to_Gun[i][j]) {
-        printf("WARNING ieqn_edof = %5d", ei[pg->imtrx]->ieqn_ledof[ledof]);
+      printf("%-6d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_Gnn[i][j]);
+      printf("%-6d ", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_Gun[i][j]);
+      printf("%-6d ", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]);
+      printf("%-6d ", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owned_ledof[ledof]);
+      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ieqn_ledof[ledof] !=
+          goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_Gun[i][j]) {
+        printf("WARNING ieqn_edof = %5d",
+               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ieqn_ledof[ledof]);
       }
       printf("\n");
     }
@@ -3035,9 +3315,9 @@ static void print_ei_index_desc()
     for (ln = 0; ln < nnodes; ln++) {
       printf("        ");
       printf(" %-5d", ln);
-      printf("  %-5d", ei[pg->imtrx]->Lvdesc_Lnn_Numdof[i][ln]);
-      printf("  %-5d", ei[pg->imtrx]->Lvdesc_Lnn_to_lvdof[i][ln]);
-      printf("    %-5d", ei[pg->imtrx]->Lvdesc_Lnn_to_Offset[i][ln]);
+      printf("  %-5d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_Lnn_Numdof[i][ln]);
+      printf("  %-5d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_Lnn_to_lvdof[i][ln]);
+      printf("    %-5d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_Lnn_to_Offset[i][ln]);
       printf("\n");
     }
     printf("        ");
@@ -3063,11 +3343,11 @@ static void print_ei_index_desc()
   fprint_line(stdout, "-", 60);
   printf("\n");
   for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
-    if (ei[pg->imtrx]->dof[i] > 0) {
+    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[i] > 0) {
       printf("     ");
       printf("     %-5d", i);
-      printf("    %-5d", ei[pg->imtrx]->dof[i]);
-      printf("    %-5d", ei[pg->imtrx]->Num_Lvdesc_Per_Var_Type[i]);
+      printf("    %-5d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[i]);
+      printf("    %-5d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Num_Lvdesc_Per_Var_Type[i]);
       printf("\n");
     }
   }
@@ -3087,7 +3367,7 @@ static void print_ei_index_desc()
   fprint_line(stdout, "=", 75);
   printf("\n");
   for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
-    if (ei[pg->imtrx]->dof[i] > 0) {
+    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[i] > 0) {
       memset(numidofs, 0, sizeof(int) * nnodes);
       printf("     ");
       fprint_line(stdout, "=", 75);
@@ -3103,21 +3383,21 @@ static void print_ei_index_desc()
              " gun row_lvdof active\n");
       printf("        ");
       fprint_line(stdout, "-", 70);
-      for (j = 0; j < ei[pg->imtrx]->dof[i]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[i]; j++) {
         printf("        ");
         printf("  %-5d", j);
-        ln = ei[pg->imtrx]->dof_list[i][j];
+        ln = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[i][j];
         numidofs[ln]++;
         printf("%-5d ", ln);
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[i][j];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[i][j];
         printf("%-5d ", ledof);
-        printf(" %-5d ", ei[pg->imtrx]->lvdof_to_lvdesc[i][j]);
-        printf("  %-5d ", ei[pg->imtrx]->lvdof_to_lvdesc_dof[i][j]);
-        printf("     %-5d ", ei[pg->imtrx]->Baby_Dolphin[i][j]);
-        printf(" %-6d", ei[pg->imtrx]->gnn_list[i][j]);
-        printf(" %-6d", ei[pg->imtrx]->gun_list[i][j]);
-        printf(" %-5d", ei[pg->imtrx]->lvdof_to_row_lvdof[i][j]);
-        printf(" %-5d", ei[pg->imtrx]->active_interp_ledof[ledof]);
+        printf(" %-5d ", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_lvdesc[i][j]);
+        printf("  %-5d ", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_lvdesc_dof[i][j]);
+        printf("     %-5d ", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Baby_Dolphin[i][j]);
+        printf(" %-6d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[i][j]);
+        printf(" %-6d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[i][j]);
+        printf(" %-5d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[i][j]);
+        printf(" %-5d", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]);
         printf("\n");
       }
       printf("        ");
@@ -3131,8 +3411,8 @@ static void print_ei_index_desc()
         printf("        ");
         printf(" %-5d", ln);
         printf("  %-5d ", numidofs[ln]);
-        printf("  %-5d ", ei[pg->imtrx]->ln_to_dof[i][ln]);
-        printf("  %-5d ", ei[pg->imtrx]->ln_to_first_dof[i][ln]);
+        printf("  %-5d ", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[i][ln]);
+        printf("  %-5d ", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[i][ln]);
         printf("\n");
       }
       printf("        ");

@@ -299,8 +299,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
    *  mp_glob is a global vector of pointers to material prop structures.
    */
   /*  extern MATRL_PROP_STRUCT **mp_glob; cf mm_mp.h */
-  MATRL_PROP_STRUCT *mat_ptr = mp_glob[mn];
-  PROBLEM_DESCRIPTION_STRUCT *pd_ptr = pd_glob[mn];
+  MATRL_PROP_STRUCT *mat_ptr = goma_ctx->fem.mp_glob[mn];
+  PROBLEM_DESCRIPTION_STRUCT *pd_ptr = goma_ctx->fem.pd_glob[mn];
 
   /*  fpos_t file_position; position in file at start of search */
 
@@ -321,17 +321,17 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
    *  Copy the materials name into the materials structure from the
    *  problem structure
    */
-  (void)strncpy(mat_ptr->Material_Name, pd_glob[mn]->MaterialName, MAX_MATLNAME);
+  (void)strncpy(mat_ptr->Material_Name, goma_ctx->fem.pd_glob[mn]->MaterialName, MAX_MATLNAME);
 
   /*
    *  Copy the number of species and species equations into the material
    *  property structure. The number of species in each material may vary
    *  in the future.
    */
-  mat_ptr->Num_Species_Eqn = pd_glob[mn]->Num_Species_Eqn;
-  mat_ptr->Num_Species = pd_glob[mn]->Num_Species;
-  mat_ptr->Num_Porous_Eqn = pd_glob[mn]->Num_Porous_Eqn;
-  mat_ptr->Num_Porous_Shell_Eqn = pd_glob[mn]->Num_Porous_Shell_Eqn;
+  mat_ptr->Num_Species_Eqn = goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn;
+  mat_ptr->Num_Species = goma_ctx->fem.pd_glob[mn]->Num_Species;
+  mat_ptr->Num_Porous_Eqn = goma_ctx->fem.pd_glob[mn]->Num_Porous_Eqn;
+  mat_ptr->Num_Porous_Shell_Eqn = goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn;
 
   /*
    *  Intialize to good default behavior
@@ -404,7 +404,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   /* Assume no second level set phase */
 
-  if (ls != NULL)
+  if (goma_ctx->fem.ls != NULL)
     mat_ptr->mp2nd =
         (SECOND_LS_PHASE_PROP_STRUCT *)alloc_void_struct_1(sizeof(SECOND_LS_PHASE_PROP_STRUCT), 1);
   else
@@ -444,7 +444,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 3) {
       sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "SUSPENSION");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "SUSPENSION");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -455,11 +455,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 1) {
       sprintf(err_msg, "Material %s - expected at least 1 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "SOLVENT_POLYMER");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "SOLVENT_POLYMER");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
-    mat_ptr->specific_volume[pd_glob[mn]->Num_Species_Eqn] = mat_ptr->u_density[0];
+    mat_ptr->specific_volume[goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn] = mat_ptr->u_density[0];
 
     SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_density);
 
@@ -468,11 +468,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 1) {
       sprintf(err_msg, "Material %s - expected at least 1 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "REACTIVE_FOAM");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "REACTIVE_FOAM");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
-    mat_ptr->specific_volume[pd_glob[mn]->Num_Species_Eqn] = mat_ptr->u_density[0];
+    mat_ptr->specific_volume[goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn] = mat_ptr->u_density[0];
     SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_density);
   }
   /* MMH */
@@ -481,7 +481,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 3) {
       sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "SUSPENSION_PM");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "SUSPENSION_PM");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -491,7 +491,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 2) {
       sprintf(err_msg, "Material %s - expected at least 2 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "THERMAL_BATTERY");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "THERMAL_BATTERY");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -501,7 +501,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 2) {
       sprintf(err_msg, "Material %s - expected at least 2 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "IDEAL_GAS");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "IDEAL_GAS");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -511,7 +511,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 2) {
       sprintf(err_msg, "Material %s - expected at least 2 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "THERMEXP");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "THERMEXP");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -521,12 +521,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 3) {
       sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "LEVEL_SET");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "LEVEL_SET");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
     if (mat_ptr->u_density[2] == 0.0)
-      mat_ptr->u_density[2] = ls->Length_Scale / 2.0;
+      mat_ptr->u_density[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
     mat_ptr->len_u_density = num_const;
     SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_density);
@@ -534,10 +534,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->DensityModel = DENSITY_CONST_PHASE_FUNC;
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
 
-    if (num_const < pfd->num_phase_funcs + 2) {
+    if (num_const < goma_ctx->fem.pfd->num_phase_funcs + 2) {
       sprintf(err_msg, "Material %s - expect at least %d constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, pfd->num_phase_funcs + 2, "Density",
-              "CONST_PHASE_FUNCTION");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, goma_ctx->fem.pfd->num_phase_funcs + 2,
+              "Density", "CONST_PHASE_FUNCTION");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -547,7 +547,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 6) {
       sprintf(err_msg, "Material %s - expected at least 6 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "FOAM");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "FOAM");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -557,7 +557,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 3) {
       sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "FOAM_PMDI_10");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "FOAM_PMDI_10");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -567,7 +567,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 2) {
       sprintf(err_msg, "Material %s - expected at least 2 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "FOAM_PMDI_10");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "FOAM_PMDI_10");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -577,7 +577,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 8) {
       sprintf(err_msg, "Material %s - expected at least 8 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "FOAM_CONC");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "FOAM_CONC");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -587,7 +587,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 4) {
       sprintf(err_msg, "Material %s - expected at least 4 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "FOAM_TIME");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "FOAM_TIME");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -597,7 +597,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 5) {
       sprintf(err_msg, "Material %s - expected at least 5 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "FOAM_TIME_TEMP");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "FOAM_TIME_TEMP");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -607,7 +607,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const < 1) {
       sprintf(err_msg, "Material %s - expected at least 1 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "CONSTANT_LAST_CONC");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "CONSTANT_LAST_CONC");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -617,7 +617,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const != 3) {
       sprintf(err_msg, "Material %s - expected 3 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "FOAM_PBE");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "FOAM_PBE");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -627,7 +627,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const != 3) {
       sprintf(err_msg, "Material %s - expected 3 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "FOAM_PBE");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "FOAM_PBE");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
@@ -637,14 +637,14 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_density), 0);
     if (num_const != 5) {
       sprintf(err_msg, "Material %s - expected 5 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, "Density", "CURE_SHRINKAGE");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", "CURE_SHRINKAGE");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_density = num_const;
     SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_density);
   } else {
     sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-            pd_glob[mn]->MaterialName, "Density", model_name);
+            goma_ctx->fem.pd_glob[mn]->MaterialName, "Density", model_name);
     GOMA_EH(model_read, err_msg);
   }
 
@@ -654,7 +654,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                                  model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
   if (model_read != -1) {
-    if (ls == NULL)
+    if (goma_ctx->fem.ls == NULL)
       GOMA_EH(GOMA_ERROR, "Second Level Set Density requires activation of Level Set Tracking.\n");
 
     mat_ptr->mp2nd->DensityModel = i0;
@@ -679,8 +679,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         GOMA_EH(GOMA_ERROR, "Keyword must be POSITIVE or NEGATIVE for Second Level Set Density.\n");
       }
       SPF(endofstring(es), " %s", input);
-      if (pfd != NULL) {
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (goma_ctx->fem.pfd != NULL) {
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
           if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->density_phase[i])) != 1) {
             GOMA_EH(GOMA_ERROR, "error reading phase density");
           }
@@ -695,7 +695,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     strcpy(search_string, "Level Set Interface Density Interpolation Method");
     model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                    SCALAR_INPUT, &NO_SPECIES, es);
@@ -749,7 +749,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     SPF(endofstring(es), "\t(%s)", "Solid Constitutive Equation defaulting to NONLINEAR");
   }
   /*This seems a little redundant! prs (2/24/95) */
-  cr_glob[mn]->MeshFluxModel = ElasticConstitutiveEquation;
+  goma_ctx->fem.cr_glob[mn]->MeshFluxModel = ElasticConstitutiveEquation;
 
   ECHO(es, echo_file);
 
@@ -763,95 +763,107 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   } else {
     PlasticConstitutiveEquation = NO_MODEL;
   }
-  evpl_glob[mn]->ConstitutiveEquation = PlasticConstitutiveEquation;
+  goma_ctx->fem.evpl_glob[mn]->ConstitutiveEquation = PlasticConstitutiveEquation;
 
   ECHO(es, echo_file);
 
   if (ElasticConstitutiveEquation == ELLIPTIC) {
-    elc_glob[mn]->fxi = 1.0;
-    elc_glob[mn]->fxi_model = CONSTANT;
-    model_read =
-        look_for_mat_prop(imp, "Elliptic fxi", &(elc_glob[mn]->fxi_model), &(elc_glob[mn]->fxi),
-                          &(elc_glob[mn]->u_fxi), &(elc_glob[mn]->len_u_fxi), model_name,
-                          SCALAR_INPUT, &NO_SPECIES, es);
+    goma_ctx->fem.elc_glob[mn]->fxi = 1.0;
+    goma_ctx->fem.elc_glob[mn]->fxi_model = CONSTANT;
+    model_read = look_for_mat_prop(
+        imp, "Elliptic fxi", &(goma_ctx->fem.elc_glob[mn]->fxi_model),
+        &(goma_ctx->fem.elc_glob[mn]->fxi), &(goma_ctx->fem.elc_glob[mn]->u_fxi),
+        &(goma_ctx->fem.elc_glob[mn]->len_u_fxi), model_name, SCALAR_INPUT, &NO_SPECIES, es);
     if (model_read == -1) {
       if (!strcmp(model_name, "SIMPLE_ABS")) {
-        elc_glob[mn]->fxi_model = ELLIPTIC_SIMPLE_ABS;
-        elc_glob[mn]->len_u_fxi = read_constants(imp, &(elc_glob[mn]->u_fxi), NO_SPECIES);
+        goma_ctx->fem.elc_glob[mn]->fxi_model = ELLIPTIC_SIMPLE_ABS;
+        goma_ctx->fem.elc_glob[mn]->len_u_fxi =
+            read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_fxi), NO_SPECIES);
 
-        if (elc_glob[mn]->len_u_fxi != 6) {
+        if (goma_ctx->fem.elc_glob[mn]->len_u_fxi != 6) {
           GOMA_EH(GOMA_ERROR, "Elliptic fxi model SIMPLE_ABS expects 6 constants");
         }
-        SPF_DBL_VEC(endofstring(es), elc_glob[mn]->len_u_fxi, elc_glob[mn]->u_fxi);
+        SPF_DBL_VEC(endofstring(es), goma_ctx->fem.elc_glob[mn]->len_u_fxi,
+                    goma_ctx->fem.elc_glob[mn]->u_fxi);
       } else if (!strcmp(model_name, "DUAL_ABS")) {
-        elc_glob[mn]->fxi_model = ELLIPTIC_DUAL_ABS;
-        elc_glob[mn]->len_u_fxi = read_constants(imp, &(elc_glob[mn]->u_fxi), NO_SPECIES);
+        goma_ctx->fem.elc_glob[mn]->fxi_model = ELLIPTIC_DUAL_ABS;
+        goma_ctx->fem.elc_glob[mn]->len_u_fxi =
+            read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_fxi), NO_SPECIES);
 
-        if (elc_glob[mn]->len_u_fxi != 5) {
+        if (goma_ctx->fem.elc_glob[mn]->len_u_fxi != 5) {
           GOMA_EH(GOMA_ERROR, "Elliptic fxi model DUAL_ABS expects 5 constants");
         }
-        SPF_DBL_VEC(endofstring(es), elc_glob[mn]->len_u_fxi, elc_glob[mn]->u_fxi);
+        SPF_DBL_VEC(endofstring(es), goma_ctx->fem.elc_glob[mn]->len_u_fxi,
+                    goma_ctx->fem.elc_glob[mn]->u_fxi);
       } else {
-        elc_glob[mn]->fxi = 1.0;
-        elc_glob[mn]->fxi_model = CONSTANT;
+        goma_ctx->fem.elc_glob[mn]->fxi = 1.0;
+        goma_ctx->fem.elc_glob[mn]->fxi_model = CONSTANT;
       }
     }
     ECHO(es, echo_file);
-    elc_glob[mn]->geta = 1.0;
-    elc_glob[mn]->geta_model = CONSTANT;
-    model_read =
-        look_for_mat_prop(imp, "Elliptic geta", &(elc_glob[mn]->geta_model), &(elc_glob[mn]->geta),
-                          &(elc_glob[mn]->u_geta), &(elc_glob[mn]->len_u_geta), model_name,
-                          SCALAR_INPUT, &NO_SPECIES, es);
+    goma_ctx->fem.elc_glob[mn]->geta = 1.0;
+    goma_ctx->fem.elc_glob[mn]->geta_model = CONSTANT;
+    model_read = look_for_mat_prop(
+        imp, "Elliptic geta", &(goma_ctx->fem.elc_glob[mn]->geta_model),
+        &(goma_ctx->fem.elc_glob[mn]->geta), &(goma_ctx->fem.elc_glob[mn]->u_geta),
+        &(goma_ctx->fem.elc_glob[mn]->len_u_geta), model_name, SCALAR_INPUT, &NO_SPECIES, es);
     if (model_read == -1) {
       if (!strcmp(model_name, "SIMPLE_ABS")) {
-        elc_glob[mn]->geta_model = ELLIPTIC_SIMPLE_ABS;
-        elc_glob[mn]->len_u_geta = read_constants(imp, &(elc_glob[mn]->u_geta), NO_SPECIES);
+        goma_ctx->fem.elc_glob[mn]->geta_model = ELLIPTIC_SIMPLE_ABS;
+        goma_ctx->fem.elc_glob[mn]->len_u_geta =
+            read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_geta), NO_SPECIES);
 
-        if (elc_glob[mn]->len_u_geta != 6) {
+        if (goma_ctx->fem.elc_glob[mn]->len_u_geta != 6) {
           GOMA_EH(GOMA_ERROR, "Elliptic geta model SIMPLE_ABS expects 6 constants");
         }
-        SPF_DBL_VEC(endofstring(es), elc_glob[mn]->len_u_geta, elc_glob[mn]->u_geta);
+        SPF_DBL_VEC(endofstring(es), goma_ctx->fem.elc_glob[mn]->len_u_geta,
+                    goma_ctx->fem.elc_glob[mn]->u_geta);
       } else if (!strcmp(model_name, "DUAL_ABS")) {
-        elc_glob[mn]->geta_model = ELLIPTIC_DUAL_ABS;
-        elc_glob[mn]->len_u_geta = read_constants(imp, &(elc_glob[mn]->u_geta), NO_SPECIES);
+        goma_ctx->fem.elc_glob[mn]->geta_model = ELLIPTIC_DUAL_ABS;
+        goma_ctx->fem.elc_glob[mn]->len_u_geta =
+            read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_geta), NO_SPECIES);
 
-        if (elc_glob[mn]->len_u_geta != 5) {
+        if (goma_ctx->fem.elc_glob[mn]->len_u_geta != 5) {
           GOMA_EH(GOMA_ERROR, "Elliptic geta model DUAL_ABS expects 5 constants");
         }
-        SPF_DBL_VEC(endofstring(es), elc_glob[mn]->len_u_geta, elc_glob[mn]->u_geta);
+        SPF_DBL_VEC(endofstring(es), goma_ctx->fem.elc_glob[mn]->len_u_geta,
+                    goma_ctx->fem.elc_glob[mn]->u_geta);
       } else {
-        elc_glob[mn]->geta = 1.0;
-        elc_glob[mn]->geta_model = CONSTANT;
+        goma_ctx->fem.elc_glob[mn]->geta = 1.0;
+        goma_ctx->fem.elc_glob[mn]->geta_model = CONSTANT;
       }
     }
     ECHO(es, echo_file);
-    elc_glob[mn]->hzeta = 1.0;
-    elc_glob[mn]->hzeta_model = CONSTANT;
-    model_read =
-        look_for_mat_prop(imp, "Elliptic hzeta", &(elc_glob[mn]->hzeta_model),
-                          &(elc_glob[mn]->hzeta), &(elc_glob[mn]->u_hzeta),
-                          &(elc_glob[mn]->len_u_hzeta), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+    goma_ctx->fem.elc_glob[mn]->hzeta = 1.0;
+    goma_ctx->fem.elc_glob[mn]->hzeta_model = CONSTANT;
+    model_read = look_for_mat_prop(
+        imp, "Elliptic hzeta", &(goma_ctx->fem.elc_glob[mn]->hzeta_model),
+        &(goma_ctx->fem.elc_glob[mn]->hzeta), &(goma_ctx->fem.elc_glob[mn]->u_hzeta),
+        &(goma_ctx->fem.elc_glob[mn]->len_u_hzeta), model_name, SCALAR_INPUT, &NO_SPECIES, es);
     if (model_read == -1) {
       if (!strcmp(model_name, "SIMPLE_ABS")) {
-        elc_glob[mn]->hzeta_model = ELLIPTIC_SIMPLE_ABS;
-        elc_glob[mn]->len_u_hzeta = read_constants(imp, &(elc_glob[mn]->u_hzeta), NO_SPECIES);
+        goma_ctx->fem.elc_glob[mn]->hzeta_model = ELLIPTIC_SIMPLE_ABS;
+        goma_ctx->fem.elc_glob[mn]->len_u_hzeta =
+            read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_hzeta), NO_SPECIES);
 
-        if (elc_glob[mn]->len_u_hzeta != 6) {
+        if (goma_ctx->fem.elc_glob[mn]->len_u_hzeta != 6) {
           GOMA_EH(GOMA_ERROR, "Elliptic hzeta model SIMPLE_ABS expects 6 constants");
         }
-        SPF_DBL_VEC(endofstring(es), elc_glob[mn]->len_u_hzeta, elc_glob[mn]->u_hzeta);
+        SPF_DBL_VEC(endofstring(es), goma_ctx->fem.elc_glob[mn]->len_u_hzeta,
+                    goma_ctx->fem.elc_glob[mn]->u_hzeta);
       } else if (!strcmp(model_name, "DUAL_ABS")) {
-        elc_glob[mn]->hzeta_model = ELLIPTIC_DUAL_ABS;
-        elc_glob[mn]->len_u_hzeta = read_constants(imp, &(elc_glob[mn]->u_hzeta), NO_SPECIES);
+        goma_ctx->fem.elc_glob[mn]->hzeta_model = ELLIPTIC_DUAL_ABS;
+        goma_ctx->fem.elc_glob[mn]->len_u_hzeta =
+            read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_hzeta), NO_SPECIES);
 
-        if (elc_glob[mn]->len_u_hzeta != 5) {
+        if (goma_ctx->fem.elc_glob[mn]->len_u_hzeta != 5) {
           GOMA_EH(GOMA_ERROR, "Elliptic hzeta model DUAL_ABS expects 5 constants");
         }
-        SPF_DBL_VEC(endofstring(es), elc_glob[mn]->len_u_hzeta, elc_glob[mn]->u_hzeta);
+        SPF_DBL_VEC(endofstring(es), goma_ctx->fem.elc_glob[mn]->len_u_hzeta,
+                    goma_ctx->fem.elc_glob[mn]->u_hzeta);
       } else {
-        elc_glob[mn]->hzeta = 1.0;
-        elc_glob[mn]->hzeta_model = CONSTANT;
+        goma_ctx->fem.elc_glob[mn]->hzeta = 1.0;
+        goma_ctx->fem.elc_glob[mn]->hzeta_model = CONSTANT;
       }
     }
     ECHO(es, echo_file);
@@ -860,71 +872,75 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   /* An optional additional type of mesh motion which includes an inertial term in the
      momentum equation */
 
-  if (pd_glob[mn]->MeshMotion == LAGRANGIAN || pd_glob[mn]->MeshMotion == DYNAMIC_LAGRANGIAN ||
-      pd_glob[mn]->MeshMotion == TOTAL_ALE) {
+  if (goma_ctx->fem.pd_glob[mn]->MeshMotion == LAGRANGIAN ||
+      goma_ctx->fem.pd_glob[mn]->MeshMotion == DYNAMIC_LAGRANGIAN ||
+      goma_ctx->fem.pd_glob[mn]->MeshMotion == TOTAL_ALE) {
     model_read = look_for_mat_prop(imp, "Convective Lagrangian Velocity",
-                                   &(pd_glob[mn]->MeshInertia), elc_glob[mn]->v_mesh_sfs, NO_USER,
-                                   NULL, model_name, VECTOR_INPUT, &NO_SPECIES, es);
+                                   &(goma_ctx->fem.pd_glob[mn]->MeshInertia),
+                                   goma_ctx->fem.elc_glob[mn]->v_mesh_sfs, NO_USER, NULL,
+                                   model_name, VECTOR_INPUT, &NO_SPECIES, es);
     if (model_read == -1) {
-      pd_glob[mn]->MeshInertia = 0;
-      elc_glob[mn]->v_mesh_sfs_model = 0;
+      goma_ctx->fem.pd_glob[mn]->MeshInertia = 0;
+      goma_ctx->fem.elc_glob[mn]->v_mesh_sfs_model = 0;
       if (!strcmp(model_name, "ROTATIONAL")) {
-        pd_glob[mn]->MeshInertia = 1;
-        elc_glob[mn]->v_mesh_sfs_model = ROTATIONAL;
+        goma_ctx->fem.pd_glob[mn]->MeshInertia = 1;
+        goma_ctx->fem.elc_glob[mn]->v_mesh_sfs_model = ROTATIONAL;
 
-        num_const = read_constants(imp, &(elc_glob[mn]->u_v_mesh_sfs), NO_SPECIES);
+        num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs), NO_SPECIES);
 
         if (num_const < 4) {
           sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Convective Lagrangian Velocity", "ROTATIONAL");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Convective Lagrangian Velocity",
+                       "ROTATIONAL");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
-        elc_glob[mn]->len_u_v_mesh_sfs = num_const;
+        goma_ctx->fem.elc_glob[mn]->len_u_v_mesh_sfs = num_const;
 
-        SPF_DBL_VEC(endofstring(es), num_const, elc_glob[mn]->u_v_mesh_sfs);
+        SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs);
       }
       if (!strcmp(model_name, "ROTATIONAL_3D")) {
-        pd_glob[mn]->MeshInertia = 1;
-        elc_glob[mn]->v_mesh_sfs_model = ROTATIONAL_3D;
+        goma_ctx->fem.pd_glob[mn]->MeshInertia = 1;
+        goma_ctx->fem.elc_glob[mn]->v_mesh_sfs_model = ROTATIONAL_3D;
 
-        num_const = read_constants(imp, &(elc_glob[mn]->u_v_mesh_sfs), NO_SPECIES);
+        num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs), NO_SPECIES);
 
         if (num_const < 7) {
-          sr =
-              sprintf(err_msg, "Matl %s expected at least 7 constants for %s %s model.\n",
-                      pd_glob[mn]->MaterialName, "Convective Lagrangian Velocity", "ROTATIONAL_3D");
+          sr = sprintf(err_msg, "Matl %s expected at least 7 constants for %s %s model.\n",
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Convective Lagrangian Velocity",
+                       "ROTATIONAL_3D");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
-        elc_glob[mn]->len_u_v_mesh_sfs = num_const;
+        goma_ctx->fem.elc_glob[mn]->len_u_v_mesh_sfs = num_const;
 
-        SPF_DBL_VEC(endofstring(es), num_const, elc_glob[mn]->u_v_mesh_sfs);
+        SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs);
       }
       if (!strcmp(model_name, "OSC_LINEAR")) {
-        pd_glob[mn]->MeshInertia = 1;
-        elc_glob[mn]->v_mesh_sfs_model = OSC_LINEAR;
+        goma_ctx->fem.pd_glob[mn]->MeshInertia = 1;
+        goma_ctx->fem.elc_glob[mn]->v_mesh_sfs_model = OSC_LINEAR;
 
-        num_const = read_constants(imp, &(elc_glob[mn]->u_v_mesh_sfs), NO_SPECIES);
+        num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs), NO_SPECIES);
 
         if (num_const < 5) {
           sr = sprintf(err_msg, "Matl %s expected at least 5 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Convective Lagrangian Velocity", "OSC_LINEAR");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Convective Lagrangian Velocity",
+                       "OSC_LINEAR");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
-        elc_glob[mn]->len_u_v_mesh_sfs = num_const;
+        goma_ctx->fem.elc_glob[mn]->len_u_v_mesh_sfs = num_const;
 
-        SPF_DBL_VEC(endofstring(es), num_const, elc_glob[mn]->u_v_mesh_sfs);
+        SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs);
       }
       if (!strcmp(model_name, "NONE")) {
-        pd_glob[mn]->MeshInertia = 0;
-        elc_glob[mn]->v_mesh_sfs_model = 0;
-        elc_glob[mn]->v_mesh_sfs[0] = 0.;
-        elc_glob[mn]->v_mesh_sfs[1] = 0.;
-        elc_glob[mn]->v_mesh_sfs[2] = 0.;
+        goma_ctx->fem.pd_glob[mn]->MeshInertia = 0;
+        goma_ctx->fem.elc_glob[mn]->v_mesh_sfs_model = 0;
+        goma_ctx->fem.elc_glob[mn]->v_mesh_sfs[0] = 0.;
+        goma_ctx->fem.elc_glob[mn]->v_mesh_sfs[1] = 0.;
+        goma_ctx->fem.elc_glob[mn]->v_mesh_sfs[2] = 0.;
       }
 
     } else {
-      elc_glob[mn]->v_mesh_sfs_model = pd_glob[mn]->MeshInertia;
-      if (pd_glob[mn]->TimeIntegration == TRANSIENT) {
+      goma_ctx->fem.elc_glob[mn]->v_mesh_sfs_model = goma_ctx->fem.pd_glob[mn]->MeshInertia;
+      if (goma_ctx->fem.pd_glob[mn]->TimeIntegration == TRANSIENT) {
         GOMA_WH(-1, "Currently can't do transient mesh motion with inertia");
       }
     }
@@ -932,131 +948,133 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ECHO(es, echo_file);
 
   } else {
-    pd_glob[mn]->MeshInertia = 0;
+    goma_ctx->fem.pd_glob[mn]->MeshInertia = 0;
   }
 
   /* read in constants for constitutive equation if they are input */
 
-  model_read = look_for_mat_proptable(imp, "Lame MU", &(elc_glob[mn]->lame_mu_model),
-                                      &(elc_glob[mn]->lame_mu), &(elc_glob[mn]->u_mu),
-                                      &(elc_glob[mn]->len_u_mu), &(elc_glob[mn]->lame_mu_tableid),
-                                      model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  model_read = look_for_mat_proptable(
+      imp, "Lame MU", &(goma_ctx->fem.elc_glob[mn]->lame_mu_model),
+      &(goma_ctx->fem.elc_glob[mn]->lame_mu), &(goma_ctx->fem.elc_glob[mn]->u_mu),
+      &(goma_ctx->fem.elc_glob[mn]->len_u_mu), &(goma_ctx->fem.elc_glob[mn]->lame_mu_tableid),
+      model_name, SCALAR_INPUT, &NO_SPECIES, es);
   if (model_read == -1) {
     if (!strcmp(model_name, "POWER_LAW")) {
-      elc_glob[mn]->lame_mu_model = POWER_LAW;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_mu), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->lame_mu_model = POWER_LAW;
+      num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_mu), NO_SPECIES);
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lame MU", "POWER_LAW");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame MU", "POWER_LAW");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_mu = num_const;
+      goma_ctx->fem.elc_glob[mn]->len_u_mu = num_const;
 
     } else if (!strcmp(model_name, "CONTACT_LINE")) {
-      elc_glob[mn]->lame_mu_model = CONTACT_LINE;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_mu), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->lame_mu_model = CONTACT_LINE;
+      num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_mu), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lame MU", "CONTACT_LINE");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame MU", "CONTACT_LINE");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_mu = num_const;
+      goma_ctx->fem.elc_glob[mn]->len_u_mu = num_const;
     } else if (!strcmp(model_name, "MULTI_CONTACT_LINE")) {
-      elc_glob[mn]->lame_mu_model = MULTI_CONTACT_LINE;
-      elc_glob[mn]->u_mu = (double *)alloc_void_struct_1(sizeof(double), 3);
-      elc_glob[mn]->len_u_mu = 3;
-      if (fscanf(imp, "%lf %lf %lf", &(elc_glob[mn]->u_mu[0]), &(elc_glob[mn]->u_mu[1]),
-                 &(elc_glob[mn]->u_mu[2])) != 3) {
+      goma_ctx->fem.elc_glob[mn]->lame_mu_model = MULTI_CONTACT_LINE;
+      goma_ctx->fem.elc_glob[mn]->u_mu = (double *)alloc_void_struct_1(sizeof(double), 3);
+      goma_ctx->fem.elc_glob[mn]->len_u_mu = 3;
+      if (fscanf(imp, "%lf %lf %lf", &(goma_ctx->fem.elc_glob[mn]->u_mu[0]),
+                 &(goma_ctx->fem.elc_glob[mn]->u_mu[1]),
+                 &(goma_ctx->fem.elc_glob[mn]->u_mu[2])) != 3) {
         GOMA_EH(GOMA_ERROR, "error reading MULTI_CONTACT_LINE constants");
       }
-      num_const = read_constants_int(imp, &(elc_glob[mn]->u_mu_ns));
+      num_const = read_constants_int(imp, &(goma_ctx->fem.elc_glob[mn]->u_mu_ns));
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lame MU", "MULTI_CONTACT_LINE");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame MU", "MULTI_CONTACT_LINE");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_mu_ns = num_const;
+      goma_ctx->fem.elc_glob[mn]->len_u_mu_ns = num_const;
     } else if (!strcmp(model_name, "SHEAR_HARDEN")) {
-      elc_glob[mn]->lame_mu_model = SHEAR_HARDEN;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_mu), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->lame_mu_model = SHEAR_HARDEN;
+      num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_mu), NO_SPECIES);
       if (num_const < 2) {
         sr = sprintf(err_msg, "Matl %s expected at least 2 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lame MU", "SHEAR_HARDEN");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame MU", "SHEAR_HARDEN");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_mu = num_const;
+      goma_ctx->fem.elc_glob[mn]->len_u_mu = num_const;
     } else if (!strcmp(model_name, "EXPONENTIAL")) {
-      elc_glob[mn]->lame_mu_model = EXPONENTIAL;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_mu), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->lame_mu_model = EXPONENTIAL;
+      num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_mu), NO_SPECIES);
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lame MU", "EXPONENTIAL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame MU", "EXPONENTIAL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_mu = num_const;
+      goma_ctx->fem.elc_glob[mn]->len_u_mu = num_const;
     } else if (!strcmp(model_name, "DENSE_POWER_LAW")) {
-      elc_glob[mn]->lame_mu_model = DENSE_POWER_LAW;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_mu), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->lame_mu_model = DENSE_POWER_LAW;
+      num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_mu), NO_SPECIES);
       if (num_const < 2) {
         sr = sprintf(err_msg, "Matl %s expected at least 2 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lame MU", "DENSE_POWER_LAW");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame MU", "DENSE_POWER_LAW");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_mu = num_const;
+      goma_ctx->fem.elc_glob[mn]->len_u_mu = num_const;
     } else {
       sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                   pd_glob[mn]->MaterialName, "Lame MU", model_name);
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame MU", model_name);
       GOMA_EH(model_read, err_msg);
     }
 
-    if (elc_glob[mn]->lame_mu_model == MULTI_CONTACT_LINE) {
-      SPF_DBL_VEC(endofstring(es), 3, elc_glob[mn]->u_mu);
-      SPF_INT_VEC(endofstring(es), num_const, elc_glob[mn]->u_mu_ns);
+    if (goma_ctx->fem.elc_glob[mn]->lame_mu_model == MULTI_CONTACT_LINE) {
+      SPF_DBL_VEC(endofstring(es), 3, goma_ctx->fem.elc_glob[mn]->u_mu);
+      SPF_INT_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_mu_ns);
     } else {
-      SPF_DBL_VEC(endofstring(es), num_const, elc_glob[mn]->u_mu);
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_mu);
     }
   }
 
   ECHO(es, echo_file);
 
-  model_read =
-      look_for_mat_prop(imp, "Lame LAMBDA", &(elc_glob[mn]->lame_lambda_model),
-                        &(elc_glob[mn]->lame_lambda), &(elc_glob[mn]->u_lambda),
-                        &(elc_glob[mn]->len_u_lambda), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  model_read = look_for_mat_prop(
+      imp, "Lame LAMBDA", &(goma_ctx->fem.elc_glob[mn]->lame_lambda_model),
+      &(goma_ctx->fem.elc_glob[mn]->lame_lambda), &(goma_ctx->fem.elc_glob[mn]->u_lambda),
+      &(goma_ctx->fem.elc_glob[mn]->len_u_lambda), model_name, SCALAR_INPUT, &NO_SPECIES, es);
   if (model_read == -1) {
     if (!strcmp(model_name, "POWER_LAW")) {
-      elc_glob[mn]->lame_lambda_model = POWER_LAW;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_lambda), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->lame_lambda_model = POWER_LAW;
+      num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_lambda), NO_SPECIES);
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lame LAMBDA", "POWER_LAW");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame LAMBDA", "POWER_LAW");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_lambda = num_const;
+      goma_ctx->fem.elc_glob[mn]->len_u_lambda = num_const;
     } else if (!strcmp(model_name, "EXPONENTIAL")) {
-      elc_glob[mn]->lame_lambda_model = EXPONENTIAL;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_lambda), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->lame_lambda_model = EXPONENTIAL;
+      num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_lambda), NO_SPECIES);
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lame LAMBDA", "EXPONENTIAL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame LAMBDA", "EXPONENTIAL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_lambda = num_const;
+      goma_ctx->fem.elc_glob[mn]->len_u_lambda = num_const;
     } else if (!strcmp(model_name, "POISSON_RATIO")) {
-      elc_glob[mn]->lame_lambda_model = POISSON_RATIO;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_lambda), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->lame_lambda_model = POISSON_RATIO;
+      num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_lambda), NO_SPECIES);
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lame LAMBDA", "POISSON_RATIO");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame LAMBDA", "POISSON_RATIO");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_lambda = num_const;
+      goma_ctx->fem.elc_glob[mn]->len_u_lambda = num_const;
     } else {
       sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                   pd_glob[mn]->MaterialName, "Lame LAMBDA", model_name);
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame LAMBDA", model_name);
       GOMA_EH(model_read, err_msg);
     }
-    SPF_DBL_VEC(endofstring(es), num_const, elc_glob[mn]->u_lambda);
+    SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_lambda);
   }
 
   ECHO(es, echo_file);
@@ -1064,136 +1082,152 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   /* Temperature shift multiplier for Lame Lambda and Lame Mu */
 
   /*Initialize for good default behavior */
-  elc_glob[mn]->lameTempShiftModel = CONSTANT;
-  elc_glob[mn]->lame_TempShift = 1.;
+  goma_ctx->fem.elc_glob[mn]->lameTempShiftModel = CONSTANT;
+  goma_ctx->fem.elc_glob[mn]->lame_TempShift = 1.;
 
-  if (elc_glob[mn]->lame_mu_model == TABLE || elc_glob[mn]->lame_lambda_model == TABLE) {
+  if (goma_ctx->fem.elc_glob[mn]->lame_mu_model == TABLE ||
+      goma_ctx->fem.elc_glob[mn]->lame_lambda_model == TABLE) {
     /* Only Constant or Table for now */
-    model_read = look_for_mat_proptable(
-        imp, "Lame Temperature Shift", &(elc_glob[mn]->lameTempShiftModel),
-        &(elc_glob[mn]->lame_TempShift), &(elc_glob[mn]->u_lame_TempShift),
-        &(elc_glob[mn]->len_u_lame_TempShift), &(elc_glob[mn]->lame_TempShift_tableid), model_name,
-        SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_proptable(imp, "Lame Temperature Shift",
+                                        &(goma_ctx->fem.elc_glob[mn]->lameTempShiftModel),
+                                        &(goma_ctx->fem.elc_glob[mn]->lame_TempShift),
+                                        &(goma_ctx->fem.elc_glob[mn]->u_lame_TempShift),
+                                        &(goma_ctx->fem.elc_glob[mn]->len_u_lame_TempShift),
+                                        &(goma_ctx->fem.elc_glob[mn]->lame_TempShift_tableid),
+                                        model_name, SCALAR_INPUT, &NO_SPECIES, es);
     if (model_read == -1) {
       if (!strcmp(model_name, "POWER_LAW")) {
-        elc_glob[mn]->lameTempShiftModel = POWER_LAW;
-        num_const = read_constants(imp, &(elc_glob[mn]->u_lame_TempShift), NO_SPECIES);
+        goma_ctx->fem.elc_glob[mn]->lameTempShiftModel = POWER_LAW;
+        num_const =
+            read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_lame_TempShift), NO_SPECIES);
         if (num_const < 3) {
           sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Lame Temperature Shift", "POWER_LAW");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame Temperature Shift",
+                       "POWER_LAW");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
-        elc_glob[mn]->len_u_lame_TempShift = num_const;
+        goma_ctx->fem.elc_glob[mn]->len_u_lame_TempShift = num_const;
       } else {
         sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                     pd_glob[mn]->MaterialName, "LAME Temperature Shift", model_name);
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "LAME Temperature Shift", model_name);
         GOMA_EH(model_read, err_msg);
       }
 
-      SPF_DBL_VEC(endofstring(es), num_const, elc_glob[mn]->u_lame_TempShift);
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_lame_TempShift);
     }
 
     ECHO(es, echo_file);
   }
 
-  model_read = look_for_mat_prop(
-      imp, "Solid Viscosity", &(elc_glob[mn]->solid_viscosity_model),
-      &(elc_glob[mn]->solid_viscosity), &(elc_glob[mn]->u_solid_viscosity),
-      &(elc_glob[mn]->len_u_solid_viscosity), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  model_read = look_for_mat_prop(imp, "Solid Viscosity",
+                                 &(goma_ctx->fem.elc_glob[mn]->solid_viscosity_model),
+                                 &(goma_ctx->fem.elc_glob[mn]->solid_viscosity),
+                                 &(goma_ctx->fem.elc_glob[mn]->u_solid_viscosity),
+                                 &(goma_ctx->fem.elc_glob[mn]->len_u_solid_viscosity), model_name,
+                                 SCALAR_INPUT, &NO_SPECIES, es);
 
   if (model_read == -1) {
-    elc_glob[mn]->solid_viscosity_model = CONSTANT;
-    elc_glob[mn]->solid_viscosity = 0.0;
+    goma_ctx->fem.elc_glob[mn]->solid_viscosity_model = CONSTANT;
+    goma_ctx->fem.elc_glob[mn]->solid_viscosity = 0.0;
 
     SPF(es, "\t(%s = CONSTANT %.4g)", "Solid Viscosity", 0.0);
   }
   ECHO(es, echo_file);
 
-  model_read = look_for_mat_prop(
-      imp, "Solid Dilational Viscosity", &(elc_glob[mn]->solid_dil_viscosity_model),
-      &(elc_glob[mn]->solid_dil_viscosity), &(elc_glob[mn]->u_solid_dil_viscosity),
-      &(elc_glob[mn]->len_u_solid_dil_viscosity), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  model_read = look_for_mat_prop(imp, "Solid Dilational Viscosity",
+                                 &(goma_ctx->fem.elc_glob[mn]->solid_dil_viscosity_model),
+                                 &(goma_ctx->fem.elc_glob[mn]->solid_dil_viscosity),
+                                 &(goma_ctx->fem.elc_glob[mn]->u_solid_dil_viscosity),
+                                 &(goma_ctx->fem.elc_glob[mn]->len_u_solid_dil_viscosity),
+                                 model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
   if (model_read == -1) {
-    elc_glob[mn]->solid_dil_viscosity_model = CONSTANT;
-    elc_glob[mn]->solid_dil_viscosity = 0.0;
+    goma_ctx->fem.elc_glob[mn]->solid_dil_viscosity_model = CONSTANT;
+    goma_ctx->fem.elc_glob[mn]->solid_dil_viscosity = 0.0;
 
     SPF(es, "\t(%s = CONSTANT %.4g)", "Solid Dilational Viscosity", 0.0);
   }
   ECHO(es, echo_file);
 
-  model_read = look_for_mat_prop(
-      imp, "Solid Retardation Time", &(elc_glob[mn]->solid_retard_model),
-      &(elc_glob[mn]->solid_retardation), &(elc_glob[mn]->u_solid_retardation),
-      &(elc_glob[mn]->len_u_solid_retardation), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  model_read = look_for_mat_prop(imp, "Solid Retardation Time",
+                                 &(goma_ctx->fem.elc_glob[mn]->solid_retard_model),
+                                 &(goma_ctx->fem.elc_glob[mn]->solid_retardation),
+                                 &(goma_ctx->fem.elc_glob[mn]->u_solid_retardation),
+                                 &(goma_ctx->fem.elc_glob[mn]->len_u_solid_retardation), model_name,
+                                 SCALAR_INPUT, &NO_SPECIES, es);
 
   if (model_read == -1) {
-    elc_glob[mn]->solid_retard_model = CONSTANT;
-    elc_glob[mn]->solid_retardation = 0.0;
+    goma_ctx->fem.elc_glob[mn]->solid_retard_model = CONSTANT;
+    goma_ctx->fem.elc_glob[mn]->solid_retardation = 0.0;
 
     SPF(es, "\t(%s = CONSTANT %.4g)", "Solid Retardation Time", 0.0);
   }
   ECHO(es, echo_file);
 
   /* Bending stiffness of structural shells */
-  model_read = look_for_mat_prop(
-      imp, "Shell bending stiffness", &(elc_glob[mn]->bend_stiffness_model),
-      &(elc_glob[mn]->bend_stiffness), &(elc_glob[mn]->u_bend_stiffness),
-      &(elc_glob[mn]->len_u_bend_stiffness), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  model_read = look_for_mat_prop(imp, "Shell bending stiffness",
+                                 &(goma_ctx->fem.elc_glob[mn]->bend_stiffness_model),
+                                 &(goma_ctx->fem.elc_glob[mn]->bend_stiffness),
+                                 &(goma_ctx->fem.elc_glob[mn]->u_bend_stiffness),
+                                 &(goma_ctx->fem.elc_glob[mn]->len_u_bend_stiffness), model_name,
+                                 SCALAR_INPUT, &NO_SPECIES, es);
 
   /* Model must be CONSTANT for now! */
   if (model_read == 1 && strcmp(model_name, "CONSTANT") != 0) {
     sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                 pd_glob[mn]->MaterialName, "Shell bending stiffness", model_name);
+                 goma_ctx->fem.pd_glob[mn]->MaterialName, "Shell bending stiffness", model_name);
     GOMA_EH(model_read, err_msg);
   } else if (model_read == -1) {
     /* Default to CONSTANT(1) */
-    elc_glob[mn]->bend_stiffness_model = CONSTANT;
-    elc_glob[mn]->bend_stiffness = 1.0;
+    goma_ctx->fem.elc_glob[mn]->bend_stiffness_model = CONSTANT;
+    goma_ctx->fem.elc_glob[mn]->bend_stiffness = 1.0;
   }
 
   ECHO(es, echo_file);
 
   /* Extensional stiffness of structural shells */
-  model_read = look_for_mat_prop(
-      imp, "Shell extensional stiffness", &(elc_glob[mn]->exten_stiffness_model),
-      &(elc_glob[mn]->exten_stiffness), &(elc_glob[mn]->u_exten_stiffness),
-      &(elc_glob[mn]->len_u_exten_stiffness), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  model_read = look_for_mat_prop(imp, "Shell extensional stiffness",
+                                 &(goma_ctx->fem.elc_glob[mn]->exten_stiffness_model),
+                                 &(goma_ctx->fem.elc_glob[mn]->exten_stiffness),
+                                 &(goma_ctx->fem.elc_glob[mn]->u_exten_stiffness),
+                                 &(goma_ctx->fem.elc_glob[mn]->len_u_exten_stiffness), model_name,
+                                 SCALAR_INPUT, &NO_SPECIES, es);
 
   /* Model must be CONSTANT for now! */
   if (model_read == 1 && strcmp(model_name, "CONSTANT") != 0) {
     sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                 pd_glob[mn]->MaterialName, "Extensional bending stiffness", model_name);
+                 goma_ctx->fem.pd_glob[mn]->MaterialName, "Extensional bending stiffness",
+                 model_name);
     GOMA_EH(model_read, err_msg);
   } else if (model_read == -1) {
     /* Default to CONSTANT(1) */
-    elc_glob[mn]->exten_stiffness_model = CONSTANT;
-    elc_glob[mn]->exten_stiffness = 1.0;
+    goma_ctx->fem.elc_glob[mn]->exten_stiffness_model = CONSTANT;
+    goma_ctx->fem.elc_glob[mn]->exten_stiffness = 1.0;
   }
 
   ECHO(es, echo_file);
 
   /* Poisson ratio of structural shells */
-  model_read =
-      look_for_mat_prop(imp, "Shell Poisson ratio", &(elc_glob[mn]->poisson_model),
-                        &(elc_glob[mn]->poisson), &(elc_glob[mn]->u_poisson),
-                        &(elc_glob[mn]->len_u_poisson), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  model_read = look_for_mat_prop(
+      imp, "Shell Poisson ratio", &(goma_ctx->fem.elc_glob[mn]->poisson_model),
+      &(goma_ctx->fem.elc_glob[mn]->poisson), &(goma_ctx->fem.elc_glob[mn]->u_poisson),
+      &(goma_ctx->fem.elc_glob[mn]->len_u_poisson), model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
   /* Model must be CONSTANT for now! */
   if (model_read == 1 && strcmp(model_name, "CONSTANT") != 0) {
     sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                 pd_glob[mn]->MaterialName, "Shell Poisson ratio", model_name);
+                 goma_ctx->fem.pd_glob[mn]->MaterialName, "Shell Poisson ratio", model_name);
     GOMA_EH(model_read, err_msg);
   } else if (model_read == -1) {
     /* Default to CONSTANT(1) */
-    elc_glob[mn]->poisson_model = CONSTANT;
-    elc_glob[mn]->poisson = 0.5;
+    goma_ctx->fem.elc_glob[mn]->poisson_model = CONSTANT;
+    goma_ctx->fem.elc_glob[mn]->poisson = 0.5;
   }
 
   ECHO(es, echo_file);
 
   /* check for shell tangent calculator model */
-  if (pd_glob[mn]->gv[R_MESH1] && pd_glob[mn]->gv[R_SHELL_CURVATURE]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_MESH1] && goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_CURVATURE]) {
     char input[MAX_CHAR_IN_INPUT] = "zilch\0";
     strcpy(search_string, "Shell Tangent Computation Method");
     model_read = look_for_optional(imp, search_string, input, '=');
@@ -1241,7 +1275,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   /* check for shell moment tensor calculator model */
-  if (pd_glob[mn]->gv[R_MESH1] && pd_glob[mn]->gv[R_SHELL_CURVATURE]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_MESH1] && goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_CURVATURE]) {
     char input[MAX_CHAR_IN_INPUT] = "zilch\0";
     strcpy(search_string, "Shell Moment Tensor Model");
     model_read = look_for_optional(imp, search_string, input, '=');
@@ -1283,73 +1317,81 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   model_read = look_for_mat_prop(imp, "Stress Free Solvent Vol Frac", &(LameLambdaModel),
-                                 &(elc_glob[mn]->Strss_fr_sol_vol_frac), NO_USER, NULL, model_name,
-                                 SCALAR_INPUT, &NO_SPECIES, es);
+                                 &(goma_ctx->fem.elc_glob[mn]->Strss_fr_sol_vol_frac), NO_USER,
+                                 NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
   ECHO(es, echo_file);
 
-  model_read = look_for_mat_proptable(
-      imp, "Solid Thermal Expansion", &(elc_glob[mn]->thermal_expansion_model),
-      &(elc_glob[mn]->thermal_expansion), &(elc_glob[mn]->u_thermal_expansion),
-      &(elc_glob[mn]->len_u_thermal_expansion), &(elc_glob[mn]->thermal_expansion_tableid),
-      model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  model_read = look_for_mat_proptable(imp, "Solid Thermal Expansion",
+                                      &(goma_ctx->fem.elc_glob[mn]->thermal_expansion_model),
+                                      &(goma_ctx->fem.elc_glob[mn]->thermal_expansion),
+                                      &(goma_ctx->fem.elc_glob[mn]->u_thermal_expansion),
+                                      &(goma_ctx->fem.elc_glob[mn]->len_u_thermal_expansion),
+                                      &(goma_ctx->fem.elc_glob[mn]->thermal_expansion_tableid),
+                                      model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
   if (model_read == -1) {
 
     if (!strcmp(model_name, "CONSTANT_DV")) {
-      elc_glob[mn]->thermal_expansion_model = CONSTANT_DV;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_thermal_expansion), NO_SPECIES);
-      elc_glob[mn]->thermal_expansion = elc_glob[mn]->u_thermal_expansion[0];
+      goma_ctx->fem.elc_glob[mn]->thermal_expansion_model = CONSTANT_DV;
+      num_const =
+          read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_thermal_expansion), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->thermal_expansion =
+          goma_ctx->fem.elc_glob[mn]->u_thermal_expansion[0];
       if (num_const < 1) {
         GOMA_EH(GOMA_ERROR, "Matl %s expected at least 1 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, "Thermal Expansion", "CONSTANT_DV");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Thermal Expansion", "CONSTANT_DV");
       }
-      elc_glob[mn]->len_u_thermal_expansion = num_const;
-      SPF_DBL_VEC(endofstring(es), 1, &elc_glob[mn]->thermal_expansion);
+      goma_ctx->fem.elc_glob[mn]->len_u_thermal_expansion = num_const;
+      SPF_DBL_VEC(endofstring(es), 1, &goma_ctx->fem.elc_glob[mn]->thermal_expansion);
     } else if (!strcmp(model_name, "SHRINKAGE")) {
-      elc_glob[mn]->thermal_expansion_model = SHRINKAGE;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_thermal_expansion), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->thermal_expansion_model = SHRINKAGE;
+      num_const =
+          read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_thermal_expansion), NO_SPECIES);
       if (num_const < 2) {
         sr = sprintf(err_msg, "Matl %s expected at least 2 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Thermal Expansion", "SHRINKAGE");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Thermal Expansion", "SHRINKAGE");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_thermal_expansion = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, elc_glob[mn]->u_thermal_expansion);
+      goma_ctx->fem.elc_glob[mn]->len_u_thermal_expansion = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_thermal_expansion);
     } else if (!strcmp(model_name, "IDEAL_GAS")) {
-      elc_glob[mn]->thermal_expansion_model = IDEAL_GAS;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_thermal_expansion), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->thermal_expansion_model = IDEAL_GAS;
+      num_const =
+          read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_thermal_expansion), NO_SPECIES);
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Thermal Expansion", "IDEAL_GAS");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Thermal Expansion", "IDEAL_GAS");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_thermal_expansion = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, elc_glob[mn]->u_thermal_expansion);
+      goma_ctx->fem.elc_glob[mn]->len_u_thermal_expansion = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_thermal_expansion);
     } else if (!strcmp(model_name, "THERMAL")) {
-      elc_glob[mn]->thermal_expansion_model = THERMAL_HEAT;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_thermal_expansion), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->thermal_expansion_model = THERMAL_HEAT;
+      num_const =
+          read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_thermal_expansion), NO_SPECIES);
       if (num_const < 5) {
         sprintf(err_msg, "Material %s - expected at least 5 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, search_string, "THERMAL");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, search_string, "THERMAL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_thermal_expansion = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, elc_glob[mn]->u_thermal_expansion);
+      goma_ctx->fem.elc_glob[mn]->len_u_thermal_expansion = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_thermal_expansion);
     } else if (!strcmp(model_name, "ORTHOTROPIC")) {
-      elc_glob[mn]->thermal_expansion_model = ORTHOTROPIC;
-      num_const = read_constants(imp, &(elc_glob[mn]->u_thermal_expansion), NO_SPECIES);
+      goma_ctx->fem.elc_glob[mn]->thermal_expansion_model = ORTHOTROPIC;
+      num_const =
+          read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_thermal_expansion), NO_SPECIES);
       if (num_const < 6) {
         sprintf(err_msg, "Material %s - expected at least 6 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, search_string, "ORTHOTROPIC");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, search_string, "ORTHOTROPIC");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      elc_glob[mn]->len_u_thermal_expansion = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, elc_glob[mn]->u_thermal_expansion);
+      goma_ctx->fem.elc_glob[mn]->len_u_thermal_expansion = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_thermal_expansion);
     }
 
     else {
-      elc_glob[mn]->thermal_expansion_model = CONSTANT;
-      elc_glob[mn]->thermal_expansion = 0.0;
+      goma_ctx->fem.elc_glob[mn]->thermal_expansion_model = CONSTANT;
+      goma_ctx->fem.elc_glob[mn]->thermal_expansion = 0.0;
       SPF(es, "\t(%s = CONSTANT %.4g)", "Solid Thermal Expansion", 0.0);
     }
   }
@@ -1357,62 +1399,64 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   ECHO(es, echo_file);
 
   model_read = look_for_mat_prop(imp, "Solid Reference Temperature",
-                                 &(elc_glob[mn]->solid_reference_temp_model),
-                                 &(elc_glob[mn]->solid_reference_temp), NO_USER, NULL, model_name,
-                                 SCALAR_INPUT, &NO_SPECIES, es);
+                                 &(goma_ctx->fem.elc_glob[mn]->solid_reference_temp_model),
+                                 &(goma_ctx->fem.elc_glob[mn]->solid_reference_temp), NO_USER, NULL,
+                                 model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
   if (model_read == -1) {
-    elc_glob[mn]->solid_reference_temp_model = CONSTANT;
-    elc_glob[mn]->solid_reference_temp = 0.0;
+    goma_ctx->fem.elc_glob[mn]->solid_reference_temp_model = CONSTANT;
+    goma_ctx->fem.elc_glob[mn]->solid_reference_temp = 0.0;
 
     SPF(es, "\t(%s = CONSTANT %.4g)", "Solid Reference Temperature", 0.0);
   }
   ECHO(es, echo_file);
 
-  if (evpl_glob[mn]->ConstitutiveEquation == EVP_HYPER) {
+  if (goma_ctx->fem.evpl_glob[mn]->ConstitutiveEquation == EVP_HYPER) {
     /*get plastic viscosity and yield stress */
-    model_read = look_for_mat_prop(imp, "Plastic Viscosity", &(evpl_glob[mn]->plastic_mu_model),
-                                   &(evpl_glob[mn]->plastic_mu), NO_USER, NULL, model_name,
-                                   SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Plastic Viscosity",
+                                   &(goma_ctx->fem.evpl_glob[mn]->plastic_mu_model),
+                                   &(goma_ctx->fem.evpl_glob[mn]->plastic_mu), NO_USER, NULL,
+                                   model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1) {
       if (!strcmp(model_name, "LINEAR")) {
-        evpl_glob[mn]->plastic_mu_model = LINEAR;
-        num_const = read_constants(imp, &(evpl_glob[mn]->u_plastic_mu), NO_SPECIES);
+        goma_ctx->fem.evpl_glob[mn]->plastic_mu_model = LINEAR;
+        num_const = read_constants(imp, &(goma_ctx->fem.evpl_glob[mn]->u_plastic_mu), NO_SPECIES);
         if (num_const < 2) {
           sr = sprintf(err_msg, "Matl %s expected at least 2 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Plastic Viscosity", "LINEAR");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Plastic Viscosity", "LINEAR");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
-        evpl_glob[mn]->len_u_plastic_mu = num_const;
+        goma_ctx->fem.evpl_glob[mn]->len_u_plastic_mu = num_const;
 
       } else {
         sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                     pd_glob[mn]->MaterialName, "Plastic Viscosity", model_name);
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Plastic Viscosity", model_name);
         GOMA_EH(model_read, err_msg);
       }
-      SPF_DBL_VEC(endofstring(es), num_const, evpl_glob[mn]->u_plastic_mu);
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.evpl_glob[mn]->u_plastic_mu);
     }
 
     ECHO(es, echo_file);
 
-    model_read = look_for_mat_prop(imp, "EVP Yield Stress", &(evpl_glob[mn]->yield_model),
-                                   &(evpl_glob[mn]->yield), NO_USER, NULL, model_name, SCALAR_INPUT,
-                                   &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "EVP Yield Stress", &(goma_ctx->fem.evpl_glob[mn]->yield_model),
+                          &(goma_ctx->fem.evpl_glob[mn]->yield), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1 && !strcmp(model_name, "LINEAR")) {
-      evpl_glob[mn]->yield_model = LINEAR;
-      num_const = read_constants(imp, &(evpl_glob[mn]->u_yield), NO_SPECIES);
+      goma_ctx->fem.evpl_glob[mn]->yield_model = LINEAR;
+      num_const = read_constants(imp, &(goma_ctx->fem.evpl_glob[mn]->u_yield), NO_SPECIES);
       if (num_const < 2) {
         sr = sprintf(err_msg, "Matl %s expected at least 2 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "EVP Yield Stress", "LINEAR");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "EVP Yield Stress", "LINEAR");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      evpl_glob[mn]->len_u_yield = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, evpl_glob[mn]->u_yield);
+      goma_ctx->fem.evpl_glob[mn]->len_u_yield = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.evpl_glob[mn]->u_yield);
     } else {
       sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                   pd_glob[mn]->MaterialName, "EVP Yield Stress", model_name);
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "EVP Yield Stress", model_name);
       GOMA_EH(model_read, err_msg);
     }
     ECHO(es, echo_file);
@@ -1426,7 +1470,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
    */
   /*********************************************************************/
 
-  if (pd_glob[mn]->MeshMotion == TOTAL_ALE) {
+  if (goma_ctx->fem.pd_glob[mn]->MeshMotion == TOTAL_ALE) {
 
     /* First transfer already parsed real-properties to the appropriate
      * structure elements. Do this by swapping pointers. You need to maintain
@@ -1434,19 +1478,20 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
      * constants in both.
      */
 
-    cr_glob[mn]->RealSolidFluxModel = ElasticConstitutiveEquation;
-    dum_ptr = elc_rs_glob[mn];
-    elc_rs_glob[mn] = elc_glob[mn];
-    elc_glob[mn] = dum_ptr;
-    elc_glob[mn]->Strss_fr_sol_vol_frac = elc_rs_glob[mn]->Strss_fr_sol_vol_frac;
-    elc_glob[mn]->thermal_expansion = 0.;
-    elc_glob[mn]->thermal_expansion_model = CONSTANT;
-    elc_glob[mn]->solid_reference_temp_model = CONSTANT;
-    elc_glob[mn]->solid_reference_temp = 25.;
-    elc_glob[mn]->solid_viscosity = 0.;
-    elc_glob[mn]->solid_viscosity_model = CONSTANT;
-    elc_glob[mn]->solid_dil_viscosity = 0.;
-    elc_glob[mn]->solid_dil_viscosity_model = CONSTANT;
+    goma_ctx->fem.cr_glob[mn]->RealSolidFluxModel = ElasticConstitutiveEquation;
+    dum_ptr = goma_ctx->fem.elc_rs_glob[mn];
+    goma_ctx->fem.elc_rs_glob[mn] = goma_ctx->fem.elc_glob[mn];
+    goma_ctx->fem.elc_glob[mn] = dum_ptr;
+    goma_ctx->fem.elc_glob[mn]->Strss_fr_sol_vol_frac =
+        goma_ctx->fem.elc_rs_glob[mn]->Strss_fr_sol_vol_frac;
+    goma_ctx->fem.elc_glob[mn]->thermal_expansion = 0.;
+    goma_ctx->fem.elc_glob[mn]->thermal_expansion_model = CONSTANT;
+    goma_ctx->fem.elc_glob[mn]->solid_reference_temp_model = CONSTANT;
+    goma_ctx->fem.elc_glob[mn]->solid_reference_temp = 25.;
+    goma_ctx->fem.elc_glob[mn]->solid_viscosity = 0.;
+    goma_ctx->fem.elc_glob[mn]->solid_viscosity_model = CONSTANT;
+    goma_ctx->fem.elc_glob[mn]->solid_dil_viscosity = 0.;
+    goma_ctx->fem.elc_glob[mn]->solid_dil_viscosity_model = CONSTANT;
 
     model_read =
         look_for_mat_prop(imp, "Pseudo-Solid Constitutive Equation", &(ElasticConstitutiveEquation),
@@ -1486,55 +1531,55 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ECHO(es, echo_file);
 
     /*This seems a little redundant! prs (2/24/95) */
-    cr_glob[mn]->MeshFluxModel = ElasticConstitutiveEquation;
+    goma_ctx->fem.cr_glob[mn]->MeshFluxModel = ElasticConstitutiveEquation;
 
     /* An optional additional type of mesh motion which includes an intertial term in the
        momentum equation */
 
     /* read in constants for constitutive equation if they are input */
 
-    model_read =
-        look_for_mat_prop(imp, "Pseudo-Solid Lame MU", &(elc_glob[mn]->lame_mu_model),
-                          &(elc_glob[mn]->lame_mu), &(elc_glob[mn]->u_mu),
-                          &(elc_glob[mn]->len_u_mu), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(
+        imp, "Pseudo-Solid Lame MU", &(goma_ctx->fem.elc_glob[mn]->lame_mu_model),
+        &(goma_ctx->fem.elc_glob[mn]->lame_mu), &(goma_ctx->fem.elc_glob[mn]->u_mu),
+        &(goma_ctx->fem.elc_glob[mn]->len_u_mu), model_name, SCALAR_INPUT, &NO_SPECIES, es);
     if (model_read == -1) {
       if (!strcmp(model_name, "CONTACT_LINE")) {
-        elc_glob[mn]->lame_mu_model = CONTACT_LINE;
-        num_const = read_constants(imp, &(elc_glob[mn]->u_mu), NO_SPECIES);
+        goma_ctx->fem.elc_glob[mn]->lame_mu_model = CONTACT_LINE;
+        num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_mu), NO_SPECIES);
         if (num_const < 4) {
           sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Lame MU", "CONTACT_LINE");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame MU", "CONTACT_LINE");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
-        elc_glob[mn]->len_u_mu = num_const;
-        SPF_DBL_VEC(endofstring(es), num_const, elc_glob[mn]->u_mu);
+        goma_ctx->fem.elc_glob[mn]->len_u_mu = num_const;
+        SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_mu);
       } else {
         sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                     pd_glob[mn]->MaterialName, "Pseudo-Solid Lame MU", model_name);
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Pseudo-Solid Lame MU", model_name);
         GOMA_EH(model_read, err_msg);
       }
 
       ECHO(es, echo_file);
     }
 
-    model_read =
-        look_for_mat_prop(imp, "Pseudo-Solid Lame LAMBDA", &(elc_glob[mn]->lame_lambda_model),
-                          &(elc_glob[mn]->lame_lambda), &(elc_glob[mn]->u_lambda),
-                          &(elc_glob[mn]->len_u_lambda), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(
+        imp, "Pseudo-Solid Lame LAMBDA", &(goma_ctx->fem.elc_glob[mn]->lame_lambda_model),
+        &(goma_ctx->fem.elc_glob[mn]->lame_lambda), &(goma_ctx->fem.elc_glob[mn]->u_lambda),
+        &(goma_ctx->fem.elc_glob[mn]->len_u_lambda), model_name, SCALAR_INPUT, &NO_SPECIES, es);
     if (model_read == -1) {
       if (!strcmp(model_name, "POISSON_RATIO")) {
-        elc_glob[mn]->lame_lambda_model = POISSON_RATIO;
-        num_const = read_constants(imp, &(elc_glob[mn]->u_lambda), NO_SPECIES);
+        goma_ctx->fem.elc_glob[mn]->lame_lambda_model = POISSON_RATIO;
+        num_const = read_constants(imp, &(goma_ctx->fem.elc_glob[mn]->u_lambda), NO_SPECIES);
         if (num_const < 1) {
           sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Lame LAMBDA", "POISSON_RATIO");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame LAMBDA", "POISSON_RATIO");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
-        elc_glob[mn]->len_u_lambda = num_const;
-        SPF_DBL_VEC(endofstring(es), num_const, elc_glob[mn]->u_mu);
+        goma_ctx->fem.elc_glob[mn]->len_u_lambda = num_const;
+        SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.elc_glob[mn]->u_mu);
       } else {
         sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                     pd_glob[mn]->MaterialName, "Lame LAMBDA", model_name);
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lame LAMBDA", model_name);
         GOMA_EH(model_read, err_msg);
       }
     }
@@ -1629,10 +1674,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
-  pd_glob[mn]->MomentumFluxModel = ConstitutiveEquation;
-  cr_glob[mn]->MomentumFluxModel = CR_MF_NEWTON_0;
-  gn_glob[mn]->ConstitutiveEquation = ConstitutiveEquation;
-  mp_glob[mn]->DilationalViscosityModel = DILVISCM_KAPPAWIPESMU;
+  goma_ctx->fem.pd_glob[mn]->MomentumFluxModel = ConstitutiveEquation;
+  goma_ctx->fem.cr_glob[mn]->MomentumFluxModel = CR_MF_NEWTON_0;
+  goma_ctx->fem.gn_glob[mn]->ConstitutiveEquation = ConstitutiveEquation;
+  goma_ctx->fem.mp_glob[mn]->DilationalViscosityModel = DILVISCM_KAPPAWIPESMU;
 
   /* read in constants for constitutive equation if they are input */
 
@@ -1640,9 +1685,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       (ConstitutiveEquation == TURBULENT_SA_DYNAMIC) ||
       (ConstitutiveEquation == TURBULENT_K_OMEGA)) {
     model_read = look_for_mat_proptable(
-        imp, "Viscosity", &(mp_glob[mn]->ViscosityModel), &(mp_glob[mn]->viscosity),
-        &(mp_glob[mn]->u_viscosity), &(mp_glob[mn]->len_u_viscosity),
-        &(mp_glob[mn]->viscosity_tableid), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+        imp, "Viscosity", &(goma_ctx->fem.mp_glob[mn]->ViscosityModel),
+        &(goma_ctx->fem.mp_glob[mn]->viscosity), &(goma_ctx->fem.mp_glob[mn]->u_viscosity),
+        &(goma_ctx->fem.mp_glob[mn]->len_u_viscosity),
+        &(goma_ctx->fem.mp_glob[mn]->viscosity_tableid), model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1 && !strcmp(model_name, "FILL")) {
       mat_ptr->ViscosityModel = FILL;
@@ -1651,7 +1697,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       if (num_const < 2) {
         sr = sprintf(err_msg, "Matl %s expected at least 2 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Viscosity", "FILL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Viscosity", "FILL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_viscosity = num_const;
@@ -1663,12 +1709,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Viscosity", "LEVEL_SET");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Viscosity", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       if (mat_ptr->u_viscosity[2] == 0.0)
-        mat_ptr->u_viscosity[2] = ls->Length_Scale / 2.0;
+        mat_ptr->u_viscosity[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
       mat_ptr->len_u_viscosity = num_const;
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_viscosity);
@@ -1679,12 +1725,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Viscosity", "LEVEL_SET");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Viscosity", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       if (mat_ptr->u_viscosity[2] == 0.0)
-        mat_ptr->u_viscosity[2] = ls->Length_Scale / 2.0;
+        mat_ptr->u_viscosity[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
       mat_ptr->len_u_viscosity = num_const;
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_viscosity);
@@ -1696,7 +1742,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Viscosity", "SUSPENSION_PM");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Viscosity", "SUSPENSION_PM");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_viscosity = num_const;
@@ -1705,26 +1751,27 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->ViscosityModel = CONST_PHASE_FUNCTION;
       num_const = read_constants(imp, &(mat_ptr->u_viscosity), 0);
 
-      if (num_const < pfd->num_phase_funcs + 2) {
+      if (num_const < goma_ctx->fem.pfd->num_phase_funcs + 2) {
         sr = sprintf(err_msg, "Matl %s expected at least %d constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, pfd->num_phase_funcs + 2, "Viscosity",
-                     "CONST_PHASE_FUNCTION");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName,
+                     goma_ctx->fem.pfd->num_phase_funcs + 2, "Viscosity", "CONST_PHASE_FUNCTION");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_viscosity = num_const;
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_viscosity);
     } else {
       GOMA_EH(model_read, "Viscosity");
-      gn_glob[mn]->mu0 = mat_ptr->viscosity;
+      goma_ctx->fem.gn_glob[mn]->mu0 = mat_ptr->viscosity;
     }
-    gn_glob[mn]->mu0 = mat_ptr->viscosity;
+    goma_ctx->fem.gn_glob[mn]->mu0 = mat_ptr->viscosity;
 
     /* If turbulent flow, read external field for distance from walls */
-    if (ConstitutiveEquation == TURBULENT_SA && !upd->turbulent_info->use_internal_wall_distance) {
+    if (ConstitutiveEquation == TURBULENT_SA &&
+        !goma_ctx->fem.upd->turbulent_info->use_internal_wall_distance) {
       mat_ptr->dist_wall_ext_field_index = -1;
-      if (efv->ev) {
-        for (i = 0; i < efv->Num_external_field; i++) {
-          if (!strcmp(efv->name[i], "DIST")) {
+      if (goma_ctx->fem.efv->ev) {
+        for (i = 0; i < goma_ctx->fem.efv->Num_external_field; i++) {
+          if (!strcmp(goma_ctx->fem.efv->name[i], "DIST")) {
             mat_ptr->dist_wall_ext_field_index = i;
           }
         }
@@ -1751,25 +1798,26 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       ConstitutiveEquation == BOND || ConstitutiveEquation == BOND_SH ||
       ConstitutiveEquation == FOAM_EPOXY || ConstitutiveEquation == FOAM_PMDI_10) {
     model_read =
-        look_for_mat_prop(imp, "Low Rate Viscosity", &(gn_glob[mn]->mu0Model), &(gn_glob[mn]->mu0),
-                          NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+        look_for_mat_prop(imp, "Low Rate Viscosity", &(goma_ctx->fem.gn_glob[mn]->mu0Model),
+                          &(goma_ctx->fem.gn_glob[mn]->mu0), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1 && !strcmp(model_name, "LEVEL_SET")) {
-      gn_glob[mn]->mu0Model = LEVEL_SET;
+      goma_ctx->fem.gn_glob[mn]->mu0Model = LEVEL_SET;
 
-      num_const = read_constants(imp, &(gn_glob[mn]->u_mu0), 0);
+      num_const = read_constants(imp, &(goma_ctx->fem.gn_glob[mn]->u_mu0), 0);
 
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Low Rate Viscosity", "LEVEL_SET");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Low Rate Viscosity", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      gn_glob[mn]->len_u_mu0 = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, gn_glob[mn]->u_mu0);
+      goma_ctx->fem.gn_glob[mn]->len_u_mu0 = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.gn_glob[mn]->u_mu0);
 
-      if (gn_glob[mn]->u_mu0[2] == 0.0)
-        gn_glob[mn]->u_mu0[2] = ls->Length_Scale / 2.0;
+      if (goma_ctx->fem.gn_glob[mn]->u_mu0[2] == 0.0)
+        goma_ctx->fem.gn_glob[mn]->u_mu0[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
     } else {
       GOMA_EH(model_read, "Low Rate Viscosity");
@@ -1779,27 +1827,30 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   if (ConstitutiveEquation == ARRHENIUS_ADVANCED) {
-    model_read = look_for_mat_prop(imp, "Arrhenius Advanced a", &(gn_glob[mn]->arrhenius_aModel),
-                                   &(gn_glob[mn]->arrhenius_a), NO_USER, NULL, model_name,
-                                   SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Arrhenius Advanced a",
+                                   &(goma_ctx->fem.gn_glob[mn]->arrhenius_aModel),
+                                   &(goma_ctx->fem.gn_glob[mn]->arrhenius_a), NO_USER, NULL,
+                                   model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1) {
       GOMA_EH(model_read, "Arrhenius Advanced a");
     }
 
     ECHO(es, echo_file);
-    model_read = look_for_mat_prop(imp, "Arrhenius Advanced c", &(gn_glob[mn]->arrhenius_cModel),
-                                   &(gn_glob[mn]->arrhenius_c), NO_USER, NULL, model_name,
-                                   SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Arrhenius Advanced c",
+                                   &(goma_ctx->fem.gn_glob[mn]->arrhenius_cModel),
+                                   &(goma_ctx->fem.gn_glob[mn]->arrhenius_c), NO_USER, NULL,
+                                   model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1) {
       GOMA_EH(model_read, "Arrhenius Advanced c");
     }
 
     ECHO(es, echo_file);
-    model_read = look_for_mat_prop(imp, "Arrhenius Advanced d", &(gn_glob[mn]->arrhenius_dModel),
-                                   &(gn_glob[mn]->arrhenius_d), NO_USER, NULL, model_name,
-                                   SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Arrhenius Advanced d",
+                                   &(goma_ctx->fem.gn_glob[mn]->arrhenius_dModel),
+                                   &(goma_ctx->fem.gn_glob[mn]->arrhenius_d), NO_USER, NULL,
+                                   model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1) {
       GOMA_EH(model_read, "Arrhenius Advanced d");
@@ -1816,26 +1867,27 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == HERSCHEL_BULKLEY ||
       ConstitutiveEquation == HERSCHEL_BULKLEY_PAPANASTASIOU ||
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP) {
-    model_read = look_for_mat_prop(imp, "Power Law Exponent", &(gn_glob[mn]->nexpModel),
-                                   &(gn_glob[mn]->nexp), NO_USER, NULL, model_name, SCALAR_INPUT,
-                                   &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "Power Law Exponent", &(goma_ctx->fem.gn_glob[mn]->nexpModel),
+                          &(goma_ctx->fem.gn_glob[mn]->nexp), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1 && !strcmp(model_name, "LEVEL_SET")) {
-      gn_glob[mn]->nexpModel = LEVEL_SET;
+      goma_ctx->fem.gn_glob[mn]->nexpModel = LEVEL_SET;
 
-      num_const = read_constants(imp, &(gn_glob[mn]->u_nexp), 0);
+      num_const = read_constants(imp, &(goma_ctx->fem.gn_glob[mn]->u_nexp), 0);
 
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Power law exponent", "LEVEL_SET");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Power law exponent", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      gn_glob[mn]->len_u_nexp = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, gn_glob[mn]->u_nexp);
+      goma_ctx->fem.gn_glob[mn]->len_u_nexp = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.gn_glob[mn]->u_nexp);
 
-      if (gn_glob[mn]->u_nexp[2] == 0.0)
-        gn_glob[mn]->u_nexp[2] = ls->Length_Scale / 2.0;
+      if (goma_ctx->fem.gn_glob[mn]->u_nexp[2] == 0.0)
+        goma_ctx->fem.gn_glob[mn]->u_nexp[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
     } else {
       GOMA_EH(model_read, "Power Law Exponent");
@@ -1849,26 +1901,27 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
       ConstitutiveEquation == BOND_SH || ConstitutiveEquation == BOND ||
       ConstitutiveEquation == BINGHAM_MIXED) {
-    model_read = look_for_mat_prop(imp, "High Rate Viscosity", &(gn_glob[mn]->muinfModel),
-                                   &(gn_glob[mn]->muinf), NO_USER, NULL, model_name, SCALAR_INPUT,
-                                   &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "High Rate Viscosity", &(goma_ctx->fem.gn_glob[mn]->muinfModel),
+                          &(goma_ctx->fem.gn_glob[mn]->muinf), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1 && !strcmp(model_name, "LEVEL_SET")) {
-      gn_glob[mn]->muinfModel = LEVEL_SET;
+      goma_ctx->fem.gn_glob[mn]->muinfModel = LEVEL_SET;
 
-      num_const = read_constants(imp, &(gn_glob[mn]->u_muinf), 0);
+      num_const = read_constants(imp, &(goma_ctx->fem.gn_glob[mn]->u_muinf), 0);
 
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Low Rate Viscosity", "LEVEL_SET");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Low Rate Viscosity", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      gn_glob[mn]->len_u_muinf = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, gn_glob[mn]->u_muinf);
+      goma_ctx->fem.gn_glob[mn]->len_u_muinf = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.gn_glob[mn]->u_muinf);
 
-      if (gn_glob[mn]->u_muinf[2] == 0.0)
-        gn_glob[mn]->u_muinf[2] = ls->Length_Scale / 2.0;
+      if (goma_ctx->fem.gn_glob[mn]->u_muinf[2] == 0.0)
+        goma_ctx->fem.gn_glob[mn]->u_muinf[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
     } else {
       GOMA_EH(model_read, "High Rate Viscosity");
@@ -1876,26 +1929,26 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ECHO(es, echo_file);
 
     if (ConstitutiveEquation != BOND && ConstitutiveEquation != BINGHAM_MIXED) {
-      model_read =
-          look_for_mat_prop(imp, "Time Constant", &(gn_glob[mn]->lamModel), &(gn_glob[mn]->lam),
-                            NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+      model_read = look_for_mat_prop(imp, "Time Constant", &(goma_ctx->fem.gn_glob[mn]->lamModel),
+                                     &(goma_ctx->fem.gn_glob[mn]->lam), NO_USER, NULL, model_name,
+                                     SCALAR_INPUT, &NO_SPECIES, es);
 
       if (model_read == -1 && !strcmp(model_name, "LEVEL_SET")) {
-        gn_glob[mn]->lamModel = LEVEL_SET;
+        goma_ctx->fem.gn_glob[mn]->lamModel = LEVEL_SET;
 
-        num_const = read_constants(imp, &(gn_glob[mn]->u_lam), 0);
+        num_const = read_constants(imp, &(goma_ctx->fem.gn_glob[mn]->u_lam), 0);
 
         if (num_const < 3) {
           sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Low Rate Viscosity", "LEVEL_SET");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Low Rate Viscosity", "LEVEL_SET");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
 
-        gn_glob[mn]->len_u_lam = num_const;
-        SPF_DBL_VEC(endofstring(es), num_const, gn_glob[mn]->u_lam);
+        goma_ctx->fem.gn_glob[mn]->len_u_lam = num_const;
+        SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.gn_glob[mn]->u_lam);
 
-        if (gn_glob[mn]->u_lam[2] == 0.0)
-          gn_glob[mn]->u_lam[2] = ls->Length_Scale / 2.0;
+        if (goma_ctx->fem.gn_glob[mn]->u_lam[2] == 0.0)
+          goma_ctx->fem.gn_glob[mn]->u_lam[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
       } else {
         GOMA_EH(model_read, "Time Constant");
@@ -1910,25 +1963,26 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
       ConstitutiveEquation == BOND_SH || ConstitutiveEquation == BOND) {
-    model_read = look_for_mat_prop(imp, "Aexp", &(gn_glob[mn]->aexpModel), &(gn_glob[mn]->aexp),
-                                   NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Aexp", &(goma_ctx->fem.gn_glob[mn]->aexpModel),
+                                   &(goma_ctx->fem.gn_glob[mn]->aexp), NO_USER, NULL, model_name,
+                                   SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1 && !strcmp(model_name, "LEVEL_SET")) {
-      gn_glob[mn]->aexpModel = LEVEL_SET;
+      goma_ctx->fem.gn_glob[mn]->aexpModel = LEVEL_SET;
 
-      num_const = read_constants(imp, &(gn_glob[mn]->u_aexp), 0);
+      num_const = read_constants(imp, &(goma_ctx->fem.gn_glob[mn]->u_aexp), 0);
 
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Low Rate Viscosity", "LEVEL_SET");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Low Rate Viscosity", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      gn_glob[mn]->len_u_aexp = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, gn_glob[mn]->u_aexp);
+      goma_ctx->fem.gn_glob[mn]->len_u_aexp = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.gn_glob[mn]->u_aexp);
 
-      if (gn_glob[mn]->u_aexp[2] == 0.0)
-        gn_glob[mn]->u_aexp[2] = ls->Length_Scale / 2.0;
+      if (goma_ctx->fem.gn_glob[mn]->u_aexp[2] == 0.0)
+        goma_ctx->fem.gn_glob[mn]->u_aexp[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
     } else {
       GOMA_EH(model_read, "Aexp");
@@ -1946,26 +2000,27 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       ConstitutiveEquation == CARREAU_WLF_CONC_EXP || ConstitutiveEquation == THERMAL ||
       ConstitutiveEquation == BOND || ConstitutiveEquation == FOAM_EPOXY ||
       ConstitutiveEquation == FOAM_PMDI_10) {
-    model_read = look_for_mat_prop(imp, "Thermal Exponent", &(gn_glob[mn]->atexpModel),
-                                   &(gn_glob[mn]->atexp), NO_USER, NULL, model_name, SCALAR_INPUT,
-                                   &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "Thermal Exponent", &(goma_ctx->fem.gn_glob[mn]->atexpModel),
+                          &(goma_ctx->fem.gn_glob[mn]->atexp), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1 && !strcmp(model_name, "LEVEL_SET")) {
-      gn_glob[mn]->atexpModel = LEVEL_SET;
+      goma_ctx->fem.gn_glob[mn]->atexpModel = LEVEL_SET;
 
-      num_const = read_constants(imp, &(gn_glob[mn]->u_atexp), 0);
+      num_const = read_constants(imp, &(goma_ctx->fem.gn_glob[mn]->u_atexp), 0);
 
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Thermal Exponent", "LEVEL_SET");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Thermal Exponent", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      gn_glob[mn]->len_u_atexp = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, gn_glob[mn]->u_atexp);
+      goma_ctx->fem.gn_glob[mn]->len_u_atexp = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.gn_glob[mn]->u_atexp);
 
-      if (gn_glob[mn]->u_atexp[2] == 0.0)
-        gn_glob[mn]->u_atexp[2] = ls->Length_Scale / 2.0;
+      if (goma_ctx->fem.gn_glob[mn]->u_atexp[2] == 0.0)
+        goma_ctx->fem.gn_glob[mn]->u_atexp[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
     } else {
       GOMA_EH(model_read, "Thermal Exponent");
@@ -1974,26 +2029,27 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   if (ConstitutiveEquation == CARREAU_ARRHENIUS) {
-    model_read = look_for_mat_prop(imp, "Temperature Shift", &(gn_glob[mn]->T_shift_Model),
-                                   &(gn_glob[mn]->T_shift), NO_USER, NULL, model_name, SCALAR_INPUT,
-                                   &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "Temperature Shift", &(goma_ctx->fem.gn_glob[mn]->T_shift_Model),
+                          &(goma_ctx->fem.gn_glob[mn]->T_shift), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1 && !strcmp(model_name, "NO_MODEL")) {
-      gn_glob[mn]->T_shift_Model = NO_MODEL;
+      goma_ctx->fem.gn_glob[mn]->T_shift_Model = NO_MODEL;
 
-      num_const = read_constants(imp, &(gn_glob[mn]->u_T_shift), 0);
+      num_const = read_constants(imp, &(goma_ctx->fem.gn_glob[mn]->u_T_shift), 0);
 
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Temperature Shift", "LEVEL_SET");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Temperature Shift", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      gn_glob[mn]->len_u_T_shift = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, gn_glob[mn]->u_T_shift);
+      goma_ctx->fem.gn_glob[mn]->len_u_T_shift = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.gn_glob[mn]->u_T_shift);
 
-      if (gn_glob[mn]->u_T_shift[2] == 0.0)
-        gn_glob[mn]->u_T_shift[2] = ls->Length_Scale / 2.0;
+      if (goma_ctx->fem.gn_glob[mn]->u_T_shift[2] == 0.0)
+        goma_ctx->fem.gn_glob[mn]->u_T_shift[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
     } else {
       GOMA_EH(model_read, "Temperature Shift");
@@ -2004,26 +2060,27 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   if (ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == BOND ||
       ConstitutiveEquation == CARREAU_WLF_CONC_EXP) {
-    model_read = look_for_mat_prop(imp, "Thermal WLF Constant2", &(gn_glob[mn]->wlfc2Model),
-                                   &(gn_glob[mn]->wlfc2), NO_USER, NULL, model_name, SCALAR_INPUT,
-                                   &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "Thermal WLF Constant2", &(goma_ctx->fem.gn_glob[mn]->wlfc2Model),
+                          &(goma_ctx->fem.gn_glob[mn]->wlfc2), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1 && !strcmp(model_name, "LEVEL_SET")) {
-      gn_glob[mn]->wlfc2Model = LEVEL_SET;
+      goma_ctx->fem.gn_glob[mn]->wlfc2Model = LEVEL_SET;
 
-      num_const = read_constants(imp, &(gn_glob[mn]->u_wlfc2), 0);
+      num_const = read_constants(imp, &(goma_ctx->fem.gn_glob[mn]->u_wlfc2), 0);
 
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Thermal Exponent", "LEVEL_SET");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Thermal Exponent", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      gn_glob[mn]->len_u_wlfc2 = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, gn_glob[mn]->u_wlfc2);
+      goma_ctx->fem.gn_glob[mn]->len_u_wlfc2 = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.gn_glob[mn]->u_wlfc2);
 
-      if (gn_glob[mn]->u_wlfc2[2] == 0.0)
-        gn_glob[mn]->u_wlfc2[2] = ls->Length_Scale / 2.0;
+      if (goma_ctx->fem.gn_glob[mn]->u_wlfc2[2] == 0.0)
+        goma_ctx->fem.gn_glob[mn]->u_wlfc2[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
     } else {
       GOMA_EH(model_read, "Thermal WLF Constant2");
@@ -2035,36 +2092,37 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       ConstitutiveEquation == BOND || ConstitutiveEquation == HERSCHEL_BULKLEY ||
       ConstitutiveEquation == HERSCHEL_BULKLEY_PAPANASTASIOU ||
       ConstitutiveEquation == BINGHAM_MIXED) {
-    model_read =
-        look_for_mat_prop(imp, "Yield Stress", &(gn_glob[mn]->tau_yModel), &(gn_glob[mn]->tau_y),
-                          &(gn_glob[mn]->u_tau_y), &(gn_glob[mn]->len_u_tau_y), model_name,
-                          SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(
+        imp, "Yield Stress", &(goma_ctx->fem.gn_glob[mn]->tau_yModel),
+        &(goma_ctx->fem.gn_glob[mn]->tau_y), &(goma_ctx->fem.gn_glob[mn]->u_tau_y),
+        &(goma_ctx->fem.gn_glob[mn]->len_u_tau_y), model_name, SCALAR_INPUT, &NO_SPECIES, es);
     GOMA_EH(model_read, "Yield Stress");
     ECHO(es, echo_file);
   }
 
-  gn_glob[mn]->regularizationModel = REGULARIZATION_EPSILON;
+  goma_ctx->fem.gn_glob[mn]->regularizationModel = REGULARIZATION_EPSILON;
   if (ConstitutiveEquation == HERSCHEL_BULKLEY ||
       ConstitutiveEquation == HERSCHEL_BULKLEY_PAPANASTASIOU) {
     dbl a = 0.0;
-    model_read = look_for_mat_prop(imp, "Regularization Model", &(gn_glob[mn]->regularizationModel),
-                                   &(a), NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Regularization Model",
+                                   &(goma_ctx->fem.gn_glob[mn]->regularizationModel), &(a), NO_USER,
+                                   NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
     if (model_read == -1 && ConstitutiveEquation == HERSCHEL_BULKLEY) {
-      gn_glob[mn]->regularizationModel = REGULARIZATION_EPSILON;
+      goma_ctx->fem.gn_glob[mn]->regularizationModel = REGULARIZATION_EPSILON;
     } else if (model_read == -1 && ConstitutiveEquation == HERSCHEL_BULKLEY_PAPANASTASIOU) {
-      gn_glob[mn]->regularizationModel = REGULARIZATION_PAPANASTASIOU;
+      goma_ctx->fem.gn_glob[mn]->regularizationModel = REGULARIZATION_PAPANASTASIOU;
     } else if (model_read == 1 && !strcmp(model_name, "EPSILON")) {
-      gn_glob[mn]->regularizationModel = REGULARIZATION_EPSILON;
+      goma_ctx->fem.gn_glob[mn]->regularizationModel = REGULARIZATION_EPSILON;
       if (ConstitutiveEquation == HERSCHEL_BULKLEY_PAPANASTASIOU) {
         GOMA_EH(GOMA_ERROR,
                 "Regularization Model EPSILON is not valid for HERSCHEL_BULKLEY_PAPANASTASIOU");
       }
     } else if (model_read == 1 && !strcmp(model_name, "PAPANASTASIOU")) {
-      gn_glob[mn]->regularizationModel = REGULARIZATION_PAPANASTASIOU;
+      goma_ctx->fem.gn_glob[mn]->regularizationModel = REGULARIZATION_PAPANASTASIOU;
     } else if (model_read == 1 && !strcmp(model_name, "PAPANASTASIOU_EPSILON")) {
-      gn_glob[mn]->regularizationModel = REGULARIZATION_PAPANASTASIOU_EPSILON;
+      goma_ctx->fem.gn_glob[mn]->regularizationModel = REGULARIZATION_PAPANASTASIOU_EPSILON;
     } else if (model_read == 1 && !strcmp(model_name, "EPSILON_YIELD_ONLY")) {
-      gn_glob[mn]->regularizationModel = REGULARIZATION_YIELD_ONLY_EPSILON;
+      goma_ctx->fem.gn_glob[mn]->regularizationModel = REGULARIZATION_YIELD_ONLY_EPSILON;
       if (ConstitutiveEquation == HERSCHEL_BULKLEY_PAPANASTASIOU) {
         GOMA_EH(GOMA_ERROR, "Regularization Model EPSILON_YIELD_ONLY is not valid for "
                             "HERSCHEL_BULKLEY_PAPANASTASIOU");
@@ -2077,39 +2135,40 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     if (ConstitutiveEquation == HERSCHEL_BULKLEY_PAPANASTASIOU) {
       // reset here because we use Regularization Model for the Constitutive Equation now
       ConstitutiveEquation = HERSCHEL_BULKLEY;
-      gn_glob[mn]->ConstitutiveEquation = ConstitutiveEquation;
+      goma_ctx->fem.gn_glob[mn]->ConstitutiveEquation = ConstitutiveEquation;
     }
   }
 
   if (ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BOND ||
       (ConstitutiveEquation == HERSCHEL_BULKLEY &&
-       (gn_glob[mn]->regularizationModel == REGULARIZATION_PAPANASTASIOU ||
-        gn_glob[mn]->regularizationModel == REGULARIZATION_PAPANASTASIOU_EPSILON)) ||
+       (goma_ctx->fem.gn_glob[mn]->regularizationModel == REGULARIZATION_PAPANASTASIOU ||
+        goma_ctx->fem.gn_glob[mn]->regularizationModel == REGULARIZATION_PAPANASTASIOU_EPSILON)) ||
       ConstitutiveEquation == BINGHAM_WLF) {
-    model_read =
-        look_for_mat_prop(imp, "Yield Exponent", &(gn_glob[mn]->fexpModel), &(gn_glob[mn]->fexp),
-                          NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Yield Exponent", &(goma_ctx->fem.gn_glob[mn]->fexpModel),
+                                   &(goma_ctx->fem.gn_glob[mn]->fexp), NO_USER, NULL, model_name,
+                                   SCALAR_INPUT, &NO_SPECIES, es);
     GOMA_EH(model_read, "Yield Exponent");
     ECHO(es, echo_file);
   }
 
   if (ConstitutiveEquation == BINGHAM_MIXED || ConstitutiveEquation == BINGHAM ||
       ConstitutiveEquation == BINGHAM_WLF || ConstitutiveEquation == HERSCHEL_BULKLEY) {
-    model_read = look_for_mat_prop(imp, "Epsilon Regularization", &(gn_glob[mn]->epsilonModel),
-                                   &(gn_glob[mn]->epsilon), NO_USER, NULL, model_name, SCALAR_INPUT,
-                                   &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "Epsilon Regularization", &(goma_ctx->fem.gn_glob[mn]->epsilonModel),
+                          &(goma_ctx->fem.gn_glob[mn]->epsilon), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
     if ((ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF) &&
         model_read == -1) {
-      gn_glob[mn]->epsilon = 0.0;
-      gn_glob[mn]->epsilonModel = CONSTANT;
+      goma_ctx->fem.gn_glob[mn]->epsilon = 0.0;
+      goma_ctx->fem.gn_glob[mn]->epsilonModel = CONSTANT;
     } else if (model_read == -1 && ConstitutiveEquation == HERSCHEL_BULKLEY) {
-      if (gn_glob[mn]->regularizationModel == REGULARIZATION_PAPANASTASIOU_EPSILON) {
+      if (goma_ctx->fem.gn_glob[mn]->regularizationModel == REGULARIZATION_PAPANASTASIOU_EPSILON) {
         // set a smaller default here for avoiding division by zero
-        gn_glob[mn]->epsilon = 1e-16;
-        gn_glob[mn]->epsilonModel = CONSTANT;
+        goma_ctx->fem.gn_glob[mn]->epsilon = 1e-16;
+        goma_ctx->fem.gn_glob[mn]->epsilonModel = CONSTANT;
       } else {
-        gn_glob[mn]->epsilon = 0.00001;
-        gn_glob[mn]->epsilonModel = CONSTANT;
+        goma_ctx->fem.gn_glob[mn]->epsilon = 0.00001;
+        goma_ctx->fem.gn_glob[mn]->epsilonModel = CONSTANT;
       }
     } else {
       GOMA_EH(model_read, "Epsilon Regularization");
@@ -2133,30 +2192,32 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
       ConstitutiveEquation == BOND || ConstitutiveEquation == BOND_SH ||
       ConstitutiveEquation == FOAM_EPOXY) {
-    model_read = look_for_mat_prop(imp, "Thixotropic Factor", &(gn_glob[mn]->thixoModel),
-                                   &(gn_glob[mn]->thixo_factor), NO_USER, NULL, model_name,
-                                   SCALAR_INPUT, &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "Thixotropic Factor", &(goma_ctx->fem.gn_glob[mn]->thixoModel),
+                          &(goma_ctx->fem.gn_glob[mn]->thixo_factor), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1 && !strcmp(model_name, "LEVEL_SET")) {
-      gn_glob[mn]->thixoModel = LEVEL_SET;
+      goma_ctx->fem.gn_glob[mn]->thixoModel = LEVEL_SET;
 
-      num_const = read_constants(imp, &(gn_glob[mn]->u_thixo_factor), 0);
+      num_const = read_constants(imp, &(goma_ctx->fem.gn_glob[mn]->u_thixo_factor), 0);
 
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Thixotropic Factor", "LEVEL_SET");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Thixotropic Factor", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      gn_glob[mn]->len_u_thixo = num_const;
-      SPF_DBL_VEC(endofstring(es), num_const, gn_glob[mn]->u_thixo_factor);
+      goma_ctx->fem.gn_glob[mn]->len_u_thixo = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.gn_glob[mn]->u_thixo_factor);
 
-      if (gn_glob[mn]->u_thixo_factor[2] == 0.0)
-        gn_glob[mn]->u_thixo_factor[2] = ls->Length_Scale / 2.0;
+      if (goma_ctx->fem.gn_glob[mn]->u_thixo_factor[2] == 0.0)
+        goma_ctx->fem.gn_glob[mn]->u_thixo_factor[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
     } else {
-      gn_glob[mn]->thixoModel = CONSTANT;
-      fprintf(stderr, "MAT %d Thixotropic Factor = %g\n", mn, gn_glob[mn]->thixo_factor);
+      goma_ctx->fem.gn_glob[mn]->thixoModel = CONSTANT;
+      fprintf(stderr, "MAT %d Thixotropic Factor = %g\n", mn,
+              goma_ctx->fem.gn_glob[mn]->thixo_factor);
       GOMA_WH(model_read, "Defaulting Thixotropic Factor to Zero");
     }
 
@@ -2165,9 +2226,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (ConstitutiveEquation == SUSPENSION || ConstitutiveEquation == POWERLAW_SUSPENSION ||
       ConstitutiveEquation == CARREAU_SUSPENSION || ConstitutiveEquation == FILLED_EPOXY) {
-    model_read = look_for_mat_prop(imp, "Suspension Maximum Packing", &(gn_glob[mn]->maxpackModel),
-                                   &(gn_glob[mn]->maxpack), NO_USER, NULL, model_name, SCALAR_INPUT,
-                                   &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Suspension Maximum Packing",
+                                   &(goma_ctx->fem.gn_glob[mn]->maxpackModel),
+                                   &(goma_ctx->fem.gn_glob[mn]->maxpack), NO_USER, NULL, model_name,
+                                   SCALAR_INPUT, &NO_SPECIES, es);
     GOMA_EH(model_read, "Suspension Maximum Packing");
     ECHO(es, echo_file);
 
@@ -2175,41 +2237,45 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     if (fscanf(imp, "%d", &species_no) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Suspension Species Number");
     }
-    gn_glob[mn]->sus_species_no = species_no;
+    goma_ctx->fem.gn_glob[mn]->sus_species_no = species_no;
 
     SPF(es, "%s %d", input, species_no);
     ECHO(es, echo_file);
   }
 
   if (ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP) {
-    model_read = look_for_mat_prop(imp, "Suspension Maximum Packing", &(gn_glob[mn]->maxpackModel),
-                                   &(gn_glob[mn]->maxpack), NO_USER, NULL, model_name, SCALAR_INPUT,
-                                   &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Suspension Maximum Packing",
+                                   &(goma_ctx->fem.gn_glob[mn]->maxpackModel),
+                                   &(goma_ctx->fem.gn_glob[mn]->maxpack), NO_USER, NULL, model_name,
+                                   SCALAR_INPUT, &NO_SPECIES, es);
     GOMA_EH(model_read, "Suspension Maximum Packing");
     ECHO(es, echo_file);
 
-    model_read =
-        look_for_mat_prop(imp, "Yield Exponent", &(gn_glob[mn]->fexpModel), &(gn_glob[mn]->fexp),
-                          NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Yield Exponent", &(goma_ctx->fem.gn_glob[mn]->fexpModel),
+                                   &(goma_ctx->fem.gn_glob[mn]->fexp), NO_USER, NULL, model_name,
+                                   SCALAR_INPUT, &NO_SPECIES, es);
     GOMA_EH(model_read, "Yield Exponent");
     ECHO(es, echo_file);
   }
 
   if (ConstitutiveEquation == CURE || ConstitutiveEquation == EPOXY ||
       ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == FOAM_PMDI_10) {
-    model_read = look_for_mat_prop(imp, "Cure Gel Point", &(gn_glob[mn]->gelpointModel),
-                                   &(gn_glob[mn]->gelpoint), NO_USER, NULL, model_name,
-                                   SCALAR_INPUT, &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "Cure Gel Point", &(goma_ctx->fem.gn_glob[mn]->gelpointModel),
+                          &(goma_ctx->fem.gn_glob[mn]->gelpoint), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
     GOMA_EH(model_read, "Cure Gel Point");
     ECHO(es, echo_file);
-    model_read = look_for_mat_prop(imp, "Cure A Exponent", &(gn_glob[mn]->cureaexpModel),
-                                   &(gn_glob[mn]->cureaexp), NO_USER, NULL, model_name,
-                                   SCALAR_INPUT, &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "Cure A Exponent", &(goma_ctx->fem.gn_glob[mn]->cureaexpModel),
+                          &(goma_ctx->fem.gn_glob[mn]->cureaexp), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
     GOMA_EH(model_read, "Cure  A Exponent");
     ECHO(es, echo_file);
-    model_read = look_for_mat_prop(imp, "Cure B Exponent", &(gn_glob[mn]->curebexpModel),
-                                   &(gn_glob[mn]->curebexp), NO_USER, NULL, model_name,
-                                   SCALAR_INPUT, &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "Cure B Exponent", &(goma_ctx->fem.gn_glob[mn]->curebexpModel),
+                          &(goma_ctx->fem.gn_glob[mn]->curebexp), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
     GOMA_EH(model_read, "Cure B Exponent");
 
     look_for(imp, "Cure Species Number", input, '=');
@@ -2220,11 +2286,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     SPF(endofstring(es), " %d", species_no);
     ECHO(es, echo_file);
 
-    gn_glob[mn]->cure_species_no = species_no;
+    goma_ctx->fem.gn_glob[mn]->cure_species_no = species_no;
 
-    model_read = look_for_mat_prop(imp, "Unreacted Gel Temperature", &(gn_glob[mn]->tgel0Model),
-                                   &(gn_glob[mn]->tgel0), NO_USER, NULL, model_name, SCALAR_INPUT,
-                                   &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Unreacted Gel Temperature",
+                                   &(goma_ctx->fem.gn_glob[mn]->tgel0Model),
+                                   &(goma_ctx->fem.gn_glob[mn]->tgel0), NO_USER, NULL, model_name,
+                                   SCALAR_INPUT, &NO_SPECIES, es);
     GOMA_EH(model_read, "Unreacted Gel Temperature");
     ECHO(es, echo_file);
   }
@@ -2235,7 +2302,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     if (fscanf(imp, "%d", &species_no) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Suspension Species Number");
     }
-    gn_glob[mn]->sus_species_no = species_no;
+    goma_ctx->fem.gn_glob[mn]->sus_species_no = species_no;
 
     SPF(endofstring(es), " %d", species_no);
     ECHO(es, echo_file);
@@ -2246,14 +2313,15 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     if (fscanf(imp, "%d", &species_no) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Suspension Species Number");
     }
-    gn_glob[mn]->sus_species_no = species_no;
+    goma_ctx->fem.gn_glob[mn]->sus_species_no = species_no;
 
     SPF(endofstring(es), " %d", species_no);
     ECHO(es, echo_file);
 
-    model_read = look_for_mat_prop(imp, "Cure Gel Point", &(gn_glob[mn]->gelpointModel),
-                                   &(gn_glob[mn]->gelpoint), NO_USER, NULL, model_name,
-                                   SCALAR_INPUT, &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "Cure Gel Point", &(goma_ctx->fem.gn_glob[mn]->gelpointModel),
+                          &(goma_ctx->fem.gn_glob[mn]->gelpoint), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
     GOMA_EH(model_read, "Cure Gel Point");
     ECHO(es, echo_file);
 
@@ -2264,19 +2332,21 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     SPF(es, "%s = %d", input, species_no);
     ECHO(es, echo_file);
 
-    gn_glob[mn]->cure_species_no = species_no;
+    goma_ctx->fem.gn_glob[mn]->cure_species_no = species_no;
   }
 
   if (ConstitutiveEquation == SYLGARD) {
-    model_read = look_for_mat_prop(imp, "Cure Gel Point", &(gn_glob[mn]->gelpointModel),
-                                   &(gn_glob[mn]->gelpoint), NO_USER, NULL, model_name,
-                                   SCALAR_INPUT, &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "Cure Gel Point", &(goma_ctx->fem.gn_glob[mn]->gelpointModel),
+                          &(goma_ctx->fem.gn_glob[mn]->gelpoint), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
     GOMA_EH(model_read, "Cure Gel Point");
     ECHO(es, echo_file);
 
-    model_read = look_for_mat_prop(imp, "Cure A Exponent", &(gn_glob[mn]->cureaexpModel),
-                                   &(gn_glob[mn]->cureaexp), NO_USER, NULL, model_name,
-                                   SCALAR_INPUT, &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, "Cure A Exponent", &(goma_ctx->fem.gn_glob[mn]->cureaexpModel),
+                          &(goma_ctx->fem.gn_glob[mn]->cureaexp), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
     GOMA_EH(model_read, "Cure  A Exponent");
     ECHO(es, echo_file);
 
@@ -2287,59 +2357,67 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     SPF(es, "%s = %d", input, species_no);
     ECHO(es, echo_file);
 
-    gn_glob[mn]->cure_species_no = species_no;
+    goma_ctx->fem.gn_glob[mn]->cure_species_no = species_no;
   }
 
   if (ConstitutiveEquation == BOND) {
     look_for(imp, "Bond Evolution Parameters", input, '=');
-    if (fscanf(imp, "%le %le %le %le %le %le", &gn_glob[mn]->k1, &gn_glob[mn]->k2, &gn_glob[mn]->n0,
-               &gn_glob[mn]->pexp, &gn_glob[mn]->qexp, &gn_glob[mn]->diff) != 6) {
+    if (fscanf(imp, "%le %le %le %le %le %le", &goma_ctx->fem.gn_glob[mn]->k1,
+               &goma_ctx->fem.gn_glob[mn]->k2, &goma_ctx->fem.gn_glob[mn]->n0,
+               &goma_ctx->fem.gn_glob[mn]->pexp, &goma_ctx->fem.gn_glob[mn]->qexp,
+               &goma_ctx->fem.gn_glob[mn]->diff) != 6) {
       GOMA_EH(GOMA_ERROR, "error reading Bond Evolution Parameters");
     }
     SPF(es, "%s = ", "Bond Evolution Parameters");
-    SPF(endofstring(es), " %.4g %.4g %.4g %.4g %.4g %.4g", gn_glob[mn]->k1, gn_glob[mn]->k2,
-        gn_glob[mn]->n0, gn_glob[mn]->pexp, gn_glob[mn]->qexp, gn_glob[mn]->diff);
+    SPF(endofstring(es), " %.4g %.4g %.4g %.4g %.4g %.4g", goma_ctx->fem.gn_glob[mn]->k1,
+        goma_ctx->fem.gn_glob[mn]->k2, goma_ctx->fem.gn_glob[mn]->n0,
+        goma_ctx->fem.gn_glob[mn]->pexp, goma_ctx->fem.gn_glob[mn]->qexp,
+        goma_ctx->fem.gn_glob[mn]->diff);
   }
 
   // Set the default
-  mp_glob[mn]->DilationalViscosityModel = DILVISCM_KAPPAWIPESMU;
+  goma_ctx->fem.mp_glob[mn]->DilationalViscosityModel = DILVISCM_KAPPAWIPESMU;
   SPF(es, "Dilational Viscosity = ");
-  model_read = look_for_mat_proptable(
-      imp, "Dilational Viscosity", &(mp_glob[mn]->DilationalViscosityModel),
-      &(mp_glob[mn]->dilationalViscosity), &(mp_glob[mn]->u_dilationalViscosity),
-      &(mp_glob[mn]->len_u_dilationalViscosity), &(mp_glob[mn]->dilationalViscosity_tableid),
-      model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  model_read = look_for_mat_proptable(imp, "Dilational Viscosity",
+                                      &(goma_ctx->fem.mp_glob[mn]->DilationalViscosityModel),
+                                      &(goma_ctx->fem.mp_glob[mn]->dilationalViscosity),
+                                      &(goma_ctx->fem.mp_glob[mn]->u_dilationalViscosity),
+                                      &(goma_ctx->fem.mp_glob[mn]->len_u_dilationalViscosity),
+                                      &(goma_ctx->fem.mp_glob[mn]->dilationalViscosity_tableid),
+                                      model_name, SCALAR_INPUT, &NO_SPECIES, es);
   if (model_read == 1) {
-    mp_glob[mn]->DilationalViscosityModel = DILVISCM_KAPPACONSTANT;
+    goma_ctx->fem.mp_glob[mn]->DilationalViscosityModel = DILVISCM_KAPPACONSTANT;
   }
   if (model_read == -1 && !strcmp(model_name, "DILVISCM_KAPPAWIPESMU")) {
-    mp_glob[mn]->dilationalViscosity = 0.0;
+    goma_ctx->fem.mp_glob[mn]->dilationalViscosity = 0.0;
   } else if (model_read == -1 && !strcmp(model_name, "DILVISCM_KAPPACONSTANT")) {
-    mp_glob[mn]->DilationalViscosityModel = DILVISCM_KAPPACONSTANT;
+    goma_ctx->fem.mp_glob[mn]->DilationalViscosityModel = DILVISCM_KAPPACONSTANT;
     num_const = read_constants(imp, &(mat_ptr->u_dilationalViscosity), 0);
     mat_ptr->dilationalViscosity = mat_ptr->u_dilationalViscosity[0];
 
     if (num_const < 1) {
       sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                   pd_glob[mn]->MaterialName, "Dilational Viscosity", "DILVISCM_KAPPACONSTANT");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Dilational Viscosity",
+                   "DILVISCM_KAPPACONSTANT");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_dilationalViscosity = num_const;
     SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_dilationalViscosity);
   } else if (model_read == -1 && !strcmp(model_name, "DILVISCM_KAPPAFIXEDRATIO")) {
-    mp_glob[mn]->DilationalViscosityModel = DILVISCM_KAPPAFIXEDRATIO;
+    goma_ctx->fem.mp_glob[mn]->DilationalViscosityModel = DILVISCM_KAPPAFIXEDRATIO;
     num_const = read_constants(imp, &(mat_ptr->u_dilationalViscosity), 0);
     mat_ptr->dilationalViscosityRatio = mat_ptr->u_dilationalViscosity[0];
     mat_ptr->dilationalViscosity = 0.0;
     if (num_const < 1) {
       sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                   pd_glob[mn]->MaterialName, "Dilational Viscosity", "DILVISCM_KAPPAFIXEDRATIO");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Dilational Viscosity",
+                   "DILVISCM_KAPPAFIXEDRATIO");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->len_u_dilationalViscosity = num_const;
     SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_dilationalViscosity);
   } else if (model_read == -1 && !strcmp(model_name, "DILVISCM_KAPPABUBBLES")) {
-    mp_glob[mn]->DilationalViscosityModel = DILVISCM_KAPPABUBBLES;
+    goma_ctx->fem.mp_glob[mn]->DilationalViscosityModel = DILVISCM_KAPPABUBBLES;
     num_const = read_constants(imp, &(mat_ptr->u_dilationalViscosity), 0);
     mat_ptr->len_u_dilationalViscosity = num_const;
     SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_dilationalViscosity);
@@ -2348,7 +2426,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     GOMA_EH(model_read, "Dilational Viscosity");
   }
 
-  if (mp_glob[mn]->DilationalViscosityModel != DILVISCM_KAPPAWIPESMU) {
+  if (goma_ctx->fem.mp_glob[mn]->DilationalViscosityModel != DILVISCM_KAPPAWIPESMU) {
     ECHO(es, echo_file);
   }
 
@@ -2373,7 +2451,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (model_read != -1) {
 
-    if (ls == NULL)
+    if (goma_ctx->fem.ls == NULL)
       GOMA_EH(GOMA_ERROR,
               "Second Level Set Viscosity requires activation of Level Set Tracking.\n");
 
@@ -2402,8 +2480,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
 
       SPF(endofstring(es), " %s", input);
-      if (pfd != NULL) {
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (goma_ctx->fem.pfd != NULL) {
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
           if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->viscosity_phase[i])) != 1) {
             GOMA_EH(GOMA_ERROR, "error reading phase viscosity");
           }
@@ -2416,7 +2494,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ECHO(es, echo_file);
   }
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     strcpy(search_string, "Level Set Interface Viscosity Interpolation Method");
     model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                    SCALAR_INPUT, &NO_SPECIES, es);
@@ -2481,40 +2559,40 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   stringup(model_name);
 
   if (!strcmp(model_name, "GIESEKUS")) {
-    vn_glob[mn]->ConstitutiveEquation = GIESEKUS;
+    goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation = GIESEKUS;
   } else if (!strcmp(model_name, "WHITE_METZNER")) {
-    vn_glob[mn]->ConstitutiveEquation = WHITE_METZNER;
+    goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation = WHITE_METZNER;
   } else if (!strcmp(model_name, "OLDROYDB")) {
-    vn_glob[mn]->ConstitutiveEquation = OLDROYDB;
+    goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation = OLDROYDB;
   } else if (!strcmp(model_name, "PTT") || !strcmp(model_name, "PHAN THIEN-TANNER") ||
              !strcmp(model_name, "PHAN-THIEN TANNER")) {
-    vn_glob[mn]->ConstitutiveEquation = PTT;
+    goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation = PTT;
   } else if (!strcmp(model_name, "SARAMITO_OLDROYDB")) {
-    vn_glob[mn]->ConstitutiveEquation = SARAMITO_OLDROYDB;
+    goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation = SARAMITO_OLDROYDB;
   } else if (!strcmp(model_name, "SARAMITO_GIESEKUS")) {
-    vn_glob[mn]->ConstitutiveEquation = SARAMITO_GIESEKUS;
+    goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation = SARAMITO_GIESEKUS;
   } else if (!strcmp(model_name, "SARAMITO_PTT")) {
-    vn_glob[mn]->ConstitutiveEquation = SARAMITO_PTT;
+    goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation = SARAMITO_PTT;
   } else if (!strcmp(model_name, "MODIFIED_JEFFREYS")) {
-    vn_glob[mn]->ConstitutiveEquation = MODIFIED_JEFFREYS;
+    goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation = MODIFIED_JEFFREYS;
   } else if (!strcmp(model_name, "ROLIE_POLY")) {
-    vn_glob[mn]->ConstitutiveEquation = ROLIE_POLY;
+    goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation = ROLIE_POLY;
   } else if (!strcmp(model_name, "FENE_P")) {
-    vn_glob[mn]->ConstitutiveEquation = FENE_P;
+    goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation = FENE_P;
   } else if (!strcmp(model_name, "NOPOLYMER")) {
-    vn_glob[mn]->ConstitutiveEquation = NOPOLYMER;
+    goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation = NOPOLYMER;
     /* set defaults if the next section is not entered */
-    vn_glob[mn]->wt_funcModel = GALERKIN;
-    vn_glob[mn]->wt_func = 0.;
-    vn_glob[mn]->evssModel = EVSS_G;
-    vn_glob[mn]->dg_J_model = FALSE;
+    goma_ctx->fem.vn_glob[mn]->wt_funcModel = GALERKIN;
+    goma_ctx->fem.vn_glob[mn]->wt_func = 0.;
+    goma_ctx->fem.vn_glob[mn]->evssModel = EVSS_G;
+    goma_ctx->fem.vn_glob[mn]->dg_J_model = FALSE;
   } else {
-    vn_glob[mn]->ConstitutiveEquation = NOPOLYMER;
+    goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation = NOPOLYMER;
     /* set defaults if the next section is not entered */
-    vn_glob[mn]->wt_funcModel = GALERKIN;
-    vn_glob[mn]->wt_func = 0.;
-    vn_glob[mn]->evssModel = EVSS_G;
-    vn_glob[mn]->dg_J_model = FALSE;
+    goma_ctx->fem.vn_glob[mn]->wt_funcModel = GALERKIN;
+    goma_ctx->fem.vn_glob[mn]->wt_func = 0.;
+    goma_ctx->fem.vn_glob[mn]->evssModel = EVSS_G;
+    goma_ctx->fem.vn_glob[mn]->dg_J_model = FALSE;
     strcpy(es, "\t(Polymer Constitutive Equation = NOPOLYMER)");
   }
   ECHO(es, echo_file);
@@ -2522,70 +2600,70 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   /* this will be true if a VE constitutive equation is specified
    * if the NOPOLYMER option is used we can skip this section
    */
-  if (vn_glob[mn]->ConstitutiveEquation) {
+  if (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation) {
 
-    if (vn_glob[mn]->ConstitutiveEquation == PTT) {
+    if (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == PTT) {
 
       strcpy(search_string, "PTT Form");
 
-      model_read = look_for_mat_prop(imp, search_string, &(vn_glob[mn]->evssModel), &(a0), NO_USER,
-                                     NULL, model_name, NO_INPUT, &NO_SPECIES, es);
+      model_read = look_for_mat_prop(imp, search_string, &(goma_ctx->fem.vn_glob[mn]->evssModel),
+                                     &(a0), NO_USER, NULL, model_name, NO_INPUT, &NO_SPECIES, es);
       if (!strcmp(model_name, "LINEAR")) {
-        vn_glob[mn]->ptt_type = PTT_LINEAR;
+        goma_ctx->fem.vn_glob[mn]->ptt_type = PTT_LINEAR;
         SPF(es, "\t%s = %s", "PTT Form", model_name);
       } else if (!strcmp(model_name, "EXPONENTIAL")) {
-        vn_glob[mn]->ptt_type = PTT_EXPONENTIAL;
+        goma_ctx->fem.vn_glob[mn]->ptt_type = PTT_EXPONENTIAL;
         SPF(es, "\t%s = %s", "PTT Form", model_name);
       } else {
         GOMA_WH(GOMA_ERROR,
                 "Unrecognized PTT Form: %s, expected LINEAR or EXPONENTIAL defaulting EXPONENTIAL",
                 model_name);
-        vn_glob[mn]->ptt_type = PTT_EXPONENTIAL;
+        goma_ctx->fem.vn_glob[mn]->ptt_type = PTT_EXPONENTIAL;
         SPF(es, "\t(%s = %s)", "PTT Form", "EXPONENTIAL");
       }
       ECHO(es, echo_file);
     } else {
-      vn_glob[mn]->ptt_type = PTT_EXPONENTIAL;
+      goma_ctx->fem.vn_glob[mn]->ptt_type = PTT_EXPONENTIAL;
     }
 
     strcpy(search_string, "Polymer Stress Formulation");
 
-    model_read = look_for_mat_prop(imp, search_string, &(vn_glob[mn]->evssModel), &(a0), NO_USER,
-                                   NULL, model_name, NO_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, search_string, &(goma_ctx->fem.vn_glob[mn]->evssModel),
+                                   &(a0), NO_USER, NULL, model_name, NO_INPUT, &NO_SPECIES, es);
     if (!strcmp(model_name, "EVSS_G")) {
-      if (vn_glob[mn]->ConstitutiveEquation == PTT ||
-          vn_glob[mn]->ConstitutiveEquation == SARAMITO_PTT)
+      if (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == PTT ||
+          goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == SARAMITO_PTT)
         GOMA_EH(GOMA_ERROR, "Error: EVSS_G stress formulation is not implemented in this case.");
 
-      vn_glob[mn]->evssModel = EVSS_G;
+      goma_ctx->fem.vn_glob[mn]->evssModel = EVSS_G;
     } else if (!strcmp(model_name, "EVSS_F")) {
-      vn_glob[mn]->evssModel = EVSS_F;
+      goma_ctx->fem.vn_glob[mn]->evssModel = EVSS_F;
     } else if (!strcmp(model_name, "EVSS_GRADV")) {
-      vn_glob[mn]->evssModel = EVSS_GRADV;
+      goma_ctx->fem.vn_glob[mn]->evssModel = EVSS_GRADV;
     } else if (!strcmp(model_name, "EVSS_L")) {
-      vn_glob[mn]->evssModel = EVSS_L;
+      goma_ctx->fem.vn_glob[mn]->evssModel = EVSS_L;
     } else if (!strcmp(model_name, "LOG_CONF")) {
-      vn_glob[mn]->evssModel = LOG_CONF;
+      goma_ctx->fem.vn_glob[mn]->evssModel = LOG_CONF;
     } else if (!strcmp(model_name, "SQRT_CONF")) {
-      vn_glob[mn]->evssModel = SQRT_CONF;
+      goma_ctx->fem.vn_glob[mn]->evssModel = SQRT_CONF;
     } else if (!strcmp(model_name, "CONF")) {
-      vn_glob[mn]->evssModel = CONF;
+      goma_ctx->fem.vn_glob[mn]->evssModel = CONF;
     } else if (!strcmp(model_name, "LOG_CONF_TRANSIENT")) {
-      vn_glob[mn]->evssModel = LOG_CONF_TRANSIENT;
+      goma_ctx->fem.vn_glob[mn]->evssModel = LOG_CONF_TRANSIENT;
     } else if (!strcmp(model_name, "LOG_CONF_TRANSIENT_GRADV")) {
-      vn_glob[mn]->evssModel = LOG_CONF_TRANSIENT_GRADV;
+      goma_ctx->fem.vn_glob[mn]->evssModel = LOG_CONF_TRANSIENT_GRADV;
     } else if (!strcmp(model_name, "LOG_CONF_GRADV")) {
-      vn_glob[mn]->evssModel = LOG_CONF_GRADV;
+      goma_ctx->fem.vn_glob[mn]->evssModel = LOG_CONF_GRADV;
     } else if (!strcmp(model_name, "EVSS_FILM_HEIGHT")) {
-      vn_glob[mn]->evssModel = EVSS_FILM_HEIGHT;
+      goma_ctx->fem.vn_glob[mn]->evssModel = EVSS_FILM_HEIGHT;
     } else if (!strcmp(model_name, "EVSS_FILM_HEIGHT_SQRT_CONF")) {
-      vn_glob[mn]->evssModel = EVSS_FILM_HEIGHT_SQRT_CONF;
+      goma_ctx->fem.vn_glob[mn]->evssModel = EVSS_FILM_HEIGHT_SQRT_CONF;
     } else {
-      if (vn_glob[mn]->ConstitutiveEquation == PTT ||
-          vn_glob[mn]->ConstitutiveEquation == SARAMITO_PTT)
+      if (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == PTT ||
+          goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == SARAMITO_PTT)
         GOMA_EH(GOMA_ERROR, "Error: EVSS_G stress formulation is not implemented in this case.");
 
-      vn_glob[mn]->evssModel = EVSS_G; /* default to Rajagopalan's
+      goma_ctx->fem.vn_glob[mn]->evssModel = EVSS_G; /* default to Rajagopalan's
                                           formulation */
 
       SPF(es, "\t(%s = %s)", "Polymer Stress Formulation", "EVSS_G");
@@ -2595,70 +2673,71 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
     strcpy(search_string, "Polymer Weight Function");
 
-    model_read = look_for_mat_prop(imp, search_string, &(vn_glob[mn]->wt_funcModel), &(a0), NO_USER,
-                                   NULL, model_name, NO_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, search_string, &(goma_ctx->fem.vn_glob[mn]->wt_funcModel),
+                                   &(a0), NO_USER, NULL, model_name, NO_INPUT, &NO_SPECIES, es);
 
     if (!strcmp(model_name, "GALERKIN")) {
-      vn_glob[mn]->wt_funcModel = GALERKIN;
+      goma_ctx->fem.vn_glob[mn]->wt_funcModel = GALERKIN;
     } else if (!strcmp(model_name, "SUPG")) {
-      vn_glob[mn]->wt_funcModel = SUPG;
+      goma_ctx->fem.vn_glob[mn]->wt_funcModel = SUPG;
     } else {
-      vn_glob[mn]->wt_funcModel = GALERKIN;
+      goma_ctx->fem.vn_glob[mn]->wt_funcModel = GALERKIN;
 
       SPF(es, "\t(%s = %s)", search_string, "GALERKIN");
     }
 
     ECHO(es, echo_file);
 
-    if (vn_glob[mn]->wt_funcModel == SUPG) {
+    if (goma_ctx->fem.vn_glob[mn]->wt_funcModel == SUPG) {
 
       strcpy(search_string, "Polymer Weighting");
 
-      model_read =
-          look_for_mat_prop(imp, search_string, &(ConstitutiveEquation), &(vn_glob[mn]->wt_func),
-                            NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+      model_read = look_for_mat_prop(imp, search_string, &(ConstitutiveEquation),
+                                     &(goma_ctx->fem.vn_glob[mn]->wt_func), NO_USER, NULL,
+                                     model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
       GOMA_EH(model_read, "Polymer Weighting not set");
     } else {
-      vn_glob[mn]->wt_func = 0.;
-      SPF(es, "\t(%s = %s %g)", search_string, "CONSTANT", vn_glob[mn]->wt_func);
+      goma_ctx->fem.vn_glob[mn]->wt_func = 0.;
+      SPF(es, "\t(%s = %s %g)", search_string, "CONSTANT", goma_ctx->fem.vn_glob[mn]->wt_func);
     }
 
     strcpy(search_string, "Polymer Shock Capturing");
-    model_read = look_for_mat_prop(imp, search_string, &(vn_glob[mn]->shockcaptureModel),
-                                   &(vn_glob[mn]->shockcapture), NO_USER, NULL, model_name,
-                                   SCALAR_INPUT, &NO_SPECIES, es);
+    model_read =
+        look_for_mat_prop(imp, search_string, &(goma_ctx->fem.vn_glob[mn]->shockcaptureModel),
+                          &(goma_ctx->fem.vn_glob[mn]->shockcapture), NO_USER, NULL, model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
     if (strncmp(model_name, " ", 1) != 0) {
       if (!strcmp(model_name, "NONE")) {
-        vn_glob[mn]->shockcaptureModel = SC_NONE;
-        vn_glob[mn]->shockcapture = 0.0;
+        goma_ctx->fem.vn_glob[mn]->shockcaptureModel = SC_NONE;
+        goma_ctx->fem.vn_glob[mn]->shockcapture = 0.0;
       } else if (!strcmp(model_name, "DCDD")) {
         int err;
-        vn_glob[mn]->shockcaptureModel = SC_DCDD;
-        err = fscanf(imp, "%lg", &(vn_glob[mn]->shockcapture));
+        goma_ctx->fem.vn_glob[mn]->shockcaptureModel = SC_DCDD;
+        err = fscanf(imp, "%lg", &(goma_ctx->fem.vn_glob[mn]->shockcapture));
         if (err != 1) {
           GOMA_EH(GOMA_ERROR, "Expected to read one double for Polymer Shock Capturing = DCDD");
         }
-        SPF(endofstring(es), " %.4g", vn_glob[mn]->shockcapture);
+        SPF(endofstring(es), " %.4g", goma_ctx->fem.vn_glob[mn]->shockcapture);
       } else if (!strcmp(model_name, "YZBETA")) {
         int err;
-        vn_glob[mn]->shockcaptureModel = SC_YZBETA;
-        err = fscanf(imp, "%lg", &(vn_glob[mn]->shockcapture));
+        goma_ctx->fem.vn_glob[mn]->shockcaptureModel = SC_YZBETA;
+        err = fscanf(imp, "%lg", &(goma_ctx->fem.vn_glob[mn]->shockcapture));
         if (err != 1) {
           GOMA_EH(GOMA_ERROR, "Expected to read one double for Polymer Shock Capturing = YZBETA");
         }
-        SPF(endofstring(es), " %.4g", vn_glob[mn]->shockcapture);
+        SPF(endofstring(es), " %.4g", goma_ctx->fem.vn_glob[mn]->shockcapture);
       } else if (!strcmp(model_name, "CONSTANT")) {
-        vn_glob[mn]->shockcaptureModel = SC_CONSTANT;
+        goma_ctx->fem.vn_glob[mn]->shockcaptureModel = SC_CONSTANT;
         // the scanf is taken care of in the look_for_mat_prop call
         // err = fscanf(imp, "%lg", &(vn_glob[mn]->shockcapture));
-        SPF(endofstring(es), " %.4g", vn_glob[mn]->shockcapture);
+        SPF(endofstring(es), " %.4g", goma_ctx->fem.vn_glob[mn]->shockcapture);
       } else {
         GOMA_EH(GOMA_ERROR, "Syntax error or invalid model for %s\n", search_string);
       }
     } else {
-      vn_glob[mn]->shockcaptureModel = SC_NONE;
-      vn_glob[mn]->shockcapture = 0.0;
+      goma_ctx->fem.vn_glob[mn]->shockcaptureModel = SC_NONE;
+      goma_ctx->fem.vn_glob[mn]->shockcapture = 0.0;
       SPF(es, "\t(%s = %s)", search_string, "NONE");
     }
 
@@ -2674,39 +2753,39 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       SPF(es, "%s = %s", search_string, model_name);
 
       if (!strcmp(model_name, "CONSTANT")) {
-        vn_glob[mn]->shiftModel = CONSTANT;
+        goma_ctx->fem.vn_glob[mn]->shiftModel = CONSTANT;
 
-        num_const = read_constants(imp, &(vn_glob[mn]->shift), NO_SPECIES);
+        num_const = read_constants(imp, &(goma_ctx->fem.vn_glob[mn]->shift), NO_SPECIES);
         if (num_const < 1) {
           log_err("Matl %s expected at least 1 constants for %s model.\n",
-                  pd_glob[mn]->MaterialName, "CONSTANT_WLF shift factor");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "CONSTANT_WLF shift factor");
         }
-        vn_glob[mn]->len_shift = num_const;
+        goma_ctx->fem.vn_glob[mn]->len_shift = num_const;
 
-        SPF_DBL_VEC(endofstring(es), num_const, vn_glob[mn]->shift);
+        SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.vn_glob[mn]->shift);
 
       } else if (!strcmp(model_name, "MODIFIED_WLF")) {
-        vn_glob[mn]->shiftModel = MODIFIED_WLF;
+        goma_ctx->fem.vn_glob[mn]->shiftModel = MODIFIED_WLF;
 
-        num_const = read_constants(imp, &(vn_glob[mn]->shift), NO_SPECIES);
+        num_const = read_constants(imp, &(goma_ctx->fem.vn_glob[mn]->shift), NO_SPECIES);
 
         if (num_const < 2) {
           log_err("Matl %s expected at least 2 constants for %s model.\n",
-                  pd_glob[mn]->MaterialName, "MODIFIED_WLF shift factor");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "MODIFIED_WLF shift factor");
         }
-        vn_glob[mn]->len_shift = num_const;
+        goma_ctx->fem.vn_glob[mn]->len_shift = num_const;
 
-        SPF_DBL_VEC(endofstring(es), num_const, vn_glob[mn]->shift);
+        SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.vn_glob[mn]->shift);
       } else {
-        vn_glob[mn]->shiftModel = CONSTANT;
-        vn_glob[mn]->shift = alloc_dbl_1(1, 1.0);
-        vn_glob[mn]->len_shift = 1;
+        goma_ctx->fem.vn_glob[mn]->shiftModel = CONSTANT;
+        goma_ctx->fem.vn_glob[mn]->shift = alloc_dbl_1(1, 1.0);
+        goma_ctx->fem.vn_glob[mn]->len_shift = 1;
         SPF(es, "\t(%s = %s %.4g)", search_string, "CONSTANT", 1.0);
       }
     } else {
-      vn_glob[mn]->shiftModel = CONSTANT;
-      vn_glob[mn]->shift = alloc_dbl_1(1, 1.0);
-      vn_glob[mn]->len_shift = 1;
+      goma_ctx->fem.vn_glob[mn]->shiftModel = CONSTANT;
+      goma_ctx->fem.vn_glob[mn]->shift = alloc_dbl_1(1, 1.0);
+      goma_ctx->fem.vn_glob[mn]->len_shift = 1;
       SPF(es, "\t(%s = %s %.4g)", search_string, "CONSTANT", 1.0);
     }
 
@@ -2722,36 +2801,36 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       SPF(es, "%s = %s", search_string, model_name);
 
       if (!strcmp(model_name, "FULL")) {
-        vn_glob[mn]->dg_J_model = FULL_DG;
+        goma_ctx->fem.vn_glob[mn]->dg_J_model = FULL_DG;
       } else if (!strcmp(model_name, "EXPLICIT")) {
-        vn_glob[mn]->dg_J_model = EXPLICIT_DG;
+        goma_ctx->fem.vn_glob[mn]->dg_J_model = EXPLICIT_DG;
 
-        num_const = read_constants(imp, &(vn_glob[mn]->dg_J_model_wt), NO_SPECIES);
+        num_const = read_constants(imp, &(goma_ctx->fem.vn_glob[mn]->dg_J_model_wt), NO_SPECIES);
 
         if (num_const < 1) {
           log_err("Matl %s expected at least 1 constants for %s model.\n",
-                  pd_glob[mn]->MaterialName, "EXPLICIT_DG weighting factor");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "EXPLICIT_DG weighting factor");
         }
-        vn_glob[mn]->len_dg_J_model_wt = num_const;
+        goma_ctx->fem.vn_glob[mn]->len_dg_J_model_wt = num_const;
 
-        SPF_DBL_VEC(endofstring(es), num_const, vn_glob[mn]->dg_J_model_wt);
+        SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.vn_glob[mn]->dg_J_model_wt);
 
       } else if (!strcmp(model_name, "SEGREGATED")) {
-        vn_glob[mn]->dg_J_model = SEGREGATED;
+        goma_ctx->fem.vn_glob[mn]->dg_J_model = SEGREGATED;
 
-        num_const = read_constants(imp, &(vn_glob[mn]->dg_J_model_wt), NO_SPECIES);
+        num_const = read_constants(imp, &(goma_ctx->fem.vn_glob[mn]->dg_J_model_wt), NO_SPECIES);
         if (num_const < 1) {
           log_err("Matl %s expected at least 1 constants for %s model.\n",
-                  pd_glob[mn]->MaterialName, "SEGREGATED weighting factor");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "SEGREGATED weighting factor");
         }
-        vn_glob[mn]->len_dg_J_model_wt = num_const;
-        SPF_DBL_VEC(endofstring(es), num_const, vn_glob[mn]->dg_J_model_wt);
+        goma_ctx->fem.vn_glob[mn]->len_dg_J_model_wt = num_const;
+        SPF_DBL_VEC(endofstring(es), num_const, goma_ctx->fem.vn_glob[mn]->dg_J_model_wt);
       } else {
-        vn_glob[mn]->dg_J_model = FALSE;
+        goma_ctx->fem.vn_glob[mn]->dg_J_model = FALSE;
         SPF(es, "\t(%s = %s)", search_string, "FALSE");
       }
     } else {
-      vn_glob[mn]->dg_J_model = FALSE;
+      goma_ctx->fem.vn_glob[mn]->dg_J_model = FALSE;
       SPF(es, "\t(%s = %s)", search_string, "FALSE");
     }
 
@@ -2762,11 +2841,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
     strcpy(search_string, "Adaptive Viscosity Scaling");
 
-    model_read = look_for_mat_prop(imp, search_string, &(ConstitutiveEquation), &(vn_glob[mn]->eps),
-                                   NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, search_string, &(ConstitutiveEquation),
+                                   &(goma_ctx->fem.vn_glob[mn]->eps), NO_USER, NULL, model_name,
+                                   SCALAR_INPUT, &NO_SPECIES, es);
     if (model_read == -1) {
-      vn_glob[mn]->eps = 0.;
-      SPF(es, "\t(%s = %s %.4g)", search_string, "CONSTANT", vn_glob[mn]->eps);
+      goma_ctx->fem.vn_glob[mn]->eps = 0.;
+      SPF(es, "\t(%s = %s %.4g)", search_string, "CONSTANT", goma_ctx->fem.vn_glob[mn]->eps);
     }
 
     ECHO(es, echo_file);
@@ -2775,13 +2855,13 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
     strcpy(search_string, "Polymer Viscosity");
 
-    if (vn_glob[mn]->modes == 0)
+    if (goma_ctx->fem.vn_glob[mn]->modes == 0)
       GOMA_EH(GOMA_ERROR, "Need to specify number of VE modes in input deck");
 
-    modal_data = (dbl *)array_alloc(1, vn_glob[mn]->modes, sizeof(dbl));
+    modal_data = (dbl *)array_alloc(1, goma_ctx->fem.vn_glob[mn]->modes, sizeof(dbl));
 
-    model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                     modal_data, model_name, es);
+    model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                     &matl_model, modal_data, model_name, es);
     if (model_read < 1) {
       if (model_read == -1)
         GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -2800,45 +2880,46 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
     }
 
-    if (vn_glob[mn]->ConstitutiveEquation == WHITE_METZNER && matl_model == CONSTANT) {
+    if (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == WHITE_METZNER &&
+        matl_model == CONSTANT) {
       GOMA_WH(GOMA_ERROR, "White-Metzner model expects non-constant polymer viscosity.");
     }
     ECHO(es, echo_file);
 
-    for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+    for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
       // initialize defaults
-      ve_glob[mn][mm]->gn->muinf = 0.;
-      ve_glob[mn][mm]->gn->muinfModel = CONSTANT;
-      ve_glob[mn][mm]->gn->lam = 0.;
-      ve_glob[mn][mm]->gn->lamModel = CONSTANT;
-      ve_glob[mn][mm]->gn->aexp = 0.;
-      ve_glob[mn][mm]->gn->aexpModel = CONSTANT;
-      ve_glob[mn][mm]->gn->nexp = 0.;
-      ve_glob[mn][mm]->gn->nexpModel = CONSTANT;
-      ve_glob[mn][mm]->gn->tau_y = 0.;
-      ve_glob[mn][mm]->gn->tau_yModel = CONSTANT;
-      ve_glob[mn][mm]->gn->fexp = 0.;
-      ve_glob[mn][mm]->gn->fexpModel = CONSTANT;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->muinf = 0.;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->muinfModel = CONSTANT;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->lam = 0.;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->lamModel = CONSTANT;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->aexp = 0.;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->aexpModel = CONSTANT;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->nexp = 0.;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->nexpModel = CONSTANT;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->tau_y = 0.;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->tau_yModel = CONSTANT;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->fexp = 0.;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->fexpModel = CONSTANT;
 
-      ve_glob[mn][mm]->gn->ConstitutiveEquation = matl_model;
+      goma_ctx->fem.ve_glob[mn][mm]->gn->ConstitutiveEquation = matl_model;
     }
 
     // in case of non-constant polymer viscosity, parse polymer viscosity parameters
     if (matl_model == CONSTANT) {
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->gn->mu0 = modal_data[mm];
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->gn->mu0 = modal_data[mm];
       }
     } else {
       // look for material properties for non-constant polymer viscosity
 
       // Low Rate Viscosity
-      switch (ve_glob[mn][0]->gn->ConstitutiveEquation) {
+      switch (goma_ctx->fem.ve_glob[mn][0]->gn->ConstitutiveEquation) {
       case POWER_LAW:
       case CARREAU:
       case HERSCHEL_BULKLEY: {
         strcpy(search_string, "Polymer Low Rate Viscosity");
-        model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                         modal_data, model_name, es);
+        model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                         &matl_model, modal_data, model_name, es);
         if (model_read < 1) {
           if (model_read == -1)
             GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -2846,8 +2927,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (matl_model != CONSTANT) {
           GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
         }
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->gn->mu0 = modal_data[mm];
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->gn->mu0 = modal_data[mm];
         }
         ECHO(es, echo_file);
       } break;
@@ -2856,13 +2937,13 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
 
       // Power Law Exponent
-      switch (ve_glob[mn][0]->gn->ConstitutiveEquation) {
+      switch (goma_ctx->fem.ve_glob[mn][0]->gn->ConstitutiveEquation) {
       case POWER_LAW:
       case CARREAU:
       case HERSCHEL_BULKLEY: {
         strcpy(search_string, "Polymer Power Law Exponent");
-        model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                         modal_data, model_name, es);
+        model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                         &matl_model, modal_data, model_name, es);
         if (model_read < 1) {
           if (model_read == -1)
             GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -2870,8 +2951,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (matl_model != CONSTANT) {
           GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
         }
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->gn->nexp = modal_data[mm];
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->gn->nexp = modal_data[mm];
         }
         ECHO(es, echo_file);
       } break;
@@ -2880,11 +2961,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
 
       // High Rate Viscosity
-      switch (ve_glob[mn][0]->gn->ConstitutiveEquation) {
+      switch (goma_ctx->fem.ve_glob[mn][0]->gn->ConstitutiveEquation) {
       case CARREAU: {
         strcpy(search_string, "Polymer High Rate Viscosity");
-        model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                         modal_data, model_name, es);
+        model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                         &matl_model, modal_data, model_name, es);
         if (model_read < 1) {
           if (model_read == -1)
             GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -2892,8 +2973,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (matl_model != CONSTANT) {
           GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
         }
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->gn->muinf = modal_data[mm];
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->gn->muinf = modal_data[mm];
         }
         ECHO(es, echo_file);
       } break;
@@ -2902,11 +2983,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
 
       // Viscosity Time Constant
-      switch (ve_glob[mn][0]->gn->ConstitutiveEquation) {
+      switch (goma_ctx->fem.ve_glob[mn][0]->gn->ConstitutiveEquation) {
       case CARREAU: {
         strcpy(search_string, "Polymer Viscosity Time Constant");
-        model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                         modal_data, model_name, es);
+        model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                         &matl_model, modal_data, model_name, es);
         if (model_read < 1) {
           if (model_read == -1)
             GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -2914,8 +2995,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (matl_model != CONSTANT) {
           GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
         }
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->gn->lam = modal_data[mm];
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->gn->lam = modal_data[mm];
         }
         ECHO(es, echo_file);
       } break;
@@ -2924,11 +3005,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
 
       // Viscosity Aexp
-      switch (ve_glob[mn][0]->gn->ConstitutiveEquation) {
+      switch (goma_ctx->fem.ve_glob[mn][0]->gn->ConstitutiveEquation) {
       case CARREAU: {
         strcpy(search_string, "Polymer Viscosity Aexp");
-        model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                         modal_data, model_name, es);
+        model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                         &matl_model, modal_data, model_name, es);
         if (model_read < 1) {
           if (model_read == -1)
             GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -2936,8 +3017,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (matl_model != CONSTANT) {
           GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
         }
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->gn->aexp = modal_data[mm];
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->gn->aexp = modal_data[mm];
         }
         ECHO(es, echo_file);
       } break;
@@ -2946,11 +3027,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
 
       // Polymer Yield Stress
-      switch (ve_glob[mn][0]->gn->ConstitutiveEquation) {
+      switch (goma_ctx->fem.ve_glob[mn][0]->gn->ConstitutiveEquation) {
       case HERSCHEL_BULKLEY: {
         strcpy(search_string, "Polymer Yield Stress");
-        model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                         modal_data, model_name, es);
+        model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                         &matl_model, modal_data, model_name, es);
         if (model_read < 1) {
           if (model_read == -1)
             GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -2958,8 +3039,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (matl_model != CONSTANT) {
           GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
         }
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->gn->tau_y = modal_data[mm];
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->gn->tau_y = modal_data[mm];
         }
       } break;
       default:
@@ -2969,20 +3050,20 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
     strcpy(search_string, "Positive Level Set Polymer Viscosity");
 
-    model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                     modal_data, model_name, es);
+    model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                     &matl_model, modal_data, model_name, es);
 
     if (model_read == 1) {
 
-      if (ls == NULL)
+      if (goma_ctx->fem.ls == NULL)
         GOMA_EH(
             GOMA_ERROR,
             "Positive Level Set Polymer Viscosity requires activation of Level Set Tracking.\n");
 
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->gn->pos_ls_mup = modal_data[mm];
-        ve_glob[mn][mm]->gn->mu0Model = VE_LEVEL_SET;
-        ve_glob[mn][mm]->gn->ConstitutiveEquation = VE_LEVEL_SET;
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->gn->pos_ls_mup = modal_data[mm];
+        goma_ctx->fem.ve_glob[mn][mm]->gn->mu0Model = VE_LEVEL_SET;
+        goma_ctx->fem.ve_glob[mn][mm]->gn->ConstitutiveEquation = VE_LEVEL_SET;
       }
 
       ECHO(es, echo_file);
@@ -2994,8 +3075,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
     strcpy(search_string, "Polymer Time Constant");
 
-    model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                     modal_data, model_name, es);
+    model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                     &matl_model, modal_data, model_name, es);
     if (model_read < 1) {
       if (model_read == -1)
         GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -3011,40 +3092,41 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
     }
 
-    if (vn_glob[mn]->ConstitutiveEquation == WHITE_METZNER && matl_model == CONSTANT) {
+    if (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == WHITE_METZNER &&
+        matl_model == CONSTANT) {
       GOMA_WH(GOMA_ERROR, "White-Metzner model expects non-constant polymer time constant.");
     }
     ECHO(es, echo_file);
 
-    for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+    for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
       // initialize defaults
-      ve_glob[mn][mm]->time_const_st->lambdainf = 0.;
-      ve_glob[mn][mm]->time_const_st->lambdainfModel = CONSTANT;
-      ve_glob[mn][mm]->time_const_st->carreau_lambda = 0.;
-      ve_glob[mn][mm]->time_const_st->carreau_lambdaModel = CONSTANT;
-      ve_glob[mn][mm]->time_const_st->aexp = 0.;
-      ve_glob[mn][mm]->time_const_st->aexpModel = CONSTANT;
-      ve_glob[mn][mm]->time_const_st->nexp = 0.;
-      ve_glob[mn][mm]->time_const_st->nexpModel = CONSTANT;
-      ve_glob[mn][mm]->time_const_st->lambda0Model = matl_model;
-      ve_glob[mn][mm]->time_const_st->ConstitutiveEquation = matl_model;
+      goma_ctx->fem.ve_glob[mn][mm]->time_const_st->lambdainf = 0.;
+      goma_ctx->fem.ve_glob[mn][mm]->time_const_st->lambdainfModel = CONSTANT;
+      goma_ctx->fem.ve_glob[mn][mm]->time_const_st->carreau_lambda = 0.;
+      goma_ctx->fem.ve_glob[mn][mm]->time_const_st->carreau_lambdaModel = CONSTANT;
+      goma_ctx->fem.ve_glob[mn][mm]->time_const_st->aexp = 0.;
+      goma_ctx->fem.ve_glob[mn][mm]->time_const_st->aexpModel = CONSTANT;
+      goma_ctx->fem.ve_glob[mn][mm]->time_const_st->nexp = 0.;
+      goma_ctx->fem.ve_glob[mn][mm]->time_const_st->nexpModel = CONSTANT;
+      goma_ctx->fem.ve_glob[mn][mm]->time_const_st->lambda0Model = matl_model;
+      goma_ctx->fem.ve_glob[mn][mm]->time_const_st->ConstitutiveEquation = matl_model;
     }
 
     // in case of non-constant polymer viscosity, parse polymer time constant parameters
     if (matl_model == CONSTANT) {
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->time_const_st->lambda0 = modal_data[mm];
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->time_const_st->lambda0 = modal_data[mm];
       }
     } else {
       // look for material properties for non-constant polymer viscosity
 
       // Low Rate Time Constant
-      switch (ve_glob[mn][0]->time_const_st->ConstitutiveEquation) {
+      switch (goma_ctx->fem.ve_glob[mn][0]->time_const_st->ConstitutiveEquation) {
       case POWER_LAW:
       case CARREAU: {
         strcpy(search_string, "Polymer Low Rate Time Constant");
-        model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                         modal_data, model_name, es);
+        model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                         &matl_model, modal_data, model_name, es);
         if (model_read < 1) {
           if (model_read == -1)
             GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -3052,8 +3134,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (matl_model != CONSTANT) {
           GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
         }
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->time_const_st->lambda0 = modal_data[mm];
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->time_const_st->lambda0 = modal_data[mm];
         }
       } break;
       default:
@@ -3061,12 +3143,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
 
       // Power Law Exponent
-      switch (ve_glob[mn][0]->time_const_st->ConstitutiveEquation) {
+      switch (goma_ctx->fem.ve_glob[mn][0]->time_const_st->ConstitutiveEquation) {
       case POWER_LAW:
       case CARREAU: {
         strcpy(search_string, "Polymer Time Constant Power Law Exponent");
-        model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                         modal_data, model_name, es);
+        model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                         &matl_model, modal_data, model_name, es);
         if (model_read < 1) {
           if (model_read == -1)
             GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -3074,8 +3156,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (matl_model != CONSTANT) {
           GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
         }
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->time_const_st->nexp = modal_data[mm];
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->time_const_st->nexp = modal_data[mm];
         }
       } break;
       default:
@@ -3083,11 +3165,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
 
       // High Rate Viscosity
-      switch (ve_glob[mn][0]->time_const_st->ConstitutiveEquation) {
+      switch (goma_ctx->fem.ve_glob[mn][0]->time_const_st->ConstitutiveEquation) {
       case CARREAU: {
         strcpy(search_string, "Polymer High Rate Time Constant");
-        model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                         modal_data, model_name, es);
+        model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                         &matl_model, modal_data, model_name, es);
         if (model_read < 1) {
           if (model_read == -1)
             GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -3095,8 +3177,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (matl_model != CONSTANT) {
           GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
         }
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->time_const_st->lambdainf = modal_data[mm];
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->time_const_st->lambdainf = modal_data[mm];
         }
       } break;
       default:
@@ -3104,11 +3186,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
 
       // Time Constant Time Constant
-      switch (ve_glob[mn][0]->time_const_st->ConstitutiveEquation) {
+      switch (goma_ctx->fem.ve_glob[mn][0]->time_const_st->ConstitutiveEquation) {
       case CARREAU: {
         strcpy(search_string, "Polymer Carreau Time Constant");
-        model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                         modal_data, model_name, es);
+        model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                         &matl_model, modal_data, model_name, es);
         if (model_read < 1) {
           if (model_read == -1)
             GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -3116,8 +3198,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (matl_model != CONSTANT) {
           GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
         }
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->time_const_st->carreau_lambda = modal_data[mm];
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->time_const_st->carreau_lambda = modal_data[mm];
         }
       } break;
       default:
@@ -3125,11 +3207,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
 
       // Time Constant Aexp
-      switch (ve_glob[mn][0]->time_const_st->ConstitutiveEquation) {
+      switch (goma_ctx->fem.ve_glob[mn][0]->time_const_st->ConstitutiveEquation) {
       case CARREAU: {
         strcpy(search_string, "Polymer Time Constant Aexp");
-        model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                         modal_data, model_name, es);
+        model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                         &matl_model, modal_data, model_name, es);
         if (model_read < 1) {
           if (model_read == -1)
             GOMA_EH(GOMA_ERROR, "%s card is missing.", search_string);
@@ -3137,8 +3219,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (matl_model != CONSTANT) {
           GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
         }
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->time_const_st->aexp = modal_data[mm];
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->time_const_st->aexp = modal_data[mm];
         }
       } break;
       default:
@@ -3148,24 +3230,24 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
     strcpy(search_string, "Positive Level Set Polymer Time Constant");
 
-    model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                     modal_data, model_name, es);
+    model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                     &matl_model, modal_data, model_name, es);
 
     if (model_read == 1) {
 
-      if (ls == NULL)
+      if (goma_ctx->fem.ls == NULL)
         GOMA_EH(GOMA_ERROR, "Positive Level Set Polymer Time Constant requires activation of Level "
                             "Set Tracking.\n");
 
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->time_const_st->pos_ls_lambda = modal_data[mm];
-        if (ve_glob[mn][mm]->time_const_st->lambda0Model != CONSTANT) {
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->time_const_st->pos_ls_lambda = modal_data[mm];
+        if (goma_ctx->fem.ve_glob[mn][mm]->time_const_st->lambda0Model != CONSTANT) {
           fprintf(stderr, "%s\n",
                   "Only CONSTANT Polymer Time Constant model supported for viscoelastic level set");
           exit(-1);
         }
-        ve_glob[mn][mm]->time_const_st->lambda0Model = VE_LEVEL_SET;
-        ve_glob[mn][mm]->time_const_st->ConstitutiveEquation = VE_LEVEL_SET;
+        goma_ctx->fem.ve_glob[mn][mm]->time_const_st->lambda0Model = VE_LEVEL_SET;
+        goma_ctx->fem.ve_glob[mn][mm]->time_const_st->ConstitutiveEquation = VE_LEVEL_SET;
       }
 
       ECHO(es, echo_file);
@@ -3175,11 +3257,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       exit(-1);
     }
 
-    if (vn_glob[mn]->ConstitutiveEquation == MODIFIED_JEFFREYS) {
+    if (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == MODIFIED_JEFFREYS) {
       strcpy(search_string, "Jeffreys Viscosity");
 
-      model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                       modal_data, model_name, es);
+      model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                       &matl_model, modal_data, model_name, es);
 
       if (model_read < 1) {
         if (model_read == -1)
@@ -3192,70 +3274,17 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       ECHO(es, echo_file);
 
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->muJeffreys = modal_data[mm];
-        ve_glob[mn][mm]->muJeffreysModel = matl_model;
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->muJeffreys = modal_data[mm];
+        goma_ctx->fem.ve_glob[mn][mm]->muJeffreysModel = matl_model;
       }
     }
 
-    if (vn_glob[mn]->ConstitutiveEquation == GIESEKUS ||
-        vn_glob[mn]->ConstitutiveEquation == SARAMITO_GIESEKUS) {
+    if (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == GIESEKUS ||
+        goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == SARAMITO_GIESEKUS) {
       strcpy(search_string, "Mobility Parameter");
 
-      model_read = look_for_modal_prop(imp, "Mobility Parameter", vn_glob[mn]->modes, &matl_model,
-                                       modal_data, model_name, es);
-
-      if (model_read < 1) {
-        if (model_read == -1)
-          SPF(err_msg, "%s is missing", search_string);
-        if (model_read == -2)
-          SPF(err_msg, "Only CONSTANT %s mode models supported.", search_string);
-        fprintf(stderr, "%s\n", err_msg);
-        exit(-1);
-      }
-
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->alpha = modal_data[mm];
-        ve_glob[mn][mm]->alphaModel = matl_model;
-      }
-
-      ECHO(es, echo_file);
-
-      strcpy(search_string, "Positive Level Set Mobility Parameter");
-
-      model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                       modal_data, model_name, es);
-
-      if (model_read == 1) {
-
-        if (ls == NULL)
-          GOMA_EH(GOMA_ERROR, "Positive Level Set Mobility Parameter requires activation of "
-                              "Level Set Tracking.\n");
-
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->pos_ls.alpha = modal_data[mm];
-          ve_glob[mn][mm]->alphaModel = VE_LEVEL_SET;
-        }
-
-        ECHO(es, echo_file);
-      } else if (model_read == -2) {
-        SPF(err_msg, "Only CONSTANT %s mode model supported.", search_string);
-        fprintf(stderr, "%s\n", err_msg);
-        exit(-1);
-      }
-
-    } else {
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->alpha = 0.;
-        ve_glob[mn][mm]->pos_ls.alpha = 0.;
-        ve_glob[mn][mm]->alphaModel = CONSTANT;
-      }
-    }
-
-    if (vn_glob[mn]->ConstitutiveEquation == FENE_P) {
-      strcpy(search_string, "Extensibility Parameter");
-
-      model_read = look_for_modal_prop(imp, "Extensibility Parameter", vn_glob[mn]->modes,
+      model_read = look_for_modal_prop(imp, "Mobility Parameter", goma_ctx->fem.vn_glob[mn]->modes,
                                        &matl_model, modal_data, model_name, es);
 
       if (model_read < 1) {
@@ -3267,17 +3296,71 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         exit(-1);
       }
 
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->extensibility = modal_data[mm];
-        ve_glob[mn][mm]->extensibilityModel = matl_model;
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->alpha = modal_data[mm];
+        goma_ctx->fem.ve_glob[mn][mm]->alphaModel = matl_model;
+      }
+
+      ECHO(es, echo_file);
+
+      strcpy(search_string, "Positive Level Set Mobility Parameter");
+
+      model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                       &matl_model, modal_data, model_name, es);
+
+      if (model_read == 1) {
+
+        if (goma_ctx->fem.ls == NULL)
+          GOMA_EH(GOMA_ERROR, "Positive Level Set Mobility Parameter requires activation of "
+                              "Level Set Tracking.\n");
+
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->pos_ls.alpha = modal_data[mm];
+          goma_ctx->fem.ve_glob[mn][mm]->alphaModel = VE_LEVEL_SET;
+        }
+
+        ECHO(es, echo_file);
+      } else if (model_read == -2) {
+        SPF(err_msg, "Only CONSTANT %s mode model supported.", search_string);
+        fprintf(stderr, "%s\n", err_msg);
+        exit(-1);
+      }
+
+    } else {
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->alpha = 0.;
+        goma_ctx->fem.ve_glob[mn][mm]->pos_ls.alpha = 0.;
+        goma_ctx->fem.ve_glob[mn][mm]->alphaModel = CONSTANT;
+      }
+    }
+
+    if (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == FENE_P) {
+      strcpy(search_string, "Extensibility Parameter");
+
+      model_read =
+          look_for_modal_prop(imp, "Extensibility Parameter", goma_ctx->fem.vn_glob[mn]->modes,
+                              &matl_model, modal_data, model_name, es);
+
+      if (model_read < 1) {
+        if (model_read == -1)
+          SPF(err_msg, "%s is missing", search_string);
+        if (model_read == -2)
+          SPF(err_msg, "Only CONSTANT %s mode models supported.", search_string);
+        fprintf(stderr, "%s\n", err_msg);
+        exit(-1);
+      }
+
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->extensibility = modal_data[mm];
+        goma_ctx->fem.ve_glob[mn][mm]->extensibilityModel = matl_model;
       }
 
       ECHO(es, echo_file);
 
     } else {
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->extensibility = 0.;
-        ve_glob[mn][mm]->extensibilityModel = CONSTANT;
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->extensibility = 0.;
+        goma_ctx->fem.ve_glob[mn][mm]->extensibilityModel = CONSTANT;
       }
     }
 
@@ -3285,9 +3368,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
      * If one of the Saramito model combinations is enabled, ensure that a yield stress card is
      * present
      */
-    if (vn_glob[mn]->ConstitutiveEquation == SARAMITO_OLDROYDB ||
-        vn_glob[mn]->ConstitutiveEquation == SARAMITO_PTT ||
-        vn_glob[mn]->ConstitutiveEquation == SARAMITO_GIESEKUS) {
+    if (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == SARAMITO_OLDROYDB ||
+        goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == SARAMITO_PTT ||
+        goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == SARAMITO_GIESEKUS) {
       /* Should yield stress be a modal property? Let's assume not for now */
       dbl tau_y_val;
       dbl fexp_val;
@@ -3331,24 +3414,25 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         }
       }
 
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->gn->tau_y = tau_y_val;
-        ve_glob[mn][mm]->gn->fexp = fexp_val;
-        ve_glob[mn][mm]->gn->nexp = nexp_val;
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->gn->tau_y = tau_y_val;
+        goma_ctx->fem.ve_glob[mn][mm]->gn->fexp = fexp_val;
+        goma_ctx->fem.ve_glob[mn][mm]->gn->nexp = nexp_val;
 
         // set polymer viscosity to (consistency index)^(1/nexp) when nexp != 1
         if (nexp_val != 1)
-          ve_glob[mn][mm]->gn->mu0 = pow(ve_glob[mn][mm]->gn->mu0, 1. / nexp_val);
+          goma_ctx->fem.ve_glob[mn][mm]->gn->mu0 =
+              pow(goma_ctx->fem.ve_glob[mn][mm]->gn->mu0, 1. / nexp_val);
       }
       ECHO(es, echo_file);
     }
 
-    if (vn_glob[mn]->ConstitutiveEquation == PTT ||
-        vn_glob[mn]->ConstitutiveEquation == SARAMITO_PTT) {
+    if (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == PTT ||
+        goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == SARAMITO_PTT) {
       strcpy(search_string, "PTT Xi parameter");
 
-      model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                       modal_data, model_name, es);
+      model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                       &matl_model, modal_data, model_name, es);
 
       if (model_read < 1) {
         if (model_read == -1)
@@ -3359,28 +3443,28 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         exit(-1);
       }
 
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->xi = modal_data[mm];
-        ve_glob[mn][mm]->xiModel = matl_model;
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->xi = modal_data[mm];
+        goma_ctx->fem.ve_glob[mn][mm]->xiModel = matl_model;
       }
 
       ECHO(es, echo_file);
 
       strcpy(search_string, "Positive Level Set PTT Xi parameter");
 
-      model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                       modal_data, model_name, es);
+      model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                       &matl_model, modal_data, model_name, es);
 
       if (model_read == 1) {
 
-        if (ls == NULL)
+        if (goma_ctx->fem.ls == NULL)
           GOMA_EH(
               GOMA_ERROR,
               "Positive Level Set PTT Xi parameter requires activation of Level Set Tracking.\n");
 
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->pos_ls.xi = modal_data[mm];
-          ve_glob[mn][mm]->xiModel = VE_LEVEL_SET;
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->pos_ls.xi = modal_data[mm];
+          goma_ctx->fem.ve_glob[mn][mm]->xiModel = VE_LEVEL_SET;
         }
 
         ECHO(es, echo_file);
@@ -3392,8 +3476,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       strcpy(search_string, "PTT Epsilon parameter");
 
-      model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                       modal_data, model_name, es);
+      model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                       &matl_model, modal_data, model_name, es);
 
       if (model_read < 1) {
         if (model_read == -1)
@@ -3406,25 +3490,25 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       ECHO(es, echo_file);
 
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->eps = modal_data[mm];
-        ve_glob[mn][mm]->epsModel = matl_model;
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->eps = modal_data[mm];
+        goma_ctx->fem.ve_glob[mn][mm]->epsModel = matl_model;
       }
 
       strcpy(search_string, "Positive Level Set PTT Epsilon parameter");
 
-      model_read = look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model,
-                                       modal_data, model_name, es);
+      model_read = look_for_modal_prop(imp, search_string, goma_ctx->fem.vn_glob[mn]->modes,
+                                       &matl_model, modal_data, model_name, es);
 
       if (model_read == 1) {
 
-        if (ls == NULL)
+        if (goma_ctx->fem.ls == NULL)
           GOMA_EH(GOMA_ERROR, "Positive Level Set PTT Epsilon parameter requires activation of "
                               "Level Set Tracking.\n");
 
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->pos_ls.eps = modal_data[mm];
-          ve_glob[mn][mm]->epsModel = VE_LEVEL_SET;
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->pos_ls.eps = modal_data[mm];
+          goma_ctx->fem.ve_glob[mn][mm]->epsModel = VE_LEVEL_SET;
         }
 
         ECHO(es, echo_file);
@@ -3434,24 +3518,45 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         exit(-1);
       }
     } else {
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->xi = 0.;
-        ve_glob[mn][mm]->pos_ls.xi = 0.;
-        ve_glob[mn][mm]->xiModel = CONSTANT;
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->xi = 0.;
+        goma_ctx->fem.ve_glob[mn][mm]->pos_ls.xi = 0.;
+        goma_ctx->fem.ve_glob[mn][mm]->xiModel = CONSTANT;
       }
 
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->eps = 0.;
-        ve_glob[mn][mm]->pos_ls.eps = 0.;
-        ve_glob[mn][mm]->epsModel = CONSTANT;
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->eps = 0.;
+        goma_ctx->fem.ve_glob[mn][mm]->pos_ls.eps = 0.;
+        goma_ctx->fem.ve_glob[mn][mm]->epsModel = CONSTANT;
       }
     }
 
-    if ((vn_glob[mn]->ConstitutiveEquation == ROLIE_POLY) ||
-        (vn_glob[mn]->ConstitutiveEquation == ROLIE_POLY_FE)) {
+    if ((goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == ROLIE_POLY) ||
+        (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == ROLIE_POLY_FE)) {
       strcpy(search_string, "Stretch Time Constant");
 
-      model_read = look_for_modal_prop(imp, "Stretch Time Constant", vn_glob[mn]->modes,
+      model_read =
+          look_for_modal_prop(imp, "Stretch Time Constant", goma_ctx->fem.vn_glob[mn]->modes,
+                              &matl_model, modal_data, model_name, es);
+
+      if (model_read < 1) {
+        if (model_read == -1)
+          SPF(err_msg, "%s is missing", search_string);
+        if (model_read == -2)
+          SPF(err_msg, "Only CONSTANT %s mode models supported.", search_string);
+        fprintf(stderr, "%s\n", err_msg);
+        exit(-1);
+      } else if (model_read == 1) {
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->stretch_time = modal_data[mm];
+          goma_ctx->fem.ve_glob[mn][mm]->stretchModel = matl_model;
+        }
+        ECHO(es, echo_file);
+      }
+
+      strcpy(search_string, "CCR Coefficient");
+
+      model_read = look_for_modal_prop(imp, "CCR Coefficient", goma_ctx->fem.vn_glob[mn]->modes,
                                        &matl_model, modal_data, model_name, es);
 
       if (model_read < 1) {
@@ -3461,39 +3566,19 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           SPF(err_msg, "Only CONSTANT %s mode models supported.", search_string);
         fprintf(stderr, "%s\n", err_msg);
         exit(-1);
-      } else if (model_read == 1) {
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->stretch_time = modal_data[mm];
-          ve_glob[mn][mm]->stretchModel = matl_model;
-        }
-        ECHO(es, echo_file);
-      }
-
-      strcpy(search_string, "CCR Coefficient");
-
-      model_read = look_for_modal_prop(imp, "CCR Coefficient", vn_glob[mn]->modes, &matl_model,
-                                       modal_data, model_name, es);
-
-      if (model_read < 1) {
-        if (model_read == -1)
-          SPF(err_msg, "%s is missing", search_string);
-        if (model_read == -2)
-          SPF(err_msg, "Only CONSTANT %s mode models supported.", search_string);
-        fprintf(stderr, "%s\n", err_msg);
-        exit(-1);
 
       } else if (model_read == 1) {
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->CCR_coefficient = modal_data[mm];
-          ve_glob[mn][mm]->CCR_coefficientModel = matl_model;
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->CCR_coefficient = modal_data[mm];
+          goma_ctx->fem.ve_glob[mn][mm]->CCR_coefficientModel = matl_model;
         }
         ECHO(es, echo_file);
       }
 
       strcpy(search_string, "Polymer Exponent");
 
-      model_read = look_for_modal_prop(imp, "Polymer Exponent", vn_glob[mn]->modes, &matl_model,
-                                       modal_data, model_name, es);
+      model_read = look_for_modal_prop(imp, "Polymer Exponent", goma_ctx->fem.vn_glob[mn]->modes,
+                                       &matl_model, modal_data, model_name, es);
 
       if (model_read < 1) {
         if (model_read == -1)
@@ -3504,17 +3589,18 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         exit(-1);
 
       } else if (model_read == 1) {
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-          ve_glob[mn][mm]->polymer_exponent = modal_data[mm];
-          ve_glob[mn][mm]->polymer_exponentModel = matl_model;
+        for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+          goma_ctx->fem.ve_glob[mn][mm]->polymer_exponent = modal_data[mm];
+          goma_ctx->fem.ve_glob[mn][mm]->polymer_exponentModel = matl_model;
         }
         ECHO(es, echo_file);
       }
 
-      if (vn_glob[mn]->ConstitutiveEquation == ROLIE_POLY_FE) {
+      if (goma_ctx->fem.vn_glob[mn]->ConstitutiveEquation == ROLIE_POLY_FE) {
         strcpy(search_string, "Maximum Stretch Ratio");
-        model_read = look_for_modal_prop(imp, "Maximum Stretch Ratio", vn_glob[mn]->modes,
-                                         &matl_model, modal_data, model_name, es);
+        model_read =
+            look_for_modal_prop(imp, "Maximum Stretch Ratio", goma_ctx->fem.vn_glob[mn]->modes,
+                                &matl_model, modal_data, model_name, es);
 
         if (model_read < 1) {
           if (model_read == -1)
@@ -3525,23 +3611,23 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           exit(-1);
 
         } else if (model_read == 1) {
-          for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-            ve_glob[mn][mm]->maximum_stretch_ratio = modal_data[mm];
-            ve_glob[mn][mm]->maximum_stretch_ratioModel = matl_model;
+          for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+            goma_ctx->fem.ve_glob[mn][mm]->maximum_stretch_ratio = modal_data[mm];
+            goma_ctx->fem.ve_glob[mn][mm]->maximum_stretch_ratioModel = matl_model;
           }
           ECHO(es, echo_file);
         }
       }
     } else {
-      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
-        ve_glob[mn][mm]->stretch_time = 0.;
-        ve_glob[mn][mm]->stretchModel = CONSTANT;
-        ve_glob[mn][mm]->CCR_coefficient = 0;
-        ve_glob[mn][mm]->CCR_coefficientModel = CONSTANT;
-        ve_glob[mn][mm]->polymer_exponent = 0;
-        ve_glob[mn][mm]->polymer_exponentModel = CONSTANT;
-        ve_glob[mn][mm]->maximum_stretch_ratio = 0;
-        ve_glob[mn][mm]->maximum_stretch_ratioModel = CONSTANT;
+      for (mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+        goma_ctx->fem.ve_glob[mn][mm]->stretch_time = 0.;
+        goma_ctx->fem.ve_glob[mn][mm]->stretchModel = CONSTANT;
+        goma_ctx->fem.ve_glob[mn][mm]->CCR_coefficient = 0;
+        goma_ctx->fem.ve_glob[mn][mm]->CCR_coefficientModel = CONSTANT;
+        goma_ctx->fem.ve_glob[mn][mm]->polymer_exponent = 0;
+        goma_ctx->fem.ve_glob[mn][mm]->polymer_exponentModel = CONSTANT;
+        goma_ctx->fem.ve_glob[mn][mm]->maximum_stretch_ratio = 0;
+        goma_ctx->fem.ve_glob[mn][mm]->maximum_stretch_ratioModel = CONSTANT;
       }
     }
 
@@ -3565,7 +3651,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       if (num_const < 2) {
         sr = snprintf(err_msg, MAX_CHAR_ERR_MSG,
                       "Matl %s expected at least 2 constants for %s %s model.\n",
-                      pd_glob[mn]->MaterialName, search_string, model_name);
+                      goma_ctx->fem.pd_glob[mn]->MaterialName, search_string, model_name);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_surface_tension = num_const;
@@ -3580,7 +3666,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       if (num_const < 3) {
         sr = snprintf(err_msg, MAX_CHAR_ERR_MSG,
                       "Matl %s expected at least 3 constants for %s %s model.\n",
-                      pd_glob[mn]->MaterialName, search_string, model_name);
+                      goma_ctx->fem.pd_glob[mn]->MaterialName, search_string, model_name);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_surface_tension = num_const;
@@ -3595,7 +3681,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       if (num_const < 2) {
         sr = snprintf(err_msg, MAX_CHAR_ERR_MSG,
                       "Matl %s expected at least 2 constants for %s %s model.\n",
-                      pd_glob[mn]->MaterialName, search_string, model_name);
+                      goma_ctx->fem.pd_glob[mn]->MaterialName, search_string, model_name);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_surface_tension = num_const;
@@ -3657,7 +3743,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   } else {
     if (strcmp(model_name, "CONSTANT")) {
       sr = sprintf(err_msg, "Matl %s: Surface diffusion model must be const.\n",
-                   pd_glob[mn]->MaterialName);
+                   goma_ctx->fem.pd_glob[mn]->MaterialName);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     num_const = 1;
@@ -3687,9 +3773,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     SPF(es, "%s = %s", search_string, model_name);
 
     if (!strcmp(model_name, "USER")) {
-      cr_glob[mn]->HeatFluxModel = CR_HF_USER;
+      goma_ctx->fem.cr_glob[mn]->HeatFluxModel = CR_HF_USER;
     } else {
-      cr_glob[mn]->HeatFluxModel = CR_HF_FOURIER_0;
+      goma_ctx->fem.cr_glob[mn]->HeatFluxModel = CR_HF_FOURIER_0;
     }
     ECHO(es, echo_file);
   }
@@ -3708,12 +3794,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_thermal_conductivity), 0);
       if (num_const < 3) {
         sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, search_string, "LEVEL_SET");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, search_string, "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       if (mat_ptr->u_thermal_conductivity[2] == 0.0)
-        mat_ptr->u_thermal_conductivity[2] = ls->Length_Scale / 2.0;
+        mat_ptr->u_thermal_conductivity[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
       mat_ptr->len_u_thermal_conductivity = num_const;
 
@@ -3723,7 +3809,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_thermal_conductivity), 0);
       if (num_const < 5) {
         sprintf(err_msg, "Material %s - expected at least 5 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, search_string, "THERMAL");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, search_string, "THERMAL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -3751,7 +3837,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_thermal_conductivity), 0);
       if (num_const < 2) {
         sprintf(err_msg, "Material %s - expected at least 2 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, search_string, "FOAM_PMDI_10");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, search_string, "FOAM_PMDI_10");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -3764,8 +3850,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                 "Expecting trailing keyword for Thermal Conductivity EXTERNAL_FIELD model.\n");
       }
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (!strcmp(efv->name[j], input)) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
           ii = 1;
           mat_ptr->thermal_cond_external_field = j;
           break;
@@ -3780,7 +3866,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->len_u_thermal_conductivity = num_const;
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Thermal Conductivity", "EXTERNAL_FIELD");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Thermal Conductivity",
+                     "EXTERNAL_FIELD");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
     } else {
@@ -3798,7 +3885,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (model_read != -1) {
 
-    if (ls == NULL)
+    if (goma_ctx->fem.ls == NULL)
       GOMA_EH(GOMA_ERROR,
               "Second Level Set Conductivity requires activation of Level Set Tracking.\n");
 
@@ -3825,8 +3912,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                 "Keyword must be POSITIVE or NEGATIVE for Second Level Set Conductivity.\n");
       }
       SPF(endofstring(es), " %s", input);
-      if (pfd != NULL) {
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (goma_ctx->fem.pfd != NULL) {
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
           if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->thermalconductivity_phase[i])) != 1) {
             GOMA_EH(GOMA_ERROR, "error reading phase thermal conductivity");
           }
@@ -3845,7 +3932,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     strcpy(search_string, "Level Set Interface Conductivity Interpolation Method");
     model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                    SCALAR_INPUT, &NO_SPECIES, es);
@@ -3883,12 +3970,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_heat_capacity), 0);
     if (num_const < 3) {
       sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, search_string, "LEVEL_SET");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, search_string, "LEVEL_SET");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
     if (mat_ptr->u_heat_capacity[2] == 0.0)
-      mat_ptr->u_heat_capacity[2] = ls->Length_Scale / 2.0;
+      mat_ptr->u_heat_capacity[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
     mat_ptr->len_u_heat_capacity = num_const;
 
@@ -3899,7 +3986,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_heat_capacity), 0);
     if (num_const < 5) {
       sprintf(err_msg, "Material %s - expected at least 5 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, search_string, "THERMAL");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, search_string, "THERMAL");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
@@ -3912,7 +3999,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_heat_capacity), 0);
     if (num_const < 2) {
       sprintf(err_msg, "Material %s - expected at least 2 constants for %s %s model.\n",
-              pd_glob[mn]->MaterialName, search_string, "FOAM_PMDI_10");
+              goma_ctx->fem.pd_glob[mn]->MaterialName, search_string, "FOAM_PMDI_10");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
@@ -3935,7 +4022,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (model_read != -1) {
 
-    if (ls == NULL)
+    if (goma_ctx->fem.ls == NULL)
       GOMA_EH(GOMA_ERROR,
               "Second Level Set Heat Capacity requires activation of Level Set Tracking.\n");
 
@@ -3962,8 +4049,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                 "Keyword must be POSITIVE or NEGATIVE for Second Level Set Heat Capacity.\n");
       }
       SPF(endofstring(es), " %s", input);
-      if (pfd != NULL) {
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (goma_ctx->fem.pfd != NULL) {
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
           if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->heatcapacity_phase[i])) != 1) {
             GOMA_EH(GOMA_ERROR, "error reading phase heat capacity");
           }
@@ -3977,7 +4064,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     strcpy(search_string, "Level Set Interface Heat Capacity Interpolation Method");
     model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                    SCALAR_INPUT, &NO_SPECIES, es);
@@ -4176,7 +4263,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Thermal Exponent", "LEVEL_SET");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Thermal Exponent", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -4184,7 +4271,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_electrical_conductivity);
 
       if (mat_ptr->u_electrical_conductivity[2] == 0.0)
-        mat_ptr->u_electrical_conductivity[2] = ls->Length_Scale / 2.0;
+        mat_ptr->u_electrical_conductivity[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
     } else if (strncmp(model_name, " ", 1) != 0) {
       if (!strcmp(model_name, "ELECTRODE_KINETICS")) {
@@ -4199,8 +4286,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                   "Expecting trailing keyword for Electrical Conductivity EXTERNAL_FIELD model.\n");
         }
         ii = 0;
-        for (j = 0; j < efv->Num_external_field; j++) {
-          if (!strcmp(efv->name[j], input)) {
+        for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+          if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
             ii = 1;
             mat_ptr->elec_cond_external_field = j;
             break;
@@ -4216,7 +4303,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         mat_ptr->len_u_electrical_conductivity = num_const;
         if (num_const < 1) {
           sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Electrical Conductivity", "EXTERNAL_FIELD");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Electrical Conductivity",
+                       "EXTERNAL_FIELD");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
       }
@@ -4408,12 +4496,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_wave_number), 0);
       if (num_const < 3) {
         sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, "Acoustic Wave Number", "LEVEL_SET");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Acoustic Wave Number", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       if (mat_ptr->u_wave_number[2] == 0.0)
-        mat_ptr->u_wave_number[2] = ls->Length_Scale / 2.0;
+        mat_ptr->u_wave_number[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
       mat_ptr->len_u_wave_number = num_const;
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_wave_number);
@@ -4434,7 +4522,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   model_read = look_for_mat_prop(imp, search_string, &(i0), &(a0), NO_USER, NULL, model_name,
                                  SCALAR_INPUT, &NO_SPECIES, es);
   if (model_read != -1) {
-    if (ls == NULL)
+    if (goma_ctx->fem.ls == NULL)
       GOMA_EH(GOMA_ERROR,
               "Second Level Set Acoustic Wave Number requires activation of Level Set Tracking.\n");
 
@@ -4461,8 +4549,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                 "Keyword must be POSITIVE or NEGATIVE for Second Level Set Wave Number.\n");
       }
       SPF(endofstring(es), " %s", input);
-      if (pfd != NULL) {
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (goma_ctx->fem.pfd != NULL) {
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
           if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->wavenumber_phase[i])) != 1) {
             GOMA_EH(GOMA_ERROR, "error reading phase wave number");
           }
@@ -4479,7 +4567,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     strcpy(search_string, "Level Set Interface Wave Number Interpolation Method");
     model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                    SCALAR_INPUT, &NO_SPECIES, es);
@@ -4509,12 +4597,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_acoustic_impedance), 0);
       if (num_const < 3) {
         sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, "Acoustic Impedance", "LEVEL_SET");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Acoustic Impedance", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       if (mat_ptr->u_acoustic_impedance[2] == 0.0)
-        mat_ptr->u_acoustic_impedance[2] = ls->Length_Scale / 2.0;
+        mat_ptr->u_acoustic_impedance[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
       mat_ptr->len_u_acoustic_impedance = num_const;
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_acoustic_impedance);
@@ -4534,7 +4622,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (model_read == 1) {
 
-    if (ls == NULL)
+    if (goma_ctx->fem.ls == NULL)
       GOMA_EH(GOMA_ERROR,
               "Second Level Set Acoustic Impedance requires activation of Level Set Tracking.\n");
 
@@ -4562,8 +4650,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                 "Keyword must be POSITIVE or NEGATIVE for Second Level Set Acoustic Impedance.\n");
       }
       SPF(endofstring(es), " %s", input);
-      if (pfd != NULL) {
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (goma_ctx->fem.pfd != NULL) {
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
           if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->acousticimpedance_phase[i])) != 1) {
             GOMA_EH(GOMA_ERROR, "error reading phase acoustic impedance");
           }
@@ -4580,7 +4668,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     strcpy(search_string, "Level Set Interface Acoustic Impedance Interpolation Method");
     model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                    SCALAR_INPUT, &NO_SPECIES, es);
@@ -4610,12 +4698,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_acoustic_absorption), 0);
       if (num_const < 3) {
         sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, "Acoustic Absorption", "LEVEL_SET");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Acoustic Absorption", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       if (mat_ptr->u_acoustic_absorption[2] == 0.0)
-        mat_ptr->u_acoustic_absorption[2] = ls->Length_Scale / 2.0;
+        mat_ptr->u_acoustic_absorption[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
       mat_ptr->len_u_acoustic_absorption = num_const;
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_acoustic_absorption);
@@ -4635,7 +4723,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (model_read == 1) {
 
-    if (ls == NULL)
+    if (goma_ctx->fem.ls == NULL)
       GOMA_EH(GOMA_ERROR,
               "Second Level Set Acoustic Absorption requires activation of Level Set Tracking.\n");
 
@@ -4663,8 +4751,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                 "Keyword must be POSITIVE or NEGATIVE for Second Level Set Acoustic Absorption.\n");
       }
       SPF(endofstring(es), " %s", input);
-      if (pfd != NULL) {
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (goma_ctx->fem.pfd != NULL) {
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
           if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->acousticabsorption_phase[i])) != 1) {
             GOMA_EH(GOMA_ERROR, "error reading phase acoustic absorption");
           }
@@ -4681,7 +4769,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     strcpy(search_string, "Level Set Interface Acoustic Absorption Interpolation Method");
     model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                    SCALAR_INPUT, &NO_SPECIES, es);
@@ -4726,12 +4814,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_refractive_index), 0);
       if (num_const < 3) {
         sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, "Refractive Index", "LEVEL_SET");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Refractive Index", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       if (mat_ptr->u_refractive_index[2] == 0.0)
-        mat_ptr->u_refractive_index[2] = ls->Length_Scale / 2.0;
+        mat_ptr->u_refractive_index[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
       mat_ptr->len_u_refractive_index = num_const;
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_refractive_index);
@@ -4751,7 +4839,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (model_read == 1) {
 
-    if (ls == NULL)
+    if (goma_ctx->fem.ls == NULL)
       GOMA_EH(GOMA_ERROR,
               "Second Level Set Refractive Index requires activation of Level Set Tracking.\n");
 
@@ -4778,8 +4866,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                 "Keyword must be POSITIVE or NEGATIVE for Second Level Set Refractive Index.\n");
       }
       SPF(endofstring(es), " %s", input);
-      if (pfd != NULL) {
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (goma_ctx->fem.pfd != NULL) {
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
           if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->refractiveindex_phase[i])) != 1) {
             GOMA_EH(GOMA_ERROR, "error reading phase refractive index");
           }
@@ -4796,7 +4884,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     strcpy(search_string, "Level Set Interface Refractive Index Interpolation Method");
     model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                    SCALAR_INPUT, &NO_SPECIES, es);
@@ -4826,12 +4914,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_light_absorption), 0);
       if (num_const < 3) {
         sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, "Light Absorption", "LEVEL_SET");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Light Absorption", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       if (mat_ptr->u_light_absorption[2] == 0.0)
-        mat_ptr->u_light_absorption[2] = ls->Length_Scale / 2.0;
+        mat_ptr->u_light_absorption[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
       mat_ptr->len_u_light_absorption = num_const;
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_light_absorption);
@@ -4851,7 +4939,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (model_read == 1) {
 
-    if (ls == NULL)
+    if (goma_ctx->fem.ls == NULL)
       GOMA_EH(GOMA_ERROR,
               "Second Level Set Light Absorption requires activation of Level Set Tracking.\n");
 
@@ -4878,8 +4966,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                 "Keyword must be POSITIVE or NEGATIVE for Second Level Set Light Absorption.\n");
       }
       SPF(endofstring(es), " %s", input);
-      if (pfd != NULL) {
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (goma_ctx->fem.pfd != NULL) {
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
           if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->lightabsorption_phase[i])) != 1) {
             GOMA_EH(GOMA_ERROR, "error reading phase light absorption");
           }
@@ -4896,7 +4984,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     strcpy(search_string, "Level Set Interface Light Absorption Interpolation Method");
     model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                    SCALAR_INPUT, &NO_SPECIES, es);
@@ -4926,12 +5014,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_extinction_index), 0);
       if (num_const < 3) {
         sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, "Extinction Index", "LEVEL_SET");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Extinction Index", "LEVEL_SET");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       if (mat_ptr->u_extinction_index[2] == 0.0)
-        mat_ptr->u_extinction_index[2] = ls->Length_Scale / 2.0;
+        mat_ptr->u_extinction_index[2] = goma_ctx->fem.ls->Length_Scale / 2.0;
 
       mat_ptr->len_u_extinction_index = num_const;
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_extinction_index);
@@ -4951,7 +5039,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (model_read == 1) {
 
-    if (ls == NULL)
+    if (goma_ctx->fem.ls == NULL)
       GOMA_EH(GOMA_ERROR,
               "Second Level Set Extinction Index requires activation of Level Set Tracking.\n");
 
@@ -4978,8 +5066,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                 "Keyword must be POSITIVE or NEGATIVE for Second Level Set Extinction Index.\n");
       }
       SPF(endofstring(es), " %s", input);
-      if (pfd != NULL) {
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (goma_ctx->fem.pfd != NULL) {
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
           if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->extinctionindex_phase[i])) != 1) {
             GOMA_EH(GOMA_ERROR, "error reading phase extinction index");
           }
@@ -4996,7 +5084,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     strcpy(search_string, "Level Set Interface Extinction Index Interpolation Method");
     model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                    SCALAR_INPUT, &NO_SPECIES, es);
@@ -5027,7 +5115,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   mat_ptr->perm_external_field_index = -1;
   mat_ptr->Xperm_external_field_index = -1;
   mat_ptr->rel_liq_perm_external_field_index = -1;
-  efv->ev_dpordt_index = -1;
+  goma_ctx->fem.efv->ev_dpordt_index = -1;
   mat_ptr->SAT_external_field_index = -1;
   mat_ptr->por_shell_closed_porosity_ext_field_index = -1;
   mat_ptr->por_shell_closed_height_ext_field_index = -1;
@@ -5069,33 +5157,34 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   int have_shell_sat_n = 0;
   PorousShellOn = 0;
 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    if (pd_glob[mn]->e[imtrx][R_POR_LIQ_PRES]) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_POR_LIQ_PRES]) {
       have_por_liq_pres = 1;
     }
-    if (pd_glob[mn]->e[imtrx][R_POR_GAS_PRES]) {
+    if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_POR_GAS_PRES]) {
       have_por_gas_pres = 1;
     }
-    if (pd_glob[mn]->e[imtrx][R_POR_POROSITY]) {
+    if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_POR_POROSITY]) {
       have_por_porosity = 1;
     }
-    if (pd_glob[mn]->e[imtrx][R_POR_SINK_MASS]) {
+    if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_POR_SINK_MASS]) {
       have_por_sink_mass = 1;
     }
-    if (pd_glob[mn]->e[imtrx][R_POR_ENERGY]) {
+    if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_POR_ENERGY]) {
       have_por_energy = 1;
     }
-    if (pd_glob[mn]->e[imtrx][R_POR_SINK_MASS]) {
+    if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_POR_SINK_MASS]) {
       have_por_sink_mass = 1;
     }
-    if (pd_glob[mn]->e[imtrx][R_SHELL_SAT_OPEN]) {
+    if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_SHELL_SAT_OPEN]) {
       have_shell_sat_open = 1;
     }
-    if (pd_glob[mn]->e[imtrx][R_SHELL_SAT_OPEN_2]) {
+    if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_SHELL_SAT_OPEN_2]) {
       have_shell_sat_open2 = 1;
     }
-    if ((pd_glob[mn]->e[imtrx][R_SHELL_SAT_1]) || (pd_glob[mn]->e[imtrx][R_SHELL_SAT_2]) ||
-        (pd_glob[mn]->e[imtrx][R_SHELL_SAT_3])) {
+    if ((goma_ctx->fem.pd_glob[mn]->e[imtrx][R_SHELL_SAT_1]) ||
+        (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_SHELL_SAT_2]) ||
+        (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_SHELL_SAT_3])) {
       PorousShellOn = 1;
       have_shell_sat_n = 1;
     }
@@ -5168,8 +5257,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     i = 0;
 
     for (j = 0; j < MAX_POROUS_NUM; j++) {
-      for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-        if (pd_glob[mn]->e[imtrx][R_POR_LIQ_PRES + j]) {
+      for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+        if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_POR_LIQ_PRES + j]) {
           mat_ptr->Porous_Eqn[i] = R_POR_LIQ_PRES + j;
           i++;
         }
@@ -5185,7 +5274,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       i++;
     }
 
-    if (i != pd_glob[mn]->Num_Porous_Eqn) {
+    if (i != goma_ctx->fem.pd_glob[mn]->Num_Porous_Eqn) {
       GOMA_EH(GOMA_ERROR, "Possible duplicate porous media equations");
     }
 
@@ -5210,7 +5299,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_porosity), NO_SPECIES);
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s %s %s model needs initial undeformed porosity \n",
-                     pd_glob[mn]->MaterialName, "Porosity", "DEFORM");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Porosity", "DEFORM");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_porosity = num_const;
@@ -5221,8 +5310,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         GOMA_EH(GOMA_ERROR, "Expecting trailing keyword for Porosity EXTERNAL_FIELD model.\n");
       }
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (!strcmp(efv->name[j], input)) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
           ii = 1;
           mat_ptr->porosity_external_field_index = j;
         }
@@ -5237,7 +5326,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->len_u_porosity = num_const;
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Porosity", "EXTERNAL_FIELD");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Porosity", "EXTERNAL_FIELD");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
     } else {
@@ -5266,7 +5355,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &mat_ptr->u_porous_compressibility, 0);
       if (num_const < 2) {
         sprintf(err_msg, "Material %s - expected at least 2 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, "Porous Compressibility", "CONST_INIT");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Porous Compressibility", "CONST_INIT");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->porous_compressibility = mat_ptr->u_porous_compressibility[0];
@@ -5275,9 +5364,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_porous_compressibility);
     } else {
 #ifdef LIBRARY_MODE
-      if (efv->ev_porous_decouple) {
+      if (goma_ctx->fem.efv->ev_porous_decouple) {
         sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                pd_glob[mn]->MaterialName, "Porous Compressibility", model_name);
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Porous Compressibility", model_name);
         GOMA_EH(model_read, err_msg);
       }
 #endif
@@ -5295,7 +5384,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_permeability), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Permeability", "PSD_VOL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Permeability", "PSD_VOL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_permeability = num_const;
@@ -5305,7 +5394,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_permeability), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Permeability", "PSD_WEXP");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Permeability", "PSD_WEXP");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_permeability = num_const;
@@ -5315,7 +5404,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_permeability), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Permeability", "PSD_SEXP");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Permeability", "PSD_SEXP");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_permeability = num_const;
@@ -5325,7 +5414,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_permeability), NO_SPECIES);
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Permeability", "SOLIDIFICATION");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Permeability", "SOLIDIFICATION");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -5334,11 +5423,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     } else if (model_read == -1 && !strcmp(model_name, "TENSOR")) {
       mat_ptr->PermeabilityModel = K_TENSOR;
       num_const = read_constants(imp, &(mat_ptr->u_permeability), NO_SPECIES);
-      if (pd_glob[mn]->Num_Dim == 3)
+      if (goma_ctx->fem.pd_glob[mn]->Num_Dim == 3)
         GOMA_EH(GOMA_ERROR, "Tensor Permeability only 2D for now");
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Permeability", "TENSOR");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Permeability", "TENSOR");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -5374,7 +5463,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_permeability), NO_SPECIES);
       if (num_const < 12) {
         sr = sprintf(err_msg, "Matl %s expected at least 12 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Permeability", "ORTHOTROPIC");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Permeability", "ORTHOTROPIC");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -5390,7 +5479,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_permeability), NO_SPECIES);
       if (num_const < 13) {
         sr = sprintf(err_msg, "Matl %s expected at least 13 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Permeability", "KC_TENSOR");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Permeability", "KC_TENSOR");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -5403,7 +5492,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_permeability), NO_SPECIES);
       if (num_const < 15) {
         sr = sprintf(err_msg, "Matl %s expected at least 15 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Permeability", "SM_TENSOR");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Permeability", "SM_TENSOR");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -5425,8 +5514,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         GOMA_EH(GOMA_ERROR, "Expecting trailing keyword for Permeability EXTERNAL_FIELD model.\n");
       }
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (!strcmp(efv->name[j], input)) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
           ii = 1;
           mat_ptr->perm_external_field_index = j;
         }
@@ -5442,7 +5531,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->len_u_permeability = num_const;
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Rel Liq Permeability", "EXTERNAL_FIELD");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Rel Liq Permeability",
+                     "EXTERNAL_FIELD");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
     }
@@ -5493,7 +5583,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_FlowingLiquid_viscosity), NO_SPECIES);
       if (num_const < 3) {
         sprintf(err_msg, "Matl %s (conc %d) needs at least 3 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, species_no, search_string, "MOLTEN GLASS");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, search_string, "MOLTEN GLASS");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_FlowingLiquid_viscosity = num_const;
@@ -5504,7 +5594,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_FlowingLiquid_viscosity), NO_SPECIES);
       if (num_const < 6) {
         sprintf(err_msg, "Matl %s (conc %d) needs at least 6 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, species_no, search_string, "EPOXY");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, search_string, "EPOXY");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_FlowingLiquid_viscosity = num_const;
@@ -5515,7 +5605,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     }
 
     if ((mat_ptr->FlowingLiquid_viscosity != 0.) &&
-        ((pd_glob[mn]->gv[R_LUBP]) || (pd_glob[mn]->gv[R_LUBP_2])))
+        ((goma_ctx->fem.pd_glob[mn]->gv[R_LUBP]) || (goma_ctx->fem.pd_glob[mn]->gv[R_LUBP_2])))
       GOMA_WH(-1, "ON POROUS_BRINKMAN: You will get erroneous results if you are using the "
                   "brinkman formulation as an expedient for lubrication velocity calculation. "
                   "FlowingliquidViscosity should be zero in that case");
@@ -5526,7 +5616,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                                    NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read != -1) {
-      if (ls == NULL)
+      if (goma_ctx->fem.ls == NULL)
         GOMA_EH(GOMA_ERROR, "Second Level Set FlowingLiquid Viscosity requires activation of Level "
                             "Set Tracking.\n");
 
@@ -5554,8 +5644,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                               "FlowingLiquid Viscosity.\n");
         }
         SPF(endofstring(es), " %s", input);
-        if (pfd != NULL) {
-          for (i = 0; i < pfd->num_phase_funcs; i++) {
+        if (goma_ctx->fem.pfd != NULL) {
+          for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
             if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->FlowingLiquid_viscosity_phase[i])) != 1) {
               GOMA_EH(GOMA_ERROR, "error reading phase FlowingLiquid viscosity");
             }
@@ -5571,7 +5661,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
     ECHO(es, echo_file);
 
-    if (ls != NULL) {
+    if (goma_ctx->fem.ls != NULL) {
       strcpy(search_string, "Level Set Interface FlowingLiquid Viscosity Interpolation Method");
       model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                      SCALAR_INPUT, &NO_SPECIES, es);
@@ -5631,7 +5721,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_rel_gas_perm), NO_SPECIES);
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Rel Gas Permeability", "SUM_TO_ONE");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Rel Gas Permeability", "SUM_TO_ONE");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_rel_gas_perm = num_const;
@@ -5650,7 +5740,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_rel_liq_perm), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Rel Liq Permeability", "VAN_GENUCHTEN");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Rel Liq Permeability",
+                     "VAN_GENUCHTEN");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_rel_liq_perm = num_const;
@@ -5660,7 +5751,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_rel_liq_perm), NO_SPECIES);
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Rel Liq Permeability", "PSD_VOL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Rel Liq Permeability", "PSD_VOL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_rel_liq_perm = num_const;
@@ -5670,7 +5761,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_rel_liq_perm), NO_SPECIES);
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Rel Liq Permeability", "PSD_WEXP");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Rel Liq Permeability", "PSD_WEXP");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_rel_liq_perm = num_const;
@@ -5680,7 +5771,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_rel_liq_perm), NO_SPECIES);
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Rel Liq Permeability", "PSD_SEXP");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Rel Liq Permeability", "PSD_SEXP");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_rel_liq_perm = num_const;
@@ -5692,8 +5783,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                 "Expecting trailing keyword for Rel Liq Permeability EXTERNAL_FIELD model.\n");
       }
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (!strcmp(efv->name[j], input)) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
           ii = 1;
           mat_ptr->rel_liq_perm_external_field_index = j;
         }
@@ -5709,7 +5800,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->len_u_rel_liq_perm = num_const;
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Rel Liq Permeability", "EXTERNAL_FIELD");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Rel Liq Permeability",
+                     "EXTERNAL_FIELD");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
     } else if (model_read == -1 && !strcmp(model_name, "VAN_GENUCHTEN_EXTERNAL")) {
@@ -5717,8 +5809,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         GOMA_EH(GOMA_ERROR, "Expecting trailing keyword for VAN_GENUCHTEN_EXTERNAL_FIELD model.\n");
       }
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (!strcmp(efv->name[j], input)) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
           ii = 1;
           mat_ptr->rel_liq_perm_external_field_index = j;
         }
@@ -5731,7 +5823,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_rel_liq_perm), NO_SPECIES);
       if (num_const < 5) {
         sr = sprintf(err_msg, "Matl %s expected at least 5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Rel Liq Permeability", "VAN_GENUCHTEN_EXTERNAL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Rel Liq Permeability",
+                     "VAN_GENUCHTEN_EXTERNAL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_rel_liq_perm = num_const;
@@ -5751,7 +5844,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_saturation), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Saturation", "VAN_GENUCHTEN");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Saturation", "VAN_GENUCHTEN");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_saturation = num_const;
@@ -5761,7 +5854,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_saturation), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Saturation", "PSD_VOL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Saturation", "PSD_VOL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_saturation = num_const;
@@ -5771,7 +5864,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_saturation), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Saturation", "PSD_WEXP");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Saturation", "PSD_WEXP");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_saturation = num_const;
@@ -5781,7 +5874,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_saturation), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Saturation", "PSD_SEXP");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Saturation", "PSD_SEXP");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_saturation = num_const;
@@ -5791,7 +5884,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_saturation), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Saturation", "TANH");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Saturation", "TANH");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_saturation = num_const;
@@ -5801,7 +5894,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_saturation), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Saturation", "SHELL_TANH");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Saturation", "SHELL_TANH");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_saturation = num_const;
@@ -5811,8 +5904,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         GOMA_EH(GOMA_ERROR, "Expecting trailing keyword for TANH EXTERNAL_FIELD model.\n");
       }
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (!strcmp(efv->name[j], input)) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
           ii = 1;
           mat_ptr->SAT_external_field_index = j;
         }
@@ -5824,7 +5917,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_saturation), NO_SPECIES);
       if (num_const < 8) {
         sr = sprintf(err_msg, "Matl %s expected at least 8 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Saturation", "TANH_EXTERNAL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Saturation", "TANH_EXTERNAL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_saturation = num_const;
@@ -5834,7 +5927,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_saturation), NO_SPECIES);
       if (num_const < 10) {
         sr = sprintf(err_msg, "Matl %s expected at least 10 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Saturation", "TANH_HYST");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Saturation", "TANH_HYST");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_saturation = num_const;
@@ -6000,7 +6093,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
      * of air.
      */
 
-    if (pd_glob[mn]->Num_Porous_Eqn > 0) {
+    if (goma_ctx->fem.pd_glob[mn]->Num_Porous_Eqn > 0) {
 
       /*
        * Hey! If it's in there, then it should be fine. To avoid the ordering
@@ -6027,14 +6120,15 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       } else if (!strcmp(model_name, "POWERLAW_DARCY_FICKIAN")) {
         PorousDiffusionConstitutiveEquation = POWERLAW_DARCY_FICKIAN;
       } else {
-        sprintf(err_msg, "Matl %s, \"%s\" = \"%s\"?\n(valid: %s)\n[%s]", pd_glob[mn]->MaterialName,
-                "Porous Diffusion Constitutive Equation", model_name, " DARCY_FICKIAN only",
+        sprintf(err_msg, "Matl %s, \"%s\" = \"%s\"?\n(valid: %s)\n[%s]",
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Porous Diffusion Constitutive Equation",
+                model_name, " DARCY_FICKIAN only",
                 "If still bad - check orderings in the mat file!");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      pd_glob[mn]->PorousFluxModel = PorousDiffusionConstitutiveEquation;
-      cr_glob[mn]->PorousFluxModel = PorousDiffusionConstitutiveEquation;
+      goma_ctx->fem.pd_glob[mn]->PorousFluxModel = PorousDiffusionConstitutiveEquation;
+      goma_ctx->fem.cr_glob[mn]->PorousFluxModel = PorousDiffusionConstitutiveEquation;
       ECHO(es, echo_file);
     }
 
@@ -6082,7 +6176,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             num_const = mat_ptr->len_u_porous_diffusivity[porous_no];
             if (num_const < 5) {
               sprintf(err_msg, "Matl %s (eqn %d) needs at least 5 constants for %s %s model.\n",
-                      pd_glob[mn]->MaterialName, porous_no, "Porous Gas Diffusivity", "POROUS");
+                      goma_ctx->fem.pd_glob[mn]->MaterialName, porous_no, "Porous Gas Diffusivity",
+                      "POROUS");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
           }
@@ -6144,7 +6239,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             num_const = read_constants(imp, mat_ptr->u_porous_vapor_pressure, porous_no);
             if (num_const < 5) {
               sprintf(err_msg, "Matl %s (%s, conc %d) needs 5 constants for %s %s model.\n",
-                      pd_glob[mn]->MaterialName, "porous 2-phase", porous_no,
+                      goma_ctx->fem.pd_glob[mn]->MaterialName, "porous 2-phase", porous_no,
                       "Porous Vapor Pressure", "KELVIN or FLAT");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
@@ -6154,7 +6249,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             num_const = read_constants(imp, mat_ptr->u_porous_vapor_pressure, porous_no);
             if (num_const < 5) {
               sprintf(err_msg, "Matl %s (%s, conc %d) needs 5 constants for %s %s model.\n",
-                      pd_glob[mn]->MaterialName, "porous unsaturated", porous_no,
+                      goma_ctx->fem.pd_glob[mn]->MaterialName, "porous unsaturated", porous_no,
                       "Porous Vapor Pressure", "KELVIN OR FLAT");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
@@ -6162,8 +6257,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_porous_vapor_pressure[porous_no]);
           } else {
             sprintf(err_msg, "%s model invalid in matl %s unless %s is \"%s\" or \"%s\"\n",
-                    "KELVIN or FLAT", pd_glob[mn]->MaterialName, "Media Type", "POROUS_TWO_PHASE",
-                    "POROUS_UNSATURATED");
+                    "KELVIN or FLAT", goma_ctx->fem.pd_glob[mn]->MaterialName, "Media Type",
+                    "POROUS_TWO_PHASE", "POROUS_UNSATURATED");
             GOMA_EH(GOMA_ERROR, err_msg);
           }
         } else if (model_read == -1 && !strcmp(model_name, "IDEAL_GAS")) {
@@ -6226,7 +6321,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           num_const = read_constants(imp, &(mat_ptr->u_porous_gas_constants), NO_SPECIES);
           if (num_const < 4) {
             sr = sprintf(err_msg, "Matl %s (conc %d) needs 4 constants for %s %s model.\n",
-                         pd_glob[mn]->MaterialName, 0, "Porous Gas Constants", "IDEAL_GAS");
+                         goma_ctx->fem.pd_glob[mn]->MaterialName, 0, "Porous Gas Constants",
+                         "IDEAL_GAS");
             GOMA_EH(GOMA_ERROR, err_msg);
           }
           mat_ptr->len_u_porous_gas_constants = num_const;
@@ -6255,24 +6351,24 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
        active in this material                     */
     i = 0;
 
-    for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-      if (pd_glob[mn]->e[imtrx][R_SHELL_SAT_1]) {
+    for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+      if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_SHELL_SAT_1]) {
         mat_ptr->Porous_Shell_Eqn[i] = R_SHELL_SAT_1;
         i++;
       }
 
-      if (pd_glob[mn]->e[imtrx][R_SHELL_SAT_2]) {
+      if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_SHELL_SAT_2]) {
         mat_ptr->Porous_Shell_Eqn[i] = R_SHELL_SAT_2;
         i++;
       }
 
-      if (pd_glob[mn]->e[imtrx][R_SHELL_SAT_3]) {
+      if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_SHELL_SAT_3]) {
         mat_ptr->Porous_Shell_Eqn[i] = R_SHELL_SAT_3;
         i++;
       }
     }
 
-    if (i != pd_glob[mn]->Num_Porous_Shell_Eqn) {
+    if (i != goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn) {
       GOMA_EH(GOMA_ERROR, "Number of porous shell equations do not add up");
     }
 
@@ -6282,14 +6378,14 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
     /* Initialize porous shell no with maximum number of porous shell layers read from pd */
 
-    for (ipore = 0; ipore < pd_glob[mn]->Num_Porous_Shell_Eqn; ipore++) {
+    for (ipore = 0; ipore < goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn; ipore++) {
 
       /******************
        *                *
        * Read porosity  *
        *                *
        *******************/
-      porous_shell_no = pd_glob[mn]->Num_Porous_Shell_Eqn;
+      porous_shell_no = goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn;
       strcpy(search_string, "Porosity");
       model_read = look_for_mat_prop(imp, search_string, mat_ptr->PorousShellPorosityModel,
                                      mat_ptr->PorousShellPorosity, NO_USER, NULL, model_name,
@@ -6300,8 +6396,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           GOMA_EH(GOMA_ERROR, "Expecting trailing keyword for Porosity EXTERNAL_FIELD model.\n");
         }
         ii = 0;
-        for (j = 0; j < efv->Num_external_field; j++) {
-          if (!strcmp(efv->name[j], input)) {
+        for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+          if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
             ii = 1;
             mat_ptr->por_shell_porosity_ext_field_index[ipore] = j;
           }
@@ -6316,7 +6412,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         mat_ptr->len_u_PorousShellPorosity[ipore] = num_const;
         if (num_const < 1) {
           sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Porosity", "EXTERNAL_FIELD");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Porosity", "EXTERNAL_FIELD");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
       } else {
@@ -6334,7 +6430,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
        * Read height *
        *             *
        ****************/
-      porous_shell_no = pd_glob[mn]->Num_Porous_Shell_Eqn;
+      porous_shell_no = goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn;
       strcpy(search_string, "Porous Shell Height");
       model_read = look_for_mat_prop(imp, search_string, mat_ptr->PorousShellHeightModel,
                                      mat_ptr->PorousShellHeight, NO_USER, NULL, model_name,
@@ -6345,8 +6441,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                   "Expecting trailing keyword for Porous Shell Height EXTERNAL_FIELD model.\n");
         }
         ii = 0;
-        for (j = 0; j < efv->Num_external_field; j++) {
-          if (!strcmp(efv->name[j], input)) {
+        for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+          if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
             ii = 1;
             mat_ptr->por_shell_height_ext_field_index[ipore] = j;
           }
@@ -6361,7 +6457,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         mat_ptr->len_u_PorousShellHeight[ipore] = num_const;
         if (num_const < 1) {
           sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Porous Shell Height", "EXTERNAL_FIELD");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Porous Shell Height",
+                       "EXTERNAL_FIELD");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
       } else {
@@ -6378,7 +6475,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
        * Read permeability *
        *                   *
        *********************/
-      porous_shell_no = pd_glob[mn]->Num_Porous_Shell_Eqn;
+      porous_shell_no = goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn;
       strcpy(search_string, "Permeability");
       model_read = look_for_mat_prop(imp, search_string, mat_ptr->PorousShellPermeabilityModel,
                                      mat_ptr->PorousShellPermeability, NO_USER, NULL, model_name,
@@ -6389,8 +6486,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                   "Expecting trailing keyword for Permeability EXTERNAL_FIELD model.\n");
         }
         ii = 0;
-        for (j = 0; j < efv->Num_external_field; j++) {
-          if (!strcmp(efv->name[j], input)) {
+        for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+          if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
             ii = 1;
             mat_ptr->por_shell_permeability_ext_field_index[ipore] = j;
           }
@@ -6405,7 +6502,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         mat_ptr->len_u_PorousShellPermeability[ipore] = num_const;
         if (num_const < 1) {
           sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Permeability", "EXTERNAL_FIELD");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Permeability", "EXTERNAL_FIELD");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
       } else if (model_read == -1 && !strcmp(model_name, "ORTHOTROPIC")) {
@@ -6413,7 +6510,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, mat_ptr->u_PorousShellPermeability, porous_shell_no);
         if (num_const < 12) {
           sr = sprintf(err_msg, "Matl %s expected at least 12 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Permeability", "ORTHOTROPIC");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Permeability", "ORTHOTROPIC");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
 
@@ -6437,7 +6534,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
        * Read relative permeability *
        *                            *
        * ****************************/
-      porous_shell_no = pd_glob[mn]->Num_Porous_Shell_Eqn;
+      porous_shell_no = goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn;
       strcpy(search_string, "Rel Liq Permeability");
       model_read = look_for_mat_prop(imp, search_string, mat_ptr->PorousShellRelPermModel,
                                      mat_ptr->PorousShellRelPerm, NO_USER, NULL, model_name,
@@ -6448,8 +6545,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                   "Expecting trailing keyword for Rel Liq Permeability EXTERNAL_FIELD model.\n");
         }
         ii = 0;
-        for (j = 0; j < efv->Num_external_field; j++) {
-          if (!strcmp(efv->name[j], input)) {
+        for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+          if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
             ii = 1;
             mat_ptr->por_shell_rel_perm_ext_field_index[ipore] = j;
           }
@@ -6463,7 +6560,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         mat_ptr->len_u_PorousShellRelPerm[ipore] = num_const;
         if (num_const < 1) {
           sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Permeability", "EXTERNAL_FIELD");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Permeability", "EXTERNAL_FIELD");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
       } else if (model_read == -1 && !strcmp(model_name, "VAN_GENUCHTEN")) {
@@ -6471,7 +6568,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, mat_ptr->u_PorousShellRelPerm, porous_shell_no);
         if (num_const < 4) {
           sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Rel Liq Permeability", "VAN_GENUCHTEN");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Rel Liq Permeability",
+                       "VAN_GENUCHTEN");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_PorousShellRelPerm[ipore] = num_const;
@@ -6481,8 +6579,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                               "VAN_GENUCHTEN_EXTERNAL model.\n");
         }
         ii = 0;
-        for (j = 0; j < efv->Num_external_field; j++) {
-          if (!strcmp(efv->name[j], input)) {
+        for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+          if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
             ii = 1;
             mat_ptr->por_shell_rel_perm_ext_field_index[ipore] = j;
           }
@@ -6494,7 +6592,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, mat_ptr->u_PorousShellRelPerm, porous_shell_no);
         if (num_const < 5) {
           sr = sprintf(err_msg, "Matl %s expected at least 5 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Rel Liq Permeability", "VAN_GENUCHTEN_EXTERNAL");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Rel Liq Permeability",
+                       "VAN_GENUCHTEN_EXTERNAL");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_PorousShellRelPerm[ipore] = num_const;
@@ -6512,7 +6611,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
        * Read cross permeability *
        *                         *
        ***************************/
-      porous_shell_no = pd_glob[mn]->Num_Porous_Shell_Eqn;
+      porous_shell_no = goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn;
       strcpy(search_string, "Porous Shell Cross Permeability");
       model_read = look_for_mat_prop(imp, search_string, mat_ptr->PorousShellCrossPermeabilityModel,
                                      mat_ptr->PorousShellCrossPermeability, NO_USER, NULL,
@@ -6523,8 +6622,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                               "EXTERNAL_FIELD model.\n");
         }
         ii = 0;
-        for (j = 0; j < efv->Num_external_field; j++) {
-          if (!strcmp(efv->name[j], input)) {
+        for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+          if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
             ii = 1;
             mat_ptr->por_shell_cross_permeability_ext_field_index[ipore] = j;
           }
@@ -6539,7 +6638,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         mat_ptr->len_u_PorousShellCrossPermeability[ipore] = num_const;
         if (num_const < 1) {
           sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Porous Shell Cross Permeability",
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Porous Shell Cross Permeability",
                        "EXTERNAL_FIELD");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
@@ -6557,7 +6656,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
        * Read capillary pressure *
        *                         *
        ***************************/
-      porous_shell_no = pd_glob[mn]->Num_Porous_Shell_Eqn;
+      porous_shell_no = goma_ctx->fem.pd_glob[mn]->Num_Porous_Shell_Eqn;
       strcpy(search_string, "Capillary Pressure");
       model_read = look_for_mat_prop(imp, search_string, mat_ptr->PorousShellCapPresModel,
                                      mat_ptr->PorousShellCapPres, NO_USER, NULL, model_name,
@@ -6568,7 +6667,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, mat_ptr->u_PorousShellCapPres, porous_shell_no);
         if (num_const < 4) {
           sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Capillary Pressure", "ATANH");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Capillary Pressure", "ATANH");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_PorousShellCapPres[ipore] = num_const;
@@ -6577,7 +6676,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, mat_ptr->u_PorousShellCapPres, porous_shell_no);
         if (num_const < 4) {
           sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Capillary Pressure", "SINH");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Capillary Pressure", "SINH");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_PorousShellCapPres[ipore] = num_const;
@@ -6586,7 +6685,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, mat_ptr->u_PorousShellCapPres, porous_shell_no);
         if (num_const < 4) {
           sr = sprintf(err_msg, "Matl %s expected at least 4 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Capillary Pressure", "VAN_GENUCHTEN");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Capillary Pressure",
+                       "VAN_GENUCHTEN");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_PorousShellCapPres[ipore] = num_const;
@@ -6597,8 +6697,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
               "Expecting trailing keyword for Capillary Pressure VAN_GENUCHTEN_EXTERNAL model.\n");
         }
         ii = 0;
-        for (j = 0; j < efv->Num_external_field; j++) {
-          if (!strcmp(efv->name[j], input)) {
+        for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+          if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
             ii = 1;
             mat_ptr->por_shell_cap_pres_ext_field_index[ipore] = j;
           }
@@ -6610,7 +6710,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, mat_ptr->u_PorousShellCapPres, porous_shell_no);
         if (num_const < 8) {
           sr = sprintf(err_msg, "Matl %s expected at least 8 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Capillary Pressure", "VAN_GENUCHTEN_EXTERNAL");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Capillary Pressure",
+                       "VAN_GENUCHTEN_EXTERNAL");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_PorousShellCapPres[ipore] = num_const;
@@ -6619,7 +6720,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, mat_ptr->u_PorousShellCapPres, porous_shell_no);
         if (num_const < 10) {
           sr = sprintf(err_msg, "Matl %s expected at least 10 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Capillary Pressure", "VAN_GENUCHTEN_HYST");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Capillary Pressure",
+                       "VAN_GENUCHTEN_HYST");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_PorousShellCapPres[ipore] = num_const;
@@ -6627,30 +6729,30 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         /* New change in 2021, use external field to store history of the curve.
          * For now, use fixed names of the field
          */
-        if (efv->ev) {
-          for (i = 0; i < efv->Num_external_field; i++) {
+        if (goma_ctx->fem.efv->ev) {
+          for (i = 0; i < goma_ctx->fem.efv->Num_external_field; i++) {
 
             /* Search for number of curve switches */
-            if (!strcmp(efv->name[i], "NUM_SWITCH_1")) {
+            if (!strcmp(goma_ctx->fem.efv->name[i], "NUM_SWITCH_1")) {
               mat_ptr->por_shell_cap_pres_hyst_num_switch_ext_field_index[0] = i;
             }
 
-            if (!strcmp(efv->name[i], "NUM_SWITCH_2")) {
+            if (!strcmp(goma_ctx->fem.efv->name[i], "NUM_SWITCH_2")) {
               mat_ptr->por_shell_cap_pres_hyst_num_switch_ext_field_index[1] = i;
             }
 
-            if (!strcmp(efv->name[i], "NUM_SWITCH_3")) {
+            if (!strcmp(goma_ctx->fem.efv->name[i], "NUM_SWITCH_3")) {
               mat_ptr->por_shell_cap_pres_hyst_num_switch_ext_field_index[2] = i;
             }
 
             /* Search for curve type - drainage or imbibition */
-            if (!strcmp(efv->name[i], "CURVE_TYPE_1")) {
+            if (!strcmp(goma_ctx->fem.efv->name[i], "CURVE_TYPE_1")) {
               mat_ptr->por_shell_cap_pres_hyst_curve_type_ext_field_index[0] = i;
             }
-            if (!strcmp(efv->name[i], "CURVE_TYPE_2")) {
+            if (!strcmp(goma_ctx->fem.efv->name[i], "CURVE_TYPE_2")) {
               mat_ptr->por_shell_cap_pres_hyst_curve_type_ext_field_index[1] = i;
             }
-            if (!strcmp(efv->name[i], "CURVE_TYPE_3")) {
+            if (!strcmp(goma_ctx->fem.efv->name[i], "CURVE_TYPE_3")) {
               mat_ptr->por_shell_cap_pres_hyst_curve_type_ext_field_index[2] = i;
             }
           }
@@ -6665,8 +6767,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
               "Expecting trailing keyword for Capillary Pressure VAN_GENUCHTEN_HYST_EXT model.\n");
         }
         ii = 0;
-        for (j = 0; j < efv->Num_external_field; j++) {
-          if (!strcmp(efv->name[j], input)) {
+        for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+          if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
             ii = 1;
             mat_ptr->por_shell_cap_pres_ext_field_index[ipore] = j;
           }
@@ -6679,7 +6781,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, mat_ptr->u_PorousShellCapPres, porous_shell_no);
         if (num_const < 18) {
           sr = sprintf(err_msg, "Matl %s expected at least 18 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Capillary Pressure", "VAN_GENUCHTEN_HYST_EXT");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Capillary Pressure",
+                       "VAN_GENUCHTEN_HYST_EXT");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_PorousShellCapPres[ipore] = num_const;
@@ -6728,8 +6831,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       num_const = read_constants(imp, &(mat_ptr->u_porous_sink_constants), NO_SPECIES);
       if (num_const < 8) {
-        sr = sprintf(err_msg, "Matl %s needs 8 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Sink Adsorption Rate Data", "LINEAR");
+        sr =
+            sprintf(err_msg, "Matl %s needs 8 constants for %s %s model.\n",
+                    goma_ctx->fem.pd_glob[mn]->MaterialName, "Sink Adsorption Rate Data", "LINEAR");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_porous_sink_constants = num_const;
@@ -6739,7 +6843,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_porous_sink_constants), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s needs 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Sink Adsorption Rate Data", "POWER_LAW");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Sink Adsorption Rate Data",
+                     "POWER_LAW");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_porous_sink_constants = num_const;
@@ -6779,8 +6884,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   have_shear_rate = 0;
   //*have_vort_dir = 0;*/
 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    if (pd_glob[mn]->e[imtrx][R_SHEAR_RATE]) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (goma_ctx->fem.pd_glob[mn]->e[imtrx][R_SHEAR_RATE]) {
       have_shear_rate = 1;
     }
     /*if (pd_glob[mn]->e[imtrx][R_VORT_DIR1])
@@ -6789,7 +6894,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }*/
   }
 
-  if (pd_glob[mn]->Num_Species_Eqn > 0) {
+  if (goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn > 0) {
 
     /*
      * Hey! If it's in there, then it should be fine. To avoid the ordering
@@ -6802,20 +6907,21 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
      *  Optionally read in the number of species in the material, and
      *  check for compatibility with the problem statement
      */
-    (void)look_for_optional_int(imp, "Number of Species", &model_read, pd_glob[mn]->Num_Species);
-    if (model_read != pd_glob[mn]->Num_Species) {
-      if (model_read == pd_glob[mn]->Num_Species + 1) {
-        pd_glob[mn]->Num_Species = model_read;
-        mp_glob[mn]->Num_Species = model_read;
-        if (upd->Max_Num_Species < mp_glob[mn]->Num_Species) {
-          upd->Max_Num_Species = mp_glob[mn]->Num_Species;
+    (void)look_for_optional_int(imp, "Number of Species", &model_read,
+                                goma_ctx->fem.pd_glob[mn]->Num_Species);
+    if (model_read != goma_ctx->fem.pd_glob[mn]->Num_Species) {
+      if (model_read == goma_ctx->fem.pd_glob[mn]->Num_Species + 1) {
+        goma_ctx->fem.pd_glob[mn]->Num_Species = model_read;
+        goma_ctx->fem.mp_glob[mn]->Num_Species = model_read;
+        if (goma_ctx->fem.upd->Max_Num_Species < goma_ctx->fem.mp_glob[mn]->Num_Species) {
+          goma_ctx->fem.upd->Max_Num_Species = goma_ctx->fem.mp_glob[mn]->Num_Species;
         }
         SPF(es, "WARNING: Number of species in phase %d increased by mat file read to %d\n", mn,
             model_read);
         ECHO(es, echo_file);
       } else {
         fprintf(stderr, "ERROR: number of species in goma input and mat file differ: %d %d\n",
-                pd_glob[mn]->Num_Species, model_read);
+                goma_ctx->fem.pd_glob[mn]->Num_Species, model_read);
         GOMA_EH(GOMA_ERROR, "read_input_mp error");
       }
     }
@@ -6880,8 +6986,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     } else if (!strcmp(model_name, "NONE")) {
       DiffusionConstitutiveEquation = NON_DIFFUSING;
     } else {
-      sprintf(err_msg, "Matl %s, \"%s\" = \"%s\"?\n(valid: %s)\n[%s]", pd_glob[mn]->MaterialName,
-              "Diffusion Constitutive Equation", model_name,
+      sprintf(err_msg, "Matl %s, \"%s\" = \"%s\"?\n(valid: %s)\n[%s]",
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Diffusion Constitutive Equation",
+              model_name,
               "FICKIAN GENERALIZED_FICKIAN STEFAN_MAXWELL STEFAN_MAXWELL_CHARGED FICKIAN_CHARGED "
               "FICKIAN_CHARGED_X STEFAN_MAXWELL_VOLUME DARCY DARCY_FICKIAN HYDRODYNAMIC "
               "HYDRODYNAMIC_QTENSOR NONE", /*  RSL 9/18/00  */
@@ -6889,8 +6996,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
-    pd_glob[mn]->MassFluxModel = DiffusionConstitutiveEquation;
-    cr_glob[mn]->MassFluxModel = DiffusionConstitutiveEquation;
+    goma_ctx->fem.pd_glob[mn]->MassFluxModel = DiffusionConstitutiveEquation;
+    goma_ctx->fem.cr_glob[mn]->MassFluxModel = DiffusionConstitutiveEquation;
 
     ECHO(es, echo_file);
 
@@ -6989,14 +7096,14 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       DiffusionConstitutiveEquation == STEFAN_MAXWELL_CHARGED ||
       DiffusionConstitutiveEquation == STEFAN_MAXWELL_VOLUME) {
 
-    if (pd_glob[mn]->Num_Species_Eqn + 1 != pd_glob[mn]->Num_Species) {
+    if (goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn + 1 != goma_ctx->fem.pd_glob[mn]->Num_Species) {
       fprintf(stderr, "ERROR stefan Maxwell diffusion model chosen but number of species, %d\n",
-              pd_glob[mn]->Num_Species);
+              goma_ctx->fem.pd_glob[mn]->Num_Species);
       fprintf(stderr, "\t isn't one less than number of species equations, %d\n",
-              pd_glob[mn]->Num_Species_Eqn);
+              goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn);
       GOMA_EH(GOMA_ERROR, "Error in number of species and species eqn specs");
     }
-    n_species = pd_glob[mn]->Num_Species;
+    n_species = goma_ctx->fem.pd_glob[mn]->Num_Species;
 
     if (n_species < 2) {
       GOMA_EH(
@@ -7066,7 +7173,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       GOMA_EH(GOMA_ERROR, "Expected to read 1 int for \"Number of chemical reactions\"");
     }
 
-    pd_glob[mn]->Num_Rxn = n_rxn;
+    goma_ctx->fem.pd_glob[mn]->Num_Rxn = n_rxn;
     if (n_rxn > MAX_RXN) {
       sprintf(err_msg,
               "Specified number of chemical rxns %d > %d, compiled limit - boost MAX_RXN in "
@@ -7093,7 +7200,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, &(mat_ptr->u_reaction_rate), 0);
         if (num_const < 3) {
           sprintf(err_msg, "Material %s - expected at least 3 constants for %s %s model.\n",
-                  pd_glob[mn]->MaterialName, "Reaction Rate", "ELECTRODE_KINETICS");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Reaction Rate", "ELECTRODE_KINETICS");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_reaction_rate = num_const;
@@ -7113,7 +7220,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, &(mat_ptr->u_thermodynamic_potential), 0);
         if (num_const < 8) {
           sprintf(err_msg, "Material %s - expected at least 8 constants for %s %s model.\n",
-                  pd_glob[mn]->MaterialName, "Thermodynamic Potential", "FeS2");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Thermodynamic Potential", "FeS2");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_thermodynamic_potential = num_const;
@@ -7123,7 +7230,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, &(mat_ptr->u_thermodynamic_potential), 0);
         if (num_const < 7) {
           sprintf(err_msg, "Material %s - expected at least 7 constants for %s %s model.\n",
-                  pd_glob[mn]->MaterialName, "Thermodynamic Potential", "LiSi");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Thermodynamic Potential", "LiSi");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_thermodynamic_potential = num_const;
@@ -7133,7 +7240,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, &(mat_ptr->u_thermodynamic_potential), 0);
         if (num_const < 1) {
           sprintf(err_msg, "Material %s - expected at least 1 constant for %s %s model.\n",
-                  pd_glob[mn]->MaterialName, "Thermodynamic Potential", "CONSTANT");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Thermodynamic Potential", "CONSTANT");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_thermodynamic_potential = num_const;
@@ -7151,7 +7258,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, &(mat_ptr->u_interfacial_area), 0);
         if (num_const < 9) {
           sprintf(err_msg, "Material %s - expected at least 9 constants for %s %s model.\n",
-                  pd_glob[mn]->MaterialName, "Interfacial Area", "THERMAL_BATTERY");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Interfacial Area", "THERMAL_BATTERY");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_interfacial_area = num_const;
@@ -7161,7 +7268,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, &(mat_ptr->u_interfacial_area), 0);
         if (num_const < 1) {
           sprintf(err_msg, "Material %s - expected at least 1 constant for %s %s model.\n",
-                  pd_glob[mn]->MaterialName, "Interfacial Area", "CONSTANT");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Interfacial Area", "CONSTANT");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_interfacial_area = num_const;
@@ -7193,7 +7300,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (num_const <
             6) { /* should 6 constants for the thermal_battery solution-temperature model */
           sprintf(err_msg, "Material %s - expected at least 6 constants for %s %s model.\n",
-                  pd_glob[mn]->MaterialName, "Solution Temperature", "THERMAL_BATTERY");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Solution Temperature",
+                  "THERMAL_BATTERY");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_solution_temperature = num_const;
@@ -7220,7 +7328,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_porosity), 0);
       if (num_const < 2) {
         sprintf(err_msg, "Material %s - expected at least 2 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, "Porosity", "THERMAL_BATTERY");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Porosity", "THERMAL_BATTERY");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_porosity = num_const;
@@ -7283,7 +7391,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           num_const = mat_ptr->len_u_diffusivity[species_no];
           if (num_const < 5) {
             sr = sprintf(err_msg, "Matl %s (conc %d) needs at least 5 constants for %s %s model.\n",
-                         pd_glob[mn]->MaterialName, species_no, "Diffusivity", "POROUS");
+                         goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity",
+                         "POROUS");
             GOMA_EH(GOMA_ERROR, err_msg);
           }
         }
@@ -7334,9 +7443,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             num_const = read_constants(imp, mat_ptr->u_gadiffusivity, species_no);
 
             if (num_const < 3) {
-              sr =
-                  sprintf(err_msg, "Matl %s %s needs 3 constants for %s  model: Kg and exponent.\n",
-                          pd_glob[mn]->MaterialName, "Shear Rate Diffusivity", "CONST_LS");
+              sr = sprintf(
+                  err_msg, "Matl %s %s needs 3 constants for %s  model: Kg and exponent.\n",
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Shear Rate Diffusivity", "CONST_LS");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
 
@@ -7345,7 +7454,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_gadiffusivity[species_no]);
           } else {
             sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                         pd_glob[mn]->MaterialName, "Shear Rate Diffusivity", model_name);
+                         goma_ctx->fem.pd_glob[mn]->MaterialName, "Shear Rate Diffusivity",
+                         model_name);
             GOMA_EH(model_read, err_msg);
           }
 
@@ -7369,9 +7479,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             num_const = read_constants(imp, mat_ptr->u_mdiffusivity, species_no);
 
             if (num_const < 3) {
-              sr =
-                  sprintf(err_msg, "Matl %s %s needs 3 constants for %s  model: Kg and exponent.\n",
-                          pd_glob[mn]->MaterialName, "Viscosity Diffusivity", "CONST_LS");
+              sr = sprintf(
+                  err_msg, "Matl %s %s needs 3 constants for %s  model: Kg and exponent.\n",
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Viscosity Diffusivity", "CONST_LS");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_u_mdiffusivity[species_no] = num_const;
@@ -7380,7 +7490,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
           else {
             sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                         pd_glob[mn]->MaterialName, "Viscosity Diffusivity", model_name);
+                         goma_ctx->fem.pd_glob[mn]->MaterialName, "Viscosity Diffusivity",
+                         model_name);
             GOMA_EH(model_read, err_msg);
           }
 
@@ -7399,7 +7510,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             num_const = read_constants(imp, mat_ptr->u_fdiffusivity, species_no);
             if (num_const < 3) {
               sr = sprintf(err_msg, "Matl %s %s needs 3 constants for %s  model.\n",
-                           pd_glob[mn]->MaterialName, "Fickian Diffusivity", "HYDRO Diffusivity");
+                           goma_ctx->fem.pd_glob[mn]->MaterialName, "Fickian Diffusivity",
+                           "HYDRO Diffusivity");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_u_fdiffusivity[species_no] = num_const;
@@ -7409,7 +7521,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             num_const = read_constants(imp, mat_ptr->u_fdiffusivity, species_no);
             if (num_const < 2) {
               sr = sprintf(err_msg, "Matl %s %s needs 2 constants for %s  model.\n",
-                           pd_glob[mn]->MaterialName, "EXP_DECAY Diffusivity", "HYDRO Diffusivity");
+                           goma_ctx->fem.pd_glob[mn]->MaterialName, "EXP_DECAY Diffusivity",
+                           "HYDRO Diffusivity");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_u_fdiffusivity[species_no] = num_const;
@@ -7419,14 +7532,16 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             num_const = read_constants(imp, mat_ptr->u_fdiffusivity, species_no);
             if (num_const < 1) {
               sr = sprintf(err_msg, "Matl %s %s needs 1 constants for %s  model.\n",
-                           pd_glob[mn]->MaterialName, "SHOCK Diffusivity", "HYDRO Diffusivity");
+                           goma_ctx->fem.pd_glob[mn]->MaterialName, "SHOCK Diffusivity",
+                           "HYDRO Diffusivity");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_u_fdiffusivity[species_no] = num_const;
             SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_fdiffusivity[species_no]);
           } else {
-            sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                         pd_glob[mn]->MaterialName, "Fickian Diffusivity", model_name);
+            sr =
+                sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
+                        goma_ctx->fem.pd_glob[mn]->MaterialName, "Fickian Diffusivity", model_name);
             GOMA_EH(GOMA_ERROR, err_msg);
           }
 
@@ -7446,7 +7561,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             if (num_const < 3) {
               sr = sprintf(err_msg,
                            "Matl %s %s needs 3 constants for %s  model: Kg, avg_conc, slope.\n",
-                           pd_glob[mn]->MaterialName, "Gravity-based Diffusivity", "BISECTION");
+                           goma_ctx->fem.pd_glob[mn]->MaterialName, "Gravity-based Diffusivity",
+                           "BISECTION");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_u_gdiffusivity[species_no] = num_const;
@@ -7458,7 +7574,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
               sr = sprintf(
                   err_msg,
                   "Matl %s %s needs 4 constants for %s  model: Kg, exponent, avg_conc, slope .\n",
-                  pd_glob[mn]->MaterialName, "Gravity-based Diffusivity", "RZBISECTION");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Gravity-based Diffusivity",
+                  "RZBISECTION");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_u_gdiffusivity[species_no] = num_const;
@@ -7467,9 +7584,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             mat_ptr->GravDiffType[species_no] = RICHARDSON_ZAKI;
             num_const = read_constants(imp, mat_ptr->u_gdiffusivity, species_no);
             if (num_const < 2) {
-              sr = sprintf(
-                  err_msg, "Matl %s %s needs 2 constants for %s  model: Kg and exponent.\n",
-                  pd_glob[mn]->MaterialName, "Gravity-based Diffusivity", "RICHARDSON_ZAKI");
+              sr =
+                  sprintf(err_msg, "Matl %s %s needs 2 constants for %s  model: Kg and exponent.\n",
+                          goma_ctx->fem.pd_glob[mn]->MaterialName, "Gravity-based Diffusivity",
+                          "RICHARDSON_ZAKI");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_u_gdiffusivity[species_no] = num_const;
@@ -7478,16 +7596,17 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             mat_ptr->GravDiffType[species_no] = RICHARDSON_ZAKI;
             num_const = read_constants(imp, mat_ptr->u_gdiffusivity, species_no);
             if (num_const < 3) {
-              sr =
-                  sprintf(err_msg, "Matl %s %s needs 3 constants for %s  model: Kg and exponent.\n",
-                          pd_glob[mn]->MaterialName, "Gravity-based Diffusivity", "CONST_LS");
+              sr = sprintf(
+                  err_msg, "Matl %s %s needs 3 constants for %s  model: Kg and exponent.\n",
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Gravity-based Diffusivity", "CONST_LS");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_u_gdiffusivity[species_no] = num_const;
             SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_gdiffusivity[species_no]);
           } else {
             sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                         pd_glob[mn]->MaterialName, "Gravity-based Diffusivity", model_name);
+                         goma_ctx->fem.pd_glob[mn]->MaterialName, "Gravity-based Diffusivity",
+                         model_name);
             GOMA_EH(model_read, err_msg);
           }
 
@@ -7526,7 +7645,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
               SPF(es, "%s = %s %d", "Q Tensor Diffusivity", "NONE", species_no);
             } else {
               sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                           pd_glob[mn]->MaterialName, "Q Tensor Diffusivity", model_name);
+                           goma_ctx->fem.pd_glob[mn]->MaterialName, "Q Tensor Diffusivity",
+                           model_name);
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             ECHO(es, echo_file);
@@ -7540,8 +7660,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
             if (have_shear_rate == 0) {
               sr = sprintf(err_msg, "Matl %s (conc %d) %s %s model needs the \"%s\" eqn active.\n",
-                           pd_glob[mn]->MaterialName, species_no, "Diffusivity", "HYDRO",
-                           "shear_rate");
+                           goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity",
+                           "HYDRO", "shear_rate");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
           }
@@ -7575,7 +7695,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             num_const = read_constants(imp, mat_ptr->u_fdiffusivity, species_no);
             if (num_const < 3) {
               sr = sprintf(err_msg, "Matl %s %s needs 3 constants for %s  model.\n",
-                           pd_glob[mn]->MaterialName, "Fickian Diffusivity",
+                           goma_ctx->fem.pd_glob[mn]->MaterialName, "Fickian Diffusivity",
                            "SUSPENSION Diffusivity");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
@@ -7586,15 +7706,16 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             num_const = read_constants(imp, mat_ptr->u_fdiffusivity, species_no);
             if (num_const < 2) {
               sr = sprintf(err_msg, "Matl %s %s needs 2 constants for %s  model.\n",
-                           pd_glob[mn]->MaterialName, "Fickian Diffusivity",
+                           goma_ctx->fem.pd_glob[mn]->MaterialName, "Fickian Diffusivity",
                            "SUSPENSION Diffusivity");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_u_fdiffusivity[species_no] = num_const;
             SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_fdiffusivity[species_no]);
           } else {
-            sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                         pd_glob[mn]->MaterialName, "Fickian Diffusivity", model_name);
+            sr =
+                sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
+                        goma_ctx->fem.pd_glob[mn]->MaterialName, "Fickian Diffusivity", model_name);
             GOMA_EH(GOMA_ERROR, err_msg);
           }
 
@@ -7614,7 +7735,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             num_const = read_constants(imp, mat_ptr->u_qdiffusivity, species_no);
             if (num_const < 3) {
               sr = sprintf(err_msg, "Matl %s %s needs 3 constants for %s  model.\n",
-                           pd_glob[mn]->MaterialName, "Q Tensor Diffusivity",
+                           goma_ctx->fem.pd_glob[mn]->MaterialName, "Q Tensor Diffusivity",
                            "SUSPENSION Diffusivity");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
@@ -7628,7 +7749,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             SPF(es, "%s = %s %d", "Q Tensor Diffusivity", "NONE", species_no);
           } else {
             sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                         pd_glob[mn]->MaterialName, "Q Tensor Diffusivity", model_name);
+                         goma_ctx->fem.pd_glob[mn]->MaterialName, "Q Tensor Diffusivity",
+                         model_name);
             GOMA_EH(GOMA_ERROR, err_msg);
           }
 
@@ -7648,7 +7770,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             if (num_const < 3) {
               sr = sprintf(err_msg,
                            "Matl %s %s needs 3 constants for %s  model: Kg, avg_conc, slope.\n",
-                           pd_glob[mn]->MaterialName, "Gravity-based Diffusivity", "BISECTION");
+                           goma_ctx->fem.pd_glob[mn]->MaterialName, "Gravity-based Diffusivity",
+                           "BISECTION");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_u_gdiffusivity[species_no] = num_const;
@@ -7660,7 +7783,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
               sr = sprintf(
                   err_msg,
                   "Matl %s %s needs 4 constants for %s  model: Kg, exponent, avg_conc, slope .\n",
-                  pd_glob[mn]->MaterialName, "Gravity-based Diffusivity", "RZBISECTION");
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Gravity-based Diffusivity",
+                  "RZBISECTION");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_u_gdiffusivity[species_no] = num_const;
@@ -7669,16 +7793,18 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
             mat_ptr->GravDiffType[species_no] = RICHARDSON_ZAKI;
             num_const = read_constants(imp, mat_ptr->u_gdiffusivity, species_no);
             if (num_const < 2) {
-              sr = sprintf(
-                  err_msg, "Matl %s %s needs 2 constants for %s  model: Kg and exponent.\n",
-                  pd_glob[mn]->MaterialName, "Gravity-based Diffusivity", "RICHARDSON_ZAKI");
+              sr =
+                  sprintf(err_msg, "Matl %s %s needs 2 constants for %s  model: Kg and exponent.\n",
+                          goma_ctx->fem.pd_glob[mn]->MaterialName, "Gravity-based Diffusivity",
+                          "RICHARDSON_ZAKI");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_u_gdiffusivity[species_no] = num_const;
             SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_gdiffusivity[species_no]);
           } else {
             sr = sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                         pd_glob[mn]->MaterialName, "Gravity-based Diffusivity", model_name);
+                         goma_ctx->fem.pd_glob[mn]->MaterialName, "Gravity-based Diffusivity",
+                         model_name);
             GOMA_EH(model_read, err_msg);
           }
 
@@ -7700,7 +7826,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
               sr = sprintf(err_msg,
                            "Matl %s %s needs 3 constants: particle radius, characteristic length "
                            "scale, and max velocity.\n",
-                           pd_glob[mn]->MaterialName, "Suspension Balance Length Scales");
+                           goma_ctx->fem.pd_glob[mn]->MaterialName,
+                           "Suspension Balance Length Scales");
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             mat_ptr->len_SBM_Lengths2[species_no] = num_const;
@@ -7714,59 +7841,65 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           mat_ptr->DiffusivityModel[species_no] = FREE_VOL;
           num_const = mat_ptr->len_u_diffusivity[species_no];
           if (num_const < 12) {
-            sr =
-                sprintf(err_msg, "Matl %s (conc %d) needs at least 12 constants for %s %s model.\n",
-                        pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
+            sr = sprintf(
+                err_msg, "Matl %s (conc %d) needs at least 12 constants for %s %s model.\n",
+                goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
             GOMA_EH(GOMA_ERROR, err_msg);
           } else if (num_const < 13) {
             sr = sprintf(
                 err_msg,
                 "Matl %s (conc %d) needs u_diffusivity[w][12]=0 for Duda-Vrentas %s %s model.\n",
-                pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
             GOMA_EH(GOMA_ERROR, err_msg);
           } else if (num_const < 15 && (int)mat_ptr->u_diffusivity[species_no][12] != 0) {
             sr = sprintf(
                 err_msg,
                 "Matl %s (conc %d) needs at least 16 constants for non-Duda-Vrentas %s %s model.\n",
-                pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
             GOMA_EH(GOMA_ERROR, err_msg);
           } else if (num_const < 17 && (int)mat_ptr->u_diffusivity[species_no][12] == 4) {
             sr = sprintf(
                 err_msg,
                 "Matl %s (conc %d) needs at least 18 constants for friction-based %s %s model.\n",
-                pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
+                goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
             GOMA_EH(GOMA_ERROR, err_msg);
           }
 
           switch ((int)mat_ptr->u_diffusivity[species_no][12]) {
           case 0:
-            sr = SPF(err_msg, "\t## Matl %s (conc %d) using Vrentas & Duda %s %s model.##",
-                     pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
+            sr =
+                SPF(err_msg, "\t## Matl %s (conc %d) using Vrentas & Duda %s %s model.##",
+                    goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
             ECHO(err_msg, echo_file);
             break;
           case 1:
-            sr = SPF(err_msg, "\t ### Matl %s (conc %d) using Zelinsky & Hanley %s %s model.###\n",
-                     pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
+            sr =
+                SPF(err_msg, "\t ### Matl %s (conc %d) using Zelinsky & Hanley %s %s model.###\n",
+                    goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
             ECHO(err_msg, echo_file);
             break;
           case 2:
-            sr = SPF(err_msg, "\t ### Matl %s (conc %d) using self-diffusion %s %s model.###\n",
-                     pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
+            sr =
+                SPF(err_msg, "\t ### Matl %s (conc %d) using self-diffusion %s %s model.###\n",
+                    goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
             ECHO(err_msg, echo_file);
             break;
           case 3:
-            sr = SPF(err_msg, "\t ### Matl %s (conc %d) using Alsoy & Duda %s %s model.###\n",
-                     pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
+            sr =
+                SPF(err_msg, "\t ### Matl %s (conc %d) using Alsoy & Duda %s %s model.###\n",
+                    goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
             ECHO(err_msg, echo_file);
             break;
           case 4:
-            sr = SPF(err_msg, "\t ### Matl %s (conc %d) using friction-based %s %s model.### \n",
-                     pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
+            sr =
+                SPF(err_msg, "\t ### Matl %s (conc %d) using friction-based %s %s model.### \n",
+                    goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity", "FREE_VOL");
             ECHO(err_msg, echo_file);
             break;
           default:
-            sr = SPF(err_msg, "\t ### Undefined %s %s model for Matl %s (conc %d) model.### \n",
-                     "FREE_VOL", "Diffusivity", pd_glob[mn]->MaterialName, species_no);
+            sr =
+                SPF(err_msg, "\t ### Undefined %s %s model for Matl %s (conc %d) model.### \n",
+                    "FREE_VOL", "Diffusivity", goma_ctx->fem.pd_glob[mn]->MaterialName, species_no);
             ECHO(err_msg, echo_file);
             break;
           }
@@ -7800,12 +7933,13 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           mat_ptr->DiffusivityModel[species_no] = GENERALIZED_FREE_VOL;
           num_const = mat_ptr->len_u_diffusivity[species_no];
           if (num_const < 13) {
-            sr = sprintf(
-                err_msg, "Matl %s (conc %d) needs at least 13 constants for %s %s model.\n",
-                pd_glob[mn]->MaterialName, species_no, "Diffusivity", "GENERALIZED_FREE_VOL");
+            sr =
+                sprintf(err_msg, "Matl %s (conc %d) needs at least 13 constants for %s %s model.\n",
+                        goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity",
+                        "GENERALIZED_FREE_VOL");
             GOMA_EH(GOMA_ERROR, err_msg);
           }
-          if (pd_glob[mn]->Num_Species_Eqn < 1) {
+          if (goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn < 1) {
             GOMA_EH(GOMA_ERROR, "Generalized models are for 2 or more BULK components.");
           }
         }
@@ -7829,10 +7963,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           num_const = mat_ptr->len_u_diffusivity[species_no];
           if (num_const < 5) {
             sr = sprintf(err_msg, "Matl %s (conc %d) needs at least 5 constants for %s %s model.\n",
-                         pd_glob[mn]->MaterialName, species_no, "Diffusivity", "SEDIMENT");
+                         goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity",
+                         "SEDIMENT");
             GOMA_EH(GOMA_ERROR, err_msg);
           }
-          if (pd_glob[mn]->Num_Species_Eqn < 1) {
+          if (goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn < 1) {
             GOMA_EH(GOMA_ERROR, "SEDIMENT model is for 2 or more BULK components.");
           }
 
@@ -7848,10 +7983,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           num_const = mat_ptr->len_u_diffusivity[species_no];
           if (num_const < 3) {
             sr = sprintf(err_msg, "Matl %s (conc %d) needs at least 3 constant for %s %s model.\n",
-                         pd_glob[mn]->MaterialName, species_no, "Diffusivity", "BRUGGEMANN");
+                         goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity",
+                         "BRUGGEMANN");
             GOMA_EH(GOMA_ERROR, err_msg);
           }
-          if (pd_glob[mn]->Num_Species_Eqn < 1) {
+          if (goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn < 1) {
             GOMA_EH(GOMA_ERROR, "BRUGGEMANN model is for 2 or more BULK components.");
           }
 
@@ -7867,12 +8003,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           num_const = mat_ptr->len_u_diffusivity[species_no];
           if (num_const < 12) {
             sr = sprintf(err_msg, "Matl %s (conc %d) needs at least 12 constant for %s %s model.\n",
-                         pd_glob[mn]->MaterialName, species_no, "Diffusivity",
+                         goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity",
                          "BRUGGEMANN_FREE_VOL");
             GOMA_EH(GOMA_ERROR, err_msg);
           }
           mat_ptr->FreeVolSolvent[species_no] = TRUE;
-          if (pd_glob[mn]->Num_Species_Eqn < 1) {
+          if (goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn < 1) {
             GOMA_EH(GOMA_ERROR, "BRUGGEMANN_FREE_VOL model is for 2 or more BULK components.");
           }
 
@@ -7882,13 +8018,13 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         else if (!strcmp(model_name, "GENERALIZED")) {
           mat_ptr->DiffusivityModel[species_no] = GENERALIZED;
           num_const = mat_ptr->len_u_diffusivity[species_no];
-          if (num_const < pd_glob[mn]->Num_Species_Eqn) {
-            sr = sprintf(err_msg,
-                         "Matl %s (conc %d) needs one constant for each i-j pair %s %s model.\n",
-                         pd_glob[mn]->MaterialName, species_no, "Diffusivity", "GENERALIZED");
+          if (num_const < goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn) {
+            sr = sprintf(
+                err_msg, "Matl %s (conc %d) needs one constant for each i-j pair %s %s model.\n",
+                goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Diffusivity", "GENERALIZED");
             GOMA_EH(GOMA_ERROR, err_msg);
           }
-          if (pd_glob[mn]->Num_Species_Eqn < 2) {
+          if (goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn < 2) {
             GOMA_EH(GOMA_ERROR, "Generalized diffusivity model is for 2 or more BULK components.");
           }
         } else if (!strcmp(model_name, "CONST_LS")) {
@@ -7922,7 +8058,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           num_const = read_constants(imp, mat_ptr->u_settling, species_no);
           if (num_const < 8) {
             sr = sprintf(err_msg, "Matl %s %s needs 8 constants for %s  model.\n",
-                         pd_glob[mn]->MaterialName, "Settling Velocity", "SEDIMENT");
+                         goma_ctx->fem.pd_glob[mn]->MaterialName, "Settling Velocity", "SEDIMENT");
             GOMA_EH(GOMA_ERROR, err_msg);
           }
           mat_ptr->len_u_settling[species_no] = num_const;
@@ -8058,8 +8194,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, mat_ptr->u_vapor_pressure, species_no);
         if (num_const < 5) {
           sr = sprintf(err_msg, "Matl %s (%s, conc %d) needs 5 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "porous 2-phase", species_no, "Vapor Pressure",
-                       "KELVIN or FLAT");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "porous 2-phase", species_no,
+                       "Vapor Pressure", "KELVIN or FLAT");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
         mat_ptr->len_u_vapor_pressure[species_no] = num_const;
@@ -8070,7 +8206,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         num_const = read_constants(imp, mat_ptr->u_vapor_pressure, species_no);
         if (num_const < 7) {
           sr = sprintf(err_msg, "Matl %s (%s, conc %d) needs 7 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "porous unsaturated", species_no,
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "porous unsaturated", species_no,
                        "Vapor Pressure", "KELVIN OR FLAT");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
@@ -8078,8 +8214,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_vapor_pressure[species_no]);
       } else {
         sr = sprintf(err_msg, "%s model invalid in matl %s unless %s is \"%s\" or \"%s\"\n",
-                     "KELVIN or FLAT", pd_glob[mn]->MaterialName, "Media Type", "POROUS_TWO_PHASE",
-                     "POROUS_UNSATURATED");
+                     "KELVIN or FLAT", goma_ctx->fem.pd_glob[mn]->MaterialName, "Media Type",
+                     "POROUS_TWO_PHASE", "POROUS_UNSATURATED");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
     } else if (model_read == -1 && !strcmp(model_name, "IDEAL_GAS")) {
@@ -8088,7 +8224,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, mat_ptr->u_vapor_pressure, species_no);
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s (conc %d) needs 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, species_no, "Vapor Pressure", "IDEAL_GAS");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Vapor Pressure",
+                     "IDEAL_GAS");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_vapor_pressure[species_no] = num_const;
@@ -8102,7 +8239,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, mat_ptr->u_vapor_pressure, species_no);
       if (num_const < 6) {
         sr = sprintf(err_msg, "Matl %s (conc %d) needs 6 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, species_no, "Vapor Pressure", "ANTOINE");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Vapor Pressure",
+                     "ANTOINE");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_vapor_pressure[species_no] = num_const;
@@ -8114,7 +8252,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, mat_ptr->u_vapor_pressure, species_no);
       if (num_const < 8) {
         sr = sprintf(err_msg, "Matl %s (conc %d) needs 6 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, species_no, "Vapor Pressure", "RIEDEL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, species_no, "Vapor Pressure",
+                     "RIEDEL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_vapor_pressure[species_no] = num_const;
@@ -8302,7 +8441,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         GOMA_EH(GOMA_ERROR,
                 "Error reading non-volatile Molar Volume: e.g. CONSTANT  species_id  MV");
       } else {
-        mat_ptr->molar_volume[pd_glob[mn]->Num_Species_Eqn] = mv;
+        mat_ptr->molar_volume[goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn] = mv;
         SPF(es, "%s = %s %d %.4g", "Non-volatile Molar Volume", model_name, ii, mv);
       }
       ECHO(es, echo_file);
@@ -8314,7 +8453,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         GOMA_EH(GOMA_ERROR,
                 "Error reading non-volatile Specific Volume: e.g. CONSTANT  species_id  MV");
       } else {
-        mat_ptr->specific_volume[pd_glob[mn]->Num_Species_Eqn] = mv;
+        mat_ptr->specific_volume[goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn] = mv;
         SPF(es, "%s = %s %d %.4g", "Non-volatile Specific Volume", model_name, ii, mv);
       }
       ECHO(es, echo_file);
@@ -8326,7 +8465,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         GOMA_EH(GOMA_ERROR,
                 "Error reading non-volatile Molar Volume: e.g. CONSTANT  species_id  MV");
       } else {
-        mat_ptr->emissivity[pd_glob[mn]->Num_Species_Eqn] = mv;
+        mat_ptr->emissivity[goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn] = mv;
         SPF(es, "%s = %s %d %.4g", "Non-volatile Emissivity", model_name, ii, mv);
       }
       ECHO(es, echo_file);
@@ -8334,7 +8473,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
     iread = look_for_optional(imp, "Flory-Huggins parameters", input, '=');
     if (iread != -1) {
-      n_species = pd_glob[mn]->Num_Species_Eqn + 1;
+      n_species = goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn + 1;
       /*number of independent interaction parameters */
       n_ij = (n_species * n_species - n_species) / 2;
 
@@ -8363,7 +8502,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
    * Moment Properties
    */
 
-  if (pd_glob[mn]->gv[MOMENT0]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[MOMENT0]) {
     ECHO("\n----Moment Properties\n", echo_file);
 
     model_read = look_for_mat_prop(imp, "Moment Weight Function", &(mat_ptr->Momentwt_funcModel),
@@ -8462,7 +8601,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->moment_growth_model = VISCOSITY_SCALED_GROWTH_RATE;
       if (fscanf(imp, "%lf", &a0) != 1) {
         sr = sprintf(err_msg, "Matl %s needs 1 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Moment Growth Kernel", "VISCOSITY_SCALED");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Moment Growth Kernel",
+                     "VISCOSITY_SCALED");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->moment_growth_scale = a0;
@@ -8471,9 +8611,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
       mat_ptr->moment_growth_model = VISCOSITY_PRESSURE_GROWTH_RATE;
       if (fscanf(imp, "%lf %lf", &a0, &a1) != 2) {
-        sr =
-            sprintf(err_msg, "Matl %s needs 2 constants for %s %s model.\n",
-                    pd_glob[mn]->MaterialName, "Moment Growth Kernel", "VISCOSITY_PRESSURE_SCALED");
+        sr = sprintf(err_msg, "Matl %s needs 2 constants for %s %s model.\n",
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Moment Growth Kernel",
+                     "VISCOSITY_PRESSURE_SCALED");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->moment_growth_scale = a0;
@@ -8496,9 +8636,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
       mat_ptr->moment_coalescence_model = ADDITION_COALESCENCE;
       if (fscanf(imp, "%lf", &a0) != 1) {
-        sr =
-            sprintf(err_msg, "Matl %s needs 1 constants for %s %s model.\n",
-                    pd_glob[mn]->MaterialName, "Moment Coalescence Kernel", "ADDITION_COALESCENCE");
+        sr = sprintf(err_msg, "Matl %s needs 1 constants for %s %s model.\n",
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Moment Coalescence Kernel",
+                     "ADDITION_COALESCENCE");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->moment_coalescence_scale = a0;
@@ -8508,7 +8648,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->moment_coalescence_model = VISCOSITY_SCALED_COALESCENCE;
       if (fscanf(imp, "%lf", &a0) != 1) {
         sr = sprintf(err_msg, "Matl %s needs 1 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Moment Coalescence Kernel",
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Moment Coalescence Kernel",
                      "VISCOSITY_SCALED_ADDITION");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
@@ -8519,7 +8659,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->moment_coalescence_model = VISCOSITY_BUBBLE_RATIO_COALESCENCE;
       if (fscanf(imp, "%lf", &a0) != 1) {
         sr = sprintf(err_msg, "Matl %s needs 1 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Moment Coalescence Kernel",
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Moment Coalescence Kernel",
                      "VISCOSITY_ADDITION_BUBBLE_RATIO");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
@@ -8535,7 +8675,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ECHO(es, echo_file);
   }
 
-  if (pd_glob[mn]->gv[FILM_HEIGHT]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[FILM_HEIGHT]) {
 
     mat_ptr->film_height_diffusivity = 0.;
     mat_ptr->film_height_diffusivityModel = CONSTANT;
@@ -8561,7 +8701,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf %lf %lf", &a0, &a1, &a2) != 3) {
       sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "BOUSS");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source", "BOUSS");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->momentum_source[0] = a0;
@@ -8574,7 +8714,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf %lf %lf", &a0, &a1, &a2) != 3) {
       sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "VARIABLE_DENSITY");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source",
+                   "VARIABLE_DENSITY");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->momentum_source[0] = a0;
@@ -8587,7 +8728,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf %lf %lf", &a0, &a1, &a2) != 3) {
       sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "VARIABLE_DENSITY");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source",
+                   "VARIABLE_DENSITY");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->momentum_source[0] = a0;
@@ -8600,7 +8742,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4) != 5) {
       sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "GRAV_VIBRATIONAL");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source",
+                   "GRAV_VIBRATIONAL");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->u_momentum_source = (dbl *)array_alloc(1, 2, sizeof(dbl));
@@ -8619,7 +8762,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf %lf %lf", &a0, &a1, &a2) != 3) {
       sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "FILL");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source", "FILL");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->momentum_source[0] = a0;
@@ -8632,7 +8775,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf %lf %lf", &a0, &a1, &a2) != 3) {
       sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "LEVEL_SET");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source", "LEVEL_SET");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->momentum_source[0] = a0;
@@ -8645,7 +8788,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf %lf %lf %lf", &a0, &a1, &a2, &a3) != 4) {
       sr = sprintf(err_msg, "Matl %s needs 4 constants for %s %s model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "SUSPEND");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source", "SUSPEND");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->u_momentum_source = (dbl *)array_alloc(1, 1, sizeof(dbl));
@@ -8662,8 +8805,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
        model on the density card */
     if (mat_ptr->DensityModel != SUSPENSION) {
       sr = sprintf(err_msg, "For matl %s, %s = \"%s\" needs %s = \"%s\".\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "SUSPEND", "Density",
-                   "SUSPENSION");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source", "SUSPEND",
+                   "Density", "SUSPENSION");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     SPF_DBL_VEC(endofstring(es), 3, mat_ptr->momentum_source);
@@ -8674,7 +8817,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf %lf %lf %lf", &a0, &a1, &a2, &a3) != 4) {
       sr = sprintf(err_msg, "Matl %s needs 4 constants for %s %s model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "SUSPENSION");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source", "SUSPENSION");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     mat_ptr->u_momentum_source = (dbl *)array_alloc(1, 1, sizeof(dbl));
@@ -8691,8 +8834,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
        model on the density card */
     if (mat_ptr->DensityModel != SUSPENSION) {
       sr = sprintf(err_msg, "For matl %s, %s = \"%s\" needs %s = \"%s\".\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "SUSPEND", "Density",
-                   "SUSPENSION");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source", "SUSPEND",
+                   "Density", "SUSPENSION");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     SPF_DBL_VEC(endofstring(es), 3, mat_ptr->momentum_source);
@@ -8704,8 +8847,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     model_read = 1;
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf %lf %lf", &a0, &a1, &a2) != 3) {
-      sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "SUSPENSION_PM");
+      sr =
+          sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
+                  goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source", "SUSPENSION_PM");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
@@ -8718,8 +8862,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
      * which is currently just like Density = SUSPENSION.
      */
     if (mat_ptr->DensityModel != SUSPENSION_PM) {
-      sprintf(err_msg, "For matl %s, %s = \"%s\" needs %s = \"%s\".\n", pd_glob[mn]->MaterialName,
-              "Navier-Stokes Source", "SUSPENSION_PM", "Density", "SUSPENSION_PM");
+      sprintf(err_msg, "For matl %s, %s = \"%s\" needs %s = \"%s\".\n",
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source", "SUSPENSION_PM",
+              "Density", "SUSPENSION_PM");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     SPF_DBL_VEC(endofstring(es), 3, mat_ptr->momentum_source);
@@ -8729,7 +8874,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf %lf %lf %lf", &a0, &a1, &a2, &a3) != 4) {
       sr = sprintf(err_msg, "Matl %s needs 4 constants for %s=\"%s\" model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "BOUSS_JXB");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source", "BOUSS_JXB");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
@@ -8750,7 +8895,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf %lf %lf", &a0, &a1, &a2) != 3) {
       sr = sprintf(err_msg, "Matl %s needs 3 constants for %s=\"%s\" model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "BOUSSINESQ");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source", "BOUSSINESQ");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
     /*
@@ -8769,7 +8914,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf", &a0) != 1) {
       sr = sprintf(err_msg, "Matl %s needs 1 constants for %s=\"%s\" model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "EHD_POLARIZATION");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source",
+                   "EHD_POLARIZATION");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
@@ -8781,7 +8927,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->MomentumSourceModel = MomentumSourceModel;
     if (fscanf(imp, "%lf %lf %lf %lf", &a0, &a1, &a2, &a3) != 4) {
       sr = sprintf(err_msg, "Matl %s needs 4 constants for %s=\"%s\" model.\n",
-                   pd_glob[mn]->MaterialName, "Navier-Stokes Source", "ACOUSTIC");
+                   goma_ctx->fem.pd_glob[mn]->MaterialName, "Navier-Stokes Source", "ACOUSTIC");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
@@ -8810,7 +8956,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                                  model_name, VECTOR_INPUT, &NO_SPECIES, es);
 
   if (model_read != -1) {
-    if (ls == NULL)
+    if (goma_ctx->fem.ls == NULL)
       GOMA_EH(GOMA_ERROR,
               "Second Level Set Momentum Source requires activation of Level Set Tracking.\n");
 
@@ -8839,8 +8985,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                 "Keyword must be POSITIVE or NEGATIVE for Second Level Set Momentum Source.\n");
       }
       SPF(endofstring(es), " %s", input);
-      if (pfd != NULL) {
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (goma_ctx->fem.pfd != NULL) {
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
           if (fscanf(imp, "%lf %lf %lf", &(mat_ptr->mp2nd->momentumsource_phase[i][0]),
                      &(mat_ptr->mp2nd->momentumsource_phase[i][1]),
                      &(mat_ptr->mp2nd->momentumsource_phase[i][2])) != 3) {
@@ -8859,7 +9005,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     strcpy(search_string, "Level Set Interface Momentum Source Interpolation Method");
     model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                    SCALAR_INPUT, &NO_SPECIES, es);
@@ -8923,8 +9069,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     model_read = 1;
     mat_ptr->HeatSourceModel = HeatSourceModel;
     if (fscanf(imp, "%lf", &a0) != 1) {
-      sprintf(err_msg, "Matl %s needs 1 constant for %s %s model.\n", pd_glob[mn]->MaterialName,
-              "Heat Source", "EPOXY");
+      sprintf(err_msg, "Matl %s needs 1 constant for %s %s model.\n",
+              goma_ctx->fem.pd_glob[mn]->MaterialName, "Heat Source", "EPOXY");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
@@ -9025,7 +9171,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                                  model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
   if (model_read != -1) {
-    if (ls == NULL)
+    if (goma_ctx->fem.ls == NULL)
       GOMA_EH(GOMA_ERROR,
               "Second Level Set Heat Source requires activation of Level Set Tracking.\n");
 
@@ -9052,8 +9198,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                 "Keyword must be POSITIVE or NEGATIVE for Second Level Set Heat Source.\n");
       }
       SPF(endofstring(es), " %s", input);
-      if (pfd != NULL) {
-        for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (goma_ctx->fem.pfd != NULL) {
+        for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
           if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->heatsource_phase[i])) != 1) {
             GOMA_EH(GOMA_ERROR, "error reading phase heat source");
           }
@@ -9068,7 +9214,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     strcpy(search_string, "Level Set Interface Heat Source Interpolation Method");
     model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                    SCALAR_INPUT, &NO_SPECIES, es);
@@ -9087,15 +9233,15 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   /* Initialize for good behavior */
-  efv->ev_etch_area = -1;
-  efv->ev_etch_depth = -1;
+  goma_ctx->fem.efv->ev_etch_area = -1;
+  goma_ctx->fem.efv->ev_etch_depth = -1;
   for (i = 0; i < mat_ptr->Num_Species; i++) {
     /*
      *  set species number equal to max number of species
      *  it is changed to species number of input property
      *  by look_for_mat_prop
      */
-    species_no = pd_glob[mn]->Num_Species;
+    species_no = goma_ctx->fem.pd_glob[mn]->Num_Species;
     model_read =
         look_for_mat_prop(imp, "Species Source", mat_ptr->SpeciesSourceModel,
                           mat_ptr->species_source, mat_ptr->u_species_source,
@@ -9108,8 +9254,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       if (fscanf(imp, "%lf %lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4, &a5) != 6) {
-        sprintf(err_msg, "Matl %s needs 6 constants for %s %s model.\n", pd_glob[mn]->MaterialName,
-                "Species Source", "EPOXY");
+        sprintf(err_msg, "Matl %s needs 6 constants for %s %s model.\n",
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "EPOXY");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -9133,7 +9279,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       if (fscanf(imp, "%lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4) != 5) {
         sr = sprintf(err_msg, "Matl %s needs  5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "EPOXY_DEA");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "EPOXY_DEA");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -9154,8 +9300,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       if (fscanf(imp, "%lf %lf %lf %lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4, &a5, &a6, &a7) !=
           8) {
-        sprintf(err_msg, "Matl %s needs 8 constants for %s %s model.\n", pd_glob[mn]->MaterialName,
-                "Species Source", "EPOXY_LINEAR_EXP");
+        sprintf(err_msg, "Matl %s needs 8 constants for %s %s model.\n",
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "EPOXY_LINEAR_EXP");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -9181,8 +9327,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       if (fscanf(imp, "%lf %lf %lf %lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4, &a5, &a6, &a7) !=
           8) {
-        sprintf(err_msg, "Matl %s needs 8 constants for %s %s model.\n", pd_glob[mn]->MaterialName,
-                "Species Source", "EPOXY_ARRHENIUS_EXP");
+        sprintf(err_msg, "Matl %s needs 8 constants for %s %s model.\n",
+                goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "EPOXY_ARRHENIUS_EXP");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -9208,7 +9354,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       if (fscanf(imp, "%lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4) != 5) {
         sr = sprintf(err_msg, "Matl %s needs  5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "SSM_BOND");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "SSM_BOND");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -9230,7 +9376,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       if (fscanf(imp, "%lf %lf %lf %lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4, &a5, &a6, &a7) !=
           8) {
         sr = sprintf(err_msg, "Matl %s needs  8 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "FLUIDITY");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "FLUIDITY");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -9254,7 +9400,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       if (fscanf(imp, "%lf %lf %lf  %lf %lf", &a0, &a1, &a2, &a3, &a4) != 5) {
         sr = sprintf(err_msg, "Matl %s needs  5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "FOAM_EPOXY");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "FOAM_EPOXY");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       // Set this species type to be an extrinsic variable
@@ -9281,7 +9427,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       if (fscanf(imp, "%lf %lf %lf %lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4, &a5, &a6, &a7) !=
           8) {
         sr = sprintf(err_msg, "Matl %s needs 8 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "FOAM");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "FOAM");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -9306,7 +9452,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       if (fscanf(imp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4,
                  &a5, &a6, &a7, &a8, &a9, &a10, &a11) != 12) {
         sr = sprintf(err_msg, "Matl %s needs 12 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "FOAM_PMDI_10_RXN");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "FOAM_PMDI_10_RXN");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -9334,7 +9480,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       if (fscanf(imp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4,
                  &a5, &a6, &a7, &a8, &a9, &a10, &a11) != 12) {
         sr = sprintf(err_msg, "Matl %s needs 12 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "FOAM_PMDI_10_RXN");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "FOAM_PMDI_10_RXN");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -9364,7 +9510,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->ExtrinsicIndependentSpeciesVar[species_no] = 0;
       if (fscanf(imp, "%lf %lf %lf %lf", &a0, &a1, &a2, &a3) != 4) {
         sr = sprintf(err_msg, "Matl %s needs 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "FOAM_PMDI_10_H2O");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "FOAM_PMDI_10_H2O");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -9399,7 +9545,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->ExtrinsicIndependentSpeciesVar[species_no] = 1;
       if (fscanf(imp, "%lf %lf %lf %lf", &a0, &a1, &a2, &a3) != 4) {
         sr = sprintf(err_msg, "Matl %s needs 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "FOAM_PMDI_10_H2O");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "FOAM_PMDI_10_H2O");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -9436,7 +9582,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       if (fscanf(imp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4, &a5, &a6, &a7,
                  &a8) != 9) {
         sr = sprintf(err_msg, "Matl %s needs 9 floats for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "BUTLER_VOLMER");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "BUTLER_VOLMER");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 9, sizeof(dbl));
@@ -9459,7 +9605,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       if (fscanf(imp, "%lf %lf %lf %lf ", &a0, &a1, &a2, &a3) != 4) {
         sr = sprintf(err_msg, "Matl %s needs 4 floats for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "PHOTO_CURING");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "PHOTO_CURING");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       if (fscanf(imp, "%lf", &a4) != 1) {
@@ -9487,7 +9633,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       if (fscanf(imp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4, &a5,
                  &a6, &a7, &a8, &a9, &a10) != 11) {
         sr = sprintf(err_msg, "Matl %s needs 11 floats for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "ELECTROOSMOTIC");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "ELECTROOSMOTIC");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 11, sizeof(dbl));
@@ -9512,7 +9658,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       if (fscanf(imp, "%lf %lf %lf  %lf", &a0, &a1, &a2, &a3) != 4) {
         sr = sprintf(err_msg, "Matl %s needs  4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "FOAM_PBE_WATER");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "FOAM_PBE_WATER");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       // Set this species type to be an extrinsic variable
@@ -9533,7 +9679,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       if (fscanf(imp, "%lf %lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4, &a5) != 6) {
         sr = sprintf(err_msg, "Matl %s needs  6 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "FOAM_PBE_OH");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "FOAM_PBE_OH");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       // Set this species type to be an extrinsic variable
@@ -9555,7 +9701,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       if (fscanf(imp, "%lf", &a0) != 1) {
         sr = sprintf(err_msg, "Matl %s needs  1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "FOAM_PBE_CO2_L");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "FOAM_PBE_CO2_L");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       // Set this species type to be an extrinsic variable
@@ -9576,7 +9722,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       if (fscanf(imp, "%lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4) != 5) {
         sr = sprintf(err_msg, "Matl %s needs  5 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "FOAM_PBE_BA_L");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "FOAM_PBE_BA_L");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       // Set this species type to be an extrinsic variable
@@ -9615,7 +9761,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       if (fscanf(imp, "%lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4) != 5) {
         sr = sprintf(err_msg, "Matl %s needs 5 floats for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Species Source", "DROP_EVAP");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Species Source", "DROP_EVAP");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 5, sizeof(dbl));
@@ -9638,10 +9784,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
 
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (!strcmp(efv->name[j], input)) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
           mat_ptr->species_source_external_field_index = j;
-          efv->ev_etch_area = j;
+          goma_ctx->fem.efv->ev_etch_area = j;
         }
       }
 
@@ -9649,10 +9795,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         GOMA_EH(GOMA_ERROR, "Expecting trailing keyword for ETCHING_KOH_EXTERNAL model.\n");
       }
 
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (!strcmp(efv->name[j], input)) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
           ii = 1;
-          efv->ev_etch_depth = j;
+          goma_ctx->fem.efv->ev_etch_depth = j;
         }
       }
 
@@ -9669,14 +9815,14 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     }
     ECHO(es, echo_file);
 
-    if (ls != NULL) {
-      species_no = pd_glob[mn]->Num_Species;
+    if (goma_ctx->fem.ls != NULL) {
+      species_no = goma_ctx->fem.pd_glob[mn]->Num_Species;
       model_read = look_for_mat_prop(
           imp, "Second Level Set Species Source", mat_ptr->mp2nd->SpeciesSourceModel,
           mat_ptr->mp2nd->speciessource, NO_USER, NULL, model_name, SCALAR_INPUT, &species_no, es);
 
       if (model_read != -1) {
-        if (ls == NULL)
+        if (goma_ctx->fem.ls == NULL)
           GOMA_EH(GOMA_ERROR,
                   "Second Level Set Species Source requires activation of Level Set Tracking.\n");
 
@@ -9704,8 +9850,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                     "Keyword must be POSITIVE or NEGATIVE for Second Level Set Heat Source.\n");
           }
           SPF(endofstring(es), " %s", input);
-          if (pfd != NULL) {
-            for (i = 0; i < pfd->num_phase_funcs; i++) {
+          if (goma_ctx->fem.pfd != NULL) {
+            for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
               if (fscanf(imp, "%lf", &(mat_ptr->mp2nd->speciessource_phase[i][species_no])) != 1) {
                 GOMA_EH(GOMA_ERROR, "error reading phase species source");
               }
@@ -9719,7 +9865,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       ECHO(es, echo_file);
 
-      if (ls != NULL) {
+      if (goma_ctx->fem.ls != NULL) {
         strcpy(search_string, "Level Set Interface Species Source Interpolation Method");
         model_read = look_for_mat_prop(imp, search_string, NULL, NULL, NO_USER, NULL, model_name,
                                        SCALAR_INPUT, &species_no, es);
@@ -9737,14 +9883,14 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         ECHO(es, echo_file);
       }
 
-      species_no = pd_glob[mn]->Num_Species;
+      species_no = goma_ctx->fem.pd_glob[mn]->Num_Species;
       model_read = look_for_mat_prop(imp, "Level Set Species Width",
                                      mat_ptr->mp2nd->use_species_source_width,
                                      mat_ptr->mp2nd->species_source_width, NO_USER, NULL,
                                      model_name, SCALAR_INPUT, &species_no, es);
 
       if (model_read != -1) {
-        if (ls == NULL)
+        if (goma_ctx->fem.ls == NULL)
           GOMA_EH(GOMA_ERROR,
                   "Level Set Species Width requires activation of Level Set Tracking.\n");
 
@@ -9817,7 +9963,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       /* Requires growth rate and coalescence rate constants */
       if (num_const < 2) {
         sr = sprintf(err_msg, "Matl %s needs 2 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Moment Source", "FOAM_PMDI_10");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Moment Source", "FOAM_PMDI_10");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_moment_source = num_const;
@@ -9831,7 +9977,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       /* Requires growth rate and coalescence rate constants */
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Moment Source", "CONSTANT_GROWTH");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Moment Source", "CONSTANT_GROWTH");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_moment_source = num_const;
@@ -9870,7 +10016,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         GOMA_EH(GOMA_ERROR,
                 "Error reading non-volatile Molar Volume: e.g. CONSTANT  species_id  MV");
       } else {
-        mat_ptr->molar_volume[pd_glob[mn]->Num_Species_Eqn] = mv;
+        mat_ptr->molar_volume[goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn] = mv;
         SPF(es, "%s = %s %d %.4g", "Non-volatile Molar Volume", model_name, ii, mw);
       }
       ECHO(es, echo_file);
@@ -9882,7 +10028,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         GOMA_EH(GOMA_ERROR,
                 "Error reading non-volatile Specific Volume: e.g. CONSTANT  species_id  MV");
       } else {
-        mat_ptr->specific_volume[pd_glob[mn]->Num_Species_Eqn] = mv;
+        mat_ptr->specific_volume[goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn] = mv;
         SPF(es, "%s = %s %d %.4g", "Non-volatile Specific Volume", model_name, ii, mw);
       }
       ECHO(es, echo_file);
@@ -9890,7 +10036,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
     iread = look_for_optional(imp, "Flory-Huggins parameters", input, '=');
     if (iread != -1) {
-      n_species = pd_glob[mn]->Num_Species_Eqn + 1;
+      n_species = goma_ctx->fem.pd_glob[mn]->Num_Species_Eqn + 1;
       /*number of independent interaction parameters */
       n_ij = (n_species * n_species - n_species) / 2;
 
@@ -10017,9 +10163,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   mat_ptr->veloU[1] = 0.0;
   mat_ptr->veloU[2] = 0.0;
 
-  if (pd_glob[mn]->gv[R_LUBP] || pd_glob[mn]->gv[R_LUBP_2] || pd_glob[mn]->gv[R_TFMP_MASS] ||
-      pd_glob[mn]->gv[R_TFMP_BOUND] ||
-      ((pd_glob[mn]->gv[R_MASS]) && (pd_glob[mn]->MassFluxModel == FICKIAN_SHELL))) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_LUBP] || goma_ctx->fem.pd_glob[mn]->gv[R_LUBP_2] ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND] ||
+      ((goma_ctx->fem.pd_glob[mn]->gv[R_MASS]) &&
+       (goma_ctx->fem.pd_glob[mn]->MassFluxModel == FICKIAN_SHELL))) {
     model_read = look_for_mat_proptable(
         imp, "Upper Height Function Constants", &(mat_ptr->HeightUFunctionModel),
         &(mat_ptr->heightU), &(mat_ptr->u_heightU_function_constants),
@@ -10034,7 +10181,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightU_function_constants), NO_SPECIES);
       if (num_const < 2) {
         sr = sprintf(err_msg, "Matl %s needs at least 2 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "CONSTANT_SPEED");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function",
+                     "CONSTANT_SPEED");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -10043,9 +10191,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
          * for it now and flag its existence through the material properties structure
          */
         mat_ptr->heightU_ext_field_index = -1; // Default to NO external field
-        if (efv->ev) {
-          for (i = 0; i < efv->Num_external_field; i++) {
-            if (!strcmp(efv->name[i], "HEIGHT")) {
+        if (goma_ctx->fem.efv->ev) {
+          for (i = 0; i < goma_ctx->fem.efv->Num_external_field; i++) {
+            if (!strcmp(goma_ctx->fem.efv->name[i], "HEIGHT")) {
               mat_ptr->heightU_ext_field_index = i;
             }
           }
@@ -10064,7 +10212,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightU_function_constants), NO_SPECIES);
       if (num_const < 2) {
         sr = sprintf(err_msg, "Matl %s needs at least 2 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "CONSTANT_SPEED");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function",
+                     "CONSTANT_SPEED");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightU_function_constants = num_const;
@@ -10076,7 +10225,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightU_function_constants), NO_SPECIES);
       if (num_const < 5) {
         sr = sprintf(err_msg, "Matl %s needs at least 5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "CONSTANT_SPEED_DEFORM");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function",
+                     "CONSTANT_SPEED_DEFORM");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightU_function_constants = num_const;
@@ -10088,7 +10238,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightU_function_constants), NO_SPECIES);
       if (num_const < 5) {
         sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "ROLL_ON");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function", "ROLL_ON");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -10098,9 +10248,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   structure
          */
         mat_ptr->heightU_ext_field_index = -1; // Default to NO external field
-        if (efv->ev) {
-          for (i = 0; i < efv->Num_external_field; i++) {
-            if (!strcmp(efv->name[i], "HEIGHT")) {
+        if (goma_ctx->fem.efv->ev) {
+          for (i = 0; i < goma_ctx->fem.efv->Num_external_field; i++) {
+            if (!strcmp(goma_ctx->fem.efv->name[i], "HEIGHT")) {
               mat_ptr->heightU_ext_field_index = i;
             }
           }
@@ -10117,7 +10267,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightU_function_constants), NO_SPECIES);
       if (num_const < 5) {
         sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "ROLL_ON_MELT");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function",
+                     "ROLL_ON_MELT");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightU_function_constants = num_const;
@@ -10130,7 +10281,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightU_function_constants), NO_SPECIES);
       if (num_const < 8) {
         sr = sprintf(err_msg, "Matl %s needs 8 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "ROLL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function", "ROLL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightU_function_constants = num_const;
@@ -10143,7 +10294,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightU_function_constants), NO_SPECIES);
       if (num_const < 5) {
         sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "CAP_SQUEEZE");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function",
+                     "CAP_SQUEEZE");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightU_function_constants = num_const;
@@ -10156,7 +10308,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightU_function_constants), NO_SPECIES);
       if (num_const < 5) {
         sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "FLAT_GRAD_FLAT");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function",
+                     "FLAT_GRAD_FLAT");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightU_function_constants = num_const;
@@ -10169,7 +10322,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightU_function_constants), NO_SPECIES);
       if (num_const < 5) {
         sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "FLAT_GRAD_FLAT_MELT");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function",
+                     "FLAT_GRAD_FLAT_MELT");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightU_function_constants = num_const;
@@ -10182,7 +10336,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightU_function_constants), NO_SPECIES);
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "CIRCLE_MELT");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function",
+                     "CIRCLE_MELT");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightU_function_constants = num_const;
@@ -10195,7 +10350,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightU_function_constants), NO_SPECIES);
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s needs at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "POLY_TIME");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function", "POLY_TIME");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightU_function_constants = num_const;
@@ -10208,7 +10363,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightU_function_constants), NO_SPECIES);
       if (num_const < 2) {
         sr = sprintf(err_msg, "Matl %s needs at least 2 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "JOURNAL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function", "JOURNAL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightU_function_constants = num_const;
@@ -10221,8 +10376,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
 
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (strcmp(efv->name[j], input) == 0) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (strcmp(goma_ctx->fem.efv->name[j], input) == 0) {
           ii = 1;
           if (mat_ptr->heightU_ext_field_index == -1)
             mat_ptr->heightU_ext_field_index = j;
@@ -10239,7 +10394,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->len_u_heightU_function_constants = num_const;
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "EXTERNAL_FIELD");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function",
+                     "EXTERNAL_FIELD");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
     } else if (model_read == -1 && !strcmp(model_name, "WALL_DISTANCE")) {
@@ -10250,15 +10406,15 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
 
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (strcmp(efv->name[j], input) == 0) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (strcmp(goma_ctx->fem.efv->name[j], input) == 0) {
           ii = 1;
           if (mat_ptr->heightU_ext_field_index == -1)
             mat_ptr->heightU_ext_field_index = j;
         }
       }
       if (ii == 0) {
-        if (upd->turbulent_info->use_internal_wall_distance) {
+        if (goma_ctx->fem.upd->turbulent_info->use_internal_wall_distance) {
           GOMA_WH(GOMA_ERROR, "No WALL_DISTANCE external field - using turbulent field.");
           mat_ptr->HeightUFunctionModel = WALL_DISTURB;
         } else {
@@ -10274,7 +10430,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->len_u_heightU_function_constants = num_const;
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "WALL_DISTANCE");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function",
+                     "WALL_DISTANCE");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_heightU_function_constants);
@@ -10297,8 +10454,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
 
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (strcmp(efv->name[j], input) == 0) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (strcmp(goma_ctx->fem.efv->name[j], input) == 0) {
           ii = 1;
           if (mat_ptr->heightU_ext_field_index == -1)
             mat_ptr->heightU_ext_field_index = j;
@@ -10315,7 +10472,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->len_u_heightU_function_constants = num_const;
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "TABLE");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function", "TABLE");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
     } else if (model_read == -1 && !strcmp(model_name, "ROLLER")) {
@@ -10327,9 +10484,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
          * for it now and flag its existence through the material properties structure
          */
         mat_ptr->heightU_ext_field_index = -1; // Default to NO external field
-        if (efv->ev) {
-          for (i = 0; i < efv->Num_external_field; i++) {
-            if (!strcmp(efv->name[i], "HEIGHT")) {
+        if (goma_ctx->fem.efv->ev) {
+          for (i = 0; i < goma_ctx->fem.efv->Num_external_field; i++) {
+            if (!strcmp(goma_ctx->fem.efv->name[i], "HEIGHT")) {
               mat_ptr->heightU_ext_field_index = i;
             }
           }
@@ -10341,7 +10498,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       if (num_const < 3 || num_const > 4) {
         sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Height Function", "ROLLER");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Height Function", "ROLLER");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightU_function_constants = num_const;
@@ -10354,10 +10511,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ECHO(es, echo_file);
   } /* End of LUBP, LUBP_2, TFMP_MASS, and TFMP_BOUND cards */
 
-  if (pd_glob[mn]->gv[R_LUBP] || pd_glob[mn]->gv[R_LUBP_2] ||
-      (pd_glob[mn]->gv[R_SHELL_FILMP] && pd_glob[mn]->gv[R_SHELL_FILMH]) ||
-      pd_glob[mn]->gv[R_TFMP_MASS] || pd_glob[mn]->gv[R_TFMP_BOUND] ||
-      ((pd_glob[mn]->gv[R_MASS]) && (pd_glob[mn]->MassFluxModel == FICKIAN_SHELL))) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_LUBP] || goma_ctx->fem.pd_glob[mn]->gv[R_LUBP_2] ||
+      (goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_FILMP] &&
+       goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_FILMH]) ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND] ||
+      ((goma_ctx->fem.pd_glob[mn]->gv[R_MASS]) &&
+       (goma_ctx->fem.pd_glob[mn]->MassFluxModel == FICKIAN_SHELL))) {
 
     model_read = look_for_mat_proptable(
         imp, "Lower Height Function Constants", &(mat_ptr->HeightLFunctionModel),
@@ -10373,7 +10532,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightL_function_constants), NO_SPECIES);
       if (num_const < 2) {
         sr = sprintf(err_msg, "Matl %s needs at least 2 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lower Height Function", "CONSTANT_SPEED");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lower Height Function",
+                     "CONSTANT_SPEED");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       if (num_const > 2) {
@@ -10381,9 +10541,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
          * for it now and flag its existence through the material properties structure
          */
         mat_ptr->heightL_ext_field_index = -1; // Default to NO external field
-        if (efv->ev) {
-          for (i = 0; i < efv->Num_external_field; i++) {
-            if (!strcmp(efv->name[i], "HEIGHT_L")) {
+        if (goma_ctx->fem.efv->ev) {
+          for (i = 0; i < goma_ctx->fem.efv->Num_external_field; i++) {
+            if (!strcmp(goma_ctx->fem.efv->name[i], "HEIGHT_L")) {
               mat_ptr->heightL_ext_field_index = i;
             }
           }
@@ -10402,7 +10562,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightL_function_constants), NO_SPECIES);
       if (num_const < 5) {
         sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lower Height Function", "ROLL_ON");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lower Height Function", "ROLL_ON");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightL_function_constants = num_const;
@@ -10415,7 +10575,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_heightL_function_constants), NO_SPECIES);
       if (num_const < 8) {
         sr = sprintf(err_msg, "Matl %s needs 8 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lower Height Function", "ROLL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lower Height Function", "ROLL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_heightL_function_constants = num_const;
@@ -10430,8 +10590,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
 
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (strcmp(efv->name[j], input) == 0) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (strcmp(goma_ctx->fem.efv->name[j], input) == 0) {
           ii = 1;
           if (mat_ptr->heightL_ext_field_index == -1)
             mat_ptr->heightL_ext_field_index = j;
@@ -10448,7 +10608,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->len_u_heightL_function_constants = num_const;
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lower Height Function", "EXTERNAL_FIELD");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lower Height Function",
+                     "EXTERNAL_FIELD");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
     }
@@ -10460,9 +10621,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   } /* End of LUBP, LUBP_2, SHELL_FILMP, SHELL_FILMH, TFMP_MASS, and TFMP_BOUND cards */
 
-  if (pd_glob[mn]->gv[R_LUBP] || pd_glob[mn]->gv[R_LUBP_2] || pd_glob[mn]->gv[R_TFMP_MASS] ||
-      pd_glob[mn]->gv[R_TFMP_BOUND] ||
-      (pd_glob[mn]->gv[R_MASS] && (pd_glob[mn]->MassFluxModel == FICKIAN_SHELL))) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_LUBP] || goma_ctx->fem.pd_glob[mn]->gv[R_LUBP_2] ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND] ||
+      (goma_ctx->fem.pd_glob[mn]->gv[R_MASS] &&
+       (goma_ctx->fem.pd_glob[mn]->MassFluxModel == FICKIAN_SHELL))) {
     model_read =
         look_for_mat_prop(imp, "Upper Velocity Function Constants", &(mat_ptr->VeloUFunctionModel),
                           mat_ptr->veloU, NO_USER, NULL, model_name, VECTOR_INPUT, &NO_SPECIES, es);
@@ -10473,7 +10635,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_veloU_function_constants), NO_SPECIES);
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s needs 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Velocity Function", "ROLL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Velocity Function", "ROLL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_veloU_function_constants = num_const;
@@ -10486,7 +10648,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_veloU_function_constants), NO_SPECIES);
       if (num_const < 5) {
         sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Velocity Function", "TANGENTIAL_ROTATE");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Velocity Function",
+                     "TANGENTIAL_ROTATE");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_veloU_function_constants = num_const;
@@ -10499,7 +10662,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_veloU_function_constants), NO_SPECIES);
       if (num_const < 6) {
         sr = sprintf(err_msg, "Matl %s needs 6 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Velocity Function", "LINEAR_TIME");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Velocity Function",
+                     "LINEAR_TIME");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_veloU_function_constants = num_const;
@@ -10513,10 +10677,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   } /* End of LUBP, LUBP_2, TFMP_MASS, and TFMP_BOUND cards */
 
-  if (pd_glob[mn]->gv[R_LUBP] || pd_glob[mn]->gv[R_LUBP_2] ||
-      (pd_glob[mn]->gv[R_SHELL_FILMP] && pd_glob[mn]->gv[R_SHELL_FILMH]) ||
-      pd_glob[mn]->gv[R_TFMP_MASS] || pd_glob[mn]->gv[R_TFMP_BOUND] ||
-      (pd_glob[mn]->gv[R_MASS] && (pd_glob[mn]->MassFluxModel == FICKIAN_SHELL))) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_LUBP] || goma_ctx->fem.pd_glob[mn]->gv[R_LUBP_2] ||
+      (goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_FILMP] &&
+       goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_FILMH]) ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND] ||
+      (goma_ctx->fem.pd_glob[mn]->gv[R_MASS] &&
+       (goma_ctx->fem.pd_glob[mn]->MassFluxModel == FICKIAN_SHELL))) {
     model_read = look_for_mat_prop(
         imp, "Lower Velocity Function Constants", &(mat_ptr->VeloLFunctionModel), mat_ptr->veloL,
         &(mat_ptr->u_veloL_function_constants), &(mat_ptr->len_u_veloL_function_constants),
@@ -10528,7 +10694,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_veloL_function_constants), NO_SPECIES);
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s needs 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lower Velocity Function", "ROLL");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lower Velocity Function", "ROLL");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_veloL_function_constants = num_const;
@@ -10541,7 +10707,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_veloL_function_constants), NO_SPECIES);
       if (num_const < 5) {
         sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "lower Velocity Function", "TANGENTIAL_ROTATE");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "lower Velocity Function",
+                     "TANGENTIAL_ROTATE");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_veloL_function_constants = num_const;
@@ -10554,7 +10721,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_veloL_function_constants), NO_SPECIES);
       if (num_const < 6) {
         sr = sprintf(err_msg, "Matl %s needs 6 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "lower Velocity Function", "LINEAR_TIME");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "lower Velocity Function",
+                     "LINEAR_TIME");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_veloL_function_constants = num_const;
@@ -10567,7 +10735,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_veloL_function_constants), NO_SPECIES);
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s needs at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lower Velocity Function", "SIDER_POLY_TIME");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lower Velocity Function",
+                     "SIDER_POLY_TIME");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_veloL_function_constants = num_const;
@@ -10581,8 +10750,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   } /* End of LUBP, LUBP_2, TFMP_MASS, SHELL_FILMP, SHELL_FILMH, and TFMP_BOUND cards */
 
-  if (pd_glob[mn]->gv[R_LUBP] || pd_glob[mn]->gv[R_LUBP_2] || pd_glob[mn]->gv[R_TFMP_MASS] ||
-      pd_glob[mn]->gv[R_TFMP_BOUND]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_LUBP] || goma_ctx->fem.pd_glob[mn]->gv[R_LUBP_2] ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND]) {
     model_read = look_for_mat_prop(imp, "Upper Contact Angle", &(mat_ptr->DcaUFunctionModel),
                                    &(mat_ptr->dcaU), NO_USER, NULL, model_name, SCALAR_INPUT,
                                    &NO_SPECIES, es);
@@ -10593,7 +10762,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_dcaU_function_constants), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s needs 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Contact Angle", "DYNAMIC");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Contact Angle", "DYNAMIC");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->dcaU = mat_ptr->u_dcaU_function_constants[0];
@@ -10606,7 +10775,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_dcaU_function_constants), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s needs 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Upper Contact Angle", "DYNAMIC_LINEAR");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Upper Contact Angle",
+                     "DYNAMIC_LINEAR");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->dcaU = mat_ptr->u_dcaU_function_constants[0];
@@ -10628,7 +10798,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_dcaL_function_constants), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s needs 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lower Contact Angle", "DYNAMIC");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lower Contact Angle", "DYNAMIC");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->dcaL = mat_ptr->u_dcaL_function_constants[0];
@@ -10641,7 +10811,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_dcaL_function_constants), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s needs 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Lower Contact Angle", "DYNAMIC_LINEAR");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Lower Contact Angle",
+                     "DYNAMIC_LINEAR");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->dcaL = mat_ptr->u_dcaL_function_constants[0];
@@ -10655,15 +10826,17 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   } /* End of LUBP, LUBP_2, TFMP_MASS, and TFMP_BOUND cards */
 
-  if (pd_glob[mn]->gv[R_LUBP] || pd_glob[mn]->gv[R_LUBP_2] ||
-      (pd_glob[mn]->gv[R_SHELL_FILMP] && pd_glob[mn]->gv[R_SHELL_FILMH]) ||
-      pd_glob[mn]->gv[R_TFMP_MASS] || pd_glob[mn]->gv[R_TFMP_BOUND]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_LUBP] || goma_ctx->fem.pd_glob[mn]->gv[R_LUBP_2] ||
+      (goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_FILMP] &&
+       goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_FILMH]) ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND]) {
     /* Optional lubrication fluid source term */
 
     strcpy(search_string, "Lubrication Fluid Source");
     mat_ptr->LubSourceModel = CONSTANT;
     mat_ptr->lubsource = 0.;
-    memset(mp_glob[mn]->d_lubsource, 0, sizeof(dbl) * (MAX_VARIABLE_TYPES + MAX_CONC));
+    memset(goma_ctx->fem.mp_glob[mn]->d_lubsource, 0,
+           sizeof(dbl) * (MAX_VARIABLE_TYPES + MAX_CONC));
 
     if (look_forward_optional(imp, search_string, input, '=') == 1) {
       if (fscanf(imp, "%s", model_name) != 1) {
@@ -10684,12 +10857,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         SPF(endofstring(es), "%g", mat_ptr->lubsource);
 
       } else if (!strcmp(model_name, "MELT")) {
-        mp_glob[mn]->LubSourceModel = MELT;
+        goma_ctx->fem.mp_glob[mn]->LubSourceModel = MELT;
         num_const = read_constants(imp, &(mat_ptr->u_lubsource_function_constants), NO_SPECIES);
 
         if (num_const < 3) {
           sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Lubrication source", "MELT");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Lubrication source", "MELT");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
 
@@ -10703,12 +10876,13 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
 
       else if (!strcmp(model_name, "CONTINUUM_FLUID")) {
-        mp_glob[mn]->LubSourceModel = CONTINUUM_FLUID;
+        goma_ctx->fem.mp_glob[mn]->LubSourceModel = CONTINUUM_FLUID;
         num_const = read_constants(imp, &(mat_ptr->u_lubsource_function_constants), NO_SPECIES);
 
         if (num_const < 3) {
           sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                       pd_glob[mn]->MaterialName, "Lubrication source", "CONTINUUM_FLUID");
+                       goma_ctx->fem.pd_glob[mn]->MaterialName, "Lubrication source",
+                       "CONTINUUM_FLUID");
           GOMA_EH(GOMA_ERROR, err_msg);
         }
 
@@ -10723,8 +10897,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   } /* End of LUBP, LUBP_2, SHELL_FILMP, SHELL_FILMH, TFMP_MASS, and TFMP_BOUND cards */
 
-  if (pd_glob[mn]->gv[R_LUBP] || pd_glob[mn]->gv[R_LUBP_2] || pd_glob[mn]->gv[R_TFMP_MASS] ||
-      pd_glob[mn]->gv[R_TFMP_BOUND]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_LUBP] || goma_ctx->fem.pd_glob[mn]->gv[R_LUBP_2] ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND]) {
 
     /* Optional lubrication momentum source term */
 
@@ -10732,7 +10906,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->lubmomsource[0] = 0.;
     mat_ptr->lubmomsource[1] = 0.;
     mat_ptr->lubmomsource[2] = 0.;
-    memset(mp_glob[mn]->d_lubmomsource, 0, sizeof(dbl) * (MAX_VARIABLE_TYPES + MAX_CONC));
+    memset(goma_ctx->fem.mp_glob[mn]->d_lubmomsource, 0,
+           sizeof(dbl) * (MAX_VARIABLE_TYPES + MAX_CONC));
 
     if (look_forward_optional(imp, search_string, input, '=') == 1) {
       if (fscanf(imp, "%s", model_name) != 1) {
@@ -10742,7 +10917,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       SPF(es, "%s = %s", search_string, model_name);
 
       if (!strcmp(model_name, "CONSTANT")) {
-        mp_glob[mn]->LubMomSourceModel = CONSTANT;
+        goma_ctx->fem.mp_glob[mn]->LubMomSourceModel = CONSTANT;
 
         if (fscanf(imp, "%lf %lf %lf", &(mat_ptr->lubmomsource[0]), &(mat_ptr->lubmomsource[1]),
                    &(mat_ptr->lubmomsource[2])) != 3)
@@ -10750,7 +10925,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         {
           GOMA_EH(GOMA_ERROR, "Lubrication momentum source constant model expects 3 flts");
         }
-        num_const = mp_glob[mn]->len_lubmomsource = 3;
+        num_const = goma_ctx->fem.mp_glob[mn]->len_lubmomsource = 3;
 
         SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->lubmomsource);
 
@@ -10763,7 +10938,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   /* Shell Energy Cards - heat sources, sinks, etc. */
 
-  if (pd_glob[mn]->gv[R_SHELL_ENERGY] == 1) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_ENERGY] == 1) {
     /*  Shell Lubrication Heat Transfer Coefficient */
     strcpy(search_string, "Lubrication Heat Transfer");
     model_read = look_for_mat_prop(imp, search_string, &(mat_ptr->Lub_Heat_XferModel),
@@ -10790,8 +10965,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   } /* End of shell_energy cards */
 
-  if ((pd_glob[mn]->gv[R_SHELL_FILMP] && pd_glob[mn]->gv[R_SHELL_FILMH]) ||
-      (pd_glob[mn]->gv[R_MASS] && (pd_glob[mn]->MassFluxModel == FICKIAN_SHELL))) {
+  if ((goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_FILMP] &&
+       goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_FILMH]) ||
+      (goma_ctx->fem.pd_glob[mn]->gv[R_MASS] &&
+       (goma_ctx->fem.pd_glob[mn]->MassFluxModel == FICKIAN_SHELL))) {
 
     model_read = look_for_mat_prop(imp, "Film Evaporation Model", &(mat_ptr->FilmEvapModel),
                                    &(mat_ptr->FilmEvap), NO_USER, NULL, model_name, SCALAR_INPUT,
@@ -10803,7 +10980,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_FilmEvap_function_constants), NO_SPECIES);
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Film Evaporation Model", "CONC_POWER");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Film Evaporation Model",
+                     "CONC_POWER");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_FilmEvap_function_constants = num_const;
@@ -10824,7 +11002,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
     strcpy(search_string, "Slip Coefficient Model");
     mat_ptr->SlipCoeff = 0.;
-    memset(mp_glob[mn]->d_SlipCoeff, 0, sizeof(dbl) * (MAX_VARIABLE_TYPES + MAX_CONC));
+    memset(goma_ctx->fem.mp_glob[mn]->d_SlipCoeff, 0,
+           sizeof(dbl) * (MAX_VARIABLE_TYPES + MAX_CONC));
 
     if (look_forward_optional(imp, search_string, input, '=') == 1) {
       if (fscanf(imp, "%s", model_name) != 1) {
@@ -10862,7 +11041,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_DisjPress_function_constants), NO_SPECIES);
       if (num_const < 5) {
         sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Disjoining Pressure Model", "TWO_TERM");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Disjoining Pressure Model",
+                     "TWO_TERM");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_DisjPress_function_constants = num_const;
@@ -10875,7 +11055,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_DisjPress_function_constants), NO_SPECIES);
       if (num_const < 4) {
         sr = sprintf(err_msg, "Matl %s needs 4 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Disjoining Pressure Model", "TWO_TERM_EXT_CA");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Disjoining Pressure Model",
+                     "TWO_TERM_EXT_CA");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_DisjPress_function_constants = num_const;
@@ -10888,7 +11069,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_DisjPress_function_constants), NO_SPECIES);
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Disjoining Pressure Model", "ONE_TERM");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Disjoining Pressure Model",
+                     "ONE_TERM");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_DisjPress_function_constants = num_const;
@@ -10902,7 +11084,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ECHO(es, echo_file);
   } /* End of SHELL_FILMP and SHELL_FILMH cards */
 
-  if (pd_glob[mn]->gv[R_SHELL_PARTC] == 1) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_PARTC] == 1) {
 
     model_read = look_for_mat_prop(imp, "Diffusion Coefficient Model", &(mat_ptr->DiffCoeffModel),
                                    &(mat_ptr->DiffCoeff), NO_USER, NULL, model_name, SCALAR_INPUT,
@@ -10914,7 +11096,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       num_const = read_constants(imp, &(mat_ptr->u_DiffCoeff_function_constants), NO_SPECIES);
       if (num_const < 3) {
         sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Diffusion Coefficient Model", "STOKES_EINSTEIN");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Diffusion Coefficient Model",
+                     "STOKES_EINSTEIN");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_DiffCoeff_function_constants = num_const;
@@ -10934,8 +11117,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   /* Check for mesh equation in any material and any matrix */
   have_mesh_eqn = 0;
-  for (i = 0; i < upd->Total_Num_Matrices; i++) {
-    if (upd->ep[i][R_MESH1] > -1) {
+  for (i = 0; i < goma_ctx->fem.upd->Total_Num_Matrices; i++) {
+    if (goma_ctx->fem.upd->ep[i][R_MESH1] > -1) {
       have_mesh_eqn = 1;
     }
   }
@@ -10944,13 +11127,17 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   /*added by DSB 7/13; some post proc routines for 2D/shell problems
                                         get confused if there are shell elements and no FSI model is
      specified. Need to check that this doesn't break anything.*/
-  if (pd_glob[mn]->gv[R_LUBP] || pd_glob[mn]->gv[R_LUBP_2] || pd_glob[mn]->gv[R_SHELL_FILMP] ||
-      pd_glob[mn]->gv[R_SHELL_SAT_OPEN] || pd_glob[mn]->gv[R_SHELL_SAT_OPEN_2] ||
-      pd_glob[mn]->gv[R_SHELL_SAT_1] ||
-      (pd_glob[mn]->gv[R_SHELL_NORMAL1] && pd_glob[mn]->gv[R_SHELL_NORMAL2] &&
-       pd_glob[mn]->gv[R_SHELL_NORMAL3]) ||
-      pd_glob[mn]->gv[R_TFMP_MASS] || pd_glob[mn]->gv[R_TFMP_BOUND] ||
-      ((pd_glob[mn]->gv[R_MASS]) && (pd_glob[mn]->MassFluxModel == FICKIAN_SHELL))) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_LUBP] || goma_ctx->fem.pd_glob[mn]->gv[R_LUBP_2] ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_FILMP] ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_SAT_OPEN] ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_SAT_OPEN_2] ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_SAT_1] ||
+      (goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_NORMAL1] &&
+       goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_NORMAL2] &&
+       goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_NORMAL3]) ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND] ||
+      ((goma_ctx->fem.pd_glob[mn]->gv[R_MASS]) &&
+       (goma_ctx->fem.pd_glob[mn]->MassFluxModel == FICKIAN_SHELL))) {
     model_read = look_for_mat_prop(imp, "FSI Deformation Model", &(mat_ptr->FSIModel), &(a0),
                                    NO_USER, NULL, model_name, NO_INPUT, &NO_SPECIES, es);
 
@@ -11170,7 +11357,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   } /* End of Lubrication Main Section  */
 
   /*  Shell Lubrication Curvature Diffusion Term */
-  if (pd_glob[mn]->gv[R_SHELL_LUB_CURV] || pd_glob[mn]->gv[R_SHELL_LUB_CURV_2]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_LUB_CURV] ||
+      goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_LUB_CURV_2]) {
     strcpy(search_string, "Lubrication Curvature Diffusion");
     model_read = look_for_mat_prop(imp, search_string, &(mat_ptr->Lub_Curv_DiffModel),
                                    &(mat_ptr->Lub_Curv_Diff), NO_USER, NULL, model_name,
@@ -11298,7 +11486,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
    * Added by SAR 2010-03-01
    */
 
-  if ((pd_glob[mn]->gv[R_SHELL_SAT_CLOSED] == 1) || (have_shell_sat_open == 1) ||
+  if ((goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_SAT_CLOSED] == 1) || (have_shell_sat_open == 1) ||
       (have_shell_sat_open2 == 1)) {
 
     // Structured shell porosity
@@ -11318,8 +11506,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       // mat_ptr->u_PorousShellClosedPorosity_function_constants = alloc_dbl_1(1,0.0);
 
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (strcmp(efv->name[j], input) == 0) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (strcmp(goma_ctx->fem.efv->name[j], input) == 0) {
           ii = 1;
           mat_ptr->por_shell_closed_porosity_ext_field_index = j;
         }
@@ -11337,7 +11525,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->len_u_PorousShellClosedPorosity_function_constants = num_const;
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Porous Shell Closed Porosity", "EXTERNAL_FIELD");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Porous Shell Closed Porosity",
+                     "EXTERNAL_FIELD");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -11348,7 +11537,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                                  NO_SPECIES);
       if (num_const < 2) {
         sr = sprintf(err_msg, "Matl %s needs at least 2 constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Porous Shell Closed Porosity", "MULTI_MODE");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Porous Shell Closed Porosity",
+                     "MULTI_MODE");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       mat_ptr->len_u_PorousShellClosedPorosity_function_constants = num_const;
@@ -11377,8 +11567,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
 
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (strcmp(efv->name[j], input) == 0) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (strcmp(goma_ctx->fem.efv->name[j], input) == 0) {
           ii = 1;
           mat_ptr->por_shell_closed_height_ext_field_index = j;
         }
@@ -11395,7 +11585,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->len_u_PorousShellClosedHeight_function_constants = num_const;
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Porous Shell Height", "EXTERNAL_FIELD");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Porous Shell Height",
+                     "EXTERNAL_FIELD");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -11422,8 +11613,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
 
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (strcmp(efv->name[j], input) == 0) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (strcmp(goma_ctx->fem.efv->name[j], input) == 0) {
           ii = 1;
           mat_ptr->por_shell_closed_radius_ext_field_index = j;
         }
@@ -11443,7 +11634,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       if (num_const < 1) {
         sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                     pd_glob[mn]->MaterialName, "Porous Shell Radius", "EXTERNAL_FIELD");
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Porous Shell Radius",
+                     "EXTERNAL_FIELD");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -11456,7 +11648,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           read_constants(imp, &(mat_ptr->u_PorousShellClosedRadius_function_constants), NO_SPECIES);
       if (num_const < mat_ptr->len_u_PorousShellClosedPorosity_function_constants - 1) {
         sr = sprintf(err_msg, "Matl %s needs at least %i constants for %s %s model.\n",
-                     pd_glob[mn]->MaterialName,
+                     goma_ctx->fem.pd_glob[mn]->MaterialName,
                      mat_ptr->len_u_PorousShellClosedPorosity_function_constants - 1,
                      "Porous Shell Closed Radius", "MULTI_MODE");
         GOMA_EH(GOMA_ERROR, err_msg);
@@ -11510,8 +11702,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                             "EXTERNAL_FIELD model.\n");
       }
       ii = 0;
-      for (j = 0; j < efv->Num_external_field; j++) {
-        if (!strcmp(efv->name[j], input)) {
+      for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
+        if (!strcmp(goma_ctx->fem.efv->name[j], input)) {
           ii = 1;
           mat_ptr->Xperm_external_field_index = j;
         }
@@ -11528,9 +11720,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->len_u_PorousShellCrossKappa_function_constants = num_const;
 
       if (num_const < 1) {
-        sr =
-            sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
-                    pd_glob[mn]->MaterialName, "Porous Shell Cross Permeability", "EXTERNAL_FIELD");
+        sr = sprintf(err_msg, "Matl %s expected at least 1 constant for %s %s model.\n",
+                     goma_ctx->fem.pd_glob[mn]->MaterialName, "Porous Shell Cross Permeability",
+                     "EXTERNAL_FIELD");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -11559,7 +11751,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
    * Added by SAR 2010-12-20
    */
 
-  if (pd_glob[mn]->gv[R_SHELL_SAT_GASN] == 1) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_SHELL_SAT_GASN] == 1) {
 
     // Gas diffusivity
     model_read = look_for_mat_prop(imp, "Porous Shell Gas Diffusivity",
@@ -11596,7 +11788,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     // So far, the density card only pertains to the gas model.
     // The incompressible liquid density does not matter.
    */
-  if (pd_glob[mn]->gv[R_TFMP_MASS] || pd_glob[mn]->gv[R_TFMP_BOUND]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND]) {
     char input[MAX_CHAR_IN_INPUT] = "zilch\0";
     strcpy(search_string, "Thin Film Multiphase Density");
     model_read = look_for_optional(imp, search_string, input, '=');
@@ -11646,7 +11838,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ECHO(es, echo_file);
   }
 
-  if (pd_glob[mn]->gv[R_TFMP_MASS] || pd_glob[mn]->gv[R_TFMP_BOUND]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND]) {
     char input[MAX_CHAR_IN_INPUT] = "zilch\0";
     strcpy(search_string, "Thin Film Multiphase Viscosity");
     model_read = look_for_optional(imp, search_string, input, '=');
@@ -11675,7 +11867,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                           "Multiphase Viscosity\" card.");
     }
   }
-  if (pd_glob[mn]->gv[R_TFMP_MASS] || pd_glob[mn]->gv[R_TFMP_BOUND]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND]) {
     char input[MAX_CHAR_IN_INPUT] = "zilch\0";
     strcpy(search_string, "Thin Film Multiphase Diffusivity Model");
     model_read = look_for_optional(imp, search_string, input, '=');
@@ -11716,7 +11908,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     }
   }
 
-  if (pd_glob[mn]->gv[R_TFMP_BOUND]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND]) {
     char input[MAX_CHAR_IN_INPUT] = "zilch\0";
     strcpy(search_string, "Thin Film Multiphase Dissolution Model");
     model_read = look_for_optional(imp, search_string, input, '=');
@@ -11747,7 +11939,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     }
   }
 
-  if (pd_glob[mn]->gv[R_TFMP_MASS] || pd_glob[mn]->gv[R_TFMP_BOUND]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND]) {
     char input[MAX_CHAR_IN_INPUT] = "zilch\0";
     strcpy(search_string, "Thin Film Multiphase Relative Permeability Model");
     model_read = look_for_optional(imp, search_string, input, '=');
@@ -11782,7 +11974,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     }
   }
 
-  if (pd_glob[mn]->gv[R_TFMP_BOUND] || pd_glob[mn]->gv[R_TFMP_MASS]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS]) {
     strcpy(search_string, "Thin Film Multiphase Mass Lumping");
     model_read = look_for_optional(imp, search_string, input, '=');
     if (model_read == 1) {
@@ -11810,7 +12002,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ECHO(es, echo_file);
   }
 
-  if (pd_glob[mn]->gv[R_TFMP_BOUND]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND]) {
     char input[MAX_CHAR_IN_INPUT] = "zilch\0";
     strcpy(model_name, "\0");
     strcpy(search_string, "Thin Film Multiphase Clipping");
@@ -11849,7 +12041,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ECHO(es, echo_file);
   }
 
-  if (pd_glob[mn]->gv[R_TFMP_MASS] || pd_glob[mn]->gv[R_TFMP_BOUND]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_MASS] || goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND]) {
     char input[MAX_CHAR_IN_INPUT] = "zilch\0";
     strcpy(search_string, "Thin Film Multiphase Drop Lattice");
     model_read = look_for_optional(imp, search_string, input, '=');
@@ -11878,7 +12070,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   /* check for roller-web gap thickness model */
-  if (pd_glob[mn]->gv[R_TFMP_BOUND]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND]) {
     char input[MAX_CHAR_IN_INPUT] = "zilch\0";
     strcpy(search_string, "Elastohydrodynamic Lubrication Gap Model");
     model_read = look_for_optional(imp, search_string, input, '=');
@@ -11910,7 +12102,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   /* check for roller-web normal calculation method (only needed if gap model is NDOTD) */
-  if (pd_glob[mn]->gv[R_MESH1] && pd_glob[mn]->gv[R_TFMP_BOUND] &&
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_MESH1] && goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND] &&
       mat_ptr->ehl_gap_model == GM_NDOTD) {
     char input[MAX_CHAR_IN_INPUT] = "zilch\0";
     strcpy(search_string, "Elastohydrodynamic Lubrication Normal Calculation Method");
@@ -11953,7 +12145,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   /* check for 2d bar integration kind */
-  if (pd_glob[mn]->gv[R_TFMP_BOUND]) {
+  if (goma_ctx->fem.pd_glob[mn]->gv[R_TFMP_BOUND]) {
     char input[MAX_CHAR_IN_INPUT] = "zilch\0";
     strcpy(search_string, "Elastohydrodynamic Lubrication Shell Integration Kind");
     model_read = look_for_optional(imp, search_string, input, '=');
@@ -12001,7 +12193,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     sprintf(Err_Msg,
             "Attempt to initialize %d species in matl %s with only"
             "%d species active!",
-            NO_SPECIES, pd_glob[mn]->MaterialName, pd_ptr->Num_Species_Eqn);
+            NO_SPECIES, goma_ctx->fem.pd_glob[mn]->MaterialName, pd_ptr->Num_Species_Eqn);
     GOMA_EH(GOMA_ERROR, Err_Msg);
   }
 

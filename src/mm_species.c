@@ -733,38 +733,40 @@ void assign_species_var_type(const int mn, const int speciesVT, const int option
  *
  ***********************************************************************/
 {
-  if (mp_glob[mn]->Species_Var_Type != SPECIES_UNDEFINED_FORM &&
-      mp_glob[mn]->Species_Var_Type != speciesVT && mp_glob[mn]->Species_Var_Type != 0) {
+  if (goma_ctx->fem.mp_glob[mn]->Species_Var_Type != SPECIES_UNDEFINED_FORM &&
+      goma_ctx->fem.mp_glob[mn]->Species_Var_Type != speciesVT &&
+      goma_ctx->fem.mp_glob[mn]->Species_Var_Type != 0) {
     if (!optional) {
       sprintf(Err_Msg,
               "assign_species_var_type ERROR, mat %d: species var type "
               " assigned to %d while it was already assigned to %d",
-              mn, speciesVT, mp_glob[mn]->Species_Var_Type);
+              mn, speciesVT, goma_ctx->fem.mp_glob[mn]->Species_Var_Type);
       GOMA_EH(GOMA_ERROR, Err_Msg);
     } else {
       printf("assign_species_var_type WARNING, mat %d: species var type "
              "failed opt assigned to %d while it was already assigned to %d",
-             mn, speciesVT, mp_glob[mn]->Species_Var_Type);
+             mn, speciesVT, goma_ctx->fem.mp_glob[mn]->Species_Var_Type);
     }
   } else {
-    mp_glob[mn]->Species_Var_Type = speciesVT;
-    pd_glob[mn]->Species_Var_Type = speciesVT;
+    goma_ctx->fem.mp_glob[mn]->Species_Var_Type = speciesVT;
+    goma_ctx->fem.pd_glob[mn]->Species_Var_Type = speciesVT;
   }
-  if (upd->Species_Var_Type != SPECIES_UNDEFINED_FORM && upd->Species_Var_Type != speciesVT &&
-      upd->Species_Var_Type != 0) {
+  if (goma_ctx->fem.upd->Species_Var_Type != SPECIES_UNDEFINED_FORM &&
+      goma_ctx->fem.upd->Species_Var_Type != speciesVT &&
+      goma_ctx->fem.upd->Species_Var_Type != 0) {
     if (!optional) {
       sprintf(Err_Msg,
               "assign_species_var_type ERROR, upd: species var type "
               " assigned to %d while it was already assigned to %d",
-              speciesVT, mp_glob[mn]->Species_Var_Type);
+              speciesVT, goma_ctx->fem.mp_glob[mn]->Species_Var_Type);
       GOMA_EH(GOMA_ERROR, Err_Msg);
     } else {
       printf("assign_species_var_type WARNING, upd: species var type "
              "failed opt assigned to %d while it was already assigned to %d",
-             speciesVT, mp_glob[mn]->Species_Var_Type);
+             speciesVT, goma_ctx->fem.mp_glob[mn]->Species_Var_Type);
     }
   } else {
-    upd->Species_Var_Type = speciesVT;
+    goma_ctx->fem.upd->Species_Var_Type = speciesVT;
   }
 }
 /*****************************************************************************/
@@ -780,21 +782,22 @@ void assign_global_species_var_type(const int speciesVT, const int optional)
  ***********************************************************************/
 {
   int mn;
-  if (upd->Species_Var_Type != SPECIES_UNDEFINED_FORM && upd->Species_Var_Type != speciesVT &&
-      upd->Species_Var_Type != 0) {
+  if (goma_ctx->fem.upd->Species_Var_Type != SPECIES_UNDEFINED_FORM &&
+      goma_ctx->fem.upd->Species_Var_Type != speciesVT &&
+      goma_ctx->fem.upd->Species_Var_Type != 0) {
     if (!optional) {
       sprintf(Err_Msg,
               "assign_species_var_type ERROR, upd: species var type "
               " assigned to %d while it was already assigned to %d",
-              speciesVT, upd->Species_Var_Type);
+              speciesVT, goma_ctx->fem.upd->Species_Var_Type);
       GOMA_EH(GOMA_ERROR, Err_Msg);
     } else {
       printf("assign_species_var_type WARNING, upd: species var type "
              "failed opt assigned to %d while it was already assigned to %d",
-             speciesVT, upd->Species_Var_Type);
+             speciesVT, goma_ctx->fem.upd->Species_Var_Type);
     }
   } else {
-    upd->Species_Var_Type = speciesVT;
+    goma_ctx->fem.upd->Species_Var_Type = speciesVT;
     for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
       assign_species_var_type(mn, speciesVT, optional);
     }

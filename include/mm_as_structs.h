@@ -136,15 +136,19 @@ typedef char CK_NAME_STR[64];
  */
 #define MAX_LOCAL_VAR_DESC (MAX_PROB_VAR + MAX_CONC)
 
-#define LEC_R_INDEX(peqn_macro, index_macro) ((lec->max_dof * (peqn_macro)) + index_macro)
+#define LEC_R_INDEX(peqn_macro, index_macro) \
+  ((goma_ctx->fem.lec->max_dof * (peqn_macro)) + index_macro)
 
-#define LEC_J_INDEX(peqn_macro, pvar_macro, index_i, index_j)                  \
-  (((MAX_PROB_VAR + MAX_CONC) * lec->max_dof * lec->max_dof) * (peqn_macro)) + \
-      ((lec->max_dof * lec->max_dof) * (pvar_macro)) + (lec->max_dof * (index_i)) + index_j
+#define LEC_J_INDEX(peqn_macro, pvar_macro, index_i, index_j)                              \
+  (((MAX_PROB_VAR + MAX_CONC) * goma_ctx->fem.lec->max_dof * goma_ctx->fem.lec->max_dof) * \
+   (peqn_macro)) +                                                                         \
+      ((goma_ctx->fem.lec->max_dof * goma_ctx->fem.lec->max_dof) * (pvar_macro)) +         \
+      (goma_ctx->fem.lec->max_dof * (index_i)) + index_j
 
-#define LEC_J_STRESS_INDEX(peqn, pvar, index_i, index_j)          \
-  ((lec->max_dof * MAX_LOCAL_VAR_DESC * lec->max_dof) * (peqn)) + \
-      ((MAX_LOCAL_VAR_DESC * lec->max_dof) * (pvar)) + (lec->max_dof * (index_i)) + index_j
+#define LEC_J_STRESS_INDEX(peqn, pvar, index_i, index_j)                                      \
+  ((goma_ctx->fem.lec->max_dof * MAX_LOCAL_VAR_DESC * goma_ctx->fem.lec->max_dof) * (peqn)) + \
+      ((MAX_LOCAL_VAR_DESC * goma_ctx->fem.lec->max_dof) * (pvar)) +                          \
+      (goma_ctx->fem.lec->max_dof * (index_i)) + index_j
 
 #ifndef MAX_PHASE_FUNC
 #define MAX_PHASE_FUNC 5

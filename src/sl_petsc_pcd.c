@@ -46,17 +46,17 @@ static goma_error initialize_PCD_matrices(PetscMatrixData *matrix_data,
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
     int mn = Matilda[eb_index];
 
-    pd = pd_glob[mn];
-    cr = cr_glob[mn];
-    elc = elc_glob[mn];
-    elc_rs = elc_rs_glob[mn];
-    gn = gn_glob[mn];
-    mp = mp_glob[mn];
-    vn = vn_glob[mn];
-    evpl = evpl_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
+    goma_ctx->fem.elc = goma_ctx->fem.elc_glob[mn];
+    goma_ctx->fem.elc_rs = goma_ctx->fem.elc_rs_glob[mn];
+    goma_ctx->fem.gn = goma_ctx->fem.gn_glob[mn];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
+    goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];
+    goma_ctx->fem.evpl = goma_ctx->fem.evpl_glob[mn];
 
-    for (int mode = 0; mode < vn->modes; mode++) {
-      ve[mode] = ve_glob[mn][mode];
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+      goma_ctx->fem.ve[mode] = goma_ctx->fem.ve_glob[mn][mode];
     }
 
     int e_start = exo->eb_ptr[eb_index];
@@ -67,16 +67,20 @@ static goma_error initialize_PCD_matrices(PetscMatrixData *matrix_data,
 
       int err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old, 0);
       GOMA_EH(err, "load_elem_dofptr");
-      err = bf_mp_init(pd);
+      err = bf_mp_init(goma_ctx->fem.pd);
       GOMA_EH(err, "bf_mp_init");
 
       int eqn = PRESSURE;
-      for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-        int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
-        for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-          int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
-          int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+        int gnn_i =
+            goma_ctx->mesh
+                .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+        int ldof_i = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; j++) {
+          int gnn_j =
+              goma_ctx->mesh
+                  .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + j];
+          int ldof_j = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
           if (ldof_i >= 0 && ldof_j >= 0 &&
               ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
                goma_ctx->num_proc == 1)) {

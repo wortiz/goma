@@ -37,7 +37,7 @@ double elliptic_dual_abs_model(dbl xi, dbl xi_0, dbl a, dbl b, dbl c, dbl d) {
 }
 
 int assemble_elliptic_mesh(void) {
-  const int dim = pd->Num_Dim;
+  const int dim = goma_ctx->fem.pd->Num_Dim;
 
   int status = 0;
   /*
@@ -48,9 +48,10 @@ int assemble_elliptic_mesh(void) {
                      /* but for now just use the first */
                      /* to tell whether there is anything */
                      /* to do...*/
-  dbl wt = fv->wt;
+  dbl wt = goma_ctx->fem.fv->wt;
 
-  if (!pd->e[pg->imtrx][eqn] || (ei[pg->imtrx]->ielem_dim < pd->Num_Dim)) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] ||
+      (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim < goma_ctx->fem.pd->Num_Dim)) {
     return -1;
   }
 
@@ -69,18 +70,18 @@ int assemble_elliptic_mesh(void) {
   dbl T[DIM] = {0};
   dbl d_T_dmesh[DIM][DIM][MDE] = {{{0}}};
   if (dim == 2 || dim == 3) {
-    dbl Snum = (SQUARE(bf[eqn]->J[0][0]) + SQUARE(bf[eqn]->J[0][1]));
-    dbl Sden = (SQUARE(bf[eqn]->J[1][0]) + SQUARE(bf[eqn]->J[1][1]));
+    dbl Snum = (SQUARE(goma_ctx->fem.bf[eqn]->J[0][0]) + SQUARE(goma_ctx->fem.bf[eqn]->J[0][1]));
+    dbl Sden = (SQUARE(goma_ctx->fem.bf[eqn]->J[1][0]) + SQUARE(goma_ctx->fem.bf[eqn]->J[1][1]));
     S[0] = sqrt(Snum / Sden);
     S[1] = sqrt(Sden / Snum);
     T[0] = log(Snum);
     T[1] = log(Sden);
     for (int b = 0; b < dim; b++) {
-      for (int m = 0; m < ei[pg->imtrx]->dof[R_MESH1 + b]; m++) {
-        dbl dSnum = 2.0 * (bf[eqn]->dJ[0][0][b][m] * bf[eqn]->J[0][0] +
-                           bf[eqn]->dJ[0][1][b][m] * bf[eqn]->J[0][1]);
-        dbl dSden = 2.0 * (bf[eqn]->dJ[1][0][b][m] * bf[eqn]->J[1][0] +
-                           bf[eqn]->dJ[1][1][b][m] * bf[eqn]->J[1][1]);
+      for (int m = 0; m < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1 + b]; m++) {
+        dbl dSnum = 2.0 * (goma_ctx->fem.bf[eqn]->dJ[0][0][b][m] * goma_ctx->fem.bf[eqn]->J[0][0] +
+                           goma_ctx->fem.bf[eqn]->dJ[0][1][b][m] * goma_ctx->fem.bf[eqn]->J[0][1]);
+        dbl dSden = 2.0 * (goma_ctx->fem.bf[eqn]->dJ[1][0][b][m] * goma_ctx->fem.bf[eqn]->J[1][0] +
+                           goma_ctx->fem.bf[eqn]->dJ[1][1][b][m] * goma_ctx->fem.bf[eqn]->J[1][1]);
         d_S_dmesh[0][b][m] = S[0] * dSnum / (2 * Snum) - S[0] * dSden / (2 * Sden);
         d_S_dmesh[1][b][m] = S[1] * dSden / (2 * Sden) - S[1] * dSnum / (2 * Snum);
         d_T_dmesh[0][b][m] = dSnum / Snum;
@@ -177,50 +178,80 @@ int assemble_elliptic_mesh(void) {
   dbl eps_s = 1.2;
 
   dbl fxi = 1.0;
-  if (elc_glob[ei[pg->imtrx]->mn]->fxi_model == CONSTANT) {
-    fxi = elc_glob[ei[pg->imtrx]->mn]->fxi;
-  } else if (elc_glob[ei[pg->imtrx]->mn]->fxi_model == ELLIPTIC_SIMPLE_ABS) {
+  if (goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->fxi_model ==
+      CONSTANT) {
+    fxi = goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->fxi;
+  } else if (goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->fxi_model ==
+             ELLIPTIC_SIMPLE_ABS) {
     fxi = elliptic_simple_abs_model(
-        fv->x0[0], elc_glob[ei[pg->imtrx]->mn]->u_fxi[0], elc_glob[ei[pg->imtrx]->mn]->u_fxi[1],
-        elc_glob[ei[pg->imtrx]->mn]->u_fxi[2], elc_glob[ei[pg->imtrx]->mn]->u_fxi[3],
-        elc_glob[ei[pg->imtrx]->mn]->u_fxi[4], elc_glob[ei[pg->imtrx]->mn]->u_fxi[5]);
-  } else if (elc_glob[ei[pg->imtrx]->mn]->fxi_model == ELLIPTIC_DUAL_ABS) {
+        goma_ctx->fem.fv->x0[0],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_fxi[0],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_fxi[1],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_fxi[2],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_fxi[3],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_fxi[4],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_fxi[5]);
+  } else if (goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->fxi_model ==
+             ELLIPTIC_DUAL_ABS) {
     fxi = elliptic_dual_abs_model(
-        fv->x0[0], elc_glob[ei[pg->imtrx]->mn]->u_fxi[0], elc_glob[ei[pg->imtrx]->mn]->u_fxi[1],
-        elc_glob[ei[pg->imtrx]->mn]->u_fxi[2], elc_glob[ei[pg->imtrx]->mn]->u_fxi[3],
-        elc_glob[ei[pg->imtrx]->mn]->u_fxi[4]);
+        goma_ctx->fem.fv->x0[0],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_fxi[0],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_fxi[1],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_fxi[2],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_fxi[3],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_fxi[4]);
   } else {
     GOMA_EH(GOMA_ERROR, "Unknown Elliptic fxi model");
   }
   dbl geta = 1.0;
-  if (elc_glob[ei[pg->imtrx]->mn]->geta_model == CONSTANT) {
-    geta = elc_glob[ei[pg->imtrx]->mn]->geta;
-  } else if (elc_glob[ei[pg->imtrx]->mn]->geta_model == ELLIPTIC_SIMPLE_ABS) {
+  if (goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->geta_model ==
+      CONSTANT) {
+    geta = goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->geta;
+  } else if (goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->geta_model ==
+             ELLIPTIC_SIMPLE_ABS) {
     geta = elliptic_simple_abs_model(
-        fv->x0[1], elc_glob[ei[pg->imtrx]->mn]->u_geta[0], elc_glob[ei[pg->imtrx]->mn]->u_geta[1],
-        elc_glob[ei[pg->imtrx]->mn]->u_geta[2], elc_glob[ei[pg->imtrx]->mn]->u_geta[3],
-        elc_glob[ei[pg->imtrx]->mn]->u_geta[4], elc_glob[ei[pg->imtrx]->mn]->u_geta[5]);
-  } else if (elc_glob[ei[pg->imtrx]->mn]->geta_model == ELLIPTIC_DUAL_ABS) {
+        goma_ctx->fem.fv->x0[1],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_geta[0],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_geta[1],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_geta[2],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_geta[3],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_geta[4],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_geta[5]);
+  } else if (goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->geta_model ==
+             ELLIPTIC_DUAL_ABS) {
     geta = elliptic_dual_abs_model(
-        fv->x0[1], elc_glob[ei[pg->imtrx]->mn]->u_geta[0], elc_glob[ei[pg->imtrx]->mn]->u_geta[1],
-        elc_glob[ei[pg->imtrx]->mn]->u_geta[2], elc_glob[ei[pg->imtrx]->mn]->u_geta[3],
-        elc_glob[ei[pg->imtrx]->mn]->u_geta[4]);
+        goma_ctx->fem.fv->x0[1],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_geta[0],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_geta[1],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_geta[2],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_geta[3],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_geta[4]);
   } else {
     GOMA_EH(GOMA_ERROR, "Unknown Elliptic geta model");
   }
   dbl hzeta = 1.0;
-  if (elc_glob[ei[pg->imtrx]->mn]->hzeta_model == CONSTANT) {
-    hzeta = elc_glob[ei[pg->imtrx]->mn]->hzeta;
-  } else if (elc_glob[ei[pg->imtrx]->mn]->hzeta_model == ELLIPTIC_SIMPLE_ABS) {
+  if (goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->hzeta_model ==
+      CONSTANT) {
+    hzeta = goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->hzeta;
+  } else if (goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->hzeta_model ==
+             ELLIPTIC_SIMPLE_ABS) {
     hzeta = elliptic_simple_abs_model(
-        fv->x0[2], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[0], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[1],
-        elc_glob[ei[pg->imtrx]->mn]->u_hzeta[2], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[3],
-        elc_glob[ei[pg->imtrx]->mn]->u_hzeta[4], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[5]);
-  } else if (elc_glob[ei[pg->imtrx]->mn]->hzeta_model == ELLIPTIC_DUAL_ABS) {
+        goma_ctx->fem.fv->x0[2],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_hzeta[0],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_hzeta[1],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_hzeta[2],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_hzeta[3],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_hzeta[4],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_hzeta[5]);
+  } else if (goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->hzeta_model ==
+             ELLIPTIC_DUAL_ABS) {
     hzeta = elliptic_dual_abs_model(
-        fv->x0[2], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[0], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[1],
-        elc_glob[ei[pg->imtrx]->mn]->u_hzeta[2], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[3],
-        elc_glob[ei[pg->imtrx]->mn]->u_hzeta[4]);
+        goma_ctx->fem.fv->x0[2],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_hzeta[0],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_hzeta[1],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_hzeta[2],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_hzeta[3],
+        goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->u_hzeta[4]);
   } else {
     GOMA_EH(GOMA_ERROR, "Unknown Elliptic hzeta model");
   }
@@ -231,7 +262,7 @@ int assemble_elliptic_mesh(void) {
    * Residuals_________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     /*
      * Assemble each component "a" of the momentum equation...
      */
@@ -239,27 +270,28 @@ int assemble_elliptic_mesh(void) {
       int a = (aa + 1) % dim;
       a = aa;
       int eqn = R_MESH1 + a;
-      int peqn = upd->ep[pg->imtrx][eqn];
+      int peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      int diffusion_on = pd->e[pg->imtrx][eqn] & T_DIFFUSION;
-      int source_on = pd->e[pg->imtrx][eqn] & T_SOURCE;
+      int diffusion_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION;
+      int source_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE;
 
-      int diffusion_etm = pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-      int source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+      int diffusion_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      int source_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
-      for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
         dbl diffusion = 0.;
         if (diffusion_on) {
           for (int p = 0; p < dim; p++) {
-            diffusion += (S[a] + eps_s) * bf[eqn]->d_phi[i][p] * bf[eqn]->B[p][a];
+            diffusion += (S[a] + eps_s) * goma_ctx->fem.bf[eqn]->d_phi[i][p] *
+                         goma_ctx->fem.bf[eqn]->B[p][a];
           }
-          diffusion *= bf[eqn]->detJ * wt;
+          diffusion *= goma_ctx->fem.bf[eqn]->detJ * wt;
           diffusion *= diffusion_etm;
         }
 
         dbl source = 0.;
         if (source_on) {
-          source = -sc[a] * T[a] * bf[eqn]->dphidxi[i][a] * wt;
+          source = -sc[a] * T[a] * goma_ctx->fem.bf[eqn]->dphidxi[i][a] * wt;
 
           source *= source_etm;
         }
@@ -270,7 +302,7 @@ int assemble_elliptic_mesh(void) {
          *    into the consitutive equation for stress
          */
 
-        lec->R[LEC_R_INDEX(peqn, i)] += diffusion + source;
+        goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += diffusion + source;
       }
     }
   }
@@ -279,20 +311,20 @@ int assemble_elliptic_mesh(void) {
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (int aa = 0; aa < dim; aa++) {
       int a = (aa + 1) % dim;
       a = aa;
       int eqn = R_MESH1 + a;
-      int peqn = upd->ep[pg->imtrx][eqn];
+      int peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      int diffusion_on = pd->e[pg->imtrx][eqn] & T_DIFFUSION;
-      int source_on = pd->e[pg->imtrx][eqn] & T_SOURCE;
+      int diffusion_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION;
+      int source_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE;
 
-      int diffusion_etm = pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-      int source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+      int diffusion_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      int source_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
-      for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
         /*
          * Set up some preliminaries that are needed for the (a,i)
          * equation for bunches of (b,j) column variables...
@@ -305,24 +337,27 @@ int assemble_elliptic_mesh(void) {
           int b = (bb + 1) % dim;
           b = bb;
           int var = MESH_DISPLACEMENT1 + b;
-          if (pd->v[pg->imtrx][var]) {
-            int pvar = upd->vp[pg->imtrx][var];
-            for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+            int pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+            for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               dbl diffusion = 0.;
               if (diffusion_on) {
                 dbl diff_a = 0.;
                 dbl diff_b = 0.;
 
                 for (int p = 0; p < dim; p++) {
-                  diff_a +=
-                      (d_S_dmesh[a][b][j]) * (bf[eqn]->d_phi[i][p] * bf[eqn]->B[p][a]) +
-                      (S[a] + eps_s) * ((bf[eqn]->d_d_phi_dmesh[i][p][b][j] * bf[eqn]->B[p][a]) +
-                                        (bf[eqn]->d_phi[i][p] * bf[eqn]->dB[p][a][b][j]));
-                  diff_b += (S[a] + eps_s) * (bf[eqn]->d_phi[i][p] * bf[eqn]->B[p][a]);
+                  diff_a += (d_S_dmesh[a][b][j]) * (goma_ctx->fem.bf[eqn]->d_phi[i][p] *
+                                                    goma_ctx->fem.bf[eqn]->B[p][a]) +
+                            (S[a] + eps_s) * ((goma_ctx->fem.bf[eqn]->d_d_phi_dmesh[i][p][b][j] *
+                                               goma_ctx->fem.bf[eqn]->B[p][a]) +
+                                              (goma_ctx->fem.bf[eqn]->d_phi[i][p] *
+                                               goma_ctx->fem.bf[eqn]->dB[p][a][b][j]));
+                  diff_b += (S[a] + eps_s) *
+                            (goma_ctx->fem.bf[eqn]->d_phi[i][p] * goma_ctx->fem.bf[eqn]->B[p][a]);
                 }
 
-                diff_a *= bf[eqn]->detJ * wt;
-                diff_b *= bf[eqn]->d_det_J_dm[b][j] * wt;
+                diff_a *= goma_ctx->fem.bf[eqn]->detJ * wt;
+                diff_b *= goma_ctx->fem.bf[eqn]->d_det_J_dm[b][j] * wt;
 
                 diffusion = diff_a + diff_b;
                 diffusion *= diffusion_etm;
@@ -331,11 +366,11 @@ int assemble_elliptic_mesh(void) {
               dbl source = 0.;
 
               if (source_on) {
-                source = -sc[a] * d_T_dmesh[a][b][j] * bf[eqn]->dphidxi[i][a] * wt;
+                source = -sc[a] * d_T_dmesh[a][b][j] * goma_ctx->fem.bf[eqn]->dphidxi[i][a] * wt;
                 source *= source_etm;
               }
 
-              lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += diffusion + source;
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += diffusion + source;
             }
           }
         }
@@ -359,34 +394,35 @@ void assemble_essential_elliptic_mesh(dbl func[DIM],
 
   dbl T[DIM] = {0};
   dbl d_T_dmesh[DIM][DIM][MDE] = {{{0}}};
-  if (pd->Num_Dim == 2) {
-    dbl Snum = (SQUARE(bf[eqn]->J[0][0]) + SQUARE(bf[eqn]->J[0][1]));
-    dbl Sden = (SQUARE(bf[eqn]->J[1][0]) + SQUARE(bf[eqn]->J[1][1]));
+  if (goma_ctx->fem.pd->Num_Dim == 2) {
+    dbl Snum = (SQUARE(goma_ctx->fem.bf[eqn]->J[0][0]) + SQUARE(goma_ctx->fem.bf[eqn]->J[0][1]));
+    dbl Sden = (SQUARE(goma_ctx->fem.bf[eqn]->J[1][0]) + SQUARE(goma_ctx->fem.bf[eqn]->J[1][1]));
     T[0] = log(Snum);
     T[1] = log(Sden);
-    for (int b = 0; b < pd->Num_Dim; b++) {
-      for (int m = 0; m < ei[pg->imtrx]->dof[R_MESH1 + b]; m++) {
-        dbl dSnum = 2.0 * (bf[eqn]->dJ[0][0][b][m] * bf[eqn]->J[0][0] +
-                           bf[eqn]->dJ[0][1][b][m] * bf[eqn]->J[0][1]);
-        dbl dSden = 2.0 * (bf[eqn]->dJ[1][0][b][m] * bf[eqn]->J[1][0] +
-                           bf[eqn]->dJ[1][1][b][m] * bf[eqn]->J[1][1]);
+    for (int b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
+      for (int m = 0; m < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1 + b]; m++) {
+        dbl dSnum = 2.0 * (goma_ctx->fem.bf[eqn]->dJ[0][0][b][m] * goma_ctx->fem.bf[eqn]->J[0][0] +
+                           goma_ctx->fem.bf[eqn]->dJ[0][1][b][m] * goma_ctx->fem.bf[eqn]->J[0][1]);
+        dbl dSden = 2.0 * (goma_ctx->fem.bf[eqn]->dJ[1][0][b][m] * goma_ctx->fem.bf[eqn]->J[1][0] +
+                           goma_ctx->fem.bf[eqn]->dJ[1][1][b][m] * goma_ctx->fem.bf[eqn]->J[1][1]);
         d_T_dmesh[0][b][m] = dSnum / Snum;
         d_T_dmesh[1][b][m] = dSden / Sden;
       }
     }
-  } else if (pd->Num_Dim == 3) {
-    for (int a = 0; a < pd->Num_Dim; a++) {
+  } else if (goma_ctx->fem.pd->Num_Dim == 3) {
+    for (int a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
       dbl inner = 0;
-      for (int b = 0; b < pd->Num_Dim; b++) {
-        inner += SQUARE(bf[eqn]->J[a][b]);
+      for (int b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
+        inner += SQUARE(goma_ctx->fem.bf[eqn]->J[a][b]);
       }
 
       T[a] = log(inner);
       dbl inv = 1 / T[a];
-      for (int b = 0; b < pd->Num_Dim; b++) {
-        for (int r = 0; r < pd->Num_Dim; r++) {
-          for (int m = 0; m < ei[pg->imtrx]->dof[R_MESH1 + b]; m++) {
-            d_T_dmesh[0][b][m] += inv * 2.0 * bf[eqn]->dJ[a][b][r][m] * bf[eqn]->J[a][b];
+      for (int b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
+        for (int r = 0; r < goma_ctx->fem.pd->Num_Dim; r++) {
+          for (int m = 0; m < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1 + b]; m++) {
+            d_T_dmesh[0][b][m] +=
+                inv * 2.0 * goma_ctx->fem.bf[eqn]->dJ[a][b][r][m] * goma_ctx->fem.bf[eqn]->J[a][b];
           }
         }
       }
@@ -395,35 +431,38 @@ void assemble_essential_elliptic_mesh(dbl func[DIM],
 
   switch (bc_name) {
   case ELLIPTIC_XI_REGULARIZATION_BC: {
-    func[0] = -M * fxi * T[0] / fv->sdet;
+    func[0] = -M * fxi * T[0] / goma_ctx->fem.fv->sdet;
 
-    for (int b = 0; b < pd->Num_Dim; b++) {
+    for (int b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
       int var = MESH_DISPLACEMENT1 + b;
-      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_func[0][var][j] = -M * fxi * d_T_dmesh[0][b][j] / fv->sdet +
-                            M * fxi * T[0] * fv->dsurfdet_dx[b][j] / (fv->sdet * fv->sdet);
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_func[0][var][j] = -M * fxi * d_T_dmesh[0][b][j] / goma_ctx->fem.fv->sdet +
+                            M * fxi * T[0] * goma_ctx->fem.fv->dsurfdet_dx[b][j] /
+                                (goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->sdet);
       }
     }
   } break;
   case ELLIPTIC_ETA_REGULARIZATION_BC: {
 
-    func[0] = -M * geta * T[1] / fv->sdet;
-    for (int b = 0; b < pd->Num_Dim; b++) {
+    func[0] = -M * geta * T[1] / goma_ctx->fem.fv->sdet;
+    for (int b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
       int var = MESH_DISPLACEMENT1 + b;
-      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_func[0][var][j] = -M * geta * d_T_dmesh[1][b][j] / fv->sdet +
-                            M * geta * T[1] * fv->dsurfdet_dx[b][j] / (fv->sdet * fv->sdet);
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_func[0][var][j] = -M * geta * d_T_dmesh[1][b][j] / goma_ctx->fem.fv->sdet +
+                            M * geta * T[1] * goma_ctx->fem.fv->dsurfdet_dx[b][j] /
+                                (goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->sdet);
       }
     }
   } break;
   case ELLIPTIC_ZETA_REGULARIZATION_BC: {
 
-    func[0] = -M * hzeta * T[2] / fv->sdet;
-    for (int b = 0; b < pd->Num_Dim; b++) {
+    func[0] = -M * hzeta * T[2] / goma_ctx->fem.fv->sdet;
+    for (int b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
       int var = MESH_DISPLACEMENT1 + b;
-      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_func[0][var][j] = -M * hzeta * d_T_dmesh[2][b][j] / fv->sdet +
-                            M * hzeta * T[2] * fv->dsurfdet_dx[b][j] / (fv->sdet * fv->sdet);
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_func[0][var][j] = -M * hzeta * d_T_dmesh[2][b][j] / goma_ctx->fem.fv->sdet +
+                            M * hzeta * T[2] * goma_ctx->fem.fv->dsurfdet_dx[b][j] /
+                                (goma_ctx->fem.fv->sdet * goma_ctx->fem.fv->sdet);
       }
     }
   } break;

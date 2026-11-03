@@ -157,7 +157,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   /* Turn matID into blockId --Not necessarly the same */
   int ifound = 0;
   for (i = 0; i < exo->num_elem_blocks; i++) {
-    if (efv->ipix_matid[N_ext] == exo->eb_id[i]) {
+    if (goma_ctx->fem.efv->ipix_matid[N_ext] == exo->eb_id[i]) {
       ipix_blkid = i;
       ifound = 1;
     }
@@ -171,7 +171,8 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   my_ignodes = (int *)malloc(curr_eb_nodes * sizeof(int));
 
   /* Sort out interpolations */
-  if ((si = in_list(efv->i[N_ext], 0, Num_Interpolations, Unique_Interpolations)) == -1) {
+  if ((si = in_list(goma_ctx->fem.efv->i[N_ext], 0, Num_Interpolations, Unique_Interpolations)) ==
+      -1) {
     GOMA_EH(GOMA_ERROR, "Seems to be a problem finding IntegrationMap interpolation for pixels.");
   }
 
@@ -196,16 +197,16 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
     GOMA_EH(exoout, "ex_open in rd_pixel_image2.c");
 
     num_nod_vars = 0;
-    for (i = 0; i < efv->Num_external_field; i++) {
-      if (efv->ipix[i] == 2) {
+    for (i = 0; i < goma_ctx->fem.efv->Num_external_field; i++) {
+      if (goma_ctx->fem.efv->ipix[i] == 2) {
         dupflag = 0;
         for (j = 0; j < num_nod_vars; j++) {
-          if (strcmp(nod_var_names_temp[j], efv->name[i]) == 0) {
+          if (strcmp(nod_var_names_temp[j], goma_ctx->fem.efv->name[i]) == 0) {
             dupflag = 1;
           }
         }
         if (!dupflag) {
-          nod_var_names_temp[num_nod_vars++] = efv->name[i];
+          nod_var_names_temp[num_nod_vars++] = goma_ctx->fem.efv->name[i];
         }
       }
     }
@@ -225,7 +226,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
     GOMA_EH(exoout, "ex_open in rd_pixel_image2.c");
     // Loop through all fields, check for same variable being mapped from another field
     for (i = N_ext - 1; i >= 0; i--) {
-      if (!strcmp(efv->name[i], efv->name[N_ext])) {
+      if (!strcmp(goma_ctx->fem.efv->name[i], goma_ctx->fem.efv->name[N_ext])) {
         my_N_ext = i;
         /*	first_time_field = FALSE; */
         break;
@@ -239,7 +240,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   resz = 1;
   z0 = 0;
   if (goma_ctx->proc_id == 0) {
-    sprintf(voxfilename, "%s", efv->file_nm_serial[N_ext]);
+    sprintf(voxfilename, "%s", goma_ctx->fem.efv->file_nm_serial[N_ext]);
     pixfid = fopen(voxfilename, "r");
     if (pixfid == NULL) {
       GOMA_EH(GOMA_ERROR, "Could not open voxel file!");
@@ -247,7 +248,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
     err = fscanf(pixfid, "%d", &pixdim);
 
     printf("Reading pixel file %s of dimensionality %d into field %s\n", voxfilename, pixdim,
-           efv->name[my_N_ext]);
+           goma_ctx->fem.efv->name[my_N_ext]);
 
     pixsize[2] = 1;
     if (pixdim == 2) {
@@ -298,8 +299,9 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
         pixorigin[2] = z0;
     */
 
-    if (pixdim != pd->Num_Dim) {
-      printf("WARNING: Pixel file dimensionality is %d, problem dim. is %d\n", pixdim, pd->Num_Dim);
+    if (pixdim != goma_ctx->fem.pd->Num_Dim) {
+      printf("WARNING: Pixel file dimensionality is %d, problem dim. is %d\n", pixdim,
+             goma_ctx->fem.pd->Num_Dim);
     }
 
     numpix = pixsize[0] * pixsize[1] * pixsize[2];
@@ -367,11 +369,14 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   j = 0;
   // Loop over elements; count GQ points, store list of global node ids
   for (ielem = e_start; ielem < e_end; ielem++) {
-    load_ei(ielem, exo, 0, pg->imtrx);
-    ei[pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
-    gptot += elem_info(NQUAD, ei[pg->imtrx]->ielem_type);
-    for (ilnode = 0; ilnode < ei[pg->imtrx]->num_local_nodes; ilnode++) {
-      ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+    load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
+    goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
+    gptot += elem_info(NQUAD, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
+    for (ilnode = 0; ilnode < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
+         ilnode++) {
+      ignode =
+          goma_ctx->mesh
+              .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + ilnode];
       my_ignodes[j++] = ignode;
     }
   }
@@ -379,7 +384,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   save_gp = (double *)malloc(gptot * sizeof(double));
 
   for (i = 0; i < gptot; i++) {
-    save_gp[i] = efv->empty_value[N_ext];
+    save_gp[i] = goma_ctx->fem.efv->empty_value[N_ext];
   }
 
   /*************************************************************/
@@ -392,28 +397,30 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
     if (DPI_ptr->elem_owner[ielem] != goma_ctx->proc_id) {
       continue; // Skip elements not owned by this processor
     }
-    load_ei(ielem, exo, 0, pg->imtrx);
-    ei[pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
+    load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
+    goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
 
-    err = bf_mp_init(pd);
+    err = bf_mp_init(goma_ctx->fem.pd);
     GOMA_EH(err, "bf_mp_init");
 
-    ngp = elem_info(NQUAD, ei[pg->imtrx]->ielem_type); // Number of Gauss points (GP) in element
+    ngp = elem_info(NQUAD, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
+                               ->ielem_type); // Number of Gauss points (GP) in element
 
     for (igp = 0; igp < ngp; igp++) // Loop over GP's
     {
-      find_stu(igp, ei[pg->imtrx]->ielem_type, &(xi[0]), &(xi[1]), &(xi[2]));
+      find_stu(igp, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, &(xi[0]), &(xi[1]),
+               &(xi[2]));
 
-      err = load_basis_functions(xi, bfd);
+      err = load_basis_functions(xi, goma_ctx->fem.bfd);
       GOMA_EH(err, "problem from load_basis_functions");
 
       err = beer_belly();
       GOMA_EH(err, "beer_belly");
       // xg, yg, zg are now the global coordinates of the Gauss point
       // Get the pixel value at this point
-      xg = fv->x[0];
-      yg = fv->x[1];
-      zg = (pixdim == 3) ? fv->x[2] : 0.0; // zg is zero for 2D problems
+      xg = goma_ctx->fem.fv->x[0];
+      yg = goma_ctx->fem.fv->x[1];
+      zg = (pixdim == 3) ? goma_ctx->fem.fv->x[2] : 0.0; // zg is zero for 2D problems
       if (pixinterp) {
         if (pixsize[2] == 1) { // bilinear interpolation
           val = bi_interp(xg, yg, min_x, min_y, resolution, pixdata, pixsize);
@@ -427,7 +434,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
         if (ix < 0 || ix >= pixsize[0] || iy < 0 || iy >= pixsize[1] || iz < 0 ||
             iz >= pixsize[2]) {
           nmiss++;
-          val = efv->empty_value[N_ext];
+          val = goma_ctx->fem.efv->empty_value[N_ext];
         } else {
           val = pixdata[INDEX3D(ix, iy, iz, pixsize)];
         }
@@ -454,31 +461,37 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
     if (DPI_ptr->elem_owner[ielem] != goma_ctx->proc_id) {
       continue; // Skip elements not owned by this processor
     }
-    load_ei(ielem, exo, 0, pg->imtrx);
-    ei[pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
+    load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
+    goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
 
-    err = bf_mp_init(pd);
+    err = bf_mp_init(goma_ctx->fem.pd);
     GOMA_EH(err, "bf_mp_init");
 
-    for (igp = 0; igp < elem_info(NQUAD, ei[pg->imtrx]->ielem_type); igp++) {
-      find_stu(igp, ei[pg->imtrx]->ielem_type, &(xi[0]), &(xi[1]), &(xi[2]));
-      err = load_basis_functions(xi, bfd);
+    for (igp = 0; igp < elem_info(NQUAD, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
+         igp++) {
+      find_stu(igp, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, &(xi[0]), &(xi[1]),
+               &(xi[2]));
+      err = load_basis_functions(xi, goma_ctx->fem.bfd);
       GOMA_EH(err, "problem from load_basis_functions");
 
       err = beer_belly();
       GOMA_EH(err, "beer_belly");
 
-      det_J = bfex[N_ext]->detJ;
-      wt = Gq_weight(igp, ei[pg->imtrx]->ielem_type);
+      det_J = goma_ctx->fem.bfex[N_ext]->detJ;
+      wt = Gq_weight(igp, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
 
       val = save_gp[gp_global++];
 
-      for (ilnode = 0; ilnode < ei[pg->imtrx]->num_local_nodes; ilnode++) {
-        ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
-        phi_i = bfex[N_ext]->phi[ilnode];
+      for (ilnode = 0; ilnode < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
+           ilnode++) {
+        ignode = goma_ctx->mesh
+                     .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr +
+                                        ilnode];
+        phi_i = goma_ctx->fem.bfex[N_ext]->phi[ilnode];
         bvec[ignode] += phi_i * val * wt * det_J;
-        for (jlnode = 0; jlnode < ei[pg->imtrx]->num_local_nodes; jlnode++) {
-          phi_j = bfex[N_ext]->phi[jlnode];
+        for (jlnode = 0; jlnode < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
+             jlnode++) {
+          phi_j = goma_ctx->fem.bfex[N_ext]->phi[jlnode];
           lumped_mass[ignode] += phi_i * phi_j * wt * det_J;
         }
       }
@@ -494,22 +507,23 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
 
   nodal_var_vals_err = (dbl *)calloc(exo->num_nodes, sizeof(dbl));
   nodal_var_vals = (dbl *)calloc(exo->num_nodes, sizeof(dbl));
-  efv->ext_fld_ndl_val[N_ext] = alloc_dbl_1(exo->num_nodes, 0.0);
+  goma_ctx->fem.efv->ext_fld_ndl_val[N_ext] = alloc_dbl_1(exo->num_nodes, 0.0);
 
   for (i = 0; i < exo->num_nodes; i++) {
-    nodal_var_vals_err[i] = efv->ext_fld_ndl_val[my_N_ext][i] = bvec[i] / lumped_mass[i];
+    nodal_var_vals_err[i] = goma_ctx->fem.efv->ext_fld_ndl_val[my_N_ext][i] =
+        bvec[i] / lumped_mass[i];
   }
 
   for (i = 0; i < exo->num_nodes; i++) {
-    nodal_var_vals[i] = efv->ext_fld_ndl_val[my_N_ext][i];
+    nodal_var_vals[i] = goma_ctx->fem.efv->ext_fld_ndl_val[my_N_ext][i];
   }
 
   k = 0;
-  for (i = 0; i < efv->Num_external_field; i++) {
-    if (efv->ipix[i] == 2) {
+  for (i = 0; i < goma_ctx->fem.efv->Num_external_field; i++) {
+    if (goma_ctx->fem.efv->ipix[i] == 2) {
       k++;
     }
-    if (!(strcmp(efv->name[i], efv->name[my_N_ext]))) {
+    if (!(strcmp(goma_ctx->fem.efv->name[i], goma_ctx->fem.efv->name[my_N_ext]))) {
       break;
     }
   }
@@ -646,14 +660,17 @@ extern double calc_error(double ***pixdata,
     if (e_end - e_start > max_error_points) {
       ielem += (e_end - e_start) / max_error_points;
     }
-    load_ei(ielem, exo, 0, pg->imtrx);
-    ei[pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
+    load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
+    goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
     // Get bounding box
     xmin = ymin = zmin = 1e20;
     xmax = ymax = zmax = -1e20;
 
-    for (ilnode = 0; ilnode < ei[pg->imtrx]->num_local_nodes; ilnode++) {
-      ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+    for (ilnode = 0; ilnode < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
+         ilnode++) {
+      ignode =
+          goma_ctx->mesh
+              .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + ilnode];
       if (goma_ctx->mesh.coor[0][ignode] < xmin)
         xmin = goma_ctx->mesh.coor[0][ignode];
       if (goma_ctx->mesh.coor[0][ignode] > xmax)
@@ -697,23 +714,27 @@ extern double calc_error(double ***pixdata,
           } else {
             // Ray collision test:
             ncoll = 0;
-            for (iside = 0; iside < ei[pg->imtrx]->num_sides; iside++) {
-              get_side_info(ei[pg->imtrx]->ielem_type, iside + 1, &nodes_per_side,
-                            local_elem_node_id);
+            for (iside = 0; iside < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_sides; iside++) {
+              get_side_info(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, iside + 1,
+                            &nodes_per_side, local_elem_node_id);
 
               n1x = goma_ctx->mesh
-                        .coor[0][goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr +
-                                                                  local_elem_node_id[0]]];
+                        .coor[0][goma_ctx->mesh.proc_elem_connect
+                                     [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr +
+                                      local_elem_node_id[0]]];
               n1y = goma_ctx->mesh
-                        .coor[1][goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr +
-                                                                  local_elem_node_id[0]]];
+                        .coor[1][goma_ctx->mesh.proc_elem_connect
+                                     [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr +
+                                      local_elem_node_id[0]]];
 
               n2x = goma_ctx->mesh
-                        .coor[0][goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr +
-                                                                  local_elem_node_id[1]]];
+                        .coor[0][goma_ctx->mesh.proc_elem_connect
+                                     [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr +
+                                      local_elem_node_id[1]]];
               n2y = goma_ctx->mesh
-                        .coor[1][goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr +
-                                                                  local_elem_node_id[1]]];
+                        .coor[1][goma_ctx->mesh.proc_elem_connect
+                                     [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr +
+                                      local_elem_node_id[1]]];
 
               ux = n2x - n1x;
               uy = n2y - n1y;
@@ -748,13 +769,19 @@ extern double calc_error(double ***pixdata,
 
           // printf("pixcoords are %g %g %g\n",pixcoords[0],pixcoords[1],pixcoords[2]);
 
-          find_xi(ielem, pixcoords, xi_data, ei[pg->imtrx]->ielem_type, nodecoor, si, N_ext);
+          find_xi(ielem, pixcoords, xi_data, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type,
+                  nodecoor, si, N_ext);
 
           pix_interp = 0;
-          for (ilnode = 0; ilnode < ei[pg->imtrx]->num_local_nodes; ilnode++) {
-            ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
-            phi_i = newshape(xi_data, ei[pg->imtrx]->ielem_type, PSI, ilnode,
-                             ei[pg->imtrx]->ielem_shape, efv->i[N_ext], ilnode);
+          for (ilnode = 0; ilnode < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes;
+               ilnode++) {
+            ignode =
+                goma_ctx->mesh
+                    .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr +
+                                       ilnode];
+            phi_i = newshape(xi_data, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, PSI,
+                             ilnode, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
+                             goma_ctx->fem.efv->i[N_ext], ilnode);
             pix_interp += phi_i * nodal_var_vals[ignode];
           }
 

@@ -167,12 +167,12 @@ int usr_ptracking(FILE *jfp,                             /*  filename for output
     fprintf(jfp, " Particle Path %d\n", part_id);
     fprintf(jfp, " time   x   y    vx   vy  dv11  dv12\n");
     fprintf(jfp, " %g %g %g %g %g %g %g\n", time_value, part_x[0], part_x[1], part_v[0], part_v[1],
-            fv->grad_v[0][0], fv->grad_v[0][1]);
+            goma_ctx->fem.fv->grad_v[0][0], goma_ctx->fem.fv->grad_v[0][1]);
   } else {
     /*   write data to file */
 
     fprintf(jfp, " %g %g %g %g %g %g %g\n", time_value, part_x[0], part_x[1], part_v[0], part_v[1],
-            fv->grad_v[0][0], fv->grad_v[0][1]);
+            goma_ctx->fem.fv->grad_v[0][0], goma_ctx->fem.fv->grad_v[0][1]);
   }
 
   return (1);

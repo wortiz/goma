@@ -121,7 +121,7 @@ double viscosity(struct Generalized_Newtonian *gn_local,
   int species;    /* Species number of particle phase. */
   dbl p_vol_frac; /* local particle volume fraction. */
   dbl mu = 0.;
-  int dim = ei[pg->imtrx]->ielem_dim;
+  int dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
 
   struct Level_Set_Data *ls_old;
 
@@ -134,89 +134,90 @@ double viscosity(struct Generalized_Newtonian *gn_local,
       (gn_local->ConstitutiveEquation == TURBULENT_SA) ||
       (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) ||
       (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA)) {
-    if (mp->ViscosityModel == USER) {
-      err = usr_viscosity(mp->u_viscosity);
-      mu = mp->viscosity;
+    if (goma_ctx->fem.mp->ViscosityModel == USER) {
+      err = usr_viscosity(goma_ctx->fem.mp->u_viscosity);
+      mu = goma_ctx->fem.mp->viscosity;
 
       var = TEMPERATURE;
-      if (d_mu != NULL && pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          d_mu->T[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+      if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          d_mu->T[j] = goma_ctx->fem.mp->d_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
 
       var = SHELL_TEMPERATURE;
-      if (d_mu != NULL && pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          d_mu->sh_t[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+      if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          d_mu->sh_t[j] = goma_ctx->fem.mp->d_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
 
       var = FILL;
-      if (d_mu != NULL && pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          d_mu->F[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+      if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          d_mu->F[j] = goma_ctx->fem.mp->d_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
 
-      if (d_mu != NULL && pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+      if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
         for (a = 0; a < dim; a++) {
           var = MESH_DISPLACEMENT1 + a;
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            d_mu->X[a][j] = mp->d_viscosity[var] * bf[var]->phi[j];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            d_mu->X[a][j] = goma_ctx->fem.mp->d_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
           }
         }
       }
 
-      if (d_mu != NULL && pd->v[pg->imtrx][MASS_FRACTION]) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
+      if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
           var = MASS_FRACTION;
           var_offset = MAX_VARIABLE_TYPES + w;
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            d_mu->C[w][j] = mp->d_viscosity[var_offset] * bf[var]->phi[j];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            d_mu->C[w][j] =
+                goma_ctx->fem.mp->d_viscosity[var_offset] * goma_ctx->fem.bf[var]->phi[j];
           }
         }
       }
 
       v = VELOCITY1;
-      vdofs = ei[pg->imtrx]->dof[v];
-      if (d_mu != NULL && pd->v[pg->imtrx][v]) {
+      vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+      if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
         for (a = 0; a < dim; a++) {
           for (j = 0; j < vdofs; j++) {
-            d_mu->v[a][j] = mp->d_viscosity[v + a] * bf[v]->phi[j];
+            d_mu->v[a][j] = goma_ctx->fem.mp->d_viscosity[v + a] * goma_ctx->fem.bf[v]->phi[j];
           }
         }
       }
 
       v = PRESSURE;
-      vdofs = ei[pg->imtrx]->dof[v];
-      if (d_mu != NULL && pd->v[pg->imtrx][v]) {
+      vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+      if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
         for (j = 0; j < vdofs; j++) {
-          d_mu->P[j] = mp->d_viscosity[v] * bf[v]->phi[j];
+          d_mu->P[j] = goma_ctx->fem.mp->d_viscosity[v] * goma_ctx->fem.bf[v]->phi[j];
         }
       }
-    } else if (mp->ViscosityModel == USER_GEN) {
+    } else if (goma_ctx->fem.mp->ViscosityModel == USER_GEN) {
       err = usr_viscosity_gen(&mu, gamma_dot, &d_mu->gd, d_mu->v, d_mu->X, d_mu->T, d_mu->P,
-                              d_mu->C, mp->u_viscosity);
-    } else if (mp->ViscosityModel == FILL) {
+                              d_mu->C, goma_ctx->fem.mp->u_viscosity);
+    } else if (goma_ctx->fem.mp->ViscosityModel == FILL) {
       /* let d_mu->F be zero here since mu is discontinuous */
-      err = fill_viscosity(mp->u_viscosity);
-      mu = mp->viscosity;
-    } else if (mp->ViscosityModel == LEVEL_SET) {
-      double mu0 = mp->u_viscosity[0];
-      double mu1 = mp->u_viscosity[1];
-      double width = mp->u_viscosity[2];
+      err = fill_viscosity(goma_ctx->fem.mp->u_viscosity);
+      mu = goma_ctx->fem.mp->viscosity;
+    } else if (goma_ctx->fem.mp->ViscosityModel == LEVEL_SET) {
+      double mu0 = goma_ctx->fem.mp->u_viscosity[0];
+      double mu1 = goma_ctx->fem.mp->u_viscosity[1];
+      double width = goma_ctx->fem.mp->u_viscosity[2];
       if (d_mu != NULL)
         err = level_set_property(mu0, mu1, width, &mu, d_mu->F);
       else
         err = level_set_property(mu0, mu1, width, &mu, NULL);
       GOMA_EH(err, "level_set_property() failed for viscosity.");
-    } else if (mp->ViscosityModel == LS_QUADRATIC) {
-      double mu0 = mp->u_viscosity[0];
-      double mu1 = mp->u_viscosity[1];
-      double width = mp->u_viscosity[2];
-      double rho0 = mp->u_density[0];
-      double rho1 = mp->u_density[1];
+    } else if (goma_ctx->fem.mp->ViscosityModel == LS_QUADRATIC) {
+      double mu0 = goma_ctx->fem.mp->u_viscosity[0];
+      double mu1 = goma_ctx->fem.mp->u_viscosity[1];
+      double width = goma_ctx->fem.mp->u_viscosity[2];
+      double rho0 = goma_ctx->fem.mp->u_density[0];
+      double rho1 = goma_ctx->fem.mp->u_density[1];
       double nu0 = mu0 / rho0;
       double nu1 = mu1 / rho1;
 
@@ -226,24 +227,24 @@ double viscosity(struct Generalized_Newtonian *gn_local,
 
       mu += mu0;
 
-      mu += (rho0 * nu1 + nu0 * rho1 - 2.0 * mu0) * lsi->H;
+      mu += (rho0 * nu1 + nu0 * rho1 - 2.0 * mu0) * goma_ctx->fem.lsi->H;
 
-      mu += (nu1 - nu0) * (rho1 - rho0) * lsi->H * lsi->H;
-    } else if (mp->ViscosityModel == CONST_PHASE_FUNCTION) {
+      mu += (nu1 - nu0) * (rho1 - rho0) * goma_ctx->fem.lsi->H * goma_ctx->fem.lsi->H;
+    } else if (goma_ctx->fem.mp->ViscosityModel == CONST_PHASE_FUNCTION) {
       // PRS: this is fubar'd    Needs fixing and documentation. This is cludged.
       double mu1, mu2, tmp_mu;
       double width;
       int a, num;
-      struct Level_Set_Data *ls_save = ls;
+      struct Level_Set_Data *ls_save = goma_ctx->fem.ls;
 
-      num = pfd->num_phase_funcs;
+      num = goma_ctx->fem.pfd->num_phase_funcs;
 
-      width = mp->u_viscosity[num];
+      width = goma_ctx->fem.mp->u_viscosity[num];
 
       for (a = 0; a < num; a++) {
-        mu1 = mp->u_viscosity[a];
-        mu2 = mp->u_viscosity[a + 2];
-        ls = pfd->ls[a];
+        mu1 = goma_ctx->fem.mp->u_viscosity[a];
+        mu2 = goma_ctx->fem.mp->u_viscosity[a + 2];
+        goma_ctx->fem.ls = goma_ctx->fem.pfd->ls[a];
         if (d_mu != NULL)
           err = level_set_property(mu1, mu2, width, &tmp_mu, d_mu->pf[a]);
         else
@@ -253,37 +254,38 @@ double viscosity(struct Generalized_Newtonian *gn_local,
       }
 
       if (fabs(mu) < DBL_SMALL)
-        mu = mp->u_viscosity[num + 1];
-      ls = ls_save;
+        mu = goma_ctx->fem.mp->u_viscosity[num + 1];
+      goma_ctx->fem.ls = ls_save;
     }
 
     /* MMH
      * Remember, this is only called for the fluid phase.
      */
-    else if (mp->ViscosityModel == SUSPENSION_PM) {
-      species = (int)mp->u_density[0];
-      p_vol_frac = fv->c[species];
-      mu = mp->viscosity * pow(1.0 - p_vol_frac, -2.5);
+    else if (goma_ctx->fem.mp->ViscosityModel == SUSPENSION_PM) {
+      species = (int)goma_ctx->fem.mp->u_density[0];
+      p_vol_frac = goma_ctx->fem.fv->c[species];
+      mu = goma_ctx->fem.mp->viscosity * pow(1.0 - p_vol_frac, -2.5);
 
       if (d_mu != NULL) {
-        for (j = 0; j < ei[pg->imtrx]->dof[MASS_FRACTION]; j++) {
-          d_mu->C[species][j] = (mu * 2.5 / (1.0 - p_vol_frac)) * bf[MASS_FRACTION]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MASS_FRACTION]; j++) {
+          d_mu->C[species][j] =
+              (mu * 2.5 / (1.0 - p_vol_frac)) * goma_ctx->fem.bf[MASS_FRACTION]->phi[j];
         }
       }
-    } else if (mp->ViscosityModel == CONSTANT) {
+    } else if (goma_ctx->fem.mp->ViscosityModel == CONSTANT) {
       /*  mu   = gn_local->mu0; corrected for auto continuation 3/01 */
       if (gn_local->ConstitutiveEquation == CONSTANT) {
         mu = gn_local->mu0;
       } else {
-        mu = mp->viscosity;
+        mu = goma_ctx->fem.mp->viscosity;
       }
-      mp_old->viscosity = mu;
+      goma_ctx->fem.mp_old->viscosity = mu;
       /*Sensitivities were already set to zero */
-    } else if (mp->ViscosityModel == TABLE) {
+    } else if (goma_ctx->fem.mp->ViscosityModel == TABLE) {
       struct Data_Table *table_local;
-      table_local = MP_Tables[mp->viscosity_tableid];
-      apply_table_mp(&mp->viscosity, table_local);
-      mu = mp->viscosity;
+      table_local = MP_Tables[goma_ctx->fem.mp->viscosity_tableid];
+      apply_table_mp(&goma_ctx->fem.mp->viscosity, table_local);
+      mu = goma_ctx->fem.mp->viscosity;
 
       if (d_mu != NULL) {
         for (i = 0; i < table_local->columns - 1; i++) {
@@ -291,23 +293,23 @@ double viscosity(struct Generalized_Newtonian *gn_local,
 
           switch (var) {
           case TEMPERATURE:
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               d_mu->T[j] = table_local->slope[i];
             }
             break;
           case MASS_FRACTION:
-            if (pd->v[pg->imtrx][MASS_FRACTION]) {
-              for (w = 0; w < pd->Num_Species_Eqn; w++) {
+            if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+              for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
                 var = MASS_FRACTION;
                 var_offset = MAX_VARIABLE_TYPES + w;
-                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   d_mu->C[w][j] = table_local->slope[i];
                 }
               }
             }
             break;
           case SHELL_TEMPERATURE:
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               d_mu->sh_t[j] = table_local->slope[i];
             }
             break;
@@ -324,26 +326,26 @@ double viscosity(struct Generalized_Newtonian *gn_local,
     if ((gn_local->ConstitutiveEquation == TURBULENT_SA) ||
         (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC)) {
 #ifdef GOMA_ENABLE_SACADO
-      if (upd->AutoDiff) {
+      if (goma_ctx->fem.upd->AutoDiff) {
         mu = ad_sa_viscosity(gn_local, d_mu);
       } else {
 #endif
         dbl scale = 1.0;
         DENSITY_DEPENDENCE_STRUCT d_rho;
         if (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) {
-          scale = density(&d_rho, tran->time_value);
+          scale = density(&d_rho, goma_ctx->fem.tran->time_value);
         }
         int negative_mu_e = FALSE;
-        if (fv_old->eddy_nu < 0) {
+        if (goma_ctx->fem.fv_old->eddy_nu < 0) {
           negative_mu_e = TRUE;
         }
 
-        double mu_newt = mp->viscosity;
+        double mu_newt = goma_ctx->fem.mp->viscosity;
         if (negative_mu_e) {
           mu = mu_newt;
         } else {
 
-          double mu_e = fv->eddy_nu;
+          double mu_e = goma_ctx->fem.fv->eddy_nu;
           double cv1 = 7.1;
           double chi = mu_e / mu_newt;
           double fv1 = pow(chi, 3) / (pow(chi, 3) + pow(cv1, 3));
@@ -355,8 +357,9 @@ double viscosity(struct Generalized_Newtonian *gn_local,
           double dfv1_dmu_e = dfv1_dchi * dchi_dmu_e;
 
           if (d_mu != NULL) {
-            for (j = 0; j < ei[pg->imtrx]->dof[EDDY_NU]; j++) {
-              d_mu->eddy_nu[j] = scale * bf[EDDY_NU]->phi[j] * (fv1 + mu_e * dfv1_dmu_e);
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EDDY_NU]; j++) {
+              d_mu->eddy_nu[j] =
+                  scale * goma_ctx->fem.bf[EDDY_NU]->phi[j] * (fv1 + mu_e * dfv1_dmu_e);
             }
           }
         }
@@ -367,16 +370,17 @@ double viscosity(struct Generalized_Newtonian *gn_local,
 
     if (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA) {
       double W[DIM][DIM];
-      if (pd->e[pg->imtrx][VELOCITY1] >= 0) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][VELOCITY1] >= 0) {
         for (int i = 0; i < DIM; i++) {
           for (int j = 0; j < DIM; j++) {
-            W[i][j] = 0.5 * (fv_old->grad_v[i][j] - fv_old->grad_v[j][i]);
+            W[i][j] =
+                0.5 * (goma_ctx->fem.fv_old->grad_v[i][j] - goma_ctx->fem.fv_old->grad_v[j][i]);
           }
         }
       } else {
         for (int i = 0; i < DIM; i++) {
           for (int j = 0; j < DIM; j++) {
-            W[i][j] = 0.5 * (fv->grad_v[i][j] - fv->grad_v[j][i]);
+            W[i][j] = 0.5 * (goma_ctx->fem.fv->grad_v[i][j] - goma_ctx->fem.fv->grad_v[j][i]);
           }
         }
       }
@@ -402,30 +406,31 @@ double viscosity(struct Generalized_Newtonian *gn_local,
 
   else if (gn_local->ConstitutiveEquation == CONSTANT) {
     mu = gn_local->mu0;
-    mp_old->viscosity = mu;
+    goma_ctx->fem.mp_old->viscosity = mu;
     /*Sensitivities were already set to zero */
 
   }
   /* this section is for all non-Newtonian models */
   else if (gn_local->ConstitutiveEquation == SUSPENSION) {
-    if (pd->v[pg->imtrx][SHELL_PARTC]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_PARTC]) {
       err = suspension_viscosity(gn_local->sus_species_no, gn_local->mu0, gn_local->maxpack,
-                                 gn_local->nexp, fv->sh_pc);
+                                 gn_local->nexp, goma_ctx->fem.fv->sh_pc);
       GOMA_EH(err, "suspension_viscosity");
-      mu = mp->viscosity;
+      mu = goma_ctx->fem.mp->viscosity;
     } else {
       err = suspension_viscosity(gn_local->sus_species_no, gn_local->mu0, gn_local->maxpack,
-                                 gn_local->nexp, fv->c[gn_local->sus_species_no]);
+                                 gn_local->nexp, goma_ctx->fem.fv->c[gn_local->sus_species_no]);
 
       GOMA_EH(err, "suspension_viscosity");
-      mu = mp->viscosity;
+      mu = goma_ctx->fem.mp->viscosity;
     }
 
-    if (d_mu != NULL && pd->v[pg->imtrx][MASS_FRACTION]) {
+    if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
       var = MASS_FRACTION;
       var_offset = MAX_VARIABLE_TYPES + gn_local->sus_species_no;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->C[gn_local->sus_species_no][j] = mp->d_viscosity[var_offset] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->C[gn_local->sus_species_no][j] =
+            goma_ctx->fem.mp->d_viscosity[var_offset] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
   } else if (gn_local->ConstitutiveEquation == CURE) {
@@ -433,14 +438,14 @@ double viscosity(struct Generalized_Newtonian *gn_local,
                          gn_local->cureaexp, gn_local->curebexp);
     GOMA_EH(err, "cure_viscosity");
 
-    mu = mp->viscosity;
+    mu = goma_ctx->fem.mp->viscosity;
 
     var = MASS_FRACTION;
-    if (d_mu != NULL && pd->v[pg->imtrx][var]) {
+    if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       w = gn_local->cure_species_no;
       var_offset = MAX_VARIABLE_TYPES + w;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->C[w][j] = mp->d_viscosity[var_offset] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->C[w][j] = goma_ctx->fem.mp->d_viscosity[var_offset] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
   } else if (gn_local->ConstitutiveEquation == THERMAL) {
@@ -469,22 +474,22 @@ double viscosity(struct Generalized_Newtonian *gn_local,
     err = thermal_viscosity(mu0, atexp);
     GOMA_EH(err, "thermal_viscosity");
 
-    mu = mp->viscosity;
+    mu = goma_ctx->fem.mp->viscosity;
 
     var = TEMPERATURE;
-    if (d_mu != NULL && pd->v[pg->imtrx][TEMPERATURE])
+    if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE])
 
     {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->T[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->T[j] = goma_ctx->fem.mp->d_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
     var = SHELL_TEMPERATURE;
-    if (d_mu != NULL && pd->v[pg->imtrx][var])
+    if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var])
 
     {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->sh_t[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->sh_t[j] = goma_ctx->fem.mp->d_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
   } else if (gn_local->ConstitutiveEquation == BOND) {
@@ -494,23 +499,23 @@ double viscosity(struct Generalized_Newtonian *gn_local,
         bond_viscosity_sh(gn_local->sus_species_no, gn_local->mu0, gn_local->muinf, gn_local->aexp);
     GOMA_EH(err, "bond_viscosity_sh");
 
-    mu = mp->viscosity;
+    mu = goma_ctx->fem.mp->viscosity;
 
     var = MASS_FRACTION;
-    if (d_mu != NULL && pd->v[pg->imtrx][var]) {
+    if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       w = gn_local->sus_species_no;
       var_offset = MAX_VARIABLE_TYPES + w;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->C[w][j] = mp->d_viscosity[var_offset] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->C[w][j] = goma_ctx->fem.mp->d_viscosity[var_offset] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
 
     var = BOND_EVOLUTION;
-    if (d_mu != NULL && pd->v[pg->imtrx][var])
+    if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var])
 
     {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->nn[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->nn[j] = goma_ctx->fem.mp->d_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
   } else if (gn_local->ConstitutiveEquation == FLUIDITY_THIXOTROPIC_VISCOSITY) {
@@ -520,21 +525,21 @@ double viscosity(struct Generalized_Newtonian *gn_local,
                           gn_local->cureaexp, gn_local->curebexp, gn_local->atexp);
     GOMA_EH(err, "epoxy_viscosity");
 
-    mu = mp->viscosity;
+    mu = goma_ctx->fem.mp->viscosity;
 
     var = TEMPERATURE;
-    if (d_mu != NULL && pd->v[pg->imtrx][TEMPERATURE]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->T[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+    if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->T[j] = goma_ctx->fem.mp->d_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
 
     var = MASS_FRACTION;
-    if (d_mu != NULL && pd->v[pg->imtrx][var]) {
+    if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       w = gn_local->cure_species_no;
       var_offset = MAX_VARIABLE_TYPES + w;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->C[w][j] = mp->d_viscosity[var_offset] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->C[w][j] = goma_ctx->fem.mp->d_viscosity[var_offset] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
   } else if (gn_local->ConstitutiveEquation == FOAM_PMDI_10) {
@@ -542,21 +547,21 @@ double viscosity(struct Generalized_Newtonian *gn_local,
                                 gn_local->cureaexp, gn_local->curebexp, gn_local->atexp);
     GOMA_EH(err, "foam_pmdi10_viscosity");
 
-    mu = mp->viscosity;
+    mu = goma_ctx->fem.mp->viscosity;
 
     var = TEMPERATURE;
-    if (d_mu != NULL && pd->v[pg->imtrx][TEMPERATURE]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->T[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+    if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->T[j] = goma_ctx->fem.mp->d_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
 
     var = MASS_FRACTION;
-    if (d_mu != NULL && pd->v[pg->imtrx][var]) {
+    if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       w = gn_local->cure_species_no;
       var_offset = MAX_VARIABLE_TYPES + w;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->C[w][j] = mp->d_viscosity[var_offset] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->C[w][j] = goma_ctx->fem.mp->d_viscosity[var_offset] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
   } else if (gn_local->ConstitutiveEquation == SYLGARD) {
@@ -564,21 +569,21 @@ double viscosity(struct Generalized_Newtonian *gn_local,
                             gn_local->cureaexp, gn_local->atexp);
     GOMA_EH(err, "sylgard_viscosity");
 
-    mu = mp->viscosity;
+    mu = goma_ctx->fem.mp->viscosity;
 
     var = TEMPERATURE;
-    if (d_mu != NULL && pd->v[pg->imtrx][TEMPERATURE]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->T[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+    if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->T[j] = goma_ctx->fem.mp->d_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
 
     var = MASS_FRACTION;
-    if (d_mu != NULL && pd->v[pg->imtrx][var]) {
+    if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       w = gn_local->cure_species_no;
       var_offset = MAX_VARIABLE_TYPES + w;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->C[w][j] = mp->d_viscosity[var_offset] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->C[w][j] = goma_ctx->fem.mp->d_viscosity[var_offset] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
   } else if (gn_local->ConstitutiveEquation == FILLED_EPOXY) {
@@ -587,41 +592,45 @@ double viscosity(struct Generalized_Newtonian *gn_local,
                                  gn_local->cureaexp, gn_local->curebexp, gn_local->tgel0,
                                  gn_local->atexp);
 
-    mu = mp->viscosity;
+    mu = goma_ctx->fem.mp->viscosity;
     if (d_mu != NULL) {
-      if (pd->v[pg->imtrx][TEMPERATURE]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
-          d_mu->T[j] = mp->d_viscosity[TEMPERATURE] * bf[TEMPERATURE]->phi[j];
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TEMPERATURE]; j++) {
+          d_mu->T[j] =
+              goma_ctx->fem.mp->d_viscosity[TEMPERATURE] * goma_ctx->fem.bf[TEMPERATURE]->phi[j];
         }
       }
 
       var = MASS_FRACTION;
       var_offset = MAX_VARIABLE_TYPES;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         w = gn_local->cure_species_no;
         w1 = gn_local->sus_species_no;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          d_mu->C[w][j] = mp->d_viscosity[var_offset + w] * bf[var]->phi[j];
-          d_mu->C[w1][j] = mp->d_viscosity[var_offset + w1] * bf[var]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          d_mu->C[w][j] =
+              goma_ctx->fem.mp->d_viscosity[var_offset + w] * goma_ctx->fem.bf[var]->phi[j];
+          d_mu->C[w1][j] =
+              goma_ctx->fem.mp->d_viscosity[var_offset + w1] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
   } else if (gn_local->ConstitutiveEquation == FOAM_EPOXY) {
     err = foam_epoxy_viscosity(gn_local->sus_species_no, gn_local->cure_species_no, gn_local->mu0,
                                gn_local->gelpoint, gn_local->atexp);
-    mu = mp->viscosity;
+    mu = goma_ctx->fem.mp->viscosity;
     if (d_mu != NULL) {
-      if (pd->v[pg->imtrx][TEMPERATURE]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
-          d_mu->T[j] = mp->d_viscosity[TEMPERATURE] * bf[TEMPERATURE]->phi[j];
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TEMPERATURE]; j++) {
+          d_mu->T[j] =
+              goma_ctx->fem.mp->d_viscosity[TEMPERATURE] * goma_ctx->fem.bf[TEMPERATURE]->phi[j];
         }
       }
-      if (pd->v[pg->imtrx][MASS_FRACTION]) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          dbl tmp = mp->d_viscosity[MAX_VARIABLE_TYPES + w];
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          dbl tmp = goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + w];
           if (DOUBLE_NONZERO(tmp)) {
-            for (j = 0; j < ei[pg->imtrx]->dof[MASS_FRACTION]; j++) {
-              d_mu->C[w][j] = tmp * bf[MASS_FRACTION]->phi[j];
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MASS_FRACTION]; j++) {
+              d_mu->C[w][j] = tmp * goma_ctx->fem.bf[MASS_FRACTION]->phi[j];
             }
           }
         }
@@ -656,10 +665,10 @@ double viscosity(struct Generalized_Newtonian *gn_local,
   } else if (gn_local->ConstitutiveEquation == CARREAU_WLF_CONC_PL ||
              gn_local->ConstitutiveEquation == CARREAU_WLF_CONC_EXP) {
     mu = carreau_wlf_conc_viscosity(gn_local, gamma_dot, d_mu, gn_local->ConstitutiveEquation);
-  } else if (ls != NULL && gn_local->ConstitutiveEquation == VE_LEVEL_SET) {
+  } else if (goma_ctx->fem.ls != NULL && gn_local->ConstitutiveEquation == VE_LEVEL_SET) {
     double pos_mup = gn_local->pos_ls_mup;
     double neg_mup = gn_local->mu0;
-    double width = ls->Length_Scale;
+    double width = goma_ctx->fem.ls->Length_Scale;
     if (d_mu != NULL)
       err = level_set_property(neg_mup, pos_mup, width, &mu, d_mu->F);
     else
@@ -669,77 +678,83 @@ double viscosity(struct Generalized_Newtonian *gn_local,
     GOMA_EH(GOMA_ERROR, "Unrecognized viscosity model for non-Newtonian fluid");
   }
 
-  if (ls != NULL && gn_local->ConstitutiveEquation != VE_LEVEL_SET &&
-      mp->ViscosityModel != LEVEL_SET && mp->ViscosityModel != LS_QUADRATIC && mp->mp2nd != NULL &&
-      (mp->mp2nd->ViscosityModel == CONSTANT || mp->mp2nd->ViscosityModel == RATIO ||
-       mp->mp2nd->ViscosityModel == TIME_RAMP)) {
+  if (goma_ctx->fem.ls != NULL && gn_local->ConstitutiveEquation != VE_LEVEL_SET &&
+      goma_ctx->fem.mp->ViscosityModel != LEVEL_SET &&
+      goma_ctx->fem.mp->ViscosityModel != LS_QUADRATIC && goma_ctx->fem.mp->mp2nd != NULL &&
+      (goma_ctx->fem.mp->mp2nd->ViscosityModel == CONSTANT ||
+       goma_ctx->fem.mp->mp2nd->ViscosityModel == RATIO ||
+       goma_ctx->fem.mp->mp2nd->ViscosityModel == TIME_RAMP)) {
     /* kludge for solidification tracking with phase function 0 */
-    if (pfd != NULL && pd->e[pg->imtrx][R_EXT_VELOCITY]) {
-      ls_old = ls;
-      ls = pfd->ls[0];
-      err = ls_modulate_viscosity(
-          &mu, mp->mp2nd->viscosity_phase[0], ls->Length_Scale, (double)mp->mp2nd->viscositymask[0],
-          (double)mp->mp2nd->viscositymask[1], d_mu, mp->mp2nd->ViscosityModel,
-          mp->mp2nd->viscosity_lsi_interp_method);
-      ls = ls_old;
+    if (goma_ctx->fem.pfd != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EXT_VELOCITY]) {
+      ls_old = goma_ctx->fem.ls;
+      goma_ctx->fem.ls = goma_ctx->fem.pfd->ls[0];
+      err = ls_modulate_viscosity(&mu, goma_ctx->fem.mp->mp2nd->viscosity_phase[0],
+                                  goma_ctx->fem.ls->Length_Scale,
+                                  (double)goma_ctx->fem.mp->mp2nd->viscositymask[0],
+                                  (double)goma_ctx->fem.mp->mp2nd->viscositymask[1], d_mu,
+                                  goma_ctx->fem.mp->mp2nd->ViscosityModel,
+                                  goma_ctx->fem.mp->mp2nd->viscosity_lsi_interp_method);
+      goma_ctx->fem.ls = ls_old;
     }
-    err = ls_modulate_viscosity(&mu, mp->mp2nd->viscosity, ls->Length_Scale,
-                                (double)mp->mp2nd->viscositymask[0],
-                                (double)mp->mp2nd->viscositymask[1], d_mu,
-                                mp->mp2nd->ViscosityModel, mp->mp2nd->viscosity_lsi_interp_method);
+    err = ls_modulate_viscosity(&mu, goma_ctx->fem.mp->mp2nd->viscosity,
+                                goma_ctx->fem.ls->Length_Scale,
+                                (double)goma_ctx->fem.mp->mp2nd->viscositymask[0],
+                                (double)goma_ctx->fem.mp->mp2nd->viscositymask[1], d_mu,
+                                goma_ctx->fem.mp->mp2nd->ViscosityModel,
+                                goma_ctx->fem.mp->mp2nd->viscosity_lsi_interp_method);
     GOMA_EH(err, "ls_modulate_viscosity");
   }
   if (DOUBLE_NONZERO(gn_local->thixo_factor)) {
     dbl thixotropic = 1;
     dbl thixo_time = 0;
-    if (fv->restime > 0.) {
-      thixotropic += gn_local->thixo_factor * fv->restime;
+    if (goma_ctx->fem.fv->restime > 0.) {
+      thixotropic += gn_local->thixo_factor * goma_ctx->fem.fv->restime;
     }
-    if (tran->time_value > 0.) {
-      thixotropic += thixo_time * tran->time_value;
+    if (goma_ctx->fem.tran->time_value > 0.) {
+      thixotropic += thixo_time * goma_ctx->fem.tran->time_value;
     }
     if (d_mu != NULL) {
       d_mu->gd *= thixotropic;
-      if (pd->v[pg->imtrx][var = BOND_EVOLUTION]) {
-        for (i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var = BOND_EVOLUTION]) {
+        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
           d_mu->nn[i] *= thixotropic;
         }
       }
       var = RESTIME;
-      if (pd->v[pg->imtrx][var] && fv->restime > 0.) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          d_mu->degrade[j] = mu * gn_local->thixo_factor * bf[var]->phi[j];
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] && goma_ctx->fem.fv->restime > 0.) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          d_mu->degrade[j] = mu * gn_local->thixo_factor * goma_ctx->fem.bf[var]->phi[j];
         }
       }
       var = TEMPERATURE;
-      if (pd->v[pg->imtrx][var]) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_mu->T[j] *= thixotropic;
         }
       }
-      if (pd->e[pg->imtrx][R_MESH1]) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
         for (i = 0; i < VIM; i++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[R_MESH1]; j++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1]; j++) {
             d_mu->X[i][j] *= thixotropic;
           }
         }
       }
-      if (pd->e[pg->imtrx][R_MOMENTUM1]) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
         for (a = 0; a < VIM; a++) {
-          for (i = 0; i < ei[pg->imtrx]->dof[VELOCITY1]; i++) {
+          for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; i++) {
             d_mu->v[a][i] *= thixotropic;
           }
         }
       }
-      if (pd->v[pg->imtrx][var = MASS_FRACTION]) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          for (i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var = MASS_FRACTION]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
             d_mu->C[w][i] *= thixotropic;
           }
         }
       }
-      if (pd->v[pg->imtrx][var = PRESSURE]) {
-        for (i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var = PRESSURE]) {
+        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
           d_mu->P[i] *= thixotropic;
         }
       }
@@ -756,13 +771,13 @@ double arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
   dbl eta0 = gn_local->mu0;
 
   dbl T;
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
-  dbl T_alpha = mp->reference[TEMPERATURE];
+  dbl T_alpha = goma_ctx->fem.mp->reference[TEMPERATURE];
 
   dbl atexp = gn_local->atexp;
 
@@ -771,8 +786,8 @@ double arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
   dbl d_mu_dT = mu * (-atexp / (T * T));
 
   if (d_mu != NULL) {
-    for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
-      d_mu->T[j] = d_mu_dT * bf[TEMPERATURE]->phi[j];
+    for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TEMPERATURE]; j++) {
+      d_mu->T[j] = d_mu_dT * goma_ctx->fem.bf[TEMPERATURE]->phi[j];
     }
   }
 
@@ -791,13 +806,13 @@ double arrhenius_advanced_viscosity(struct Generalized_Newtonian *gn_local,
   dbl eta0 = gn_local->mu0;
 
   dbl T;
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
-  dbl T_alpha = mp->reference[TEMPERATURE];
+  dbl T_alpha = goma_ctx->fem.mp->reference[TEMPERATURE];
   dbl T_shift = gn_local->T_shift;
 
   dbl Tpow = pow(T - T_shift, -d);
@@ -809,8 +824,8 @@ double arrhenius_advanced_viscosity(struct Generalized_Newtonian *gn_local,
   dbl d_mu_dT = mu * (-a - c * d * Tpown1);
 
   if (d_mu != NULL) {
-    for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
-      d_mu->T[j] = d_mu_dT * bf[TEMPERATURE]->phi[j];
+    for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TEMPERATURE]; j++) {
+      d_mu->T[j] = d_mu_dT * goma_ctx->fem.bf[TEMPERATURE]->phi[j];
     }
   }
 
@@ -839,10 +854,10 @@ double power_law_viscosity(struct Generalized_Newtonian *gn_local,
   dbl offset;
   dbl mu = 0.;
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
@@ -865,7 +880,7 @@ double power_law_viscosity(struct Generalized_Newtonian *gn_local,
     d_mu->gd = mu0 * (nexp - 1.0) * val;
   }
 
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -883,7 +898,7 @@ double power_law_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dv
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -919,10 +934,10 @@ double herschel_bulkley_viscosity(struct Generalized_Newtonian *gn_local,
   dbl nexp;
   dbl tau_y;
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
@@ -1016,7 +1031,7 @@ double herschel_bulkley_viscosity(struct Generalized_Newtonian *gn_local,
    *  otherwise converges not
    */
 
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -1037,7 +1052,7 @@ double herschel_bulkley_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dv
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -1076,10 +1091,10 @@ double carreau_viscosity(struct Generalized_Newtonian *gn_local,
   dbl aexp;
   dbl lambda;
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
@@ -1161,7 +1176,7 @@ double carreau_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dmesh
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -1177,7 +1192,7 @@ double carreau_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dv
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -1215,10 +1230,10 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   dbl aexp;
   dbl lambda;
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
@@ -1277,13 +1292,13 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   }
 
   dbl T;
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
-  dbl T_alpha = mp->reference[TEMPERATURE];
+  dbl T_alpha = goma_ctx->fem.mp->reference[TEMPERATURE];
   dbl T_shift = gn_local->T_shift;
   dbl atexp = gn_local->atexp;
   if (gn_local->atexpModel == LEVEL_SET) {
@@ -1343,7 +1358,7 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dmesh
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -1359,7 +1374,7 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dv
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -1370,10 +1385,10 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
       }
     }
   }
-  if (d_mu != NULL && pd->e[pg->imtrx][TEMPERATURE]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
     for (i = 0; i < vdofs; i++) {
       if (goma_ctx->solver.include_visc_sens) {
-        d_mu->T[i] = mu / hscale * d_hscale_dT * bf[TEMPERATURE]->phi[i];
+        d_mu->T[i] = mu / hscale * d_hscale_dT * goma_ctx->fem.bf[TEMPERATURE]->phi[i];
       } else {
         d_mu->T[i] = 0.0;
       }
@@ -1431,36 +1446,36 @@ double bingham_viscosity(struct Generalized_Newtonian *gn_local,
   if (gn_local->tau_yModel == CONSTANT) {
     tau_y = gn_local->tau_y;
   } else if (gn_local->tau_yModel == USER) {
-    usr_yield_stress(gn_local->u_tau_y, tran->time_value);
+    usr_yield_stress(gn_local->u_tau_y, goma_ctx->fem.tran->time_value);
     tau_y = gn_local->tau_y;
   } else {
     GOMA_EH(GOMA_ERROR, "Invalid Yield Stress Model");
   }
   fexp = gn_local->fexp;
 
-  if (pd->gv[TEMPERATURE]) {
-    temp = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    temp = goma_ctx->fem.fv->T;
   } else {
-    temp = upd->Process_Temperature;
+    temp = goma_ctx->fem.upd->Process_Temperature;
   }
 
 #if MELTING_BINGHAM
-  tmelt = mp->melting_point_liquidus;
+  tmelt = goma_ctx->fem.mp->melting_point_liquidus;
 #endif
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   var = TEMPERATURE;
-  if (DOUBLE_NONZERO(temp) && DOUBLE_NONZERO(mp->reference[TEMPERATURE])) {
+  if (DOUBLE_NONZERO(temp) && DOUBLE_NONZERO(goma_ctx->fem.mp->reference[TEMPERATURE])) {
 #if MELTING_BINGHAM
     /* melting version */
     if (temp <= tmelt) {
-      at_shift = exp(-atexp * (mp->reference[TEMPERATURE] - temp) / (tmelt - temp) /
-                     (mp->reference[TEMPERATURE] - tmelt));
+      at_shift = exp(-atexp * (goma_ctx->fem.mp->reference[TEMPERATURE] - temp) / (tmelt - temp) /
+                     (goma_ctx->fem.mp->reference[TEMPERATURE] - tmelt));
       if (!isfinite(at_shift)) {
         at_shift = DBL_MAX;
       }
@@ -1472,7 +1487,7 @@ double bingham_viscosity(struct Generalized_Newtonian *gn_local,
     }
 #else
     /* normal, non-melting version */
-    at_shift = exp(atexp * (1. / temp - 1. / mp->reference[TEMPERATURE]));
+    at_shift = exp(atexp * (1. / temp - 1. / goma_ctx->fem.mp->reference[TEMPERATURE]));
     if (!isfinite(at_shift)) {
       at_shift = DBL_MAX;
     }
@@ -1533,8 +1548,8 @@ double bingham_viscosity(struct Generalized_Newtonian *gn_local,
    */
 
   var = TEMPERATURE;
-  if (d_mu != NULL && pd->e[pg->imtrx][var]) {
-    if (DOUBLE_NONZERO(temp) && DOUBLE_NONZERO(mp->reference[TEMPERATURE]) &&
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+    if (DOUBLE_NONZERO(temp) && DOUBLE_NONZERO(goma_ctx->fem.mp->reference[TEMPERATURE]) &&
         DOUBLE_NONZERO(gammadot)) {
 #if MELTING_BINGHAM
       /* melting version */
@@ -1557,15 +1572,15 @@ double bingham_viscosity(struct Generalized_Newtonian *gn_local,
       dmudT = 0.;
     }
 
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      d_mu->T[j] = dmudT * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      d_mu->T[j] = dmudT * goma_ctx->fem.bf[var]->phi[j];
     }
   }
 
   /*
    * d( mu )/dmesh
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -1581,7 +1596,7 @@ double bingham_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dv
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -1640,31 +1655,31 @@ double bingham_wlf_viscosity(struct Generalized_Newtonian *gn_local,
   lambda = gn_local->lam;
   wlfc2 = gn_local->wlfc2;
 
-  if (pd->gv[TEMPERATURE]) {
-    temp = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    temp = goma_ctx->fem.fv->T;
   } else {
-    temp = upd->Process_Temperature;
+    temp = goma_ctx->fem.upd->Process_Temperature;
   }
 
   if (gn_local->tau_yModel == CONSTANT) {
     tau_y = gn_local->tau_y;
   } else if (gn_local->tau_yModel == USER) {
-    usr_yield_stress(gn_local->u_tau_y, tran->time_value);
+    usr_yield_stress(gn_local->u_tau_y, goma_ctx->fem.tran->time_value);
     tau_y = gn_local->tau_y;
   } else {
     GOMA_EH(GOMA_ERROR, "Invalid Yield Stress Model");
   }
   fexp = gn_local->fexp;
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   var = TEMPERATURE;
   at_shift = 1.;
-  Tref = mp->reference[TEMPERATURE];
+  Tref = goma_ctx->fem.mp->reference[TEMPERATURE];
   wlf_denom = wlfc2 + temp - Tref;
   if (DOUBLE_NONZERO(wlf_denom)) {
     at_shift = exp(atexp * (Tref - temp) / wlf_denom);
@@ -1708,8 +1723,8 @@ double bingham_wlf_viscosity(struct Generalized_Newtonian *gn_local,
    */
 
   var = TEMPERATURE;
-  if (d_mu != NULL && pd->e[pg->imtrx][var]) {
-    if (DOUBLE_NONZERO(temp) && DOUBLE_NONZERO(mp->reference[TEMPERATURE]) &&
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+    if (DOUBLE_NONZERO(temp) && DOUBLE_NONZERO(goma_ctx->fem.mp->reference[TEMPERATURE]) &&
         DOUBLE_NONZERO(gammadot)) {
       dmudT = mu / at_shift + at_shift * d_yield_d_at * visc_cy +
               at_shift * (mu0 - muinf + yield) * d_visc_cy * d_shear_d_at;
@@ -1721,15 +1736,15 @@ double bingham_wlf_viscosity(struct Generalized_Newtonian *gn_local,
       dmudT = 0.;
     }
 
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      d_mu->T[j] = dmudT * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      d_mu->T[j] = dmudT * goma_ctx->fem.bf[var]->phi[j];
     }
   }
 
   /*
    * d( mu )/dmesh
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -1745,7 +1760,7 @@ double bingham_wlf_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dv
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -1804,10 +1819,10 @@ double carreau_wlf_viscosity(struct Generalized_Newtonian *gn_local,
   wlfc2 = gn_local->wlfc2;
   lambda = gn_local->lam;
 
-  if (pd->gv[TEMPERATURE]) {
-    temp = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    temp = goma_ctx->fem.fv->T;
   } else {
-    temp = upd->Process_Temperature;
+    temp = goma_ctx->fem.upd->Process_Temperature;
   }
 
   if (gn_local->mu0Model == LEVEL_SET) {
@@ -1877,16 +1892,16 @@ double carreau_wlf_viscosity(struct Generalized_Newtonian *gn_local,
     }
   }
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   at_shift = 1.;
-  wlf_denom = wlfc2 + temp - mp->reference[TEMPERATURE];
+  wlf_denom = wlfc2 + temp - goma_ctx->fem.mp->reference[TEMPERATURE];
   if (DOUBLE_NONZERO(wlf_denom)) {
-    at_shift = exp(atexp * (mp->reference[TEMPERATURE] - temp) / wlf_denom);
+    at_shift = exp(atexp * (goma_ctx->fem.mp->reference[TEMPERATURE] - temp) / wlf_denom);
     if (!isfinite(at_shift)) {
       at_shift = DBL_MAX;
     }
@@ -1916,7 +1931,7 @@ double carreau_wlf_viscosity(struct Generalized_Newtonian *gn_local,
    */
 
   var = TEMPERATURE;
-  if (d_mu != NULL && pd->e[pg->imtrx][var]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
     if (DOUBLE_NONZERO(wlf_denom)) {
       dmudT = mu + at_shift * at_shift * (mu0 - muinf) * d_visc_cy * d_shear_d_at;
       dmudT *= -atexp * wlfc2 / (wlf_denom * wlf_denom);
@@ -1927,15 +1942,15 @@ double carreau_wlf_viscosity(struct Generalized_Newtonian *gn_local,
       dmudT = 0.;
     }
 
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      d_mu->T[j] = dmudT * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      d_mu->T[j] = dmudT * goma_ctx->fem.bf[var]->phi[j];
     }
   }
 
   /*
    * d( mu )/dmesh
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -1951,7 +1966,7 @@ double carreau_wlf_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dv
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -1989,10 +2004,10 @@ int fill_viscosity(dbl *param) /* ptr to the user-defined parameter list    */
   dbl F;  /* Convenient local variables */
 
   /***********Load up convenient local variables*************/
-  F = fv->F;
+  F = goma_ctx->fem.fv->F;
 
   /**********************************************************/
-  if (ls != NULL) {
+  if (goma_ctx->fem.ls != NULL) {
     GOMA_EH(GOMA_ERROR, "Use LEVEL_SET instead of FILL viscosity model.");
     return (0);
   }
@@ -2004,7 +2019,7 @@ int fill_viscosity(dbl *param) /* ptr to the user-defined parameter list    */
     mu = param[0];
   }
 
-  mp->viscosity = mu;
+  goma_ctx->fem.mp->viscosity = mu;
   return (0);
 }
 
@@ -2044,7 +2059,7 @@ int suspension_viscosity(int species, /* species for solid volume fraction track
   dbl mu; /* viscosity */
 
   /* Concentration at previous time step */
-  dbl C_old = fv_old->sh_pc;
+  dbl C_old = goma_ctx->fem.fv_old->sh_pc;
 
   /* Viscosity at previous time step */
   dbl mu_old;
@@ -2053,23 +2068,23 @@ int suspension_viscosity(int species, /* species for solid volume fraction track
 
   /* initialize everything */
 
-  mp->d_viscosity[TEMPERATURE] = 0.0;
-  mp->d2_viscosity[TEMPERATURE] = 0.0;
-  mp->d_viscosity[PRESSURE] = 0.0;
-  mp->d2_viscosity[PRESSURE] = 0.0;
-  mp->d_viscosity[SHEAR_RATE] = 0.0;
-  mp->d2_viscosity[SHEAR_RATE] = 0.0;
-  mp->d_viscosity[SHELL_PARTC] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[TEMPERATURE] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[TEMPERATURE] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[PRESSURE] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[PRESSURE] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[SHEAR_RATE] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[SHEAR_RATE] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[SHELL_PARTC] = 0.0;
 
   for (a = 0; a < DIM; a++) {
-    mp->d_viscosity[VELOCITY1 + a] = 0.0;
-    mp->d2_viscosity[VELOCITY1 + a] = 0.0;
-    mp->d_viscosity[MESH_DISPLACEMENT1 + a] = 0.0;
-    mp->d2_viscosity[MESH_DISPLACEMENT1 + a] = 0.0;
+    goma_ctx->fem.mp->d_viscosity[VELOCITY1 + a] = 0.0;
+    goma_ctx->fem.mp->d2_viscosity[VELOCITY1 + a] = 0.0;
+    goma_ctx->fem.mp->d_viscosity[MESH_DISPLACEMENT1 + a] = 0.0;
+    goma_ctx->fem.mp->d2_viscosity[MESH_DISPLACEMENT1 + a] = 0.0;
   }
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-    mp->d_viscosity[MAX_VARIABLE_TYPES + w] = 0.0;
-    mp->d2_viscosity[MAX_VARIABLE_TYPES + w] = 0.0;
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + w] = 0.0;
+    goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + w] = 0.0;
   }
   /* Implement a cutoff concentration that caps the viscosity at a lower
      value. This should make the viscosity more stable and allow the
@@ -2083,41 +2098,41 @@ int suspension_viscosity(int species, /* species for solid volume fraction track
     mu = mu0 * pow(1.0 - C / maxpack, nexp);
     mu_old = mu0 * pow(1.0 - C_old / maxpack, nexp);
 
-    mp->viscosity = mu;
-    mp_old->viscosity = mu_old;
+    goma_ctx->fem.mp->viscosity = mu;
+    goma_ctx->fem.mp_old->viscosity = mu_old;
 
-    if (pd->v[pg->imtrx][SHELL_PARTC]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_PARTC]) {
 
       /* dmu/dc */
-      mp->d_viscosity[SHELL_PARTC] = -mu * nexp / (maxpack - C);
+      goma_ctx->fem.mp->d_viscosity[SHELL_PARTC] = -mu * nexp / (maxpack - C);
 
       /* d2mu/dc2 .... */
-      mp->d2_viscosity[SHELL_PARTC] =
+      goma_ctx->fem.mp->d2_viscosity[SHELL_PARTC] =
           mu0 * nexp * (nexp - 1.0) * pow(1.0 - C / maxpack, nexp - 2.) / maxpack / maxpack;
     }
 
     else {
 
       /* dmu/dc */
-      mp->d_viscosity[MAX_VARIABLE_TYPES + species] = -mu * nexp / (maxpack - C);
+      goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species] = -mu * nexp / (maxpack - C);
 
       /* d2mu/dc2 .... */
-      mp->d2_viscosity[MAX_VARIABLE_TYPES + species] =
+      goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species] =
           mu0 * nexp * (nexp - 1.0) * pow(1.0 - C / maxpack, nexp - 2.) / maxpack / maxpack;
     }
 
   } else if (C <= 0.) {
     mu = mu0;
     mu_old = mu;
-    mp->viscosity = mu;
-    mp_old->viscosity = mu_old;
+    goma_ctx->fem.mp->viscosity = mu;
+    goma_ctx->fem.mp_old->viscosity = mu_old;
   }
 
   else if (C >= 0.98 * maxpack) {
     mu = mu0 * pow(0.02, nexp);
     mu_old = mu;
-    mp->viscosity = mu;
-    mp_old->viscosity = mu_old;
+    goma_ctx->fem.mp->viscosity = mu;
+    goma_ctx->fem.mp_old->viscosity = mu_old;
 
     /* setting the derivatives to zero for this range seems to improve convergence. Odd.*/
   }
@@ -2168,32 +2183,32 @@ double carreau_suspension_viscosity(struct Generalized_Newtonian *gn_local,
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
   if (fabs(gammadot) <= 1.0e-7) {
     gammadot = .0001;
   }
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   /* initialize everything */
 
-  mp->d_viscosity[TEMPERATURE] = 0.0;
-  mp->d2_viscosity[TEMPERATURE] = 0.0;
-  mp->d_viscosity[PRESSURE] = 0.0;
-  mp->d2_viscosity[PRESSURE] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[TEMPERATURE] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[TEMPERATURE] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[PRESSURE] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[PRESSURE] = 0.0;
 
   for (a = 0; a < DIM; a++) {
-    mp->d_viscosity[VELOCITY1 + a] = 0.0;
-    mp->d2_viscosity[VELOCITY1 + a] = 0.0;
-    mp->d_viscosity[MESH_DISPLACEMENT1 + a] = 0.0;
-    mp->d2_viscosity[MESH_DISPLACEMENT1 + a] = 0.0;
+    goma_ctx->fem.mp->d_viscosity[VELOCITY1 + a] = 0.0;
+    goma_ctx->fem.mp->d2_viscosity[VELOCITY1 + a] = 0.0;
+    goma_ctx->fem.mp->d_viscosity[MESH_DISPLACEMENT1 + a] = 0.0;
+    goma_ctx->fem.mp->d2_viscosity[MESH_DISPLACEMENT1 + a] = 0.0;
   }
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-    mp->d_viscosity[MAX_VARIABLE_TYPES + w] = 0.0;
-    mp->d2_viscosity[MAX_VARIABLE_TYPES + w] = 0.0;
-    C[w] = fv->c[w];
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + w] = 0.0;
+    goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + w] = 0.0;
+    C[w] = goma_ctx->fem.fv->c[w];
   }
 
   nexp = gn_local->nexp;
@@ -2216,12 +2231,12 @@ double carreau_suspension_viscosity(struct Generalized_Newtonian *gn_local,
   if (nexp_species > 0.0 || (C[species] > 0.0 && C[species] < (maxpack - .01))) {
     mu_sus = pow(1.0 - C[species] / maxpack, nexp_species);
     /* dmu/dc */
-    mp->d_viscosity[MAX_VARIABLE_TYPES + species] =
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species] =
         -mu_car * mu_sus * nexp_species / (maxpack - C[species]);
 
     /* d2mu/dc2 .... */
 
-    mp->d2_viscosity[MAX_VARIABLE_TYPES + species] =
+    goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species] =
         mu_car * nexp_species * (nexp_species - 1.0) *
         pow(1.0 - C[species] / maxpack, nexp_species - 2.) / maxpack / maxpack;
   } else if (C[species] <= 0.) {
@@ -2233,7 +2248,7 @@ double carreau_suspension_viscosity(struct Generalized_Newtonian *gn_local,
   }
 
   mu = mu_car * mu_sus;
-  mp->viscosity = mu;
+  goma_ctx->fem.mp->viscosity = mu;
 
   if (DOUBLE_NONZERO(gammadot)) {
     val = pow(lambda * gammadot, aexp - 1.);
@@ -2247,18 +2262,18 @@ double carreau_suspension_viscosity(struct Generalized_Newtonian *gn_local,
     d_mu->gd = (mu0 - muinf) * (nexp - 1.) * lambda * val * val1 * mu_sus;
 
     if (C[species] < maxpack) {
-      mp->d2_viscosity[MAX_VARIABLE_TYPES + MAX_CONC] =
+      goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + MAX_CONC] =
           -d_mu->gd * nexp_species / (maxpack - C[species]);
     }
 
-    mp->d2_viscosity[SHEAR_RATE] =
+    goma_ctx->fem.mp->d2_viscosity[SHEAR_RATE] =
         d_mu->gd * ((aexp - 1) / (lambda * gammadot) + lambda * (nexp - 1. - aexp) / (1 + val2));
   }
 
   /*
    * d( mu )/dmesh
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -2274,7 +2289,7 @@ double carreau_suspension_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dv
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -2290,10 +2305,11 @@ double carreau_suspension_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dc
    */
   var = MASS_FRACTION;
-  if (d_mu != NULL && pd->v[pg->imtrx][var]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     var_offset = MAX_VARIABLE_TYPES + species;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      d_mu->C[species][j] = mp->d_viscosity[var_offset] * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      d_mu->C[species][j] =
+          goma_ctx->fem.mp->d_viscosity[var_offset] * goma_ctx->fem.bf[var]->phi[j];
     }
   }
 
@@ -2322,10 +2338,10 @@ double power_law_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   dbl offset;
   dbl mu = 0.;
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
@@ -2336,7 +2352,7 @@ double power_law_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   nexp = gn_local->nexp;
   offset = 0.00001;
 
-  dbl temp = fv->T;
+  dbl temp = goma_ctx->fem.fv->T;
 
   if (!(DOUBLE_NONZERO(temp))) {
     GOMA_EH(GOMA_ERROR, "Field temperature is zero in power law arrhenius viscosity model.");
@@ -2362,7 +2378,7 @@ double power_law_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
     d_mu->gd = mu0 * (nexp - 1.0) * val;
   }
 
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -2380,7 +2396,7 @@ double power_law_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dv
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -2391,10 +2407,10 @@ double power_law_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
       }
     }
   }
-  if (d_mu != NULL && pd->e[pg->imtrx][TEMPERATURE]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
     int var = TEMPERATURE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      d_mu->T[j] = d_arr_coeff_dT * mu_save * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      d_mu->T[j] = d_arr_coeff_dT * mu_save * goma_ctx->fem.bf[var]->phi[j];
     }
   }
 
@@ -2437,29 +2453,29 @@ double powerlaw_suspension_viscosity(struct Generalized_Newtonian *gn_local,
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   /* initialize everything */
 
-  mp->d_viscosity[TEMPERATURE] = 0.0;
-  mp->d2_viscosity[TEMPERATURE] = 0.0;
-  mp->d_viscosity[PRESSURE] = 0.0;
-  mp->d2_viscosity[PRESSURE] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[TEMPERATURE] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[TEMPERATURE] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[PRESSURE] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[PRESSURE] = 0.0;
 
   for (a = 0; a < DIM; a++) {
-    mp->d_viscosity[VELOCITY1 + a] = 0.0;
-    mp->d2_viscosity[VELOCITY1 + a] = 0.0;
-    mp->d_viscosity[MESH_DISPLACEMENT1 + a] = 0.0;
-    mp->d2_viscosity[MESH_DISPLACEMENT1 + a] = 0.0;
+    goma_ctx->fem.mp->d_viscosity[VELOCITY1 + a] = 0.0;
+    goma_ctx->fem.mp->d2_viscosity[VELOCITY1 + a] = 0.0;
+    goma_ctx->fem.mp->d_viscosity[MESH_DISPLACEMENT1 + a] = 0.0;
+    goma_ctx->fem.mp->d2_viscosity[MESH_DISPLACEMENT1 + a] = 0.0;
   }
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-    mp->d_viscosity[MAX_VARIABLE_TYPES + w] = 0.0;
-    mp->d2_viscosity[MAX_VARIABLE_TYPES + w] = 0.0;
-    C[w] = fv->c[w];
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + w] = 0.0;
+    goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + w] = 0.0;
+    C[w] = goma_ctx->fem.fv->c[w];
   }
 
   nexp = gn_local->nexp;
@@ -2475,12 +2491,12 @@ double powerlaw_suspension_viscosity(struct Generalized_Newtonian *gn_local,
   if (nexp_species > 0.0 || (C[species] > 0.0 && C[species] < (maxpack - .01))) {
     mu_sus = pow(1.0 - C[species] / maxpack, nexp_species);
     /* dmu/dc */
-    mp->d_viscosity[MAX_VARIABLE_TYPES + species] =
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species] =
         -mu_car * mu_sus * nexp_species / (maxpack - C[species]);
 
     /* d2mu/dc2 .... */
 
-    mp->d2_viscosity[MAX_VARIABLE_TYPES + species] =
+    goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species] =
         mu_car * nexp_species * (nexp_species - 1.0) *
         pow(1.0 - C[species] / maxpack, nexp_species - 2.) / maxpack / maxpack;
   } else if (C[species] <= 0.) {
@@ -2492,17 +2508,18 @@ double powerlaw_suspension_viscosity(struct Generalized_Newtonian *gn_local,
   }
 
   mu = mu_car * mu_sus;
-  mp->viscosity = mu;
+  goma_ctx->fem.mp->viscosity = mu;
 
   if (d_mu != NULL)
     d_mu->gd = mu * (nexp - 1.0) / (gammadot + offset);
 
-  mp->d2_viscosity[SHEAR_RATE] = mu * (nexp - 1.0) * (nexp - 2.0) / SQUARE(gammadot + offset);
+  goma_ctx->fem.mp->d2_viscosity[SHEAR_RATE] =
+      mu * (nexp - 1.0) * (nexp - 2.0) / SQUARE(gammadot + offset);
 
   /*
    * d( mu )/dmesh
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -2518,7 +2535,7 @@ double powerlaw_suspension_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dv
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -2534,10 +2551,11 @@ double powerlaw_suspension_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dc
    */
   var = MASS_FRACTION;
-  if (d_mu != NULL && pd->v[pg->imtrx][var]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     var_offset = MAX_VARIABLE_TYPES + species;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      d_mu->C[species][j] = mp->d_viscosity[var_offset] * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      d_mu->C[species][j] =
+          goma_ctx->fem.mp->d_viscosity[var_offset] * goma_ctx->fem.bf[var]->phi[j];
     }
   }
 
@@ -2590,7 +2608,7 @@ int epoxy_viscosity(int species, /* species number for cure equation */
   int var;
   int status = 1;
 
-  alpha = fv->c[species]; /* extent of reaction */
+  alpha = goma_ctx->fem.fv->c[species]; /* extent of reaction */
 
   if (alpha < alpha_g) {
     ratio = (alpha_g) / (alpha_g - alpha);
@@ -2601,10 +2619,10 @@ int epoxy_viscosity(int species, /* species number for cure equation */
     exponent = A + B * alpha_g;
   }
 
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
   if (T <= 0.) {
@@ -2613,31 +2631,33 @@ int epoxy_viscosity(int species, /* species number for cure equation */
     mu = mu0 * exp(Aexp / T) * pow(ratio, exponent);
   }
 
-  mp->viscosity = mu;
+  goma_ctx->fem.mp->viscosity = mu;
 
   /* dmu_dT */
   var = TEMPERATURE;
-  if (pd->v[pg->imtrx][var]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     if (T <= 0.) {
-      mp->d_viscosity[var] = 0.;
-      mp->d2_viscosity[var] = 0.;
+      goma_ctx->fem.mp->d_viscosity[var] = 0.;
+      goma_ctx->fem.mp->d2_viscosity[var] = 0.;
     } else {
-      mp->d_viscosity[var] = -mu * Aexp / (T * T);
-      mp->d2_viscosity[var] = -mu * SQUARE(Aexp / (T * T)) + 2. * mu * Aexp / (T * T * T);
+      goma_ctx->fem.mp->d_viscosity[var] = -mu * Aexp / (T * T);
+      goma_ctx->fem.mp->d2_viscosity[var] =
+          -mu * SQUARE(Aexp / (T * T)) + 2. * mu * Aexp / (T * T * T);
     }
   }
 
   /* dmu/dc */
   var = MASS_FRACTION;
-  if (pd->v[pg->imtrx][var]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     if (alpha < alpha_g) {
       deriv = exponent / (alpha_g - alpha) + B * log(ratio);
       d_deriv = 2. * B / (alpha_g - alpha) + exponent / SQUARE(alpha_g - alpha);
-      mp->d_viscosity[MAX_VARIABLE_TYPES + species] = mu * deriv;
-      mp->d2_viscosity[MAX_VARIABLE_TYPES + species] = mu * deriv * deriv + mu * d_deriv;
+      goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species] = mu * deriv;
+      goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species] =
+          mu * deriv * deriv + mu * d_deriv;
     } else {
-      mp->d_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
-      mp->d2_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
+      goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
+      goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
     }
   }
 
@@ -2679,7 +2699,7 @@ int foam_pmdi10_viscosity(int species, /* species number for cure equation */
   double volF;
   int w;
 
-  alpha = fv->c[species]; /* extent of reaction */
+  alpha = goma_ctx->fem.fv->c[species]; /* extent of reaction */
 
   double alpha_g_pow = pow(alpha_g, A);
 
@@ -2694,9 +2714,9 @@ int foam_pmdi10_viscosity(int species, /* species number for cure equation */
     ratio = 1e8;
   }
 
-  T = upd->Process_Temperature;
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  T = goma_ctx->fem.upd->Process_Temperature;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   }
 
   if (T <= 0.) {
@@ -2705,51 +2725,53 @@ int foam_pmdi10_viscosity(int species, /* species number for cure equation */
     muL = mu0 * exp(-norm_E / T) * pow(ratio, -B);
   }
 
-  volF = mp->volumeFractionGas;
+  volF = goma_ctx->fem.mp->volumeFractionGas;
 
   if (volF > 0.98) {
     volF = 0.98;
   }
 
   mu = muL * exp(volF / (1 - volF));
-  mp->viscosity = mu;
-  mp->FlowingLiquid_viscosity = muL;
+  goma_ctx->fem.mp->viscosity = mu;
+  goma_ctx->fem.mp->FlowingLiquid_viscosity = muL;
 
   double partial = (1 / ((1 - volF) * (1 - volF))) * exp(volF / (1 - volF));
 
   /* dmu_dT */
   var = TEMPERATURE;
   if (T <= 0) {
-    mp->d_viscosity[var] = 0;
-    mp->d_FlowingLiquid_viscosity[var] = 0;
+    goma_ctx->fem.mp->d_viscosity[var] = 0;
+    goma_ctx->fem.mp->d_FlowingLiquid_viscosity[var] = 0;
   } else {
-    mp->d_FlowingLiquid_viscosity[var] = muL * norm_E / (T * T);
-    mp->d_viscosity[var] = mu * norm_E / (T * T) + muL * mp->d_volumeFractionGas[var] * partial;
+    goma_ctx->fem.mp->d_FlowingLiquid_viscosity[var] = muL * norm_E / (T * T);
+    goma_ctx->fem.mp->d_viscosity[var] =
+        mu * norm_E / (T * T) + muL * goma_ctx->fem.mp->d_volumeFractionGas[var] * partial;
   }
-  mp->d2_viscosity[var] = 0.0; // This doesn't seem to be used ever
+  goma_ctx->fem.mp->d2_viscosity[var] = 0.0; // This doesn't seem to be used ever
 
-  if (pd->gv[var]) {
+  if (goma_ctx->fem.pd->gv[var]) {
     if (T <= 0.) {
-      mp->d_viscosity[var] = 0.;
-      mp->d2_viscosity[var] = 0.;
+      goma_ctx->fem.mp->d_viscosity[var] = 0.;
+      goma_ctx->fem.mp->d2_viscosity[var] = 0.;
     }
   }
 
   /* dmu/dc */
   var = MASS_FRACTION;
-  mp->d_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
-  mp->d2_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
-  for (w = 0; w < pd->Num_Species; w++) {
-    mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + w] = 0;
+  goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
+  goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species; w++) {
+    goma_ctx->fem.mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + w] = 0;
   }
-  if (pd->gv[var]) {
+  if (goma_ctx->fem.pd->gv[var]) {
     if (alpha < alpha_g && alpha > 1e-8) {
       deriv = (-A * pow(alpha, A - 1) / alpha_g_pow) * (-B) * (1 / ratio);
-      for (w = 0; w < pd->Num_Species; w++) {
-        mp->d_viscosity[MAX_VARIABLE_TYPES + species] =
-            mu * deriv + muL * mp->d_volumeFractionGas[MAX_VARIABLE_TYPES + w] * partial;
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species; w++) {
+        goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species] =
+            mu * deriv +
+            muL * goma_ctx->fem.mp->d_volumeFractionGas[MAX_VARIABLE_TYPES + w] * partial;
       }
-      mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species] = muL * deriv;
+      goma_ctx->fem.mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species] = muL * deriv;
     }
   }
 
@@ -2773,7 +2795,7 @@ int sylgard_viscosity(int species, /* species number for cure equation */
   int var;
   int status = 1;
 
-  alpha = fv->c[species]; /* extent of reaction */
+  alpha = goma_ctx->fem.fv->c[species]; /* extent of reaction */
   exponent = A;
 
   if (alpha < alpha_g) {
@@ -2787,10 +2809,10 @@ int sylgard_viscosity(int species, /* species number for cure equation */
     ratio = 100000;
   }
 
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
   if (T <= 0.) {
@@ -2799,31 +2821,33 @@ int sylgard_viscosity(int species, /* species number for cure equation */
     mu = mu0 * exp(Aexp / T) * pow(ratio, exponent);
   }
 
-  mp->viscosity = mu;
+  goma_ctx->fem.mp->viscosity = mu;
 
   /* dmu_dT */
   var = TEMPERATURE;
-  if (pd->v[pg->imtrx][var]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     if (T <= 0.) {
-      mp->d_viscosity[var] = 0.;
-      mp->d2_viscosity[var] = 0.;
+      goma_ctx->fem.mp->d_viscosity[var] = 0.;
+      goma_ctx->fem.mp->d2_viscosity[var] = 0.;
     } else {
-      mp->d_viscosity[var] = -mu * Aexp / (T * T);
-      mp->d2_viscosity[var] = -mu * SQUARE(Aexp / (T * T)) + 2. * mu * Aexp / (T * T * T);
+      goma_ctx->fem.mp->d_viscosity[var] = -mu * Aexp / (T * T);
+      goma_ctx->fem.mp->d2_viscosity[var] =
+          -mu * SQUARE(Aexp / (T * T)) + 2. * mu * Aexp / (T * T * T);
     }
   }
 
   /* dmu/dc */
   var = MASS_FRACTION;
-  if (pd->v[pg->imtrx][var]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     if (alpha < alpha_g && alpha > 0.) {
       deriv = exponent / (alpha_g - alpha);
       d_deriv = exponent / SQUARE(alpha_g - alpha);
-      mp->d_viscosity[MAX_VARIABLE_TYPES + species] = mu * deriv;
-      mp->d2_viscosity[MAX_VARIABLE_TYPES + species] = mu * deriv * deriv + mu * d_deriv;
+      goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species] = mu * deriv;
+      goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species] =
+          mu * deriv * deriv + mu * d_deriv;
     } else {
-      mp->d_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
-      mp->d2_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
+      goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
+      goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
     }
   }
 
@@ -2887,18 +2911,18 @@ int filled_epoxy_viscosity(int species_sus, /* species num, solid volume fractio
 
   /* initialize everything */
 
-  mp->d_viscosity[TEMPERATURE] = 0.0;
-  mp->d2_viscosity[TEMPERATURE] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[TEMPERATURE] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[TEMPERATURE] = 0.0;
 
-  mp->d_viscosity[MAX_VARIABLE_TYPES + species_sus] = 0.0;
-  mp->d2_viscosity[MAX_VARIABLE_TYPES + species_sus] = 0.0;
-  mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.0;
-  mp->d2_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_sus] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species_sus] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.0;
 
-  vf = fv->c[species_sus]; /* volume fraction solid */
+  vf = goma_ctx->fem.fv->c[species_sus]; /* volume fraction solid */
 
-  alpha = fv->c[species_cur]; /* extent of reaction */
-  alpha2 = alpha * alpha;     /* extent of reaction squared */
+  alpha = goma_ctx->fem.fv->c[species_cur]; /* extent of reaction */
+  alpha2 = alpha * alpha;                   /* extent of reaction squared */
   alpha_g2 = alpha_g * alpha_g;
 
   if (alpha < alpha_g) {
@@ -2916,10 +2940,10 @@ int filled_epoxy_viscosity(int species_sus, /* species num, solid volume fractio
     exit(-1);
   }
 
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
   c1 = Atexp;
@@ -2939,55 +2963,56 @@ int filled_epoxy_viscosity(int species_sus, /* species num, solid volume fractio
 
   if (nexp > 0.0 || (vf > 0.0 && vf <= (maxpack - .01))) {
     mu = mu0_local * pow(1.0 - vf / maxpack, nexp);
-    mp->viscosity = mu;
-    mp->d_viscosity[MAX_VARIABLE_TYPES + species_sus] = -mu * nexp / (maxpack - vf);
-    mp->d2_viscosity[MAX_VARIABLE_TYPES + species_sus] =
+    goma_ctx->fem.mp->viscosity = mu;
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_sus] = -mu * nexp / (maxpack - vf);
+    goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species_sus] =
         mu0_local * nexp * (nexp - 1.0) * pow(1.0 - vf / maxpack, nexp - 2.0) / maxpack / maxpack;
   } else if (vf >= (maxpack - .01)) {
     mu = mu0_local * pow(0.01 / maxpack, nexp);
-    mp->viscosity = mu;
-    mp->d_viscosity[MAX_VARIABLE_TYPES + species_sus] = 0.;
-    mp->d2_viscosity[MAX_VARIABLE_TYPES + species_sus] = 0.;
+    goma_ctx->fem.mp->viscosity = mu;
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_sus] = 0.;
+    goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species_sus] = 0.;
 
   } else if (vf <= 0.) {
     mu = mu0_local;
-    mp->viscosity = mu;
-    mp->d_viscosity[MAX_VARIABLE_TYPES + species_sus] = 0.;
-    mp->d2_viscosity[MAX_VARIABLE_TYPES + species_sus] = 0.;
+    goma_ctx->fem.mp->viscosity = mu;
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_sus] = 0.;
+    goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species_sus] = 0.;
   }
 
   /* dmu_dT */
   var = TEMPERATURE;
-  if (Num_Var_In_Type[pg->imtrx][var]) {
+  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
     if (T <= 0.) {
-      mp->d_viscosity[var] = 0.;
+      goma_ctx->fem.mp->d_viscosity[var] = 0.;
       deriv_t = 0.;
-      mp->d2_viscosity[TEMPERATURE] = 0.;
+      goma_ctx->fem.mp->d2_viscosity[TEMPERATURE] = 0.;
     } else {
       uu = -c1 * c2 / pow(c2 + T - T_g, 2.0);
       duu_dT = ln_10 * uu;
       d2uu_dT2 = ln_10 * (2 * c1 * c2 * pow(c2 + T - T_g, -3.0) + duu_dT * uu);
       deriv_t = duu_dT * mu;
       deriv2_t2 = d2uu_dT2 * mu;
-      mp->d_viscosity[var] = deriv_t;
-      mp->d2_viscosity[var] = deriv2_t2;
+      goma_ctx->fem.mp->d_viscosity[var] = deriv_t;
+      goma_ctx->fem.mp->d2_viscosity[var] = deriv2_t2;
     }
   }
 
   /* dmu/dc */
   var = MASS_FRACTION;
-  if (Num_Var_In_Type[pg->imtrx][var]) {
+  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
     if (alpha < alpha_g) {
       deriv = 8. / 3. * alpha / (alpha_g2 - alpha2) - duu_dT * (A * T_g / (1. - A * alpha));
 
       d_deriv = 8. / 3. * (1. / (alpha_g2 - alpha2) - 2. * alpha2 / SQUARE(alpha_g2 - alpha2)) -
                 duu_dT * A * A * T_g / SQUARE(1. - A * alpha);
 
-      mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = mu * deriv;
-      mp->d2_viscosity[MAX_VARIABLE_TYPES + species_cur] = mu * deriv * deriv + mu * d_deriv;
+      goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = mu * deriv;
+      goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species_cur] =
+          mu * deriv * deriv + mu * d_deriv;
     } else {
-      mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.;
-      mp->d2_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.;
+      goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.;
+      goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.;
     }
   }
 
@@ -3043,16 +3068,16 @@ int foam_epoxy_viscosity(int species_fluor, int species_cur, dbl mu0, dbl alpha_
 
   /* initialize everything */
 
-  mp->d_viscosity[TEMPERATURE] = 0.0;
-  mp->d2_viscosity[TEMPERATURE] = 0.0;
-  mp->d_FlowingLiquid_viscosity[TEMPERATURE] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[TEMPERATURE] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[TEMPERATURE] = 0.0;
+  goma_ctx->fem.mp->d_FlowingLiquid_viscosity[TEMPERATURE] = 0.0;
 
-  mp->d_viscosity[MAX_VARIABLE_TYPES + species_fluor] = 0.0;
-  mp->d2_viscosity[MAX_VARIABLE_TYPES + species_fluor] = 0.0;
-  mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.0;
-  mp->d2_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_fluor] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species_fluor] = 0.0;
+  goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.0;
+  goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.0;
 
-  alpha = fv->c[species_cur]; /* extent of reaction */
+  alpha = goma_ctx->fem.fv->c[species_cur]; /* extent of reaction */
   alpha2 = alpha * alpha;
   alpha_g2 = alpha_g * alpha_g;
 
@@ -3065,17 +3090,17 @@ int foam_epoxy_viscosity(int species_fluor, int species_cur, dbl mu0, dbl alpha_
     exponent = 4. / .3;
   }
 
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
   // Calculate the pure liquid-phase viscosity
   muL = mu0 * pow(ratio, exponent) * exp(Aexp / T);
 
-  if (mp->volumeFractionGas >= 0.0) {
-    cVolFrac = mp->volumeFractionGas;
+  if (goma_ctx->fem.mp->volumeFractionGas >= 0.0) {
+    cVolFrac = goma_ctx->fem.mp->volumeFractionGas;
     if (cVolFrac > 0.99)
       cVolFrac = 0.99;
     volFac = exp(cVolFrac / (1.0 - cVolFrac));
@@ -3084,39 +3109,39 @@ int foam_epoxy_viscosity(int species_fluor, int species_cur, dbl mu0, dbl alpha_
   mu = muL * volFac;
 
   /* dmu/dc */
-  if (Num_Var_In_Type[pg->imtrx][MASS_FRACTION]) {
-    mp->d_viscosity[MAX_VARIABLE_TYPES + species_fluor] = 0.0;
-    mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species_fluor] = 0.0;
+  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_fluor] = 0.0;
+    goma_ctx->fem.mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species_fluor] = 0.0;
   }
 
   /* dmu_dT */
-  if (Num_Var_In_Type[pg->imtrx][TEMPERATURE]) {
-    mp->d_viscosity[TEMPERATURE] = -mu * Aexp / (T * T);
-    mp->d_FlowingLiquid_viscosity[TEMPERATURE] = -muL * Aexp / (T * T);
+  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
+    goma_ctx->fem.mp->d_viscosity[TEMPERATURE] = -mu * Aexp / (T * T);
+    goma_ctx->fem.mp->d_FlowingLiquid_viscosity[TEMPERATURE] = -muL * Aexp / (T * T);
   }
 
   /* dmu/dc */
-  if (Num_Var_In_Type[pg->imtrx][MASS_FRACTION]) {
+  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
     if (alpha < alpha_g) {
       deriv = 2. * exponent * alpha / (alpha_g2 - alpha * alpha);
-      mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = mu * deriv;
-      mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species_cur] = muL * deriv;
+      goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = mu * deriv;
+      goma_ctx->fem.mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species_cur] = muL * deriv;
     } else {
-      mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.0;
-      mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.0;
+      goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.0;
+      goma_ctx->fem.mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species_cur] = 0.0;
     }
 
-    if (mp->volumeFractionGas >= 0.0 && mp->volumeFractionGas <= 0.99) {
+    if (goma_ctx->fem.mp->volumeFractionGas >= 0.0 && goma_ctx->fem.mp->volumeFractionGas <= 0.99) {
       dbl volFacDeriv = mu / ((1 - cVolFrac) * (1 - cVolFrac));
-      for (j = 0; j < Num_Var_In_Type[pg->imtrx][MASS_FRACTION]; j++) {
-        mp->d_viscosity[MAX_VARIABLE_TYPES + j] +=
-            volFacDeriv * mp->d_volumeFractionGas[MAX_VARIABLE_TYPES + j];
+      for (j = 0; j < Num_Var_In_Type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]; j++) {
+        goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + j] +=
+            volFacDeriv * goma_ctx->fem.mp->d_volumeFractionGas[MAX_VARIABLE_TYPES + j];
       }
     }
   }
 
-  mp->FlowingLiquid_viscosity = muL;
-  mp->viscosity = mu;
+  goma_ctx->fem.mp->FlowingLiquid_viscosity = muL;
+  goma_ctx->fem.mp->viscosity = mu;
 
   return (status);
 } /* end of foam_epoxy_viscosity */
@@ -3147,27 +3172,28 @@ int thermal_viscosity(dbl mu0,  /* reference temperature fluid viscosity */
   int status = 1;
   int var = TEMPERATURE;
 
-  if (!pd->v[pg->imtrx][TEMPERATURE] && !pd->v[pg->imtrx][SHELL_TEMPERATURE]) {
+  if (!goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE] &&
+      !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_TEMPERATURE]) {
     return (0);
   }
 
-  if (pd->gv[TEMPERATURE]) {
-    T = fv->T;
-  } else if (pd->gv[SHELL_TEMPERATURE]) {
-    T = fv->sh_t;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    T = goma_ctx->fem.fv->T;
+  } else if (goma_ctx->fem.pd->gv[SHELL_TEMPERATURE]) {
+    T = goma_ctx->fem.fv->sh_t;
     var = SHELL_TEMPERATURE;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
   if (T <= 0.3) {
     mu = mu0 * exp(Aexp / 0.3);
-    mp->viscosity = mu;
-    mp->d_viscosity[var] = 0.;
+    goma_ctx->fem.mp->viscosity = mu;
+    goma_ctx->fem.mp->d_viscosity[var] = 0.;
   } else {
     mu = mu0 * exp(Aexp / T);
-    mp->viscosity = mu;
-    mp->d_viscosity[var] = -mu0 * Aexp / (T * T);
+    goma_ctx->fem.mp->viscosity = mu;
+    goma_ctx->fem.mp->d_viscosity[var] = -mu0 * Aexp / (T * T);
   }
 
   return (status);
@@ -3211,11 +3237,11 @@ int cure_viscosity(int species, /* species num, solid volume fraction        */
   dbl deriv; /* stuff for the first derivative */
   int status = 1;
 
-  if (!pd->v[pg->imtrx][MASS_FRACTION]) {
+  if (!goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
     return (0);
   }
 
-  alpha = fv->c[species]; /* extent of reaction */
+  alpha = goma_ctx->fem.fv->c[species]; /* extent of reaction */
   if (alpha < alpha_g) {
     ratio = (alpha_g) / (alpha_g - alpha);
     exponent = A + B * alpha;
@@ -3227,15 +3253,15 @@ int cure_viscosity(int species, /* species num, solid volume fraction        */
 
   mu = mu0 * pow(ratio, exponent);
 
-  mp->viscosity = mu;
+  goma_ctx->fem.mp->viscosity = mu;
 
   /* dmu/dc */
 
   if (alpha < alpha_g) {
     deriv = exponent / (alpha_g - alpha) + B * log(ratio);
-    mp->d_viscosity[MAX_VARIABLE_TYPES + species] = mu * deriv;
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species] = mu * deriv;
   } else {
-    mp->d_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species] = 0.;
   }
 
   return (status);
@@ -3287,14 +3313,14 @@ double bond_viscosity(struct Generalized_Newtonian *gn_local,
   dbl nn; /* Convenient local variables */
   int a, b, i, j, vdofs, mdofs = 0, var;
 
-  if (!pd->v[pg->imtrx][BOND_EVOLUTION]) {
+  if (!goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][BOND_EVOLUTION]) {
     return (0);
   }
 
-  if (pd->gv[TEMPERATURE]) {
-    temp = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    temp = goma_ctx->fem.fv->T;
   } else {
-    temp = upd->Process_Temperature;
+    temp = goma_ctx->fem.upd->Process_Temperature;
   }
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
@@ -3307,23 +3333,23 @@ double bond_viscosity(struct Generalized_Newtonian *gn_local,
   if (gn_local->tau_yModel == CONSTANT) {
     tau_y = gn_local->tau_y;
   } else if (gn_local->tau_yModel == USER) {
-    usr_yield_stress(gn_local->u_tau_y, tran->time_value);
+    usr_yield_stress(gn_local->u_tau_y, goma_ctx->fem.tran->time_value);
     tau_y = gn_local->tau_y;
   } else {
     GOMA_EH(-1, "Invalid Yield Stress Model");
   }
   fexp = gn_local->fexp;
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   var = TEMPERATURE;
   at_shift = 1.;
-  if (DOUBLE_NONZERO(temp) && DOUBLE_NONZERO(mp->reference[TEMPERATURE])) {
-    Tref = mp->reference[TEMPERATURE];
+  if (DOUBLE_NONZERO(temp) && DOUBLE_NONZERO(goma_ctx->fem.mp->reference[TEMPERATURE])) {
+    Tref = goma_ctx->fem.mp->reference[TEMPERATURE];
     wlf_denom = wlfc2 + temp - Tref;
     if (DOUBLE_NONZERO(wlf_denom)) {
       at_shift = exp(atexp * (Tref - temp) / wlf_denom);
@@ -3334,17 +3360,19 @@ double bond_viscosity(struct Generalized_Newtonian *gn_local,
     }
   }
 
-  nn = fv->nn;
+  nn = goma_ctx->fem.fv->nn;
   if (nn <= 0.0) {
     mu = at_shift * mu_inf;
-    mp->viscosity = mu;
-    mp->d_viscosity[BOND_EVOLUTION] = 0.;
-    mp->d_viscosity[TEMPERATURE] = d_at_dT * mu_inf;
+    goma_ctx->fem.mp->viscosity = mu;
+    goma_ctx->fem.mp->d_viscosity[BOND_EVOLUTION] = 0.;
+    goma_ctx->fem.mp->d_viscosity[TEMPERATURE] = d_at_dT * mu_inf;
   } else {
     mu = at_shift * (mu_inf + (mu0 - mu_inf) * pow(nn, Aexp));
-    mp->viscosity = mu;
-    mp->d_viscosity[BOND_EVOLUTION] = at_shift * (mu0 - mu_inf) * Aexp * pow(nn, Aexp - 1.);
-    mp->d_viscosity[TEMPERATURE] = d_at_dT * (mu_inf + (mu0 - mu_inf) * pow(nn, Aexp));
+    goma_ctx->fem.mp->viscosity = mu;
+    goma_ctx->fem.mp->d_viscosity[BOND_EVOLUTION] =
+        at_shift * (mu0 - mu_inf) * Aexp * pow(nn, Aexp - 1.);
+    goma_ctx->fem.mp->d_viscosity[TEMPERATURE] =
+        d_at_dT * (mu_inf + (mu0 - mu_inf) * pow(nn, Aexp));
     if (DOUBLE_NONZERO(gammadot) && DOUBLE_NONZERO(at_shift)) {
       exp_term = exp(-at_shift * fexp * gammadot);
       yield = tau_y * (1. - exp_term) / (at_shift * gammadot);
@@ -3356,17 +3384,17 @@ double bond_viscosity(struct Generalized_Newtonian *gn_local,
       d_yield = 0.;
       d_yield_d_at = 0.;
     }
-    mp->viscosity += nn * yield;
-    mp->d_viscosity[BOND_EVOLUTION] += yield;
-    mp->d_viscosity[TEMPERATURE] += nn * (at_shift * d_yield_d_at + d_at_dT * yield);
+    goma_ctx->fem.mp->viscosity += nn * yield;
+    goma_ctx->fem.mp->d_viscosity[BOND_EVOLUTION] += yield;
+    goma_ctx->fem.mp->d_viscosity[TEMPERATURE] += nn * (at_shift * d_yield_d_at + d_at_dT * yield);
   }
 
-  mu = mp->viscosity;
+  mu = goma_ctx->fem.mp->viscosity;
 
   var = BOND_EVOLUTION;
-  if (d_mu != NULL && pd->v[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      d_mu->nn[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+  if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      d_mu->nn[j] = goma_ctx->fem.mp->d_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
     }
   }
   if (d_mu != NULL)
@@ -3377,16 +3405,16 @@ double bond_viscosity(struct Generalized_Newtonian *gn_local,
    *       */
 
   var = TEMPERATURE;
-  if (d_mu != NULL && pd->e[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      d_mu->T[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      d_mu->T[j] = goma_ctx->fem.mp->d_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
     }
   }
 
   /*
    * d( mu )/dmesh
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -3402,7 +3430,7 @@ double bond_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dv
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -3447,20 +3475,21 @@ int bond_viscosity_sh(int bond_species, /* integer associated with conc eqn for 
   dbl nn; /* Convenient local variables */
   int status = 1;
 
-  if (!pd->gv[MASS_FRACTION]) {
+  if (!goma_ctx->fem.pd->gv[MASS_FRACTION]) {
     return (0);
   }
 
-  nn = fv->c[bond_species]; /* structure-factor variable */
+  nn = goma_ctx->fem.fv->c[bond_species]; /* structure-factor variable */
   if (nn <= 0.0) {
-    mp->viscosity = mu_inf;
-    mp->d_viscosity[MAX_VARIABLE_TYPES + bond_species] = 0.;
+    goma_ctx->fem.mp->viscosity = mu_inf;
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + bond_species] = 0.;
   } else if (nn > 0 && nn <= 1.0) {
-    mp->viscosity = mu_inf + (mu0 - mu_inf) * pow(nn, Aexp);
-    mp->d_viscosity[MAX_VARIABLE_TYPES + bond_species] = (mu0 - mu_inf) * Aexp * pow(nn, Aexp - 1.);
+    goma_ctx->fem.mp->viscosity = mu_inf + (mu0 - mu_inf) * pow(nn, Aexp);
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + bond_species] =
+        (mu0 - mu_inf) * Aexp * pow(nn, Aexp - 1.);
   } else {
-    mp->viscosity = mu0;
-    mp->d_viscosity[MAX_VARIABLE_TYPES + bond_species] = 0.;
+    goma_ctx->fem.mp->viscosity = mu0;
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + bond_species] = 0.;
   }
 
   return (status);
@@ -3516,23 +3545,23 @@ double carreau_wlf_conc_viscosity(struct Generalized_Newtonian *gn_local,
   ref_conc = gn_local->maxpack;
   conc_exp = gn_local->fexp;
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   /*  temperature shift factor  */
 
-  if (pd->gv[TEMPERATURE]) {
-    temp = fv->T;
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+    temp = goma_ctx->fem.fv->T;
   } else {
-    temp = upd->Process_Temperature;
+    temp = goma_ctx->fem.upd->Process_Temperature;
   }
 
-  wlf_denom = wlfc2 + temp - mp->reference[TEMPERATURE];
+  wlf_denom = wlfc2 + temp - goma_ctx->fem.mp->reference[TEMPERATURE];
   if (DOUBLE_NONZERO(wlf_denom)) {
-    at_shift = exp(atexp * (mp->reference[TEMPERATURE] - temp) / wlf_denom);
+    at_shift = exp(atexp * (goma_ctx->fem.mp->reference[TEMPERATURE] - temp) / wlf_denom);
     if (!isfinite(at_shift)) {
       at_shift = DBL_MAX;
     }
@@ -3542,26 +3571,26 @@ double carreau_wlf_conc_viscosity(struct Generalized_Newtonian *gn_local,
 
   /*  concentration shift factor  */
 
-  switch (mp->Species_Var_Type) {
+  switch (goma_ctx->fem.mp->Species_Var_Type) {
   case SPECIES_MASS_FRACTION:
     nonvol_conc = 1.;
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      nonvol_conc -= fv->c[w];
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      nonvol_conc -= goma_ctx->fem.fv->c[w];
     }
     break;
   case SPECIES_DENSITY:
     nonvol_conc = 1.;
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      nonvol_conc -= fv->c[w] * mp->specific_volume[w];
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      nonvol_conc -= goma_ctx->fem.fv->c[w] * goma_ctx->fem.mp->specific_volume[w];
     }
-    nonvol_conc /= mp->u_density[0];
+    nonvol_conc /= goma_ctx->fem.mp->u_density[0];
     break;
   default:
     GOMA_EH(GOMA_ERROR, "That species type not completed yet.");
     break;
   }
   if (nonvol_conc < 0) {
-    fprintf(stderr, "nonvolatile conc %g %g \n", nonvol_conc, fv->c[0]);
+    fprintf(stderr, "nonvolatile conc %g %g \n", nonvol_conc, goma_ctx->fem.fv->c[0]);
     if (const_eqn == CARREAU_WLF_CONC_PL)
       nonvol_conc = 0.;
     GOMA_WH(-1, "negative nonvolatile concentration");
@@ -3600,7 +3629,7 @@ double carreau_wlf_conc_viscosity(struct Generalized_Newtonian *gn_local,
    */
 
   var = TEMPERATURE;
-  if (d_mu != NULL && pd->e[pg->imtrx][var]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
     if (DOUBLE_NONZERO(wlf_denom)) {
       dmudT =
           mu + at_conc * at_conc * at_shift * at_shift * (mu0 - muinf) * d_visc_cy * d_shear_d_at;
@@ -3612,8 +3641,8 @@ double carreau_wlf_conc_viscosity(struct Generalized_Newtonian *gn_local,
       dmudT = 0.;
     }
 
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      d_mu->T[j] = dmudT * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      d_mu->T[j] = dmudT * goma_ctx->fem.bf[var]->phi[j];
     }
   }
   /*
@@ -3621,7 +3650,7 @@ double carreau_wlf_conc_viscosity(struct Generalized_Newtonian *gn_local,
    */
 
   var = MASS_FRACTION;
-  if (d_mu != NULL && pd->v[pg->imtrx][var]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     if (const_eqn == CARREAU_WLF_CONC_PL) {
       if (nonvol_conc > 0.) {
         dmudC =
@@ -3638,9 +3667,9 @@ double carreau_wlf_conc_viscosity(struct Generalized_Newtonian *gn_local,
       GOMA_EH(GOMA_ERROR, "invalid constitutive model for WLF_CONC");
     }
 
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->C[w][j] = -dmudC * bf[var]->phi[j];
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu->C[w][j] = -dmudC * goma_ctx->fem.bf[var]->phi[j];
       }
     }
   }
@@ -3648,7 +3677,7 @@ double carreau_wlf_conc_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dmesh
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -3664,7 +3693,7 @@ double carreau_wlf_conc_viscosity(struct Generalized_Newtonian *gn_local,
   /*
    * d( mu )/dv
    */
-  if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -3696,8 +3725,10 @@ int ls_modulate_viscosity(double *mu1,
   } else if (model == TIME_RAMP) {
     ratio = 1.0;
     // Making specific to starting at time = 0
-    if (tran->time_value < (tran->init_time + 10. * tran->Delta_t0)) {
-      ratio = (tran->time_value - tran->init_time) / (10. * tran->Delta_t0);
+    if (goma_ctx->fem.tran->time_value <
+        (goma_ctx->fem.tran->init_time + 10. * goma_ctx->fem.tran->Delta_t0)) {
+      ratio = (goma_ctx->fem.tran->time_value - goma_ctx->fem.tran->init_time) /
+              (10. * goma_ctx->fem.tran->Delta_t0);
     }
     mu2 = *mu1 + ratio * (mu2 - *mu1);
   }
@@ -3718,44 +3749,44 @@ int ls_modulate_viscosity(double *mu1,
 
   d_mu->gd *= factor;
 
-  if (pd->v[pg->imtrx][var = TEMPERATURE]) {
-    for (i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var = TEMPERATURE]) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
       d_mu->T[i] *= factor;
     }
   }
 
-  if (pd->v[pg->imtrx][var = MASS_FRACTION]) {
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      for (i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var = MASS_FRACTION]) {
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
         d_mu->C[w][i] *= factor;
       }
     }
   }
 
-  if (pd->v[pg->imtrx][var = VELOCITY1]) {
-    for (a = 0; a < pd->Num_Dim; a++) {
-      for (i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var = VELOCITY1]) {
+    for (a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
         d_mu->v[a][i] *= factor;
       }
     }
   }
 
-  if (pd->v[pg->imtrx][var = MESH_DISPLACEMENT1]) {
-    for (a = 0; a < pd->Num_Dim; a++) {
-      for (i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var = MESH_DISPLACEMENT1]) {
+    for (a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
         d_mu->X[a][i] *= factor;
       }
     }
   }
 
-  if (pd->v[pg->imtrx][var = PRESSURE]) {
-    for (i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var = PRESSURE]) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
       d_mu->P[i] *= factor;
     }
   }
 
-  if (pd->v[pg->imtrx][var = BOND_EVOLUTION]) {
-    for (i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var = BOND_EVOLUTION]) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
       d_mu->nn[i] *= factor;
     }
   }
@@ -3765,10 +3796,10 @@ int ls_modulate_viscosity(double *mu1,
 void copy_pF_to_F(int phase) {
   int a;
 
-  fv->F = fv->pF[phase];
+  goma_ctx->fem.fv->F = goma_ctx->fem.fv->pF[phase];
 
-  for (a = 0; a < pd->Num_Dim; a++)
-    fv->grad_F[a] = fv->grad_pF[phase][a];
+  for (a = 0; a < goma_ctx->fem.pd->Num_Dim; a++)
+    goma_ctx->fem.fv->grad_F[a] = goma_ctx->fem.fv->grad_pF[phase][a];
 }
 
 /*******************************************************************************
@@ -3796,7 +3827,7 @@ double flowing_liquid_viscosity(VISCOSITY_DEPENDENCE_STRUCT *d_flow_vis) {
   int err;
   int var, var_offset, vdofs;
   int j, a, w;
-  int dim = ei[pg->imtrx]->ielem_dim;
+  int dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
 
   double flow_vis = 0.;
 
@@ -3804,59 +3835,65 @@ double flowing_liquid_viscosity(VISCOSITY_DEPENDENCE_STRUCT *d_flow_vis) {
   if (d_flow_vis != NULL) {
     zeroStructures(d_flow_vis, 1);
   }
-  if (mp->PorousMediaType != POROUS_BRINKMAN)
+  if (goma_ctx->fem.mp->PorousMediaType != POROUS_BRINKMAN)
     GOMA_WH(-1, "Set Porous term multiplier in continuous medium");
 
   /***** Evaluate FlowingLiquid Viscosity based on the specified model ****/
 
-  if (mp->FlowingLiquidViscosityModel == CONSTANT) {
-    flow_vis = mp->FlowingLiquid_viscosity;
-    mp_old->FlowingLiquid_viscosity = flow_vis;
+  if (goma_ctx->fem.mp->FlowingLiquidViscosityModel == CONSTANT) {
+    flow_vis = goma_ctx->fem.mp->FlowingLiquid_viscosity;
+    goma_ctx->fem.mp_old->FlowingLiquid_viscosity = flow_vis;
   }
 
-  else if (mp->FlowingLiquidViscosityModel == MOLTEN_GLASS) {
-    (void)molten_glass_viscosity(&flow_vis, d_flow_vis->T, mp->u_FlowingLiquid_viscosity);
+  else if (goma_ctx->fem.mp->FlowingLiquidViscosityModel == MOLTEN_GLASS) {
+    (void)molten_glass_viscosity(&flow_vis, d_flow_vis->T,
+                                 goma_ctx->fem.mp->u_FlowingLiquid_viscosity);
   }
 
-  else if (mp->FlowingLiquidViscosityModel == EPOXY) {
-    (void)epoxy_flowing_liquid_viscosity(&flow_vis, d_flow_vis, mp->u_FlowingLiquid_viscosity);
+  else if (goma_ctx->fem.mp->FlowingLiquidViscosityModel == EPOXY) {
+    (void)epoxy_flowing_liquid_viscosity(&flow_vis, d_flow_vis,
+                                         goma_ctx->fem.mp->u_FlowingLiquid_viscosity);
   }
 
-  else if (mp->FlowingLiquidViscosityModel == USER) {
-    (void)usr_FlowingLiquidViscosity(mp->u_FlowingLiquid_viscosity);
-    flow_vis = mp->FlowingLiquid_viscosity;
-    mp_old->FlowingLiquid_viscosity = flow_vis;
+  else if (goma_ctx->fem.mp->FlowingLiquidViscosityModel == USER) {
+    (void)usr_FlowingLiquidViscosity(goma_ctx->fem.mp->u_FlowingLiquid_viscosity);
+    flow_vis = goma_ctx->fem.mp->FlowingLiquid_viscosity;
+    goma_ctx->fem.mp_old->FlowingLiquid_viscosity = flow_vis;
 
     if (d_flow_vis != NULL) {
-      if (pd->v[pg->imtrx][TEMPERATURE]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
         var = TEMPERATURE;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          d_flow_vis->T[j] = mp->d_FlowingLiquid_viscosity[var] * bf[var]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          d_flow_vis->T[j] =
+              goma_ctx->fem.mp->d_FlowingLiquid_viscosity[var] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
-      if (pd->v[pg->imtrx][VELOCITY1]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
         var = VELOCITY1;
-        vdofs = ei[pg->imtrx]->dof[var];
+        vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
         for (a = 0; a < dim; a++) {
           for (j = 0; j < vdofs; j++) {
-            d_flow_vis->v[a][j] = mp->d_FlowingLiquid_viscosity[var + a] * bf[var]->phi[j];
+            d_flow_vis->v[a][j] = goma_ctx->fem.mp->d_FlowingLiquid_viscosity[var + a] *
+                                  goma_ctx->fem.bf[var]->phi[j];
           }
         }
       }
-      if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
         var = MESH_DISPLACEMENT1;
         for (a = 0; a < dim; a++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            d_flow_vis->X[a][j] = mp->d_FlowingLiquid_viscosity[var + a] * bf[var]->phi[j];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            d_flow_vis->X[a][j] = goma_ctx->fem.mp->d_FlowingLiquid_viscosity[var + a] *
+                                  goma_ctx->fem.bf[var]->phi[j];
           }
         }
       }
-      if (pd->v[pg->imtrx][MASS_FRACTION]) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
           var = MASS_FRACTION;
           var_offset = MAX_VARIABLE_TYPES + w;
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            d_flow_vis->C[w][j] = mp->d_FlowingLiquid_viscosity[var_offset] * bf[var]->phi[j];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            d_flow_vis->C[w][j] = goma_ctx->fem.mp->d_FlowingLiquid_viscosity[var_offset] *
+                                  goma_ctx->fem.bf[var]->phi[j];
           }
         }
       }
@@ -3867,12 +3904,14 @@ double flowing_liquid_viscosity(VISCOSITY_DEPENDENCE_STRUCT *d_flow_vis) {
     GOMA_EH(GOMA_ERROR, "Don't recognize your FlowingLiquidViscosity model");
   }
 
-  if (ls != NULL && mp->mp2nd != NULL && (mp->mp2nd->FlowingLiquidViscosityModel == CONSTANT)) {
-    err = ls_modulate_viscosity(&flow_vis, mp->mp2nd->FlowingLiquid_viscosity, ls->Length_Scale,
-                                (double)mp->mp2nd->FlowingLiquid_viscositymask[0],
-                                (double)mp->mp2nd->FlowingLiquid_viscositymask[1], d_flow_vis,
-                                mp->mp2nd->FlowingLiquidViscosityModel,
-                                mp->mp2nd->viscosity_lsi_interp_method);
+  if (goma_ctx->fem.ls != NULL && goma_ctx->fem.mp->mp2nd != NULL &&
+      (goma_ctx->fem.mp->mp2nd->FlowingLiquidViscosityModel == CONSTANT)) {
+    err = ls_modulate_viscosity(&flow_vis, goma_ctx->fem.mp->mp2nd->FlowingLiquid_viscosity,
+                                goma_ctx->fem.ls->Length_Scale,
+                                (double)goma_ctx->fem.mp->mp2nd->FlowingLiquid_viscositymask[0],
+                                (double)goma_ctx->fem.mp->mp2nd->FlowingLiquid_viscositymask[1],
+                                d_flow_vis, goma_ctx->fem.mp->mp2nd->FlowingLiquidViscosityModel,
+                                goma_ctx->fem.mp->mp2nd->viscosity_lsi_interp_method);
     GOMA_EH(err, "ls_modulate_viscosity");
   }
 

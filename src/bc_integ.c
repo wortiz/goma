@@ -146,9 +146,9 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
   VARIABLE_DESCRIPTION_STRUCT *vd;
   double surface_centroid[DIM];
   int interface_id = -1;
-  const double penalty = upd->strong_penalty;
+  const double penalty = goma_ctx->fem.upd->strong_penalty;
 
-  tran->time_value = time_intermediate;
+  goma_ctx->fem.tran->time_value = time_intermediate;
 
   /***************************************************************************/
   /*     START OF SURFACE LOOPS THAT REQUIRE INTEGRATION (WEAK SENSE)        */
@@ -160,11 +160,13 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
    *   applied at the surface
    */
 
-  if (ls != NULL && ls->SubElemIntegration && ls->elem_overlap_state) {
+  if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->SubElemIntegration &&
+      goma_ctx->fem.ls->elem_overlap_state) {
     Subgrid_Int.ip_total = get_subelement_integration_pts(
         &Subgrid_Int.s, &Subgrid_Int.wt, &Subgrid_Int.ip_sign, 0., elem_side_bc->id_side - 1, 0);
     ip_total = Subgrid_Int.ip_total;
-  } else if (ls != NULL && ls->Integration_Depth > 0 && ls->elem_overlap_state) {
+  } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->Integration_Depth > 0 &&
+             goma_ctx->fem.ls->elem_overlap_state) {
 #ifdef SUBELEMENT_FOR_SUBGRID
     /* DRN: you can also do subgrid integration with the following.
        it recursive divides element to create small subelements and then
@@ -192,8 +194,9 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
    */
   for (ip = 0; ip < ip_total; ip++) {
 
-    if (ls != NULL && ls->SubElemIntegration && ls->elem_overlap_state) {
-      ls->Elem_Sign = Subgrid_Int.ip_sign[ip];
+    if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->SubElemIntegration &&
+        goma_ctx->fem.ls->elem_overlap_state) {
+      goma_ctx->fem.ls->Elem_Sign = Subgrid_Int.ip_sign[ip];
       xi[0] = Subgrid_Int.s[ip][0];
       xi[1] = Subgrid_Int.s[ip][1];
       xi[2] = Subgrid_Int.s[ip][2];
@@ -201,9 +204,10 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
       s = 1.e30;
       t = 1.e30;
       wt = Subgrid_Int.wt[ip];
-    } else if (ls != NULL && ls->Integration_Depth > 0 && ls->elem_overlap_state) {
+    } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->Integration_Depth > 0 &&
+               goma_ctx->fem.ls->elem_overlap_state) {
 #ifdef SUBELEMENT_FOR_SUBGRID
-      ls->Elem_Sign = 0;
+      goma_ctx->fem.ls->Elem_Sign = 0;
       xi[0] = Subgrid_Int.s[ip][0];
       xi[1] = Subgrid_Int.s[ip][1];
       xi[2] = Subgrid_Int.s[ip][2];
@@ -214,8 +218,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 #else
       /* Tom - We need subgrid integration along this element side here */
       /* for now just use regular gauss integration */
-      if (ls != NULL)
-        ls->Elem_Sign = 0;
+      if (goma_ctx->fem.ls != NULL)
+        goma_ctx->fem.ls->Elem_Sign = 0;
       xi[0] = Subgrid_Int.s[ip][0];
       xi[1] = Subgrid_Int.s[ip][1];
       xi[2] = Subgrid_Int.s[ip][2];
@@ -229,15 +233,16 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
          wt = Gq_surf_weight(ip, ielem_type); */
 #endif
     } else {
-      if (ls != NULL)
-        ls->Elem_Sign = 0;
+      if (goma_ctx->fem.ls != NULL)
+        goma_ctx->fem.ls->Elem_Sign = 0;
       /* find the quadrature point locations (s, t) for current ip */
-      find_surf_st(ip, ielem_type, elem_side_bc->id_side, ei[pg->imtrx]->ielem_dim, xi, &s, &t, &u);
+      find_surf_st(ip, ielem_type, elem_side_bc->id_side,
+                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim, xi, &s, &t, &u);
       /* find the quadrature weight for current surface ip */
       wt = Gq_surf_weight(ip, ielem_type);
     }
 
-    err = load_basis_functions(xi, bfd);
+    err = load_basis_functions(xi, goma_ctx->fem.bfd);
     GOMA_EH(err, "problem from load_basis_functions");
 
     err = beer_belly();
@@ -268,7 +273,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                                    (elem_side_bc->local_elem_node_id));
 
     /*  Need to avoid calling this for shells*/
-    if (ielem_dim != 3 && ielem_dim == pd->Num_Dim) {
+    if (ielem_dim != 3 && ielem_dim == goma_ctx->fem.pd->Num_Dim) {
       calc_surf_tangent(ielem, iconnect_ptr, num_local_nodes, ielem_dim - 1,
                         (int)elem_side_bc->num_nodes_on_side, (elem_side_bc->local_elem_node_id));
     }
@@ -287,7 +292,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
      * Load up commonly used physical properties such as density at
      * the current quadrature point using the material state vector.
      */
-    load_properties(mp, time_value);
+    load_properties(goma_ctx->fem.mp, time_value);
 
     /*
      * Determine the State Variable Vector for the material
@@ -299,8 +304,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
      * constituitive properties should be filled in.
      */
     for (i = 0; i < elem_side_bc->Num_MatID; i++) {
-      mp_2 = mp_glob[elem_side_bc->MatID_List[i]];
-      if (mp_2 != mp) {
+      mp_2 = goma_ctx->fem.mp_glob[elem_side_bc->MatID_List[i]];
+      if (mp_2 != goma_ctx->fem.mp) {
         load_matrl_statevector(mp_2);
         load_properties(mp_2, time_value);
         break;
@@ -310,26 +315,28 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
     /*
      * Load up porous media variables and properties, if needed
      */
-    if (mp->PorousMediaType == POROUS_UNSATURATED || mp->PorousMediaType == POROUS_SATURATED ||
-        mp->PorousMediaType == POROUS_TWO_PHASE) {
+    if (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+        goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED ||
+        goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) {
       err = load_porous_properties();
       GOMA_EH(err, "load_porous_properties");
     }
 
-    if (mp->SurfaceTensionModel != CONSTANT) {
+    if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
       load_surface_tension(dsigma_dx);
       if (neg_elem_volume)
         return (status);
     }
 
-    if (TimeIntegration != STEADY && pd->e[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (TimeIntegration != STEADY &&
+        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (icount = 0; icount < ielem_dim; icount++) {
-        x_dot[icount] = fv_dot->x[icount];
+        x_dot[icount] = goma_ctx->fem.fv_dot->x[icount];
         /* calculate surface position for wall repulsion/no penetration condition */
-        xsurf[icount] = fv->x0[icount];
+        xsurf[icount] = goma_ctx->fem.fv->x0[icount];
       }
 
-      if (pd->e[pg->imtrx][SOLID_DISPLACEMENT1]) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][SOLID_DISPLACEMENT1]) {
         for (icount = 0; icount < VIM; icount++)
           x_rs_dot[icount] = 0.;
         for (icount = 0; icount < ielem_dim; icount++) {
@@ -337,14 +344,14 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
            * (which doesn't exist) because
            * x_rs_dot = d(X_rs)/dt = d(Coor[][] + d_rs)/dt = d(d_rs)/dt
            */
-          x_rs_dot[icount] = fv_dot->d_rs[icount];
+          x_rs_dot[icount] = goma_ctx->fem.fv_dot->d_rs[icount];
         }
       }
     } else {
       for (icount = 0; icount < ielem_dim; icount++) {
         x_rs_dot[icount] = 0.;
         x_dot[icount] = 0.;
-        xsurf[icount] = fv->x0[icount];
+        xsurf[icount] = goma_ctx->fem.fv->x0[icount];
       }
     }
 
@@ -383,7 +390,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           }
         }
         if (is) {
-          for (icount = 0; icount < mp->Num_Species; icount++) {
+          for (icount = 0; icount < goma_ctx->fem.mp->Num_Species; icount++) {
             is[interface_id].Processed[icount] = FALSE;
           }
         }
@@ -393,7 +400,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
       iapply = 0;
       skip_other_side = FALSE;
       if (is_ns != 0) {
-        if (ei[pg->imtrx]->elem_blk_id == ss_to_blks[1][ss_index]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id == ss_to_blks[1][ss_index]) {
           iapply = 1;
         }
       }
@@ -496,17 +503,17 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
           //        if (goma_automatic_rotations.rotation_nodes == NULL) {
 
-          contact_flag = (ls != NULL);
+          contact_flag = (goma_ctx->fem.ls != NULL);
 
           /*  first all external boundaries with velocity
               second - internal boundaries with an explicit block id
               third  - internal boundaries with implicit iapply logic
           */
-          if ((SS_Internal_Boundary[ss_index] == -1 && pd->gv[VELOCITY1]) ||
+          if ((SS_Internal_Boundary[ss_index] == -1 && goma_ctx->fem.pd->gv[VELOCITY1]) ||
               (SS_Internal_Boundary[ss_index] != -1 &&
-               bc->BC_Data_Int[0] == ei[pg->imtrx]->elem_blk_id) ||
+               bc->BC_Data_Int[0] == goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id) ||
               (SS_Internal_Boundary[ss_index] != -1 && bc->BC_Data_Int[0] == -1 && iapply &&
-               pd->gv[VELOCITY1])) {
+               goma_ctx->fem.pd->gv[VELOCITY1])) {
             fvelo_normal_bc(func, d_func, bc->BC_Data_Float[0], contact_flag, x_dot, theta, delta_t,
                             (int)bc->BC_Name, bc->BC_Data_Float[1], bc->BC_Data_Float[2],
                             bc->BC_Data_Float[3]);
@@ -536,12 +543,13 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
               second - internal boundaries with an explicit block id
               third  - internal boundaries with implicit iapply logic
           */
-          if (ls != NULL) {
-            if ((SS_Internal_Boundary[ss_index] == -1 && pd->v[pg->imtrx][VELOCITY1]) ||
+          if (goma_ctx->fem.ls != NULL) {
+            if ((SS_Internal_Boundary[ss_index] == -1 &&
+                 goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1]) ||
                 (SS_Internal_Boundary[ss_index] != -1 &&
-                 bc->BC_Data_Int[0] == ei[pg->imtrx]->elem_blk_id) ||
+                 bc->BC_Data_Int[0] == goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id) ||
                 (SS_Internal_Boundary[ss_index] != -1 && bc->BC_Data_Int[0] == -1 && iapply &&
-                 pd->v[pg->imtrx][VELOCITY1])) {
+                 goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1])) {
               fvelo_tangential_ls_bc(func, d_func, bc->BC_Data_Float[0], x_dot, theta, delta_t,
                                      bc->BC_Data_Float[1], bc->BC_Data_Float[2],
                                      bc->BC_Data_Float[3]);
@@ -862,7 +870,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
         case ELEC_TRACTION_SOLID_BC:
 
           /* There are no time derivatives in here. */
-          if (af->Assemble_LSA_Mass_Matrix)
+          if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
             break;
 
           memset(cfunc, 0, MDE * DIM * sizeof(double));
@@ -875,9 +883,10 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
            * (first integer parameter for the BC).
            */
 
-          if (bc->BC_Data_Int[0] == ei[pg->imtrx]->elem_blk_id) {
+          if (bc->BC_Data_Int[0] == goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id) {
             elec_surf_stress(cfunc, d_cfunc, elem_side_bc->id_side, elem_side_bc, iconnect_ptr,
-                             mp->permittivity, bc->BC_Data_Float[0], (int)bc->BC_Name);
+                             goma_ctx->fem.mp->permittivity, bc->BC_Data_Float[0],
+                             (int)bc->BC_Name);
 
           } else {
             skip_other_side = TRUE;
@@ -919,10 +928,10 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           memset(d_cfunc, 0, MDE * DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
 
           /* MMH: I looked in the fncs below, and there were no time derivatives. */
-          if (af->Assemble_LSA_Mass_Matrix)
+          if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
             break;
 
-          if (bc->BC_Data_Int[0] == ei[pg->imtrx]->elem_blk_id ||
+          if (bc->BC_Data_Int[0] == goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id ||
               (bc->BC_Data_Int[0] == -1 && iapply)) {
 
             int dir;
@@ -1000,7 +1009,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           int iAC = bc->BC_Data_Int[0]; /* need this index so we can retrieve the current LM value
                                            from augc */
 
-          flow_n_dot_T_hydro(func, d_func, 0., 0., 0., -augc[iAC].DataFlt[0]);
+          flow_n_dot_T_hydro(func, d_func, 0., 0., 0., -goma_ctx->fem.augc[iAC].DataFlt[0]);
         } break;
 
         case FLOW_HYDROSTATIC_BC:
@@ -1029,12 +1038,13 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           break;
 
         case STRESS_DEVELOPED_BC:
-          if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV) {
+          if (goma_ctx->fem.vn->evssModel == LOG_CONF ||
+              goma_ctx->fem.vn->evssModel == LOG_CONF_GRADV) {
             stress_no_v_dot_gradS_logc(func_stress, d_func_stress, delta_t, theta);
-          } else if (vn->evssModel == LOG_CONF_TRANSIENT ||
-                     vn->evssModel == LOG_CONF_TRANSIENT_GRADV) {
+          } else if (goma_ctx->fem.vn->evssModel == LOG_CONF_TRANSIENT ||
+                     goma_ctx->fem.vn->evssModel == LOG_CONF_TRANSIENT_GRADV) {
             stress_no_v_dot_gradS_logc_transient(func_stress, d_func_stress, delta_t, theta);
-          } else if (vn->evssModel == SQRT_CONF) {
+          } else if (goma_ctx->fem.vn->evssModel == SQRT_CONF) {
             stress_no_v_dot_gradS_sqrt(func_stress, d_func_stress, delta_t, theta);
           } else {
             stress_no_v_dot_gradS(func_stress, d_func_stress, delta_t, theta);
@@ -1064,7 +1074,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           break;
 
         case SHELL_CONC_LS_BC:
-          if (ls != NULL && SS_Internal_Boundary[ss_index] == -1) {
+          if (goma_ctx->fem.ls != NULL && SS_Internal_Boundary[ss_index] == -1) {
             shell_conc_ls_bc(func, d_func, bc->BC_Data_Int[0], bc->BC_Data_Float[0],
                              bc->BC_Data_Float[1], (int)bc->BC_Name, time_value, delta_t, xi, exo);
             surface_determinant_and_normal(
@@ -1131,7 +1141,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           break;
 
         case SHELL_TFMP_FREE_LIQ_BC:
-          if (pd->e[pg->imtrx][R_TFMP_MASS]) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_MASS]) {
             shell_n_dot_liq_velo_bc_tfmp(func, d_func, 0.0, time_value, delta_t, xi, exo);
 
             surface_determinant_and_normal(
@@ -1218,7 +1228,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
            * boundary condition is specified on the bc card as
            * the first integer
            */
-          if (ei[pg->imtrx]->elem_blk_id == bc->BC_Data_Int[0]) {
+          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id == bc->BC_Data_Int[0]) {
             iapply = 1;
           } else {
             iapply = 0;
@@ -1237,7 +1247,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
            * boundary condition is specified on the bc card as
            * the first integer
            */
-          if (ei[pg->imtrx]->elem_blk_id == bc->BC_Data_Int[0]) {
+          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id == bc->BC_Data_Int[0]) {
             iapply = 1;
           } else {
             iapply = 0;
@@ -1256,7 +1266,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
            * boundary condition is specified on the bc card as
            * the first integer
            */
-          if (ei[pg->imtrx]->elem_blk_id == bc->BC_Data_Int[0]) {
+          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id == bc->BC_Data_Int[0]) {
             iapply = 1;
           } else {
             iapply = 0;
@@ -1602,7 +1612,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           break;
         case LIGHTP_JUMP_BC:
         case LIGHTM_JUMP_BC:
-          if (ei[pg->imtrx]->elem_blk_id == bc->BC_Data_Int[0]) {
+          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id == bc->BC_Data_Int[0]) {
             iapply = 1;
           } else {
             iapply = 1;
@@ -1711,8 +1721,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
               switch (BC_Types[i1].BC_Name) {
               case VELO_TANGENT_BC:
               case VELO_STREAMING_BC:
-                wall_velo[0] = fv->snormal[1] * BC_Types[i1].BC_Data_Float[0];
-                wall_velo[1] = -fv->snormal[0] * BC_Types[i1].BC_Data_Float[0];
+                wall_velo[0] = goma_ctx->fem.fv->snormal[1] * BC_Types[i1].BC_Data_Float[0];
+                wall_velo[1] = -goma_ctx->fem.fv->snormal[0] * BC_Types[i1].BC_Data_Float[0];
                 break;
               case VELO_SLIP_BC:
               case VELO_SLIP_FLUID_BC:
@@ -1723,18 +1733,21 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
               case VELO_SLIP_ROT_BC:
               case VELO_SLIP_ROT_FLUID_BC:
               case AIR_FILM_ROT_BC:
-                wall_velo[0] =
-                    BC_Types[i1].BC_Data_Float[1] * (fv->x[1] - BC_Types[i1].BC_Data_Float[3]);
-                wall_velo[1] =
-                    BC_Types[i1].BC_Data_Float[1] * (fv->x[0] - BC_Types[i1].BC_Data_Float[2]);
+                wall_velo[0] = BC_Types[i1].BC_Data_Float[1] *
+                               (goma_ctx->fem.fv->x[1] - BC_Types[i1].BC_Data_Float[3]);
+                wall_velo[1] = BC_Types[i1].BC_Data_Float[1] *
+                               (goma_ctx->fem.fv->x[0] - BC_Types[i1].BC_Data_Float[2]);
                 break;
               case VELO_TANGENT_USER_BC:
-                wall_velo[0] = velo_vary_fnc(UVARY_BC, fv->x[0], fv->x[1], fv->x[2],
-                                             BC_Types[i1].u_BC, time_value);
-                wall_velo[1] = velo_vary_fnc(VVARY_BC, fv->x[0], fv->x[1], fv->x[2],
-                                             BC_Types[i1].u_BC, time_value);
-                wall_velo[2] = velo_vary_fnc(WVARY_BC, fv->x[0], fv->x[1], fv->x[2],
-                                             BC_Types[i1].u_BC, time_value);
+                wall_velo[0] =
+                    velo_vary_fnc(UVARY_BC, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
+                                  goma_ctx->fem.fv->x[2], BC_Types[i1].u_BC, time_value);
+                wall_velo[1] =
+                    velo_vary_fnc(VVARY_BC, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
+                                  goma_ctx->fem.fv->x[2], BC_Types[i1].u_BC, time_value);
+                wall_velo[2] =
+                    velo_vary_fnc(WVARY_BC, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
+                                  goma_ctx->fem.fv->x[2], BC_Types[i1].u_BC, time_value);
                 break;
               default:
                 if (goma_ctx->debug_flag > 1)
@@ -1901,15 +1914,17 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                BC_Types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC ||
                BC_Types[bc_input_id].BC_Name == ELEC_TRACTION_BC ||
                BC_Types[bc_input_id].BC_Name == CAPILLARY_SHEAR_VISC_BC) &&
-              (Dolphin[pg->imtrx][I][VELOCITY1] >
+              (Dolphin[goma_ctx->fem.pg->imtrx][I][VELOCITY1] >
                0)) { /* DRN: getting segfault for Q1P0 on Q2 mesh, does this fix it? */
             for (p = 0; p < bc_desc->vector; p++) {
               /* assuming momentum and species have same interpolation, for now */
-              func[p] = cfunc[ei[pg->imtrx]->ln_to_first_dof[R_MOMENTUM1][id]][p];
+              func[p] =
+                  cfunc[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[R_MOMENTUM1][id]]
+                       [p];
               for (k = 0; k < MAX_VARIABLE_TYPES + MAX_CONC; k++) {
                 for (j = 0; j < MDE; j++) {
-                  d_func[p][k][j] =
-                      d_cfunc[ei[pg->imtrx]->ln_to_first_dof[R_MOMENTUM1][id]][p][k][j];
+                  d_func[p][k][j] = d_cfunc[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
+                                                ->ln_to_first_dof[R_MOMENTUM1][id]][p][k][j];
                 }
               }
             }
@@ -1951,22 +1966,26 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           //          }
 
           if ((BC_Types[bc_input_id].BC_Name == TENSION_SHEET_BC) &&
-              (Dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0)) {
-            func[0] = cfunc[ei[pg->imtrx]->ln_to_first_dof[R_MESH1][id]][0];
+              (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0)) {
+            func[0] =
+                cfunc[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[R_MESH1][id]][0];
             for (k = 0; k < MAX_VARIABLE_TYPES + MAX_CONC; k++) {
               for (j = 0; j < MDE; j++) {
-                d_func[0][k][j] = d_cfunc[ei[pg->imtrx]->ln_to_first_dof[R_MESH1][id]][0][k][j];
+                d_func[0][k][j] =
+                    d_cfunc[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[R_MESH1][id]]
+                           [0][k][j];
               }
             }
           }
 
           if ((BC_Types[bc_input_id].BC_Name == SHEAR_TO_SHELL_BC) &&
-              (Dolphin[pg->imtrx][I][R_SHELL_TENSION] > 0)) {
-            func[0] = cfunc[ei[pg->imtrx]->ln_to_first_dof[R_SHELL_TENSION][id]][0];
+              (Dolphin[goma_ctx->fem.pg->imtrx][I][R_SHELL_TENSION] > 0)) {
+            func[0] = cfunc[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
+                                ->ln_to_first_dof[R_SHELL_TENSION][id]][0];
             for (k = 0; k < MAX_VARIABLE_TYPES + MAX_CONC; k++) {
               for (j = 0; j < MDE; j++) {
-                d_func[0][k][j] =
-                    d_cfunc[ei[pg->imtrx]->ln_to_first_dof[R_SHELL_TENSION][id]][0][k][j];
+                d_func[0][k][j] = d_cfunc[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
+                                              ->ln_to_first_dof[R_SHELL_TENSION][id]][0][k][j];
               }
             }
           }
@@ -1996,7 +2015,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                                         &eqn, &matID_apply, &vd);
               } else {
                 index_eq =
-                    bc_eqn_index(id, I, bc_input_id, ei[pg->imtrx]->mn, p, &eqn, &matID_apply, &vd);
+                    bc_eqn_index(id, I, bc_input_id, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn,
+                                 p, &eqn, &matID_apply, &vd);
               }
 
               if (index_eq >= 0) {
@@ -2005,7 +2025,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                  * at the current node, whether or not it actually an
                  * interpolating degree of freedom
                  */
-                ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
+                ldof_eqn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[eqn][id];
 
                 /*
                  *   for weakly integrated boundary conditions,
@@ -2051,18 +2071,19 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                      *  be the basis function which is not zeroed out in
                      *  the current element.
                      */
-                    ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][ldof_eqn];
-                    mn_first = ei[pg->imtrx]->matID_ledof[ledof];
+                    ledof =
+                        goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][ldof_eqn];
+                    mn_first = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
 
                     if ((BC_Types[bc_input_id].BC_Data_Int[1] &&
                          Current_EB_ptr->Elem_Blk_Id == BC_Types[bc_input_id].BC_Data_Int[1]) ||
                         (!BC_Types[bc_input_id].BC_Data_Int[1] &&
                          ((Current_EB_ptr->Elem_Blk_Id + 1) % 2) == 0)) {
 
-                      phi_i = bf[eqn]->phi[ldof_eqn];
+                      phi_i = goma_ctx->fem.bf[eqn]->phi[ldof_eqn];
                       weight *= phi_i;
                     } else {
-                      phi_i = bf[eqn]->phi[ldof_eqn + 1];
+                      phi_i = goma_ctx->fem.bf[eqn]->phi[ldof_eqn + 1];
                       weight *= phi_i;
                     }
 
@@ -2078,8 +2099,9 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                      *    conditions get applied on the second degree
                      *    of freedom at the node.
                      */
-                    if ((bf[eqn]->interpolation == I_Q2_D || bf[eqn]->interpolation == I_Q1_D ||
-                         bf[eqn]->interpolation == I_Q2_D_LSA) &&
+                    if ((goma_ctx->fem.bf[eqn]->interpolation == I_Q2_D ||
+                         goma_ctx->fem.bf[eqn]->interpolation == I_Q1_D ||
+                         goma_ctx->fem.bf[eqn]->interpolation == I_Q2_D_LSA) &&
                         (bc->BC_Name == CONT_TANG_VEL_BC || bc->BC_Name == CONT_NORM_VEL_BC ||
                          bc->BC_Name == DISCONTINUOUS_VELO_BC || bc->BC_Name == VL_EQUIL_BC ||
                          bc->BC_Name == VL_POLY_BC || bc->BC_Name == SDC_STEFANFLOW_BC ||
@@ -2094,27 +2116,28 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                    *  CROSS_PHASE boundary conditions for the phase in which
                    *  the eqn actually is solved for.
                    */
-                  else if (bc_desc->i_apply == SINGLE_PHASE || pd->e[pg->imtrx][eqn]) {
+                  else if (bc_desc->i_apply == SINGLE_PHASE ||
+                           goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
                     if (bc->BC_Name == KINEMATIC_PETROV_BC ||
                         bc->BC_Name == VELO_NORMAL_LS_PETROV_BC ||
                         bc->BC_Name == KIN_DISPLACEMENT_PETROV_BC) {
-                      if (pd->Num_Dim != 2) {
+                      if (goma_ctx->fem.pd->Num_Dim != 2) {
                         GOMA_EH(
                             GOMA_ERROR,
                             "KINEMATIC_PETROV or KIN_DISPLACEMENT_PETROV not available in 3D yet");
                       }
                       id_side = elem_side_bc->id_side;
                       i_basis = 1 - id_side % 2;
-                      phi_i = bf[eqn]->dphidxi[ldof_eqn][i_basis];
+                      phi_i = goma_ctx->fem.bf[eqn]->dphidxi[ldof_eqn][i_basis];
                       weight *= phi_i;
                     } else if (bc->BC_Name == ELLIPTIC_XI_REGULARIZATION_BC ||
                                bc->BC_Name == ELLIPTIC_ETA_REGULARIZATION_BC ||
                                bc->BC_Name == ELLIPTIC_ZETA_REGULARIZATION_BC) {
                       i_basis = (bc->BC_Name - ELLIPTIC_XI_REGULARIZATION_BC);
-                      phi_i = bf[eqn]->dphidxi[ldof_eqn][i_basis];
+                      phi_i = goma_ctx->fem.bf[eqn]->dphidxi[ldof_eqn][i_basis];
                       weight *= phi_i;
                     } else {
-                      phi_i = bf[eqn]->phi[ldof_eqn];
+                      phi_i = goma_ctx->fem.bf[eqn]->phi[ldof_eqn];
                       weight *= phi_i;
                     }
 
@@ -2130,8 +2153,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                      *  adjacent material
                      */
 
-                    for (mn = 0; mn < upd->Num_Mat; mn++) {
-                      if (pd_glob[mn]->e[pg->imtrx][eqn] &&
+                    for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+                      if (goma_ctx->fem.pd_glob[mn]->e[goma_ctx->fem.pg->imtrx][eqn] &&
                           (eb_in_matrl(BC_Types[bc_input_id].BC_Data_Int[0], mn) ||
                            eb_in_matrl(BC_Types[bc_input_id].BC_Data_Int[1], mn))) {
                         // type = pd_glob[mn]->w[eqn];
@@ -2155,7 +2178,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                          * so I am not sure why the bfi[type] was used in the first place.
                          */
 
-                        phi_i = bf[eqn]->phi[id];
+                        phi_i = goma_ctx->fem.bf[eqn]->phi[id];
                         weight *= phi_i;
                       }
                     }
@@ -2183,7 +2206,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                     bc->BC_Name != SHELL_TFMP_NUM_DIFF_BC && bc->BC_Name != SH_SDET_BC &&
                     bc->BC_Name != SH_MESH2_WEAK_BC &&
                     bc->BC_Name != SHELL_LUBRICATION_OUTFLOW_BC) {
-                  weight *= pd->etm[pg->imtrx][eqn][(LOG2_BOUNDARY)];
+                  weight *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_BOUNDARY)];
                 }
 
                 /*
@@ -2195,7 +2218,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                 if (eqn == R_MASS) {
                   ieqn = MAX_PROB_EQN + bc->species_eq;
                 } else {
-                  ieqn = upd->ep[pg->imtrx][eqn];
+                  ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
                   if (goma_automatic_rotations.automatic_rotations &&
                       (bc->desc->rotate != NO_ROT)) {
                     ieqn = equation_index_auto_rotate(elem_side_bc, I, eqn, p, bc);
@@ -2207,7 +2230,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                  *  residual vector
                  */
                 if (ldof_eqn != -1) {
-                  lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += weight * fv->sdet * func[p];
+                  goma_ctx->fem.lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] +=
+                      weight * goma_ctx->fem.fv->sdet * func[p];
 
 #ifdef DEBUG_BC
                   if (IFPD == NULL)
@@ -2215,8 +2239,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                   fprintf(IFPD,
                           "ielem = %d: BC_index = %d, lec->R[LEC_R_INDEX(%d,%d)] += weight"
                           "* fv->sdet * func[p]: weight = %g, fv->sdet = %g, func[%d] = %g\n",
-                          ei[pg->imtrx]->ielem, bc_input_id, ieqn, ldof_eqn, weight, fv->sdet, p,
-                          func[p]);
+                          goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, bc_input_id, ieqn,
+                          ldof_eqn, weight, goma_ctx->fem.fv->sdet, p, func[p]);
                   fflush(IFPD);
 #endif
                   /*
@@ -2227,12 +2251,12 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                    *  - add into matrix
                    */
 
-                  if (af->Assemble_Jacobian && ldof_eqn != -1) {
+                  if (goma_ctx->fem.af->Assemble_Jacobian && ldof_eqn != -1) {
 
                     if (new_way) {
                       for (w = 0; w < jacCol.Num_lvdesc; w++) {
                         lvdesc = jacCol.Lvdesc_Index[w];
-                        tmp = jacCol.JacCol[w] * weight * fv->sdet;
+                        tmp = jacCol.JacCol[w] * weight * goma_ctx->fem.fv->sdet;
                         /*
                          *  Find the variable type that corresponds to
                          *  the local variable description. This is the
@@ -2241,11 +2265,13 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                         if (lvdesc < 0 || lvdesc > MAX_LOCAL_VAR_DESC) {
                           printf("we have an error\n");
                         }
-                        var = ei[pg->imtrx]->Lvdesc_to_Var_Type[lvdesc];
+                        var = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_Var_Type[lvdesc];
                         if (var == MASS_FRACTION) {
-                          pvar = MAX_PROB_VAR + ei[pg->imtrx]->Lvdesc_to_MFSubvar[lvdesc];
+                          pvar =
+                              MAX_PROB_VAR +
+                              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_MFSubvar[lvdesc];
                         } else {
-                          pvar = upd->vp[pg->imtrx][var];
+                          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                         }
                         /*
                          *  ieqn = upd->ep[pg->imtrx][eqn] (MF's put high)
@@ -2259,32 +2285,38 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                          *            element. We should make use of that
                          *            feature to cut down the amount of work.
                          */
-                        jac_ptr = &(lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, 0)]);
-                        phi_ptr = bf[var]->phi;
-                        for (jlv = 0; jlv < ei[pg->imtrx]->Lvdesc_Numdof[lvdesc]; jlv++) {
-                          j = ei[pg->imtrx]->Lvdesc_to_lvdof[lvdesc][jlv];
-                          lnn = ei[pg->imtrx]->Lvdesc_to_Lnn[lvdesc][jlv];
-                          q = ei[pg->imtrx]->ln_to_dof[var][lnn];
+                        jac_ptr = &(goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, 0)]);
+                        phi_ptr = goma_ctx->fem.bf[var]->phi;
+                        for (jlv = 0;
+                             jlv < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_Numdof[lvdesc];
+                             jlv++) {
+                          j = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
+                                  ->Lvdesc_to_lvdof[lvdesc][jlv];
+                          lnn =
+                              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Lvdesc_to_Lnn[lvdesc][jlv];
+                          q = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[var][lnn];
                           jac_ptr[j] += tmp * phi_ptr[q];
                         }
                       }
 
-                      if (!af->Assemble_LSA_Mass_Matrix) {
-                        tmp = weight * fv->sdet;
+                      if (!goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
+                        tmp = weight * goma_ctx->fem.fv->sdet;
                         for (w = 0; w < jacCol.Num_lvdof; w++) {
                           var = jacCol.Lvdof_var_type[w];
-                          pvar = upd->vp[pg->imtrx][var];
+                          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                           j = jacCol.Lvdof_lvdof[w];
-                          lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] += tmp * jacCol.Jac_lvdof[w];
+                          goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                              tmp * jacCol.Jac_lvdof[w];
                         }
 
-                        for (q = 0; q < pd->Num_Dim; q++) {
+                        for (q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
                           var = MESH_DISPLACEMENT1 + q;
-                          if (pd->v[pg->imtrx][var]) {
-                            pvar = upd->vp[pg->imtrx][var];
-                            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                              lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                                  weight * func[p] * fv->dsurfdet_dx[q][j];
+                          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+                            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                                 j++) {
+                              goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                                  weight * func[p] * goma_ctx->fem.fv->dsurfdet_dx[q][j];
                             }
                           }
                         }
@@ -2299,14 +2331,15 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                        * this first term b/c it doesn't involve any
                        * primary time derivative variables.
                        */
-                      if (!af->Assemble_LSA_Mass_Matrix) {
-                        for (q = 0; q < pd->Num_Dim; q++) {
+                      if (!goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
+                        for (q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
                           var = MESH_DISPLACEMENT1 + q;
-                          pvar = upd->vp[pg->imtrx][var];
+                          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                           if (pvar != -1) {
-                            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                              lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                                  weight * func[p] * fv->dsurfdet_dx[q][j];
+                            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                                 j++) {
+                              goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                                  weight * func[p] * goma_ctx->fem.fv->dsurfdet_dx[q][j];
                             }
                           }
                         }
@@ -2316,19 +2349,23 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                        * variables
                        */
                       for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-                        pvar = upd->vp[pg->imtrx][var];
+                        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                         if (pvar != -1 && (BC_Types[bc_input_id].desc->sens[var] || 1)) {
                           if (var != MASS_FRACTION) {
-                            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                              lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                                  weight * fv->sdet * d_func[p][var][j];
+                            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                                 j++) {
+                              goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                                  weight * goma_ctx->fem.fv->sdet * d_func[p][var][j];
                             }
                           } else {
                             /* variable type is MASS_FRACTION */
-                            for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                                lec->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
-                                    weight * fv->sdet * d_func[p][MAX_VARIABLE_TYPES + w][j];
+                            for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                                   j++) {
+                                goma_ctx->fem.lec
+                                    ->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
+                                    weight * goma_ctx->fem.fv->sdet *
+                                    d_func[p][MAX_VARIABLE_TYPES + w][j];
                               }
                             } /* end of loop over species */
                           } /* end of if MASS_FRACTION */
@@ -2346,7 +2383,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           if (stress_bc == 1) {
 
             /* For a stress BC, we will loop over modes on top of loop over the stress components */
-            for (imode = 0; imode < vn->modes; imode++) {
+            for (imode = 0; imode < goma_ctx->fem.vn->modes; imode++) {
               for (p = 0; p < bc_desc->vector; p++) {
                 /*
                  *   Check to see if this BC on this node is
@@ -2354,8 +2391,9 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                  *   And, find the global unknown number, index_eq, on which
                  *   to applying this additive boundary condition, eqn
                  */
-                index_eq = bc_eqn_index_stress(id, I, bc_input_id, ei[pg->imtrx]->mn, p, imode,
-                                               &eqn, &matID_apply, &vd);
+                index_eq = bc_eqn_index_stress(id, I, bc_input_id,
+                                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn, p,
+                                               imode, &eqn, &matID_apply, &vd);
 
                 if (index_eq >= 0) {
                   /*
@@ -2363,7 +2401,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                    * at the current node, whether or not it actually an
                    * interpolating degree of freedom
                    */
-                  ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
+                  ldof_eqn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[eqn][id];
 
                   /*
                    *   for weakly integrated boundary conditions,
@@ -2376,7 +2414,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                    */
 
                   if (bc_desc->i_apply == SINGLE_PHASE) {
-                    phi_i = bf[eqn]->phi[ldof_eqn];
+                    phi_i = goma_ctx->fem.bf[eqn]->phi[ldof_eqn];
                     weight *= phi_i;
                   } else {
                     GOMA_EH(GOMA_ERROR, "Only SINGLE_PHASE is handled in stress BC implementation");
@@ -2393,14 +2431,15 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                    * Determine the position in the local element residual
                    * vector to put the current contribution
                    */
-                  ieqn = upd->ep[pg->imtrx][eqn];
+                  ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
                   /*
                    *  Add the current contribution to the local element
                    *  residual vector
                    */
 
-                  lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += weight * fv->sdet * func_stress[imode][p];
+                  goma_ctx->fem.lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] +=
+                      weight * goma_ctx->fem.fv->sdet * func_stress[imode][p];
 
                   /*
                    *   Add sensitivities into matrix
@@ -2410,7 +2449,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                    *  - add into matrix
                    */
 
-                  if (af->Assemble_Jacobian && ldof_eqn != -1) {
+                  if (goma_ctx->fem.af->Assemble_Jacobian && ldof_eqn != -1) {
 
                     /* if mesh displacement is variable,
                      *  put in this sensitivity first
@@ -2420,14 +2459,16 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                      * primary time derivative variables.
                      */
 
-                    if (!af->Assemble_LSA_Mass_Matrix) {
-                      for (q = 0; q < pd->Num_Dim; q++) {
+                    if (!goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
+                      for (q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
                         var = MESH_DISPLACEMENT1 + q;
-                        pvar = upd->vp[pg->imtrx][var];
+                        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                         if (pvar != -1) {
-                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                                weight * func_stress[imode][p] * fv->dsurfdet_dx[q][j];
+                          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                               j++) {
+                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                                weight * func_stress[imode][p] *
+                                goma_ctx->fem.fv->dsurfdet_dx[q][j];
                           }
                         }
                       }
@@ -2438,22 +2479,25 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                      */
 
                     for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-                      pvar = upd->vp[pg->imtrx][var];
+                      pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                       if (pvar != -1) {
 
                         /* Case for variable type that is not MASS_FRACTION */
                         if (var != MASS_FRACTION) {
-                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                                weight * fv->sdet * d_func_stress[imode][p][var][j];
+                          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                               j++) {
+                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                                weight * goma_ctx->fem.fv->sdet * d_func_stress[imode][p][var][j];
                           }
                         }
                         /* Case for variable type that is MASS_FRACTION */
                         else {
-                          for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                              lec->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
-                                  weight * fv->sdet *
+                          for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                                 j++) {
+                              goma_ctx->fem.lec
+                                  ->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
+                                  weight * goma_ctx->fem.fv->sdet *
                                   d_func_stress[imode][p][MAX_VARIABLE_TYPES + w][j];
                             }
                           }
@@ -2521,7 +2565,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
   struct BC_descriptions *bc_desc;
   double surface_centroid[DIM];
 
-  tran->time_value = time_intermediate;
+  goma_ctx->fem.tran->time_value = time_intermediate;
 
   /***************************************************************************/
   /*     START OF SURFACE LOOPS THAT REQUIRE INTEGRATION (WEAK SENSE)        */
@@ -2533,11 +2577,13 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
    *   applied at the surface
    */
 
-  if (ls != NULL && ls->SubElemIntegration && ls->elem_overlap_state) {
+  if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->SubElemIntegration &&
+      goma_ctx->fem.ls->elem_overlap_state) {
     Subgrid_Int.ip_total = get_subelement_integration_pts(
         &Subgrid_Int.s, &Subgrid_Int.wt, &Subgrid_Int.ip_sign, 0., elem_side_bc->id_side - 1, 0);
     ip_total = Subgrid_Int.ip_total;
-  } else if (ls != NULL && ls->Integration_Depth > 0 && ls->elem_overlap_state) {
+  } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->Integration_Depth > 0 &&
+             goma_ctx->fem.ls->elem_overlap_state) {
 #ifdef SUBELEMENT_FOR_SUBGRID
     /* DRN: you can also do subgrid integration with the following.
        it recursive divides element to create small subelements and then
@@ -2565,8 +2611,9 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
    */
   for (ip = 0; ip < ip_total; ip++) {
 
-    if (ls != NULL && ls->SubElemIntegration && ls->elem_overlap_state) {
-      ls->Elem_Sign = Subgrid_Int.ip_sign[ip];
+    if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->SubElemIntegration &&
+        goma_ctx->fem.ls->elem_overlap_state) {
+      goma_ctx->fem.ls->Elem_Sign = Subgrid_Int.ip_sign[ip];
       xi[0] = Subgrid_Int.s[ip][0];
       xi[1] = Subgrid_Int.s[ip][1];
       xi[2] = Subgrid_Int.s[ip][2];
@@ -2574,9 +2621,10 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
       s = 1.e30;
       t = 1.e30;
       wt = Subgrid_Int.wt[ip];
-    } else if (ls != NULL && ls->Integration_Depth > 0 && ls->elem_overlap_state) {
+    } else if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->Integration_Depth > 0 &&
+               goma_ctx->fem.ls->elem_overlap_state) {
 #ifdef SUBELEMENT_FOR_SUBGRID
-      ls->Elem_Sign = 0;
+      goma_ctx->fem.ls->Elem_Sign = 0;
       xi[0] = Subgrid_Int.s[ip][0];
       xi[1] = Subgrid_Int.s[ip][1];
       xi[2] = Subgrid_Int.s[ip][2];
@@ -2587,8 +2635,8 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
 #else
       /* Tom - We need subgrid integration along this element side here */
       /* for now just use regular gauss integration */
-      if (ls != NULL)
-        ls->Elem_Sign = 0;
+      if (goma_ctx->fem.ls != NULL)
+        goma_ctx->fem.ls->Elem_Sign = 0;
       xi[0] = Subgrid_Int.s[ip][0];
       xi[1] = Subgrid_Int.s[ip][1];
       xi[2] = Subgrid_Int.s[ip][2];
@@ -2602,15 +2650,16 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
          wt = Gq_surf_weight(ip, ielem_type); */
 #endif
     } else {
-      if (ls != NULL)
-        ls->Elem_Sign = 0;
+      if (goma_ctx->fem.ls != NULL)
+        goma_ctx->fem.ls->Elem_Sign = 0;
       /* find the quadrature point locations (s, t) for current ip */
-      find_surf_st(ip, ielem_type, elem_side_bc->id_side, ei[pg->imtrx]->ielem_dim, xi, &s, &t, &u);
+      find_surf_st(ip, ielem_type, elem_side_bc->id_side,
+                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim, xi, &s, &t, &u);
       /* find the quadrature weight for current surface ip */
       wt = Gq_surf_weight(ip, ielem_type);
     }
 
-    err = load_basis_functions(xi, bfd);
+    err = load_basis_functions(xi, goma_ctx->fem.bfd);
     GOMA_EH(err, "problem from load_basis_functions");
 
     err = beer_belly();
@@ -2659,7 +2708,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
      * Load up commonly used physical properties such as density at
      * the current quadrature point using the material state vector.
      */
-    load_properties(mp, time_value);
+    load_properties(goma_ctx->fem.mp, time_value);
 
     /*
      * Determine the State Variable Vector for the material
@@ -2671,8 +2720,8 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
      * constituitive properties should be filled in.
      */
     for (i = 0; i < elem_side_bc->Num_MatID; i++) {
-      mp_2 = mp_glob[elem_side_bc->MatID_List[i]];
-      if (mp_2 != mp) {
+      mp_2 = goma_ctx->fem.mp_glob[elem_side_bc->MatID_List[i]];
+      if (mp_2 != goma_ctx->fem.mp) {
         load_matrl_statevector(mp_2);
         load_properties(mp_2, time_value);
         break;
@@ -2682,8 +2731,9 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
     /*
      * Load up porous media variables and properties, if needed
      */
-    if (mp->PorousMediaType == POROUS_UNSATURATED || mp->PorousMediaType == POROUS_SATURATED ||
-        mp->PorousMediaType == POROUS_TWO_PHASE) {
+    if (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+        goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED ||
+        goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) {
       err = load_porous_properties();
       GOMA_EH(err, "load_porous_properties");
     }
@@ -2803,7 +2853,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
         /*         vector and Jacobian Matrix                                 */
         /**********************************************************************/
 
-        for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
           /*
            *   for weakly integrated boundary conditions,
@@ -2815,23 +2865,24 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
 
           ldof_eqn = i;
 
-          phi_e[0] = bf[eqn]->phi_e[i][0];
-          phi_e[1] = bf[eqn]->phi_e[i][1];
-          phi_e[2] = bf[eqn]->phi_e[i][2];
+          phi_e[0] = goma_ctx->fem.bf[eqn]->phi_e[i][0];
+          phi_e[1] = goma_ctx->fem.bf[eqn]->phi_e[i][1];
+          phi_e[2] = goma_ctx->fem.bf[eqn]->phi_e[i][2];
 
           /*
            * For strong conditions weight the function by BIG_PENALTY
            */
           if (bc_desc->method == STRONG_INT_NEDELEC) {
-            weight *= upd->strong_penalty;
+            weight *= goma_ctx->fem.upd->strong_penalty;
           }
-          ieqn = upd->ep[pg->imtrx][eqn];
+          ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-          for (int p = 0; p < pd->Num_Dim; p++) {
+          for (int p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
             if (ldof_eqn != -1) {
-              lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += weight * fv->sdet * phi_e[p] * func[p];
+              goma_ctx->fem.lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] +=
+                  weight * goma_ctx->fem.fv->sdet * phi_e[p] * func[p];
 
-              if (af->Assemble_Jacobian && ldof_eqn != -1) {
+              if (goma_ctx->fem.af->Assemble_Jacobian && ldof_eqn != -1) {
 
                 /* OLD METHOD */
 
@@ -2842,14 +2893,14 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
                  * this first term b/c it doesn't involve any
                  * primary time derivative variables.
                  */
-                if (!af->Assemble_LSA_Mass_Matrix) {
-                  for (q = 0; q < pd->Num_Dim; q++) {
+                if (!goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
+                  for (q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
                     var = MESH_DISPLACEMENT1 + q;
-                    pvar = upd->vp[pg->imtrx][var];
+                    pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                     if (pvar != -1) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                        lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                            weight * phi_e[p] * func[p] * fv->dsurfdet_dx[q][j];
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                        goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                            weight * phi_e[p] * func[p] * goma_ctx->fem.fv->dsurfdet_dx[q][j];
                       }
                     }
                   }
@@ -2859,19 +2910,20 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
                  * variables
                  */
                 for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-                  pvar = upd->vp[pg->imtrx][var];
+                  pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                   if (pvar != -1 && (BC_Types[bc_input_id].desc->sens[var] || 1)) {
                     if (var != MASS_FRACTION) {
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                        lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                            weight * fv->sdet * phi_e[p] * d_func[p][var][j];
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                        goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                            weight * goma_ctx->fem.fv->sdet * phi_e[p] * d_func[p][var][j];
                       }
                     } else {
                       /* variable type is MASS_FRACTION */
-                      for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                          lec->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
-                              weight * fv->sdet * phi_e[p] * d_func[p][MAX_VARIABLE_TYPES + w][j];
+                      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                          goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
+                              weight * goma_ctx->fem.fv->sdet * phi_e[p] *
+                              d_func[p][MAX_VARIABLE_TYPES + w][j];
                         }
                       } /* end of loop over species */
                     } /* end of if MASS_FRACTION */
@@ -2910,7 +2962,7 @@ int equation_index_auto_rotate(const ELEM_SIDE_BC_STRUCT *elem_side_bc,
     double dot = 0;
     for (int j = 0; j < 3; j++) {
       dot += goma_automatic_rotations.rotation_nodes[I].rotated_coord[i]->normal->data[j] *
-             fv->snormal[j];
+             goma_ctx->fem.fv->snormal[j];
     }
     if (fabs(dot) > max_dot) {
       rot_dir = i;
@@ -2919,7 +2971,7 @@ int equation_index_auto_rotate(const ELEM_SIDE_BC_STRUCT *elem_side_bc,
   }
 
   eq_idx[0] = rot_dir;
-  ieqn = upd->ep[pg->imtrx][eqn + eq_idx[p]];
+  ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn + eq_idx[p]];
   return ieqn;
 }
 
@@ -2952,7 +3004,7 @@ void apply_table_wic_bc(double func[],
   int basis;
   double slope, interp_val, x_table[2];
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
 
   basis = BC_Type->table->t_index[0];
@@ -2960,12 +3012,12 @@ void apply_table_wic_bc(double func[],
   /*  Setup Dummy variable to pass array to interpolation function */
 
   if (basis != -1)
-    x_table[0] = fv->x[basis];
+    x_table[0] = goma_ctx->fem.fv->x[basis];
   else
     x_table[0] = time_value;
 
   if (BC_Type->table->interp_method == BIQUADRATIC || BC_Type->table->interp_method == BILINEAR) {
-    x_table[1] = fv->x[BC_Type->table->t_index[1]];
+    x_table[1] = goma_ctx->fem.fv->x[BC_Type->table->t_index[1]];
   }
   interp_val = interpolate_table(BC_Type->table, x_table, &slope, NULL);
 

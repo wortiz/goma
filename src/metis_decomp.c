@@ -404,12 +404,12 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
   build_node_node(monolith);
 
   // crude block weights
-  for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (int ebn = 0; ebn < monolith->num_elem_blocks; ebn++) {
       int mn = Matilda[ebn];
       for (int var = V_FIRST; var < V_LAST; var++) {
-        if (pd_glob[mn]->e[imtrx][var]) {
-          int interp = pd_glob[mn]->i[imtrx][var];
+        if (goma_ctx->fem.pd_glob[mn]->e[imtrx][var]) {
+          int interp = goma_ctx->fem.pd_glob[mn]->i[imtrx][var];
           int ielem_type =
               get_type(monolith->eb_elem_type[ebn], monolith->eb_num_nodes_per_elem[ebn],
                        monolith->eb_num_attr[ebn]);

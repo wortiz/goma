@@ -203,10 +203,10 @@ void initial_guess_stress_to_log_conf(double *x, int num_total_nodes) {
 
   stress_eqn_pointer(v_s);
 
-  for (mn = 0; mn < upd->Num_Mat; mn++) // mn = Material Number
+  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) // mn = Material Number
   {
-    for (mode = 0; mode < vn_glob[mn]->modes; mode++) {
-      ve[mode] = ve_glob[mn][mode];
+    for (mode = 0; mode < goma_ctx->fem.vn_glob[mn]->modes; mode++) {
+      goma_ctx->fem.ve[mode] = goma_ctx->fem.ve_glob[mn][mode];
 
       for (node = 0; node < num_total_nodes; node++) {
         memset(WORK, 0, sizeof(double) * LWORK);
@@ -215,12 +215,12 @@ void initial_guess_stress_to_log_conf(double *x, int num_total_nodes) {
         for (a = 0; a < 2; a++) {
           for (b = 0; b < 2; b++) {
             v = v_s[mode][a][b];
-            s_idx[a][b] = Index_Solution(node, v, 0, 0, -2, pg->imtrx);
+            s_idx[a][b] = Index_Solution(node, v, 0, 0, -2, goma_ctx->fem.pg->imtrx);
           }
         }
 
-        mup = viscosity(ve[mode]->gn, gamma_dot, NULL);
-        lambda = polymer_time_const(ve[mode]->time_const_st, gamma_dot, NULL);
+        mup = viscosity(goma_ctx->fem.ve[mode]->gn, gamma_dot, NULL);
+        lambda = polymer_time_const(goma_ctx->fem.ve[mode]->time_const_st, gamma_dot, NULL);
 
         // skip node if stress variables not found
         if (s_idx[0][0] == -1 || s_idx[0][1] == -1 || s_idx[1][1] == -1)
@@ -465,11 +465,11 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
    */
 
   /* Set step_fix only if parallel run and only if fix freq is enabled*/
-  if (goma_ctx->num_proc > 1 && tran->fix_freq > 0) {
+  if (goma_ctx->num_proc > 1 && goma_ctx->fem.tran->fix_freq > 0) {
     step_fix = 1; /* Always fix on the first timestep to match print frequency */
   }
 
-  tran->time_value = time1;
+  goma_ctx->fem.tran->time_value = time1;
 
   is_steady_state = (TimeIntegration == STEADY) ? TRUE : FALSE;
 
@@ -477,27 +477,29 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
 #ifdef LIBRARY_MODE
   fprintf(stdout, "  Commencing call #%3d from ANIMAS to solve_problem\n", callnum);
-  if (libio->animas_step != -1)
+  if (goma_ctx->fem.libio->animas_step != -1)
     last_call = FALSE;
 
   /* Determine if external porosity updates are required */
-  if (Num_Var_In_Type[pg->imtrx][POR_LIQ_PRES] && efv->ev_porous_index > -1) {
+  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][POR_LIQ_PRES] &&
+      goma_ctx->fem.efv->ev_porous_index > -1) {
     update_porosity = TRUE;
-    fprintf(stdout, " External porosity field %d will be updated.\n", efv->ev_porous_index);
+    fprintf(stdout, " External porosity field %d will be updated.\n",
+            goma_ctx->fem.efv->ev_porous_index);
   }
-  if (libio->goma_first == 1)
+  if (goma_ctx->fem.libio->goma_first == 1)
     fprintf(stdout, "  Goma goes first");
-  if (libio->goma_first == 0)
+  if (goma_ctx->fem.libio->goma_first == 0)
     fprintf(stdout, "  Goma goes second");
 
 #endif
 
   /* Determine if external area fraction updates are required */
-  if ((Num_Var_In_Type[pg->imtrx][MASS_FRACTION]) && (efv->ev_etch_area > -1) &&
-      (efv->ev_etch_depth > -1)) {
+  if ((Num_Var_In_Type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) &&
+      (goma_ctx->fem.efv->ev_etch_area > -1) && (goma_ctx->fem.efv->ev_etch_depth > -1)) {
     update_etch_area = TRUE;
     fprintf(stderr, " External fields etch area %d and etch depth %d will be updated.\n",
-            efv->ev_etch_area, efv->ev_etch_depth);
+            goma_ctx->fem.efv->ev_etch_area, goma_ctx->fem.efv->ev_etch_depth);
   }
 
   if (goma_ctx->unlimited_output && strlen(goma_ctx->soln_out_file)) {
@@ -533,11 +535,11 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
    * When using overlap AC's for fluid/solid overlapping grid problems,
    * create the additional set of AC constraints here.
    */
-  if (Do_Overlap && augc[nAC - 1].Type == AC_OVERLAP) {
+  if (Do_Overlap && goma_ctx->fem.augc[nAC - 1].Type == AC_OVERLAP) {
     err = create_overlap_acs(exo, nAC - 1);
     GOMA_EH(err, "Problem with create_overlap_acs!");
   }
-  if (nAC > 0 && augc[0].Type == AC_PERIODIC) {
+  if (nAC > 0 && goma_ctx->fem.augc[0].Type == AC_PERIODIC) {
     err = create_periodic_acs(exo);
     GOMA_EH(err, "Problem with create_periodic_acs!");
   }
@@ -570,8 +572,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     GOMA_EH(GOMA_ERROR, "Augmenting condition values overflowing MAX_NGV.  Change and rerun .");
 
   if (goma_ctx->spec_source_inventory == NULL) {
-    goma_ctx->spec_source_inventory = Dmatrix_birth(upd->Num_Mat, upd->Max_Num_Species_Eqn + 1);
-    goma_ctx->spec_source_inventory_rows = upd->Num_Mat;
+    goma_ctx->spec_source_inventory =
+        Dmatrix_birth(goma_ctx->fem.upd->Num_Mat, goma_ctx->fem.upd->Max_Num_Species_Eqn + 1);
+    goma_ctx->spec_source_inventory_rows = goma_ctx->fem.upd->Num_Mat;
   }
   if (goma_ctx->spec_source_lumped_mass == NULL) {
     goma_ctx->spec_source_lumped_mass = alloc_dbl_1(exo->num_nodes, 0.0);
@@ -662,7 +665,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
   num_total_nodes = dpi->num_universe_nodes;
 
-  numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
+  numProcUnknowns = NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
 
   asdv(&resid_vector, numProcUnknowns);
   asdv(&resid_vector_sens, numProcUnknowns);
@@ -701,33 +704,33 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
   /* Initialize solid inertia flag */
   set_solid_inertia();
 
-  if (tran->solid_inertia) {
-    tran->xdbl_dot = (double *)array_alloc(1, numProcUnknowns, sizeof(double));
-    tran->xdbl_dot_old = (double *)array_alloc(1, numProcUnknowns, sizeof(double));
+  if (goma_ctx->fem.tran->solid_inertia) {
+    goma_ctx->fem.tran->xdbl_dot = (double *)array_alloc(1, numProcUnknowns, sizeof(double));
+    goma_ctx->fem.tran->xdbl_dot_old = (double *)array_alloc(1, numProcUnknowns, sizeof(double));
 
     for (i = 0; i < numProcUnknowns; i++) {
-      tran->xdbl_dot[i] = 0.;
-      tran->xdbl_dot_old[i] = 0.;
+      goma_ctx->fem.tran->xdbl_dot[i] = 0.;
+      goma_ctx->fem.tran->xdbl_dot_old[i] = 0.;
     }
 
     /*set these in input deck when ready, or if you feel compelled
       to change them.  PRS 10/3/2001 */
-    tran->newmark_gamma = 0.9;
-    tran->newmark_beta = 0.49;
+    goma_ctx->fem.tran->newmark_gamma = 0.9;
+    goma_ctx->fem.tran->newmark_beta = 0.49;
   }
 
   node_to_fill = alloc_int_1(num_total_nodes, 0);
 
-  pg->matrices = malloc(sizeof(struct Matrix_Data));
-  pg->matrices[pg->imtrx].ams = ams[JAC];
-  pg->matrices[pg->imtrx].x = x;
-  pg->matrices[pg->imtrx].x_old = x_old;
-  pg->matrices[pg->imtrx].x_older = x_older;
-  pg->matrices[pg->imtrx].xdot = xdot;
-  pg->matrices[pg->imtrx].xdot_old = xdot_old;
-  pg->matrices[pg->imtrx].x_update = x_update;
-  pg->matrices[pg->imtrx].scale = scale;
-  pg->matrices[pg->imtrx].resid_vector = resid_vector;
+  goma_ctx->fem.pg->matrices = malloc(sizeof(struct Matrix_Data));
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].ams = ams[JAC];
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x = x;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old = x_old;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_older = x_older;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot = xdot;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot_old = xdot_old;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_update = x_update;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].scale = scale;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].resid_vector = resid_vector;
 
   /* Allocate sparse matrix */
 
@@ -744,9 +747,10 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     int local_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
                       goma_ctx->mesh.num_external_nodes;
     err = GomaSparseMatrix_SetProblemGraph(
-        goma_matrix, num_internal_dofs[pg->imtrx], num_boundary_dofs[pg->imtrx],
-        num_external_dofs[pg->imtrx], local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,
-        dpi, cx[pg->imtrx], pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
+        goma_matrix, num_internal_dofs[goma_ctx->fem.pg->imtrx],
+        num_boundary_dofs[goma_ctx->fem.pg->imtrx], num_external_dofs[goma_ctx->fem.pg->imtrx],
+        local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo, dpi,
+        cx[goma_ctx->fem.pg->imtrx], goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
     GOMA_EH(err, "GomaSparseMatrix_SetProblemGraph");
     ams[JAC]->GomaMatrixData = goma_matrix;
 #ifdef GOMA_ENABLE_PETSC
@@ -755,20 +759,22 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
-    pg->imtrx = 0;
+    goma_ctx->fem.pg->imtrx = 0;
     goma_error err = goma_setup_petsc_matrix_complex(
-        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[pg->imtrx],
-        num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx], pg->imtrx);
+        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[goma_ctx->fem.pg->imtrx],
+        num_boundary_dofs[goma_ctx->fem.pg->imtrx], num_external_dofs[goma_ctx->fem.pg->imtrx],
+        goma_ctx->fem.pg->imtrx);
     GOMA_EH(err, "goma_setup_petsc_matrix_complex");
 #else
   } else if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
-    pg->imtrx = 0;
+    goma_ctx->fem.pg->imtrx = 0;
     goma_error err = goma_setup_petsc_matrix(
-        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[pg->imtrx],
-        num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx], pg->imtrx);
+        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[goma_ctx->fem.pg->imtrx],
+        num_boundary_dofs[goma_ctx->fem.pg->imtrx], num_external_dofs[goma_ctx->fem.pg->imtrx],
+        goma_ctx->fem.pg->imtrx);
     GOMA_EH(err, "goma_setup_petsc_matrix");
 #endif
 #endif
@@ -779,9 +785,10 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
      * An attic to store external dofs column names is needed when
      * running in parallel.
      */
-    alloc_extern_ija_buffer(num_universe_dofs[pg->imtrx],
-                            num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx], ija,
-                            &ija_attic);
+    alloc_extern_ija_buffer(num_universe_dofs[goma_ctx->fem.pg->imtrx],
+                            num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                                num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+                            ija, &ija_attic);
     /*
      * Any necessary one time initialization of the linear
      * solver package (Aztec).
@@ -805,11 +812,14 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     ams[JAC]->npn_plus =
         dpi->num_internal_nodes + dpi->num_boundary_nodes + dpi->num_external_nodes;
 
-    ams[JAC]->npu = num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx];
-    ams[JAC]->npu_plus = num_universe_dofs[pg->imtrx];
+    ams[JAC]->npu =
+        num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+    ams[JAC]->npu_plus = num_universe_dofs[goma_ctx->fem.pg->imtrx];
 
-    ams[JAC]->nnz = ija[num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]] - 1;
-    ams[JAC]->nnz_plus = ija[num_universe_dofs[pg->imtrx]];
+    ams[JAC]->nnz = ija[num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                        num_boundary_dofs[goma_ctx->fem.pg->imtrx]] -
+                    1;
+    ams[JAC]->nnz_plus = ija[num_universe_dofs[goma_ctx->fem.pg->imtrx]];
 
   } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
     log_msg("alloc_VBR_sparse_arrays...");
@@ -826,7 +836,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
   }
 #ifdef GOMA_ENABLE_PETSC
 #if !(PETSC_USE_COMPLEX)
-  if (upd->petsc_solve_post_proc && rd->TotalNVPostOutput) {
+  if (goma_ctx->fem.upd->petsc_solve_post_proc && rd->TotalNVPostOutput) {
     goma_setup_petsc_post_proc_matrix(exo, dpi, x, x_old, xdot, xdot_old);
   }
 #endif
@@ -838,9 +848,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
    */
   if (nAC > 0) {
     for (iAC = 0; iAC < nAC; iAC++) {
-      augc[iAC].d_evol_dx = alloc_dbl_1(numProcUnknowns, 0.0);
-      augc[iAC].d_lsvel_dx = alloc_dbl_1(numProcUnknowns, 0.0);
-      augc[iAC].d_lsvol_dx = alloc_dbl_1(numProcUnknowns, 0.0);
+      goma_ctx->fem.augc[iAC].d_evol_dx = alloc_dbl_1(numProcUnknowns, 0.0);
+      goma_ctx->fem.augc[iAC].d_lsvel_dx = alloc_dbl_1(numProcUnknowns, 0.0);
+      goma_ctx->fem.augc[iAC].d_lsvol_dx = alloc_dbl_1(numProcUnknowns, 0.0);
     }
   }
 
@@ -886,8 +896,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
      */
 #ifndef ALLOW_NEGATIVE_TIMES_PLEASE
     if (TimeIntegration != STEADY) {
-      if (tran->init_time < 0.0) {
-        tran->init_time = timeValueRead;
+      if (goma_ctx->fem.tran->init_time < 0.0) {
+        goma_ctx->fem.tran->init_time = timeValueRead;
         DPRINTF(stdout, "\n Initial Simulation Time Has been set to %g\n", timeValueRead);
       }
     }
@@ -899,7 +909,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     initial_guess_stress_to_log_conf(x, num_total_nodes);
   }
 
-  if ((callnum == 1) && (pmv_hyst != NULL)) {
+  if ((callnum == 1) && (goma_ctx->fem.pmv_hyst != NULL)) {
     error = init_pmv_hyst(exo);
     GOMA_EH(error, "Error in initiating Porous Media Variables Hysteresis Struct");
   }
@@ -912,7 +922,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
     /* Load starting porous liquid pressures from solution vector */
     for (i = 0; i < num_total_nodes; i++) {
-      j = Index_Solution(i, POR_LIQ_PRES, 0, 0, -1, pg->imtrx);
+      j = Index_Solution(i, POR_LIQ_PRES, 0, 0, -1, goma_ctx->fem.pg->imtrx);
       if (j > -1)
         base_p_liq[i] = x[j];
     }
@@ -924,7 +934,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 #else
 
   /****************************Anneal from external***********************/
-  if (efv->ev_porous_decouple) {
+  if (goma_ctx->fem.efv->ev_porous_decouple) {
     anneal_mesh_with_external_field(exo);
   }
 
@@ -1018,32 +1028,39 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
 
       for (iAC = 0; iAC < nAC; iAC++) {
-        evol_local = augc[iAC].evol;
+        evol_local = goma_ctx->fem.augc[iAC].evol;
 #ifdef PARALLEL
-        if (goma_ctx->num_proc > 1 &&
-            (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
-             augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
+        if (goma_ctx->num_proc > 1 && (goma_ctx->fem.augc[iAC].Type == AC_VOLUME ||
+                                       goma_ctx->fem.augc[iAC].Type == AC_POSITION ||
+                                       goma_ctx->fem.augc[iAC].Type == AC_ANGLE ||
+                                       goma_ctx->fem.augc[iAC].Type == AC_POSITION_MT)) {
           MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
           evol_local = evol_global;
         }
 #endif
-        if (augc[iAC].Type == AC_USERBC) {
-          DPRINTF(stdout, "\tBC[%4d] DF[%4d]=% 10.6e\n", augc[iAC].BCID, augc[iAC].DFID, x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_USERMAT || augc[iAC].Type == AC_FLUX_MAT) {
-          DPRINTF(stdout, "\tMT[%4d] MP[%4d]=% 10.6e\n", augc[iAC].MTID, augc[iAC].MPID, x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_VOLUME) {
-          DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
-                  augc[iAC].VOLID, evol_local, x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_POSITION || augc[iAC].Type == AC_POSITION_MT) {
+        if (goma_ctx->fem.augc[iAC].Type == AC_USERBC) {
+          DPRINTF(stdout, "\tBC[%4d] DF[%4d]=% 10.6e\n", goma_ctx->fem.augc[iAC].BCID,
+                  goma_ctx->fem.augc[iAC].DFID, x_AC[iAC]);
+        } else if (goma_ctx->fem.augc[iAC].Type == AC_USERMAT ||
+                   goma_ctx->fem.augc[iAC].Type == AC_FLUX_MAT) {
+          DPRINTF(stdout, "\tMT[%4d] MP[%4d]=% 10.6e\n", goma_ctx->fem.augc[iAC].MTID,
+                  goma_ctx->fem.augc[iAC].MPID, x_AC[iAC]);
+        } else if (goma_ctx->fem.augc[iAC].Type == AC_VOLUME) {
+          DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n", goma_ctx->fem.augc[iAC].MTID,
+                  goma_ctx->fem.augc[iAC].VOLID, evol_local, x_AC[iAC]);
+        } else if (goma_ctx->fem.augc[iAC].Type == AC_POSITION ||
+                   goma_ctx->fem.augc[iAC].Type == AC_POSITION_MT) {
           DPRINTF(stdout, "\tNodeSet[%4d]_Pos = %10.6e F_bal = %10.6e MT[%4d] Param=%10.6e\n",
-                  augc[iAC].MTID, evol_local, augc[iAC].lm_resid, augc[iAC].VOLID, x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_ANGLE) {
-          evol_local = augc[iAC].lm_resid + augc[iAC].CONSTV;
+                  goma_ctx->fem.augc[iAC].MTID, evol_local, goma_ctx->fem.augc[iAC].lm_resid,
+                  goma_ctx->fem.augc[iAC].VOLID, x_AC[iAC]);
+        } else if (goma_ctx->fem.augc[iAC].Type == AC_ANGLE) {
+          evol_local = goma_ctx->fem.augc[iAC].lm_resid + goma_ctx->fem.augc[iAC].CONSTV;
           DPRINTF(stdout, "\tNodeSet[%4d]_Ang = %g F_bal = %6.3e MT[%4d] Param=%6.3e\n",
-                  augc[iAC].MTID, evol_local, augc[iAC].lm_resid, augc[iAC].VOLID, x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_LS_VEL) {
-          evol_local = augc[iAC].lsvol;
-          lsvel_local = augc[iAC].lsvel;
+                  goma_ctx->fem.augc[iAC].MTID, evol_local, goma_ctx->fem.augc[iAC].lm_resid,
+                  goma_ctx->fem.augc[iAC].VOLID, x_AC[iAC]);
+        } else if (goma_ctx->fem.augc[iAC].Type == AC_LS_VEL) {
+          evol_local = goma_ctx->fem.augc[iAC].lsvol;
+          lsvel_local = goma_ctx->fem.augc[iAC].lsvel;
 
 #ifdef PARALLEL
           if (goma_ctx->num_proc > 1) {
@@ -1056,10 +1073,12 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
           lsvel_local = lsvel_local / evol_local;
 
-          DPRINTF(stdout, "\tMT[%4d] LSVEL phase[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
-                  augc[iAC].LSPHASE, lsvel_local, x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_FLUX) {
-          DPRINTF(stdout, "\tBC[%4d] DF[%4d]=%10.6e\n", augc[iAC].BCID, augc[iAC].DFID, x_AC[iAC]);
+          DPRINTF(stdout, "\tMT[%4d] LSVEL phase[%4d]=%10.6e Param=%10.6e\n",
+                  goma_ctx->fem.augc[iAC].MTID, goma_ctx->fem.augc[iAC].LSPHASE, lsvel_local,
+                  x_AC[iAC]);
+        } else if (goma_ctx->fem.augc[iAC].Type == AC_FLUX) {
+          DPRINTF(stdout, "\tBC[%4d] DF[%4d]=%10.6e\n", goma_ctx->fem.augc[iAC].BCID,
+                  goma_ctx->fem.augc[iAC].DFID, x_AC[iAC]);
         }
       }
     }
@@ -1128,8 +1147,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
     if (goma_ctx->particles.dynamics) {
       /* If this was steady-state we need to ensure the fv_old* values are the same as fv. */
-      dcopy1(NumUnknowns[pg->imtrx], x, x_old);
-      dcopy1(NumUnknowns[pg->imtrx], x, x_older);
+      dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], x, x_old);
+      dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], x, x_older);
       initialize_particles(exo, x, x_old, xdot, xdot_old, resid_vector);
       for (n = 0; n < goma_ctx->particles.max_time_steps; n++) {
         time = (n + 1) * goma_ctx->particles.output_time_step;
@@ -1147,19 +1166,20 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
    ********************************************************************************/
   else {
     if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
-      fprintf(stdout, "MaxTimeSteps: %d \tTimeMax: %f\n", tran->MaxTimeSteps, tran->TimeMax);
+      fprintf(stdout, "MaxTimeSteps: %d \tTimeMax: %f\n", goma_ctx->fem.tran->MaxTimeSteps,
+              goma_ctx->fem.tran->TimeMax);
       fprintf(stdout, "solving transient problem\n");
     }
 
     /*
      *  Transfer information from the Transient_Information structure to local variables
      */
-    double delta_t0 = tran->Delta_t0;
-    double delta_t_min = tran->Delta_t_min;
-    double delta_t_max = tran->Delta_t_max;
-    double max_time_steps = tran->MaxTimeSteps;
-    double time_max = tran->TimeMax;
-    eps = tran->eps;
+    double delta_t0 = goma_ctx->fem.tran->Delta_t0;
+    double delta_t_min = goma_ctx->fem.tran->Delta_t_min;
+    double delta_t_max = goma_ctx->fem.tran->Delta_t_max;
+    double max_time_steps = goma_ctx->fem.tran->MaxTimeSteps;
+    double time_max = goma_ctx->fem.tran->TimeMax;
+    eps = goma_ctx->fem.tran->eps;
 
     // Determine if we are using a constant time step or not
     if (delta_t0 < 0.0) {
@@ -1177,29 +1197,29 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
      * solve_steps > 0: Take |solve| steps, restore delta_t from last call.
      */
 #ifdef LIBRARY_MODE
-    if (libio->solve_steps > 0) {
-      MaxTimeSteps = libio->solve_steps;
+    if (goma_ctx->fem.libio->solve_steps > 0) {
+      MaxTimeSteps = goma_ctx->fem.libio->solve_steps;
       if (callnum > 1)
         Delta_t0 = delta_t_save;
-    } else if (libio->solve_steps < 0) {
-      MaxTimeSteps = -libio->solve_steps;
+    } else if (goma_ctx->fem.libio->solve_steps < 0) {
+      MaxTimeSteps = -goma_ctx->fem.libio->solve_steps;
       if (callnum > 1)
         Delta_t0 = delta_t_save;
     } else {
-      if (callnum > 1 && delta_t_save * libio->decelerator > Delta_t0) {
-        Delta_t0 = delta_t_save * libio->decelerator;
+      if (callnum > 1 && delta_t_save * goma_ctx->fem.libio->decelerator > Delta_t0) {
+        Delta_t0 = delta_t_save * goma_ctx->fem.libio->decelerator;
       }
     }
 #endif
 
-    time = time1 = tran->init_time; /* Allow non-zero initial time */
-    tran->time_value = tran->time_value_old = time1;
-    tran->delta_t_old = delta_t0;
+    time = time1 = goma_ctx->fem.tran->init_time; /* Allow non-zero initial time */
+    goma_ctx->fem.tran->time_value = goma_ctx->fem.tran->time_value_old = time1;
+    goma_ctx->fem.tran->delta_t_old = delta_t0;
     if (delta_t0 > delta_t_max)
       delta_t0 = delta_t_max;
     delta_t = delta_t_old = delta_t_older = delta_t0;
-    tran->delta_t = delta_t; /*Load this up for use in load_fv_mesh_derivs */
-    tran->delta_t_avg = delta_t;
+    goma_ctx->fem.tran->delta_t = delta_t; /*Load this up for use in load_fv_mesh_derivs */
+    goma_ctx->fem.tran->delta_t_avg = delta_t;
 
     /*
      *  Allocate space for prediction vector to be saved here,
@@ -1250,7 +1270,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     matrix_systems_mask = 1;
 
     /*set some other misc. action flags */
-    af->Sat_hyst_reevaluate = FALSE;
+    goma_ctx->fem.af->Sat_hyst_reevaluate = FALSE;
 
     /* Call prefront (or mf_setup) if necessary */
 
@@ -1301,7 +1321,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
      * Now, reset MaxTimeSteps to skip the time step loop.
      */
 #ifdef LIBRARY_MODE
-    if (last_call && libio->goma_first == 1 && libio->print_flag >= 0)
+    if (last_call && goma_ctx->fem.libio->goma_first == 1 && goma_ctx->fem.libio->print_flag >= 0)
       MaxTimeSteps = 0;
 #endif
 
@@ -1327,13 +1347,14 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         DPRINTF(stdout, "\t\tLAST TIME STEP!\n");
         time1 = time_max;
         delta_t = time1 - time;
-        tran->delta_t = delta_t;
-        tran->delta_t_avg = 0.25 * (delta_t + delta_t_old + delta_t_older + delta_t_oldest);
+        goma_ctx->fem.tran->delta_t = delta_t;
+        goma_ctx->fem.tran->delta_t_avg =
+            0.25 * (delta_t + delta_t_old + delta_t_older + delta_t_oldest);
 #ifdef LIBRARY_MODE
         last_step = TRUE;
 #endif
       }
-      tran->time_value = time1;
+      goma_ctx->fem.tran->time_value = time1;
 #ifdef LIBRARY_MODE
       if (n == (MaxTimeSteps - 1))
         last_step = TRUE;
@@ -1369,12 +1390,12 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
        * If external field is time_dep update the current solution,
        * x_old, to the values of the external variables at that time point.
        */
-      if (efv->ev) {
+      if (goma_ctx->fem.efv->ev) {
         timeValueReadTrans = time;
-        for (w = 0; w < efv->Num_external_field; w++) {
-          if (strcmp(efv->field_type[w], "transient") == 0) {
-            err = rd_trans_vectors_from_exoII(x_old, efv->file_nm[w], w, n, &timeValueReadTrans,
-                                              exo, cx[0], dpi);
+        for (w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
+          if (strcmp(goma_ctx->fem.efv->field_type[w], "transient") == 0) {
+            err = rd_trans_vectors_from_exoII(x_old, goma_ctx->fem.efv->file_nm[w], w, n,
+                                              &timeValueReadTrans, exo, cx[0], dpi);
             if (err != 0) {
               DPRINTF(stderr, "%s: err from rd_trans_vectors_from_exoII\n", yo);
             }
@@ -1392,7 +1413,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
       } else if ((nt - last_renorm_nt) >= 3 && (nt - last_adapt_nt) >= 2) {
         /* Now revert to the scheme input by the user */
-        theta = tran->theta;
+        theta = goma_ctx->fem.tran->theta;
         const_delta_t = const_delta_ts;
         /*
          * If the previous step failed due to a convergence error
@@ -1419,12 +1440,12 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
       if (nt == 0) {
         xfem = NULL;
-        if (upd->XFEM) {
+        if (goma_ctx->fem.upd->XFEM) {
           xfem = alloc_struct_1(struct Extended_Shape_Fcn_Basics, 1);
           xfem->ielem = -1;
           xfem->tot_vol = alloc_dbl_1(numProcUnknowns, 0.0);
           xfem->active_vol = alloc_dbl_1(numProcUnknowns, 0.0);
-          if (ls == NULL) {
+          if (goma_ctx->fem.ls == NULL) {
             GOMA_EH(GOMA_ERROR, "Currently, XFEM requires traditional level set (not pf)");
           }
         }
@@ -1434,14 +1455,15 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
        * Initial Start up (t=0) for the FILL/LEVEL_SET equations
        */
 
-      if (upd->ep[pg->imtrx][FILL] > -1 && nt == 0) { /*  Start of LS initialization */
+      if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][FILL] > -1 &&
+          nt == 0) { /*  Start of LS initialization */
 
-        if (ls != NULL || pfd != NULL) {
+        if (goma_ctx->fem.ls != NULL || goma_ctx->fem.pfd != NULL) {
 
-          int eqntype = ls->Init_Method;
+          int eqntype = goma_ctx->fem.ls->Init_Method;
           /* This is a temporary loc for this allocation */
 
-          switch (ls->Evolution) {
+          switch (goma_ctx->fem.ls->Evolution) {
           case LS_EVOLVE_ADVECT_EXPLICIT:
             DPRINTF(stdout, "\n\t Using decoupled / subcycling for FILL equation.\n");
             break;
@@ -1458,27 +1480,29 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             GOMA_EH(GOMA_ERROR, "Level Set Evolution scheme not found \n");
           }
 
-          if (ls->Length_Scale < 0.0)
+          if (goma_ctx->fem.ls->Length_Scale < 0.0)
             GOMA_EH(GOMA_ERROR, "\tError: a Level Set Length Scale needs to be specified\n");
 
-          if (ls->Integration_Depth > 0 || ls->SubElemIntegration || ls->AdaptIntegration) {
+          if (goma_ctx->fem.ls->Integration_Depth > 0 || goma_ctx->fem.ls->SubElemIntegration ||
+              goma_ctx->fem.ls->AdaptIntegration) {
 
-            if (ls->Integration_Depth > 0) {
+            if (goma_ctx->fem.ls->Integration_Depth > 0) {
               int first_elem;
 
               first_elem = find_first_elem_with_var(exo, LS);
 
               if (first_elem != -1) {
-                load_ei(first_elem, exo, 0, pg->imtrx);
+                load_ei(first_elem, exo, 0, goma_ctx->fem.pg->imtrx);
 
-                Subgrid_Tree = create_shape_fcn_tree(ls->Integration_Depth);
+                Subgrid_Tree = create_shape_fcn_tree(goma_ctx->fem.ls->Integration_Depth);
                 DPRINTF(stdout, "\n\tSubgrid Integration of level set interface active.\n");
               }
-            } else if (ls->SubElemIntegration) {
+            } else if (goma_ctx->fem.ls->SubElemIntegration) {
               DPRINTF(stdout, "\n\tSubelement Integration of level set interface active.\n");
-            } else if (ls->AdaptIntegration) {
+            } else if (goma_ctx->fem.ls->AdaptIntegration) {
               DPRINTF(stdout, "\n\tAdaptive Integration of level set interface active.\n");
-              DPRINTF(stdout, "\tAdaptive Integration Interface Order = %d\n", ls->Adaptive_Order);
+              DPRINTF(stdout, "\tAdaptive Integration Interface Order = %d\n",
+                      goma_ctx->fem.ls->Adaptive_Order);
             }
             Subgrid_Int.ip_total = 0;
             Subgrid_Int.s = NULL;
@@ -1505,13 +1529,13 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
             /* parallel synchronization of initialization surfaces */
             if (goma_ctx->num_proc > 1) {
-              if (!ls->init_surf_list)
-                ls->init_surf_list = create_surf_list();
-              assemble_Global_surf_list(ls->init_surf_list);
+              if (!goma_ctx->fem.ls->init_surf_list)
+                goma_ctx->fem.ls->init_surf_list = create_surf_list();
+              assemble_Global_surf_list(goma_ctx->fem.ls->init_surf_list);
             }
 
-            surf_based_initialization(x, NULL, NULL, exo, num_total_nodes, ls->init_surf_list, 0.,
-                                      0., 0.);
+            surf_based_initialization(x, NULL, NULL, exo, num_total_nodes,
+                                      goma_ctx->fem.ls->init_surf_list, 0., 0., 0.);
 
 #ifdef DEBUG_PARALLEL
             {
@@ -1526,7 +1550,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
               fprintf(data_out, "num_total_nodes:  %d \n", num_total_nodes);
 
               for (II = 0; II < num_total_nodes; II++) {
-                je = Index_Solution(II, LS, 0, 0, -1, pg->imtrx);
+                je = Index_Solution(II, LS, 0, 0, -1, goma_ctx->fem.pg->imtrx);
 
                 if (je != -1) {
                   fprintf(data_out, "%d  %lf \n", II, x[je]);
@@ -1553,14 +1577,15 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
           exchange_dof(cx[0], dpi, x, 0);
 
           if (converged) {
-            switch (ls->Renorm_Method) {
+            switch (goma_ctx->fem.ls->Renorm_Method) {
 
             case HUYGENS:
             case HUYGENS_C:
             case HUYGENS_MASS_ITER:
             case FACET_BASED:
               Renorm_Now =
-                  (ls->Force_Initial_Renorm || (ls->Renorm_Freq != 0 && ls->Renorm_Countdown == 0));
+                  (goma_ctx->fem.ls->Force_Initial_Renorm ||
+                   (goma_ctx->fem.ls->Renorm_Freq != 0 && goma_ctx->fem.ls->Renorm_Countdown == 0));
 
               did_renorm =
                   huygens_renormalization(x, xdot, num_total_nodes, exo, cx[0], dpi,
@@ -1578,8 +1603,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
               GOMA_EH(GOMA_ERROR, "Use of \"CORRECT\" is obsolete.");
               break;
             default:
-              if (ls->Evolution == LS_EVOLVE_ADVECT_EXPLICIT ||
-                  ls->Evolution == LS_EVOLVE_ADVECT_COUPLED)
+              if (goma_ctx->fem.ls->Evolution == LS_EVOLVE_ADVECT_EXPLICIT ||
+                  goma_ctx->fem.ls->Evolution == LS_EVOLVE_ADVECT_COUPLED)
                 GOMA_WH(-1, "No level set renormalization is on.\n");
             } /* end of switch(ls->Renorm_Method ) */
           }
@@ -1587,7 +1612,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
            * More initialization needed. Have to set those field variables that initially are
            * indexed by level set function.  For example, species  concentration and temperature.
            */
-          if (ls->Num_Var_Init > 0)
+          if (goma_ctx->fem.ls->Num_Var_Init > 0)
             ls_var_initialization(&x, exo, dpi, cx);
 
           /* 	  DPRINTF(stderr, "Done with ls_var_initialization.\n"); */
@@ -1609,18 +1634,18 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
              * every time step.
              */
 
-            if (build && ls->last_surf_list == NULL) {
+            if (build && goma_ctx->fem.ls->last_surf_list == NULL) {
               struct LS_Surf *tmp_surf = NULL;
               struct LS_Surf_Iso_Data *tmp_data;
 
-              ls->last_surf_list = create_surf_list();
+              goma_ctx->fem.ls->last_surf_list = create_surf_list();
 
               tmp_surf = create_surf(LS_SURF_ISOSURFACE);
               tmp_data = (struct LS_Surf_Iso_Data *)tmp_surf->data;
               tmp_data->isovar = FILL;
               tmp_data->isoval = 0.0;
 
-              append_surf(ls->last_surf_list, tmp_surf);
+              append_surf(goma_ctx->fem.ls->last_surf_list, tmp_surf);
             }
 
           } /* matches int build */
@@ -1639,13 +1664,14 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         exchange_dof(cx[0], dpi, x_oldest, 0);
       }
 
-      ls_old = ls;
-      if (upd->vp[pg->imtrx][PHASE1] > -1 && nt == 0) { /* Start of Phase Function initialization */
+      ls_old = goma_ctx->fem.ls;
+      if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][PHASE1] > -1 &&
+          nt == 0) { /* Start of Phase Function initialization */
 
-        if (pfd != NULL) {
-          struct Level_Set_Data *ls_save = ls;
-          if (upd->vp[pg->imtrx][PHASE1] > -1) {
-            switch (pfd->ls[0]->Evolution) {
+        if (goma_ctx->fem.pfd != NULL) {
+          struct Level_Set_Data *ls_save = goma_ctx->fem.ls;
+          if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][PHASE1] > -1) {
+            switch (goma_ctx->fem.pfd->ls[0]->Evolution) {
             case LS_EVOLVE_ADVECT_EXPLICIT:
               DPRINTF(stdout,
                       "\n\t Using decoupled / subcycling for FILL equation for R_PHASE0.\n");
@@ -1665,26 +1691,28 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             }
           }
 
-          for (i = 0; i < pfd->num_phase_funcs; i++) {
-            ls = pfd->ls[i]; /* This is a crucial step.  It allows us to use the Level Set Machinery
-                                to initialize the phase functions
-                                BUT... Make sure to set it back to what we start with when through.
-                                Many places the test ls != NULL is used to thread the code
-                             */
+          for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
+            goma_ctx->fem.ls =
+                goma_ctx->fem.pfd
+                    ->ls[i]; /* This is a crucial step.  It allows us to use the Level Set Machinery
+    to initialize the phase functions
+    BUT... Make sure to set it back to what we start with when through.
+    Many places the test ls != NULL is used to thread the code
+ */
 
-            switch (ls->Init_Method) {
+            switch (goma_ctx->fem.ls->Init_Method) {
             case SURFACES:
               DPRINTF(stdout, "\n\t\t Surface object initialization for phase function: %d", i);
 
               /* parallel synchronization of initialization surfaces */
               if (goma_ctx->num_proc > 1) {
-                if (!ls->init_surf_list)
-                  ls->init_surf_list = create_surf_list();
-                assemble_Global_surf_list(ls->init_surf_list);
+                if (!goma_ctx->fem.ls->init_surf_list)
+                  goma_ctx->fem.ls->init_surf_list = create_surf_list();
+                assemble_Global_surf_list(goma_ctx->fem.ls->init_surf_list);
               }
 
-              surf_based_initialization(x, NULL, NULL, exo, num_total_nodes, ls->init_surf_list, 0.,
-                                        0., 0.);
+              surf_based_initialization(x, NULL, NULL, exo, num_total_nodes,
+                                        goma_ctx->fem.ls->init_surf_list, 0., 0., 0.);
               break;
             case EXO_READ:
               DPRINTF(stdout, "\n\t\t Exodus file read initialization for phase function fields");
@@ -1692,24 +1720,24 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             } /* end of switch(ls->Init_Method ) */
           } /* end of i<pfd->num_phase_funcs */
 
-          ls = ls_save; /* OK, used the level set routines now be nice and point
+          goma_ctx->fem.ls = ls_save; /* OK, used the level set routines now be nice and point
                            ls back to where you found it */
 
           /* Allocate arrays for constraint Jacobian contributions */
-          if (pfd->Use_Constraint == TRUE) {
+          if (goma_ctx->fem.pfd->Use_Constraint == TRUE) {
             int i;
-            pfd->jac_info->d_pf_lm = alloc_dbl_1(numProcUnknowns, 0.0);
-            pfd->jac_info->d_lm_pf = alloc_dbl_1(numProcUnknowns, 0.0);
+            goma_ctx->fem.pfd->jac_info->d_pf_lm = alloc_dbl_1(numProcUnknowns, 0.0);
+            goma_ctx->fem.pfd->jac_info->d_lm_pf = alloc_dbl_1(numProcUnknowns, 0.0);
 
-            if (pfd->ls[0]->Init_Method != EXO_READ) {
-              for (i = 0; i < pfd->num_phase_funcs; i++) {
-                shift_nodal_values(PHASE1 + i, -pfd->shift[i], x, num_total_nodes);
+            if (goma_ctx->fem.pfd->ls[0]->Init_Method != EXO_READ) {
+              for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
+                shift_nodal_values(PHASE1 + i, -goma_ctx->fem.pfd->shift[i], x, num_total_nodes);
               }
             }
           }
 
         } /* end of pfd!=NULL */
-        ls = ls_old;
+        goma_ctx->fem.ls = ls_old;
 
         dcopy1(numProcUnknowns, x, x_old);
         dcopy1(numProcUnknowns, x, x_older);
@@ -1720,11 +1748,11 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
       } /* end of phase function initialization */
 
-      if (ls != NULL && ls->last_surf_list != NULL) {
+      if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->last_surf_list != NULL) {
         /* Find the interface surf at the last full time step (x_old = tmp_x)
          * for use during this explicit step */
 
-        create_subsurfs(ls->last_surf_list, x_old, exo);
+        create_subsurfs(goma_ctx->fem.ls->last_surf_list, x_old, exo);
       }
 
       if (goma_ctx->proc_id == 0) {
@@ -1752,16 +1780,16 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         predict_solution(numProcUnknowns, delta_t, delta_t_old, delta_t_older, theta, x, x_old,
                          x_older, x_oldest, xdot, xdot_old, xdot_older);
 
-        if (tran->solid_inertia) {
+        if (goma_ctx->fem.tran->solid_inertia) {
           predict_solution_newmark(num_total_nodes, delta_t, x, x_old, xdot, xdot_old);
-          exchange_dof(cx[0], dpi, tran->xdbl_dot, 0);
+          exchange_dof(cx[0], dpi, goma_ctx->fem.tran->xdbl_dot, 0);
         }
       } else {
         DPRINTF(stderr, "skipping predict_solution at time: %g %d\n", time1, nonconv_roll);
       }
 
 #ifdef LASER_RAYTRACE
-      if (ls != NULL) {
+      if (goma_ctx->fem.ls != NULL) {
         double (*point0)[DIM] = NULL;
         double (*point1)[DIM] = NULL;
         int *owning_elem = NULL;
@@ -1777,18 +1805,18 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       }
 #endif
 
-      if (ls != NULL && ls->Evolution == LS_EVOLVE_SLAVE) {
-        surf_based_initialization(x, NULL, NULL, exo, num_total_nodes, ls->init_surf_list, time1,
-                                  theta, delta_t);
+      if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->Evolution == LS_EVOLVE_SLAVE) {
+        surf_based_initialization(x, NULL, NULL, exo, num_total_nodes,
+                                  goma_ctx->fem.ls->init_surf_list, time1, theta, delta_t);
       }
-      if (pfd != NULL) {
-        ls_old = ls; /*the ol' switcheroo*/
-        ls = pfd->ls[0];
-        if (ls->Evolution == LS_EVOLVE_SLAVE) {
-          surf_based_initialization(x, NULL, NULL, exo, num_total_nodes, ls->init_surf_list, time1,
-                                    theta, delta_t);
+      if (goma_ctx->fem.pfd != NULL) {
+        ls_old = goma_ctx->fem.ls; /*the ol' switcheroo*/
+        goma_ctx->fem.ls = goma_ctx->fem.pfd->ls[0];
+        if (goma_ctx->fem.ls->Evolution == LS_EVOLVE_SLAVE) {
+          surf_based_initialization(x, NULL, NULL, exo, num_total_nodes,
+                                    goma_ctx->fem.ls->init_surf_list, time1, theta, delta_t);
         }
-        ls = ls_old;
+        goma_ctx->fem.ls = ls_old;
       }
 
       /* Now go back and correct all those dofs using XFEM */
@@ -1814,8 +1842,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
         for (iAC = 0; iAC < nAC; iAC++) {
           update_parameterAC(iAC, x, xdot, x_AC, cx[0], exo, dpi);
-          augc[iAC].tmp2 = x_AC_dot[iAC];
-          augc[iAC].tmp3 = x_AC_old[iAC];
+          goma_ctx->fem.augc[iAC].tmp2 = x_AC_dot[iAC];
+          goma_ctx->fem.augc[iAC].tmp3 = x_AC_old[iAC];
         }
       }
 
@@ -1839,8 +1867,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
       exchange_dof(cx[0], dpi, x, 0);
       exchange_dof(cx[0], dpi, xdot, 0);
-      if (tran->solid_inertia)
-        exchange_dof(cx[0], dpi, tran->xdbl_dot, 0);
+      if (goma_ctx->fem.tran->solid_inertia)
+        exchange_dof(cx[0], dpi, goma_ctx->fem.tran->xdbl_dot, 0);
 
       /*
        * Save the predicted solution for the time step
@@ -1852,12 +1880,18 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         dcopy1(nAC, x_AC, x_AC_pred);
 
 #ifdef GOMA_ENABLE_OMEGA_H
-      if ((tran->ale_adapt || (ls != NULL && ls->adapt)) && tran->theta != 0) {
-        GOMA_EH(GOMA_ERROR, "Error theta time step parameter = %g only 0.0 supported", tran->theta);
+      if ((goma_ctx->fem.tran->ale_adapt ||
+           (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->adapt)) &&
+          goma_ctx->fem.tran->theta != 0) {
+        GOMA_EH(GOMA_ERROR, "Error theta time step parameter = %g only 0.0 supported",
+                goma_ctx->fem.tran->theta);
       }
-      if ((tran->ale_adapt || (ls != NULL && ls->adapt)) && pg->imtrx == 0 &&
-          (nt == 0 || ((ls != NULL && nt % ls->adapt_freq == 0) ||
-                       (tran->ale_adapt && nt % tran->ale_adapt_freq == 0)))) {
+      if ((goma_ctx->fem.tran->ale_adapt ||
+           (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->adapt)) &&
+          goma_ctx->fem.pg->imtrx == 0 &&
+          (nt == 0 ||
+           ((goma_ctx->fem.ls != NULL && nt % goma_ctx->fem.ls->adapt_freq == 0) ||
+            (goma_ctx->fem.tran->ale_adapt && nt % goma_ctx->fem.tran->ale_adapt_freq == 0)))) {
         if (last_adapt_nt == nt && adapt_step > 0) {
           adapt_step--;
         }
@@ -1867,9 +1901,10 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         adapt_step++;
         num_total_nodes = dpi->num_universe_nodes;
         num_total_nodes = dpi->num_universe_nodes;
-        numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
+        numProcUnknowns =
+            NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
         if (nt == 0) {
-          if (ls->Num_Var_Init > 0)
+          if (goma_ctx->fem.ls->Num_Var_Init > 0)
             ls_var_initialization(&x, exo, dpi, cx);
         }
         x_save = realloc(x_save, sizeof(double) * numProcUnknowns);
@@ -1904,7 +1939,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       }
 #endif
 
-      numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
+      numProcUnknowns =
+          NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
       /*
        *  Solve the nonlinear problem. If we achieve convergence,
        *  set the flag, converged, to true on return. If not
@@ -1912,7 +1948,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
        */
       dcopy1(numProcUnknowns, x, x_save);
       dcopy1(numProcUnknowns, xdot, xdot_save);
-      tran->current_theta = theta;
+      goma_ctx->fem.tran->current_theta = theta;
       err = solve_nonlinear_problem(ams[JAC], x, delta_t, theta, x_old, x_older, xdot, xdot_old,
                                     resid_vector, x_update, scale, &converged, &nprint, tev,
                                     tev_post, gv, rd, gindex, p_gsize, gvec, gvec_elem, time1, exo,
@@ -1921,8 +1957,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       if (err == -1)
         converged = FALSE;
       inewton = err;
-      evpl_glob[0]->update_flag = 0;   /*See get_evp_stress_tensor for description */
-      af->Sat_hyst_reevaluate = FALSE; /*See load_saturation for description*/
+      goma_ctx->fem.evpl_glob[0]->update_flag = 0;   /*See get_evp_stress_tensor for description */
+      goma_ctx->fem.af->Sat_hyst_reevaluate = FALSE; /*See load_saturation for description*/
 #ifdef RESET_TRANSIENT_RELAXATION_PLEASE
       /* Set TRUE to disable relaxation on timesteps after the first*/
       /* For transient, reset the Newton damping factors after a
@@ -1958,9 +1994,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       }
 
       if (converged)
-        af->Sat_hyst_reevaluate = TRUE; /*see load_saturation */
+        goma_ctx->fem.af->Sat_hyst_reevaluate = TRUE; /*see load_saturation */
 
-      if ((af->Sat_hyst_reevaluate) && (pmv_hyst != NULL)) {
+      if ((goma_ctx->fem.af->Sat_hyst_reevaluate) && (goma_ctx->fem.pmv_hyst != NULL)) {
         /* Determine what curve to follow and if switch is in order */
         err = evaluate_sat_hyst_criterion_nodal(x, xdot, exo);
       }
@@ -1976,14 +2012,15 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
        */
       if (converged) {
 
-        if (upd->ep[pg->imtrx][TURB_K] >= 0 || upd->ep[pg->imtrx][TURB_OMEGA] >= 0) {
+        if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][TURB_K] >= 0 ||
+            goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][TURB_OMEGA] >= 0) {
           /*     Floor values to 0 */
           int floored_values = 0;
           for (int var = TURB_K; var <= TURB_OMEGA; var++) {
-            for (int mn = 0; mn < upd->Num_Mat; mn++) {
-              if (pd_glob[mn]->v[pg->imtrx][var]) {
+            for (int mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+              if (goma_ctx->fem.pd_glob[mn]->v[goma_ctx->fem.pg->imtrx][var]) {
                 for (i = 0; i < num_total_nodes; i++) {
-                  int j = Index_Solution(i, var, 0, 0, mn, pg->imtrx);
+                  int j = Index_Solution(i, var, 0, 0, mn, goma_ctx->fem.pg->imtrx);
 
                   if (j != -1 && x[j] < 0) {
                     x[j] = 0.0;
@@ -2001,8 +2038,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             P0PRINTF("Floored %d values\n", global_floored);
         }
 
-        delta_t_new = time_step_control(delta_t, delta_t_old, const_delta_t, x, x_pred, x_old, x_AC,
-                                        x_AC_pred, eps, &success_dt, tran->use_var_norm);
+        delta_t_new =
+            time_step_control(delta_t, delta_t_old, const_delta_t, x, x_pred, x_old, x_AC,
+                              x_AC_pred, eps, &success_dt, goma_ctx->fem.tran->use_var_norm);
         if (const_delta_t) {
           success_dt = TRUE;
           delta_t_new = delta_t;
@@ -2011,9 +2049,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
           failed_recently_countdown--;
         } else if (delta_t_new > delta_t_max) {
           delta_t_new = delta_t_max;
-        } else if (delta_t_new < tran->resolved_delta_t_min) {
+        } else if (delta_t_new < goma_ctx->fem.tran->resolved_delta_t_min) {
           /* fool algorithm into using delta_t = tran->resolved_delta_t_min */
-          delta_t_new = tran->resolved_delta_t_min;
+          delta_t_new = goma_ctx->fem.tran->resolved_delta_t_min;
           success_dt = TRUE;
           DPRINTF(stderr, "\n\tminimum resolved step limit! - step control\n");
           /*     if(!success_dt)delta_t /= tran->time_step_decelerator;
@@ -2028,11 +2066,11 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
           delta_t_new = delta_t;*/
         }
 
-        if (ls != NULL && tran->Courant_Limit != 0.) {
+        if (goma_ctx->fem.ls != NULL && goma_ctx->fem.tran->Courant_Limit != 0.) {
           double Courant_dt;
-          Courant_dt =
-              tran->Courant_Limit * Courant_Time_Step(x, x_old, x_older, xdot, xdot_old,
-                                                      resid_vector, ams[0]->proc_config, exo);
+          Courant_dt = goma_ctx->fem.tran->Courant_Limit *
+                       Courant_Time_Step(x, x_old, x_older, xdot, xdot_old, resid_vector,
+                                         ams[0]->proc_config, exo);
           if (Courant_dt > 0. && Courant_dt < delta_t_new) {
             DPRINTF(stdout, "\nCourant Limit requires dt <= %g\n", Courant_dt);
             delta_t_new = Courant_dt;
@@ -2051,39 +2089,40 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         /* Determine whether to print out the data or not */
         i_print = 0;
         i_fix = 0;
-        if (tran->print_freq == 0) {
-          if ((time > time_print) || (fabs(time - time_print) < (1.e-4 * tran->print_delt))) {
-            if (tran->print_delt2 < 0.) {
+        if (goma_ctx->fem.tran->print_freq == 0) {
+          if ((time > time_print) ||
+              (fabs(time - time_print) < (1.e-4 * goma_ctx->fem.tran->print_delt))) {
+            if (goma_ctx->fem.tran->print_delt2 < 0.) {
               i_print = 1;
               i_fix = 1;
-              time_print += tran->print_delt;
+              time_print += goma_ctx->fem.tran->print_delt;
             } else {
-              if (time < tran->print_delt2_time) {
+              if (time < goma_ctx->fem.tran->print_delt2_time) {
                 i_print = 1;
                 i_fix = 1;
-                time_print += tran->print_delt;
+                time_print += goma_ctx->fem.tran->print_delt;
               } else {
                 i_print = 1;
                 i_fix = 1;
-                time_print += tran->print_delt2;
+                time_print += goma_ctx->fem.tran->print_delt2;
               }
             }
           }
         } else {
           if (nt == step_print) {
             i_print = 1;
-            step_print += tran->print_freq;
+            step_print += goma_ctx->fem.tran->print_freq;
           }
         }
 
         /* Check if steady state has been reached */
-        if (tran->march_to_steady_state && n > 0) {
+        if (goma_ctx->fem.tran->march_to_steady_state && n > 0) {
           /* for now check last two matrices */
           int steady_state_reached = TRUE;
           double max_distance = 0;
 
           double distance = vector_distance(NumUnknowns[0], x, x_old);
-          if (distance > tran->steady_state_tolerance) {
+          if (distance > goma_ctx->fem.tran->steady_state_tolerance) {
             steady_state_reached = FALSE;
           }
           max_distance = distance;
@@ -2130,17 +2169,17 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
           if (goma_ctx->write_intermediate_solutions == 0) {
 #ifdef LIBRARY_MODE
             lib_print = FALSE;
-            if (libio->goma_first == 0) {
-              if (libio->print_flag == 0 && last_call && last_step)
+            if (goma_ctx->fem.libio->goma_first == 0) {
+              if (goma_ctx->fem.libio->print_flag == 0 && last_call && last_step)
                 lib_print = TRUE;
-              if (libio->print_flag == 1 && last_step)
+              if (goma_ctx->fem.libio->print_flag == 1 && last_step)
                 lib_print = TRUE;
-              if (libio->print_flag == 2)
+              if (goma_ctx->fem.libio->print_flag == 2)
                 lib_print = TRUE;
-              fprintf(stderr, "JAS FIRST...animas_step = %d, lib_print = %d\n", libio->animas_step,
-                      lib_print);
+              fprintf(stderr, "JAS FIRST...animas_step = %d, lib_print = %d\n",
+                      goma_ctx->fem.libio->animas_step, lib_print);
             } else {
-              if (libio->print_flag == 2 && !last_step)
+              if (goma_ctx->fem.libio->print_flag == 2 && !last_step)
                 lib_print = TRUE;
             }
 
@@ -2164,8 +2203,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             nprint++;
 #endif
 
-            if (ls != NULL && ls->Interface_Output == TRUE) {
-              print_point_list(x, exo, ls->output_file, time);
+            if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->Interface_Output == TRUE) {
+              print_point_list(x, exo, goma_ctx->fem.ls->output_file, time);
             }
           }
           /* Print out values of extra unknowns from augmenting conditions */
@@ -2175,65 +2214,72 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
 
             for (iAC = 0; iAC < nAC; iAC++) {
-              evol_local = augc[iAC].evol;
+              evol_local = goma_ctx->fem.augc[iAC].evol;
 #ifdef PARALLEL
-              if (goma_ctx->num_proc > 1 &&
-                  (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
-                   augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
+              if (goma_ctx->num_proc > 1 && (goma_ctx->fem.augc[iAC].Type == AC_VOLUME ||
+                                             goma_ctx->fem.augc[iAC].Type == AC_POSITION ||
+                                             goma_ctx->fem.augc[iAC].Type == AC_ANGLE ||
+                                             goma_ctx->fem.augc[iAC].Type == AC_POSITION_MT)) {
                 MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 evol_local = evol_global;
               }
 #endif
-              if (augc[iAC].Type == AC_USERBC) {
-                DPRINTF(stdout, "\tBC[%4d] DF[%4d]=% 10.6e\n", augc[iAC].BCID, augc[iAC].DFID,
+              if (goma_ctx->fem.augc[iAC].Type == AC_USERBC) {
+                DPRINTF(stdout, "\tBC[%4d] DF[%4d]=% 10.6e\n", goma_ctx->fem.augc[iAC].BCID,
+                        goma_ctx->fem.augc[iAC].DFID, x_AC[iAC]);
+              } else if (goma_ctx->fem.augc[iAC].Type == AC_USERMAT ||
+                         goma_ctx->fem.augc[iAC].Type == AC_FLUX_MAT) {
+                DPRINTF(stdout, "\tMT[%4d] MP[%4d]=% 10.6e\n", goma_ctx->fem.augc[iAC].MTID,
+                        goma_ctx->fem.augc[iAC].MPID, x_AC[iAC]);
+              } else if (goma_ctx->fem.augc[iAC].Type == AC_VOLUME) {
+                DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n",
+                        goma_ctx->fem.augc[iAC].MTID, goma_ctx->fem.augc[iAC].VOLID, evol_local,
                         x_AC[iAC]);
-              } else if (augc[iAC].Type == AC_USERMAT || augc[iAC].Type == AC_FLUX_MAT) {
-                DPRINTF(stdout, "\tMT[%4d] MP[%4d]=% 10.6e\n", augc[iAC].MTID, augc[iAC].MPID,
-                        x_AC[iAC]);
-              } else if (augc[iAC].Type == AC_VOLUME) {
-                DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
-                        augc[iAC].VOLID, evol_local, x_AC[iAC]);
-              } else if (augc[iAC].Type == AC_FLUX) {
-                DPRINTF(stdout, "\tBC[%4d] DF[%4d]=%10.6e\n", augc[iAC].BCID, augc[iAC].DFID,
-                        x_AC[iAC]);
-              } else if (augc[iAC].Type == AC_POSITION || augc[iAC].Type == AC_POSITION_MT) {
+              } else if (goma_ctx->fem.augc[iAC].Type == AC_FLUX) {
+                DPRINTF(stdout, "\tBC[%4d] DF[%4d]=%10.6e\n", goma_ctx->fem.augc[iAC].BCID,
+                        goma_ctx->fem.augc[iAC].DFID, x_AC[iAC]);
+              } else if (goma_ctx->fem.augc[iAC].Type == AC_POSITION ||
+                         goma_ctx->fem.augc[iAC].Type == AC_POSITION_MT) {
                 DPRINTF(stdout, "\tNodeSet[%4d]_Pos = %10.6e F_bal = %10.6e MT[%4d] Param=%10.6e\n",
-                        augc[iAC].MTID, evol_local, augc[iAC].lm_resid, augc[iAC].VOLID, x_AC[iAC]);
-              } else if (augc[iAC].Type == AC_ANGLE) {
-                evol_local = augc[iAC].lm_resid + augc[iAC].CONSTV;
+                        goma_ctx->fem.augc[iAC].MTID, evol_local, goma_ctx->fem.augc[iAC].lm_resid,
+                        goma_ctx->fem.augc[iAC].VOLID, x_AC[iAC]);
+              } else if (goma_ctx->fem.augc[iAC].Type == AC_ANGLE) {
+                evol_local = goma_ctx->fem.augc[iAC].lm_resid + goma_ctx->fem.augc[iAC].CONSTV;
                 DPRINTF(stdout, "\tNodeSet[%4d]_Ang = %g F_bal = %6.3e MT[%4d] Param=%6.3e\n",
-                        augc[iAC].MTID, evol_local, augc[iAC].lm_resid, augc[iAC].VOLID, x_AC[iAC]);
+                        goma_ctx->fem.augc[iAC].MTID, evol_local, goma_ctx->fem.augc[iAC].lm_resid,
+                        goma_ctx->fem.augc[iAC].VOLID, x_AC[iAC]);
               }
             }
           }
 
         } /* if(i_print) */
-        evpl_glob[0]->update_flag = 1;
+        goma_ctx->fem.evpl_glob[0]->update_flag = 1;
 
         /* Fix output if current time step matches frequency */
 #ifdef PARALLEL
-        if ((step_fix != 0 && nt == step_fix) || ((i_fix == 1) && (tran->fix_freq > 0))) {
+        if ((step_fix != 0 && nt == step_fix) ||
+            ((i_fix == 1) && (goma_ctx->fem.tran->fix_freq > 0))) {
           /* Barrier because fix needs both files to be finished printing
              and fix always occurs on the same timestep as printing */
           MPI_Barrier(MPI_COMM_WORLD);
           fix_output();
           /* Fix step is relative to print step */
-          step_fix += tran->fix_freq * tran->print_freq;
+          step_fix += goma_ctx->fem.tran->fix_freq * goma_ctx->fem.tran->print_freq;
         }
 #endif
         /*
          * Adjust the time step if the new time will be larger than the
          * next printing time.
          */
-        if (tran->print_freq == 0 && success_dt) {
+        if (goma_ctx->fem.tran->print_freq == 0 && success_dt) {
           if ((time + 1.2 * delta_t_new >= time_print) && (time_print > time)) {
             delta_t_new = time_print - time;
             DPRINTF(stdout, "reset delta_t = %g to maintain printing frequency\n", delta_t_new);
             if (delta_t_new <= 0)
               GOMA_EH(GOMA_ERROR, "error with time-step printing control");
           } else if (time >= time_print) {
-            if (delta_t_new != tran->print_delt) {
-              delta_t_new = tran->print_delt;
+            if (delta_t_new != goma_ctx->fem.tran->print_delt) {
+              delta_t_new = goma_ctx->fem.tran->print_delt;
               DPRINTF(stdout, "reset delta_t = %g to maintain printing frequency\n", delta_t_new);
               if (delta_t_new <= 0) {
                 GOMA_EH(GOMA_ERROR, "error with time-step printing control");
@@ -2253,7 +2299,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         }
 #endif
 
-        if (converged && ls != NULL) {
+        if (converged && goma_ctx->fem.ls != NULL) {
           int ibc, ls_adc_event = FALSE;
           /* Resolve LS_ADC boundaries ( Attach/Dewet/Coalesce ) */
           for (ibc = 0; ibc < Num_BC; ibc++) {
@@ -2263,8 +2309,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
               resolve_ls_adc_old(&(BC_Types[ibc]), exo, x, delta_t, &ls_adc_event, nt);
               break;
             case LS_ADC_BC:
-              resolve_ls_adc(ls->last_surf_list->start->subsurf_list, &(BC_Types[ibc]), exo, x,
-                             delta_t, &ls_adc_event, nt);
+              resolve_ls_adc(goma_ctx->fem.ls->last_surf_list->start->subsurf_list,
+                             &(BC_Types[ibc]), exo, x, delta_t, &ls_adc_event, nt);
 
               break;
             default:
@@ -2275,28 +2321,29 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
               exchange_dof(cx[0], dpi, x, 0);
             }
 #endif
-            if (ls_adc_event && tran->Restart_Time_Integ_After_Renorm) {
+            if (ls_adc_event && goma_ctx->fem.tran->Restart_Time_Integ_After_Renorm) {
               /* like a restart */
               discard_previous_time_step(numProcUnknowns, x, x_old, x_older, x_oldest, xdot,
                                          xdot_old, xdot_older);
               last_renorm_nt = nt;
               if (delta_t_new > fabs(delta_t0))
-                delta_t_new *= tran->time_step_decelerator;
+                delta_t_new *= goma_ctx->fem.tran->time_step_decelerator;
             }
           }
 
           /* Check for renormalization  */
 
-          ls->Renorm_Countdown -= 1;
+          goma_ctx->fem.ls->Renorm_Countdown -= 1;
 
-          switch (ls->Renorm_Method) {
+          switch (goma_ctx->fem.ls->Renorm_Method) {
 
           case HUYGENS:
           case HUYGENS_C:
           case HUYGENS_MASS_ITER:
           case FACET_BASED:
             Renorm_Now =
-                (ls->Renorm_Freq != 0 && ls->Renorm_Countdown == 0) || ls_adc_event == TRUE;
+                (goma_ctx->fem.ls->Renorm_Freq != 0 && goma_ctx->fem.ls->Renorm_Countdown == 0) ||
+                ls_adc_event == TRUE;
 
             did_renorm =
                 huygens_renormalization(x, xdot, num_total_nodes, exo, cx[0], dpi,
@@ -2304,13 +2351,13 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             if (did_renorm) {
               exchange_dof(cx[0], dpi, x, 0);
             }
-            if (did_renorm && tran->Restart_Time_Integ_After_Renorm) {
+            if (did_renorm && goma_ctx->fem.tran->Restart_Time_Integ_After_Renorm) {
               /* like a restart */
               discard_previous_time_step(numProcUnknowns, x, x_old, x_older, x_oldest, xdot,
                                          xdot_old, xdot_older);
               last_renorm_nt = nt;
               if (delta_t_new > fabs(delta_t0))
-                delta_t_new *= tran->time_step_decelerator;
+                delta_t_new *= goma_ctx->fem.tran->time_step_decelerator;
             }
 
             break;
@@ -2322,26 +2369,27 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             break;
           }
 
-          if (ls->Sat_Hyst_Renorm_Lockout > 0) {
-            af->Sat_hyst_reevaluate = FALSE;
-            ls->Sat_Hyst_Renorm_Lockout -= 1;
+          if (goma_ctx->fem.ls->Sat_Hyst_Renorm_Lockout > 0) {
+            goma_ctx->fem.af->Sat_hyst_reevaluate = FALSE;
+            goma_ctx->fem.ls->Sat_Hyst_Renorm_Lockout -= 1;
           }
         }
 
-        if (converged && pfd != NULL) {
-          struct Level_Set_Data *ls_save = ls;
+        if (converged && goma_ctx->fem.pfd != NULL) {
+          struct Level_Set_Data *ls_save = goma_ctx->fem.ls;
 
-          for (i = 0; i < pfd->num_phase_funcs; i++) {
+          for (i = 0; i < goma_ctx->fem.pfd->num_phase_funcs; i++) {
 
-            ls = pfd->ls[i];
-            ls->Renorm_Countdown -= 1;
-            switch (ls->Renorm_Method) {
+            goma_ctx->fem.ls = goma_ctx->fem.pfd->ls[i];
+            goma_ctx->fem.ls->Renorm_Countdown -= 1;
+            switch (goma_ctx->fem.ls->Renorm_Method) {
 
             case HUYGENS:
             case HUYGENS_C:
             case HUYGENS_MASS_ITER:
             case FACET_BASED:
-              Renorm_Now = (ls->Renorm_Freq != 0 && ls->Renorm_Countdown == 0);
+              Renorm_Now =
+                  (goma_ctx->fem.ls->Renorm_Freq != 0 && goma_ctx->fem.ls->Renorm_Countdown == 0);
 
               did_renorm =
                   huygens_renormalization(x, xdot, num_total_nodes, exo, cx[0], dpi,
@@ -2349,13 +2397,13 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
               if (did_renorm) {
                 exchange_dof(cx[0], dpi, x, 0);
               }
-              if (did_renorm && tran->Restart_Time_Integ_After_Renorm) {
+              if (did_renorm && goma_ctx->fem.tran->Restart_Time_Integ_After_Renorm) {
                 /* like a restart */
                 discard_previous_time_step(numProcUnknowns, x, x_old, x_older, x_oldest, xdot,
                                            xdot_old, xdot_older);
                 last_renorm_nt = nt;
                 if (delta_t_new > fabs(delta_t0))
-                  delta_t_new *= tran->time_step_decelerator;
+                  delta_t_new *= goma_ctx->fem.tran->time_step_decelerator;
               }
               break;
             default:
@@ -2363,14 +2411,14 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             }
           }
 
-          ls = ls_save;
+          goma_ctx->fem.ls = ls_save;
         }
         /*
          *   save xdot to xdot_old for next time step
          */
         dcopy1(numProcUnknowns, xdot_old, xdot_older);
-        if (tran->solid_inertia)
-          dcopy1(numProcUnknowns, tran->xdbl_dot, tran->xdbl_dot_old);
+        if (goma_ctx->fem.tran->solid_inertia)
+          dcopy1(numProcUnknowns, goma_ctx->fem.tran->xdbl_dot, goma_ctx->fem.tran->xdbl_dot_old);
         dcopy1(numProcUnknowns, xdot, xdot_old);
         dcopy1(numProcUnknowns, x_older, x_oldest);
         dcopy1(numProcUnknowns, x_old, x_older);
@@ -2378,11 +2426,12 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         delta_t_oldest = delta_t_older;
         delta_t_older = delta_t_old;
         delta_t_old = delta_t;
-        tran->delta_t_old = delta_t_old;
-        tran->time_value_old = time;
+        goma_ctx->fem.tran->delta_t_old = delta_t_old;
+        goma_ctx->fem.tran->time_value_old = time;
         delta_t = delta_t_new;
-        tran->delta_t = delta_t; /*load up for use in load_fv_mesh_derivs*/
-        tran->delta_t_avg = 0.25 * (delta_t + delta_t_old + delta_t_older + delta_t_oldest);
+        goma_ctx->fem.tran->delta_t = delta_t; /*load up for use in load_fv_mesh_derivs*/
+        goma_ctx->fem.tran->delta_t_avg =
+            0.25 * (delta_t + delta_t_old + delta_t_older + delta_t_oldest);
 
         if (nAC > 0) {
           dcopy1(nAC, x_AC_dot_old, x_AC_dot_older);
@@ -2426,11 +2475,11 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
 #ifdef REACTION_PRODUCT_EFV
         for (i = 0; i < exo->num_nodes; i++) {
-          if (efv->ev && nt > 1) {
+          if (goma_ctx->fem.efv->ev && nt > 1) {
             int ef;
             if (fabs(goma_ctx->spec_source_lumped_mass[i]) > DBL_SMALL) {
-              for (ef = 0; ef < efv->Num_external_field; ef++) {
-                efv->ext_fld_ndl_val[ef][i] *= goma_ctx->spec_source_lumped_mass[i];
+              for (ef = 0; ef < goma_ctx->fem.efv->Num_external_field; ef++) {
+                goma_ctx->fem.efv->ext_fld_ndl_val[ef][i] *= goma_ctx->spec_source_lumped_mass[i];
               }
             }
           }
@@ -2446,18 +2495,18 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
 #ifdef REACTION_PRODUCT_EFV
         for (i = 0; i < exo->num_nodes; i++) {
-          if (efv->ev && nt > 1) {
+          if (goma_ctx->fem.efv->ev && nt > 1) {
             int ef;
-            for (ef = 0; ef < efv->Num_external_field; ef++) {
+            for (ef = 0; ef < goma_ctx->fem.efv->Num_external_field; ef++) {
               if (fabs(goma_ctx->spec_source_lumped_mass[i]) > DBL_SMALL) {
-                efv->ext_fld_ndl_val[ef][i] /= goma_ctx->spec_source_lumped_mass[i];
+                goma_ctx->fem.efv->ext_fld_ndl_val[ef][i] /= goma_ctx->spec_source_lumped_mass[i];
               } else {
-                efv->ext_fld_ndl_val[ef][i] = 0.0;
+                goma_ctx->fem.efv->ext_fld_ndl_val[ef][i] = 0.0;
               }
             }
           }
         }
-        if (efv->ev && i_print) {
+        if (goma_ctx->fem.efv->ev && i_print) {
           error = 0;
           if (file != NULL) {
             error = write_ascii_soln(x, resid_vector, numProcUnknowns, x_AC, nAC, time, file);
@@ -2545,56 +2594,59 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             }
           } else {
             DPRINTF(stderr, "\n\tlast time step failed, dt *= %g for next try!\n",
-                    tran->time_step_decelerator);
+                    goma_ctx->fem.tran->time_step_decelerator);
 
             goma_ctx->solver.damp_factor1 = MAX(goma_ctx->solver.damp_factor1, 1.0);
-            delta_t *= tran->time_step_decelerator;
-            tran->delta_t = delta_t;
-            tran->delta_t_avg = 0.25 * (delta_t + delta_t_old + delta_t_older + delta_t_oldest);
+            delta_t *= goma_ctx->fem.tran->time_step_decelerator;
+            goma_ctx->fem.tran->delta_t = delta_t;
+            goma_ctx->fem.tran->delta_t_avg =
+                0.25 * (delta_t + delta_t_old + delta_t_older + delta_t_oldest);
             time1 = time + delta_t;
-            tran->time_value = time1;
-            evpl_glob[0]->update_flag = 2;
-            af->Sat_hyst_reevaluate = 0;
+            goma_ctx->fem.tran->time_value = time1;
+            goma_ctx->fem.evpl_glob[0]->update_flag = 2;
+            goma_ctx->fem.af->Sat_hyst_reevaluate = 0;
 
             /* if specified with "Steps of constant delta_t after failure"
                use a constant delta_t to help the painful recovery
              */
-            failed_recently_countdown = tran->const_dt_after_failure;
+            failed_recently_countdown = goma_ctx->fem.tran->const_dt_after_failure;
           }
-        } else if (converged &&
-                   delta_t < tran->resolved_delta_t_min / tran->time_step_decelerator) {
+        } else if (converged && delta_t < goma_ctx->fem.tran->resolved_delta_t_min /
+                                              goma_ctx->fem.tran->time_step_decelerator) {
           DPRINTF(stderr, "\n\tminimum resolved step limit! - not converged\n");
           delta_t_oldest = delta_t_older;
           delta_t_older = delta_t_old;
           delta_t_old = delta_t;
-          tran->delta_t_old = delta_t_old;
-          tran->time_value_old = time;
-          delta_t = tran->resolved_delta_t_min;
-          tran->delta_t = delta_t;
-          tran->delta_t_avg = 0.25 * (delta_t + delta_t_old + delta_t_older + delta_t_oldest);
+          goma_ctx->fem.tran->delta_t_old = delta_t_old;
+          goma_ctx->fem.tran->time_value_old = time;
+          delta_t = goma_ctx->fem.tran->resolved_delta_t_min;
+          goma_ctx->fem.tran->delta_t = delta_t;
+          goma_ctx->fem.tran->delta_t_avg =
+              0.25 * (delta_t + delta_t_old + delta_t_older + delta_t_oldest);
           time1 = time + delta_t;
-          tran->time_value = time1;
+          goma_ctx->fem.tran->time_value = time1;
         } else {
           DPRINTF(stdout, "\n\tlast time step failed, dt *= %g for next try!\n",
-                  tran->time_step_decelerator);
+                  goma_ctx->fem.tran->time_step_decelerator);
 
-          delta_t *= tran->time_step_decelerator;
-          tran->delta_t = delta_t;
-          tran->delta_t_avg = 0.25 * (delta_t + delta_t_old + delta_t_older + delta_t_oldest);
+          delta_t *= goma_ctx->fem.tran->time_step_decelerator;
+          goma_ctx->fem.tran->delta_t = delta_t;
+          goma_ctx->fem.tran->delta_t_avg =
+              0.25 * (delta_t + delta_t_old + delta_t_older + delta_t_oldest);
           time1 = time + delta_t;
-          tran->time_value = time1;
-          evpl_glob[0]->update_flag = 2;
-          af->Sat_hyst_reevaluate = 0;
+          goma_ctx->fem.tran->time_value = time1;
+          goma_ctx->fem.evpl_glob[0]->update_flag = 2;
+          goma_ctx->fem.af->Sat_hyst_reevaluate = 0;
 
           /* if specified with "Steps of constant delta_t after failure"
              use a constant delta_t to help the painful recovery
            */
-          failed_recently_countdown = tran->const_dt_after_failure;
+          failed_recently_countdown = goma_ctx->fem.tran->const_dt_after_failure;
         }
 
 #define DEBUG_SUBELEMENT_CONFIGURATION 0
 #if DEBUG_SUBELEMENT_CONFIGURATION
-        if (ls != NULL && ls->SubElemIntegration) {
+        if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->SubElemIntegration) {
           DPRINTF(stdout, "predicted subelement configuration:\n");
           subelement_mesh_output(x_pred, exo);
           DPRINTF(stdout, "failed solution subelement configuration:\n");
@@ -2689,13 +2741,14 @@ free_and_clear:
     safer_free((void **)&xdot_older);
   }
 
-  if (tran->solid_inertia) {
-    free(tran->xdbl_dot);
-    free(tran->xdbl_dot_old);
+  if (goma_ctx->fem.tran->solid_inertia) {
+    free(goma_ctx->fem.tran->xdbl_dot);
+    free(goma_ctx->fem.tran->xdbl_dot_old);
   }
   safer_free((void **)&x_update);
 
-  Dmatrix_death(goma_ctx->spec_source_inventory, upd->Num_Mat, upd->Max_Num_Species_Eqn + 1);
+  Dmatrix_death(goma_ctx->spec_source_inventory, goma_ctx->fem.upd->Num_Mat,
+                goma_ctx->fem.upd->Max_Num_Species_Eqn + 1);
   goma_ctx->spec_source_inventory = NULL;
   goma_ctx->spec_source_inventory_rows = 0;
   safer_free((void **)&goma_ctx->spec_source_lumped_mass);
@@ -2707,18 +2760,18 @@ free_and_clear:
   if (last_call) {
     for (i = 0; i < MAX_NUMBER_MATLS; i++) {
       for (n = 0; n < MAX_MODES; n++) {
-        safer_free((void **)&(ve_glob[i][n]->gn));
-        safer_free((void **)&(ve_glob[i][n]->time_const_st));
-        safer_free((void **)&(ve_glob[i][n]));
+        safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]->gn));
+        safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]->time_const_st));
+        safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]));
       }
-      safer_free((void **)&(vn_glob[i]));
+      safer_free((void **)&(goma_ctx->fem.vn_glob[i]));
     }
   }
 
-  safer_free((void **)&ve);
+  safer_free((void **)&goma_ctx->fem.ve);
 
-  if (num_universe_dofs[pg->imtrx] !=
-      (num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx])) {
+  if (num_universe_dofs[goma_ctx->fem.pg->imtrx] !=
+      (num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx])) {
     safer_free((void **)&ija_attic);
   }
 
@@ -2762,9 +2815,9 @@ free_and_clear:
     safer_free((void **)&Dolphin);
   }
 
-  if (ls != NULL) {
-    if (ls->init_surf_list != NULL)
-      free_surf_list(&(ls->init_surf_list));
+  if (goma_ctx->fem.ls != NULL) {
+    if (goma_ctx->fem.ls->init_surf_list != NULL)
+      free_surf_list(&(goma_ctx->fem.ls->init_surf_list));
   }
 
   free_shape_fcn_tree(Subgrid_Tree);
@@ -2896,8 +2949,8 @@ static void predict_solution_newmark(
   NODE_INFO_STRUCT *node_ptr;
 
   c1 = delta_t;
-  c2 = delta_t * delta_t * (1. - 2. * tran->newmark_beta) / 2.;
-  c3 = delta_t * (1. - tran->newmark_gamma);
+  c2 = delta_t * delta_t * (1. - 2. * goma_ctx->fem.tran->newmark_beta) / 2.;
+  c3 = delta_t * (1. - goma_ctx->fem.tran->newmark_gamma);
   for (i = 0; i < N; i++) {
 
     node_ptr = Nodes[i];
@@ -2906,11 +2959,11 @@ static void predict_solution_newmark(
 
     for (imat = 0; imat < num_mat; imat++) {
       mat_index = (curr_mat_list->List)[imat];
-      if (pd_glob[mat_index]->MeshMotion == DYNAMIC_LAGRANGIAN) {
-        for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
-          j = Index_Solution(i, R_MESH1 + a, 0, 0, -1, pg->imtrx);
-          x[j] = x_old[j] + c1 * xdot_old[j] + c2 * tran->xdbl_dot_old[j];
-          xdot[j] = xdot_old[j] + c3 * tran->xdbl_dot_old[j];
+      if (goma_ctx->fem.pd_glob[mat_index]->MeshMotion == DYNAMIC_LAGRANGIAN) {
+        for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
+          j = Index_Solution(i, R_MESH1 + a, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+          x[j] = x_old[j] + c1 * xdot_old[j] + c2 * goma_ctx->fem.tran->xdbl_dot_old[j];
+          xdot[j] = xdot_old[j] + c3 * goma_ctx->fem.tran->xdbl_dot_old[j];
         }
       }
     }
@@ -2997,7 +3050,8 @@ int anneal_mesh(double x[],
 
   FILE *anneal_dat;
 
-  int numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
+  int numProcUnknowns =
+      NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
 
   asdv(&x_file, numProcUnknowns);
 
@@ -3011,9 +3065,9 @@ int anneal_mesh(double x[],
 
   displacement_somewhere = FALSE;
 
-  for (m = 0; m < upd->Num_Mat; m++) {
-    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-      displacement_somewhere |= (pd_glob[m]->e[imtrx][R_MESH1]);
+  for (m = 0; m < goma_ctx->fem.upd->Num_Mat; m++) {
+    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+      displacement_somewhere |= (goma_ctx->fem.pd_glob[m]->e[imtrx][R_MESH1]);
     }
   }
 
@@ -3063,11 +3117,11 @@ int anneal_mesh(double x[],
     memset(d, 0, sizeof(double) * DIM * MDE);
     memset(dofs, 0, sizeof(int) * DIM);
 
-    for (ln = 0; ln < ei[pg->imtrx]->num_local_nodes; ln++) {
+    for (ln = 0; ln < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; ln++) {
       double factor = 1.0;
       double xi[3] = {0.0, 0.0, 0.0};
 
-      find_nodal_stu(ln, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
+      find_nodal_stu(ln, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
 
       gnn = exo->elem_node_list[exo->elem_node_pntr[ielem] + ln];
 
@@ -3080,15 +3134,17 @@ int anneal_mesh(double x[],
         for (p = 0; p < DIM; p++) {
           var = MESH_DISPLACEMENT1 + p;
 
-          for (i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
-            phi[i] = newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ei[pg->imtrx]->dof_list[var][i],
-                              ei[pg->imtrx]->ielem_shape, pd->i[pg->imtrx][var], i);
+          for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
+            phi[i] = newshape(xi, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, PSI,
+                              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[var][i],
+                              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
+                              goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var], i);
           }
 
-          if (pd->v[pg->imtrx][var]) {
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-              displacement[p] += *esp->d[p][j] * phi[j];
-              *esp_old->d[p][j] = 0.0;
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              displacement[p] += *goma_ctx->fem.esp->d[p][j] * phi[j];
+              *goma_ctx->fem.esp_old->d[p][j] = 0.0;
             }
             moved[gnn] = 1;
           } else
@@ -3283,7 +3339,7 @@ int anneal_mesh_with_external_field(const Exo_DB *exo)
        *input file are dmx, dmy, dmz, PERIOD!
        */
 
-      displacement[p] = efv->ext_fld_ndl_val[p][i];
+      displacement[p] = goma_ctx->fem.efv->ext_fld_ndl_val[p][i];
     }
 
     anneal_map(dim, X_old, displacement, X_new);
@@ -3340,7 +3396,7 @@ void shift_nodal_values(int var, double shift, double *x, int num_total_nodes) {
   int I, ie, matID = -1;
 
   for (I = 0; I < num_total_nodes; I++) {
-    ie = Index_Solution(I, var, 0, 0, matID, pg->imtrx);
+    ie = Index_Solution(I, var, 0, 0, matID, goma_ctx->fem.pg->imtrx);
     if (ie != -1) {
       x[ie] += shift;
     }
@@ -3384,7 +3440,7 @@ int load_export_vars(const int nodes, dbl x[], dbl *x_pp)
         return -1;
       }
   */
-  if (libio->xsoln == NULL || libio->xpost == NULL) {
+  if (goma_ctx->fem.libio->xsoln == NULL || goma_ctx->fem.libio->xpost == NULL) {
     fprintf(stderr, "Invalid variable storage array: xsoln or xpost");
     return -1;
   }
@@ -3392,14 +3448,14 @@ int load_export_vars(const int nodes, dbl x[], dbl *x_pp)
   /* Retrieve solution variables in the order requested */
   for (i = 0; i < Num_Export_XS; i++) {
     ivar = Export_XS_ID[i];
-    if (Num_Var_In_Type[pg->imtrx][ivar] == 0) {
+    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][ivar] == 0) {
       fprintf(stderr, "Inactive variable specified: ID = %d\n", ivar);
       return -1;
     }
     for (j = 0; j < nodes; j++) {
-      k = Index_Solution(j, ivar, 0, 0, -1, pg->imtrx);
+      k = Index_Solution(j, ivar, 0, 0, -1, goma_ctx->fem.pg->imtrx);
       var = ((k >= 0) ? x[k] : 0.0);
-      libio->xsoln[scount] = var;
+      goma_ctx->fem.libio->xsoln[scount] = var;
       scount++;
     }
   }
@@ -3408,7 +3464,7 @@ int load_export_vars(const int nodes, dbl x[], dbl *x_pp)
   if (Num_Export_XP > 0 && x_pp != NULL) {
     for (i = 0; i < Num_Export_XP; i++) {
       for (j = 0; j < nodes; j++) {
-        libio->xpost[pcount] = x_pp[pcount];
+        goma_ctx->fem.libio->xpost[pcount] = x_pp[pcount];
         pcount++;
       }
     }
@@ -3429,7 +3485,7 @@ int variable_stats(double *x, const double time, const int coord_linear) {
   double crd_sum[DIM], crd_sqr[2 * DIM], crd_cross[DIM][MAX_VARIABLE_TYPES];
   double fcn_sum[MAX_VARIABLE_TYPES], fcn_sqr[MAX_VARIABLE_TYPES];
   int crd_ncp[DIM], fcn_ncp[MAX_VARIABLE_TYPES];
-  int pdim = pd->Num_Dim;
+  int pdim = goma_ctx->fem.pd->Num_Dim;
 #ifdef PARALLEL
   double max_buf[MAX_VARIABLE_TYPES];  /* accumulated over all procs */
   double min_buf[MAX_VARIABLE_TYPES];  /* accumulated over all procs */
@@ -3468,11 +3524,11 @@ int variable_stats(double *x, const double time, const int coord_linear) {
   DPRINTF(stdout, "\t   min        max        mean       stdev     #values\n");
   DPRINTF(stdout, "=============================================================\n");
   for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-    if (upd->vp[pg->imtrx][var] > -1) {
+    if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var] > -1) {
       for (i = 0; i < DPI_ptr->num_owned_nodes; i++) {
         var_somewhere = FALSE;
-        for (mn = 0; mn < upd->Num_Mat; mn++) {
-          idv = Index_Solution(i, var, 0, 0, mn, pg->imtrx);
+        for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+          idv = Index_Solution(i, var, 0, 0, mn, goma_ctx->fem.pg->imtrx);
           if (idv != -1) {
             var_somewhere = TRUE;
             break;
@@ -3497,8 +3553,8 @@ int variable_stats(double *x, const double time, const int coord_linear) {
     for (i = 0; i < DPI_ptr->num_owned_nodes; i++) {
       for (dir = 0; dir < pdim; dir++) {
         var = MESH_DISPLACEMENT1 + dir;
-        if (upd->vp[pg->imtrx][var] > -1) {
-          idv = Index_Solution(i, var, 0, 0, -1, pg->imtrx);
+        if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var] > -1) {
+          idv = Index_Solution(i, var, 0, 0, -1, goma_ctx->fem.pg->imtrx);
           coord = goma_ctx->mesh.coor[dir][i] + x[idv];
         } else {
           coord = goma_ctx->mesh.coor[dir][i];
@@ -3510,8 +3566,8 @@ int variable_stats(double *x, const double time, const int coord_linear) {
         }
         for (dirj = dir + 1; dirj < pdim; dirj++) {
           var = MESH_DISPLACEMENT1 + dirj;
-          if (upd->vp[pg->imtrx][var] > -1) {
-            idv = Index_Solution(i, var, 0, 0, -1, pg->imtrx);
+          if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var] > -1) {
+            idv = Index_Solution(i, var, 0, 0, -1, goma_ctx->fem.pg->imtrx);
             coordj = goma_ctx->mesh.coor[dirj][i] + x[idv];
           } else {
             coordj = goma_ctx->mesh.coor[dirj][i];
@@ -3524,14 +3580,14 @@ int variable_stats(double *x, const double time, const int coord_linear) {
     for (i = 0; i < DPI_ptr->num_owned_nodes; i++) {
       for (dir = 0; dir < pdim; dir++) {
         dvar = MESH_DISPLACEMENT1 + dir;
-        if (upd->vp[pg->imtrx][dvar] > -1) {
-          idx = Index_Solution(i, dvar, 0, 0, -1, pg->imtrx);
+        if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][dvar] > -1) {
+          idx = Index_Solution(i, dvar, 0, 0, -1, goma_ctx->fem.pg->imtrx);
           coord = goma_ctx->mesh.coor[dir][i] + x[idx];
           for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-            if (upd->vp[pg->imtrx][var] > -1) {
+            if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var] > -1) {
               var_somewhere = FALSE;
-              for (mn = 0; mn < upd->Num_Mat; mn++) {
-                idv = Index_Solution(i, var, 0, 0, mn, pg->imtrx);
+              for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+                idv = Index_Solution(i, var, 0, 0, mn, goma_ctx->fem.pg->imtrx);
                 if (idv != -1) {
                   var_somewhere = TRUE;
                   break;
@@ -3546,10 +3602,10 @@ int variable_stats(double *x, const double time, const int coord_linear) {
       }
 
       for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-        if (upd->vp[pg->imtrx][var] > -1) {
+        if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var] > -1) {
           var_somewhere = FALSE;
-          for (mn = 0; mn < upd->Num_Mat; mn++) {
-            idv = Index_Solution(i, var, 0, 0, mn, pg->imtrx);
+          for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+            idv = Index_Solution(i, var, 0, 0, mn, goma_ctx->fem.pg->imtrx);
             if (idv != -1) {
               var_somewhere = TRUE;
               break;
@@ -3618,7 +3674,7 @@ int variable_stats(double *x, const double time, const int coord_linear) {
   if (goma_ctx->proc_id == 0) {
     for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
       double std_arg = 0.;
-      if (upd->vp[pg->imtrx][var] > -1) {
+      if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var] > -1) {
         mean[var] /= ncp[var];
         std_arg = sqr[var] - ncp[var] * SQUARE(mean[var]);
         if (std_arg > 0.) {
@@ -3731,7 +3787,7 @@ int variable_stats(double *x, const double time, const int coord_linear) {
 
     n_rhs = 0;
     for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-      if (upd->vp[pg->imtrx][var] > -1) {
+      if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var] > -1) {
         double sigma_fcn, sum_lin, sigma_lin, sum_lin_sqr, cross_sum, rmse, corr;
         /* correlation coefficient calculation  */
         if (fcn_ncp[var] == reg_N) {

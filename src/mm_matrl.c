@@ -120,7 +120,7 @@ void matrl_prop_print(MATRL_PROP_STRUCT *mat_ptr, int mn)
 {
   int i;
   char pString[256];
-  PROBLEM_DESCRIPTION_STRUCT *pd_ptr = pd_glob[mn];
+  PROBLEM_DESCRIPTION_STRUCT *pd_ptr = goma_ctx->fem.pd_glob[mn];
 
   /* Code cleanup crew is not happy with the unimportant information provided by this function to
    * the terminal.  In the calling program we now make this call dependent on the Debug_Flag level
@@ -289,17 +289,17 @@ void reconcile_bc_to_matrl(void)
       /*
        *  Check the pressure datum
        */
-      if (bc->BC_Data_Float[0] != upd->Pressure_Datum) {
+      if (bc->BC_Data_Float[0] != goma_ctx->fem.upd->Pressure_Datum) {
         fprintf(stderr,
                 "%s WARNING Global Pressure Datum %g and VL_EQUIL Pressure Datum %g Differ\n", yo,
-                upd->Pressure_Datum, bc->BC_Data_Float[0]);
-        if (upd->Pressure_Datum != 1.0132500000E6) {
+                goma_ctx->fem.upd->Pressure_Datum, bc->BC_Data_Float[0]);
+        if (goma_ctx->fem.upd->Pressure_Datum != 1.0132500000E6) {
           fprintf(stderr, "%s ERROR Global Pressure Datum set differently in two places\n", yo);
           GOMA_EH(GOMA_ERROR, "Duplicate and different pressure datums");
         } else {
           fprintf(stderr, "%s WARNING Global Pressure Datum set to %g by VL_EQUIL card\n", yo,
                   bc->BC_Data_Float[0]);
-          upd->Pressure_Datum = bc->BC_Data_Float[0];
+          goma_ctx->fem.upd->Pressure_Datum = bc->BC_Data_Float[0];
         }
         /*
          * Check the molecular weights
@@ -309,7 +309,7 @@ void reconcile_bc_to_matrl(void)
         if (matID < 0) {
           GOMA_EH(GOMA_ERROR, "matID not found for eb_index");
         }
-        matrl_ptr = mp_glob[matID];
+        matrl_ptr = goma_ctx->fem.mp_glob[matID];
         num_species = matrl_ptr->Num_Species;
         if (bc->BC_Data_Float[1] != matrl_ptr->molecular_weight[0]) {
           if (matrl_ptr->molecular_weight[0] == -1.0) {
@@ -347,7 +347,7 @@ void reconcile_bc_to_matrl(void)
          */
         eb_index = bc->BC_Data_Int[2];
         matID = map_mat_index(eb_index);
-        matrl_ptr = mp_glob[matID];
+        matrl_ptr = goma_ctx->fem.mp_glob[matID];
         num_species = matrl_ptr->Num_Species;
         if (bc->BC_Data_Float[1] != matrl_ptr->molecular_weight[0]) {
           if (matrl_ptr->molecular_weight[0] == -1.0) {
@@ -427,12 +427,13 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
     doJac = FALSE;
   if (doJac) {
     densityJac->Num_Terms = 0;
-    if (upd->vp[pg->imtrx][TEMPERATURE] != -1) {
+    if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TEMPERATURE] != -1) {
       num_dep = 1;
     } else {
       num_dep = 0;
     }
-    if (upd->vp[pg->imtrx][MASS_FRACTION] != -1 || upd->vp[pg->imtrx][SPECIES_UNK_0] != -1) {
+    if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][MASS_FRACTION] != -1 ||
+        goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SPECIES_UNK_0] != -1) {
       num_dep += matrl->Num_Species;
     }
     propertyJac_realloc(&densityJac, num_dep);
@@ -468,7 +469,7 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
              matrl->DensityModel == DENSITY_FOAM_TIME_TEMP ||
              matrl->DensityModel == DENSITY_FOAM_TIME) {
     double param = matrl->u_density[0];
-    double S = fv->c[0];
+    double S = goma_ctx->fem.fv->c[0];
 
     rho = param * (1.0 - S);
 
@@ -521,7 +522,7 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
     double ref_press = matrl->u_density[2];
     double Rgas_const = matrl->u_density[3];
 
-    double rho_gas = (ref_press * M_CO2 / (Rgas_const * fv->T));
+    double rho_gas = (ref_press * M_CO2 / (Rgas_const * goma_ctx->fem.fv->T));
 
     rho = rho_gas * volF + rho_liq * (1 - volF);
 
@@ -529,8 +530,8 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
 
     var = MASS_FRACTION;
     if (volF > 0. && doJac) {
-      if (pd->v[pg->imtrx][var]) {
-        for (w = 0; w < pd->Num_Species; w++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species; w++) {
           double drhodC = (rho_gas * matrl->d_volumeFractionGas[MAX_VARIABLE_TYPES + w] -
                            rho_liq * matrl->d_volumeFractionGas[MAX_VARIABLE_TYPES + w]);
           propertyJac_addEnd(densityJac, MASS_FRACTION, matID, w, drhodC, rho);
@@ -540,9 +541,9 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
 
     var = TEMPERATURE;
     if (volF > 0. && doJac) {
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         double drhoDT;
-        drhoDT = (rho_gas / fv->T * volF + rho_gas * matrl->d_volumeFractionGas[var] -
+        drhoDT = (rho_gas / goma_ctx->fem.fv->T * volF + rho_gas * matrl->d_volumeFractionGas[var] -
                   rho_liq * matrl->d_volumeFractionGas[var]);
         propertyJac_addEnd(densityJac, TEMPERATURE, matID, 0, drhoDT, rho);
       }
@@ -553,24 +554,25 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
     dbl alpha_m = matrl->u_density[2];
     dbl alpha_g = matrl->u_density[3];
     dbl cure_enable = matrl->u_density[4];
-    int ConstitutiveEquation = gn_glob[matID]->ConstitutiveEquation;
+    int ConstitutiveEquation = goma_ctx->fem.gn_glob[matID]->ConstitutiveEquation;
     int species_no = 0;
 
     if (ConstitutiveEquation == CURE || ConstitutiveEquation == EPOXY ||
         ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == FOAM_PMDI_10) {
-      species_no = gn_glob[ei[pg->imtrx]->mn]->cure_species_no;
+      species_no =
+          goma_ctx->fem.gn_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]->cure_species_no;
     } else {
       GOMA_EH(GOMA_ERROR, "Unknown constitutive equation for density model CURE_SHRINKAGE");
     }
 
-    if (fv->c[species_no] >= cure_enable) {
-      rho = rho_l + ((rho_s - rho_l) / (alpha_m - alpha_g)) * (fv->c[0] - alpha_g);
+    if (goma_ctx->fem.fv->c[species_no] >= cure_enable) {
+      rho = rho_l + ((rho_s - rho_l) / (alpha_m - alpha_g)) * (goma_ctx->fem.fv->c[0] - alpha_g);
 
       /* Now do sensitivies */
 
       int var = MASS_FRACTION;
       if (doJac) {
-        if (pd->v[pg->imtrx][var]) {
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
           double drhodC = ((rho_s - rho_l) / (alpha_m - alpha_g));
           propertyJac_addEnd(densityJac, MASS_FRACTION, matID, species_no, drhodC, rho);
         }
@@ -593,8 +595,8 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
 
     var = MASS_FRACTION;
     if (volF > 0. && doJac) {
-      if (pd->v[pg->imtrx][var]) {
-        for (w = 0; w < pd->Num_Species; w++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species; w++) {
           double drhodC = 0;
           propertyJac_addEnd(densityJac, MASS_FRACTION, matID, w, drhodC, rho);
         }
@@ -603,7 +605,7 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
 
     var = TEMPERATURE;
     if (volF > 0. && doJac) {
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         double drhoDT;
         drhoDT = 0;
         propertyJac_addEnd(densityJac, TEMPERATURE, matID, 0, drhoDT, rho);
@@ -669,14 +671,15 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
 
   } else if (matrl->DensityModel == DENSITY_IDEAL_GAS) {
     double mw_last, c_total;
-    mw_last = matrl->molecular_weight[pd->Num_Species_Eqn];
+    mw_last = matrl->molecular_weight[goma_ctx->fem.pd->Num_Species_Eqn];
     /*
      * Specify the thermodynamic pressure here
      *   -> For the moment we ignore any coupling between
      *      the dynamic pressure field and the thermodynamic
      *      pressure field.
      */
-    pressureThermo = upd->Pressure_Datum; /* This is always in cgs units, so not that useful*/
+    pressureThermo =
+        goma_ctx->fem.upd->Pressure_Datum; /* This is always in cgs units, so not that useful*/
 
     /*
      * Specify the gas constant according to user's choice
@@ -722,10 +725,10 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
     }
 
     if (doJac) {
-      if (pd->v[pg->imtrx][TEMPERATURE]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
         propertyJac_addEnd(densityJac, TEMPERATURE, matID, 0, -rho / stateVector[TEMPERATURE], rho);
       }
-      if (pd->v[pg->imtrx][MASS_FRACTION]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
         switch (speciesVT) {
         case SPECIES_MASS_FRACTION:
           for (w = 0; w < num_species - 1; w++) {
@@ -782,13 +785,13 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
     drho_dT = 0.;
 
     if (doJac) {
-      if (pd->v[pg->imtrx][TEMPERATURE]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
         for (w = 0; w < matrl->Num_Species_Eqn; w++) {
           drho_dT -= (matrl->specific_volume[w] - sv_p) * rho * rho * 3. * matrl->species_source[w];
         }
         propertyJac_addEnd(densityJac, TEMPERATURE, matID, 0, drho_dT, rho);
       }
-      if (pd->v[pg->imtrx][MASS_FRACTION]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
         for (w = 0; w < matrl->Num_Species_Eqn; w++) {
           drho_dc = -(matrl->specific_volume[w] - sv_p) * rho * rho;
           propertyJac_addEnd(densityJac, MASS_FRACTION, matID, w, drho_dc, rho);
@@ -817,34 +820,36 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
     double d_rho_dT = 0;
     double d_rho_dM1 = 0;
 
-    if (fv->c[species_BA_g] > PBE_FP_SMALL || fv->c[species_CO2_g] > PBE_FP_SMALL) {
-      rho_bubble = (ref_press / (Rgas_const * fv->T)) *
-                   (fv->c[species_CO2_g] * M_CO2 + fv->c[species_BA_g] * M_BA) /
-                   (fv->c[species_CO2_g] + fv->c[species_BA_g]);
+    if (goma_ctx->fem.fv->c[species_BA_g] > PBE_FP_SMALL ||
+        goma_ctx->fem.fv->c[species_CO2_g] > PBE_FP_SMALL) {
+      rho_bubble =
+          (ref_press / (Rgas_const * goma_ctx->fem.fv->T)) *
+          (goma_ctx->fem.fv->c[species_CO2_g] * M_CO2 + goma_ctx->fem.fv->c[species_BA_g] * M_BA) /
+          (goma_ctx->fem.fv->c[species_CO2_g] + goma_ctx->fem.fv->c[species_BA_g]);
     }
 
-    double inv_mom_frac = 1 / (1 + fv->moment[1]);
-    rho = rho_bubble * (fv->moment[1] * inv_mom_frac) + rho_foam * inv_mom_frac;
+    double inv_mom_frac = 1 / (1 + goma_ctx->fem.fv->moment[1]);
+    rho = rho_bubble * (goma_ctx->fem.fv->moment[1] * inv_mom_frac) + rho_foam * inv_mom_frac;
 
     if (doJac) {
       var = TEMPERATURE;
-      if (pd->v[pg->imtrx][var]) {
-        d_rho_dT = (-rho) / fv->T;
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        d_rho_dT = (-rho) / goma_ctx->fem.fv->T;
         propertyJac_addEnd(densityJac, var, matID, 0, d_rho_dT, rho);
       }
 
       var = MOMENT1;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         d_rho_dM1 = 2 * inv_mom_frac * inv_mom_frac;
         propertyJac_addEnd(densityJac, var, matID, 0, d_rho_dM1, rho);
       }
     }
   } else if (matrl->DensityModel == DENSITY_FOAM_PBE_EQN) {
-    rho = fv->rho;
+    rho = goma_ctx->fem.fv->rho;
 
     if (doJac) {
       int var = DENSITY_EQN;
-      if (pd->v[pg->imtrx][var]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         propertyJac_addEnd(densityJac, var, matID, 0, 1, rho);
       }
     }
@@ -877,7 +882,7 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
       break;
     case SPECIES_DENSITY:
       for (w = 0; w < matrl->Num_Species; w++) {
-        rho += (1. - matrl->specific_volume[w] / sv_p) * fv->c[w];
+        rho += (1. - matrl->specific_volume[w] / sv_p) * goma_ctx->fem.fv->c[w];
       }
       rho += 1. / sv_p;
 
@@ -891,7 +896,8 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
       break;
     case SPECIES_CONCENTRATION:
       for (w = 0; w < matrl->Num_Species; w++) {
-        rho += (1. - matrl->specific_volume[w] / sv_p) * fv->c[w] * matrl->molecular_weight[w];
+        rho += (1. - matrl->specific_volume[w] / sv_p) * goma_ctx->fem.fv->c[w] *
+               matrl->molecular_weight[w];
       }
       rho += 1. / sv_p;
 
@@ -953,9 +959,9 @@ calc_density(MATRL_PROP_STRUCT *matrl, int doJac, PROPERTYJAC_STRUCT *densityJac
     if (matrl->Species_Var_Type != SPECIES_CONCENTRATION) {
       GOMA_EH(GOMA_ERROR, "unimplemented");
     }
-    if (pd->Num_Species > pd->Num_Species_Eqn) {
+    if (goma_ctx->fem.pd->Num_Species > goma_ctx->fem.pd->Num_Species_Eqn) {
       w = matrl->Num_Species_Eqn;
-      rho = mw[w] * fv->c[w];
+      rho = mw[w] * goma_ctx->fem.fv->c[w];
     } else {
       rho = 0.0;
     }
@@ -1037,7 +1043,7 @@ void load_properties(MATRL_PROP_STRUCT *matrl, double time)
  *  variable in the material structure.
  *************************************************************************/
 {
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     if (!matrl->DensityJac) {
       matrl->DensityJac = alloc_struct_1(PROPERTYJAC_STRUCT, 1);
     }

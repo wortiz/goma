@@ -61,25 +61,25 @@ void update_parameterC(int iCC,        /* CONDITION NUMBER */
 
   /* Calls from ac_conti.c (nCC=0) */
   if (nCC == 0) {
-    if (cont->upType == 1) { /* BC */
-      ibc = cont->upBCID;
-      idf = cont->upDFID;
+    if (goma_ctx->fem.cont->upType == 1) { /* BC */
+      ibc = goma_ctx->fem.cont->upBCID;
+      idf = goma_ctx->fem.cont->upDFID;
       update_BC_parameter(lambda, ibc, idf, cx, exo, dpi);
-    } else if (cont->upType == 2) {
-      mn = cont->upMTID;
-      mpr = cont->upMPID;
-      ic = cont->upMDID;
+    } else if (goma_ctx->fem.cont->upType == 2) {
+      mn = goma_ctx->fem.cont->upMTID;
+      mpr = goma_ctx->fem.cont->upMPID;
+      ic = goma_ctx->fem.cont->upMDID;
       update_MT_parameter(lambda, mn, mpr, ic, cx, exo, dpi);
-    } else if (cont->upType == 3) {
-      ibc = cont->upBCID;
-      idf = cont->upDFID;
+    } else if (goma_ctx->fem.cont->upType == 3) {
+      ibc = goma_ctx->fem.cont->upBCID;
+      idf = goma_ctx->fem.cont->upDFID;
       update_AC_parameter(lambda, ibc, idf, cx, exo, dpi);
-    } else if (cont->upType == 4) {
-      mn = cont->upMTID;
-      mpr = cont->upMPID;
-      ic = cont->upMDID;
+    } else if (goma_ctx->fem.cont->upType == 4) {
+      mn = goma_ctx->fem.cont->upMTID;
+      mpr = goma_ctx->fem.cont->upMPID;
+      ic = goma_ctx->fem.cont->upMDID;
       update_UM_parameter(lambda, mn, mpr, ic, cx, exo, dpi);
-    } else if (cont->upType == 5) {
+    } else if (goma_ctx->fem.cont->upType == 5) {
       update_user_parameter(lambda, x, xdot, x_AC, cx, exo, dpi);
     }
 
@@ -94,9 +94,9 @@ void update_parameterC(int iCC,        /* CONDITION NUMBER */
      *    BC parameters
      */
 
-    if (cpcc[iCC].Type == 1) {
-      ibc = cpcc[iCC].BCID;
-      idf = cpcc[iCC].DFID;
+    if (goma_ctx->fem.cpcc[iCC].Type == 1) {
+      ibc = goma_ctx->fem.cpcc[iCC].BCID;
+      idf = goma_ctx->fem.cpcc[iCC].DFID;
       update_BC_parameter(lambda, ibc, idf, cx, exo, dpi);
     }
 
@@ -104,10 +104,10 @@ void update_parameterC(int iCC,        /* CONDITION NUMBER */
      *    MT parameters
      */
 
-    else if (cpcc[iCC].Type == 2) {
-      mn = cpcc[iCC].MTID;
-      mpr = cpcc[iCC].MPID;
-      ic = cpcc[iCC].MDID;
+    else if (goma_ctx->fem.cpcc[iCC].Type == 2) {
+      mn = goma_ctx->fem.cpcc[iCC].MTID;
+      mpr = goma_ctx->fem.cpcc[iCC].MPID;
+      ic = goma_ctx->fem.cpcc[iCC].MDID;
       update_MT_parameter(lambda, mn, mpr, ic, cx, exo, dpi);
     }
 
@@ -115,9 +115,9 @@ void update_parameterC(int iCC,        /* CONDITION NUMBER */
      *    AC parameters
      */
 
-    else if (cpcc[iCC].Type == 3) {
-      ibc = cpcc[iCC].BCID;
-      idf = cpcc[iCC].DFID;
+    else if (goma_ctx->fem.cpcc[iCC].Type == 3) {
+      ibc = goma_ctx->fem.cpcc[iCC].BCID;
+      idf = goma_ctx->fem.cpcc[iCC].DFID;
       update_AC_parameter(lambda, ibc, idf, cx, exo, dpi);
     }
 
@@ -125,10 +125,10 @@ void update_parameterC(int iCC,        /* CONDITION NUMBER */
      *    UM parameters
      */
 
-    else if (cpcc[iCC].Type == 4) {
-      mn = cpcc[iCC].MTID;
-      mpr = cpcc[iCC].MPID;
-      ic = cpcc[iCC].MDID;
+    else if (goma_ctx->fem.cpcc[iCC].Type == 4) {
+      mn = goma_ctx->fem.cpcc[iCC].MTID;
+      mpr = goma_ctx->fem.cpcc[iCC].MPID;
+      ic = goma_ctx->fem.cpcc[iCC].MDID;
       update_UM_parameter(lambda, mn, mpr, ic, cx, exo, dpi);
     }
 
@@ -136,12 +136,12 @@ void update_parameterC(int iCC,        /* CONDITION NUMBER */
      *    UF parameters
      */
 
-    else if (cpcc[iCC].Type == 5) {
+    else if (goma_ctx->fem.cpcc[iCC].Type == 5) {
       update_user_parameter(lambda, x, xdot, x_AC, cx, exo, dpi);
     }
 
     else {
-      if (cont->upType != 6)
+      if (goma_ctx->fem.cont->upType != 6)
         GOMA_EH(GOMA_ERROR, "Bad continuation type!");
     }
   }
@@ -165,9 +165,9 @@ void update_parameterTP(int iTC,        /* CONDITION NUMBER */
    *    BC parameters
    */
 
-  if (tpcc[iTC].Type == 1) {
-    ibc = tpcc[iTC].BCID;
-    idf = tpcc[iTC].DFID;
+  if (goma_ctx->fem.tpcc[iTC].Type == 1) {
+    ibc = goma_ctx->fem.tpcc[iTC].BCID;
+    idf = goma_ctx->fem.tpcc[iTC].DFID;
     update_BC_parameter(lambda, ibc, idf, cx, exo, dpi);
   }
 
@@ -175,10 +175,10 @@ void update_parameterTP(int iTC,        /* CONDITION NUMBER */
    *    MT parameters
    */
 
-  else if (tpcc[iTC].Type == 2) {
-    mn = tpcc[iTC].MTID;
-    mpr = tpcc[iTC].MPID;
-    ic = tpcc[iTC].MDID;
+  else if (goma_ctx->fem.tpcc[iTC].Type == 2) {
+    mn = goma_ctx->fem.tpcc[iTC].MTID;
+    mpr = goma_ctx->fem.tpcc[iTC].MPID;
+    ic = goma_ctx->fem.tpcc[iTC].MDID;
     update_MT_parameter(lambda, mn, mpr, ic, cx, exo, dpi);
   }
 
@@ -186,9 +186,9 @@ void update_parameterTP(int iTC,        /* CONDITION NUMBER */
    *    AC parameters
    */
 
-  else if (tpcc[iTC].Type == 3) {
-    ibc = tpcc[iTC].BCID;
-    idf = tpcc[iTC].DFID;
+  else if (goma_ctx->fem.tpcc[iTC].Type == 3) {
+    ibc = goma_ctx->fem.tpcc[iTC].BCID;
+    idf = goma_ctx->fem.tpcc[iTC].DFID;
     update_AC_parameter(lambda, ibc, idf, cx, exo, dpi);
   }
 
@@ -196,10 +196,10 @@ void update_parameterTP(int iTC,        /* CONDITION NUMBER */
    *    UM parameters
    */
 
-  else if (tpcc[iTC].Type == 4) {
-    mn = tpcc[iTC].MTID;
-    mpr = tpcc[iTC].MPID;
-    ic = tpcc[iTC].MDID;
+  else if (goma_ctx->fem.tpcc[iTC].Type == 4) {
+    mn = goma_ctx->fem.tpcc[iTC].MTID;
+    mpr = goma_ctx->fem.tpcc[iTC].MPID;
+    ic = goma_ctx->fem.tpcc[iTC].MDID;
     update_UM_parameter(lambda, mn, mpr, ic, cx, exo, dpi);
   }
 
@@ -207,12 +207,12 @@ void update_parameterTP(int iTC,        /* CONDITION NUMBER */
    *    UF parameters
    */
 
-  else if (tpcc[iTC].Type == 5) {
+  else if (goma_ctx->fem.tpcc[iTC].Type == 5) {
     update_user_TP_parameter(lambda, x, xdot, x_AC, cx, exo, dpi);
   }
 
   else {
-    if (loca_in->TPupType != 6)
+    if (goma_ctx->fem.loca_in->TPupType != 6)
       GOMA_EH(GOMA_ERROR, "Bad TP continuation type!");
   }
 }
@@ -235,9 +235,9 @@ void update_parameterHC(int iHC,        /* Hunting condition number */
    *    BC parameters
    */
 
-  if (hunt[iHC].Type == 1) {
-    ibc = hunt[iHC].BCID;
-    idf = hunt[iHC].DFID;
+  if (goma_ctx->fem.hunt[iHC].Type == 1) {
+    ibc = goma_ctx->fem.hunt[iHC].BCID;
+    idf = goma_ctx->fem.hunt[iHC].DFID;
     if (ibc > -1) {
       update_BC_parameter(lambda, ibc, idf, cx, exo, dpi);
     }
@@ -247,10 +247,10 @@ void update_parameterHC(int iHC,        /* Hunting condition number */
    *    MT parameters
    */
 
-  else if (hunt[iHC].Type == 2) {
-    mn = hunt[iHC].MTID;
-    mpr = hunt[iHC].MPID;
-    ic = hunt[iHC].MDID;
+  else if (goma_ctx->fem.hunt[iHC].Type == 2) {
+    mn = goma_ctx->fem.hunt[iHC].MTID;
+    mpr = goma_ctx->fem.hunt[iHC].MPID;
+    ic = goma_ctx->fem.hunt[iHC].MDID;
     update_MT_parameter(lambda, mn, mpr, ic, cx, exo, dpi);
   }
 
@@ -258,9 +258,9 @@ void update_parameterHC(int iHC,        /* Hunting condition number */
    *    AC parameters
    */
 
-  else if (hunt[iHC].Type == 3) {
-    ibc = hunt[iHC].BCID;
-    idf = hunt[iHC].DFID;
+  else if (goma_ctx->fem.hunt[iHC].Type == 3) {
+    ibc = goma_ctx->fem.hunt[iHC].BCID;
+    idf = goma_ctx->fem.hunt[iHC].DFID;
     update_AC_parameter(lambda, ibc, idf, cx, exo, dpi);
   }
 
@@ -268,10 +268,10 @@ void update_parameterHC(int iHC,        /* Hunting condition number */
    *    UM parameters
    */
 
-  else if (hunt[iHC].Type == 4) {
-    mn = hunt[iHC].MTID;
-    mpr = hunt[iHC].MPID;
-    ic = hunt[iHC].MDID;
+  else if (goma_ctx->fem.hunt[iHC].Type == 4) {
+    mn = goma_ctx->fem.hunt[iHC].MTID;
+    mpr = goma_ctx->fem.hunt[iHC].MPID;
+    ic = goma_ctx->fem.hunt[iHC].MDID;
     update_UM_parameter(lambda, mn, mpr, ic, cx, exo, dpi);
   }
 
@@ -279,7 +279,7 @@ void update_parameterHC(int iHC,        /* Hunting condition number */
    *    UF parameters
    */
 
-  else if (hunt[iHC].Type == 5) {
+  else if (goma_ctx->fem.hunt[iHC].Type == 5) {
     update_user_parameter(lambda, x, xdot, x_AC, cx, exo, dpi);
   }
 
@@ -456,105 +456,105 @@ void update_MT_parameter(double lambda, /* Parameter value */
      */
 
   case TAGC_REFTEMP:
-    mp_glob[mn]->reference[TEMPERATURE] = lambda;
+    goma_ctx->fem.mp_glob[mn]->reference[TEMPERATURE] = lambda;
     break;
 
     /* these are for SUSPENSION/FILLED_EPOXY models */
 
   case TAGC_THERMAL_CONDUCTIVITY:
-    mp_glob[mn]->thermal_conductivity = lambda;
+    goma_ctx->fem.mp_glob[mn]->thermal_conductivity = lambda;
     break;
 
   case TAGC_ACOUSTIC_WAVENUMBER:
-    mp_glob[mn]->wave_number = lambda;
+    goma_ctx->fem.mp_glob[mn]->wave_number = lambda;
     break;
 
   case TAGC_ACOUSTIC_IMPEDANCE:
-    mp_glob[mn]->acoustic_impedance = lambda;
+    goma_ctx->fem.mp_glob[mn]->acoustic_impedance = lambda;
     break;
 
   case TAGC_ACOUSTIC_ABSORPTION:
-    mp_glob[mn]->acoustic_absorption = lambda;
+    goma_ctx->fem.mp_glob[mn]->acoustic_absorption = lambda;
     break;
 
   case TAGC_REFRACTIVE_INDEX:
-    mp_glob[mn]->refractive_index = lambda;
+    goma_ctx->fem.mp_glob[mn]->refractive_index = lambda;
     break;
 
   case TAGC_LIGHT_ABSORPTION:
-    mp_glob[mn]->light_absorption = lambda;
+    goma_ctx->fem.mp_glob[mn]->light_absorption = lambda;
     break;
 
   case TAGC_EXTINCTION_INDEX:
-    mp_glob[mn]->extinction_index = lambda;
+    goma_ctx->fem.mp_glob[mn]->extinction_index = lambda;
     break;
 
   case TAGC_ELECTRICAL_CONDUCTIVITY:
-    mp_glob[mn]->electrical_conductivity = lambda;
+    goma_ctx->fem.mp_glob[mn]->electrical_conductivity = lambda;
     break;
 
   case TAGC_PERMITTIVITY:
-    mp_glob[mn]->permittivity = lambda;
+    goma_ctx->fem.mp_glob[mn]->permittivity = lambda;
     break;
 
   case TAGC_VISCOSITY:
-    mp_glob[mn]->viscosity = lambda;
+    goma_ctx->fem.mp_glob[mn]->viscosity = lambda;
     break;
 
   case TAGC_SURFACE_TENSION:
-    mp_glob[mn]->surface_tension = lambda;
+    goma_ctx->fem.mp_glob[mn]->surface_tension = lambda;
     break;
 
   case TAGC_HEAT_CAPACITY:
-    mp_glob[mn]->heat_capacity = lambda;
+    goma_ctx->fem.mp_glob[mn]->heat_capacity = lambda;
     break;
 
   case TAGC_VOLUME_EXPANSION:
-    mp_glob[mn]->Volume_Expansion = lambda;
+    goma_ctx->fem.mp_glob[mn]->Volume_Expansion = lambda;
     break;
 
   case TAGC_DENSITY:
-    mp_glob[mn]->density = lambda;
+    goma_ctx->fem.mp_glob[mn]->density = lambda;
     break;
 
   case TAGC_POROSITY:
-    mp_glob[mn]->porosity = lambda;
+    goma_ctx->fem.mp_glob[mn]->porosity = lambda;
     break;
 
   case TAGC_PERMEABILITY:
-    mp_glob[mn]->permeability = lambda;
+    goma_ctx->fem.mp_glob[mn]->permeability = lambda;
     break;
 
   case TAGC_REL_GAS_PERM:
-    mp_glob[mn]->rel_gas_perm = lambda;
+    goma_ctx->fem.mp_glob[mn]->rel_gas_perm = lambda;
     break;
 
   case TAGC_REL_LIQ_PERM:
-    mp_glob[mn]->rel_liq_perm = lambda;
+    goma_ctx->fem.mp_glob[mn]->rel_liq_perm = lambda;
     break;
 
   case TAGC_SATURATION:
-    mp_glob[mn]->saturation = lambda;
+    goma_ctx->fem.mp_glob[mn]->saturation = lambda;
     break;
 
   case TAGC_MELTING_POINT_LIQUIDUS:
-    mp_glob[mn]->melting_point_liquidus = lambda;
+    goma_ctx->fem.mp_glob[mn]->melting_point_liquidus = lambda;
     break;
 
   case TAGC_MELTING_POINT_SOLIDUS:
-    mp_glob[mn]->melting_point_solidus = lambda;
+    goma_ctx->fem.mp_glob[mn]->melting_point_solidus = lambda;
     break;
 
   case TAGC_FLOWINGLIQUID_VISCOSITY:
-    mp_glob[mn]->FlowingLiquid_viscosity = lambda;
+    goma_ctx->fem.mp_glob[mn]->FlowingLiquid_viscosity = lambda;
     break;
 
   case TAGC_DIFFUSIVITY_0:
-    mp_glob[mn]->diffusivity[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->diffusivity[0] = lambda;
     break;
 
   case TAGC_DIFFUSIVITY_1:
-    mp_glob[mn]->diffusivity[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->diffusivity[1] = lambda;
     break;
 
     /*
@@ -563,72 +563,72 @@ void update_MT_parameter(double lambda, /* Parameter value */
      */
 
   case TAGC_MU0:
-    gn_glob[mn]->mu0 = lambda;
+    goma_ctx->fem.gn_glob[mn]->mu0 = lambda;
     break;
   case TAGC_NEXP:
-    gn_glob[mn]->nexp = lambda;
+    goma_ctx->fem.gn_glob[mn]->nexp = lambda;
     break;
   case TAGC_MUINF:
-    gn_glob[mn]->muinf = lambda;
+    goma_ctx->fem.gn_glob[mn]->muinf = lambda;
     break;
   case TAGC_LAM:
-    gn_glob[mn]->lam = lambda;
+    goma_ctx->fem.gn_glob[mn]->lam = lambda;
     break;
   case TAGC_AEXP:
-    gn_glob[mn]->aexp = lambda;
+    goma_ctx->fem.gn_glob[mn]->aexp = lambda;
     break;
   case TAGC_ATEXP:
-    gn_glob[mn]->atexp = lambda;
+    goma_ctx->fem.gn_glob[mn]->atexp = lambda;
     break;
 
     /* CARREAU_WLF */
 
   case TAGC_WLFC2:
-    gn_glob[mn]->wlfc2 = lambda;
+    goma_ctx->fem.gn_glob[mn]->wlfc2 = lambda;
     break;
 
     /* these are for the BINGHAM yielding material model */
 
   case TAGC_TAU_Y:
-    gn_glob[mn]->tau_y = lambda;
+    goma_ctx->fem.gn_glob[mn]->tau_y = lambda;
     break;
   case TAGC_FEXP:
-    gn_glob[mn]->fexp = lambda;
+    goma_ctx->fem.gn_glob[mn]->fexp = lambda;
     break;
 
     /* these are for SUSPENSION/FILLED_EPOXY models */
 
   case TAGC_MAXPACK:
-    gn_glob[mn]->maxpack = lambda;
+    goma_ctx->fem.gn_glob[mn]->maxpack = lambda;
     break;
   case TAGC_FICKDIFF_X:
-    mp_glob[mn]->u_fdiffusivity[0][0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_fdiffusivity[0][0] = lambda;
     break;
   case TAGC_FICKDIFF_Y:
-    mp_glob[mn]->u_fdiffusivity[0][1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_fdiffusivity[0][1] = lambda;
     break;
 
     /* these can be implemented for Ryan's Qtensor model as needed */
 
 #if 0
     case TAGC_QTENSOR_EXTENSION_P:
-      mp_glob[mn]->u_Qtensor_Extension_P[0][0]=lambda;
+      goma_ctx->fem.mp_glob[mn]->u_Qtensor_Extension_P[0][0]=lambda;
       break;
     case TAGC_QTENSOR_NCT:
-      mp_glob[mn]->u_Qtensor_Nct[0][0]=lambda;
+      goma_ctx->fem.mp_glob[mn]->u_Qtensor_Nct[0][0]=lambda;
       break;
 #endif
 
     /* these are for CURE/EPOXY/FILLED_EPOXY models */
 
   case TAGC_GELPOINT:
-    gn_glob[mn]->gelpoint = lambda;
+    goma_ctx->fem.gn_glob[mn]->gelpoint = lambda;
     break;
   case TAGC_CUREAEXP:
-    gn_glob[mn]->cureaexp = lambda;
+    goma_ctx->fem.gn_glob[mn]->cureaexp = lambda;
     break;
   case TAGC_CUREBEXP:
-    gn_glob[mn]->curebexp = lambda;
+    goma_ctx->fem.gn_glob[mn]->curebexp = lambda;
     break;
 
     /*
@@ -643,11 +643,11 @@ void update_MT_parameter(double lambda, /* Parameter value */
   case TAGC_TIME_CONST5:
   case TAGC_TIME_CONST6:
   case TAGC_TIME_CONST7:
-    ve_glob[mn][mpr - TAGC_TIME_CONST]->time_const_st->lambda0 = lambda;
+    goma_ctx->fem.ve_glob[mn][mpr - TAGC_TIME_CONST]->time_const_st->lambda0 = lambda;
     break;
 
   case TAGC_WT_FUNC:
-    vn_glob[mn]->wt_func = lambda;
+    goma_ctx->fem.vn_glob[mn]->wt_func = lambda;
     break;
 
   case TAGC_ALPHA:
@@ -658,31 +658,31 @@ void update_MT_parameter(double lambda, /* Parameter value */
   case TAGC_ALPHA5:
   case TAGC_ALPHA6:
   case TAGC_ALPHA7:
-    ve_glob[mn][mpr - TAGC_ALPHA]->alpha = lambda;
+    goma_ctx->fem.ve_glob[mn][mpr - TAGC_ALPHA]->alpha = lambda;
     break;
 
   case TAGC_PTT_XI:
-    ve_glob[mn][cont->upMPID - TAGC_PTT_XI]->xi = lambda;
+    goma_ctx->fem.ve_glob[mn][goma_ctx->fem.cont->upMPID - TAGC_PTT_XI]->xi = lambda;
     break;
 
   case TAGC_PTT_EPS:
-    ve_glob[mn][cont->upMPID - TAGC_PTT_EPS]->eps = lambda;
+    goma_ctx->fem.ve_glob[mn][goma_ctx->fem.cont->upMPID - TAGC_PTT_EPS]->eps = lambda;
     break;
 
   case TAGC_SHIFT_FUNC:
   case TAGC_SHIFT_FUNC1:
-    vn_glob[mn]->shift[mpr - TAGC_SHIFT_FUNC] = lambda;
+    goma_ctx->fem.vn_glob[mn]->shift[mpr - TAGC_SHIFT_FUNC] = lambda;
     break;
 
   case TAGC_POLYMER_YIELD_STRESS:
-    for (int mm = 0; mm < vn_glob[mn]->modes; mm++) {
-      ve_glob[mn][mm]->gn->tau_y = lambda;
+    for (int mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+      goma_ctx->fem.ve_glob[mn][mm]->gn->tau_y = lambda;
     }
     break;
 
   case TAGC_POLYMER_YIELD_EXPONENT:
-    for (int mm = 0; mm < vn_glob[mn]->modes; mm++) {
-      ve_glob[mn][mm]->gn->fexp = lambda;
+    for (int mm = 0; mm < goma_ctx->fem.vn_glob[mn]->modes; mm++) {
+      goma_ctx->fem.ve_glob[mn][mm]->gn->fexp = lambda;
     }
     break;
 
@@ -691,99 +691,99 @@ void update_MT_parameter(double lambda, /* Parameter value */
      */
 
   case TAGC_LAME_MU:
-    elc_glob[mn]->lame_mu = lambda;
+    goma_ctx->fem.elc_glob[mn]->lame_mu = lambda;
     break;
 
   case TAGC_LAME_MU_CONTACT_LINE_G0:
-    *(elc_glob[mn]->u_mu + 1) = lambda;
+    *(goma_ctx->fem.elc_glob[mn]->u_mu + 1) = lambda;
     break;
 
   case TAGC_LAME_MU_CONTACT_LINE_G1:
-    *(elc_glob[mn]->u_mu + 2) = lambda;
+    *(goma_ctx->fem.elc_glob[mn]->u_mu + 2) = lambda;
     break;
 
   case TAGC_LAME_MU_CONTACT_LINE_R0:
-    *(elc_glob[mn]->u_mu + 3) = lambda;
+    *(goma_ctx->fem.elc_glob[mn]->u_mu + 3) = lambda;
     break;
 
   case TAGC_LAME_LAMBDA:
-    elc_glob[mn]->lame_lambda = lambda;
+    goma_ctx->fem.elc_glob[mn]->lame_lambda = lambda;
     break;
 
   case TAGC_BEND_STIFFNESS:
-    elc_glob[mn]->bend_stiffness = lambda;
+    goma_ctx->fem.elc_glob[mn]->bend_stiffness = lambda;
     break;
 
   case TAGC_CONV_LAG_VELX:
-    *(elc_glob[mn]->v_mesh_sfs) = lambda;
+    *(goma_ctx->fem.elc_glob[mn]->v_mesh_sfs) = lambda;
     break;
 
   case TAGC_CONV_LAG_VELY:
-    *(elc_glob[mn]->v_mesh_sfs + 1) = lambda;
+    *(goma_ctx->fem.elc_glob[mn]->v_mesh_sfs + 1) = lambda;
     break;
 
   case TAGC_CONV_LAG_VELZ:
-    *(elc_glob[mn]->v_mesh_sfs + 2) = lambda;
+    *(goma_ctx->fem.elc_glob[mn]->v_mesh_sfs + 2) = lambda;
     break;
 
   case TAGC_CONV_LAG_ROTRATE:
-    *(elc_glob[mn]->u_v_mesh_sfs) = lambda;
+    *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs) = lambda;
     break;
 
   case TAGC_CONV_LAG_ROT_X0:
-    *(elc_glob[mn]->u_v_mesh_sfs + 1) = lambda;
+    *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs + 1) = lambda;
     break;
 
   case TAGC_CONV_LAG_ROT_Y0:
-    *(elc_glob[mn]->u_v_mesh_sfs + 2) = lambda;
+    *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs + 2) = lambda;
     break;
 
   case TAGC_CONV_LAG_ROT_Z0:
-    *(elc_glob[mn]->u_v_mesh_sfs + 3) = lambda;
+    *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs + 3) = lambda;
     break;
 
   case TAGC_RS_LAME_MU:
-    elc_rs_glob[mn]->lame_mu = lambda;
+    goma_ctx->fem.elc_rs_glob[mn]->lame_mu = lambda;
     break;
 
   case TAGC_RS_LAME_LAMBDA:
-    elc_rs_glob[mn]->lame_lambda = lambda;
+    goma_ctx->fem.elc_rs_glob[mn]->lame_lambda = lambda;
     break;
 
   case TAGC_RS_CONV_LAG_VELX:
-    *(elc_rs_glob[mn]->v_mesh_sfs) = lambda;
+    *(goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs) = lambda;
     break;
 
   case TAGC_RS_CONV_LAG_VELY:
-    *(elc_rs_glob[mn]->v_mesh_sfs + 1) = lambda;
+    *(goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs + 1) = lambda;
     break;
 
   case TAGC_RS_CONV_LAG_VELZ:
-    *(elc_rs_glob[mn]->v_mesh_sfs + 2) = lambda;
+    *(goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs + 2) = lambda;
     break;
 
   case TAGC_RS_CONV_LAG_ROTRATE:
-    *(elc_rs_glob[mn]->u_v_mesh_sfs) = lambda;
+    *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs) = lambda;
     break;
 
   case TAGC_RS_CONV_LAG_ROT_X0:
-    *(elc_rs_glob[mn]->u_v_mesh_sfs + 1) = lambda;
+    *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs + 1) = lambda;
     break;
 
   case TAGC_RS_CONV_LAG_ROT_Y0:
-    *(elc_rs_glob[mn]->u_v_mesh_sfs + 2) = lambda;
+    *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs + 2) = lambda;
     break;
 
   case TAGC_RS_CONV_LAG_ROT_Z0:
-    *(elc_rs_glob[mn]->u_v_mesh_sfs + 3) = lambda;
+    *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs + 3) = lambda;
     break;
 
   case TAGC_POISSON:
-    elc_glob[mn]->poisson = lambda;
+    goma_ctx->fem.elc_glob[mn]->poisson = lambda;
     break;
 
   case TAGC_STRSS_FR_SOL_VOL_FRAC:
-    elc_glob[mn]->Strss_fr_sol_vol_frac = lambda;
+    goma_ctx->fem.elc_glob[mn]->Strss_fr_sol_vol_frac = lambda;
     break;
 
     /*
@@ -791,271 +791,271 @@ void update_MT_parameter(double lambda, /* Parameter value */
      */
 
   case TAGC_NSS_A0:
-    mp_glob[mn]->momentum_source[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->momentum_source[0] = lambda;
     break;
 
   case TAGC_NSS_A1:
-    mp_glob[mn]->momentum_source[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->momentum_source[1] = lambda;
     break;
 
   case TAGC_NSS_A2:
-    mp_glob[mn]->momentum_source[2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->momentum_source[2] = lambda;
     break;
 
   case TAGC_NSS_A3:
-    mp_glob[mn]->u_momentum_source[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_momentum_source[0] = lambda;
     break;
 
   case TAGC_LUB_HGT_U0:
-    mp_glob[mn]->u_heightU_function_constants[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[0] = lambda;
     break;
 
   case TAGC_LUB_HGT_U1:
-    mp_glob[mn]->u_heightU_function_constants[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[1] = lambda;
     break;
 
   case TAGC_LUB_HGT_U2:
-    mp_glob[mn]->u_heightU_function_constants[2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[2] = lambda;
     break;
 
   case TAGC_LUB_HGT_U3:
-    mp_glob[mn]->u_heightU_function_constants[3] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[3] = lambda;
     break;
 
   case TAGC_LUB_HGT_U4:
-    mp_glob[mn]->u_heightU_function_constants[4] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[4] = lambda;
     break;
 
   case TAGC_LUB_HGT_U5:
-    mp_glob[mn]->u_heightU_function_constants[5] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[5] = lambda;
     break;
 
   case TAGC_LUB_HGT_U6:
-    mp_glob[mn]->u_heightU_function_constants[6] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[6] = lambda;
     break;
 
   case TAGC_LUB_HGT_U7:
-    mp_glob[mn]->u_heightU_function_constants[7] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[7] = lambda;
     break;
 
   case TAGC_LUB_HGT_L0:
-    mp_glob[mn]->u_heightL_function_constants[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[0] = lambda;
     break;
 
   case TAGC_LUB_HGT_L1:
-    mp_glob[mn]->u_heightL_function_constants[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[1] = lambda;
     break;
 
   case TAGC_LUB_HGT_L2:
-    mp_glob[mn]->u_heightL_function_constants[2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[2] = lambda;
     break;
 
   case TAGC_LUB_HGT_L3:
-    mp_glob[mn]->u_heightL_function_constants[3] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[3] = lambda;
     break;
 
   case TAGC_LUB_HGT_L4:
-    mp_glob[mn]->u_heightL_function_constants[4] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[4] = lambda;
     break;
 
   case TAGC_LUB_HGT_L5:
-    mp_glob[mn]->u_heightL_function_constants[5] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[5] = lambda;
     break;
 
   case TAGC_LUB_HGT_L6:
-    mp_glob[mn]->u_heightL_function_constants[6] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[6] = lambda;
     break;
 
   case TAGC_LUB_HGT_L7:
-    mp_glob[mn]->u_heightL_function_constants[7] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[7] = lambda;
     break;
 
   case TAGC_U_LUB_VELO_U0:
-    mp_glob[mn]->u_veloU_function_constants[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[0] = lambda;
     break;
 
   case TAGC_U_LUB_VELO_U1:
-    mp_glob[mn]->u_veloU_function_constants[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[1] = lambda;
     break;
 
   case TAGC_U_LUB_VELO_U2:
-    mp_glob[mn]->u_veloU_function_constants[2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[2] = lambda;
     break;
 
   case TAGC_U_LUB_VELO_U3:
-    mp_glob[mn]->u_veloU_function_constants[3] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[3] = lambda;
     break;
 
   case TAGC_U_LUB_VELO_U4:
-    mp_glob[mn]->u_veloU_function_constants[4] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[4] = lambda;
     break;
 
   case TAGC_U_LUB_VELO_U5:
-    mp_glob[mn]->u_veloU_function_constants[5] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[5] = lambda;
     break;
 
   case TAGC_U_LUB_VELO_L0:
-    mp_glob[mn]->u_veloL_function_constants[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[0] = lambda;
     break;
 
   case TAGC_U_LUB_VELO_L1:
-    mp_glob[mn]->u_veloL_function_constants[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[1] = lambda;
     break;
 
   case TAGC_U_LUB_VELO_L2:
-    mp_glob[mn]->u_veloL_function_constants[2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[2] = lambda;
     break;
 
   case TAGC_U_LUB_VELO_L3:
-    mp_glob[mn]->u_veloL_function_constants[3] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[3] = lambda;
     break;
 
   case TAGC_U_LUB_VELO_L4:
-    mp_glob[mn]->u_veloL_function_constants[4] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[4] = lambda;
     break;
 
   case TAGC_U_LUB_VELO_L5:
-    mp_glob[mn]->u_veloL_function_constants[5] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[5] = lambda;
     break;
 
   case TAGC_LUB_VELO_U0:
-    mp_glob[mn]->veloU[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->veloU[0] = lambda;
     break;
 
   case TAGC_LUB_VELO_U1:
-    mp_glob[mn]->veloU[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->veloU[1] = lambda;
     break;
 
   case TAGC_LUB_VELO_U2:
-    mp_glob[mn]->veloU[2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->veloU[2] = lambda;
     break;
 
   case TAGC_LUB_VELO_L0:
-    mp_glob[mn]->veloL[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->veloL[0] = lambda;
     break;
 
   case TAGC_LUB_VELO_L1:
-    mp_glob[mn]->veloL[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->veloL[1] = lambda;
     break;
 
   case TAGC_LUB_VELO_L2:
-    mp_glob[mn]->veloL[2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->veloL[2] = lambda;
     break;
 
   case TAGC_LUB_DCA_U0:
-    mp_glob[mn]->u_dcaU_function_constants[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[0] = lambda;
     break;
 
   case TAGC_LUB_DCA_U1:
-    mp_glob[mn]->u_dcaU_function_constants[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[1] = lambda;
     break;
 
   case TAGC_LUB_DCA_U2:
-    mp_glob[mn]->u_dcaU_function_constants[2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[2] = lambda;
     break;
 
   case TAGC_LUB_DCA_U3:
-    mp_glob[mn]->u_dcaU_function_constants[3] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[3] = lambda;
     break;
 
   case TAGC_LUB_DCA_L0:
-    mp_glob[mn]->u_dcaL_function_constants[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[0] = lambda;
     break;
 
   case TAGC_LUB_DCA_L1:
-    mp_glob[mn]->u_dcaL_function_constants[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[1] = lambda;
     break;
 
   case TAGC_LUB_DCA_L2:
-    mp_glob[mn]->u_dcaL_function_constants[2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[2] = lambda;
     break;
 
   case TAGC_LUB_DCA_L3:
-    mp_glob[mn]->u_dcaL_function_constants[3] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[3] = lambda;
     break;
 
   case TAGC_LUB_SOURCE_0:
-    mp_glob[mn]->u_lubsource_function_constants[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_lubsource_function_constants[0] = lambda;
     break;
 
   case TAGC_LUB_SOURCE_1:
-    mp_glob[mn]->u_lubsource_function_constants[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_lubsource_function_constants[1] = lambda;
     break;
 
   case TAGC_LUB_SOURCE_2:
-    mp_glob[mn]->u_lubsource_function_constants[2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_lubsource_function_constants[2] = lambda;
     break;
 
   case TAGC_RST_FUNC_0:
-    mp_glob[mn]->Rst_func = lambda;
+    goma_ctx->fem.mp_glob[mn]->Rst_func = lambda;
     break;
 
   case TAGC_RST_FUNC_1:
-    mp_glob[mn]->Rst_diffusion = lambda;
+    goma_ctx->fem.mp_glob[mn]->Rst_diffusion = lambda;
     break;
 
   case TAGC_RST_FUNC_2:
-    mp_glob[mn]->Rst_func_supg = lambda;
+    goma_ctx->fem.mp_glob[mn]->Rst_func_supg = lambda;
     break;
 
   case TAGC_RST_FUNC_3:
-    mp_glob[mn]->Rst_epsilon = lambda;
+    goma_ctx->fem.mp_glob[mn]->Rst_epsilon = lambda;
     break;
 
   case TAGC_HEAT_SOURCE_0:
-    mp_glob[mn]->u_heat_source[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heat_source[0] = lambda;
     break;
 
   case TAGC_SPECIES_SOURCE_0_P0:
-    mp_glob[mn]->u_species_source[0][0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_species_source[0][0] = lambda;
     break;
 
   case TAGC_SPECIES_SOURCE_0_P1:
-    mp_glob[mn]->u_species_source[0][1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_species_source[0][1] = lambda;
     break;
 
   case TAGC_SPECIES_SOURCE_0_P2:
-    mp_glob[mn]->u_species_source[0][2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_species_source[0][2] = lambda;
     break;
 
   case TAGC_SPECIES_SOURCE_0_P3:
-    mp_glob[mn]->u_species_source[0][3] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_species_source[0][3] = lambda;
     break;
 
   case TAGC_SPECIES_SOURCE_1_P0:
-    mp_glob[mn]->u_species_source[1][0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_species_source[1][0] = lambda;
     break;
 
   case TAGC_SPECIES_SOURCE_1_P1:
-    mp_glob[mn]->u_species_source[1][1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_species_source[1][1] = lambda;
     break;
 
   case TAGC_SPECIES_SOURCE_1_P2:
-    mp_glob[mn]->u_species_source[1][2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_species_source[1][2] = lambda;
     break;
 
   case TAGC_SPECIES_SOURCE_1_P3:
-    mp_glob[mn]->u_species_source[1][3] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_species_source[1][3] = lambda;
     break;
 
   case TAGC_LATENT_HEAT_0:
-    mp_glob[mn]->latent_heat_vap[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->latent_heat_vap[0] = lambda;
     break;
 
   case TAGC_LATENT_HEAT_1:
-    mp_glob[mn]->latent_heat_vap[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->latent_heat_vap[1] = lambda;
     break;
 
   case TAGC_ACOUSTIC_FREQ:
-    upd->Acoustic_Frequency = lambda;
+    goma_ctx->fem.upd->Acoustic_Frequency = lambda;
     break;
 
   case TAGC_EM_FREQ:
-    upd->EM_Frequency = lambda;
+    goma_ctx->fem.upd->EM_Frequency = lambda;
     break;
 
   case TAGC_PROCESS_TEMP:
-    upd->Process_Temperature = lambda;
+    goma_ctx->fem.upd->Process_Temperature = lambda;
     break;
 
   case TAGC_ACOUSTIC_WAVELENGTH:
@@ -1063,54 +1063,55 @@ void update_MT_parameter(double lambda, /* Parameter value */
      * what unit system was being used
      */
     if (1) {
-      upd->Acoustic_Frequency = 2. * M_PIE * c_mm / lambda;
+      goma_ctx->fem.upd->Acoustic_Frequency = 2. * M_PIE * c_mm / lambda;
     } else {
-      upd->Acoustic_Frequency = 2. * M_PIE * c_m / lambda;
+      goma_ctx->fem.upd->Acoustic_Frequency = 2. * M_PIE * c_m / lambda;
     }
     break;
 
   case TAGC_EM_WAVELENGTH:
-    upd->EM_Frequency =
-        (1.0 / (sqrt(upd->Free_Space_Permittivity * upd->Free_Space_Permeability))) / lambda;
+    goma_ctx->fem.upd->EM_Frequency = (1.0 / (sqrt(goma_ctx->fem.upd->Free_Space_Permittivity *
+                                                   goma_ctx->fem.upd->Free_Space_Permeability))) /
+                                      lambda;
     break;
 
   case TAGC_TFMP_REL_PERM_0:
-    mp_glob[mn]->tfmp_rel_perm_const[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->tfmp_rel_perm_const[0] = lambda;
     break;
 
   case TAGC_TFMP_REL_PERM_1:
-    mp_glob[mn]->tfmp_rel_perm_const[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->tfmp_rel_perm_const[1] = lambda;
     break;
 
   case TAGC_TFMP_REL_PERM_2:
-    mp_glob[mn]->tfmp_rel_perm_const[2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->tfmp_rel_perm_const[2] = lambda;
     break;
 
   case TAGC_TFMP_REL_PERM_3:
-    mp_glob[mn]->tfmp_rel_perm_const[3] = lambda;
+    goma_ctx->fem.mp_glob[mn]->tfmp_rel_perm_const[3] = lambda;
     break;
 
   case TAGC_TFMP_DENSITY_0:
-    mp_glob[mn]->tfmp_density_const[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->tfmp_density_const[0] = lambda;
     break;
 
   case TAGC_TFMP_DENSITY_1:
-    mp_glob[mn]->tfmp_density_const[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->tfmp_density_const[1] = lambda;
     break;
 
   case TAGC_TFMP_DENSITY_2:
-    mp_glob[mn]->tfmp_density_const[2] = lambda;
+    goma_ctx->fem.mp_glob[mn]->tfmp_density_const[2] = lambda;
     break;
 
   case TAGC_TFMP_DENSITY_3:
-    mp_glob[mn]->tfmp_density_const[3] = lambda;
+    goma_ctx->fem.mp_glob[mn]->tfmp_density_const[3] = lambda;
     break;
 
   case TAGC_TFMP_VISCOSITY_0:
-    mp_glob[mn]->tfmp_viscosity_const[0] = lambda;
+    goma_ctx->fem.mp_glob[mn]->tfmp_viscosity_const[0] = lambda;
     break;
   case TAGC_TFMP_VISCOSITY_1:
-    mp_glob[mn]->tfmp_viscosity_const[1] = lambda;
+    goma_ctx->fem.mp_glob[mn]->tfmp_viscosity_const[1] = lambda;
     break;
 
   default:
@@ -1178,46 +1179,46 @@ void update_UM_parameter(
   int float_length = -1;
   switch (mpr) {
   case TAGC_THERMAL_CONDUCTIVITY:
-    float_length = mp_glob[mn]->len_u_thermal_conductivity;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_thermal_conductivity;
     break;
   case TAGC_ELECTRICAL_CONDUCTIVITY:
-    float_length = mp_glob[mn]->len_u_electrical_conductivity;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_electrical_conductivity;
     break;
   case TAGC_VISCOSITY:
-    float_length = mp_glob[mn]->len_u_viscosity;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_viscosity;
     break;
   case TAGC_SURFACE_TENSION:
-    float_length = mp_glob[mn]->len_u_surface_tension;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_surface_tension;
     break;
   case TAGC_HEAT_CAPACITY:
-    float_length = mp_glob[mn]->len_u_heat_capacity;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_heat_capacity;
     break;
   case TAGC_VOLUME_EXPANSION:
-    float_length = mp_glob[mn]->len_u_Volume_Expansion;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_Volume_Expansion;
     break;
   case TAGC_DENSITY:
-    float_length = mp_glob[mn]->len_u_density;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_density;
     break;
   case TAGC_POROSITY:
-    float_length = mp_glob[mn]->len_u_porosity;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_porosity;
     break;
   case TAGC_PERMEABILITY:
-    float_length = mp_glob[mn]->len_u_permeability;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_permeability;
     break;
   case TAGC_REL_GAS_PERM:
-    float_length = mp_glob[mn]->len_u_rel_gas_perm;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_rel_gas_perm;
     break;
   case TAGC_REL_LIQ_PERM:
-    float_length = mp_glob[mn]->len_u_rel_liq_perm;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_rel_liq_perm;
     break;
   case TAGC_SATURATION:
-    float_length = mp_glob[mn]->len_u_saturation;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_saturation;
     break;
   case TAGC_FLOWINGLIQUID_VISCOSITY:
-    float_length = mp_glob[mn]->len_u_FlowingLiquid_viscosity;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_FlowingLiquid_viscosity;
     break;
   case TAGC_TAU_Y:
-    float_length = gn_glob[mn]->len_u_tau_y;
+    float_length = goma_ctx->fem.gn_glob[mn]->len_u_tau_y;
     break;
   default:
     GOMA_EH(GOMA_ERROR, "No model available for that property!");
@@ -1229,46 +1230,46 @@ void update_UM_parameter(
 
   switch (mpr) {
   case TAGC_THERMAL_CONDUCTIVITY:
-    mp_glob[mn]->u_thermal_conductivity[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_thermal_conductivity[ic] = lambda;
     break;
   case TAGC_ELECTRICAL_CONDUCTIVITY:
-    mp_glob[mn]->u_electrical_conductivity[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_electrical_conductivity[ic] = lambda;
     break;
   case TAGC_VISCOSITY:
-    mp_glob[mn]->u_viscosity[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_viscosity[ic] = lambda;
     break;
   case TAGC_SURFACE_TENSION:
-    mp_glob[mn]->u_surface_tension[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_surface_tension[ic] = lambda;
     break;
   case TAGC_HEAT_CAPACITY:
-    mp_glob[mn]->u_heat_capacity[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_heat_capacity[ic] = lambda;
     break;
   case TAGC_VOLUME_EXPANSION:
-    mp_glob[mn]->u_Volume_Expansion[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_Volume_Expansion[ic] = lambda;
     break;
   case TAGC_DENSITY:
-    mp_glob[mn]->u_density[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_density[ic] = lambda;
     break;
   case TAGC_POROSITY:
-    mp_glob[mn]->u_porosity[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_porosity[ic] = lambda;
     break;
   case TAGC_PERMEABILITY:
-    mp_glob[mn]->u_permeability[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_permeability[ic] = lambda;
     break;
   case TAGC_REL_GAS_PERM:
-    mp_glob[mn]->u_rel_gas_perm[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_rel_gas_perm[ic] = lambda;
     break;
   case TAGC_REL_LIQ_PERM:
-    mp_glob[mn]->u_rel_liq_perm[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_rel_liq_perm[ic] = lambda;
     break;
   case TAGC_SATURATION:
-    mp_glob[mn]->u_saturation[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_saturation[ic] = lambda;
     break;
   case TAGC_TAU_Y:
-    gn_glob[mn]->u_tau_y[ic] = lambda;
+    goma_ctx->fem.gn_glob[mn]->u_tau_y[ic] = lambda;
     break;
   case TAGC_FLOWINGLIQUID_VISCOSITY:
-    mp_glob[mn]->u_FlowingLiquid_viscosity[ic] = lambda;
+    goma_ctx->fem.mp_glob[mn]->u_FlowingLiquid_viscosity[ic] = lambda;
     break;
   default:
     GOMA_EH(GOMA_ERROR, "No model available for that property!");
@@ -1285,10 +1286,10 @@ void update_AC_parameter(double lambda, /* Parameter value */
                          Dpi *dpi)      /* distributed processing information */
 {
 
-  if (idf == -1 || augc[ibc].len_AC == 0) {
-    augc[ibc].CONSTV = lambda;
+  if (idf == -1 || goma_ctx->fem.augc[ibc].len_AC == 0) {
+    goma_ctx->fem.augc[ibc].CONSTV = lambda;
   } else {
-    augc[ibc].DataFlt[idf] = lambda;
+    goma_ctx->fem.augc[ibc].DataFlt[idf] = lambda;
   }
 } /* END of routine update_AC_parameter  */
 /*******************************************************************************/
@@ -1434,95 +1435,95 @@ void retrieve_MT_parameter(double *lambda, /* Parameter value */
      */
 
   case TAGC_THERMAL_CONDUCTIVITY:
-    *lambda = mp_glob[mn]->thermal_conductivity;
+    *lambda = goma_ctx->fem.mp_glob[mn]->thermal_conductivity;
     break;
 
   case TAGC_ACOUSTIC_WAVENUMBER:
-    *lambda = mp_glob[mn]->wave_number;
+    *lambda = goma_ctx->fem.mp_glob[mn]->wave_number;
     break;
 
   case TAGC_ACOUSTIC_IMPEDANCE:
-    *lambda = mp_glob[mn]->acoustic_impedance;
+    *lambda = goma_ctx->fem.mp_glob[mn]->acoustic_impedance;
     break;
 
   case TAGC_ACOUSTIC_ABSORPTION:
-    *lambda = mp_glob[mn]->acoustic_absorption;
+    *lambda = goma_ctx->fem.mp_glob[mn]->acoustic_absorption;
     break;
 
   case TAGC_REFRACTIVE_INDEX:
-    *lambda = mp_glob[mn]->refractive_index;
+    *lambda = goma_ctx->fem.mp_glob[mn]->refractive_index;
     break;
 
   case TAGC_LIGHT_ABSORPTION:
-    *lambda = mp_glob[mn]->light_absorption;
+    *lambda = goma_ctx->fem.mp_glob[mn]->light_absorption;
     break;
 
   case TAGC_EXTINCTION_INDEX:
-    *lambda = mp_glob[mn]->extinction_index;
+    *lambda = goma_ctx->fem.mp_glob[mn]->extinction_index;
     break;
 
   case TAGC_ELECTRICAL_CONDUCTIVITY:
-    *lambda = mp_glob[mn]->electrical_conductivity;
+    *lambda = goma_ctx->fem.mp_glob[mn]->electrical_conductivity;
     break;
 
   case TAGC_VISCOSITY:
-    *lambda = mp_glob[mn]->viscosity;
+    *lambda = goma_ctx->fem.mp_glob[mn]->viscosity;
     break;
 
   case TAGC_SURFACE_TENSION:
-    *lambda = mp_glob[mn]->surface_tension;
+    *lambda = goma_ctx->fem.mp_glob[mn]->surface_tension;
     break;
 
   case TAGC_HEAT_CAPACITY:
-    *lambda = mp_glob[mn]->heat_capacity;
+    *lambda = goma_ctx->fem.mp_glob[mn]->heat_capacity;
     break;
 
   case TAGC_VOLUME_EXPANSION:
-    *lambda = mp_glob[mn]->Volume_Expansion;
+    *lambda = goma_ctx->fem.mp_glob[mn]->Volume_Expansion;
     break;
 
   case TAGC_DENSITY:
-    *lambda = mp_glob[mn]->density;
+    *lambda = goma_ctx->fem.mp_glob[mn]->density;
     break;
 
   case TAGC_POROSITY:
-    *lambda = mp_glob[mn]->porosity;
+    *lambda = goma_ctx->fem.mp_glob[mn]->porosity;
     break;
 
   case TAGC_PERMEABILITY:
-    *lambda = mp_glob[mn]->permeability;
+    *lambda = goma_ctx->fem.mp_glob[mn]->permeability;
     break;
 
   case TAGC_REL_GAS_PERM:
-    *lambda = mp_glob[mn]->rel_gas_perm;
+    *lambda = goma_ctx->fem.mp_glob[mn]->rel_gas_perm;
     break;
 
   case TAGC_REL_LIQ_PERM:
-    *lambda = mp_glob[mn]->rel_liq_perm;
+    *lambda = goma_ctx->fem.mp_glob[mn]->rel_liq_perm;
     break;
 
   case TAGC_SATURATION:
-    *lambda = mp_glob[mn]->saturation;
+    *lambda = goma_ctx->fem.mp_glob[mn]->saturation;
     break;
 
   case TAGC_MELTING_POINT_LIQUIDUS:
-    *lambda = mp_glob[mn]->melting_point_liquidus;
+    *lambda = goma_ctx->fem.mp_glob[mn]->melting_point_liquidus;
     break;
 
   case TAGC_MELTING_POINT_SOLIDUS:
-    *lambda = mp_glob[mn]->melting_point_solidus;
+    *lambda = goma_ctx->fem.mp_glob[mn]->melting_point_solidus;
     break;
 
   case TAGC_FLOWINGLIQUID_VISCOSITY:
-    *lambda = mp_glob[mn]->FlowingLiquid_viscosity;
+    *lambda = goma_ctx->fem.mp_glob[mn]->FlowingLiquid_viscosity;
     break;
 
   case TAGC_DIFFUSIVITY_0:
-    *lambda = mp_glob[mn]->diffusivity[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->diffusivity[0];
     break;
 
   case TAGC_DIFFUSIVITY_1:
-    *lambda = mp_glob[mn]->diffusivity[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->diffusivity[1];
     break;
 
     /*
@@ -1531,76 +1532,76 @@ void retrieve_MT_parameter(double *lambda, /* Parameter value */
      */
 
   case TAGC_MU0:
-    *lambda = gn_glob[mn]->mu0;
+    *lambda = goma_ctx->fem.gn_glob[mn]->mu0;
     break;
   case TAGC_NEXP:
-    *lambda = gn_glob[mn]->nexp;
+    *lambda = goma_ctx->fem.gn_glob[mn]->nexp;
     break;
   case TAGC_MUINF:
-    *lambda = gn_glob[mn]->muinf;
+    *lambda = goma_ctx->fem.gn_glob[mn]->muinf;
     break;
   case TAGC_LAM:
-    *lambda = gn_glob[mn]->lam;
+    *lambda = goma_ctx->fem.gn_glob[mn]->lam;
     break;
   case TAGC_AEXP:
-    *lambda = gn_glob[mn]->aexp;
+    *lambda = goma_ctx->fem.gn_glob[mn]->aexp;
     break;
   case TAGC_ATEXP:
-    *lambda = gn_glob[mn]->atexp;
+    *lambda = goma_ctx->fem.gn_glob[mn]->atexp;
     break;
 
     /* CARREAU_WLF */
 
   case TAGC_WLFC2:
-    *lambda = gn_glob[mn]->wlfc2;
+    *lambda = goma_ctx->fem.gn_glob[mn]->wlfc2;
     break;
 
   case TAGC_REFTEMP:
-    *lambda = mp_glob[mn]->reference[TEMPERATURE];
+    *lambda = goma_ctx->fem.mp_glob[mn]->reference[TEMPERATURE];
     break;
 
     /* these are for the BINGHAM yielding material model */
 
   case TAGC_TAU_Y:
-    *lambda = gn_glob[mn]->tau_y;
+    *lambda = goma_ctx->fem.gn_glob[mn]->tau_y;
     break;
   case TAGC_FEXP:
-    *lambda = gn_glob[mn]->fexp;
+    *lambda = goma_ctx->fem.gn_glob[mn]->fexp;
     break;
 
     /* these are for SUSPENSION/FILLED_EPOXY models */
 
   case TAGC_MAXPACK:
-    *lambda = gn_glob[mn]->maxpack;
+    *lambda = goma_ctx->fem.gn_glob[mn]->maxpack;
     break;
   case TAGC_FICKDIFF_X:
-    *lambda = mp_glob[mn]->u_fdiffusivity[0][0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_fdiffusivity[0][0];
     break;
   case TAGC_FICKDIFF_Y:
-    *lambda = mp_glob[mn]->u_fdiffusivity[0][1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_fdiffusivity[0][1];
     break;
 
     /* these can be implemented for Ryan's Qtensor model as needed */
 
 #if 0
     case TAGC_QTENSOR_EXTENSION_P:
-      *lambda = mp_glob[mn]->u_Qtensor_Extension_P[0][0];
+      *lambda = goma_ctx->fem.mp_glob[mn]->u_Qtensor_Extension_P[0][0];
       break;
     case TAGC_QTENSOR_NCT:
-      *lambda = mp_glob[mn]->u_Qtensor_Nct[0][0];
+      *lambda = goma_ctx->fem.mp_glob[mn]->u_Qtensor_Nct[0][0];
       break;
 #endif
 
     /* these are for CURE/EPOXY/FILLED_EPOXY models */
 
   case TAGC_GELPOINT:
-    *lambda = gn_glob[mn]->gelpoint;
+    *lambda = goma_ctx->fem.gn_glob[mn]->gelpoint;
     break;
   case TAGC_CUREAEXP:
-    *lambda = gn_glob[mn]->cureaexp;
+    *lambda = goma_ctx->fem.gn_glob[mn]->cureaexp;
     break;
   case TAGC_CUREBEXP:
-    *lambda = gn_glob[mn]->curebexp;
+    *lambda = goma_ctx->fem.gn_glob[mn]->curebexp;
     break;
 
     /*
@@ -1615,11 +1616,11 @@ void retrieve_MT_parameter(double *lambda, /* Parameter value */
   case TAGC_TIME_CONST5:
   case TAGC_TIME_CONST6:
   case TAGC_TIME_CONST7:
-    *lambda = ve_glob[mn][mpr - TAGC_TIME_CONST]->time_const_st->lambda0;
+    *lambda = goma_ctx->fem.ve_glob[mn][mpr - TAGC_TIME_CONST]->time_const_st->lambda0;
     break;
 
   case TAGC_WT_FUNC:
-    *lambda = vn_glob[mn]->wt_func;
+    *lambda = goma_ctx->fem.vn_glob[mn]->wt_func;
     break;
 
   case TAGC_ALPHA:
@@ -1630,28 +1631,30 @@ void retrieve_MT_parameter(double *lambda, /* Parameter value */
   case TAGC_ALPHA5:
   case TAGC_ALPHA6:
   case TAGC_ALPHA7:
-    *lambda = ve_glob[mn][mpr - TAGC_ALPHA]->alpha;
+    *lambda = goma_ctx->fem.ve_glob[mn][mpr - TAGC_ALPHA]->alpha;
     break;
 
   case TAGC_PTT_XI:
-    *lambda = ve_glob[mn][cont->upMPID - TAGC_PTT_XI]->xi;
+    *lambda = goma_ctx->fem.ve_glob[mn][goma_ctx->fem.cont->upMPID - TAGC_PTT_XI]->xi;
     break;
 
   case TAGC_PTT_EPS:
-    *lambda = ve_glob[mn][cont->upMPID - TAGC_PTT_EPS]->eps;
+    *lambda = goma_ctx->fem.ve_glob[mn][goma_ctx->fem.cont->upMPID - TAGC_PTT_EPS]->eps;
     break;
 
   case TAGC_SHIFT_FUNC:
   case TAGC_SHIFT_FUNC1:
-    *lambda = vn_glob[mn]->shift[mpr - TAGC_SHIFT_FUNC];
+    *lambda = goma_ctx->fem.vn_glob[mn]->shift[mpr - TAGC_SHIFT_FUNC];
     break;
 
   case TAGC_POLYMER_YIELD_STRESS:
-    *lambda = ve_glob[mn][cont->upMPID - TAGC_POLYMER_YIELD_STRESS]->gn->tau_y;
+    *lambda = goma_ctx->fem.ve_glob[mn][goma_ctx->fem.cont->upMPID - TAGC_POLYMER_YIELD_STRESS]
+                  ->gn->tau_y;
     break;
 
   case TAGC_POLYMER_YIELD_EXPONENT:
-    *lambda = ve_glob[mn][cont->upMPID - TAGC_POLYMER_YIELD_EXPONENT]->gn->fexp;
+    *lambda = goma_ctx->fem.ve_glob[mn][goma_ctx->fem.cont->upMPID - TAGC_POLYMER_YIELD_EXPONENT]
+                  ->gn->fexp;
     break;
 
     /*
@@ -1659,95 +1662,95 @@ void retrieve_MT_parameter(double *lambda, /* Parameter value */
      */
 
   case TAGC_LAME_MU:
-    *lambda = elc_glob[mn]->lame_mu;
+    *lambda = goma_ctx->fem.elc_glob[mn]->lame_mu;
     break;
 
   case TAGC_LAME_MU_CONTACT_LINE_G0:
-    *lambda = *(elc_glob[mn]->u_mu + 1);
+    *lambda = *(goma_ctx->fem.elc_glob[mn]->u_mu + 1);
     break;
 
   case TAGC_LAME_MU_CONTACT_LINE_G1:
-    *lambda = *(elc_glob[mn]->u_mu + 2);
+    *lambda = *(goma_ctx->fem.elc_glob[mn]->u_mu + 2);
     break;
 
   case TAGC_LAME_MU_CONTACT_LINE_R0:
-    *lambda = *(elc_glob[mn]->u_mu + 3);
+    *lambda = *(goma_ctx->fem.elc_glob[mn]->u_mu + 3);
     break;
 
   case TAGC_LAME_LAMBDA:
-    *lambda = elc_glob[mn]->lame_lambda;
+    *lambda = goma_ctx->fem.elc_glob[mn]->lame_lambda;
     break;
 
   case TAGC_CONV_LAG_VELX:
-    *lambda = *(elc_glob[mn]->v_mesh_sfs);
+    *lambda = *(goma_ctx->fem.elc_glob[mn]->v_mesh_sfs);
     break;
 
   case TAGC_CONV_LAG_VELY:
-    *lambda = *(elc_glob[mn]->v_mesh_sfs + 1);
+    *lambda = *(goma_ctx->fem.elc_glob[mn]->v_mesh_sfs + 1);
     break;
 
   case TAGC_CONV_LAG_VELZ:
-    *lambda = *(elc_glob[mn]->v_mesh_sfs + 2);
+    *lambda = *(goma_ctx->fem.elc_glob[mn]->v_mesh_sfs + 2);
     break;
 
   case TAGC_CONV_LAG_ROTRATE:
-    *lambda = *(elc_glob[mn]->u_v_mesh_sfs);
+    *lambda = *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs);
     break;
 
   case TAGC_CONV_LAG_ROT_X0:
-    *lambda = *(elc_glob[mn]->u_v_mesh_sfs + 1);
+    *lambda = *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs + 1);
     break;
 
   case TAGC_CONV_LAG_ROT_Y0:
-    *lambda = *(elc_glob[mn]->u_v_mesh_sfs + 2);
+    *lambda = *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs + 2);
     break;
 
   case TAGC_CONV_LAG_ROT_Z0:
-    *lambda = *(elc_glob[mn]->u_v_mesh_sfs + 3);
+    *lambda = *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs + 3);
     break;
 
   case TAGC_RS_LAME_MU:
-    *lambda = elc_rs_glob[mn]->lame_mu;
+    *lambda = goma_ctx->fem.elc_rs_glob[mn]->lame_mu;
     break;
 
   case TAGC_RS_LAME_LAMBDA:
-    *lambda = elc_rs_glob[mn]->lame_lambda;
+    *lambda = goma_ctx->fem.elc_rs_glob[mn]->lame_lambda;
     break;
 
   case TAGC_RS_CONV_LAG_VELX:
-    *lambda = *(elc_rs_glob[mn]->v_mesh_sfs);
+    *lambda = *(goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs);
     break;
 
   case TAGC_RS_CONV_LAG_VELY:
-    *lambda = *(elc_rs_glob[mn]->v_mesh_sfs + 1);
+    *lambda = *(goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs + 1);
     break;
 
   case TAGC_RS_CONV_LAG_VELZ:
-    *lambda = *(elc_rs_glob[mn]->v_mesh_sfs + 2);
+    *lambda = *(goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs + 2);
     break;
 
   case TAGC_RS_CONV_LAG_ROTRATE:
-    *lambda = *(elc_rs_glob[mn]->u_v_mesh_sfs);
+    *lambda = *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs);
     break;
 
   case TAGC_RS_CONV_LAG_ROT_X0:
-    *lambda = *(elc_rs_glob[mn]->u_v_mesh_sfs + 1);
+    *lambda = *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs + 1);
     break;
 
   case TAGC_RS_CONV_LAG_ROT_Y0:
-    *lambda = *(elc_rs_glob[mn]->u_v_mesh_sfs + 2);
+    *lambda = *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs + 2);
     break;
 
   case TAGC_RS_CONV_LAG_ROT_Z0:
-    *lambda = *(elc_rs_glob[mn]->u_v_mesh_sfs + 3);
+    *lambda = *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs + 3);
     break;
 
   case TAGC_POISSON:
-    *lambda = elc_glob[mn]->poisson;
+    *lambda = goma_ctx->fem.elc_glob[mn]->poisson;
     break;
 
   case TAGC_STRSS_FR_SOL_VOL_FRAC:
-    *lambda = elc_glob[mn]->Strss_fr_sol_vol_frac;
+    *lambda = goma_ctx->fem.elc_glob[mn]->Strss_fr_sol_vol_frac;
     break;
 
     /*
@@ -1755,267 +1758,267 @@ void retrieve_MT_parameter(double *lambda, /* Parameter value */
      */
 
   case TAGC_NSS_A0:
-    *lambda = mp_glob[mn]->momentum_source[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->momentum_source[0];
     break;
 
   case TAGC_NSS_A1:
-    *lambda = mp_glob[mn]->momentum_source[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->momentum_source[1];
     break;
 
   case TAGC_NSS_A2:
-    *lambda = mp_glob[mn]->momentum_source[2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->momentum_source[2];
     break;
 
   case TAGC_NSS_A3:
-    *lambda = mp_glob[mn]->u_momentum_source[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_momentum_source[0];
     break;
 
   case TAGC_LUB_HGT_U0:
-    *lambda = mp_glob[mn]->u_heightU_function_constants[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[0];
     break;
 
   case TAGC_LUB_HGT_U1:
-    *lambda = mp_glob[mn]->u_heightU_function_constants[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[1];
     break;
 
   case TAGC_LUB_HGT_U2:
-    *lambda = mp_glob[mn]->u_heightU_function_constants[2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[2];
     break;
 
   case TAGC_LUB_HGT_U3:
-    *lambda = mp_glob[mn]->u_heightU_function_constants[3];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[3];
     break;
 
   case TAGC_LUB_HGT_U4:
-    *lambda = mp_glob[mn]->u_heightU_function_constants[4];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[4];
     break;
 
   case TAGC_LUB_HGT_U5:
-    *lambda = mp_glob[mn]->u_heightU_function_constants[5];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[5];
     break;
 
   case TAGC_LUB_HGT_U6:
-    *lambda = mp_glob[mn]->u_heightU_function_constants[6];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[6];
     break;
 
   case TAGC_LUB_HGT_U7:
-    *lambda = mp_glob[mn]->u_heightU_function_constants[7];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[7];
     break;
 
   case TAGC_LUB_HGT_L0:
-    *lambda = mp_glob[mn]->u_heightL_function_constants[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[0];
     break;
 
   case TAGC_LUB_HGT_L1:
-    *lambda = mp_glob[mn]->u_heightL_function_constants[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[1];
     break;
 
   case TAGC_LUB_HGT_L2:
-    *lambda = mp_glob[mn]->u_heightL_function_constants[2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[2];
     break;
 
   case TAGC_LUB_HGT_L3:
-    *lambda = mp_glob[mn]->u_heightL_function_constants[3];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[3];
     break;
 
   case TAGC_LUB_HGT_L4:
-    *lambda = mp_glob[mn]->u_heightL_function_constants[4];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[4];
     break;
 
   case TAGC_LUB_HGT_L5:
-    *lambda = mp_glob[mn]->u_heightL_function_constants[5];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[5];
     break;
 
   case TAGC_LUB_HGT_L6:
-    *lambda = mp_glob[mn]->u_heightL_function_constants[6];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[6];
     break;
 
   case TAGC_LUB_HGT_L7:
-    *lambda = mp_glob[mn]->u_heightL_function_constants[7];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[7];
     break;
 
   case TAGC_U_LUB_VELO_U0:
-    *lambda = mp_glob[mn]->u_veloU_function_constants[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[0];
     break;
 
   case TAGC_U_LUB_VELO_U1:
-    *lambda = mp_glob[mn]->u_veloU_function_constants[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[1];
     break;
 
   case TAGC_U_LUB_VELO_U2:
-    *lambda = mp_glob[mn]->u_veloU_function_constants[2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[2];
     break;
 
   case TAGC_U_LUB_VELO_U3:
-    *lambda = mp_glob[mn]->u_veloU_function_constants[3];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[3];
     break;
 
   case TAGC_U_LUB_VELO_U4:
-    *lambda = mp_glob[mn]->u_veloU_function_constants[4];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[4];
     break;
 
   case TAGC_U_LUB_VELO_U5:
-    *lambda = mp_glob[mn]->u_veloU_function_constants[5];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[5];
     break;
 
   case TAGC_U_LUB_VELO_L0:
-    *lambda = mp_glob[mn]->u_veloL_function_constants[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[0];
     break;
 
   case TAGC_U_LUB_VELO_L1:
-    *lambda = mp_glob[mn]->u_veloL_function_constants[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[1];
     break;
 
   case TAGC_U_LUB_VELO_L2:
-    *lambda = mp_glob[mn]->u_veloL_function_constants[2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[2];
     break;
 
   case TAGC_U_LUB_VELO_L3:
-    *lambda = mp_glob[mn]->u_veloL_function_constants[3];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[3];
     break;
 
   case TAGC_U_LUB_VELO_L4:
-    *lambda = mp_glob[mn]->u_veloL_function_constants[4];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[4];
     break;
 
   case TAGC_U_LUB_VELO_L5:
-    *lambda = mp_glob[mn]->u_veloL_function_constants[5];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[5];
     break;
 
   case TAGC_LUB_VELO_U0:
-    *lambda = mp_glob[mn]->veloU[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->veloU[0];
     break;
 
   case TAGC_LUB_VELO_U1:
-    *lambda = mp_glob[mn]->veloU[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->veloU[1];
     break;
 
   case TAGC_LUB_VELO_U2:
-    *lambda = mp_glob[mn]->veloU[2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->veloU[2];
     break;
 
   case TAGC_LUB_VELO_L0:
-    *lambda = mp_glob[mn]->veloL[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->veloL[0];
     break;
 
   case TAGC_LUB_VELO_L1:
-    *lambda = mp_glob[mn]->veloL[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->veloL[1];
     break;
 
   case TAGC_LUB_VELO_L2:
-    *lambda = mp_glob[mn]->veloL[2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->veloL[2];
     break;
 
   case TAGC_LUB_DCA_U0:
-    *lambda = mp_glob[mn]->u_dcaU_function_constants[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[0];
     break;
 
   case TAGC_LUB_DCA_U1:
-    *lambda = mp_glob[mn]->u_dcaU_function_constants[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[1];
     break;
 
   case TAGC_LUB_DCA_U2:
-    *lambda = mp_glob[mn]->u_dcaU_function_constants[2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[2];
     break;
 
   case TAGC_LUB_DCA_U3:
-    *lambda = mp_glob[mn]->u_dcaU_function_constants[3];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[3];
     break;
 
   case TAGC_LUB_DCA_L0:
-    *lambda = mp_glob[mn]->u_dcaL_function_constants[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[0];
     break;
 
   case TAGC_LUB_DCA_L1:
-    *lambda = mp_glob[mn]->u_dcaL_function_constants[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[1];
     break;
 
   case TAGC_LUB_DCA_L2:
-    *lambda = mp_glob[mn]->u_dcaL_function_constants[2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[2];
     break;
 
   case TAGC_LUB_DCA_L3:
-    *lambda = mp_glob[mn]->u_dcaL_function_constants[3];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[3];
     break;
 
   case TAGC_LUB_SOURCE_0:
-    *lambda = mp_glob[mn]->u_lubsource_function_constants[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_lubsource_function_constants[0];
     break;
 
   case TAGC_LUB_SOURCE_1:
-    *lambda = mp_glob[mn]->u_lubsource_function_constants[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_lubsource_function_constants[1];
     break;
 
   case TAGC_LUB_SOURCE_2:
-    *lambda = mp_glob[mn]->u_lubsource_function_constants[2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_lubsource_function_constants[2];
     break;
 
   case TAGC_RST_FUNC_0:
-    *lambda = mp_glob[mn]->Rst_func;
+    *lambda = goma_ctx->fem.mp_glob[mn]->Rst_func;
     break;
 
   case TAGC_RST_FUNC_1:
-    *lambda = mp_glob[mn]->Rst_diffusion;
+    *lambda = goma_ctx->fem.mp_glob[mn]->Rst_diffusion;
     break;
 
   case TAGC_RST_FUNC_2:
-    *lambda = mp_glob[mn]->Rst_func_supg;
+    *lambda = goma_ctx->fem.mp_glob[mn]->Rst_func_supg;
     break;
 
   case TAGC_RST_FUNC_3:
-    *lambda = mp_glob[mn]->Rst_epsilon;
+    *lambda = goma_ctx->fem.mp_glob[mn]->Rst_epsilon;
     break;
 
   case TAGC_HEAT_SOURCE_0:
-    *lambda = mp_glob[mn]->u_heat_source[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heat_source[0];
     break;
 
   case TAGC_SPECIES_SOURCE_0_P0:
-    *lambda = mp_glob[mn]->u_species_source[0][0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_species_source[0][0];
     break;
 
   case TAGC_SPECIES_SOURCE_0_P1:
-    *lambda = mp_glob[mn]->u_species_source[0][1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_species_source[0][1];
     break;
 
   case TAGC_SPECIES_SOURCE_0_P2:
-    *lambda = mp_glob[mn]->u_species_source[0][2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_species_source[0][2];
     break;
 
   case TAGC_SPECIES_SOURCE_0_P3:
-    *lambda = mp_glob[mn]->u_species_source[0][3];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_species_source[0][3];
     break;
 
   case TAGC_SPECIES_SOURCE_1_P0:
-    *lambda = mp_glob[mn]->u_species_source[1][0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_species_source[1][0];
     break;
 
   case TAGC_SPECIES_SOURCE_1_P1:
-    *lambda = mp_glob[mn]->u_species_source[1][1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_species_source[1][1];
     break;
 
   case TAGC_SPECIES_SOURCE_1_P2:
-    *lambda = mp_glob[mn]->u_species_source[1][2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_species_source[1][2];
     break;
 
   case TAGC_SPECIES_SOURCE_1_P3:
-    *lambda = mp_glob[mn]->u_species_source[1][3];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_species_source[1][3];
     break;
 
   case TAGC_LATENT_HEAT_0:
-    *lambda = mp_glob[mn]->latent_heat_vap[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->latent_heat_vap[0];
     break;
 
   case TAGC_LATENT_HEAT_1:
-    *lambda = mp_glob[mn]->latent_heat_vap[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->latent_heat_vap[1];
     break;
 
   case TAGC_ACOUSTIC_FREQ:
-    *lambda = upd->Acoustic_Frequency;
+    *lambda = goma_ctx->fem.upd->Acoustic_Frequency;
     break;
 
   case TAGC_PROCESS_TEMP:
-    *lambda = upd->Process_Temperature;
+    *lambda = goma_ctx->fem.upd->Process_Temperature;
     break;
 
   case TAGC_ACOUSTIC_WAVELENGTH:
@@ -2023,42 +2026,42 @@ void retrieve_MT_parameter(double *lambda, /* Parameter value */
      * what unit system was being used
      */
     if (1) {
-      *lambda = 2. * M_PIE * c_mm / upd->Acoustic_Frequency;
+      *lambda = 2. * M_PIE * c_mm / goma_ctx->fem.upd->Acoustic_Frequency;
     } else {
-      *lambda = 2. * M_PIE * c_m / upd->Acoustic_Frequency;
+      *lambda = 2. * M_PIE * c_m / goma_ctx->fem.upd->Acoustic_Frequency;
     }
     break;
 
   case TAGC_TFMP_REL_PERM_0:
-    *lambda = mp_glob[mn]->tfmp_rel_perm_const[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->tfmp_rel_perm_const[0];
     break;
 
   case TAGC_TFMP_REL_PERM_1:
-    *lambda = mp_glob[mn]->tfmp_rel_perm_const[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->tfmp_rel_perm_const[1];
     break;
 
   case TAGC_TFMP_REL_PERM_2:
-    *lambda = mp_glob[mn]->tfmp_rel_perm_const[2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->tfmp_rel_perm_const[2];
     break;
 
   case TAGC_TFMP_REL_PERM_3:
-    *lambda = mp_glob[mn]->tfmp_rel_perm_const[3];
+    *lambda = goma_ctx->fem.mp_glob[mn]->tfmp_rel_perm_const[3];
     break;
 
   case TAGC_TFMP_DENSITY_0:
-    *lambda = mp_glob[mn]->tfmp_density_const[0];
+    *lambda = goma_ctx->fem.mp_glob[mn]->tfmp_density_const[0];
     break;
 
   case TAGC_TFMP_DENSITY_1:
-    *lambda = mp_glob[mn]->tfmp_density_const[1];
+    *lambda = goma_ctx->fem.mp_glob[mn]->tfmp_density_const[1];
     break;
 
   case TAGC_TFMP_DENSITY_2:
-    *lambda = mp_glob[mn]->tfmp_density_const[2];
+    *lambda = goma_ctx->fem.mp_glob[mn]->tfmp_density_const[2];
     break;
 
   case TAGC_TFMP_DENSITY_3:
-    *lambda = mp_glob[mn]->tfmp_density_const[3];
+    *lambda = goma_ctx->fem.mp_glob[mn]->tfmp_density_const[3];
     break;
 
   default:
@@ -2078,10 +2081,10 @@ void retrieve_AC_parameter(double *lambda, /* Parameter value */
                            Dpi *dpi)       /* distributed processing information */
 {
 
-  if (idf == -1 || augc[ibc].len_AC == 0) {
-    *lambda = augc[ibc].CONSTV;
+  if (idf == -1 || goma_ctx->fem.augc[ibc].len_AC == 0) {
+    *lambda = goma_ctx->fem.augc[ibc].CONSTV;
   } else {
-    *lambda = augc[ibc].DataFlt[idf];
+    *lambda = goma_ctx->fem.augc[ibc].DataFlt[idf];
   }
 } /* END of routine update_AC_parameter  */
 /*******************************************************************************/
@@ -2099,46 +2102,46 @@ void retrieve_UM_parameter(
   int float_length = -1;
   switch (mpr) {
   case TAGC_THERMAL_CONDUCTIVITY:
-    float_length = mp_glob[mn]->len_u_thermal_conductivity;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_thermal_conductivity;
     break;
   case TAGC_ELECTRICAL_CONDUCTIVITY:
-    float_length = mp_glob[mn]->len_u_electrical_conductivity;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_electrical_conductivity;
     break;
   case TAGC_VISCOSITY:
-    float_length = mp_glob[mn]->len_u_viscosity;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_viscosity;
     break;
   case TAGC_SURFACE_TENSION:
-    float_length = mp_glob[mn]->len_u_surface_tension;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_surface_tension;
     break;
   case TAGC_HEAT_CAPACITY:
-    float_length = mp_glob[mn]->len_u_heat_capacity;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_heat_capacity;
     break;
   case TAGC_VOLUME_EXPANSION:
-    float_length = mp_glob[mn]->len_u_Volume_Expansion;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_Volume_Expansion;
     break;
   case TAGC_DENSITY:
-    float_length = mp_glob[mn]->len_u_density;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_density;
     break;
   case TAGC_POROSITY:
-    float_length = mp_glob[mn]->len_u_porosity;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_porosity;
     break;
   case TAGC_PERMEABILITY:
-    float_length = mp_glob[mn]->len_u_permeability;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_permeability;
     break;
   case TAGC_REL_GAS_PERM:
-    float_length = mp_glob[mn]->len_u_rel_gas_perm;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_rel_gas_perm;
     break;
   case TAGC_REL_LIQ_PERM:
-    float_length = mp_glob[mn]->len_u_rel_liq_perm;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_rel_liq_perm;
     break;
   case TAGC_SATURATION:
-    float_length = mp_glob[mn]->len_u_saturation;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_saturation;
     break;
   case TAGC_FLOWINGLIQUID_VISCOSITY:
-    float_length = mp_glob[mn]->len_u_FlowingLiquid_viscosity;
+    float_length = goma_ctx->fem.mp_glob[mn]->len_u_FlowingLiquid_viscosity;
     break;
   case TAGC_TAU_Y:
-    float_length = gn_glob[mn]->len_u_tau_y;
+    float_length = goma_ctx->fem.gn_glob[mn]->len_u_tau_y;
     break;
   default:
     GOMA_EH(GOMA_ERROR, "No model available for that property!");
@@ -2150,46 +2153,46 @@ void retrieve_UM_parameter(
 
   switch (mpr) {
   case TAGC_THERMAL_CONDUCTIVITY:
-    *lambda = mp_glob[mn]->u_thermal_conductivity[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_thermal_conductivity[ic];
     break;
   case TAGC_ELECTRICAL_CONDUCTIVITY:
-    *lambda = mp_glob[mn]->u_electrical_conductivity[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_electrical_conductivity[ic];
     break;
   case TAGC_VISCOSITY:
-    *lambda = mp_glob[mn]->u_viscosity[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_viscosity[ic];
     break;
   case TAGC_SURFACE_TENSION:
-    *lambda = mp_glob[mn]->u_surface_tension[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_surface_tension[ic];
     break;
   case TAGC_HEAT_CAPACITY:
-    *lambda = mp_glob[mn]->u_heat_capacity[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_heat_capacity[ic];
     break;
   case TAGC_VOLUME_EXPANSION:
-    *lambda = mp_glob[mn]->u_Volume_Expansion[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_Volume_Expansion[ic];
     break;
   case TAGC_DENSITY:
-    *lambda = mp_glob[mn]->u_density[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_density[ic];
     break;
   case TAGC_POROSITY:
-    *lambda = mp_glob[mn]->u_porosity[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_porosity[ic];
     break;
   case TAGC_PERMEABILITY:
-    *lambda = mp_glob[mn]->u_permeability[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_permeability[ic];
     break;
   case TAGC_REL_GAS_PERM:
-    *lambda = mp_glob[mn]->u_rel_gas_perm[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_rel_gas_perm[ic];
     break;
   case TAGC_REL_LIQ_PERM:
-    *lambda = mp_glob[mn]->u_rel_liq_perm[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_rel_liq_perm[ic];
     break;
   case TAGC_SATURATION:
-    *lambda = mp_glob[mn]->u_saturation[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_saturation[ic];
     break;
   case TAGC_FLOWINGLIQUID_VISCOSITY:
-    *lambda = mp_glob[mn]->u_FlowingLiquid_viscosity[ic];
+    *lambda = goma_ctx->fem.mp_glob[mn]->u_FlowingLiquid_viscosity[ic];
     break;
   case TAGC_TAU_Y:
-    *lambda = gn_glob[mn]->u_tau_y[ic];
+    *lambda = goma_ctx->fem.gn_glob[mn]->u_tau_y[ic];
     break;
   default:
     GOMA_EH(GOMA_ERROR, "No model available for that property!");

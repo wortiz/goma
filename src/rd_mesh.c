@@ -184,7 +184,7 @@ int read_mesh_exoII(Exo_DB *exo, Dpi *dpi) {
 
   check_nodesets(exo, BC_Types, Num_BC, dpi);
 
-  check_elemblocks(exo, upd->Num_Mat, pd_glob, dpi);
+  check_elemblocks(exo, goma_ctx->fem.upd->Num_Mat, goma_ctx->fem.pd_glob, dpi);
 
   /*
    *  Allocate and set up the element block to Material ID mapping array,
@@ -931,7 +931,7 @@ void check_elemblocks(Exo_DB *e,                       /* EXODUS II FE db has al
    */
 
   for (i = 0; i < nmat; i++) {
-    mp_ptr = mp_glob[i];
+    mp_ptr = goma_ctx->fem.mp_glob[i];
     for (j = 0; j < mp_ptr->Num_Matrl_Elem_Blk; j++) {
       ebid_mat = mp_ptr->Matrl_Elem_Blk_Ids[j];
       /*
@@ -1043,7 +1043,7 @@ void setup_matilda(Exo_DB *e, int *matilda)
   for (eb = 0; eb < e->num_elem_blocks; eb++) {
     ebid = e->eb_id[eb];
     found = FALSE;
-    for (m = 0; m < upd->Num_Mat && (!found); m++) {
+    for (m = 0; m < goma_ctx->fem.upd->Num_Mat && (!found); m++) {
       if ((found = eb_in_matrl(ebid, m))) {
         break;
       }
@@ -1062,7 +1062,7 @@ void setup_matilda(Exo_DB *e, int *matilda)
 #endif
     } else {
       matilda[eb] = m;
-      eb_ptr->MatlProp_ptr = mp_glob[m];
+      eb_ptr->MatlProp_ptr = goma_ctx->fem.mp_glob[m];
     }
     eb_ptr++;
   }
@@ -1095,7 +1095,7 @@ int eb_in_matrl(const int ebid, const int mn)
  *********************************************************************/
 {
   int pos;
-  MATRL_PROP_STRUCT *mp_ptr = mp_glob[mn];
+  MATRL_PROP_STRUCT *mp_ptr = goma_ctx->fem.mp_glob[mn];
   pos = in_list(ebid, 0, mp_ptr->Num_Matrl_Elem_Blk, mp_ptr->Matrl_Elem_Blk_Ids);
   if (pos < 0)
     return FALSE;
@@ -1196,7 +1196,7 @@ int map_mat_index(const int ebid)
  *************************************************************/
 {
   int m, found = FALSE;
-  for (m = 0; m < upd->Num_Mat && !found; m++) {
+  for (m = 0; m < goma_ctx->fem.upd->Num_Mat && !found; m++) {
     if (eb_in_matrl(ebid, m)) {
       found = TRUE;
       break;

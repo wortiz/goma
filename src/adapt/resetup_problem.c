@@ -191,19 +191,22 @@ int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
 int resetup_matrix(struct GomaLinearSolverData **ams, Exo_DB *exo, Dpi *dpi) {
   if ((strcmp(goma_ctx->solver.matrix_format, "tpetra") == 0) ||
       (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0)) {
-    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-      GomaSparseMatrix goma_matrix = ams[pg->imtrx]->GomaMatrixData;
+    for (goma_ctx->fem.pg->imtrx = 0;
+         goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+         goma_ctx->fem.pg->imtrx++) {
+      GomaSparseMatrix goma_matrix = ams[goma_ctx->fem.pg->imtrx]->GomaMatrixData;
       GomaSparseMatrix_Destroy(&goma_matrix);
       GomaSparseMatrix_CreateFromFormat(&goma_matrix, goma_ctx->solver.matrix_format);
-      ams[pg->imtrx]->GomaMatrixData = goma_matrix;
+      ams[goma_ctx->fem.pg->imtrx]->GomaMatrixData = goma_matrix;
       int local_nodes = exo->num_nodes;
       GomaSparseMatrix_SetProblemGraph(
-          goma_matrix, num_internal_dofs[pg->imtrx], num_boundary_dofs[pg->imtrx],
-          num_external_dofs[pg->imtrx], local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,
-          dpi, cx[pg->imtrx], pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
+          goma_matrix, num_internal_dofs[goma_ctx->fem.pg->imtrx],
+          num_boundary_dofs[goma_ctx->fem.pg->imtrx], num_external_dofs[goma_ctx->fem.pg->imtrx],
+          local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo, dpi,
+          cx[goma_ctx->fem.pg->imtrx], goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
     }
-    pg->imtrx = 0;
-    ams[pg->imtrx]->solveSetup = 0;
+    goma_ctx->fem.pg->imtrx = 0;
+    ams[goma_ctx->fem.pg->imtrx]->solveSetup = 0;
   } else {
     GOMA_EH(-1, "Unsupported matrix storage format use epetra");
   }

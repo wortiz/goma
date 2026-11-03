@@ -976,7 +976,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
     if (mindex < 0) {
       eb_ptr->MatlProp_ptr = NULL;
     } else {
-      eb_ptr->MatlProp_ptr = mp_glob[mindex];
+      eb_ptr->MatlProp_ptr = goma_ctx->fem.mp_glob[mindex];
     }
     eb_ptr->ElemStorage = NULL;
     eb_ptr->Num_Elems_In_Block = exo->eb_num_elems[i];

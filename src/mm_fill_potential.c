@@ -177,22 +177,22 @@ int assemble_potential(double time, /* present time value */
 
   dbl A_inv[MAX_CONC * DIM]
            [MAX_CONC * DIM]; /* inverse of Stefan_Maxwell coefficient matrix; KSC: 10/28/98 */
-  dbl *D = mp->diffusivity;  /* Fickian diffusion coefficients */
-  dbl T = 298.15;            /* Electrolyte solution temperature default = 25 C */
-  dbl c = 0.0;               /* Total molar concentration of electrolyte solution */
-                             /* ERROR -> appears to be an error because this is never set!!!! */
-  dbl rho = 0.0;             /* Mass density of electrolyte solution */
-                             /* ERROR -> appears to be an error because this is never set!!!! */
+  dbl *D = goma_ctx->fem.mp->diffusivity; /* Fickian diffusion coefficients */
+  dbl T = 298.15;                         /* Electrolyte solution temperature default = 25 C */
+  dbl c = 0.0;                            /* Total molar concentration of electrolyte solution */
+  /* ERROR -> appears to be an error because this is never set!!!! */
+  dbl rho = 0.0; /* Mass density of electrolyte solution */
+                 /* ERROR -> appears to be an error because this is never set!!!! */
   DENSITY_DEPENDENCE_STRUCT d_rho_struct; /* density dependence */
   DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
-  dbl *M = mp->molecular_weight; /* Ptr to species molecular weights */
-  dbl M_mix = 0.0;               /* Molecular weight of electrolyte solution */
-                                 /* ERROR -> appears to be an error because this is never set!!!! */
-  dbl grad_x[MAX_CONC][DIM];     /* mole fraction gradient */
+  dbl *M = goma_ctx->fem.mp->molecular_weight; /* Ptr to species molecular weights */
+  dbl M_mix = 0.0;                             /* Molecular weight of electrolyte solution */
+  /* ERROR -> appears to be an error because this is never set!!!! */
+  dbl grad_x[MAX_CONC][DIM]; /* mole fraction gradient */
 
-  dbl *z = mp->charge_number; /* ptr to the charge numbers for species */
-  dbl sumdelx;                /* dummy variables */
-  const double F = 96487.0;   /* Faraday's constant in units of C/equiv. */
+  dbl *z = goma_ctx->fem.mp->charge_number; /* ptr to the charge numbers for species */
+  dbl sumdelx;                              /* dummy variables */
+  const double F = 96487.0;                 /* Faraday's constant in units of C/equiv. */
   dbl h_term1;
   dbl dii2dC[DIM][MAX_CONC][MDE]; /* concentration derivative of ii2 -- RSL 3/28/00 */
   int n = -1, l, m, kk, w1;
@@ -204,7 +204,7 @@ int assemble_potential(double time, /* present time value */
   /*
    * Set the number of species variables from the mp structure
    */
-  int n_species = mp->Num_Species;
+  int n_species = goma_ctx->fem.mp->Num_Species;
 
   /* initialize grad_phi_j, grad_phi_i */
   for (j = 0; j < DIM; j++) {
@@ -219,18 +219,18 @@ int assemble_potential(double time, /* present time value */
   /*
    * Unpack variables from structures for local convenience...
    */
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /*
    * Bail out fast if there's nothing to do...
    */
   eqn = R_POTENTIAL;
-  if (!pd->e[pg->imtrx][eqn])
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn])
     return (status);
 
-  wt = fv->wt;           /* Gauss point weight. */
-  h3 = fv->h3;           /* Differential volume element. */
-  det_J = bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
+  wt = goma_ctx->fem.fv->wt;           /* Gauss point weight. */
+  h3 = goma_ctx->fem.fv->h3;           /* Differential volume element. */
+  det_J = goma_ctx->fem.bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
 
   /*
    * Material property constants, etc. Any variations at this Gauss point
@@ -250,62 +250,63 @@ int assemble_potential(double time, /* present time value */
   memset(dhdX, 0, sizeof(double) * DIM * MDE);
   memset(dhdv, 0, sizeof(double) * DIM * MDE);
   memset(dhdC, 0, sizeof(double) * MAX_CONC * MDE);
-  if (mp->CurrentSourceModel == USER) {
-    (void)usr_current_source(mp->u_current_source);
-    h = mp->current_source;
+  if (goma_ctx->fem.mp->CurrentSourceModel == USER) {
+    (void)usr_current_source(goma_ctx->fem.mp->u_current_source);
+    h = goma_ctx->fem.mp->current_source;
 
     var = TEMPERATURE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      dhdT[j] = mp->d_current_source[var] * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      dhdT[j] = goma_ctx->fem.mp->d_current_source[var] * goma_ctx->fem.bf[var]->phi[j];
     }
 
     var = VOLTAGE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      dhdV[j] = mp->d_current_source[var] * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      dhdV[j] = goma_ctx->fem.mp->d_current_source[var] * goma_ctx->fem.bf[var]->phi[j];
     }
 
-    if (pd->v[pg->imtrx][VELOCITY1]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
       for (a = 0; a < dim; a++) {
         var = VELOCITY1 + a;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          dhdv[a][j] = mp->d_current_source[var] * bf[var]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          dhdv[a][j] = goma_ctx->fem.mp->d_current_source[var] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
 
-    if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (a = 0; a < dim; a++) {
         var = MESH_DISPLACEMENT1 + a;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          dhdX[a][j] = mp->d_current_source[var] * bf[var]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          dhdX[a][j] = goma_ctx->fem.mp->d_current_source[var] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
 
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         var = MASS_FRACTION;
         var_offset = MAX_VARIABLE_TYPES + w;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          dhdC[w][j] = mp->d_current_source[var_offset] * bf[var]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          dhdC[w][j] =
+              goma_ctx->fem.mp->d_current_source[var_offset] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
 
-  } else if (mp->CurrentSourceModel ==
+  } else if (goma_ctx->fem.mp->CurrentSourceModel ==
              ELECTRODE_KINETICS) /* KSC: 10/21/98; modified, KSC: 8/30/00 */
   {
-    n_species = pd->Num_Species_Eqn + 1;
+    n_species = goma_ctx->fem.pd->Num_Species_Eqn + 1;
     n = n_species * VIM;
 
-    if (mp->SolutionTemperatureModel == CONSTANT) /* constant solution temperature */
+    if (goma_ctx->fem.mp->SolutionTemperatureModel == CONSTANT) /* constant solution temperature */
     {
-      T = mp->solution_temperature;
-    } else if (mp->SolutionTemperatureModel ==
+      T = goma_ctx->fem.mp->solution_temperature;
+    } else if (goma_ctx->fem.mp->SolutionTemperatureModel ==
                THERMAL_BATTERY) /* thermal battery temperature model */
     {
       electrolyte_temperature(time, dt, 0); /* calculate electrolyte temperature at present time */
-      T = mp->electrolyte_temperature;
+      T = goma_ctx->fem.mp->electrolyte_temperature;
     } else {
       GOMA_EH(GOMA_ERROR,
               "Solution-temperature model other than THERMAL_BATTERY awaits future implementation");
@@ -318,7 +319,7 @@ int assemble_potential(double time, /* present time value */
     for (w = 0; w < n_species; w++) /*  upper limit changed -- RSL 8/7/00  */
     {
       electrode_species_source(w, time, dt);
-      h_term1 += mp->charge_number[w] * mp->species_source[w];
+      h_term1 += goma_ctx->fem.mp->charge_number[w] * goma_ctx->fem.mp->species_source[w];
     }
     /* h = h_term1; */ /* let h represent the first source term; KSC: 4/20/99 */
     h = F * h_term1;   /* h represent the first source term; KSC: 7-29-04 */
@@ -329,35 +330,37 @@ int assemble_potential(double time, /* present time value */
     sumzdrv = 0.;
     for (w1 = 0; w1 < n_species; w1++) {
       electrode_species_source(w1, time, dt);
-      sumzdrt += mp->charge_number[w1] * mp->d_species_source[TEMPERATURE];
-      sumzdrv += mp->charge_number[w1] * mp->d_species_source[VOLTAGE];
+      sumzdrt +=
+          goma_ctx->fem.mp->charge_number[w1] * goma_ctx->fem.mp->d_species_source[TEMPERATURE];
+      sumzdrv += goma_ctx->fem.mp->charge_number[w1] * goma_ctx->fem.mp->d_species_source[VOLTAGE];
     }
     var = TEMPERATURE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       /* dhdT[j] = sumzdrt*bf[var]->phi[j]; */
-      dhdT[j] = F * sumzdrt * bf[var]->phi[j]; /* KSC: 7-29-04 */
+      dhdT[j] = F * sumzdrt * goma_ctx->fem.bf[var]->phi[j]; /* KSC: 7-29-04 */
     }
     var = VOLTAGE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       /* dhdV[j] = sumzdrv*bf[var]->phi[j]; */
-      dhdV[j] = F * sumzdrv * bf[var]->phi[j]; /* KSC: 7-29-04 */
+      dhdV[j] = F * sumzdrv * goma_ctx->fem.bf[var]->phi[j]; /* KSC: 7-29-04 */
     }
 
     /* Derivatives of the scalar h with respect to mole fraction are computed here; h is the
        single sum in Equation (2.13) of the thermal battery LDRD report. -- RSL 8/8/00 */
 
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         var = MASS_FRACTION;
         var_offset = MAX_VARIABLE_TYPES + w;
         sumzdrc = 0.;
         for (w1 = 0; w1 < n_species; w1++) {
           electrode_species_source(w1, time, dt);
-          sumzdrc += mp->charge_number[w1] * mp->d_species_source[var_offset];
+          sumzdrc +=
+              goma_ctx->fem.mp->charge_number[w1] * goma_ctx->fem.mp->d_species_source[var_offset];
         }
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           /* dhdC[w][j] = sumzdrc*bf[var]->phi[j]; */
-          dhdC[w][j] = F * sumzdrc * bf[var]->phi[j]; /* KSC: 7-29-04 */
+          dhdC[w][j] = F * sumzdrc * goma_ctx->fem.bf[var]->phi[j]; /* KSC: 7-29-04 */
         }
 
       } /* end of loop over w */
@@ -366,68 +369,69 @@ int assemble_potential(double time, /* present time value */
 
   } /* end of CurrentSourceModel == ELECTRODE_KINETICS */
 
-  else if (mp->CurrentSourceModel == CONSTANT) {
-    h = mp->current_source;
+  else if (goma_ctx->fem.mp->CurrentSourceModel == CONSTANT) {
+    h = goma_ctx->fem.mp->current_source;
 
     /*Sensitivities were already set to zero */
-  } else if (mp->CurrentSourceModel == BUTLER_VOLMER) /* added by KSC: 04/28/06 */
+  } else if (goma_ctx->fem.mp->CurrentSourceModel == BUTLER_VOLMER) /* added by KSC: 04/28/06 */
   {
     dbl dh[3];
-    int wspec = mp->u_current_source[0];
+    int wspec = goma_ctx->fem.mp->u_current_source[0];
 
     /* Computing current source by calling butler_volmer_source */
-    h = butler_volmer_source(mp->u_current_source, 1, dh);
+    h = butler_volmer_source(goma_ctx->fem.mp->u_current_source, 1, dh);
 
     var = TEMPERATURE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      dhdT[j] = dh[0] * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      dhdT[j] = dh[0] * goma_ctx->fem.bf[var]->phi[j];
     }
 
     var = VOLTAGE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      dhdV[j] = dh[1] * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      dhdV[j] = dh[1] * goma_ctx->fem.bf[var]->phi[j];
     }
 
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         var = MASS_FRACTION;
-        dhdC[wspec][j] = dh[2] * bf[var]->phi[j];
+        dhdC[wspec][j] = dh[2] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
-  } else if (mp->CurrentSourceModel == FICKIAN_CHARGED ||
-             mp->CurrentSourceModel == STEFAN_MAXWELL_CHARGED) /* added by KSC: 10/4/00 */
+  } else if (goma_ctx->fem.mp->CurrentSourceModel == FICKIAN_CHARGED ||
+             goma_ctx->fem.mp->CurrentSourceModel ==
+                 STEFAN_MAXWELL_CHARGED) /* added by KSC: 10/4/00 */
   {
     h = 0.0;
     for (w = 0; w < n_species; w++) {
-      h += mp->charge_number[w] * mp->species_source[w];
+      h += goma_ctx->fem.mp->charge_number[w] * goma_ctx->fem.mp->species_source[w];
     }
     h *= F;
 
-  } else if (mp->CurrentSourceModel == NET_CHARGE) {
+  } else if (goma_ctx->fem.mp->CurrentSourceModel == NET_CHARGE) {
     h = 0.0;
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-      h += mp->charge_number[w] * fv->c[w];
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+      h += goma_ctx->fem.mp->charge_number[w] * goma_ctx->fem.fv->c[w];
     }
     h *= F;
 
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         var = MASS_FRACTION;
         var_offset = MAX_VARIABLE_TYPES + w;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          dhdC[w][j] = F * mp->charge_number[w] * bf[var]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          dhdC[w][j] = F * goma_ctx->fem.mp->charge_number[w] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
-  } else if (mp->CurrentSourceModel == DEBYE_HUCKEL)
+  } else if (goma_ctx->fem.mp->CurrentSourceModel == DEBYE_HUCKEL)
   /* This is the implementation of resolving potential field in the
   region close of the EDL.  The Debye-Huckle approximation assumes
   small EDL relative to the length of flow dimension.  Also,
   this assumes a Boltzmann distribution of charges near the wall.
   This is developed for the use of electroosmotic flow. ACS 7/03 */
   {
-    h = -fv->V;
-    lambda_d = mp->u_current_source[0];
+    h = -goma_ctx->fem.fv->V;
+    lambda_d = goma_ctx->fem.mp->u_current_source[0];
     h /= (lambda_d * lambda_d);
 
   } else {
@@ -436,7 +440,7 @@ int assemble_potential(double time, /* present time value */
   /********** End of specification of the current source model **********/
 
   for (a = 0; a < dim; a++) {
-    grad_V[a] = fv->grad_V[a];
+    grad_V[a] = goma_ctx->fem.fv->grad_V[a];
   }
 
   for (a = 0; a < dim; a++) {
@@ -448,13 +452,14 @@ int assemble_potential(double time, /* present time value */
      for processes involving charged species and in which electroneutrality can be
      taken to be valid. KSC: (8/30/00, 9/13/00) and RSL 9/8/00 */
 
-  if (cr->MassFluxModel == STEFAN_MAXWELL_CHARGED || /* Stefan-Maxwell diffusion of charged species
-                                                        in concentrated electrolyte */
-      cr->MassFluxModel == STEFAN_MAXWELL_VOLUME)    /* added by RSL 9/14/00 */
+  if (goma_ctx->fem.cr->MassFluxModel ==
+          STEFAN_MAXWELL_CHARGED || /* Stefan-Maxwell diffusion of charged species
+                         in concentrated electrolyte */
+      goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_VOLUME) /* added by RSL 9/14/00 */
   {
     for (i = 0; i < n_species - 1; i++) {
       for (a = 0; a < VIM; a++) {
-        grad_x[i][a] = fv->grad_c[i][a];
+        grad_x[i][a] = goma_ctx->fem.fv->grad_c[i][a];
       }
     }
     for (a = 0; a < VIM; a++) {
@@ -481,11 +486,11 @@ int assemble_potential(double time, /* present time value */
        here; ii2 is the first double sum in Equation (2.13) of the thermal battery LDRD report. --
        RSL 4/2/00 */
 
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         var = MASS_FRACTION;
         var_offset = MAX_VARIABLE_TYPES + w;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (a = 0; a < dim; a++) {
             dii2dC[a][w][j] = 0.0;
             sum1 = 0.0;
@@ -500,11 +505,11 @@ int assemble_potential(double time, /* present time value */
             for (l = 0; l < n_species; l++) {
               sum3 = 0.0;
               for (kk = 1; kk < n_species; kk++) {
-                sum3 += fv->giant_C_matrix[w][j][VIM * l][VIM * kk] * grad_x[kk][a];
+                sum3 += goma_ctx->fem.fv->giant_C_matrix[w][j][VIM * l][VIM * kk] * grad_x[kk][a];
               }
               sum2 += z[l] * sum3;
             }
-            dii2dC[a][w][j] = bf[var]->grad_phi[j][a] * sum1 + sum2;
+            dii2dC[a][w][j] = goma_ctx->fem.bf[var]->grad_phi[j][a] * sum1 + sum2;
             dii2dC[a][w][j] *= F; /* KSC: 7-29-04 */
 
           } /* end of loop over a */
@@ -519,21 +524,21 @@ int assemble_potential(double time, /* present time value */
   /*
    *  Fickian diffusion of charged species in dilute electrolyte
    */
-  else if (cr->MassFluxModel == FICKIAN_CHARGED) {
+  else if (goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED) {
     if (z[n_species - 1] != 0.0) {
       for (a = 0; a < VIM; a++) {
         sumdelx = 0.0;
         for (i = 0; i < n_species - 1; i++) {
-          sumdelx += fv->grad_c[i][a];
+          sumdelx += goma_ctx->fem.fv->grad_c[i][a];
         }
-        fv->grad_c[n_species - 1][a] = -sumdelx;
+        goma_ctx->fem.fv->grad_c[n_species - 1][a] = -sumdelx;
       }
     }
 
     for (a = 0; a < VIM; a++) {
       ii2[a] = 0.0;
       for (i = 0; i < n_species; i++) {
-        ii2[a] -= z[i] * D[i] * fv->grad_c[i][a];
+        ii2[a] -= z[i] * D[i] * goma_ctx->fem.fv->grad_c[i][a];
       }
       ii2[a] *= F;
     }
@@ -560,11 +565,11 @@ int assemble_potential(double time, /* present time value */
         } */
   }
 
-  else if (cr->MassFluxModel == FICKIAN_CHARGED_X) /* RSL 9/18/00 */
+  else if (goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED_X) /* RSL 9/18/00 */
   {
     for (i = 0; i < n_species - 1; i++) {
       for (a = 0; a < VIM; a++) {
-        grad_x[i][a] = fv->grad_c[i][a];
+        grad_x[i][a] = goma_ctx->fem.fv->grad_c[i][a];
       }
     }
 
@@ -578,14 +583,15 @@ int assemble_potential(double time, /* present time value */
 
     /* Derivatives of the vector ii2 (actually ii2/F) with respect to mole fraction */
 
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         var = MASS_FRACTION;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (a = 0; a < dim; a++) {
-            dii2dC[a][w][j] = -c * z[w] * D[w] * bf[var]->grad_phi[j][a] +
-                              ii2[a] * (d_rho->C[w][j] / rho -
-                                        bf[var]->phi[j] * (M[w] - M[n_species - 1]) / M_mix);
+            dii2dC[a][w][j] =
+                -c * z[w] * D[w] * goma_ctx->fem.bf[var]->grad_phi[j][a] +
+                ii2[a] * (d_rho->C[w][j] / rho -
+                          goma_ctx->fem.bf[var]->phi[j] * (M[w] - M[n_species - 1]) / M_mix);
           }
         }
       }
@@ -596,42 +602,45 @@ int assemble_potential(double time, /* present time value */
    * Residuals_________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     eqn = R_POTENTIAL;
-    peqn = upd->ep[pg->imtrx][eqn];
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-      phi_i = bf[eqn]->phi[i];
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+      phi_i = goma_ctx->fem.bf[eqn]->phi[i];
       for (p = 0; p < dim; p++) {
-        grad_phi_i[p] = bf[eqn]->grad_phi[i][p];
+        grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
       }
 
       diffusion = 0.0;
-      if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
         for (p = 0; p < dim; p++) {
           diffusion += grad_phi_i[p] * ii[p];
         }
         /* add the ii2 contribution in the Poisson equation
          * describing electrolyte potential, KSC: 8/30/00
          */
-        if (mp->VoltageFormulation == V_CONDUCTIVITY &&
-            (cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
-             cr->MassFluxModel == STEFAN_MAXWELL_VOLUME || cr->MassFluxModel == FICKIAN_CHARGED ||
-             cr->MassFluxModel == FICKIAN_CHARGED_X)) {
+        if (goma_ctx->fem.mp->VoltageFormulation == V_CONDUCTIVITY &&
+            (goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
+             goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_VOLUME ||
+             goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED ||
+             goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED_X)) {
           for (p = 0; p < dim; p++) {
             diffusion += grad_phi_i[p] * ii2[p];
           }
         }
-        diffusion *= det_J * wt * h3 * pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+        diffusion *=
+            det_J * wt * h3 * goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
       }
 
       source = 0.0;
-      if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
         source = phi_i * h;
-        source *= det_J * wt * h3 * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+        source *=
+            det_J * wt * h3 * goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
       }
 
-      lec->R[LEC_R_INDEX(peqn, i)] += diffusion + source;
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += diffusion + source;
 
     } /* end of loop over i */
   } /* end of Assemble_Residual */
@@ -640,13 +649,13 @@ int assemble_potential(double time, /* present time value */
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     eqn = R_POTENTIAL;
-    peqn = upd->ep[pg->imtrx][eqn];
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-      phi_i = bf[eqn]->phi[i];
+      phi_i = goma_ctx->fem.bf[eqn]->phi[i];
 
       /*
        * Set up some preliminaries that are needed for the (a,i)
@@ -654,7 +663,7 @@ int assemble_potential(double time, /* present time value */
        */
 
       for (p = 0; p < dim; p++) {
-        grad_phi_i[p] = bf[eqn]->grad_phi[i][p];
+        grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
       }
 
       /*
@@ -662,15 +671,15 @@ int assemble_potential(double time, /* present time value */
        */
       var = VOLTAGE;
 
-      if (pd->v[pg->imtrx][var]) {
-        pvar = upd->vp[pg->imtrx][var];
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (p = 0; p < dim; p++) {
-            grad_phi_j[p] = bf[var]->grad_phi[j][p];
+            grad_phi_j[p] = goma_ctx->fem.bf[var]->grad_phi[j][p];
           }
 
           diffusion = 0.0;
-          if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
             for (p = 0; p < dim; p++) {
               d_i_V_j[p] = -k * grad_phi_j[p] - dkdV[j] * grad_V[p];
             }
@@ -680,17 +689,17 @@ int assemble_potential(double time, /* present time value */
             }
             diffusion *= det_J * wt;
             diffusion *= h3;
-            diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+            diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
           }
 
           source = 0.0;
-          if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
             source += phi_i * dhdV[j] * det_J * wt;
             source *= h3;
-            source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+            source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
           }
 
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += diffusion + source;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += diffusion + source;
         }
       }
 
@@ -698,31 +707,31 @@ int assemble_potential(double time, /* present time value */
        * J_p_T
        */
       var = TEMPERATURE;
-      if (pd->v[pg->imtrx][var]) {
-        pvar = upd->vp[pg->imtrx][var];
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (p = 0; p < dim; p++) {
-            grad_phi_j[p] = bf[var]->grad_phi[j][p];
+            grad_phi_j[p] = goma_ctx->fem.bf[var]->grad_phi[j][p];
           }
 
           diffusion = 0.0;
-          if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
             for (p = 0; p < dim; p++) {
               diffusion -= grad_phi_i[p] * dkdT[j] * grad_V[p];
             }
             diffusion *= det_J * wt;
             diffusion *= h3;
-            diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+            diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
           }
 
           source = 0.0;
-          if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
             source += phi_i * dhdT[j] * det_J * wt;
             source *= h3;
-            source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+            source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
           }
 
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += diffusion + source;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += diffusion + source;
         }
       }
 
@@ -731,17 +740,17 @@ int assemble_potential(double time, /* present time value */
        */
       for (b = 0; b < dim; b++) {
         var = VELOCITY1 + b;
-        if (pd->v[pg->imtrx][var]) {
-          pvar = upd->vp[pg->imtrx][var];
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             source = 0.0;
-            if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
               source += phi_i * dhdv[b][j] * det_J * wt;
               source *= h3;
-              source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+              source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
             }
 
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += source;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += source;
           }
         }
       }
@@ -751,16 +760,16 @@ int assemble_potential(double time, /* present time value */
        */
       for (b = 0; b < dim; b++) {
         var = MESH_DISPLACEMENT1 + b;
-        if (pd->v[pg->imtrx][var]) {
-          pvar = upd->vp[pg->imtrx][var];
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            dh3dmesh_bj = fv->dh3dq[b] * bf[var]->phi[j];
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            dh3dmesh_bj = goma_ctx->fem.fv->dh3dq[b] * goma_ctx->fem.bf[var]->phi[j];
 
-            d_det_J_dmeshbj = bf[eqn]->d_det_J_dm[b][j];
+            d_det_J_dmeshbj = goma_ctx->fem.bf[eqn]->d_det_J_dm[b][j];
 
             diffusion = 0.0;
 
-            if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
               /*
                * Three parts:
                * 	diff_a = Int(...d(grad_phi_i)/dmesh.q h3 |Jv|)
@@ -771,14 +780,14 @@ int assemble_potential(double time, /* present time value */
 
               diff_a = 0.;
               for (p = 0; p < dim; p++) {
-                dgrad_phi_i_dmesh[p] = bf[eqn]->d_grad_phi_dmesh[i][p][b][j];
+                dgrad_phi_i_dmesh[p] = goma_ctx->fem.bf[eqn]->d_grad_phi_dmesh[i][p][b][j];
 
                 diff_a += dgrad_phi_i_dmesh[p] * ii[p];
 
-                if (mp->VoltageFormulation == V_CONDUCTIVITY &&
-                    (cr->MassFluxModel ==
+                if (goma_ctx->fem.mp->VoltageFormulation == V_CONDUCTIVITY &&
+                    (goma_ctx->fem.cr->MassFluxModel ==
                          FICKIAN_CHARGED || /* add ii2 contribution, KSC: 11/10/00 */
-                     cr->MassFluxModel == FICKIAN_CHARGED_X)) /*  RSL 6/24/02  */
+                     goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED_X)) /*  RSL 6/24/02  */
                 {
                   diff_a += dgrad_phi_i_dmesh[p] * ii2[p];
                 }
@@ -787,21 +796,23 @@ int assemble_potential(double time, /* present time value */
 
               diff_b = 0.0;
               for (p = 0; p < dim; p++) {
-                didmesh[p] = -k * fv->d_grad_V_dmesh[p][b][j] - dkdX[b][j] * grad_V[p];
+                didmesh[p] =
+                    -k * goma_ctx->fem.fv->d_grad_V_dmesh[p][b][j] - dkdX[b][j] * grad_V[p];
 
-                if (mp->VoltageFormulation == V_CONDUCTIVITY &&
-                    cr->MassFluxModel == FICKIAN_CHARGED) /* add ii2 contribution, KSC: 11/10/00 */
+                if (goma_ctx->fem.mp->VoltageFormulation == V_CONDUCTIVITY &&
+                    goma_ctx->fem.cr->MassFluxModel ==
+                        FICKIAN_CHARGED) /* add ii2 contribution, KSC: 11/10/00 */
                 {
-                  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                    didmesh[p] -= F * z[w] * D[w] * fv->d_grad_c_dmesh[p][w][b][j];
+                  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                    didmesh[p] -= F * z[w] * D[w] * goma_ctx->fem.fv->d_grad_c_dmesh[p][w][b][j];
                   }
                 }
 
-                if (mp->VoltageFormulation == V_CONDUCTIVITY &&
-                    cr->MassFluxModel == FICKIAN_CHARGED_X) /*  RSL 6/24/02  */
+                if (goma_ctx->fem.mp->VoltageFormulation == V_CONDUCTIVITY &&
+                    goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED_X) /*  RSL 6/24/02  */
                 {
                   for (w = 0; w < n_species - 1; w++) {
-                    didmesh[p] -= c * z[w] * D[w] * fv->d_grad_c_dmesh[p][w][b][j];
+                    didmesh[p] -= c * z[w] * D[w] * goma_ctx->fem.fv->d_grad_c_dmesh[p][w][b][j];
                   }
                 }
               }
@@ -814,10 +825,10 @@ int assemble_potential(double time, /* present time value */
               for (p = 0; p < dim; p++) {
                 diff_c += grad_phi_i[p] * ii[p];
 
-                if (mp->VoltageFormulation == V_CONDUCTIVITY &&
-                    (cr->MassFluxModel ==
+                if (goma_ctx->fem.mp->VoltageFormulation == V_CONDUCTIVITY &&
+                    (goma_ctx->fem.cr->MassFluxModel ==
                          FICKIAN_CHARGED || /* add ii2 contribution, KSC: 11/10/00 */
-                     cr->MassFluxModel == FICKIAN_CHARGED_X)) /*  RSL 6/24/02  */
+                     goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED_X)) /*  RSL 6/24/02  */
                 {
                   diff_c += grad_phi_i[p] * ii2[p];
                 }
@@ -827,10 +838,10 @@ int assemble_potential(double time, /* present time value */
               diff_d = 0.0;
               for (p = 0; p < dim; p++) {
                 diff_d += grad_phi_i[p] * ii[p];
-                if (mp->VoltageFormulation == V_CONDUCTIVITY &&
-                    (cr->MassFluxModel ==
+                if (goma_ctx->fem.mp->VoltageFormulation == V_CONDUCTIVITY &&
+                    (goma_ctx->fem.cr->MassFluxModel ==
                          FICKIAN_CHARGED || /* add ii2 contribution, KSC: 11/10/00 */
-                     cr->MassFluxModel == FICKIAN_CHARGED_X)) /*  RSL 6/24/02  */
+                     goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED_X)) /*  RSL 6/24/02  */
                 {
                   diff_d += grad_phi_i[p] * ii2[p];
                 }
@@ -839,20 +850,20 @@ int assemble_potential(double time, /* present time value */
 
               diffusion = diff_a + diff_b + diff_c + diff_d;
 
-              diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+              diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
             }
 
             source = 0.0;
-            if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
               source =
                   phi_i *
                   (h * d_det_J_dmeshbj * h3 + h * det_J * dh3dmesh_bj + dhdX[b][j] * det_J * h3) *
                   wt;
 
-              source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+              source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
             }
 
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += diffusion + source;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += diffusion + source;
           }
         }
       }
@@ -861,28 +872,29 @@ int assemble_potential(double time, /* present time value */
        * J_p_c
        */
       var = MASS_FRACTION;
-      if (pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var]) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] &&
+          goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             for (p = 0; p < dim; p++) {
-              grad_phi_j[p] = bf[var]->grad_phi[j][p];
+              grad_phi_j[p] = goma_ctx->fem.bf[var]->grad_phi[j][p];
             }
 
             diffusion = 0.0;
-            if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
               for (p = 0; p < dim; p++) {
                 diffusion -= grad_phi_i[p] * dkdC[w][j] * grad_V[p];
 
-                if (mp->VoltageFormulation == V_CONDUCTIVITY) {
-                  if (cr->MassFluxModel ==
+                if (goma_ctx->fem.mp->VoltageFormulation == V_CONDUCTIVITY) {
+                  if (goma_ctx->fem.cr->MassFluxModel ==
                           STEFAN_MAXWELL_CHARGED || /* add ii2 contribution for
      Stefan-Maxwell diffusion of charged species in concentrated solutions, KSC: 9/10/00 */
-                      cr->MassFluxModel == STEFAN_MAXWELL_VOLUME ||
-                      cr->MassFluxModel == FICKIAN_CHARGED_X) /* RSL 9/18
+                      goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_VOLUME ||
+                      goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED_X) /* RSL 9/18
 /00 */
                   {
                     diffusion += grad_phi_i[p] * dii2dC[p][w][j];
-                  } else if (cr->MassFluxModel ==
+                  } else if (goma_ctx->fem.cr->MassFluxModel ==
                              FICKIAN_CHARGED) /* add ii2 contribution for
 transport of dilute charged species in electrolyte, KSC: 9/10/00; modified: 10/4/00 */
                   {
@@ -893,18 +905,18 @@ transport of dilute charged species in electrolyte, KSC: 9/10/00; modified: 10/4
 
               diffusion *= det_J * wt;
               diffusion *= h3;
-              diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+              diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
             }
 
             source = 0.0;
-            if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
               source += phi_i * dhdC[w][j];
               source *= det_J * wt;
               source *= h3;
-              source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+              source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
             }
 
-            lec->J[LEC_J_INDEX(peqn, MAX_PROB_VAR + w, i, j)] += diffusion + source;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, MAX_PROB_VAR + w, i, j)] += diffusion + source;
           } /* end of loop over j */
         } /* end of loop over w */
       } /* end of var = MASS_FRACTION */
@@ -939,22 +951,22 @@ void surface_charge_surf(
   double sum;
   double z[MAX_CONC];
 
-  for (i = 0; i < pd->Num_Species; i++) {
-    z[i] = mp->charge_number[i];
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species; i++) {
+    z[i] = goma_ctx->fem.mp->charge_number[i];
   }
 
   sum = 0.0;
-  for (i = 0; i < pd->Num_Species - 1; i++) {
-    sum += fv->c[i] * z[i];
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species - 1; i++) {
+    sum += goma_ctx->fem.fv->c[i] * z[i];
   }
 
   *func = sum - sigma;
 
   var = MASS_FRACTION;
-  if (pd->v[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      for (i = 0; i < pd->Num_Species; i++) {
-        d_func[0][MAX_VARIABLE_TYPES + i][j] = z[i] * bf[var]->phi[j];
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      for (i = 0; i < goma_ctx->fem.pd->Num_Species; i++) {
+        d_func[0][MAX_VARIABLE_TYPES + i][j] = z[i] * goma_ctx->fem.bf[var]->phi[j];
       }
     }
   }
@@ -1012,15 +1024,16 @@ void current_BV_surf(double func[DIM],
   int w, j, j_id, w1, dim, kdir, var, jvar;
   double phi_j;
 
-  z = mp->charge_number[wspec];
-  if (mp->SolutionTemperatureModel == CONSTANT) {
-    T = mp->solution_temperature;
+  z = goma_ctx->fem.mp->charge_number[wspec];
+  if (goma_ctx->fem.mp->SolutionTemperatureModel == CONSTANT) {
+    T = goma_ctx->fem.mp->solution_temperature;
   } else {
     GOMA_EH(GOMA_ERROR, "Solution-temperature model not yet implemented");
   }
-  if (pd->e[pg->imtrx][R_ENERGY]) /* if energy equation is active, re-set electrolyte temperature */
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENERGY]) /* if energy equation is active,
+                                                                 re-set electrolyte temperature */
   {
-    T = fv->T;
+    T = goma_ctx->fem.fv->T;
   }
   /* set solution temperature to 298 K if it is zero - safety feature */
   if (T == 0.0) {
@@ -1028,12 +1041,12 @@ void current_BV_surf(double func[DIM],
     fprintf(stderr, "Warning!: a default electrolyte temperature of 298 K is being used!");
   }
 
-  if (nAC) {                     /* if augmenting condition card is active, then */
-    V = mp->electrode_potential; /* get electrode potential from AC calculation */
+  if (nAC) {                                   /* if augmenting condition card is active, then */
+    V = goma_ctx->fem.mp->electrode_potential; /* get electrode potential from AC calculation */
   }
 
-  c = fv->c[wspec];
-  PHI = fv->V;
+  c = goma_ctx->fem.fv->c[wspec];
+  PHI = goma_ctx->fem.fv->V;
 
   FRT = F / R / T;
   conc = pow(c, beta);
@@ -1041,11 +1054,11 @@ void current_BV_surf(double func[DIM],
   grpa = alphaa * FRT * (V - PHI - U0);
   grpc = alphac * FRT * (V - PHI - U0);
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /* get deformation gradient, etc. if lagrangian mesh with inertia */
-  if (pd->MeshMotion == LAGRANGIAN && pd->MeshInertia == 1) {
-    err = belly_flop(elc->lame_mu);
+  if (goma_ctx->fem.pd->MeshMotion == LAGRANGIAN && goma_ctx->fem.pd->MeshInertia == 1) {
+    err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
     if (neg_elem_volume)
       return;
@@ -1053,7 +1066,7 @@ void current_BV_surf(double func[DIM],
 
   /* get the convection velocity (it's different for arbitrary and
      lagrangian meshes) */
-  if (mp->PorousMediaType == CONTINUOUS) {
+  if (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS) {
     err = get_convection_velocity(vconv, vconv_old, d_vconv, dt, tt);
   }
   GOMA_EH(err, "Error in calculating effective convection velocity");
@@ -1067,12 +1080,12 @@ void current_BV_surf(double func[DIM],
 
   /* Calculate the residual contribution from convective flux       */
   for (kdir = 0; kdir < dim; kdir++) {
-    *func += c * vconv[kdir] * fv->snormal[kdir];
+    *func += c * vconv[kdir] * goma_ctx->fem.fv->snormal[kdir];
   }
 
   /* sum the contributions to the global stiffness matrix  for Species*/
 
-  for (w = 0; w < pd->Num_Species_Eqn; w++) /* no dependence on other species */
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) /* no dependence on other species */
   {
     d_i[MAX_VARIABLE_TYPES + w] = 0.;
   }
@@ -1083,44 +1096,45 @@ void current_BV_surf(double func[DIM],
 
   /* J_s_c --- sensitivity wrt species concentrations */
   var = MASS_FRACTION;
-  for (j_id = 0; j_id < ei[pg->imtrx]->dof[var]; j_id++) {
-    phi_j = bf[var]->phi[j_id];
+  for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
+    phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
-    for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+    for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
       d_func[0][MAX_VARIABLE_TYPES + w1][j_id] -= d_i[MAX_VARIABLE_TYPES + w1] * phi_j;
     }
 
     for (kdir = 0; kdir < dim; kdir++) {
-      d_func[0][MAX_VARIABLE_TYPES + wspec][j_id] += phi_j * vconv[kdir] * fv->snormal[kdir];
+      d_func[0][MAX_VARIABLE_TYPES + wspec][j_id] +=
+          phi_j * vconv[kdir] * goma_ctx->fem.fv->snormal[kdir];
 
-      for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+      for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
         d_func[0][MAX_VARIABLE_TYPES + w1][j_id] +=
-            c * d_vconv->C[kdir][w1][j_id] * fv->snormal[kdir];
+            c * d_vconv->C[kdir][w1][j_id] * goma_ctx->fem.fv->snormal[kdir];
       }
     }
   }
 
   /* J_s_T --- sensitivity wrt electrolyte solution temperature */
   var = TEMPERATURE;
-  if (pd->v[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       j_id = j;
-      phi_j = bf[var]->phi[j_id];
+      phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
       d_func[0][var][j_id] -= d_i[TEMPERATURE] * phi_j;
 
       for (kdir = 0; kdir < dim; kdir++) {
-        d_func[0][var][j_id] += c * d_vconv->T[kdir][j_id] * fv->snormal[kdir];
+        d_func[0][var][j_id] += c * d_vconv->T[kdir][j_id] * goma_ctx->fem.fv->snormal[kdir];
       }
     }
   }
 
   /* J_s_V --- sensitivity wrt electrolyte potential */
   var = VOLTAGE;
-  if (pd->v[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       j_id = j;
-      phi_j = bf[var]->phi[j_id];
+      phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
       d_func[0][var][j_id] -= d_i[VOLTAGE] * phi_j;
 
@@ -1131,12 +1145,13 @@ void current_BV_surf(double func[DIM],
   /* J_s_d --- sensitivity wrt to nodal mesh displacements */
   for (jvar = 0; jvar < dim; jvar++) {
     var = MESH_DISPLACEMENT1 + jvar;
-    if (pd->v[pg->imtrx][var]) {
-      for (j_id = 0; j_id < ei[pg->imtrx]->dof[var]; j_id++) {
-        phi_j = bf[var]->phi[j_id];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j_id];
         for (kdir = 0; kdir < dim; kdir++) {
-          d_func[0][var][j_id] += c * vconv[kdir] * fv->dsnormal_dx[kdir][jvar][j_id] +
-                                  c * d_vconv->X[kdir][jvar][j_id] * fv->snormal[kdir];
+          d_func[0][var][j_id] +=
+              c * vconv[kdir] * goma_ctx->fem.fv->dsnormal_dx[kdir][jvar][j_id] +
+              c * d_vconv->X[kdir][jvar][j_id] * goma_ctx->fem.fv->snormal[kdir];
         }
       }
     }
@@ -1144,10 +1159,10 @@ void current_BV_surf(double func[DIM],
 
   for (jvar = 0; jvar < dim; jvar++) {
     var = VELOCITY1 + jvar;
-    if (pd->v[pg->imtrx][var]) {
-      for (j_id = 0; j_id < ei[pg->imtrx]->dof[var]; j_id++) {
-        phi_j = bf[var]->phi[j_id];
-        d_func[0][var][j_id] += c * d_vconv->v[jvar][jvar][j_id] * fv->snormal[jvar];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j_id];
+        d_func[0][var][j_id] += c * d_vconv->v[jvar][jvar][j_id] * goma_ctx->fem.fv->snormal[jvar];
       }
     }
   }
@@ -1195,8 +1210,8 @@ void current_ORR_surf(double func[],
 
   /* compute current density */
   FRT = F / R / T;
-  PHI = fv->V;
-  c = fv->c[wspec];
+  PHI = goma_ctx->fem.fv->V;
+  c = goma_ctx->fem.fv->c[wspec];
   if (c < 0.0)
     c = 1.0e-10;
   if (c == 0)
@@ -1215,10 +1230,10 @@ void current_ORR_surf(double func[],
 
   /* J_s_c --- sensitivity wrt species concentrations */
   var = MASS_FRACTION;
-  for (j_id = 0; j_id < ei[pg->imtrx]->dof[var]; j_id++) {
-    phi_j = bf[var]->phi[j_id];
+  for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
+    phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
-    for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+    for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
       d_func[0][MAX_VARIABLE_TYPES + w1][j_id] = 0.0;
     }
 
@@ -1227,10 +1242,10 @@ void current_ORR_surf(double func[],
 
   /* J_s_T --- sensitivity wrt electrolyte solution temperature */
   var = TEMPERATURE;
-  if (pd->v[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       j_id = j;
-      phi_j = bf[var]->phi[j_id];
+      phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
       d_func[0][var][j_id] = -didT * phi_j;
     }
@@ -1238,10 +1253,10 @@ void current_ORR_surf(double func[],
 
   /* J_s_V --- sensitivity wrt electrolyte potential */
   var = VOLTAGE;
-  if (pd->v[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       j_id = j;
-      phi_j = bf[var]->phi[j_id];
+      phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
       d_func[0][var][j_id] = -didV * phi_j;
     }
@@ -1291,8 +1306,8 @@ void current_HOR_surf(double func[],
 
   /* compute current density */
   FRT = F / R / T;
-  PHI = fv->V;
-  c = fv->c[wspec];
+  PHI = goma_ctx->fem.fv->V;
+  c = goma_ctx->fem.fv->c[wspec];
   if (c < 0.0)
     c = 1.0e-10;
   if (c == 0)
@@ -1310,10 +1325,10 @@ void current_HOR_surf(double func[],
 
   /* J_s_c --- sensitivity wrt species concentrations */
   var = MASS_FRACTION;
-  for (j_id = 0; j_id < ei[pg->imtrx]->dof[var]; j_id++) {
-    phi_j = bf[var]->phi[j_id];
+  for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
+    phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
-    for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+    for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
       d_func[0][MAX_VARIABLE_TYPES + w1][j_id] = 0.0;
     }
 
@@ -1322,10 +1337,10 @@ void current_HOR_surf(double func[],
 
   /* J_s_T --- sensitivity wrt electrolyte solution temperature */
   var = TEMPERATURE;
-  if (pd->v[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       j_id = j;
-      phi_j = bf[var]->phi[j_id];
+      phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
       d_func[0][var][j_id] = -didT * phi_j;
     }
@@ -1333,10 +1348,10 @@ void current_HOR_surf(double func[],
 
   /* J_s_V --- sensitivity wrt electrolyte potential */
   var = VOLTAGE;
-  if (pd->v[pg->imtrx][var]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       j_id = j;
-      phi_j = bf[var]->phi[j_id];
+      phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
       d_func[0][var][j_id] = -didV * phi_j;
     }
@@ -1353,24 +1368,24 @@ int assemble_Enorm(void) {
   dbl d_Enorm_d_V[MDE];
   dbl advection, source;
 
-  dim = pd->Num_Dim;
-  if (!pd->e[pg->imtrx][R_ENORM])
+  dim = goma_ctx->fem.pd->Num_Dim;
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENORM])
     return 0;
 
-  if (!pd->v[pg->imtrx][VOLTAGE])
+  if (!goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VOLTAGE])
     GOMA_EH(GOMA_ERROR, "Must have VOLTAGE equation active to use ENORM.");
 
-  if (pd->v[pg->imtrx][MESH_DISPLACEMENT1])
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1])
     GOMA_EH(GOMA_ERROR, "Sorry, assemble_Enorm has not been rigged for ALE.");
 
-  wt = fv->wt;
-  h3 = fv->h3;
-  detJ = bf[R_ENORM]->detJ;
+  wt = goma_ctx->fem.fv->wt;
+  h3 = goma_ctx->fem.fv->h3;
+  detJ = goma_ctx->fem.bf[R_ENORM]->detJ;
 
   /* Compute the value of |E|, where E = grad(V). */
   Enorm = 0.0;
   for (j = 0; j < dim; j++) {
-    gradEcomp = fv->grad_V[j];
+    gradEcomp = goma_ctx->fem.fv->grad_V[j];
     Enorm += gradEcomp * gradEcomp;
   }
   Enorm = MAX(0.0, Enorm);
@@ -1380,64 +1395,71 @@ int assemble_Enorm(void) {
   /* Get d(Enormsq)/d(V_k). */
   /* Kludge to avoid singularity.  Should be updated after 1st iteration with real values. */
   if (Enorm > 0.0)
-    for (k = 0; k < ei[pg->imtrx]->dof[VOLTAGE]; k++) {
+    for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VOLTAGE]; k++) {
       for (j = 0; j < dim; j++)
-        d_Enorm_d_V[k] += fv->grad_Enorm[j] * bf[VOLTAGE]->grad_phi[k][j];
+        d_Enorm_d_V[k] +=
+            goma_ctx->fem.fv->grad_Enorm[j] * goma_ctx->fem.bf[VOLTAGE]->grad_phi[k][j];
       d_Enorm_d_V[k] /= Enorm;
     }
 
-  if (af->Assemble_Residual) {
-    for (i = 0; i < ei[pg->imtrx]->dof[R_ENORM]; i++) {
-      wt_func = bf[R_ENORM]->phi[i];
+  if (goma_ctx->fem.af->Assemble_Residual) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_ENORM]; i++) {
+      wt_func = goma_ctx->fem.bf[R_ENORM]->phi[i];
 
       /* Might as well call the one term, |E|^2, the advection term... */
       advection = 0.0;
-      if (pd->e[pg->imtrx][R_ENORM] & T_ADVECTION) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENORM] & T_ADVECTION) {
         advection = -Enorm;
         advection *= wt_func * detJ * wt * h3;
-        advection *= pd->etm[pg->imtrx][R_ENORM][(LOG2_ADVECTION)];
+        advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][R_ENORM][(LOG2_ADVECTION)];
       }
 
       /* And of course, the glorious LHS, "ENORM", shall just be the source term... */
       source = 0.0;
-      if (pd->e[pg->imtrx][ENORM] & T_SOURCE) {
-        source = fv->Enorm;
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][ENORM] & T_SOURCE) {
+        source = goma_ctx->fem.fv->Enorm;
         source *= wt_func * detJ * wt * h3;
-        source *= pd->etm[pg->imtrx][R_ENORM][(LOG2_SOURCE)];
+        source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][R_ENORM][(LOG2_SOURCE)];
       }
 
-      lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][R_ENORM], i)] += advection + source;
+      goma_ctx->fem.lec
+          ->R[LEC_R_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_ENORM], i)] +=
+          advection + source;
     } /* for i = 0 ... dof[R_ENORM] */
   } /* if(Assemble_Residual) */
 
-  if (af->Assemble_Jacobian) {
-    for (i = 0; i < ei[pg->imtrx]->dof[R_ENORM]; i++) {
-      wt_func = bf[R_ENORM]->phi[i];
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_ENORM]; i++) {
+      wt_func = goma_ctx->fem.bf[R_ENORM]->phi[i];
 
       /* J_Enorm_V */
-      for (k = 0; k < ei[pg->imtrx]->dof[VOLTAGE]; k++) {
+      for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VOLTAGE]; k++) {
         /* Only the advection term for _V. */
         advection = 0.0;
-        if (pd->e[pg->imtrx][R_ENORM] & T_ADVECTION) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENORM] & T_ADVECTION) {
           advection = d_Enorm_d_V[k];
           advection *= wt_func * detJ * wt * h3;
-          advection *= pd->etm[pg->imtrx][R_ENORM][(LOG2_ADVECTION)];
+          advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][R_ENORM][(LOG2_ADVECTION)];
         }
-        lec->J[LEC_J_INDEX(upd->ep[pg->imtrx][R_ENORM], upd->vp[pg->imtrx][VOLTAGE], i, k)] +=
+        goma_ctx->fem.lec
+            ->J[LEC_J_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_ENORM],
+                            goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VOLTAGE], i, k)] +=
             advection;
       } /* for k = 0 ... dof[VOLTAGE] */
 
       /* J_Enorm_Enorm */
-      for (k = 0; k < ei[pg->imtrx]->dof[ENORM]; k++) {
+      for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ENORM]; k++) {
         /* Only the source term for _Enorm. */
         source = 0.0;
-        if (pd->e[pg->imtrx][R_ENORM] & T_SOURCE) {
-          source = bf[ENORM]->phi[k];
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENORM] & T_SOURCE) {
+          source = goma_ctx->fem.bf[ENORM]->phi[k];
           source *= wt_func * detJ * wt * h3;
-          source *= pd->etm[pg->imtrx][R_ENORM][(LOG2_SOURCE)];
+          source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][R_ENORM][(LOG2_SOURCE)];
         }
 
-        lec->J[LEC_J_INDEX(upd->ep[pg->imtrx][R_ENORM], upd->vp[pg->imtrx][ENORM], i, k)] += source;
+        goma_ctx->fem.lec
+            ->J[LEC_J_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_ENORM],
+                            goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][ENORM], i, k)] += source;
       } /* for k = 0 ... dof[ENORM] */
     } /* for i = 0 ... dof[R_ENORM] */
   } /* if (Assemble_Jacobian) */
@@ -1508,7 +1530,7 @@ int assemble_electric_field(void) /* Least square equation Efield = grad (voltag
    * Unpack variables from structures for local convenience...
    */
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   eqn = R_EFIELD1;
 
@@ -1516,15 +1538,15 @@ int assemble_electric_field(void) /* Least square equation Efield = grad (voltag
    * Bail out fast if there's nothing to do...
    */
 
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (status);
   }
 
-  wt = fv->wt;
+  wt = goma_ctx->fem.fv->wt;
 
-  det_J = bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
+  det_J = goma_ctx->fem.bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
 
-  h3 = fv->h3; /* Differential volume element (scales). */
+  h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
 
   /*
    * Field variables...
@@ -1533,15 +1555,15 @@ int assemble_electric_field(void) /* Least square equation Efield = grad (voltag
   /* Gradient of voltage equation */
 
   for (a = 0; a < VIM; a++) {
-    grad_V[a] = fv->grad_V[a];
-    Efield[a] = fv->E_field[a];
+    grad_V[a] = goma_ctx->fem.fv->grad_V[a];
+    Efield[a] = goma_ctx->fem.fv->E_field[a];
   }
 
   /*
    * Residuals_________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     /*
      * Assemble each component "ab" of the velocity gradient equation...
      */
@@ -1552,16 +1574,16 @@ int assemble_electric_field(void) /* Least square equation Efield = grad (voltag
        * based on the number of degrees of freedom...
        */
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-        wt_func = bf[eqn]->phi[i]; /* add Petrov-Galerkin terms as necessary */
+        wt_func = goma_ctx->fem.bf[eqn]->phi[i]; /* add Petrov-Galerkin terms as necessary */
 
         advection = 0.;
 
-        if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
           advection -= grad_V[a];
           advection *= wt_func * det_J * wt * h3;
-          advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+          advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
         }
 
         /*
@@ -1570,13 +1592,14 @@ int assemble_electric_field(void) /* Least square equation Efield = grad (voltag
 
         source = 0;
 
-        if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
           source += Efield[a];
           source *= wt_func * det_J * h3 * wt;
-          source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+          source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
         }
 
-        lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][eqn], i)] += advection + source;
+        goma_ctx->fem.lec->R[LEC_R_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn], i)] +=
+            advection + source;
       }
     }
   }
@@ -1585,34 +1608,34 @@ int assemble_electric_field(void) /* Least square equation Efield = grad (voltag
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (a = 0; a < VIM; a++) {
       eqn = R_EFIELD1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        wt_func = bf[eqn]->phi[i]; /* add Petrov-Galerkin terms as necessary */
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+        wt_func = goma_ctx->fem.bf[eqn]->phi[i]; /* add Petrov-Galerkin terms as necessary */
 
         /*
          * J_Efield_V
          */
         var = VOLTAGE;
-        if (pd->v[pg->imtrx][var]) {
-          pvar = upd->vp[pg->imtrx][var];
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            phi_j = bf[var]->phi[j];
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            phi_j = goma_ctx->fem.bf[var]->phi[j];
 
             advection = 0.;
 
-            if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-              advection -= bf[var]->grad_phi[j][a];
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
+              advection -= goma_ctx->fem.bf[var]->grad_phi[j][a];
               advection *= wt_func * det_J * wt * h3;
-              advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+              advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
             }
 
             source = 0.;
 
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection + source;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection + source;
           }
         }
         /*
@@ -1620,18 +1643,18 @@ int assemble_electric_field(void) /* Least square equation Efield = grad (voltag
          */
         for (p = 0; p < dim; p++) {
           var = MESH_DISPLACEMENT1 + p;
-          if (pd->v[pg->imtrx][var]) {
-            pvar = upd->vp[pg->imtrx][var];
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-              phi_j = bf[var]->phi[j];
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-              d_det_J_dmesh_pj = bf[eqn]->d_det_J_dm[p][j];
+              d_det_J_dmesh_pj = goma_ctx->fem.bf[eqn]->d_det_J_dm[p][j];
 
-              dh3dmesh_pj = fv->dh3dq[p] * bf[var]->phi[j];
+              dh3dmesh_pj = goma_ctx->fem.fv->dh3dq[p] * goma_ctx->fem.bf[var]->phi[j];
 
               advection = 0.;
 
-              if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
                 /*
                  * three parts:
                  *    advection_a =
@@ -1646,26 +1669,28 @@ int assemble_electric_field(void) /* Least square equation Efield = grad (voltag
 
                 advection_a *= (d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj);
 
-                advection_b = -fv->d_grad_V_dmesh[a][p][j];
+                advection_b = -goma_ctx->fem.fv->d_grad_V_dmesh[a][p][j];
 
                 advection_b *= det_J * h3;
 
                 advection = advection_a + advection_b;
 
-                advection *= wt_func * wt * pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+                advection *= wt_func * wt *
+                             goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
               }
 
               source = 0.;
 
-              if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
                 source += Efield[a];
 
                 source *= d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj;
 
-                source *= wt_func * wt * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                source *= wt_func * wt *
+                          goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
               }
 
-              lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection + source;
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection + source;
             }
           }
         }
@@ -1676,18 +1701,19 @@ int assemble_electric_field(void) /* Least square equation Efield = grad (voltag
 
         var = EFIELD1 + a;
 
-        if (pd->v[pg->imtrx][var]) {
-          pvar = upd->vp[pg->imtrx][var];
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            phi_j = bf[var]->phi[j];
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            phi_j = goma_ctx->fem.bf[var]->phi[j];
 
             source = 0.;
 
-            if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-              source = phi_j * det_J * h3 * wt_func * wt * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+              source = phi_j * det_J * h3 * wt_func * wt *
+                       goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
             }
 
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += source;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += source;
           }
         }
       }
@@ -1726,7 +1752,7 @@ Parameters:
   dbl efield[MAX_PDIM];      /* electric field */
   double grad_phi_j;
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
 
   *func = BC_Type->BC_Data_Float[0];
@@ -1749,39 +1775,41 @@ Parameters:
   perm = electrical_conductivity(d_p_dT, d_p_dV, d_p_dC, d_p_dX, time, dt);
 
   for (a = 0; a < VIM; a++) {
-    efield[a] = -fv->grad_V[a];
+    efield[a] = -goma_ctx->fem.fv->grad_V[a];
   }
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     var = VOLTAGE;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         for (p = 0; p < VIM; p++) {
-          grad_phi_j = bf[var]->grad_phi[j][p];
-          d_func[0][var][j] += fv->snormal[p] * (perm * grad_phi_j - d_p_dV[j] * efield[p]);
+          grad_phi_j = goma_ctx->fem.bf[var]->grad_phi[j][p];
+          d_func[0][var][j] +=
+              goma_ctx->fem.fv->snormal[p] * (perm * grad_phi_j - d_p_dV[j] * efield[p]);
         }
       }
     }
 
     var = TEMPERATURE;
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         for (p = 0; p < VIM; p++) {
-          grad_phi_j = bf[var]->grad_phi[j][p];
-          d_func[0][var][j] += fv->snormal[p] * (-d_p_dT[j] * efield[p]);
+          grad_phi_j = goma_ctx->fem.bf[var]->grad_phi[j][p];
+          d_func[0][var][j] += goma_ctx->fem.fv->snormal[p] * (-d_p_dT[j] * efield[p]);
         }
       }
     }
 
-    if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (b = 0; b < VIM; b++) {
         var = MESH_DISPLACEMENT1 + b;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (q = 0; q < VIM; q++) {
             d_func[0][var][j] +=
-                fv->snormal[q] * (perm * fv->d_grad_V_dmesh[q][b][j] - d_p_dX[b][j] * efield[q]) -
-                fv->dsnormal_dx[q][b][j] * (perm * efield[q]);
+                goma_ctx->fem.fv->snormal[q] *
+                    (perm * goma_ctx->fem.fv->d_grad_V_dmesh[q][b][j] - d_p_dX[b][j] * efield[q]) -
+                goma_ctx->fem.fv->dsnormal_dx[q][b][j] * (perm * efield[q]);
           }
         }
       }
@@ -1791,7 +1819,7 @@ Parameters:
   /* Calculate the residual contribution                                       */
 
   for (a = 0; a < VIM; a++) {
-    *func += -perm * fv->snormal[a] * efield[a];
+    *func += -perm * goma_ctx->fem.fv->snormal[a] * efield[a];
   }
 
   return;
@@ -1810,78 +1838,81 @@ double electrical_conductivity(double dkdT[MDE],
   int dim, var, var_offset;
   int i, j, a, w;
   dbl k = 1e12; /* electrical conductivity. */
-  int n_species = mp->Num_Species;
+  int n_species = goma_ctx->fem.mp->Num_Species;
   dbl sumx, sumk; /* dummy variables */
   dbl A_inv[MAX_CONC * DIM]
            [MAX_CONC * DIM]; /* inverse of Stefan_Maxwell coefficient matrix; KSC: 10/28/98 */
-  dbl *D = mp->diffusivity;  /* Fickian diffusion coefficients */
-  dbl T = 298.15;            /* Electrolyte solution temperature default = 25 C */
-  dbl c;                     /* Total molar concentration of electrolyte solution */
-  const double R = 8.314;    /* Universal gas constant in units of J/mole K */
-  const double F = 96487.0;  /* Faraday's constant in units of C/equiv. */
-  dbl FRT;                   /* product of F/R/T */
-  dbl rho;                   /* Mass density of electrolyte solution */
+  dbl *D = goma_ctx->fem.mp->diffusivity; /* Fickian diffusion coefficients */
+  dbl T = 298.15;                         /* Electrolyte solution temperature default = 25 C */
+  dbl c;                                  /* Total molar concentration of electrolyte solution */
+  const double R = 8.314;                 /* Universal gas constant in units of J/mole K */
+  const double F = 96487.0;               /* Faraday's constant in units of C/equiv. */
+  dbl FRT;                                /* product of F/R/T */
+  dbl rho;                                /* Mass density of electrolyte solution */
   DENSITY_DEPENDENCE_STRUCT d_rho_struct; /* density dependence */
   DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
-  dbl *M = mp->molecular_weight; /* Ptr to species molecular weights */
-  dbl M_mix;                     /* Molecular weight of electrolyte solution */
-  dbl x[MAX_CONC];               /* mole fraction */
+  dbl *M = goma_ctx->fem.mp->molecular_weight; /* Ptr to species molecular weights */
+  dbl M_mix;                                   /* Molecular weight of electrolyte solution */
+  dbl x[MAX_CONC];                             /* mole fraction */
 
-  dbl *z = mp->charge_number; /* ptr to the charge numbers for species */
+  dbl *z = goma_ctx->fem.mp->charge_number; /* ptr to the charge numbers for species */
 
   int i_elec_cond; /* index of external field elec. conductivity */
   int n, l, m, mn, kk;
   dbl sum1, sum2, sum3;
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
   /*** Electrical Conductivity ****/
-  if (mp->Elec_ConductivityModel == USER) {
-    (void)usr_electrical_conductivity(mp->u_electrical_conductivity, time);
+  if (goma_ctx->fem.mp->Elec_ConductivityModel == USER) {
+    (void)usr_electrical_conductivity(goma_ctx->fem.mp->u_electrical_conductivity, time);
 
-    k = mp->electrical_conductivity;
+    k = goma_ctx->fem.mp->electrical_conductivity;
 
     var = TEMPERATURE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      dkdT[j] = mp->d_electrical_conductivity[var] * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      dkdT[j] = goma_ctx->fem.mp->d_electrical_conductivity[var] * goma_ctx->fem.bf[var]->phi[j];
     }
 
     var = VOLTAGE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      dkdV[j] = mp->d_electrical_conductivity[var] * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      dkdV[j] = goma_ctx->fem.mp->d_electrical_conductivity[var] * goma_ctx->fem.bf[var]->phi[j];
     }
 
-    if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (a = 0; a < dim; a++) {
         var = MESH_DISPLACEMENT1 + a;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          dkdX[a][j] = mp->d_electrical_conductivity[var] * bf[var]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          dkdX[a][j] =
+              goma_ctx->fem.mp->d_electrical_conductivity[var] * goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
 
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         var = MASS_FRACTION;
         var_offset = MAX_VARIABLE_TYPES + w;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          dkdC[w][j] = mp->d_electrical_conductivity[var_offset] * bf[var]->phi[j];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          dkdC[w][j] = goma_ctx->fem.mp->d_electrical_conductivity[var_offset] *
+                       goma_ctx->fem.bf[var]->phi[j];
         }
       }
     }
 
   }
 
-  else if (mp->Elec_ConductivityModel == ELECTRONEUTRALITY_FICKIAN ||
-           mp->Elec_ConductivityModel == ELECTRONEUTRALITY_SM ||
-           mp->Elec_ConductivityModel == ELECTRODE_KINETICS) {
-    if (cr->MassFluxModel == STEFAN_MAXWELL_CHARGED || cr->MassFluxModel == STEFAN_MAXWELL_VOLUME) {
+  else if (goma_ctx->fem.mp->Elec_ConductivityModel == ELECTRONEUTRALITY_FICKIAN ||
+           goma_ctx->fem.mp->Elec_ConductivityModel == ELECTRONEUTRALITY_SM ||
+           goma_ctx->fem.mp->Elec_ConductivityModel == ELECTRODE_KINETICS) {
+    if (goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
+        goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_VOLUME) {
       n = n_species * VIM;
 
-      if (mp->SolutionTemperatureModel == CONSTANT) {
-        T = mp->solution_temperature;
-      } else if (mp->SolutionTemperatureModel == THERMAL_BATTERY) {
+      if (goma_ctx->fem.mp->SolutionTemperatureModel == CONSTANT) {
+        T = goma_ctx->fem.mp->solution_temperature;
+      } else if (goma_ctx->fem.mp->SolutionTemperatureModel == THERMAL_BATTERY) {
         electrolyte_temperature(time, dt, 0);
-        T = mp->electrolyte_temperature;
+        T = goma_ctx->fem.mp->electrolyte_temperature;
       } else {
         GOMA_EH(
             GOMA_ERROR,
@@ -1904,7 +1935,7 @@ double electrical_conductivity(double dkdT[MDE],
        */
       sumx = 0.0;
       for (i = 0; i < n_species - 1; i++) {
-        x[i] = fv->c[i];
+        x[i] = goma_ctx->fem.fv->c[i];
         sumx += x[i];
       }
       x[n_species - 1] = 1.0 - sumx;
@@ -1922,7 +1953,7 @@ double electrical_conductivity(double dkdT[MDE],
        */
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) {
-          A_inv[i][j] = fv->SM_matrix_inv[i][j];
+          A_inv[i][j] = goma_ctx->fem.fv->SM_matrix_inv[i][j];
         }
       }
 
@@ -1938,19 +1969,19 @@ double electrical_conductivity(double dkdT[MDE],
       k = sumk; /* This is the electrical conductivity value in the PHI2 equation; KSC: 10/98  */
 
       var = TEMPERATURE;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         dkdT[j] = 0.0;
       }
 
       var = VOLTAGE;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         dkdV[j] = 0.0;
       }
 
-      if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
         for (a = 0; a < dim; a++) {
           var = MESH_DISPLACEMENT1 + a;
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             dkdX[a][j] = 0.0;
           }
         }
@@ -1960,11 +1991,11 @@ double electrical_conductivity(double dkdT[MDE],
          are computed here; kappa is defined by Equation (2.14) of the thermal battery LDRD report.
          -- RSL 3/31/00 */
 
-      if (pd->v[pg->imtrx][MASS_FRACTION]) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
           var = MASS_FRACTION;
           var_offset = MAX_VARIABLE_TYPES + w;
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             dkdC[w][j] = 0.0;
             sum1 = 0.0;
             for (l = 0; l < n_species; l++) {
@@ -1979,12 +2010,13 @@ double electrical_conductivity(double dkdT[MDE],
             for (l = 0; l < n_species; l++) {
               sum3 = 0.0;
               for (kk = 1; kk < n_species; kk++) {
-                sum3 += z[kk] * x[kk] * fv->giant_C_matrix[w][j][VIM * l][VIM * kk];
+                sum3 += z[kk] * x[kk] * goma_ctx->fem.fv->giant_C_matrix[w][j][VIM * l][VIM * kk];
               }
               sum2 += z[l] * sum3;
             }
             /* dkdC[w][j] = -FRT * (bf[var]->phi[j]*sum1 + sum2); */
-            dkdC[w][j] = -F * FRT * (bf[var]->phi[j] * sum1 + sum2); /* KSC: 7-29-04 */
+            dkdC[w][j] =
+                -F * FRT * (goma_ctx->fem.bf[var]->phi[j] * sum1 + sum2); /* KSC: 7-29-04 */
 
           } /* end of loop over j */
 
@@ -1994,12 +2026,12 @@ double electrical_conductivity(double dkdT[MDE],
 
     } /* end of cr->MassFluxModel == STEFAN_MAXWELL_CHARGED */
 
-    else if (cr->MassFluxModel == FICKIAN_CHARGED) {
-      if (mp->SolutionTemperatureModel == CONSTANT) {
-        T = mp->solution_temperature;
-      } else if (mp->SolutionTemperatureModel == THERMAL_BATTERY) {
+    else if (goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED) {
+      if (goma_ctx->fem.mp->SolutionTemperatureModel == CONSTANT) {
+        T = goma_ctx->fem.mp->solution_temperature;
+      } else if (goma_ctx->fem.mp->SolutionTemperatureModel == THERMAL_BATTERY) {
         electrolyte_temperature(time, dt, 0);
-        T = mp->electrolyte_temperature;
+        T = goma_ctx->fem.mp->electrolyte_temperature;
       } else {
         GOMA_EH(
             GOMA_ERROR,
@@ -2026,61 +2058,62 @@ double electrical_conductivity(double dkdT[MDE],
       if (z[n_species - 1] != 0.0) {
         sumx = 0.0;
         for (i = 0; i < n_species - 1; i++) {
-          sumx += (z[i] / z[n_species - 1]) * fv->c[i];
+          sumx += (z[i] / z[n_species - 1]) * goma_ctx->fem.fv->c[i];
         }
-        fv->c[n_species - 1] = -sumx;
+        goma_ctx->fem.fv->c[n_species - 1] = -sumx;
       }
 
       sumk = 0.0;
       for (i = 0; i < n_species; i++) {
-        sumk += z[i] * z[i] * D[i] * fv->c[i];
+        sumk += z[i] * z[i] * D[i] * goma_ctx->fem.fv->c[i];
       }
       k = F * FRT * sumk;
 
       var = TEMPERATURE;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        dkdT[j] = -bf[var]->phi[j] * k / T;
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        dkdT[j] = -goma_ctx->fem.bf[var]->phi[j] * k / T;
       }
 
       var = VOLTAGE;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         dkdV[j] = 0.0;
       }
 
-      if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
         for (a = 0; a < dim; a++) {
           var = MESH_DISPLACEMENT1 + a;
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             dkdX[a][j] = 0.0;
           }
         }
       }
 
-      if (pd->v[pg->imtrx][MASS_FRACTION]) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
           var = MASS_FRACTION;
           var_offset = MAX_VARIABLE_TYPES + w;
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            dkdC[w][j] = F * FRT * z[w] * z[w] * D[w] * bf[var]->phi[j];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            dkdC[w][j] = F * FRT * z[w] * z[w] * D[w] * goma_ctx->fem.bf[var]->phi[j];
           }
         }
       }
     } /* end of if (cr->MassFluxModel == FICKIAN_CHARGED) */
 
-    else if (cr->MassFluxModel == FICKIAN_CHARGED_X) /* RSL 9/18/00 */
+    else if (goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED_X) /* RSL 9/18/00 */
     {
-      mn = ei[pg->imtrx]->mn;
+      mn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn;
 
-      if (pd_glob[mn]->e[pg->imtrx][R_ENERGY]) /* if the energy equation is being solved */
+      if (goma_ctx->fem.pd_glob[mn]
+              ->e[goma_ctx->fem.pg->imtrx][R_ENERGY]) /* if the energy equation is being solved */
       {
-        T = fv->T;
+        T = goma_ctx->fem.fv->T;
       } else /* if the energy equation is NOT being solved */
       {
-        if (mp->SolutionTemperatureModel == CONSTANT) {
-          T = mp->solution_temperature;
-        } else if (mp->SolutionTemperatureModel == THERMAL_BATTERY) {
+        if (goma_ctx->fem.mp->SolutionTemperatureModel == CONSTANT) {
+          T = goma_ctx->fem.mp->solution_temperature;
+        } else if (goma_ctx->fem.mp->SolutionTemperatureModel == THERMAL_BATTERY) {
           electrolyte_temperature(time, dt, 0);
-          T = mp->electrolyte_temperature;
+          T = goma_ctx->fem.mp->electrolyte_temperature;
         } else {
           GOMA_EH(GOMA_ERROR, "Invalid solution temperature model");
         }
@@ -2092,7 +2125,7 @@ double electrical_conductivity(double dkdT[MDE],
 
       sumx = 0.0;
       for (i = 0; i < n_species - 1; i++) {
-        x[i] = fv->c[i];
+        x[i] = goma_ctx->fem.fv->c[i];
         sumx += x[i];
       }
       x[n_species - 1] = 1.0 - sumx;
@@ -2110,19 +2143,19 @@ double electrical_conductivity(double dkdT[MDE],
       k = FRT * c * sumk;
 
       var = TEMPERATURE;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        dkdT[j] = -bf[var]->phi[j] * k / T;
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        dkdT[j] = -goma_ctx->fem.bf[var]->phi[j] * k / T;
       }
 
       var = VOLTAGE;
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         dkdV[j] = 0.0;
       }
 
-      if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
         for (a = 0; a < dim; a++) {
           var = MESH_DISPLACEMENT1 + a;
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             dkdX[a][j] = 0.0;
           }
         }
@@ -2131,14 +2164,14 @@ double electrical_conductivity(double dkdT[MDE],
       /* Derivatives of electrical conductivity (actually kappa/F) with respect to mole fraction
        */
 
-      if (pd->v[pg->imtrx][MASS_FRACTION]) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
           var = MASS_FRACTION;
           var_offset = MAX_VARIABLE_TYPES + w;
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            dkdC[w][j] =
-                FRT * c * bf[var]->phi[j] * z[w] * z[w] * D[w] +
-                k * (d_rho->C[w][j] / rho - bf[var]->phi[j] * (M[w] - M[n_species - 1]) / M_mix);
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            dkdC[w][j] = FRT * c * goma_ctx->fem.bf[var]->phi[j] * z[w] * z[w] * D[w] +
+                         k * (d_rho->C[w][j] / rho -
+                              goma_ctx->fem.bf[var]->phi[j] * (M[w] - M[n_species - 1]) / M_mix);
           }
         }
       }
@@ -2147,106 +2180,108 @@ double electrical_conductivity(double dkdT[MDE],
 
   } /* end of if (mp->Elec_ConductivityModel == ELECTRONEUTRALITY_FICKIAN) etc. */
 
-  else if (mp->Elec_ConductivityModel == CONSTANT) {
+  else if (goma_ctx->fem.mp->Elec_ConductivityModel == CONSTANT) {
 
     /*
      * Use Voltage Formulation to choose between electrical conductivity
      * (default) or permittivity (must have been specified).
      */
-    if (mp->VoltageFormulation == V_PERMITTIVITY) {
-      k = mp->permittivity;
+    if (goma_ctx->fem.mp->VoltageFormulation == V_PERMITTIVITY) {
+      k = goma_ctx->fem.mp->permittivity;
     } else {
-      k = mp->electrical_conductivity;
+      k = goma_ctx->fem.mp->electrical_conductivity;
     }
 
     var = TEMPERATURE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       dkdT[j] = 0.;
     }
 
     var = VOLTAGE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       dkdV[j] = 0.0;
     }
-    if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (a = 0; a < dim; a++) {
         var = MESH_DISPLACEMENT1 + a;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           dkdX[a][j] = 0.0;
         }
       }
     }
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         var = MASS_FRACTION;
         var_offset = MAX_VARIABLE_TYPES + w;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           dkdC[w][j] = 0.0;
         }
       }
     }
 
     /*Sensitivities were already set to zero */
-  } else if (mp->Elec_ConductivityModel == LEVEL_SET) {
+  } else if (goma_ctx->fem.mp->Elec_ConductivityModel == LEVEL_SET) {
     /*
      * Use Voltage Formulation to choose between electrical conductivity
      * (default) or permittivity (must have been specified).
      */
-    if (mp->VoltageFormulation == V_PERMITTIVITY) {
-      level_set_property(mp->u_electrical_conductivity[0], mp->u_electrical_conductivity[1],
-                         mp->u_electrical_conductivity[2], &k, NULL);
+    if (goma_ctx->fem.mp->VoltageFormulation == V_PERMITTIVITY) {
+      level_set_property(goma_ctx->fem.mp->u_electrical_conductivity[0],
+                         goma_ctx->fem.mp->u_electrical_conductivity[1],
+                         goma_ctx->fem.mp->u_electrical_conductivity[2], &k, NULL);
     } else {
-      k = mp->electrical_conductivity;
+      k = goma_ctx->fem.mp->electrical_conductivity;
     }
 
     var = TEMPERATURE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       dkdT[j] = 0.;
     }
 
     var = VOLTAGE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       dkdV[j] = 0.0;
     }
-    if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (a = 0; a < dim; a++) {
         var = MESH_DISPLACEMENT1 + a;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           dkdX[a][j] = 0.0;
         }
       }
     }
-    if (pd->v[pg->imtrx][MASS_FRACTION]) {
-      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         var = MASS_FRACTION;
         var_offset = MAX_VARIABLE_TYPES + w;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           dkdC[w][j] = 0.0;
         }
       }
     }
 
     /*Sensitivities were already set to zero */
-  } else if (mp->Elec_ConductivityModel == EXTERNAL_FIELD) {
-    i_elec_cond = mp->elec_cond_external_field;
+  } else if (goma_ctx->fem.mp->Elec_ConductivityModel == EXTERNAL_FIELD) {
+    i_elec_cond = goma_ctx->fem.mp->elec_cond_external_field;
     GOMA_EH(i_elec_cond, "Electrical conductivity external field not found!");
-    k = fv->external_field[i_elec_cond] * mp->u_electrical_conductivity[0];
+    k = goma_ctx->fem.fv->external_field[i_elec_cond] *
+        goma_ctx->fem.mp->u_electrical_conductivity[0];
 
     // Maybe all sensitivies should be set to 0 by default, and changed
     // only as needed?
     var = TEMPERATURE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       dkdT[j] = 0.;
     }
 
     var = VOLTAGE;
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
       dkdV[j] = 0.0;
     }
-    if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (a = 0; a < dim; a++) {
         var = MESH_DISPLACEMENT1 + a;
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           dkdX[a][j] = 0.0;
         }
       }

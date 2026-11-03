@@ -212,10 +212,10 @@ void user_aug_cond_residuals(int iAC,
 
   /**  loop over all AC conditions **/
 
-  if (augc[iAC].Type == AC_USERBC) /* BC augmenting condition */
+  if (goma_ctx->fem.augc[iAC].Type == AC_USERBC) /* BC augmenting condition */
   {
-    AC[iAC] = BC_Types[4].BC_Data_Float[0] - 2.0; /* Goma Test Suite */
-  } else if (augc[iAC].Type == AC_USERMAT)        /* MT augmenting condition */
+    AC[iAC] = BC_Types[4].BC_Data_Float[0] - 2.0;        /* Goma Test Suite */
+  } else if (goma_ctx->fem.augc[iAC].Type == AC_USERMAT) /* MT augmenting condition */
   {
   }
 
@@ -323,7 +323,7 @@ void user_aug_cond_volume_residuals(const int iAC,
 #ifdef PARALLEL
   double global_inventory;
 #endif
-  inventory = augc[iAC].evol;
+  inventory = goma_ctx->fem.augc[iAC].evol;
 #ifdef PARALLEL
   if (goma_ctx->num_proc > 1) {
     MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -331,14 +331,14 @@ void user_aug_cond_volume_residuals(const int iAC,
   }
 #endif
   for (i = 0; i < numProcUnknowns; i++) {
-    cAC[iAC][i] = augc[iAC].d_evol_dx[i];
+    cAC[iAC][i] = goma_ctx->fem.augc[iAC].d_evol_dx[i];
   }
 
   for (jAC = 0; jAC < nAC; jAC++) {
     dAC[iAC][jAC] = 0.0;
   }
 
-  target = augc[iAC].CONSTV;
+  target = goma_ctx->fem.augc[iAC].CONSTV;
   AC[iAC] = -target + inventory;
 }
 /****************************************************************************/

@@ -96,7 +96,7 @@ double raoults_law_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
   VARIABLE_DESCRIPTION_STRUCT *vd;
   INTERFACE_SOURCE_STRUCT *is, **is_hdl;
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return 0.0;
 
   /*
@@ -104,9 +104,9 @@ double raoults_law_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
    */
   ebIndex_liq = ebID_to_ebIndex(ebID_mat_liq);
   ebIndex_gas = ebID_to_ebIndex(bc->BC_Data_Int[2]);
-  mp_liq = mp_glob[Matilda[ebIndex_liq]];
-  mp_gas = mp_glob[Matilda[ebIndex_gas]];
-  have_T = (upd->vp[pg->imtrx][TEMPERATURE] != -1);
+  mp_liq = goma_ctx->fem.mp_glob[Matilda[ebIndex_liq]];
+  mp_gas = goma_ctx->fem.mp_glob[Matilda[ebIndex_gas]];
+  have_T = (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TEMPERATURE] != -1);
 
   /*
    * Find the storage for this bc from the linked list attached
@@ -135,15 +135,15 @@ double raoults_law_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
      * jacobian. The source term is defined as the
      *
      */
-    is[intf_id].Do_Jac = af->Assemble_Jacobian;
+    is[intf_id].Do_Jac = goma_ctx->fem.af->Assemble_Jacobian;
     source_vle_prxn(is, bc, mp_gas, mp_liq, have_T, intf_id);
     /*
      * We now need to possibly change the species variable type
      * for the source term and the dependent variable for the
      * Jacobian entries.
      */
-    speciesVT = upd->Species_Var_Type;
-    if (upd->Species_Var_Type == SPECIES_UNDEFINED_FORM) {
+    speciesVT = goma_ctx->fem.upd->Species_Var_Type;
+    if (goma_ctx->fem.upd->Species_Var_Type == SPECIES_UNDEFINED_FORM) {
       speciesVT = SPECIES_MASS_FRACTION;
     }
     if (speciesVT != is[intf_id].SpeciesVT) {
@@ -179,7 +179,7 @@ double raoults_law_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
    *  Next we need to adjust this expression by multiplication
    *  by Y_i
    */
-  Y_wspec = mp->StateVector[SPECIES_UNK_0 + wspec];
+  Y_wspec = goma_ctx->fem.mp->StateVector[SPECIES_UNK_0 + wspec];
   func_value = massflux * Y_wspec;
 
   /*
@@ -205,7 +205,7 @@ double raoults_law_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
   /*
    * Jacobian terms
    */
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     /*
      * Modify the existing entries in func_jac to account for the
@@ -222,7 +222,7 @@ double raoults_law_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
      * dependence
      */
     vd = is[intf_id].Var_List[pos];
-    index_lvdesc = ei[pg->imtrx]->VDindex_to_Lvdesc[vd->List_Index];
+    index_lvdesc = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->VDindex_to_Lvdesc[vd->List_Index];
     jacobianVD_addEntry(func_jac, index_lvdesc, massflux);
 
     /*
@@ -244,7 +244,7 @@ double raoults_law_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
        *         We may need it anyway for postprocessing.
        *
        */
-      index_lvdesc = ei[pg->imtrx]->VDindex_to_Lvdesc[vd->List_Index];
+      index_lvdesc = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->VDindex_to_Lvdesc[vd->List_Index];
       if (index_lvdesc >= 0 && DOUBLE_NONZERO(is[intf_id].JacMatrix[pos][index_is])) {
         /*
          * Transfer the pertinent information to the
@@ -464,7 +464,7 @@ double is_equil_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
 
   VARIABLE_DESCRIPTION_STRUCT *vd;
 
-  if (af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return 0.0;
 
   /*
@@ -472,15 +472,15 @@ double is_equil_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
    */
   ebIndex_a = ebID_to_ebIndex(ebID_mat_a);
   ebIndex_b = ebID_to_ebIndex(bc->BC_Data_Int[2]);
-  mp_a = mp_glob[Matilda[ebIndex_a]];
-  mp_b = mp_glob[Matilda[ebIndex_b]];
-  have_T = (upd->vp[pg->imtrx][TEMPERATURE] != -1);
+  mp_a = goma_ctx->fem.mp_glob[Matilda[ebIndex_a]];
+  mp_b = goma_ctx->fem.mp_glob[Matilda[ebIndex_b]];
+  have_T = (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TEMPERATURE] != -1);
 
   /*
    * Currently we limit this bc to one type of species
    * var type. This will be relaxed in the future.
    */
-  if (upd->Species_Var_Type != SPECIES_CONCENTRATION) {
+  if (goma_ctx->fem.upd->Species_Var_Type != SPECIES_CONCENTRATION) {
     GOMA_EH(GOMA_ERROR, "unimplemented");
   }
 
@@ -512,7 +512,7 @@ double is_equil_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
      * units of mol cm-2 sec-1. The dependent variable is
      * the species concentration.
      */
-    is[intf_id].Do_Jac = af->Assemble_Jacobian;
+    is[intf_id].Do_Jac = goma_ctx->fem.af->Assemble_Jacobian;
     source_is_equil_prxn(is, bc, mp_a, mp_b, have_T, intf_id);
 
     /*
@@ -520,8 +520,8 @@ double is_equil_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
      * for the source term and the dependent variable for the
      * Jacobian entries.
      */
-    speciesVT = upd->Species_Var_Type;
-    if (upd->Species_Var_Type == SPECIES_UNDEFINED_FORM) {
+    speciesVT = goma_ctx->fem.upd->Species_Var_Type;
+    if (goma_ctx->fem.upd->Species_Var_Type == SPECIES_UNDEFINED_FORM) {
       speciesVT = SPECIES_CONCENTRATION;
     }
 
@@ -575,8 +575,8 @@ double is_equil_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
    *  by wspec concentration. Note, mp refers to the current
    *  side of the interface.
    */
-  if (upd->Species_Var_Type == SPECIES_CONCENTRATION) {
-    C_wspec = mp->StateVector[SPECIES_UNK_0 + wspec_a];
+  if (goma_ctx->fem.upd->Species_Var_Type == SPECIES_CONCENTRATION) {
+    C_wspec = goma_ctx->fem.mp->StateVector[SPECIES_UNK_0 + wspec_a];
     func_value = volflux * C_wspec;
   } else {
     GOMA_EH(GOMA_ERROR, "unimplemented");
@@ -603,7 +603,7 @@ double is_equil_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
   /*
    * Jacobian terms
    */
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     /*
      * Modify the existing entries in func_jac to account for the
@@ -620,7 +620,7 @@ double is_equil_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
      * dependence
      */
     vd = is[intf_id].Var_List[pos];
-    index_lvdesc = ei[pg->imtrx]->VDindex_to_Lvdesc[vd->List_Index];
+    index_lvdesc = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->VDindex_to_Lvdesc[vd->List_Index];
     jacobianVD_addEntry(func_jac, index_lvdesc, volflux);
 
     /*
@@ -642,7 +642,7 @@ double is_equil_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
        *         We may need it anyway for postprocessing.
        *
        */
-      index_lvdesc = ei[pg->imtrx]->VDindex_to_Lvdesc[vd->List_Index];
+      index_lvdesc = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->VDindex_to_Lvdesc[vd->List_Index];
       if (index_lvdesc >= 0 && DOUBLE_NONZERO(is[intf_id].JacMatrix[pos][index_is])) {
         /*
          * Transfer the pertinent information to the
@@ -828,21 +828,21 @@ is_masstemp_create(MATRL_PROP_STRUCT *mp_1, MATRL_PROP_STRUCT *mp_2, int do_Jac)
   INTERFACE_SOURCE_STRUCT *is;
   VARIABLE_DESCRIPTION_STRUCT *vd;
   num_terms = mp_1->Num_Species + mp_2->Num_Species;
-  have_T = (upd->vp[pg->imtrx][TEMPERATURE] != -1);
+  have_T = (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TEMPERATURE] != -1);
   if (have_T)
     num_terms++;
   is = interface_source_alloc(num_terms, 0, do_Jac);
   for (i = 0; i < Num_Interface_Srcs; i++) {
     for (k = 0; k < mp_1->Num_Species; k++) {
-      vd = find_or_create_vd(MASS_FRACTION, 1, mp_1->MatID, k, pg->imtrx);
+      vd = find_or_create_vd(MASS_FRACTION, 1, mp_1->MatID, k, goma_ctx->fem.pg->imtrx);
       is[i].Var_List[k] = vd;
     }
     for (k = 0, pos = mp_1->Num_Species; k < mp_2->Num_Species; k++, pos++) {
-      vd = find_or_create_vd(MASS_FRACTION, 1, mp_2->MatID, k, pg->imtrx);
+      vd = find_or_create_vd(MASS_FRACTION, 1, mp_2->MatID, k, goma_ctx->fem.pg->imtrx);
       is[i].Var_List[pos] = vd;
     }
     if (have_T) {
-      vd = find_or_create_vd(TEMPERATURE, 1, -1, 0, pg->imtrx);
+      vd = find_or_create_vd(TEMPERATURE, 1, -1, 0, goma_ctx->fem.pg->imtrx);
       is[i].Var_List[num_terms - 1] = vd;
     }
   }

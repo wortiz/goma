@@ -97,8 +97,8 @@ int ad_assemble_momentum(dbl time,       /* current time */
 
   int ledof, eqn, ii, peqn;
 
-  int *pde = pd->e[pg->imtrx];
-  int *pdv = pd->v[pg->imtrx];
+  int *pde = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx];
+  int *pdv = goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx];
 
   int status;
   struct Basis_Functions *bfm;
@@ -140,7 +140,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
 
   dbl wt;
 
-  int transient_run = pd->TimeIntegration != STEADY;
+  int transient_run = goma_ctx->fem.pd->TimeIntegration != STEADY;
   int mass_on;
   int advection_on = 0;
   int source_on = 0;
@@ -168,25 +168,26 @@ int ad_assemble_momentum(dbl time,       /* current time */
   /*
    * Bail out fast if there's nothing to do...
    */
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (status);
   }
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
-  wt = fv->wt;
+  wt = goma_ctx->fem.fv->wt;
 
-  h3 = fv->h3; /* Differential volume element (scales). */
+  h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
 
   d_area = ad_fv->detJ * wt * h3;
 
   dbl supg = 0.;
 
-  if (mp->Mwt_funcModel == GALERKIN) {
+  if (goma_ctx->fem.mp->Mwt_funcModel == GALERKIN) {
     supg = 0.;
-  } else if (mp->Mwt_funcModel == SUPG || mp->Mwt_funcModel == SUPG_GP ||
-             mp->Mwt_funcModel == SUPG_SHAKIB) {
-    supg = mp->Mwt_func;
+  } else if (goma_ctx->fem.mp->Mwt_funcModel == SUPG ||
+             goma_ctx->fem.mp->Mwt_funcModel == SUPG_GP ||
+             goma_ctx->fem.mp->Mwt_funcModel == SUPG_SHAKIB) {
+    supg = goma_ctx->fem.mp->Mwt_func;
   }
 
   /*** Density ***/
@@ -203,7 +204,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
    * Gauss point were evaluated in load_material_properties().
    */
 
-  if (pd->e[pg->imtrx][eqn] & T_POROUS_BRINK) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_POROUS_BRINK) {
     GOMA_EH(GOMA_ERROR, "Porous Brinkmann term not enabled for autodiff momentum");
   }
 
@@ -224,50 +225,50 @@ int ad_assemble_momentum(dbl time,       /* current time */
    */
   std::vector<std::vector<ADType>> resid(WIM);
   for (a = 0; a < WIM; a++) {
-    resid[a].resize(ei[pg->imtrx]->dof[eqn + a]);
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn + a]; i++) {
+    resid[a].resize(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn + a]);
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn + a]; i++) {
       resid[a][i] = 0;
     }
   }
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     /*
      * Assemble each component "a" of the momentum equation...
      */
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      bfm = bf[eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      bfm = goma_ctx->fem.bf[eqn];
 
       mass_on = pde[eqn] & T_MASS;
       advection_on = pde[eqn] & T_ADVECTION;
       diffusion_on = pde[eqn] & T_DIFFUSION;
       source_on = pde[eqn] & T_SOURCE;
 
-      mass_etm = pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-      advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
-      diffusion_etm = pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-      source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+      mass_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
+      advection_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
+      diffusion_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      source_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
       /*
        * In the element, there will be contributions to this many equations
        * based on the number of degrees of freedom...
        */
 
-      R = &(lec->R[LEC_R_INDEX(peqn, 0)]);
+      R = &(goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, 0)]);
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
           /*
            *  Here is where we figure out whether the row is to placed in
            *  the normal spot (e.g., ii = i), or whether a boundary condition
            *  require that the volumetric contribution be stuck in another
            *  ldof pertaining to the same variable type.
            */
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-          phi_i = bf[eqn]->phi[i];
+          phi_i = goma_ctx->fem.bf[eqn]->phi[i];
           /* only use Petrov Galerkin on advective term - if required */
           ADType wt_func = phi_i;
 
@@ -330,7 +331,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
                 gamma[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
               }
             }
-            ADType mu = ad_viscosity(gn, gamma);
+            ADType mu = ad_viscosity(goma_ctx->fem.gn, gamma);
             ADType div_grad_phi = 0;
             ADType div_v = 0;
             for (int w = 0; w < dim; w++) {
@@ -372,27 +373,28 @@ int ad_assemble_momentum(dbl time,       /* current time */
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+        ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           for (int var = V_FIRST; var < V_LAST; var++) {
 
             /* Sensitivity w.r.t. velocity */
             if (pdv[var]) {
-              int pvar = upd->vp[pg->imtrx][var];
+              int pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += resid[a][ii].dx(ad_fv->offset[var] + j);
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] +=
+                    resid[a][ii].dx(ad_fv->offset[var] + j);
 
               } /* End of loop over j */
             } /* End of if the variale is active */
@@ -409,7 +411,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
 void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
 #if 1
   int sdim = VIM;
-  if (pd->gv[FILM_HEIGHT]) {
+  if (goma_ctx->fem.pd->gv[FILM_HEIGHT]) {
     sdim = 3;
   }
 
@@ -420,13 +422,13 @@ void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
       dgamma[i][j] = gamma[i][j].val();
     }
   }
-  switch (vn->evssModel) {
+  switch (goma_ctx->fem.vn->evssModel) {
   case EVSS_FILM_HEIGHT_SQRT_CONF:
   case SQRT_CONF: {
-    for (int mode = 0; mode < vn->modes; mode++) {
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       /* get polymer viscosity */
-      ADType mup = ad_viscosity(ve[mode]->gn, gamma);
-      dbl lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
+      ADType mup = ad_viscosity(goma_ctx->fem.ve[mode]->gn, gamma);
+      dbl lambda = polymer_time_const(goma_ctx->fem.ve[mode]->time_const_st, dgamma, NULL);
 
       ADType bdotb[DIM][DIM];
       ADType b[DIM][DIM];
@@ -451,7 +453,7 @@ void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
   } break;
   default: // Regular stress formulations
   {
-    for (int mode = 0; mode < vn->modes; mode++) {
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       for (int i = 0; i < sdim; i++) {
         for (int j = 0; j < sdim; j++) {
           stress[i][j] += ad_fv->S[mode][i][j];
@@ -491,7 +493,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   /* numerical "adaptive" viscosity and derivatives */
 
   ADType mu_num = 0.0;
-  if (pd->gv[TEMPERATURE]) {
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
     GOMA_EH(GOMA_ERROR, "Temperature not yet implemented ad_fluid_stress");
   }
 
@@ -500,22 +502,22 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
    */
 
   dbl evss_f = 0;
-  if (pd->gv[POLYMER_STRESS11] && is_evss_f_model(vn->evssModel)) {
+  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11] && is_evss_f_model(goma_ctx->fem.vn->evssModel)) {
     evss_f = 1.0;
   }
 
   double Heaviside = 1;
-  if (ls != NULL && ls->ghost_stress) {
-    load_lsi(ls->Length_Scale);
-    switch (ls->ghost_stress) {
+  if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->ghost_stress) {
+    load_lsi(goma_ctx->fem.ls->Length_Scale);
+    switch (goma_ctx->fem.ls->ghost_stress) {
     case LS_OFF:
       Heaviside = 1;
       break;
     case LS_POSITIVE:
-      Heaviside = lsi->H;
+      Heaviside = goma_ctx->fem.lsi->H;
       break;
     case LS_NEGATIVE:
-      Heaviside = 1 - lsi->H;
+      Heaviside = 1 - goma_ctx->fem.lsi->H;
       break;
     default:
       GOMA_EH(GOMA_ERROR, "Unknown Level Set Ghost Stress value");
@@ -547,9 +549,9 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   }
 
   // TODO AD
-  mu = ad_viscosity(gn, gamma);
-  if (pd->gv[POLYMER_STRESS11]) {
-    mus = ad_viscosity(gn, gamma);
+  mu = ad_viscosity(goma_ctx->fem.gn, gamma);
+  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
+    mus = ad_viscosity(goma_ctx->fem.gn, gamma);
 
     /* This is the adaptive viscosity from Sun et al., 1999.
      * The term multiplies the continuous and discontinuous
@@ -559,12 +561,12 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
      */
 
     mu_num = 1;
-    if (DOUBLE_NONZERO(vn->eps)) {
+    if (DOUBLE_NONZERO(goma_ctx->fem.vn->eps)) {
       ADType s[DIM][DIM] = {{0.}};
-      for (int mode = 0; mode < vn->modes; mode++) {
+      for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
         for (int a = 0; a < VIM; a++) {
           for (int b = 0; b < VIM; b++) {
-            s[a][b] += fv->S[mode][a][b];
+            s[a][b] += goma_ctx->fem.fv->S[mode][a][b];
           }
         }
       }
@@ -574,10 +576,10 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
 
     mu = mu_num * mus;
 
-    for (int mode = 0; mode < vn->modes; mode++) {
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       /* get polymer viscosity */
       // TODO AD
-      mup = ad_viscosity(ve[mode]->gn, gamma);
+      mup = ad_viscosity(goma_ctx->fem.ve[mode]->gn, gamma);
 
       mu += Heaviside * mu_num * at * mup;
 
@@ -587,7 +589,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   /*
    * Calculate the dilational viscosity, if necessary
    */
-  if (mp->DilationalViscosityModel != DILVISCM_KAPPAWIPESMU) {
+  if (goma_ctx->fem.mp->DilationalViscosityModel != DILVISCM_KAPPAWIPESMU) {
     GOMA_EH(GOMA_ERROR, "Dilational viscosity not enabled AD fluid stress");
   }
 
@@ -595,7 +597,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
    * Viscoelastic Stress contributions
    */
   ADType polymer_stress[DIM][DIM];
-  if (pd->gv[POLYMER_STRESS11]) {
+  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
     ad_ve_polymer_stress(gamma, polymer_stress);
   }
 
@@ -605,7 +607,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
     }
   }
 
-  if (pd->gv[POLYMER_STRESS11]) {
+  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
     for (int a = 0; a < VIM; a++) {
       for (int b = 0; b < VIM; b++) {
         // TODO : derivative may be missing here...
@@ -613,7 +615,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
       }
     }
   }
-  if (gn->ConstitutiveEquation == BINGHAM_MIXED) {
+  if (goma_ctx->fem.gn->ConstitutiveEquation == BINGHAM_MIXED) {
     GOMA_EH(-1, "BINGHAM_MIXED not enabled for AD fluid stress");
   }
 }
@@ -635,7 +637,7 @@ int ad_momentum_source_term(ADType f[DIM], /* Body force. */
                             dbl time) {
   int a;
   int eqn;
-  const int dim = pd->Num_Dim;
+  const int dim = goma_ctx->fem.pd->Num_Dim;
   int status = 0;
 
   /* initialize everything to zero */
@@ -644,32 +646,32 @@ int ad_momentum_source_term(ADType f[DIM], /* Body force. */
   }
 
   /****Momentum Source Model******/
-  if (mp->MomentumSourceModel == CONSTANT) {
+  if (goma_ctx->fem.mp->MomentumSourceModel == CONSTANT) {
     int force_dim = dim;
-    if (pd->CoordinateSystem == CARTESIAN_2pt5D) {
+    if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D) {
       force_dim = 3;
     }
     for (int a = 0; a < force_dim; a++) {
       eqn = R_MOMENTUM1 + a;
-      if (pd->e[upd->matrix_index[eqn]][eqn] & T_SOURCE) {
-        f[a] = mp->momentum_source[a];
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[eqn]][eqn] & T_SOURCE) {
+        f[a] = goma_ctx->fem.mp->momentum_source[a];
       }
     }
-  } else if (mp->MomentumSourceModel == LEVEL_SET && pd->gv[FILL]) {
+  } else if (goma_ctx->fem.mp->MomentumSourceModel == LEVEL_SET && goma_ctx->fem.pd->gv[FILL]) {
     DENSITY_DEPENDENCE_STRUCT d_rho_struct; /* density dependence */
     DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
     double rho = density(d_rho, time);
 
-    for (a = 0; a < pd->Num_Dim; a++) {
-      f[a] = mp->momentum_source[a] * rho;
+    for (a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
+      f[a] = goma_ctx->fem.mp->momentum_source[a] * rho;
     }
-  } else if (mp->MomentumSourceModel == VARIABLE_DENSITY) {
-    if (mp->DensityModel == SOLVENT_POLYMER) {
+  } else if (goma_ctx->fem.mp->MomentumSourceModel == VARIABLE_DENSITY) {
+    if (goma_ctx->fem.mp->DensityModel == SOLVENT_POLYMER) {
       double rho = density(NULL, time);
       for (a = 0; a < dim; a++) {
         eqn = R_MOMENTUM1 + a;
-        if (pd->e[upd->matrix_index[eqn]][eqn] & T_SOURCE) {
-          f[a] = rho * mp->momentum_source[a];
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[eqn]][eqn] & T_SOURCE) {
+          f[a] = rho * goma_ctx->fem.mp->momentum_source[a];
         }
       }
     } else {
@@ -679,8 +681,10 @@ int ad_momentum_source_term(ADType f[DIM], /* Body force. */
     GOMA_EH(GOMA_ERROR, "Unknown Navier-Stokes Source Model for AD");
   }
 
-  if (ls != NULL && mp->mp2nd != NULL && mp->MomentumSourceModel != LEVEL_SET &&
-      mp->mp2nd->MomentumSourceModel == CONSTANT && (pd->e[pg->imtrx][R_MOMENTUM1] & T_SOURCE)) {
+  if (goma_ctx->fem.ls != NULL && goma_ctx->fem.mp->mp2nd != NULL &&
+      goma_ctx->fem.mp->MomentumSourceModel != LEVEL_SET &&
+      goma_ctx->fem.mp->mp2nd->MomentumSourceModel == CONSTANT &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] & T_SOURCE)) {
     GOMA_EH(GOMA_ERROR, "Unknown Navier-Stokes Source Model for AD");
   }
 
@@ -701,7 +705,7 @@ int ad_calc_pspg(ADType pspg[DIM],
   int pspg_global;
   int pspg_local;
 
-  dbl *v = fv->v; /* Velocity field. */
+  dbl *v = goma_ctx->fem.fv->v; /* Velocity field. */
   ADType *grad_P = ad_fv->grad_P;
 
   /*
@@ -755,7 +759,7 @@ int ad_calc_pspg(ADType pspg[DIM],
   int species; /* species number for particle phase,  */
   dbl ompvf;   /* 1 - partical volume fraction */
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
 
   /* initialize */
   for (a = 0; a < DIM; a++)
@@ -779,15 +783,15 @@ int ad_calc_pspg(ADType pspg[DIM],
 
   int v_s[MAX_MODES][DIM][DIM];
 
-  if (pd->gv[POLYMER_STRESS11]) {
+  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
     stress_eqn_pointer(v_s);
   }
 
   /* initialize dependencies */
 
-  if (pd->e[pg->imtrx][R_PMOMENTUM1]) {
-    species = (int)mp->u_density[0];
-    ompvf = 1.0 - fv->c[species];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1]) {
+    species = (int)goma_ctx->fem.mp->u_density[0];
+    ompvf = 1.0 - goma_ctx->fem.fv->c[species];
   } else {
     species = -1;
     ompvf = 1.0;
@@ -806,7 +810,7 @@ int ad_calc_pspg(ADType pspg[DIM],
   } else if (pspg_local) {
     GOMA_EH(GOMA_ERROR, "PSPG Local not enabled for AD");
   } else if (goma_ctx->solver.pspg == 3) { // shakib
-    ad_only_tau_momentum_shakib(pspg_tau, pd->Num_Dim, dt, TRUE);
+    ad_only_tau_momentum_shakib(pspg_tau, goma_ctx->fem.pd->Num_Dim, dt, TRUE);
   }
 
   for (a = 0; a < VIM; a++)
@@ -816,7 +820,7 @@ int ad_calc_pspg(ADType pspg[DIM],
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
       gamma[a][b] = grad_v[a][b] + grad_v[b][a];
-      dgamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+      dgamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
 
@@ -824,18 +828,19 @@ int ad_calc_pspg(ADType pspg[DIM],
    * get viscosity for velocity second derivative/diffusion
    * term in PSPG stuff
    */
-  mu = ad_viscosity(gn, gamma);
+  mu = ad_viscosity(goma_ctx->fem.gn, gamma);
 
   /* get variables we will need for momentum residual */
 
   for (a = 0; a < WIM; a++) {
-    if (pd->TimeIntegration != STEADY && pd->v[pg->imtrx][MESH_DISPLACEMENT1 + a]) {
+    if (goma_ctx->fem.pd->TimeIntegration != STEADY &&
+        goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1 + a]) {
       x_dot[a] = ad_fv->x_dot[a];
     } else {
       x_dot[a] = 0.;
     }
 
-    if (pd->TimeIntegration != STEADY) {
+    if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
       v_dot[a] = ad_fv->v_dot[a];
     } else {
       v_dot[a] = 0.;
@@ -845,28 +850,31 @@ int ad_calc_pspg(ADType pspg[DIM],
   for (p = 0; p < WIM; p++)
     div_s[p] = 0.;
 
-  if (pd->gv[POLYMER_STRESS11]) {
-    if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV ||
-        vn->evssModel == LOG_CONF_TRANSIENT || vn->evssModel == LOG_CONF_TRANSIENT_GRADV) {
-      for (mode = 0; mode < vn->modes; mode++) {
+  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
+    if (goma_ctx->fem.vn->evssModel == LOG_CONF || goma_ctx->fem.vn->evssModel == LOG_CONF_GRADV ||
+        goma_ctx->fem.vn->evssModel == LOG_CONF_TRANSIENT ||
+        goma_ctx->fem.vn->evssModel == LOG_CONF_TRANSIENT_GRADV) {
+      for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
         dbl lambda = 0.0;
-        lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
-        dbl mup = viscosity(ve[mode]->gn, dgamma, NULL);
-        int dofs = ei[upd->matrix_index[v_s[mode][0][0]]]->dof[v_s[mode][0][0]];
+        lambda = polymer_time_const(goma_ctx->fem.ve[mode]->time_const_st, dgamma, NULL);
+        dbl mup = viscosity(goma_ctx->fem.ve[mode]->gn, dgamma, NULL);
+        int dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v_s[mode][0][0]]]
+                       ->dof[v_s[mode][0][0]];
         dbl grad_S[DIM][DIM][DIM] = {{{0.0}}};
         dbl s[MDE][DIM][DIM];
         dbl exp_s[MDE][DIM][DIM] = {{{0.0}}};
         dbl eig_values[DIM];
         dbl R[DIM][DIM];
         for (int k = 0; k < dofs; k++) {
-          if (pg->imtrx == upd->matrix_index[POLYMER_STRESS11] &&
-              (vn->evssModel == LOG_CONF_TRANSIENT_GRADV || vn->evssModel == LOG_CONF_TRANSIENT)) {
+          if (goma_ctx->fem.pg->imtrx == goma_ctx->fem.upd->matrix_index[POLYMER_STRESS11] &&
+              (goma_ctx->fem.vn->evssModel == LOG_CONF_TRANSIENT_GRADV ||
+               goma_ctx->fem.vn->evssModel == LOG_CONF_TRANSIENT)) {
             for (int i = 0; i < VIM; i++) {
               for (int j = 0; j < VIM; j++) {
                 if (j >= i) {
-                  s[k][i][j] = *esp_old->S[mode][i][j][k];
+                  s[k][i][j] = *goma_ctx->fem.esp_old->S[mode][i][j][k];
                 } else {
-                  s[k][i][j] = *esp_old->S[mode][j][i][k];
+                  s[k][i][j] = *goma_ctx->fem.esp_old->S[mode][j][i][k];
                 }
               }
             }
@@ -874,9 +882,9 @@ int ad_calc_pspg(ADType pspg[DIM],
             for (int i = 0; i < VIM; i++) {
               for (int j = 0; j < VIM; j++) {
                 if (j >= i) {
-                  s[k][i][j] = *esp->S[mode][i][j][k];
+                  s[k][i][j] = *goma_ctx->fem.esp->S[mode][i][j][k];
                 } else {
-                  s[k][i][j] = *esp->S[mode][j][i][k];
+                  s[k][i][j] = *goma_ctx->fem.esp->S[mode][j][i][k];
                 }
               }
             }
@@ -889,9 +897,11 @@ int ad_calc_pspg(ADType pspg[DIM],
               grad_S[r][p][q] = 0.;
               for (int i = 0; i < dofs; i++) {
                 if (p <= q) {
-                  grad_S[r][p][q] += exp_s[i][p][q] * bf[POLYMER_STRESS11]->grad_phi[i][r];
+                  grad_S[r][p][q] +=
+                      exp_s[i][p][q] * goma_ctx->fem.bf[POLYMER_STRESS11]->grad_phi[i][r];
                 } else {
-                  grad_S[r][p][q] += exp_s[i][q][p] * bf[POLYMER_STRESS11]->grad_phi[i][r];
+                  grad_S[r][p][q] +=
+                      exp_s[i][q][p] * goma_ctx->fem.bf[POLYMER_STRESS11]->grad_phi[i][r];
                 }
               }
             }
@@ -909,11 +919,12 @@ int ad_calc_pspg(ADType pspg[DIM],
           div_s[p] += (mup / lambda) * div_exp_s[p];
         }
       }
-    } else if (vn->evssModel == SQRT_CONF) {
-      for (mode = 0; mode < vn->modes; mode++) {
-        int dofs = ei[upd->matrix_index[v_s[mode][0][0]]]->dof[v_s[mode][0][0]];
-        dbl lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
-        dbl mup = viscosity(ve[mode]->gn, dgamma, NULL);
+    } else if (goma_ctx->fem.vn->evssModel == SQRT_CONF) {
+      for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+        int dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v_s[mode][0][0]]]
+                       ->dof[v_s[mode][0][0]];
+        dbl lambda = polymer_time_const(goma_ctx->fem.ve[mode]->time_const_st, dgamma, NULL);
+        dbl mup = viscosity(goma_ctx->fem.ve[mode]->gn, dgamma, NULL);
         ADType b[MDE][DIM][DIM];
         ADType bdotb[MDE][DIM][DIM];
         for (int i = 0; i < VIM; i++) {
@@ -922,10 +933,10 @@ int ad_calc_pspg(ADType pspg[DIM],
             for (int k = 0; k < dofs; k++) {
               if (j >= i) {
                 b[k][i][j] = ADType(ad_fv->total_ad_variables, ad_fv->offset[v_s[mode][i][j]] + k,
-                                    *esp->S[mode][i][j][k]);
+                                    *goma_ctx->fem.esp->S[mode][i][j][k]);
               } else {
                 b[k][i][j] = ADType(ad_fv->total_ad_variables, ad_fv->offset[v_s[mode][i][j]] + k,
-                                    *esp->S[mode][j][i][k]);
+                                    *goma_ctx->fem.esp->S[mode][j][i][k]);
               }
             }
           }
@@ -995,18 +1006,19 @@ int ad_calc_pspg(ADType pspg[DIM],
       // }
     } else {
       for (p = 0; p < WIM; p++) {
-        for (mode = 0; mode < vn->modes; mode++) {
-          div_s[p] += fv->div_S[mode][p];
+        for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+          div_s[p] += goma_ctx->fem.fv->div_S[mode][p];
         }
       }
     }
   }
 
-  if (cr->MassFluxModel == DM_SUSPENSION_BALANCE || cr->MassFluxModel == HYDRODYNAMIC_QTENSOR_OLD ||
-      cr->MassFluxModel == HYDRODYNAMIC_QTENSOR)
+  if (goma_ctx->fem.cr->MassFluxModel == DM_SUSPENSION_BALANCE ||
+      goma_ctx->fem.cr->MassFluxModel == HYDRODYNAMIC_QTENSOR_OLD ||
+      goma_ctx->fem.cr->MassFluxModel == HYDRODYNAMIC_QTENSOR)
     GOMA_EH(GOMA_ERROR, "Particle stress not enabled for AD");
 
-  if (pd->gv[VELOCITY_GRADIENT11]) {
+  if (goma_ctx->fem.pd->gv[VELOCITY_GRADIENT11]) {
     for (p = 0; p < WIM; p++) {
       div_G[p] = ad_fv->div_G[p];
     }
@@ -1016,13 +1028,14 @@ int ad_calc_pspg(ADType pspg[DIM],
     }
   }
 
-  if (pd->e[upd->matrix_index[R_MOMENTUM1]][R_MOMENTUM1] & T_POROUS_BRINK) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[R_MOMENTUM1]][R_MOMENTUM1] &
+      T_POROUS_BRINK) {
     GOMA_EH(GOMA_ERROR, "Porous Brinkman not enabled for AD");
   } else {
     por = 1.;
     por2 = 1.;
     per = 1.;
-    vis = mp->viscosity;
+    vis = goma_ctx->fem.mp->viscosity;
     sc = 0.;
   }
 
@@ -1036,7 +1049,7 @@ int ad_calc_pspg(ADType pspg[DIM],
   /* get momentum source term */
   ad_momentum_source_term(f, time_value);
 
-  if (pd->gv[R_PMOMENTUM1]) {
+  if (goma_ctx->fem.pd->gv[R_PMOMENTUM1]) {
     rho_t = ompvf * rho;
     meqn1 = R_PMOMENTUM1;
   } else {
@@ -1048,35 +1061,38 @@ int ad_calc_pspg(ADType pspg[DIM],
     meqn = meqn1 + a;
 
     mass = 0.;
-    if ((pd->e[upd->matrix_index[meqn]][meqn] & T_MASS) && (pd->TimeIntegration != STEADY)) {
+    if ((goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[meqn]][meqn] & T_MASS) &&
+        (goma_ctx->fem.pd->TimeIntegration != STEADY)) {
       mass = rho_t * v_dot[a] / por;
-      mass *= pd->etm[upd->matrix_index[meqn]][meqn][(LOG2_MASS)];
+      mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.upd->matrix_index[meqn]][meqn][(LOG2_MASS)];
     }
 
     advection = 0.;
-    if (pd->e[upd->matrix_index[meqn]][meqn] & T_ADVECTION) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[meqn]][meqn] & T_ADVECTION) {
       for (p = 0; p < WIM; p++) {
         advection += rho_t * (v[p] - x_dot[p]) * grad_v[p][a] / por2;
       }
-      advection *= pd->etm[upd->matrix_index[meqn]][meqn][(LOG2_ADVECTION)];
+      advection *=
+          goma_ctx->fem.pd->etm[goma_ctx->fem.upd->matrix_index[meqn]][meqn][(LOG2_ADVECTION)];
     }
 
     diffusion = 0.;
-    if (pd->e[upd->matrix_index[meqn]][meqn] & T_DIFFUSION) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[meqn]][meqn] & T_DIFFUSION) {
       diffusion = grad_P[a] - div_s[a];
       /*diffusion  -= div_tau_p[a]  */
       diffusion -= mu * div_G[a];
-      diffusion *= pd->etm[upd->matrix_index[meqn]][meqn][(LOG2_DIFFUSION)];
+      diffusion *=
+          goma_ctx->fem.pd->etm[goma_ctx->fem.upd->matrix_index[meqn]][meqn][(LOG2_DIFFUSION)];
     }
 
     source = 0.;
-    if (pd->e[upd->matrix_index[meqn]][meqn] & T_SOURCE) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[meqn]][meqn] & T_SOURCE) {
       source = -f[a];
-      source *= pd->etm[upd->matrix_index[meqn]][meqn][(LOG2_SOURCE)];
+      source *= goma_ctx->fem.pd->etm[goma_ctx->fem.upd->matrix_index[meqn]][meqn][(LOG2_SOURCE)];
     }
 
     porous = 0.;
-    if (pd->e[upd->matrix_index[meqn]][meqn] & T_POROUS_BRINK) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[meqn]][meqn] & T_POROUS_BRINK) {
     }
 
     momentum[a] = mass + advection + diffusion + source + porous;
@@ -1118,7 +1134,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
   int meqn;
   int v_s[MAX_MODES][DIM][DIM];
 
-  int *pdv = pd->v[pg->imtrx];
+  int *pdv = goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx];
 
   ADType pspg[DIM];
 
@@ -1142,7 +1158,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
    */
 
   eqn = R_PRESSURE;
-  peqn = upd->ep[pg->imtrx][eqn];
+  peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
   ADType div_v = 0;
 
@@ -1154,17 +1170,17 @@ int ad_assemble_continuity(dbl time_value, /* current time */
    * Bail out fast if there's nothing to do...
    */
 
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (status);
   }
 
-  if (pd->gv[POLYMER_STRESS11]) {
+  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
     err = stress_eqn_pointer(v_s);
   }
 
-  wt = fv->wt;
-  det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
-  h3 = fv->h3;         /* Differential volume element (scales). */
+  wt = goma_ctx->fem.fv->wt;
+  det_J = ad_fv->detJ;       /* Really, ought to be mesh eqn. */
+  h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
 
   d_area = wt * det_J * h3;
 
@@ -1172,26 +1188,27 @@ int ad_assemble_continuity(dbl time_value, /* current time */
    * Get the deformation gradients and tensors if needed
    */
 
-  lagrangian_mesh_motion = (cr->MeshMotion == LAGRANGIAN || cr->MeshMotion == DYNAMIC_LAGRANGIAN);
-  electrode_kinetics_on = (mp->SpeciesSourceModel[0] == ELECTRODE_KINETICS);
-  ion_reactions_on = (mp->SpeciesSourceModel[0] == ION_REACTIONS);
-  total_ale_on = (cr->MeshMotion == TOTAL_ALE);
-  hydromassflux_on = (cr->MassFluxModel == HYDRODYNAMIC);
-  suspensionsource_on = (mp->MomentumSourceModel == SUSPENSION);
+  lagrangian_mesh_motion = (goma_ctx->fem.cr->MeshMotion == LAGRANGIAN ||
+                            goma_ctx->fem.cr->MeshMotion == DYNAMIC_LAGRANGIAN);
+  electrode_kinetics_on = (goma_ctx->fem.mp->SpeciesSourceModel[0] == ELECTRODE_KINETICS);
+  ion_reactions_on = (goma_ctx->fem.mp->SpeciesSourceModel[0] == ION_REACTIONS);
+  total_ale_on = (goma_ctx->fem.cr->MeshMotion == TOTAL_ALE);
+  hydromassflux_on = (goma_ctx->fem.cr->MassFluxModel == HYDRODYNAMIC);
+  suspensionsource_on = (goma_ctx->fem.mp->MomentumSourceModel == SUSPENSION);
 
-  if (lagrangian_mesh_motion && pd->gv[R_MESH1]) {
-    err = belly_flop(elc->lame_mu);
+  if (lagrangian_mesh_motion && goma_ctx->fem.pd->gv[R_MESH1]) {
+    err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
     if (err == 2)
       return (err);
   }
 
-  if (total_ale_on && !pd->gv[VELOCITY1]) {
+  if (total_ale_on && !goma_ctx->fem.pd->gv[VELOCITY1]) {
     total_ale_and_velo_off = 1;
   }
 
-  if (total_ale_and_velo_off && pd->gv[R_SOLID1]) {
-    err = belly_flop_rs(elc_rs->lame_mu);
+  if (total_ale_and_velo_off && goma_ctx->fem.pd->gv[R_SOLID1]) {
+    err = belly_flop_rs(goma_ctx->fem.elc_rs->lame_mu);
     GOMA_EH(err, "error in belly flop for real solid");
     if (err == 2)
       return (err);
@@ -1201,7 +1218,8 @@ int ad_assemble_continuity(dbl time_value, /* current time */
     ad_calc_pspg(pspg, time_value, tt, dt, pg_data);
   }
 
-  if (mp->MomentumSourceModel == SUSPENSION_PM || electrode_kinetics_on) /*  RSL 7/25/00  */
+  if (goma_ctx->fem.mp->MomentumSourceModel == SUSPENSION_PM ||
+      electrode_kinetics_on) /*  RSL 7/25/00  */
   {
     err = get_continuous_species_terms(&s_terms, 0.0, tt, dt, pg_data->hsquared);
     GOMA_EH(err, "problem in getting the species terms");
@@ -1214,31 +1232,32 @@ int ad_assemble_continuity(dbl time_value, /* current time */
     GOMA_EH(err, "problem in getting the species terms");
   }
 
-  if ((hydromassflux_on) && (mp->DensityModel == SUSPENSION) && (suspensionsource_on)) {
+  if ((hydromassflux_on) && (goma_ctx->fem.mp->DensityModel == SUSPENSION) &&
+      (suspensionsource_on)) {
     /*
      * Compute hydrodynamic/sedimentation flux and sensitivities.
      */
 
-    w0 =
-        (int)mp->u_density[0]; /* This is the species number that is transported HYDRODYNAMICally */
+    w0 = (int)goma_ctx->fem.mp
+             ->u_density[0]; /* This is the species number that is transported HYDRODYNAMICally */
 
     hydro_flux(&s_terms, w0, tt, dt, pg_data->hsquared);
   }
 
-  advection_on = pd->e[pg->imtrx][eqn] & T_ADVECTION;
+  advection_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION;
 
-  advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+  advection_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
 
   dbl ls_disable_pspg = 1;
 
-  std::vector<ADType> resid(ei[pg->imtrx]->dof[eqn]);
-  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+  std::vector<ADType> resid(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]);
+  for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
     resid[i] = 0;
   }
-  if (af->Assemble_Residual) {
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-      phi_i = bf[eqn]->phi[i];
+      phi_i = goma_ctx->fem.bf[eqn]->phi[i];
 
       /*
        *  Mass Terms: drhodt terms (usually though problem dependent)
@@ -1254,7 +1273,8 @@ int ad_assemble_continuity(dbl time_value, /* current time */
        */
       ADType advection = 0.0;
       if (advection_on) {
-        if (pd->gv[VELOCITY1]) /* then must be solving fluid mechanics in this material */
+        if (goma_ctx->fem.pd
+                ->gv[VELOCITY1]) /* then must be solving fluid mechanics in this material */
         {
 
           /*
@@ -1273,7 +1293,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
       if (goma_ctx->solver.pspg) {
         for (a = 0; a < WIM; a++) {
           meqn = R_MOMENTUM1 + a;
-          if (pd->gv[meqn]) {
+          if (goma_ctx->fem.pd->gv[meqn]) {
             pressure_stabilization += ad_fv->basis[eqn].grad_phi[i][a] * pspg[a];
           }
         }
@@ -1284,22 +1304,23 @@ int ad_assemble_continuity(dbl time_value, /* current time */
        *  Add up the individual contributions and sum them into the local element
        *  contribution for the total continuity equation for the ith local unknown
        */
-      lec->R[LEC_R_INDEX(peqn, i)] += advection.val() + pressure_stabilization.val();
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += advection.val() + pressure_stabilization.val();
       resid[i] = advection + pressure_stabilization;
     }
   }
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     eqn = PRESSURE;
-    peqn = upd->ep[pg->imtrx][eqn];
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
       /* Sensitivity w.r.t. velocity */
       for (int var = V_FIRST; var < V_LAST; var++) {
         if (pdv[var]) {
-          pvar = upd->vp[pg->imtrx][var];
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                resid[i].dx(ad_fv->offset[var] + j);
           } /* End of loop over j */
         } /* End of if the variale is active */
       }
@@ -1324,13 +1345,13 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
    */
   std::vector<std::vector<ADType>> resid(WIM);
   for (int a = 0; a < WIM; a++) {
-    resid[a].resize(ei[pg->imtrx]->dof[eqn + a]);
-    for (int i = 0; i < ei[pg->imtrx]->dof[eqn + a]; i++) {
+    resid[a].resize(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn + a]);
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn + a]; i++) {
       resid[a][i] = 0;
     }
   }
   dbl rho = density(NULL, time);
-  ADType d_area = ad_fv->detJ * fv->wt * fv->h3;
+  ADType d_area = ad_fv->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
 
   ADType f[DIM];
   ad_momentum_source_term(f, time);
@@ -1365,19 +1386,19 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
   }
   ad_ve_polymer_stress(gamma, stress);
 
-  ADType mu = ad_viscosity(gn, gamma);
+  ADType mu = ad_viscosity(goma_ctx->fem.gn, gamma);
   dbl evss_f = 0.0;
 
   ADType mu_num = 1.0;
-  if (DOUBLE_NONZERO(vn->eps)) {
+  if (DOUBLE_NONZERO(goma_ctx->fem.vn->eps)) {
     mu_num = ad_numerical_viscosity(stress, gamma_cont, 2);
   }
 
   ADType mup = 0;
-  if (pd->gv[VELOCITY_GRADIENT11]) {
-    for (int mode = 0; mode < vn->modes; mode++) {
+  if (goma_ctx->fem.pd->gv[VELOCITY_GRADIENT11]) {
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       evss_f = 1.0;
-      ADType mup_mode = ad_viscosity(ve[mode]->gn, gamma);
+      ADType mup_mode = ad_viscosity(goma_ctx->fem.ve[mode]->gn, gamma);
       mup += mup_mode;
     }
   }
@@ -1392,41 +1413,41 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
     }
   }
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     /*
      * Assemble each component "a" of the momentum equation...
      */
     for (int a = 0; a < WIM; a++) {
       int eqn = R_MOMENTUM1 + a;
-      int peqn = upd->ep[pg->imtrx][eqn];
+      int peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      int mass_on = pd->e[pg->imtrx][eqn] & T_MASS;
-      int advection_on = pd->e[pg->imtrx][eqn] & T_ADVECTION;
-      int diffusion_on = pd->e[pg->imtrx][eqn] & T_DIFFUSION;
-      int source_on = pd->e[pg->imtrx][eqn] & T_SOURCE;
+      int mass_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS;
+      int advection_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION;
+      int diffusion_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION;
+      int source_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE;
 
-      dbl mass_etm = pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-      dbl advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
-      dbl diffusion_etm = pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-      dbl source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+      dbl mass_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
+      dbl advection_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
+      dbl diffusion_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      dbl source_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
       /*
        * In the element, there will be contributions to this many equations
        * based on the number of degrees of freedom...
        */
 
-      for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        int ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+        int ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
           /*
            *  Here is where we figure out whether the row is to placed in
            *  the normal spot (e.g., ii = i), or whether a boundary condition
            *  require that the volumetric contribution be stuck in another
            *  ldof pertaining to the same variable type.
            */
-          int ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          int ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-          dbl phi_i = bf[eqn]->phi[i];
+          dbl phi_i = goma_ctx->fem.bf[eqn]->phi[i];
           /* only use Petrov Galerkin on advective term - if required */
           ADType wt_func = phi_i;
 
@@ -1475,7 +1496,7 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
            */
 
           /*lec->R[LEC_R_INDEX(peqn,ii)] += mass + advection + porous + diffusion + source;*/
-          lec->R[LEC_R_INDEX(peqn, ii)] +=
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, ii)] +=
               mass.val() + advection.val() + diffusion.val() + source.val();
           resid[a][ii] += mass + advection + diffusion + source;
         } /*end if (active_dofs) */
@@ -1487,27 +1508,28 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (int a = 0; a < WIM; a++) {
       int eqn = R_MOMENTUM1 + a;
-      int peqn = upd->ep[pg->imtrx][eqn];
+      int peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        int ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+        int ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-        int ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+        int ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           for (int var = V_FIRST; var < V_LAST; var++) {
 
             /* Sensitivity w.r.t. velocity */
-            if (pd->v[pg->imtrx][var]) {
-              int pvar = upd->vp[pg->imtrx][var];
+            if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+              int pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += resid[a][ii].dx(ad_fv->offset[var] + j);
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] +=
+                    resid[a][ii].dx(ad_fv->offset[var] + j);
 
               } /* End of loop over j */
             } /* End of if the variale is active */
@@ -1551,7 +1573,7 @@ int ad_assemble_film_height(dbl time, /* current time */
    */
 
   eqn = R_FILM_HEIGHT;
-  peqn = upd->ep[pg->imtrx][eqn];
+  peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
   ADType div_v = 0;
 
@@ -1564,33 +1586,33 @@ int ad_assemble_film_height(dbl time, /* current time */
    * Bail out fast if there's nothing to do...
    */
 
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (status);
   }
 
   ADType supg_tau = 0;
   ad_supg_tau_shakib(supg_tau, 2, dt, 1e-9, eqn);
 
-  wt = fv->wt;
-  det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
-  h3 = fv->h3;         /* Differential volume element (scales). */
+  wt = goma_ctx->fem.fv->wt;
+  det_J = ad_fv->detJ;       /* Really, ought to be mesh eqn. */
+  h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
 
   d_area = wt * det_J * h3;
-  std::vector<ADType> resid(ei[pg->imtrx]->dof[eqn]);
-  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+  std::vector<ADType> resid(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]);
+  for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
     resid[i] = 0;
   }
-  dbl mass_etm = pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-  dbl advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
-  dbl diffusion_etm = pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+  dbl mass_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
+  dbl advection_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
+  dbl diffusion_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
   dbl diffusivity = 0.;
-  if (mp->film_height_diffusivityModel == CONSTANT) {
-    diffusivity = mp->film_height_diffusivity;
+  if (goma_ctx->fem.mp->film_height_diffusivityModel == CONSTANT) {
+    diffusivity = goma_ctx->fem.mp->film_height_diffusivity;
   }
-  if (af->Assemble_Residual) {
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-      phi_i = bf[eqn]->phi[i];
+      phi_i = goma_ctx->fem.bf[eqn]->phi[i];
       ADType wt_func = phi_i;
       for (int a = 0; a < 2; a++) {
         wt_func += supg_tau * (ad_fv->v[a] - ad_fv->x_dot[a]) * ad_fv->basis[eqn].grad_phi[i][a];
@@ -1613,7 +1635,8 @@ int ad_assemble_film_height(dbl time, /* current time */
        *   Note density is not multiplied into this term normally
        */
       ADType advection = 0.0;
-      if (pd->gv[VELOCITY1]) /* then must be solving fluid mechanics in this material */
+      if (goma_ctx->fem.pd
+              ->gv[VELOCITY1]) /* then must be solving fluid mechanics in this material */
       {
 
         /*
@@ -1640,22 +1663,23 @@ int ad_assemble_film_height(dbl time, /* current time */
        *  Add up the individual contributions and sum them into the local element
        *  contribution for the total continuity equation for the ith local unknown
        */
-      lec->R[LEC_R_INDEX(peqn, i)] += advection.val() + mass.val() + diffusion.val();
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += advection.val() + mass.val() + diffusion.val();
       resid[i] = advection + mass + diffusion;
     }
   }
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     eqn = R_FILM_HEIGHT;
-    peqn = upd->ep[pg->imtrx][eqn];
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
       /* Sensitivity w.r.t. velocity */
       for (int var = V_FIRST; var < V_LAST; var++) {
-        if (pd->v[pg->imtrx][var]) {
-          pvar = upd->vp[pg->imtrx][var];
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
+        if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                resid[i].dx(ad_fv->offset[var] + j);
           } /* End of loop over j */
         } /* End of if the variale is active */
       }
@@ -1686,13 +1710,13 @@ ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   lambda = gn_local->lam;
 
   ADType T;
-  if (pd->gv[TEMPERATURE]) {
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
     T = ad_fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
-  dbl T_alpha = mp->reference[TEMPERATURE];
+  dbl T_alpha = goma_ctx->fem.mp->reference[TEMPERATURE];
   dbl T_shift = gn_local->T_shift;
   dbl atexp = gn_local->atexp;
 
@@ -1734,13 +1758,13 @@ ADType ad_arrhenius_viscosity(struct Generalized_Newtonian *gn_local, ADType gam
   dbl eta0 = gn_local->mu0;
 
   ADType T;
-  if (pd->gv[TEMPERATURE]) {
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
     T = ad_fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
-  dbl T_alpha = mp->reference[TEMPERATURE];
+  dbl T_alpha = goma_ctx->fem.mp->reference[TEMPERATURE];
   dbl T_shift = gn_local->T_shift;
 
   ADType Tpow = pow(T - T_shift, -d);
@@ -1758,13 +1782,13 @@ ADType ad_arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
   dbl atexp = gn_local->atexp;
 
   ADType T;
-  if (pd->gv[TEMPERATURE]) {
+  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
     T = ad_fv->T;
   } else {
-    T = upd->Process_Temperature;
+    T = goma_ctx->fem.upd->Process_Temperature;
   }
 
-  dbl T_alpha = mp->reference[TEMPERATURE];
+  dbl T_alpha = goma_ctx->fem.mp->reference[TEMPERATURE];
 
   ADType mu = eta0 * exp((1 / T - 1 / T_alpha) * atexp);
 
@@ -1775,7 +1799,7 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
 
   int eqn = VELOCITY_GRADIENT11;
   int v_g[DIM][DIM];
-  if (pd->gv[VELOCITY_GRADIENT11]) {
+  if (goma_ctx->fem.pd->gv[VELOCITY_GRADIENT11]) {
     v_g[0][0] = VELOCITY_GRADIENT11;
     v_g[0][1] = VELOCITY_GRADIENT12;
     v_g[1][0] = VELOCITY_GRADIENT21;
@@ -1795,8 +1819,8 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
     resid[a].resize(3);
     for (int b = 0; b < 3; b++) {
       eqn = v_g[a][b];
-      resid[a][b].resize(ei[pg->imtrx]->dof[eqn]);
-      for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      resid[a][b].resize(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]);
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
         resid[a][b][i] = 0;
       }
     }
@@ -1814,7 +1838,7 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
 
   grad_v[2][2] = -(grad_v[0][0] + grad_v[1][1]);
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     /*
      * Assemble each component "a" of the momentum equation...
      */
@@ -1823,38 +1847,38 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
         if ((a == 2 || b == 2) && a != b)
           continue;
         int eqn = v_g[a][b];
-        int peqn = upd->ep[pg->imtrx][eqn];
+        int peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-        int advection_on = pd->e[pg->imtrx][eqn] & T_ADVECTION;
-        int source_on = pd->e[pg->imtrx][eqn] & T_SOURCE;
+        int advection_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION;
+        int source_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE;
 
-        dbl advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
-        dbl source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+        dbl advection_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
+        dbl source_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
         /*
          * In the element, there will be contributions to this many equations
          * based on the number of degrees of freedom...
          */
 
-        for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-          int ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-          if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+          int ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
             /*
              *  Here is where we figure out whether the row is to placed in
              *  the normal spot (e.g., ii = i), or whether a boundary condition
              *  require that the volumetric contribution be stuck in another
              *  ldof pertaining to the same variable type.
              */
-            int ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+            int ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-            dbl phi_i = bf[eqn]->phi[i];
+            dbl phi_i = goma_ctx->fem.bf[eqn]->phi[i];
             /* only use Petrov Galerkin on advective term - if required */
             ADType wt_func = phi_i;
 
             ADType advection = 0.;
             if (advection_on) {
               advection -= grad_v[a][b];
-              advection *= -wt_func * ad_fv->detJ * fv->wt * fv->h3;
+              advection *= -wt_func * ad_fv->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
               advection *= advection_etm;
             }
 
@@ -1862,7 +1886,7 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
             for (int p = 0; p < VIM; p++) {
               diffusion += ad_fv->basis[eqn].grad_phi_e[i][p][a][b] * ad_fv->grad_G[p][a][b];
             }
-            diffusion *= 1e-7 * -ad_fv->detJ * fv->wt * fv->h3;
+            diffusion *= 1e-7 * -ad_fv->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
 
             /*
              * Source term...
@@ -1870,7 +1894,7 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
             ADType source = 0.0;
             if (source_on) {
               source += ad_fv->G[a][b];
-              source *= -wt_func * ad_fv->detJ * fv->wt * fv->h3;
+              source *= -wt_func * ad_fv->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
               source *= source_etm;
             }
 
@@ -1880,7 +1904,8 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
              */
 
             /*lec->R[LEC_R_INDEX(peqn,ii)] += mass + advection + porous + diffusion + source;*/
-            lec->R[LEC_R_INDEX(peqn, ii)] += advection.val() + source.val() + diffusion.val();
+            goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, ii)] +=
+                advection.val() + source.val() + diffusion.val();
             resid[a][b][ii] += advection + source + diffusion;
           } /*end if (active_dofs) */
         } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
@@ -1892,28 +1917,28 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (int a = 0; a < 3; a++) {
       for (int b = 0; b < 3; b++) {
         int eqn = v_g[a][b];
-        int peqn = upd->ep[pg->imtrx][eqn];
+        int peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-        for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-          int ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+        for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+          int ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-          int ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-          if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
-            ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          int ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
+            ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
             for (int var = V_FIRST; var < V_LAST; var++) {
 
               /* Sensitivity w.r.t. velocity */
-              if (pd->v[pg->imtrx][var]) {
-                int pvar = upd->vp[pg->imtrx][var];
+              if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                int pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-                for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
-                  lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] +=
+                  goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] +=
                       resid[a][b][ii].dx(ad_fv->offset[var] + j);
 
                 } /* End of loop over j */

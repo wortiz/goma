@@ -171,26 +171,26 @@ int usr_thermal_conductivity(dbl *param MAYBE_UNUSED,
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   /**********************************************************/
 
   /*******Add property function and sensitivities here*******/
 
   /****************Don't touch these lines***********************/
-  mp->thermal_conductivity = k;                                   /*Do not touch */
-  mp->d_thermal_conductivity[TEMPERATURE] = dkdT;                 /*Do not touch */
-  for (a = 0; a < DIM; a++)                                       /*Do not touch */
-  {                                                               /*Do not touch */
-    mp->d_thermal_conductivity[MESH_DISPLACEMENT1 + a] = dkdX[a]; /*Do not touch */
+  goma_ctx->fem.mp->thermal_conductivity = k;                                   /*Do not touch */
+  goma_ctx->fem.mp->d_thermal_conductivity[TEMPERATURE] = dkdT;                 /*Do not touch */
+  for (a = 0; a < DIM; a++)                                                     /*Do not touch */
+  {                                                                             /*Do not touch */
+    goma_ctx->fem.mp->d_thermal_conductivity[MESH_DISPLACEMENT1 + a] = dkdX[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < MAX_CONC; a++)                                  /*Do not touch */
-  {                                                               /*Do not touch */
-    mp->d_thermal_conductivity[MAX_VARIABLE_TYPES + a] = dkdC[a]; /*Do not touch */
+  for (a = 0; a < MAX_CONC; a++)                                                /*Do not touch */
+  {                                                                             /*Do not touch */
+    goma_ctx->fem.mp->d_thermal_conductivity[MAX_VARIABLE_TYPES + a] = dkdC[a]; /*Do not touch */
   }
   /**************************************************************/
   return (0);
@@ -236,28 +236,28 @@ int usr_electrical_conductivity(dbl *param MAYBE_UNUSED,
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
-  V = fv->V; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
+  V = goma_ctx->fem.fv->V; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   /**********************************************************/
 
   /*******Add property function and sensitivities here*******/
 
   /****************Don't touch these lines***********************/
-  mp->electrical_conductivity = k;                                   /*Do not touch */
-  mp->d_electrical_conductivity[TEMPERATURE] = dkdT;                 /*Do not touch */
-  mp->d_electrical_conductivity[VOLTAGE] = dkdV;                     /*Do not touch */
-  for (a = 0; a < DIM; a++)                                          /*Do not touch */
-  {                                                                  /*Do not touch */
-    mp->d_electrical_conductivity[MESH_DISPLACEMENT1 + a] = dkdX[a]; /*Do not touch */
+  goma_ctx->fem.mp->electrical_conductivity = k;                                   /*Do not touch */
+  goma_ctx->fem.mp->d_electrical_conductivity[TEMPERATURE] = dkdT;                 /*Do not touch */
+  goma_ctx->fem.mp->d_electrical_conductivity[VOLTAGE] = dkdV;                     /*Do not touch */
+  for (a = 0; a < DIM; a++)                                                        /*Do not touch */
+  {                                                                                /*Do not touch */
+    goma_ctx->fem.mp->d_electrical_conductivity[MESH_DISPLACEMENT1 + a] = dkdX[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < MAX_CONC; a++)                                     /*Do not touch */
-  {                                                                  /*Do not touch */
-    mp->d_electrical_conductivity[MAX_VARIABLE_TYPES + a] = dkdC[a]; /*Do not touch */
+  for (a = 0; a < MAX_CONC; a++)                                                   /*Do not touch */
+  {                                                                                /*Do not touch */
+    goma_ctx->fem.mp->d_electrical_conductivity[MAX_VARIABLE_TYPES + a] = dkdC[a]; /*Do not touch */
   }
   /**************************************************************/
 
@@ -293,20 +293,20 @@ int usr_density(dbl *param MAYBE_UNUSED) /* pointer to user-defined parameter li
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
-  for (w = 0; w < pd->Num_Species_Eqn; w++)
-    C[w] = fv->c[w]; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
+  for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++)
+    C[w] = goma_ctx->fem.fv->c[w]; /*Do not touch */
 
   /**********************************************************/
 
   /*******Add property function and sensitivities here*******/
 
   /****************Don't touch these lines***********************/
-  mp->density = rho;                                     /*Do not touch */
-  mp->d_density[TEMPERATURE] = d_rho_dT;                 /*Do not touch */
-  for (w = 0; w < MAX_CONC; w++)                         /*Do not touch */
-  {                                                      /*Do not touch */
-    mp->d_density[MAX_VARIABLE_TYPES + w] = d_rho_dC[w]; /*Do not touch */
+  goma_ctx->fem.mp->density = rho;                                     /*Do not touch */
+  goma_ctx->fem.mp->d_density[TEMPERATURE] = d_rho_dT;                 /*Do not touch */
+  for (w = 0; w < MAX_CONC; w++)                                       /*Do not touch */
+  {                                                                    /*Do not touch */
+    goma_ctx->fem.mp->d_density[MAX_VARIABLE_TYPES + w] = d_rho_dC[w]; /*Do not touch */
   }
   /**************************************************************/
 
@@ -395,11 +395,11 @@ int usr_heat_capacity(dbl *param MAYBE_UNUSED,
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   /**********************************************************/
 
@@ -407,15 +407,15 @@ int usr_heat_capacity(dbl *param MAYBE_UNUSED,
 
   /****************Don't touch these lines***********************/
   /* NB nothing can depend on gradients of variables */
-  mp->heat_capacity = Cp;                                   /*Do not touch */
-  mp->d_heat_capacity[TEMPERATURE] = dCpdT;                 /*Do not touch */
-  for (a = 0; a < DIM; a++)                                 /*Do not touch */
-  {                                                         /*Do not touch */
-    mp->d_heat_capacity[MESH_DISPLACEMENT1 + a] = dCpdX[a]; /*Do not touch */
+  goma_ctx->fem.mp->heat_capacity = Cp;                                   /*Do not touch */
+  goma_ctx->fem.mp->d_heat_capacity[TEMPERATURE] = dCpdT;                 /*Do not touch */
+  for (a = 0; a < DIM; a++)                                               /*Do not touch */
+  {                                                                       /*Do not touch */
+    goma_ctx->fem.mp->d_heat_capacity[MESH_DISPLACEMENT1 + a] = dCpdX[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < MAX_CONC; a++)                            /*Do not touch */
-  {                                                         /*Do not touch */
-    mp->d_heat_capacity[MAX_VARIABLE_TYPES + a] = dCpdC[a]; /*Do not touch */
+  for (a = 0; a < MAX_CONC; a++)                                          /*Do not touch */
+  {                                                                       /*Do not touch */
+    goma_ctx->fem.mp->d_heat_capacity[MAX_VARIABLE_TYPES + a] = dCpdC[a]; /*Do not touch */
   } /*Do not touch */
   /**********************************************************/
 
@@ -506,33 +506,33 @@ int usr_heat_source(dbl *param MAYBE_UNUSED,
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
-  V = fv->V; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
+  V = goma_ctx->fem.fv->V; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   /**********************************************************/
 
   /*******Add property function and sensitivities here*******/
 
   /****************Don't touch these lines***********************/
-  mp->heat_source = h;                          /*Do not touch */
-  mp->d_heat_source[TEMPERATURE] = dhdT;        /*Do not touch */
-  mp->d_heat_source[VOLTAGE] = dhdV;            /*Do not touch */
-                                                /*Do not touch */
-  for (a = 0; a < DIM; a++)                     /*Do not touch */
-  {                                             /*Do not touch */
-    mp->d_heat_source[VELOCITY1 + a] = dhdv[a]; /*Do not touch */
+  goma_ctx->fem.mp->heat_source = h;                          /*Do not touch */
+  goma_ctx->fem.mp->d_heat_source[TEMPERATURE] = dhdT;        /*Do not touch */
+  goma_ctx->fem.mp->d_heat_source[VOLTAGE] = dhdV;            /*Do not touch */
+                                                              /*Do not touch */
+  for (a = 0; a < DIM; a++)                                   /*Do not touch */
+  {                                                           /*Do not touch */
+    goma_ctx->fem.mp->d_heat_source[VELOCITY1 + a] = dhdv[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < DIM; a++)                              /*Do not touch */
-  {                                                      /*Do not touch */
-    mp->d_heat_source[MESH_DISPLACEMENT1 + a] = dhdX[a]; /*Do not touch */
+  for (a = 0; a < DIM; a++)                                            /*Do not touch */
+  {                                                                    /*Do not touch */
+    goma_ctx->fem.mp->d_heat_source[MESH_DISPLACEMENT1 + a] = dhdX[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < MAX_CONC; a++)                         /*Do not touch */
-  {                                                      /*Do not touch */
-    mp->d_heat_source[MAX_VARIABLE_TYPES + a] = dhdC[a]; /*Do not touch */
+  for (a = 0; a < MAX_CONC; a++)                                       /*Do not touch */
+  {                                                                    /*Do not touch */
+    goma_ctx->fem.mp->d_heat_source[MAX_VARIABLE_TYPES + a] = dhdC[a]; /*Do not touch */
   } /*Do not touch */
 
   return (0);
@@ -633,33 +633,33 @@ int usr_species_source(int species_no MAYBE_UNUSED, /* Current species number   
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
-  V = fv->V; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
+  V = goma_ctx->fem.fv->V; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   /**********************************************************/
 
   /*******Add property function and sensitivities here*******/
 
   /****************Don't touch these lines***********************/
-  mp->species_source[species_no] = s;              /*Do not touch */
-  mp->d_species_source[TEMPERATURE] = dsdT;        /*Do not touch */
-  mp->d_species_source[VOLTAGE] = dsdV;            /*Do not touch */
-                                                   /*Do not touch */
-  for (a = 0; a < DIM; a++)                        /*Do not touch */
-  {                                                /*Do not touch */
-    mp->d_species_source[VELOCITY1 + a] = dsdv[a]; /*Do not touch */
+  goma_ctx->fem.mp->species_source[species_no] = s;              /*Do not touch */
+  goma_ctx->fem.mp->d_species_source[TEMPERATURE] = dsdT;        /*Do not touch */
+  goma_ctx->fem.mp->d_species_source[VOLTAGE] = dsdV;            /*Do not touch */
+                                                                 /*Do not touch */
+  for (a = 0; a < DIM; a++)                                      /*Do not touch */
+  {                                                              /*Do not touch */
+    goma_ctx->fem.mp->d_species_source[VELOCITY1 + a] = dsdv[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < DIM; a++)                                 /*Do not touch */
-  {                                                         /*Do not touch */
-    mp->d_species_source[MESH_DISPLACEMENT1 + a] = dsdX[a]; /*Do not touch */
+  for (a = 0; a < DIM; a++)                                               /*Do not touch */
+  {                                                                       /*Do not touch */
+    goma_ctx->fem.mp->d_species_source[MESH_DISPLACEMENT1 + a] = dsdX[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < MAX_CONC; a++)                            /*Do not touch */
-  {                                                         /*Do not touch */
-    mp->d_species_source[MAX_VARIABLE_TYPES + a] = dsdC[a]; /*Do not touch */
+  for (a = 0; a < MAX_CONC; a++)                                          /*Do not touch */
+  {                                                                       /*Do not touch */
+    goma_ctx->fem.mp->d_species_source[MAX_VARIABLE_TYPES + a] = dsdC[a]; /*Do not touch */
   } /*Do not touch */
 
   return (0);
@@ -752,33 +752,33 @@ int usr_current_source(dbl *param MAYBE_UNUSED) /* pointer to user-defined param
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
-  V = fv->V; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
+  V = goma_ctx->fem.fv->V; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   /**********************************************************/
 
   /*******Add property function and sensitivities here*******/
 
   /****************Don't touch these lines***********************/
-  mp->current_source = h;                          /*Do not touch */
-  mp->d_current_source[TEMPERATURE] = dhdT;        /*Do not touch */
-  mp->d_current_source[VOLTAGE] = dhdV;            /*Do not touch */
-                                                   /*Do not touch */
-  for (a = 0; a < DIM; a++)                        /*Do not touch */
-  {                                                /*Do not touch */
-    mp->d_current_source[VELOCITY1 + a] = dhdv[a]; /*Do not touch */
+  goma_ctx->fem.mp->current_source = h;                          /*Do not touch */
+  goma_ctx->fem.mp->d_current_source[TEMPERATURE] = dhdT;        /*Do not touch */
+  goma_ctx->fem.mp->d_current_source[VOLTAGE] = dhdV;            /*Do not touch */
+                                                                 /*Do not touch */
+  for (a = 0; a < DIM; a++)                                      /*Do not touch */
+  {                                                              /*Do not touch */
+    goma_ctx->fem.mp->d_current_source[VELOCITY1 + a] = dhdv[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < DIM; a++)                                 /*Do not touch */
-  {                                                         /*Do not touch */
-    mp->d_current_source[MESH_DISPLACEMENT1 + a] = dhdX[a]; /*Do not touch */
+  for (a = 0; a < DIM; a++)                                               /*Do not touch */
+  {                                                                       /*Do not touch */
+    goma_ctx->fem.mp->d_current_source[MESH_DISPLACEMENT1 + a] = dhdX[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < MAX_CONC; a++)                            /*Do not touch */
-  {                                                         /*Do not touch */
-    mp->d_current_source[MAX_VARIABLE_TYPES + a] = dhdC[a]; /*Do not touch */
+  for (a = 0; a < MAX_CONC; a++)                                          /*Do not touch */
+  {                                                                       /*Do not touch */
+    goma_ctx->fem.mp->d_current_source[MAX_VARIABLE_TYPES + a] = dhdC[a]; /*Do not touch */
   } /*Do not touch */
 
   return (0);
@@ -867,12 +867,12 @@ int usr_viscosity(dbl *param MAYBE_UNUSED) /* pointer to user-defined parameter 
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
-  F = fv->F; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
+  F = goma_ctx->fem.fv->F; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (a = 0; a < pd->Num_Species_Eqn; a++)
-    C[a] = fv->c[a]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (a = 0; a < goma_ctx->fem.pd->Num_Species_Eqn; a++)
+    C[a] = goma_ctx->fem.fv->c[a]; /*Do not touch */
 
   /**********************************************************/
 
@@ -886,25 +886,25 @@ int usr_viscosity(dbl *param MAYBE_UNUSED) /* pointer to user-defined parameter 
    */
 
   mu = param[0];
-  if (fv->c[0] < 0.5) {
+  if (goma_ctx->fem.fv->c[0] < 0.5) {
     mu = param[1];
   }
 
   /****************Don't touch these lines***********************/
-  mp->viscosity = mu;                          /*Do not touch */
-  mp->d_viscosity[TEMPERATURE] = dmudT;        /*Do not touch */
-                                               /*Do not touch */
-  for (a = 0; a < DIM; a++)                    /*Do not touch */
-  {                                            /*Do not touch */
-    mp->d_viscosity[VELOCITY1 + a] = dmudV[a]; /*Do not touch */
+  goma_ctx->fem.mp->viscosity = mu;                          /*Do not touch */
+  goma_ctx->fem.mp->d_viscosity[TEMPERATURE] = dmudT;        /*Do not touch */
+                                                             /*Do not touch */
+  for (a = 0; a < DIM; a++)                                  /*Do not touch */
+  {                                                          /*Do not touch */
+    goma_ctx->fem.mp->d_viscosity[VELOCITY1 + a] = dmudV[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < DIM; a++)                             /*Do not touch */
-  {                                                     /*Do not touch */
-    mp->d_viscosity[MESH_DISPLACEMENT1 + a] = dmudX[a]; /*Do not touch */
+  for (a = 0; a < DIM; a++)                                           /*Do not touch */
+  {                                                                   /*Do not touch */
+    goma_ctx->fem.mp->d_viscosity[MESH_DISPLACEMENT1 + a] = dmudX[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < MAX_CONC; a++)                        /*Do not touch */
-  {                                                     /*Do not touch */
-    mp->d_viscosity[MAX_VARIABLE_TYPES + a] = dmudC[a]; /*Do not touch */
+  for (a = 0; a < MAX_CONC; a++)                                      /*Do not touch */
+  {                                                                   /*Do not touch */
+    goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + a] = dmudC[a]; /*Do not touch */
   } /*Do not touch */
 
   return (0);
@@ -947,11 +947,11 @@ int usr_surface_tension(dbl *param MAYBE_UNUSED) /* ptr to user-defined paramete
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   /*******Add property function and sensitivities here*******/
   /* An example:
@@ -964,20 +964,20 @@ int usr_surface_tension(dbl *param MAYBE_UNUSED) /* ptr to user-defined paramete
    */
 
   /****************Don't touch these lines***********************/
-  mp->surface_tension = sigma;                          /*Do not touch */
-  mp->d_surface_tension[TEMPERATURE] = dsigmadT;        /*Do not touch */
-                                                        /*Do not touch */
-  for (a = 0; a < DIM; a++)                             /*Do not touch */
-  {                                                     /*Do not touch */
-    mp->d_surface_tension[VELOCITY1 + a] = dsigmadV[a]; /*Do not touch */
+  goma_ctx->fem.mp->surface_tension = sigma;                          /*Do not touch */
+  goma_ctx->fem.mp->d_surface_tension[TEMPERATURE] = dsigmadT;        /*Do not touch */
+                                                                      /*Do not touch */
+  for (a = 0; a < DIM; a++)                                           /*Do not touch */
+  {                                                                   /*Do not touch */
+    goma_ctx->fem.mp->d_surface_tension[VELOCITY1 + a] = dsigmadV[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < DIM; a++)                                      /*Do not touch */
-  {                                                              /*Do not touch */
-    mp->d_surface_tension[MESH_DISPLACEMENT1 + a] = dsigmadX[a]; /*Do not touch */
+  for (a = 0; a < DIM; a++)                                                    /*Do not touch */
+  {                                                                            /*Do not touch */
+    goma_ctx->fem.mp->d_surface_tension[MESH_DISPLACEMENT1 + a] = dsigmadX[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < MAX_CONC; a++)                                 /*Do not touch */
-  {                                                              /*Do not touch */
-    mp->d_surface_tension[MAX_VARIABLE_TYPES + a] = dsigmadC[a]; /*Do not touch */
+  for (a = 0; a < MAX_CONC; a++)                                               /*Do not touch */
+  {                                                                            /*Do not touch */
+    goma_ctx->fem.mp->d_surface_tension[MAX_VARIABLE_TYPES + a] = dsigmadC[a]; /*Do not touch */
   } /*Do not touch */
 
   return (0);
@@ -1076,11 +1076,11 @@ int usr_momentum_source(dbl *param MAYBE_UNUSED) /* ptr to user-defined paramete
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   /**********************************************************/
 
@@ -1088,20 +1088,20 @@ int usr_momentum_source(dbl *param MAYBE_UNUSED) /* ptr to user-defined paramete
 
   /****************Don't touch these lines***********************/
   for (a = 0; a < DIM; a++) {
-    mp->momentum_source[a] = f[a];                          /*Do not touch */
-    mp->d_momentum_source[a][TEMPERATURE] = dfdT[a];        /*Do not touch */
-                                                            /*Do not touch */
-    for (b = 0; b < DIM; b++)                               /*Do not touch */
-    {                                                       /*Do not touch */
-      mp->d_momentum_source[a][VELOCITY1 + b] = dfdV[a][b]; /*Do not touch */
+    goma_ctx->fem.mp->momentum_source[a] = f[a];                          /*Do not touch */
+    goma_ctx->fem.mp->d_momentum_source[a][TEMPERATURE] = dfdT[a];        /*Do not touch */
+                                                                          /*Do not touch */
+    for (b = 0; b < DIM; b++)                                             /*Do not touch */
+    {                                                                     /*Do not touch */
+      goma_ctx->fem.mp->d_momentum_source[a][VELOCITY1 + b] = dfdV[a][b]; /*Do not touch */
     } /*Do not touch */
-    for (b = 0; b < DIM; b++)                                        /*Do not touch */
-    {                                                                /*Do not touch */
-      mp->d_momentum_source[a][MESH_DISPLACEMENT1 + a] = dfdX[a][b]; /*Do not touch */
+    for (b = 0; b < DIM; b++)                                                      /*Do not touch */
+    {                                                                              /*Do not touch */
+      goma_ctx->fem.mp->d_momentum_source[a][MESH_DISPLACEMENT1 + a] = dfdX[a][b]; /*Do not touch */
     } /*Do not touch */
-    for (w = 0; w < MAX_CONC; w++)                                   /*Do not touch */
-    {                                                                /*Do not touch */
-      mp->d_momentum_source[a][MAX_VARIABLE_TYPES + w] = dfdC[a][w]; /*Do not touch */
+    for (w = 0; w < MAX_CONC; w++)                                                 /*Do not touch */
+    {                                                                              /*Do not touch */
+      goma_ctx->fem.mp->d_momentum_source[a][MAX_VARIABLE_TYPES + w] = dfdC[a][w]; /*Do not touch */
     }
   } /*Do not touch */
 
@@ -1175,11 +1175,11 @@ int usr_lame_mu(struct Elastic_Constitutive *ep MAYBE_UNUSED,
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   /*******Add property function and sensitivities here*******/
   /* Example:
@@ -1332,11 +1332,11 @@ int usr_lame_lambda(struct Elastic_Constitutive *ep MAYBE_UNUSED,
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   /**********************************************************/
 
@@ -1442,11 +1442,11 @@ int usr_expansion(dbl *param, /* ptr to user-defined parameter list        */
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   /* f = param[0] * sin(param[1] * tran->time_value);  */
   /* Double exponential thermal expansion model        */
@@ -1569,11 +1569,11 @@ int usr_diffusivity(int species_no MAYBE_UNUSED, /* Species number of diffusivit
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   /**********************************************************/
 
@@ -1610,15 +1610,15 @@ int usr_diffusivity(int species_no MAYBE_UNUSED, /* Species number of diffusivit
 
   /****************Don't touch these lines***********************/
   w = species_no;
-  mp->diffusivity[w] = D;                                   /*Do not touch */
-  mp->d_diffusivity[w][TEMPERATURE] = dDdT;                 /*Do not touch */
-  for (a = 0; a < DIM; a++)                                 /*Do not touch */
-  {                                                         /*Do not touch */
-    mp->d_diffusivity[w][MESH_DISPLACEMENT1 + a] = dDdX[a]; /*Do not touch */
+  goma_ctx->fem.mp->diffusivity[w] = D;                                   /*Do not touch */
+  goma_ctx->fem.mp->d_diffusivity[w][TEMPERATURE] = dDdT;                 /*Do not touch */
+  for (a = 0; a < DIM; a++)                                               /*Do not touch */
+  {                                                                       /*Do not touch */
+    goma_ctx->fem.mp->d_diffusivity[w][MESH_DISPLACEMENT1 + a] = dDdX[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < MAX_CONC; a++)                            /*Do not touch */
-  {                                                         /*Do not touch */
-    mp->d_diffusivity[w][MAX_VARIABLE_TYPES + a] = dDdC[a]; /*Do not touch */
+  for (a = 0; a < MAX_CONC; a++)                                          /*Do not touch */
+  {                                                                       /*Do not touch */
+    goma_ctx->fem.mp->d_diffusivity[w][MAX_VARIABLE_TYPES + a] = dDdC[a]; /*Do not touch */
   }
   /**************************************************************/
 
@@ -1661,12 +1661,12 @@ int usr_FlowingLiquidViscosity(dbl *param MAYBE_UNUSED) /* ptr to user-defined p
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
-  F = fv->F; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
+  F = goma_ctx->fem.fv->F; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (a = 0; a < pd->Num_Species_Eqn; a++)
-    C[a] = fv->c[a]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (a = 0; a < goma_ctx->fem.pd->Num_Species_Eqn; a++)
+    C[a] = goma_ctx->fem.fv->c[a]; /*Do not touch */
 
   /**********************************************************/
 
@@ -1679,20 +1679,22 @@ int usr_FlowingLiquidViscosity(dbl *param MAYBE_UNUSED) /* ptr to user-defined p
    *
    */
   /****************Don't touch these lines***********************/
-  mp->FlowingLiquid_viscosity = mu;                          /*Do not touch */
-  mp->d_FlowingLiquid_viscosity[TEMPERATURE] = dmudT;        /*Do not touch */
-                                                             /*Do not touch */
-  for (a = 0; a < DIM; a++)                                  /*Do not touch */
-  {                                                          /*Do not touch */
-    mp->d_FlowingLiquid_viscosity[VELOCITY1 + a] = dmudV[a]; /*Do not touch */
+  goma_ctx->fem.mp->FlowingLiquid_viscosity = mu;                          /*Do not touch */
+  goma_ctx->fem.mp->d_FlowingLiquid_viscosity[TEMPERATURE] = dmudT;        /*Do not touch */
+                                                                           /*Do not touch */
+  for (a = 0; a < DIM; a++)                                                /*Do not touch */
+  {                                                                        /*Do not touch */
+    goma_ctx->fem.mp->d_FlowingLiquid_viscosity[VELOCITY1 + a] = dmudV[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < DIM; a++)                                           /*Do not touch */
-  {                                                                   /*Do not touch */
-    mp->d_FlowingLiquid_viscosity[MESH_DISPLACEMENT1 + a] = dmudX[a]; /*Do not touch */
+  for (a = 0; a < DIM; a++) /*Do not touch */
+  {                         /*Do not touch */
+    goma_ctx->fem.mp->d_FlowingLiquid_viscosity[MESH_DISPLACEMENT1 + a] =
+        dmudX[a]; /*Do not touch */
   } /*Do not touch */
-  for (a = 0; a < MAX_CONC; a++)                                      /*Do not touch */
-  {                                                                   /*Do not touch */
-    mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + a] = dmudC[a]; /*Do not touch */
+  for (a = 0; a < MAX_CONC; a++) /*Do not touch */
+  {                              /*Do not touch */
+    goma_ctx->fem.mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + a] =
+        dmudC[a]; /*Do not touch */
   } /*Do not touch */
 
   return (0);
@@ -1767,11 +1769,11 @@ int usr_solid_viscosity(dbl *param, /* ptr to user-defined parameter list       
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   if (len_pars < 3)
     GOMA_EH(-1, "not enough user parameters for usr_solid_viscosity");
@@ -1871,11 +1873,11 @@ int usr_solid_dil_viscosity(dbl *param, /* ptr to user-defined parameter list   
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (i = 0; i < pd->Num_Species_Eqn; i++)
-    C[i] = fv->c[i]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++)
+    C[i] = goma_ctx->fem.fv->c[i]; /*Do not touch */
 
   if (len_pars < 3)
     GOMA_EH(-1, "not enough user parameters for usr_solid_dil_viscosity");
@@ -1942,7 +1944,7 @@ int usr_permeability(dbl *param) /* user-defined parameter list */
 
   /***********Load up convenient variables*************/
 
-  phi = mp->porosity; /*Do not touch */
+  phi = goma_ctx->fem.mp->porosity; /*Do not touch */
 
   /**********************************************************/
 
@@ -1957,8 +1959,8 @@ int usr_permeability(dbl *param) /* user-defined parameter list */
   }
 
   /****************Don't touch these lines***********************/
-  mp->permeability = k;                      /*Do not touch */
-  mp->d_permeability[POR_POROSITY] = dkdphi; /*Do not touch */
+  goma_ctx->fem.mp->permeability = k;                      /*Do not touch */
+  goma_ctx->fem.mp->d_permeability[POR_POROSITY] = dkdphi; /*Do not touch */
   /**************************************************************/
 
   return (0);
@@ -2028,12 +2030,12 @@ int usr_yield_stress(dbl *param, dbl time) /* pointer to user-defined parameter 
   /***********Load up convenient local variables*************/
   /*NB This ought to be done once for all fields at gauss pt*/
 
-  T = fv->T; /*Do not touch */
-  F = fv->F; /*Do not touch */
+  T = goma_ctx->fem.fv->T; /*Do not touch */
+  F = goma_ctx->fem.fv->F; /*Do not touch */
   for (a = 0; a < DIM; a++)
-    X[a] = fv->x[a]; /*Do not touch */
-  for (a = 0; a < pd->Num_Species_Eqn; a++)
-    C[a] = fv->c[a]; /*Do not touch */
+    X[a] = goma_ctx->fem.fv->x[a]; /*Do not touch */
+  for (a = 0; a < goma_ctx->fem.pd->Num_Species_Eqn; a++)
+    C[a] = goma_ctx->fem.fv->c[a]; /*Do not touch */
 
   /**********************************************************/
 
@@ -2049,8 +2051,8 @@ int usr_yield_stress(dbl *param, dbl time) /* pointer to user-defined parameter 
   tau_y = param[0] + (param[1] - param[0]) * exp(-time / param[2]);
 
   /****************Don't touch these lines***********************/
-  gn->tau_y = tau_y; /*Do not touch */
-                     /*Do not touch */
+  goma_ctx->fem.gn->tau_y = tau_y; /*Do not touch */
+                                   /*Do not touch */
   return (0);
 } /* End of usr_yield_stress */
 

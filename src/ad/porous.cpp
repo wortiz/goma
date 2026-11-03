@@ -80,7 +80,7 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
   /**********************************************************************
    *                   ATANH MODEL FOR CAPILLARY PRESSURE
    **********************************************************************/
-  if (mp->PorousShellCapPresModel[ipore] == CAP_ATANH) {
+  if (goma_ctx->fem.mp->PorousShellCapPresModel[ipore] == CAP_ATANH) {
     /*
      * FOR ATANH EQUATION
      *  mp->u_saturation[0] is the irreduceable water saturation
@@ -97,10 +97,10 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
     //    sat_norm = (2.0 * saturation - sat_max - sat_min) / (sat_max - sat_min);
     //    d_sat_norm_d_saturation = 2.0/(sat_max - sat_min);
 
-    con_a = mp->u_PorousShellCapPres[ipore][0];
-    con_b = mp->u_PorousShellCapPres[ipore][1];
-    con_c = mp->u_PorousShellCapPres[ipore][2];
-    con_d = mp->u_PorousShellCapPres[ipore][3];
+    con_a = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][0];
+    con_b = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][1];
+    con_c = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][2];
+    con_d = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][3];
 
     sat_norm = (con_a - saturation) / con_b;
     d_sat_norm_d_saturation = -1.0 / con_b;
@@ -115,9 +115,9 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
     }
     //    cap_pres = mp->cap_pres = con_c - con_d * atanh(sat_clip);
     cap_pres = con_d / (con_c - atanh(sat_clip));
-    mp->cap_pres = cap_pres.val();
+    goma_ctx->fem.mp->cap_pres = cap_pres.val();
 
-  } else if (mp->PorousShellCapPresModel[ipore] == CAP_SINH) {
+  } else if (goma_ctx->fem.mp->PorousShellCapPresModel[ipore] == CAP_SINH) {
     /*
      * FOR SINH EQUATION
      *  mp->u_saturation[0] is the irreducable water saturation
@@ -126,10 +126,10 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
      *  mp->u_saturation[3] is multiplier in tanh function
      */
 
-    sat_min = mp->u_PorousShellCapPres[ipore][0];
-    sat_max = mp->u_PorousShellCapPres[ipore][1];
-    con_c = mp->u_PorousShellCapPres[ipore][2];
-    con_d = mp->u_PorousShellCapPres[ipore][3];
+    sat_min = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][0];
+    sat_max = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][1];
+    con_c = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][2];
+    con_d = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][3];
 
     /* Normalized saturation - should be between -6 to +6 */
     sat_norm = (12.0 * saturation - 6.0 * (sat_max + sat_min)) / (sat_max - sat_min);
@@ -148,7 +148,7 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
     //    }
     cap_pres = con_c - con_d * sinh(sat_clip);
 
-  } else if (mp->PorousShellCapPresModel[ipore] == VAN_GENUCHTEN) {
+  } else if (goma_ctx->fem.mp->PorousShellCapPresModel[ipore] == VAN_GENUCHTEN) {
     /*
      * FOR VAN_GENUCHTEN EQUATION
      *  mp->u_saturation[0] is the irreducable water saturation
@@ -157,10 +157,10 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
      *  mp->u_saturation[3] is exponent n
      */
 
-    sat_min = mp->u_PorousShellCapPres[ipore][0];
-    sat_max = mp->u_PorousShellCapPres[ipore][1];
-    con_c = mp->u_PorousShellCapPres[ipore][2];
-    nexp = mp->u_PorousShellCapPres[ipore][3];
+    sat_min = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][0];
+    sat_max = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][1];
+    con_c = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][2];
+    nexp = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][3];
 
     n_inv = 1.0 / nexp;
     mexp = 1.0 - n_inv;
@@ -176,7 +176,7 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
 
     cap_pres = con_c * pow(brack_in, n_inv);
 
-  } else if (mp->PorousShellCapPresModel[ipore] == VAN_GENUCHTEN_EXTERNAL) {
+  } else if (goma_ctx->fem.mp->PorousShellCapPresModel[ipore] == VAN_GENUCHTEN_EXTERNAL) {
     /*
      * FOR VAN_GENUCHTEN EXTERNAL EQUATION
      *  mp->u_saturation[0] is the irreducable water saturation for curve 1
@@ -191,19 +191,19 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
      *
      */
 
-    i_ext_field = mp->por_shell_cap_pres_ext_field_index[ipore];
+    i_ext_field = goma_ctx->fem.mp->por_shell_cap_pres_ext_field_index[ipore];
     /* Here I assume the external field value ranges from 0 to 1 */
-    val_ext_field = fv->external_field[i_ext_field];
+    val_ext_field = goma_ctx->fem.fv->external_field[i_ext_field];
 
-    sat_min_1 = mp->u_PorousShellCapPres[ipore][0];
-    sat_max_1 = mp->u_PorousShellCapPres[ipore][1];
-    con_c_1 = mp->u_PorousShellCapPres[ipore][2];
-    nexp_1 = mp->u_PorousShellCapPres[ipore][3];
+    sat_min_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][0];
+    sat_max_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][1];
+    con_c_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][2];
+    nexp_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][3];
 
-    sat_min_2 = mp->u_PorousShellCapPres[ipore][4];
-    sat_max_2 = mp->u_PorousShellCapPres[ipore][5];
-    con_c_2 = mp->u_PorousShellCapPres[ipore][6];
-    nexp_2 = mp->u_PorousShellCapPres[ipore][7];
+    sat_min_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][4];
+    sat_max_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][5];
+    con_c_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][6];
+    nexp_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][7];
 
     /* Interpolate the fitting parameters with external field value */
     sat_min = sat_min_1 + val_ext_field * (sat_min_2 - sat_min_1);
@@ -224,7 +224,7 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
 
     cap_pres = con_c * pow(std::max(brack_in, 1e-32), n_inv);
 
-  } else if (mp->PorousShellCapPresModel[ipore] == VAN_GENUCHTEN_HYST) {
+  } else if (goma_ctx->fem.mp->PorousShellCapPresModel[ipore] == VAN_GENUCHTEN_HYST) {
     /*
      * FOR VAN_GENUCHTEN_HYST EQUATION
      *  mp->u_saturation[0] is the irreducable water saturation for wetting curve
@@ -247,35 +247,35 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
     /* Quality check of global node number ignode*/
     if (ignode < 0) {
       if (ipore == 0) {
-        ignode = ei[pg->imtrx]->gnn_list[SHELL_SAT_1][ilnode];
+        ignode = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[SHELL_SAT_1][ilnode];
       } else if (ipore == 1) {
-        ignode = ei[pg->imtrx]->gnn_list[SHELL_SAT_2][ilnode];
+        ignode = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[SHELL_SAT_2][ilnode];
       } else if (ipore == 2) {
-        ignode = ei[pg->imtrx]->gnn_list[SHELL_SAT_3][ilnode];
+        ignode = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[SHELL_SAT_3][ilnode];
       } else {
         GOMA_EH(GOMA_ERROR, "Something's wrong here!");
       }
     }
 
     /* First, see if we are switching */
-    switch_now = pmv_hyst->curve_switch[ipore][ignode];
+    switch_now = goma_ctx->fem.pmv_hyst->curve_switch[ipore][ignode];
 
     /* Get the minimum and maximum saturation for the scanning curves */
-    sat_min_wet = pmv_hyst->sat_min_imbibe[ipore][ignode];
-    sat_max_dry = pmv_hyst->sat_max_drain[ipore][ignode];
+    sat_min_wet = goma_ctx->fem.pmv_hyst->sat_min_imbibe[ipore][ignode];
+    sat_max_dry = goma_ctx->fem.pmv_hyst->sat_max_drain[ipore][ignode];
 
     /* Find out whether on draining or wetting curve */
-    draining_curve = pmv_hyst->curve_type[ipore][ignode];
-    draining_curve_old = pmv_hyst->curve_type_old[ipore][ignode];
+    draining_curve = goma_ctx->fem.pmv_hyst->curve_type[ipore][ignode];
+    draining_curve_old = goma_ctx->fem.pmv_hyst->curve_type_old[ipore][ignode];
 
     /* If we are not switching */
     if (switch_now == 0) {
       if (draining_curve == 1) /* Stay on main draining curve */
       {
-        sat_min = mp->u_PorousShellCapPres[ipore][4];
+        sat_min = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][4];
         sat_max = sat_max_dry;
-        con_c = mp->u_PorousShellCapPres[ipore][6];
-        nexp = mp->u_PorousShellCapPres[ipore][7];
+        con_c = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][6];
+        nexp = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][7];
 
         n_inv = 1.0 / nexp;
         mexp = 1.0 - n_inv;
@@ -294,9 +294,9 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
       } else if (draining_curve == 0) /* Stay on main wetting curve */
       {
         sat_min = sat_min_wet;
-        sat_max = mp->u_PorousShellCapPres[ipore][1];
-        con_c = mp->u_PorousShellCapPres[ipore][2];
-        nexp = mp->u_PorousShellCapPres[ipore][3];
+        sat_max = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][1];
+        con_c = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][2];
+        nexp = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][3];
 
         n_inv = 1.0 / nexp;
         mexp = 1.0 - n_inv;
@@ -319,18 +319,18 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
       if ((draining_curve == 1) && (draining_curve_old == 0)) /* Wetting going to draining */
       {
         /* Get all parameters from draining curve */
-        sat_min = mp->u_PorousShellCapPres[ipore][4];
-        sat_max = mp->u_PorousShellCapPres[ipore][5];
-        con_c = mp->u_PorousShellCapPres[ipore][6];
-        nexp = mp->u_PorousShellCapPres[ipore][7];
+        sat_min = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][4];
+        sat_max = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][5];
+        con_c = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][6];
+        nexp = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][7];
 
         n_inv = 1.0 / nexp;
         mexp = 1.0 - n_inv;
         m_inv = -1.0 / mexp;
 
         /* Get the saturation and capillary pressure at switching or reversal point */
-        sat_switch = pmv_hyst->sat_switch[ipore][ignode];
-        cap_pres_switch = pmv_hyst->cap_pres_switch[ipore][ignode];
+        sat_switch = goma_ctx->fem.pmv_hyst->sat_switch[ipore][ignode];
+        cap_pres_switch = goma_ctx->fem.pmv_hyst->cap_pres_switch[ipore][ignode];
 
         /* Calculate normalized saturation at reversal point */
         brack_in_inv = pow((cap_pres_switch / con_c), nexp) + 1.0;
@@ -349,7 +349,7 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
           GOMA_EH(GOMA_ERROR, "Invalid value of maximum saturation at the scanning drying curve");
         }
         /* Update sat_max_dry in pmv_hyst structure*/
-        pmv_hyst->sat_max_drain[ipore][ignode] = sat_max_dry.val();
+        goma_ctx->fem.pmv_hyst->sat_max_drain[ipore][ignode] = sat_max_dry.val();
 
         /* Calculate normalized saturation based on newly calculated sat_max_dry */
         sat_norm = (saturation - sat_min) / (sat_max_dry - sat_min);
@@ -364,18 +364,18 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
       } else if ((draining_curve == 0) && (draining_curve_old == 1)) /* draining going to wetting */
       {
         /* Get all parameters from wetting curve */
-        sat_min = mp->u_PorousShellCapPres[ipore][0];
-        sat_max = mp->u_PorousShellCapPres[ipore][1];
-        con_c = mp->u_PorousShellCapPres[ipore][2];
-        nexp = mp->u_PorousShellCapPres[ipore][3];
+        sat_min = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][0];
+        sat_max = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][1];
+        con_c = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][2];
+        nexp = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][3];
 
         n_inv = 1.0 / nexp;
         mexp = 1.0 - n_inv;
         m_inv = -1.0 / mexp;
 
         /* Get the saturation and capillary pressure at switching or reversal point */
-        sat_switch = pmv_hyst->sat_switch[ipore][ignode];
-        cap_pres_switch = pmv_hyst->cap_pres_switch[ipore][ignode];
+        sat_switch = goma_ctx->fem.pmv_hyst->sat_switch[ipore][ignode];
+        cap_pres_switch = goma_ctx->fem.pmv_hyst->cap_pres_switch[ipore][ignode];
 
         /* Calculate normalized saturation at reversal point */
         brack_in_inv = pow((cap_pres_switch / con_c), nexp) + 1.0;
@@ -394,7 +394,7 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
           GOMA_EH(GOMA_ERROR, "Invalid value of minimum saturation at the scanning wetting curve");
         }
         /* Update sat_min_wet in pmv_hyst structure*/
-        pmv_hyst->sat_min_imbibe[ipore][ignode] = sat_min_wet.val();
+        goma_ctx->fem.pmv_hyst->sat_min_imbibe[ipore][ignode] = sat_min_wet.val();
 
         /* Calculate normalized saturation based on newly calculated sat_min_wet */
         sat_norm = (saturation - sat_min_wet) / (sat_max - sat_min_wet);
@@ -407,7 +407,7 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
         cap_pres = con_c * pow(brack_in, n_inv);
       }
     }
-  } else if (mp->PorousShellCapPresModel[ipore] == VAN_GENUCHTEN_HYST_EXT) {
+  } else if (goma_ctx->fem.mp->PorousShellCapPresModel[ipore] == VAN_GENUCHTEN_HYST_EXT) {
     /*
      * FOR VAN_GENUCHTEN_HYST_EXT EQUATION
      *  mp->u_saturation[0] is the irreducable water saturation for wetting curve 1
@@ -440,30 +440,30 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
     /* Quality check of global node number ignode*/
     if (ignode < 0) {
       if (ipore == 0) {
-        ignode = ei[pg->imtrx]->gnn_list[SHELL_SAT_1][ilnode];
+        ignode = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[SHELL_SAT_1][ilnode];
       } else if (ipore == 1) {
-        ignode = ei[pg->imtrx]->gnn_list[SHELL_SAT_2][ilnode];
+        ignode = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[SHELL_SAT_2][ilnode];
       } else if (ipore == 2) {
-        ignode = ei[pg->imtrx]->gnn_list[SHELL_SAT_3][ilnode];
+        ignode = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[SHELL_SAT_3][ilnode];
       } else {
         GOMA_EH(GOMA_ERROR, "Something's wrong here!");
       }
     }
 
     /* First, see if we are switching */
-    switch_now = pmv_hyst->curve_switch[ipore][ignode];
+    switch_now = goma_ctx->fem.pmv_hyst->curve_switch[ipore][ignode];
 
-    i_ext_field = mp->por_shell_cap_pres_ext_field_index[ipore];
+    i_ext_field = goma_ctx->fem.mp->por_shell_cap_pres_ext_field_index[ipore];
     /* Here I assume the external field value ranges from 0 to 1 */
-    val_ext_field = *evp->external_field[i_ext_field][ilnode];
+    val_ext_field = *goma_ctx->fem.evp->external_field[i_ext_field][ilnode];
 
     /* Get the minimum and maximum saturation for the scanning curves */
-    sat_min_wet = pmv_hyst->sat_min_imbibe[ipore][ignode];
-    sat_max_dry = pmv_hyst->sat_max_drain[ipore][ignode];
+    sat_min_wet = goma_ctx->fem.pmv_hyst->sat_min_imbibe[ipore][ignode];
+    sat_max_dry = goma_ctx->fem.pmv_hyst->sat_max_drain[ipore][ignode];
 
     /* Find out whether on draining or wetting curve */
-    draining_curve = pmv_hyst->curve_type[ipore][ignode];
-    draining_curve_old = pmv_hyst->curve_type_old[ipore][ignode];
+    draining_curve = goma_ctx->fem.pmv_hyst->curve_type[ipore][ignode];
+    draining_curve_old = goma_ctx->fem.pmv_hyst->curve_type_old[ipore][ignode];
 
     /* If we are not switching */
     if (switch_now == 0) {
@@ -471,14 +471,14 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
       {
 
         /* Get parameters from draining curve 1*/
-        sat_min_1 = mp->u_PorousShellCapPres[ipore][4];
-        con_c_1 = mp->u_PorousShellCapPres[ipore][6];
-        nexp_1 = mp->u_PorousShellCapPres[ipore][7];
+        sat_min_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][4];
+        con_c_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][6];
+        nexp_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][7];
 
         /* Get parameters from draining curve 2*/
-        sat_min_2 = mp->u_PorousShellCapPres[ipore][12];
-        con_c_2 = mp->u_PorousShellCapPres[ipore][14];
-        nexp_2 = mp->u_PorousShellCapPres[ipore][15];
+        sat_min_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][12];
+        con_c_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][14];
+        nexp_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][15];
 
         /* Interpolate the fitting parameters with external field value */
         sat_min = sat_min_1 + val_ext_field * (sat_min_2 - sat_min_1);
@@ -505,14 +505,14 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
         sat_min = sat_min_wet;
 
         /* Get parameters from wetting curve 1*/
-        sat_max_1 = mp->u_PorousShellCapPres[ipore][1];
-        con_c_1 = mp->u_PorousShellCapPres[ipore][2];
-        nexp_1 = mp->u_PorousShellCapPres[ipore][3];
+        sat_max_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][1];
+        con_c_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][2];
+        nexp_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][3];
 
         /* Get parameters from wetting curve 2*/
-        sat_max_2 = mp->u_PorousShellCapPres[ipore][9];
-        con_c_2 = mp->u_PorousShellCapPres[ipore][10];
-        nexp_2 = mp->u_PorousShellCapPres[ipore][11];
+        sat_max_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][9];
+        con_c_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][10];
+        nexp_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][11];
 
         /* Interpolate the fitting parameters with external field value */
         sat_max = sat_max_1 + val_ext_field * (sat_max_2 - sat_max_1);
@@ -540,16 +540,16 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
       if ((draining_curve == 1) && (draining_curve_old == 0)) /* Wetting going to draining */
       {
         /* Get all parameters from draining curve 1 */
-        sat_min_1 = mp->u_PorousShellCapPres[ipore][4];
-        sat_max_1 = mp->u_PorousShellCapPres[ipore][5];
-        con_c_1 = mp->u_PorousShellCapPres[ipore][6];
-        nexp_1 = mp->u_PorousShellCapPres[ipore][7];
+        sat_min_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][4];
+        sat_max_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][5];
+        con_c_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][6];
+        nexp_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][7];
 
         /* Get all parameters from draining curve 2 */
-        sat_min_2 = mp->u_PorousShellCapPres[ipore][12];
-        sat_max_2 = mp->u_PorousShellCapPres[ipore][13];
-        con_c_2 = mp->u_PorousShellCapPres[ipore][14];
-        nexp_2 = mp->u_PorousShellCapPres[ipore][15];
+        sat_min_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][12];
+        sat_max_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][13];
+        con_c_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][14];
+        nexp_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][15];
 
         /* Interpolate the fitting parameters with external field value */
         sat_min = sat_min_1 + val_ext_field * (sat_min_2 - sat_min_1);
@@ -562,8 +562,8 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
         m_inv = -1.0 / mexp;
 
         /* Get the saturation and capillary pressure at switching or reversal point */
-        sat_switch = pmv_hyst->sat_switch[ipore][ignode];
-        cap_pres_switch = pmv_hyst->cap_pres_switch[ipore][ignode];
+        sat_switch = goma_ctx->fem.pmv_hyst->sat_switch[ipore][ignode];
+        cap_pres_switch = goma_ctx->fem.pmv_hyst->cap_pres_switch[ipore][ignode];
 
         /* Calculate normalized saturation at reversal point */
         brack_in_inv = pow((cap_pres_switch / con_c), nexp) + 1.0;
@@ -582,7 +582,7 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
           GOMA_EH(GOMA_ERROR, "Invalid value of maximum saturation at the scanning drying curve");
         }
         /* Update sat_max_dry in element storage structure*/
-        pmv_hyst->sat_max_drain[ipore][ignode] = sat_max_dry.val();
+        goma_ctx->fem.pmv_hyst->sat_max_drain[ipore][ignode] = sat_max_dry.val();
 
         /* Calculate normalized saturation based on newly calculated sat_max_dry */
         sat_norm = (saturation - sat_min) / (sat_max_dry - sat_min);
@@ -596,16 +596,16 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
       } else if ((draining_curve == 0) && (draining_curve_old == 1)) /* draining going to wetting */
       {
         /* Get all parameters from wetting curve 1 */
-        sat_min_1 = mp->u_PorousShellCapPres[ipore][0];
-        sat_max_1 = mp->u_PorousShellCapPres[ipore][1];
-        con_c_1 = mp->u_PorousShellCapPres[ipore][2];
-        nexp_1 = mp->u_PorousShellCapPres[ipore][3];
+        sat_min_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][0];
+        sat_max_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][1];
+        con_c_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][2];
+        nexp_1 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][3];
 
         /* Get all parameters from wetting curve 2 */
-        sat_min_2 = mp->u_PorousShellCapPres[ipore][8];
-        sat_max_2 = mp->u_PorousShellCapPres[ipore][9];
-        con_c_2 = mp->u_PorousShellCapPres[ipore][10];
-        nexp_2 = mp->u_PorousShellCapPres[ipore][11];
+        sat_min_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][8];
+        sat_max_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][9];
+        con_c_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][10];
+        nexp_2 = goma_ctx->fem.mp->u_PorousShellCapPres[ipore][11];
 
         /* Interpolate the fitting parameters with external field value */
         sat_min = sat_min_1 + val_ext_field * (sat_min_2 - sat_min_1);
@@ -618,8 +618,8 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
         m_inv = -1.0 / mexp;
 
         /* Get the saturation and capillary pressure at switching or reversal point */
-        sat_switch = pmv_hyst->sat_switch[ipore][ignode];
-        cap_pres_switch = pmv_hyst->cap_pres_switch[ipore][ignode];
+        sat_switch = goma_ctx->fem.pmv_hyst->sat_switch[ipore][ignode];
+        cap_pres_switch = goma_ctx->fem.pmv_hyst->cap_pres_switch[ipore][ignode];
 
         /* Calculate normalized saturation at reversal point */
         brack_in_inv = pow((cap_pres_switch / con_c), nexp) + 1.0;
@@ -638,7 +638,7 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
           GOMA_EH(GOMA_ERROR, "Invalid value of minimum saturation at the scanning wetting curve");
         }
         /* Update sat_min_wet in element storage structure*/
-        pmv_hyst->sat_min_imbibe[ipore][ignode] = sat_min_wet.val();
+        goma_ctx->fem.pmv_hyst->sat_min_imbibe[ipore][ignode] = sat_min_wet.val();
 
         /* Calculate normalized saturation based on newly calculated sat_min_wet */
         sat_norm = (saturation - sat_min_wet) / (sat_max - sat_min_wet);
@@ -680,13 +680,13 @@ ADType ad_por_mass_source_model(void)
   ADType dHside_dS = 0.0;
   ADType tau = 0.0;
   ADType sink_mass_max = 0.0, nexp = 0.0;
-  ADType sink_mass_clip = fv->sink_mass;
+  ADType sink_mass_clip = goma_ctx->fem.fv->sink_mass;
 
   ADType saturation = 0.0;
 
   /* Get saturation based on the formulation used*/
 
-  if (pd->v[pg->imtrx][SHELL_SAT_1]) /* Saturation formulation */
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_SAT_1]) /* Saturation formulation */
   {
     saturation = ad_fv->sh_sat_1;
   } else {
@@ -695,20 +695,21 @@ ADType ad_por_mass_source_model(void)
 
   /*** Calculate MassSource based on the selected models ***/
 
-  switch (mp->PorousSinkConstantsModel) {
+  switch (goma_ctx->fem.mp->PorousSinkConstantsModel) {
 
   case LINEAR:
 
-    if (saturation >= mp->u_porous_sink_constants[6]) {
-      tau = mp->u_porous_sink_constants[0];
+    if (saturation >= goma_ctx->fem.mp->u_porous_sink_constants[6]) {
+      tau = goma_ctx->fem.mp->u_porous_sink_constants[0];
     } else {
       tau = 0.;
     }
 
-    sink_mass_max = mp->u_porous_sink_constants[1];
+    sink_mass_max = goma_ctx->fem.mp->u_porous_sink_constants[1];
 
-    MassSource = -tau * mp->u_porous_sink_constants[2] * (sink_mass_max - fv->sink_mass) *
-                 saturation / sink_mass_max / fv->volume_change;
+    MassSource = -tau * goma_ctx->fem.mp->u_porous_sink_constants[2] *
+                 (sink_mass_max - goma_ctx->fem.fv->sink_mass) * saturation / sink_mass_max /
+                 goma_ctx->fem.fv->volume_change;
 
     /* Again, I don't think this term belongs, contrary to the paper from which
        it came.   Disappears with application of the Reynolds Transport theorem */
@@ -727,8 +728,8 @@ ADType ad_por_mass_source_model(void)
   case POWER_LAW:
 
     /* Evaluate heaviside function based on minimum saturation */
-    sat_min = mp->u_porous_sink_constants[3];
-    width = mp->u_porous_sink_constants[4];
+    sat_min = goma_ctx->fem.mp->u_porous_sink_constants[3];
+    width = goma_ctx->fem.mp->u_porous_sink_constants[4];
     alpha = 0.5 * width;
     sat_center = sat_min - alpha;
     sat_normalized = saturation - sat_center;
@@ -744,18 +745,18 @@ ADType ad_por_mass_source_model(void)
       dHside_dS = 0.5 * (1.0 / alpha + cos(M_PIE * sat_normalized / alpha) / alpha);
     }
 
-    tau = mp->u_porous_sink_constants[0];
-    sink_mass_max = mp->u_porous_sink_constants[1];
-    nexp = mp->u_porous_sink_constants[2];
+    tau = goma_ctx->fem.mp->u_porous_sink_constants[0];
+    sink_mass_max = goma_ctx->fem.mp->u_porous_sink_constants[1];
+    nexp = goma_ctx->fem.mp->u_porous_sink_constants[2];
 
-    if (fv->sink_mass < sink_mass_max) {
-      sink_mass_clip = fv->sink_mass;
+    if (goma_ctx->fem.fv->sink_mass < sink_mass_max) {
+      sink_mass_clip = goma_ctx->fem.fv->sink_mass;
     } else {
       sink_mass_clip = sink_mass_max;
     }
 
     MassSource = -tau * pow(((sink_mass_max - sink_mass_clip) / sink_mass_max), nexp) * saturation /
-                 mp->density;
+                 goma_ctx->fem.mp->density;
 
     MassSource *= Hside;
 
@@ -792,9 +793,9 @@ void ad_porous_shell_open_source_model(ADType j_1_2[MDE], // Flux between porous
   porous_shell_var[1] = SHELL_SAT_2;
   porous_shell_var[2] = SHELL_SAT_3;
 
-  ADType H[MAX_POR_SHELL] = {0.0};     // Pore height (vertical)
-  ADType kappa[MAX_POR_SHELL] = {0.0}; // Cross permeability
-  ADType mu = mp->viscosity;           // Viscosity
+  ADType H[MAX_POR_SHELL] = {0.0};         // Pore height (vertical)
+  ADType kappa[MAX_POR_SHELL] = {0.0};     // Cross permeability
+  ADType mu = goma_ctx->fem.mp->viscosity; // Viscosity
 
   ADType sat_nodes[MAX_POR_SHELL][MDE] = {{0.0}};
   ADType cap_pres_nodes[MAX_POR_SHELL][MDE] = {{0.0}};
@@ -823,21 +824,21 @@ void ad_porous_shell_open_source_model(ADType j_1_2[MDE], // Flux between porous
   ADType sat_normalized_3[MDE] = {0.0};
 
   /* Extract all of the necessary information */
-  for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
+  for (ipore = 0; ipore < goma_ctx->fem.pd->Num_Porous_Shell_Eqn; ipore++) {
     var = porous_shell_var[ipore];
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         switch (ipore) {
         case 0:
-          sat_nodes[ipore][j] = set_ad_or_dbl(*esp->sh_sat_1[j], R_SHELL_SAT_1, j);
+          sat_nodes[ipore][j] = set_ad_or_dbl(*goma_ctx->fem.esp->sh_sat_1[j], R_SHELL_SAT_1, j);
           sat_normalized_1[j] = sat_nodes[ipore][j] - sat_center_1;
           break;
         case 1:
-          sat_nodes[ipore][j] = set_ad_or_dbl(*esp->sh_sat_2[j], R_SHELL_SAT_2, j);
+          sat_nodes[ipore][j] = set_ad_or_dbl(*goma_ctx->fem.esp->sh_sat_2[j], R_SHELL_SAT_2, j);
           sat_normalized_2[j] = sat_nodes[ipore][j] - sat_center_2;
           break;
         case 2:
-          sat_nodes[ipore][j] = set_ad_or_dbl(*esp->sh_sat_3[j], R_SHELL_SAT_3, j);
+          sat_nodes[ipore][j] = set_ad_or_dbl(*goma_ctx->fem.esp->sh_sat_3[j], R_SHELL_SAT_3, j);
           sat_normalized_3[j] = sat_nodes[ipore][j] - sat_center_3;
           break;
         }
@@ -850,7 +851,7 @@ void ad_porous_shell_open_source_model(ADType j_1_2[MDE], // Flux between porous
 
   /* Apply heaviside function to deactivate flux at S_1 > 0.99*/
 
-  for (j = 0; j < ei[pg->imtrx]->dof[SHELL_SAT_1]; j++) {
+  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SHELL_SAT_1]; j++) {
     if (sat_nodes[0][j] >= sat_max_1) {
       Hside_1[j] = 0.0;
       Hside_1_square[j] = 0.0;
@@ -865,7 +866,7 @@ void ad_porous_shell_open_source_model(ADType j_1_2[MDE], // Flux between porous
   }
 
   /* Apply heaviside function to activate flux at S_2 > S_min*/
-  for (j = 0; j < ei[pg->imtrx]->dof[SHELL_SAT_2]; j++) {
+  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SHELL_SAT_2]; j++) {
     if (sat_nodes[1][j] >= sat_min_2) {
       Hside_2[j] = 1.0;
     } else if (sat_nodes[1][j] <= (sat_min_2 - width_2)) {
@@ -877,8 +878,8 @@ void ad_porous_shell_open_source_model(ADType j_1_2[MDE], // Flux between porous
   }
 
   /* Apply heaviside function to deactivate flux at S_3 > 0.99*/
-  if (pd->e[pg->imtrx][R_SHELL_SAT_3]) {
-    for (j = 0; j < ei[pg->imtrx]->dof[SHELL_SAT_3]; j++) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3]) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SHELL_SAT_3]; j++) {
       if (sat_nodes[2][j] >= sat_max_3) {
         Hside_3[j] = 0.0;
         Hside_3_square[j] = 0.0;
@@ -894,12 +895,12 @@ void ad_porous_shell_open_source_model(ADType j_1_2[MDE], // Flux between porous
   }
 
   /* Populate the interporous flux */
-  for (j = 0; j < ei[pg->imtrx]->dof[SHELL_SAT_1]; j++) {
+  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SHELL_SAT_1]; j++) {
     j_1_2[j] = (kappa[0] / mu) * (cap_pres_nodes[0][j] - cap_pres_nodes[1][j]) / (2.0 * H[0]);
     j_1_2[j] += (kappa[1] / mu) * (cap_pres_nodes[0][j] - cap_pres_nodes[1][j]) / (2.0 * H[1]);
     j_1_2[j] *= Hside_1_square[j] * Hside_2[j];
 
-    if (pd->e[pg->imtrx][R_SHELL_SAT_3]) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3]) {
       j_2_3[j] = (kappa[1] / mu) * (cap_pres_nodes[2][j] - cap_pres_nodes[1][j]) / (2.0 * H[1]);
       j_2_3[j] += (kappa[2] / mu) * (cap_pres_nodes[2][j] - cap_pres_nodes[1][j]) / (2.0 * H[2]);
       j_2_3[j] *= Hside_2[j] * Hside_3_square[j];
@@ -931,9 +932,9 @@ void ad_porous_shell_open_source_model(ADType j_1_2, // Flux between porous laye
   porous_shell_var[1] = SHELL_SAT_2;
   porous_shell_var[2] = SHELL_SAT_3;
 
-  ADType H[MAX_POR_SHELL] = {0.0};     // Pore height (vertical)
-  ADType kappa[MAX_POR_SHELL] = {0.0}; // Cross permeability
-  ADType mu = mp->viscosity;           // Viscosity
+  ADType H[MAX_POR_SHELL] = {0.0};         // Pore height (vertical)
+  ADType kappa[MAX_POR_SHELL] = {0.0};     // Cross permeability
+  ADType mu = goma_ctx->fem.mp->viscosity; // Viscosity
 
   ADType sat_nodes[MAX_POR_SHELL] = {{0.0}};
   ADType cap_pres_nodes[MAX_POR_SHELL] = {{0.0}};
@@ -962,9 +963,9 @@ void ad_porous_shell_open_source_model(ADType j_1_2, // Flux between porous laye
   ADType sat_normalized_3 = 0;
 
   /* Extract all of the necessary information */
-  for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
+  for (ipore = 0; ipore < goma_ctx->fem.pd->Num_Porous_Shell_Eqn; ipore++) {
     var = porous_shell_var[ipore];
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       switch (ipore) {
       case 0:
         sat_normalized_1 = sat_nodes[ipore] - sat_center_1;
@@ -1009,7 +1010,7 @@ void ad_porous_shell_open_source_model(ADType j_1_2, // Flux between porous laye
   }
 
   /* Apply heaviside function to deactivate flux at S_3 > 0.99*/
-  if (pd->e[pg->imtrx][R_SHELL_SAT_3]) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3]) {
     if (sat_nodes[2] >= sat_max_3) {
       Hside_3 = 0.0;
       Hside_3_square = 0.0;
@@ -1028,7 +1029,7 @@ void ad_porous_shell_open_source_model(ADType j_1_2, // Flux between porous laye
   j_1_2 += (kappa[1] / mu) * (cap_pres_fv[0] - cap_pres_fv[1]) / (2.0 * H[1]);
   j_1_2 *= Hside_1_square * Hside_2;
 
-  if (pd->e[pg->imtrx][R_SHELL_SAT_3]) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3]) {
     j_2_3 = (kappa[1] / mu) * (cap_pres_fv[2] - cap_pres_fv[1]) / (2.0 * H[1]);
     j_2_3 += (kappa[2] / mu) * (cap_pres_fv[2] - cap_pres_fv[1]) / (2.0 * H[2]);
     j_2_3 *= Hside_2 * Hside_3_square;
@@ -1056,11 +1057,11 @@ ADType porous_shell_rel_perm_model(int ipore, ADType saturation) {
   int i_rel_perm_ev;
   double scale;
 
-  switch (mp->PorousShellRelPermModel[ipore]) {
+  switch (goma_ctx->fem.mp->PorousShellRelPermModel[ipore]) {
 
   case CONSTANT:
 
-    k_rel = mp->PorousShellRelPerm[ipore];
+    k_rel = goma_ctx->fem.mp->PorousShellRelPerm[ipore];
 
     break;
 
@@ -1077,11 +1078,11 @@ ADType porous_shell_rel_perm_model(int ipore, ADType saturation) {
      *  Store some temporary variables
      */
 
-    sat_min = mp->u_PorousShellRelPerm[ipore][0];
-    sat_max = 1.0 - mp->u_PorousShellRelPerm[ipore][1];
+    sat_min = goma_ctx->fem.mp->u_PorousShellRelPerm[ipore][0];
+    sat_max = 1.0 - goma_ctx->fem.mp->u_PorousShellRelPerm[ipore][1];
     s_eff = (saturation - sat_min) / (sat_max - sat_min);
-    viscosity = mp->u_PorousShellRelPerm[ipore][3];
-    lambda = mp->u_PorousShellRelPerm[ipore][2];
+    viscosity = goma_ctx->fem.mp->u_PorousShellRelPerm[ipore][3];
+    lambda = goma_ctx->fem.mp->u_PorousShellRelPerm[ipore][2];
 
     /*
      *  Clip the relative permeability to zero if the effective saturation
@@ -1089,7 +1090,7 @@ ADType porous_shell_rel_perm_model(int ipore, ADType saturation) {
      *  in a liquid phase if there is no continguous pathway in that phase.
      */
     if (s_eff < 0.0) {
-      k_rel = mp->PorousShellRelPerm[ipore] = 0.0;
+      k_rel = goma_ctx->fem.mp->PorousShellRelPerm[ipore] = 0.0;
     }
 
     /*
@@ -1101,7 +1102,7 @@ ADType porous_shell_rel_perm_model(int ipore, ADType saturation) {
      */
     else if (s_eff >= 0.99999) {
       k_rel = 1.0 / viscosity;
-      mp->PorousShellRelPerm[ipore] = k_rel.val();
+      goma_ctx->fem.mp->PorousShellRelPerm[ipore] = k_rel.val();
 
     }
 
@@ -1115,7 +1116,7 @@ ADType porous_shell_rel_perm_model(int ipore, ADType saturation) {
       a1 = 1.0 - factor2;
       k_rel = sqrt(s_eff) * a1 * a1 / viscosity;
 
-      mp->PorousShellRelPerm[ipore] = k_rel.val();
+      goma_ctx->fem.mp->PorousShellRelPerm[ipore] = k_rel.val();
     }
 
     break;
@@ -1129,10 +1130,11 @@ ADType porous_shell_rel_perm_model(int ipore, ADType saturation) {
      * variable
      */
 
-    i_rel_perm_ev = mp->por_shell_rel_perm_ext_field_index[ipore];
-    scale = mp->u_rel_liq_perm[0];
+    i_rel_perm_ev = goma_ctx->fem.mp->por_shell_rel_perm_ext_field_index[ipore];
+    scale = goma_ctx->fem.mp->u_rel_liq_perm[0];
 
-    k_rel = mp->PorousShellRelPerm[ipore] = scale * fv->external_field[i_rel_perm_ev];
+    k_rel = goma_ctx->fem.mp->PorousShellRelPerm[ipore] =
+        scale * goma_ctx->fem.fv->external_field[i_rel_perm_ev];
 
     break;
 
@@ -1148,17 +1150,18 @@ ADType porous_shell_rel_perm_model(int ipore, ADType saturation) {
      *  mp->u_PorousShellRelPerm[ipore][4] is the exponent, 1 - 1/beta for external field value of 1
      */
 
-    i_rel_perm_ev = mp->por_shell_rel_perm_ext_field_index[ipore];
+    i_rel_perm_ev = goma_ctx->fem.mp->por_shell_rel_perm_ext_field_index[ipore];
 
-    sat_min = mp->u_PorousShellRelPerm[ipore][0];
-    sat_max = 1.0 - mp->u_PorousShellRelPerm[ipore][1];
+    sat_min = goma_ctx->fem.mp->u_PorousShellRelPerm[ipore][0];
+    sat_max = 1.0 - goma_ctx->fem.mp->u_PorousShellRelPerm[ipore][1];
     s_eff = (saturation - sat_min) / (sat_max - sat_min);
-    viscosity = mp->u_PorousShellRelPerm[ipore][3];
+    viscosity = goma_ctx->fem.mp->u_PorousShellRelPerm[ipore][3];
 
     /* Here I assume that efv is bounded between 0 and 1 */
-    lambda = fv->external_field[i_rel_perm_ev] *
-                 (mp->u_PorousShellRelPerm[ipore][4] - mp->u_PorousShellRelPerm[ipore][2]) +
-             mp->u_PorousShellRelPerm[ipore][2];
+    lambda = goma_ctx->fem.fv->external_field[i_rel_perm_ev] *
+                 (goma_ctx->fem.mp->u_PorousShellRelPerm[ipore][4] -
+                  goma_ctx->fem.mp->u_PorousShellRelPerm[ipore][2]) +
+             goma_ctx->fem.mp->u_PorousShellRelPerm[ipore][2];
 
     /*
      *  Clip the relative permeability to zero if the effective saturation
@@ -1166,7 +1169,7 @@ ADType porous_shell_rel_perm_model(int ipore, ADType saturation) {
      *  in a liquid phase if there is no continguous pathway in that phase.
      */
     if (s_eff < 0.0) {
-      k_rel = mp->PorousShellRelPerm[ipore] = 0.0;
+      k_rel = goma_ctx->fem.mp->PorousShellRelPerm[ipore] = 0.0;
     }
 
     /*
@@ -1178,7 +1181,7 @@ ADType porous_shell_rel_perm_model(int ipore, ADType saturation) {
      */
     else if (s_eff >= 0.99999) {
       k_rel = 1.0 / viscosity;
-      mp->PorousShellRelPerm[ipore] = k_rel.val();
+      goma_ctx->fem.mp->PorousShellRelPerm[ipore] = k_rel.val();
     }
 
     /*
@@ -1191,7 +1194,7 @@ ADType porous_shell_rel_perm_model(int ipore, ADType saturation) {
       a1 = 1.0 - factor2;
       k_rel = sqrt(s_eff) * a1 * a1 / viscosity;
 
-      mp->PorousShellRelPerm[ipore] = k_rel.val();
+      goma_ctx->fem.mp->PorousShellRelPerm[ipore] = k_rel.val();
     }
 
     break;
@@ -1222,7 +1225,8 @@ void Inn_ad(ADType v[DIM], // Input vector
   for (i = 0; i < DIM; i++) {
     w[i] = 0.0;
     for (j = 0; j < DIM; j++) {
-      w[i] += (v[j] * delta(i, j) - v[j] * fv->snormal[i] * fv->snormal[j]);
+      w[i] +=
+          (v[j] * delta(i, j) - v[j] * goma_ctx->fem.fv->snormal[i] * goma_ctx->fem.fv->snormal[j]);
     }
   }
   return;
@@ -1240,8 +1244,9 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
   int status = 0;
 
   // Bail out of function if there is nothing to do
-  if ((!pd->e[pg->imtrx][R_SHELL_SAT_1]) && (!pd->e[pg->imtrx][R_SHELL_SAT_2]) &&
-      (!pd->e[pg->imtrx][R_SHELL_SAT_3]))
+  if ((!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1]) &&
+      (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_2]) &&
+      (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3]))
     return (status);
 
   // Variable definitions
@@ -1268,35 +1273,35 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
   ADType grad_sat_gauss[MAX_POR_SHELL][DIM] = {{0.0}};
   ADType grad_II_sat_gauss[MAX_POR_SHELL][DIM] = {{0.0}};
   ADType sat_dot_gauss[MAX_POR_SHELL] = {0.0};
-  for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
+  for (ipore = 0; ipore < goma_ctx->fem.pd->Num_Porous_Shell_Eqn; ipore++) {
     var = porous_shell_var[ipore];
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         switch (ipore) {
         case 0: {
-          sat_nodes[ipore][j] = set_ad_or_dbl(*esp->sh_sat_1[j], R_SHELL_SAT_1, j);
-          ADType udot = set_ad_or_dbl(*esp_dot->sh_sat_1[j], R_SHELL_SAT_1, j);
-          if (af->Assemble_Jacobian == TRUE) {
+          sat_nodes[ipore][j] = set_ad_or_dbl(*goma_ctx->fem.esp->sh_sat_1[j], R_SHELL_SAT_1, j);
+          ADType udot = set_ad_or_dbl(*goma_ctx->fem.esp_dot->sh_sat_1[j], R_SHELL_SAT_1, j);
+          if (goma_ctx->fem.af->Assemble_Jacobian == TRUE) {
             udot.fastAccessDx(ad_fv->offset[R_SHELL_SAT_1] + j) =
-                (1. + 2. * tran->current_theta) / tran->delta_t;
+                (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
           }
           sat_dot_nodes[ipore][j] = udot;
         } break;
         case 1: {
-          sat_nodes[ipore][j] = set_ad_or_dbl(*esp->sh_sat_2[j], R_SHELL_SAT_2, j);
-          ADType udot = set_ad_or_dbl(*esp_dot->sh_sat_2[j], R_SHELL_SAT_2, j);
-          if (af->Assemble_Jacobian == TRUE) {
+          sat_nodes[ipore][j] = set_ad_or_dbl(*goma_ctx->fem.esp->sh_sat_2[j], R_SHELL_SAT_2, j);
+          ADType udot = set_ad_or_dbl(*goma_ctx->fem.esp_dot->sh_sat_2[j], R_SHELL_SAT_2, j);
+          if (goma_ctx->fem.af->Assemble_Jacobian == TRUE) {
             udot.fastAccessDx(ad_fv->offset[R_SHELL_SAT_2] + j) =
-                (1. + 2. * tran->current_theta) / tran->delta_t;
+                (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
           }
           sat_dot_nodes[ipore][j] = udot;
         } break;
         case 2: {
-          sat_nodes[ipore][j] = set_ad_or_dbl(*esp->sh_sat_3[j], R_SHELL_SAT_3, j);
-          ADType udot = set_ad_or_dbl(*esp_dot->sh_sat_3[j], R_SHELL_SAT_3, j);
-          if (af->Assemble_Jacobian == TRUE) {
+          sat_nodes[ipore][j] = set_ad_or_dbl(*goma_ctx->fem.esp->sh_sat_3[j], R_SHELL_SAT_3, j);
+          ADType udot = set_ad_or_dbl(*goma_ctx->fem.esp_dot->sh_sat_3[j], R_SHELL_SAT_3, j);
+          if (goma_ctx->fem.af->Assemble_Jacobian == TRUE) {
             udot.fastAccessDx(ad_fv->offset[R_SHELL_SAT_3] + j) =
-                (1. + 2. * tran->current_theta) / tran->delta_t;
+                (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
           }
           sat_dot_nodes[ipore][j] = udot;
         } break;
@@ -1336,34 +1341,34 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
   // Setup lubrication
   int *n_dof = NULL;
   int dof_map[MDE];
-  dbl wt_old = fv->wt;
+  dbl wt_old = goma_ctx->fem.fv->wt;
   n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
   lubrication_shell_initialize(n_dof, dof_map, -1, xi, exo, 0);
 
   // Unpack FEM variables from global structures
-  dbl wt = fv->wt;      // Gauss point weight
-  dbl h3 = fv->h3;      // Differential volume element
-  dbl det_J = fv->sdet; // Jacobian of transformation
+  dbl wt = goma_ctx->fem.fv->wt;      // Gauss point weight
+  dbl h3 = goma_ctx->fem.fv->h3;      // Differential volume element
+  dbl det_J = goma_ctx->fem.fv->sdet; // Jacobian of transformation
   dbl dA = det_J * wt * h3;
 
   /* Equation term multipliers*/
   dbl etm_mass[MAX_POR_SHELL] = {0.0}, etm_diff[MAX_POR_SHELL] = {0.0},
       etm_sour[MAX_POR_SHELL] = {0.0};
-  for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
+  for (ipore = 0; ipore < goma_ctx->fem.pd->Num_Porous_Shell_Eqn; ipore++) {
     eqn = porous_shell_eqn[ipore];
-    if (pd->e[pg->imtrx][eqn]) {
-      etm_mass[ipore] = pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-      etm_diff[ipore] = pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-      etm_sour[ipore] = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
+      etm_mass[ipore] = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
+      etm_diff[ipore] = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      etm_sour[ipore] = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
     }
   }
 
   // Load porous medium parameters
   ADType phi[MAX_POR_SHELL] = {0.0}; // Porosity
   ADType H[MAX_POR_SHELL] = {0.0};   // Pore height (vertical)
-  for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
+  for (ipore = 0; ipore < goma_ctx->fem.pd->Num_Porous_Shell_Eqn; ipore++) {
     var = porous_shell_var[ipore];
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       phi[ipore] = porous_shell_porosity_model(ipore);
       H[ipore] = porous_shell_height_model(ipore);
       porous_shell_permeability_model(ipore);
@@ -1387,19 +1392,19 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
   ADType cap_pres_fv[MAX_POR_SHELL] = {0.0};
   ADType grad_p[MAX_POR_SHELL][DIM] = {{0.0}};
   ADType grad_II_p[MAX_POR_SHELL][DIM] = {{0.0}};
-  for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
+  for (ipore = 0; ipore < goma_ctx->fem.pd->Num_Porous_Shell_Eqn; ipore++) {
     var = porous_shell_var[ipore];
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       /* Old method */
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         cap_pres[ipore][j] = ad_load_cap_pres(ipore, j, -1, sat_nodes[ipore][j]);
       }
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        cap_pres_fv[ipore] += cap_pres[ipore][j] * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        cap_pres_fv[ipore] += cap_pres[ipore][j] * goma_ctx->fem.bf[var]->phi[j];
       }
       for (a = 0; a < DIM; a++) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          grad_p[ipore][a] += cap_pres[ipore][j] * bf[var]->grad_phi[j][a];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          grad_p[ipore][a] += cap_pres[ipore][j] * goma_ctx->fem.bf[var]->grad_phi[j][a];
         }
       }
       Inn_ad(grad_p[ipore], grad_II_p[ipore]);
@@ -1412,10 +1417,10 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
 
   int mass_lump = 1;
 
-  for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
+  for (ipore = 0; ipore < goma_ctx->fem.pd->Num_Porous_Shell_Eqn; ipore++) {
     var = porous_shell_var[ipore];
-    if (pd->v[pg->imtrx][var]) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         if (mass_lump) {
           E_MASS[ipore][j] = H[ipore] * phi[ipore] * sat_dot_nodes[ipore][j];
         } else {
@@ -1428,9 +1433,9 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
   // Load relative permeability as a function of saturation
   ADType rel_liq_perm[MAX_POR_SHELL] = {0.0};
 
-  for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
+  for (ipore = 0; ipore < goma_ctx->fem.pd->Num_Porous_Shell_Eqn; ipore++) {
     var = porous_shell_var[ipore];
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       rel_liq_perm[ipore] = porous_shell_rel_perm_model(ipore, sat_gauss[ipore]);
     }
   }
@@ -1438,21 +1443,22 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
   // Calculate DIFFUSION terms
   ADType E_DIFF[MAX_POR_SHELL][DIM] = {{0.0}};
 
-  for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
+  for (ipore = 0; ipore < goma_ctx->fem.pd->Num_Porous_Shell_Eqn; ipore++) {
     var = porous_shell_var[ipore];
-    if (pd->v[pg->imtrx][var]) {
-      if (mp->PorousShellPermeabilityModel[ipore] == ORTHOTROPIC) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      if (goma_ctx->fem.mp->PorousShellPermeabilityModel[ipore] == ORTHOTROPIC) {
         for (a = 0; a < DIM; a++) {
           for (b = 0; b < DIM; b++) {
-            E_DIFF[ipore][a] += H[ipore] * mp->PorousShellPermTensor[ipore][a][b] *
+            E_DIFF[ipore][a] += H[ipore] * goma_ctx->fem.mp->PorousShellPermTensor[ipore][a][b] *
                                 rel_liq_perm[ipore] *
-                                (grad_II_p[ipore][b] + mp->momentum_source[b]);
+                                (grad_II_p[ipore][b] + goma_ctx->fem.mp->momentum_source[b]);
           }
         }
       } else {
         for (a = 0; a < DIM; a++) {
-          E_DIFF[ipore][a] += H[ipore] * mp->PorousShellPermeability[ipore] * rel_liq_perm[ipore] *
-                              (grad_II_p[ipore][a] + mp->momentum_source[a]);
+          E_DIFF[ipore][a] += H[ipore] * goma_ctx->fem.mp->PorousShellPermeability[ipore] *
+                              rel_liq_perm[ipore] *
+                              (grad_II_p[ipore][a] + goma_ctx->fem.mp->momentum_source[a]);
         }
       }
     }
@@ -1461,7 +1467,7 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
   // Calculate SOURCE term from adjacent porous shells
   ADType E_SOUR[MAX_POR_SHELL][MDE] = {{0.0}};
 
-  if (pd->Num_Porous_Shell_Eqn > 1) {
+  if (goma_ctx->fem.pd->Num_Porous_Shell_Eqn > 1) {
 
 #ifdef AD_POROUS_SHELL_NODE_SOURCE
     ADType j_1_2[MDE] = {0.0}; // Flux between porous layers 1 and 2
@@ -1472,11 +1478,11 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
 
     /* Store the interlayer fluxes and the sensitivities */
 
-    for (j = 0; j < ei[pg->imtrx]->dof[SHELL_SAT_1]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SHELL_SAT_1]; j++) {
       E_SOUR[0][j] = -j_1_2[j];
       E_SOUR[1][j] = j_1_2[j];
 
-      if (pd->Num_Porous_Shell_Eqn > 2) {
+      if (goma_ctx->fem.pd->Num_Porous_Shell_Eqn > 2) {
         E_SOUR[1][j] += j_2_3[j];
         E_SOUR[2][j] = -j_2_3[j];
       }
@@ -1491,11 +1497,11 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
 
     /* Store the interlayer fluxes and the sensitivities */
 
-    for (j = 0; j < ei[pg->imtrx]->dof[SHELL_SAT_1]; j++) {
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SHELL_SAT_1]; j++) {
       E_SOUR[0][j] = -j_1_2;
       E_SOUR[1][j] = j_1_2;
 
-      if (pd->Num_Porous_Shell_Eqn > 2) {
+      if (goma_ctx->fem.pd->Num_Porous_Shell_Eqn > 2) {
         E_SOUR[1][j] += j_2_3;
         E_SOUR[2][j] = -j_2_3;
       }
@@ -1508,7 +1514,7 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
   // Right now it only applies to first porous shell layer - SHELL_SAT_1
   ADType E_SINK = 0.0;
 
-  if (pd->e[pg->imtrx][R_POR_SINK_MASS]) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_SINK_MASS]) {
     E_SINK = ad_por_mass_source_model();
   }
 
@@ -1517,23 +1523,24 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
   // Assemble residual contribution to this equation
 
   /* Loop over porous shell layer equations*/
-  std::vector<std::vector<ADType>> resid(pd->Num_Porous_Shell_Eqn);
+  std::vector<std::vector<ADType>> resid(goma_ctx->fem.pd->Num_Porous_Shell_Eqn);
 
-  for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
+  for (ipore = 0; ipore < goma_ctx->fem.pd->Num_Porous_Shell_Eqn; ipore++) {
     eqn = porous_shell_eqn[ipore];
-    resid[ipore].resize(ei[pg->imtrx]->dof[eqn]);
-    for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    resid[ipore].resize(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]);
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
       resid[ipore][i] = 0;
     }
   }
 
-  for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
+  for (ipore = 0; ipore < goma_ctx->fem.pd->Num_Porous_Shell_Eqn; ipore++) {
     eqn = porous_shell_eqn[ipore];
-    if ((af->Assemble_Residual) && pd->e[pg->imtrx][eqn]) {
-      peqn = upd->ep[pg->imtrx][eqn];
+    if ((goma_ctx->fem.af->Assemble_Residual) &&
+        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
       // Loop over DOF (i)
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
         // Load basis functions
         ShellBF(eqn, i, &phi_i, grad_phi_i, gradII_phi_i, d_gradII_phi_i_dmesh,
@@ -1541,14 +1548,14 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
 
         // Assemble mass term
         ADType mass = 0.0;
-        if (pd->e[pg->imtrx][eqn] & T_MASS) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
           mass += E_MASS[ipore][i] * phi_i;
         }
         mass *= dA * etm_mass[ipore];
 
         // Assemble diffusion term
         ADType diff = 0.0;
-        if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
           for (a = 0; a < DIM; a++) {
             diff -= E_DIFF[ipore][a] * gradII_phi_i[a];
           }
@@ -1557,7 +1564,7 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
 
         // Assemble source term
         ADType sour = 0.0;
-        if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
           sour += E_SOUR[ipore][0] * phi_i;
           if (ipore == 0) {
             sour -= E_SINK * phi_i;
@@ -1567,7 +1574,7 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
 
         // Assemble full residual
         resid[ipore][i] += mass + diff + sour;
-        lec->R[LEC_R_INDEX(peqn, i)] += mass.val() + diff.val() + sour.val();
+        goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += mass.val() + diff.val() + sour.val();
       } // End of loop over DOF (i)
     } // End of residual assembly of R_SHELL_SAT_1
   } // End of loop over porous shell layers
@@ -1575,21 +1582,23 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
   /* --- Assemble Jacobian --------------------------------------------------*/
 
   /* Loop over porous shell layer equations*/
-  for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
+  for (ipore = 0; ipore < goma_ctx->fem.pd->Num_Porous_Shell_Eqn; ipore++) {
     eqn = porous_shell_eqn[ipore];
-    if ((af->Assemble_Jacobian) && (pd->e[pg->imtrx][eqn])) {
-      peqn = upd->ep[pg->imtrx][eqn];
+    if ((goma_ctx->fem.af->Assemble_Jacobian) &&
+        (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn])) {
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
         for (int var = V_FIRST; var < V_LAST; var++) {
 
           /* Sensitivity w.r.t. velocity */
-          if (pd->v[pg->imtrx][var]) {
-            int pvar = upd->vp[pg->imtrx][var];
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+            int pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-            for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
-              lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[ipore][i].dx(ad_fv->offset[var] + j);
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                  resid[ipore][i].dx(ad_fv->offset[var] + j);
 
             } /* End of loop over j */
           } /* End of if the variale is active */
@@ -1600,7 +1609,7 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
   } // End of loop over porous shell layers
 
   // Finalize and exit
-  fv->wt = wt_old;
+  goma_ctx->fem.fv->wt = wt_old;
   safe_free((void *)n_dof);
   return (status);
 

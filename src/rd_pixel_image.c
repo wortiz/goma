@@ -135,7 +135,7 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
 
   int ifound = 0;
   for (i = 0; i < exo->num_elem_blocks; i++) {
-    if (efv->ipix_matid[N_ext] == exo->eb_id[i]) {
+    if (goma_ctx->fem.efv->ipix_matid[N_ext] == exo->eb_id[i]) {
       ipix_blkid = i;
       ifound = 1;
     }
@@ -145,12 +145,13 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
     GOMA_EH(GOMA_ERROR, "Trouble in rd_pixel_image: cannot find blkid");
 
   /* Sort out interpolations */
-  if ((si = in_list(efv->i[N_ext], 0, Num_Interpolations, Unique_Interpolations)) == -1) {
+  if ((si = in_list(goma_ctx->fem.efv->i[N_ext], 0, Num_Interpolations, Unique_Interpolations)) ==
+      -1) {
     GOMA_EH(GOMA_ERROR, "Seems to be a problem finding IntegrationMap interpolation for pixels.");
   }
 
   /*** Open exodus files and initialize *************************/
-  strcpy(txtfile, efv->file_nm[N_ext]);
+  strcpy(txtfile, goma_ctx->fem.efv->file_nm[N_ext]);
 
   /* Replicate current input exodus database to prepare for mapped fields, unless it has already
      been done This is the file we will write out the new fields too for future use as fields
@@ -181,22 +182,24 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
   e_start = exo->eb_ptr[ipix_blkid];
   e_end = exo->eb_ptr[ipix_blkid + 1];
   for (ielem = e_start; ielem < e_end; ielem++) {
-    load_ei(ielem, exo, 0, pg->imtrx);
+    load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
     xsum = 0.0;
     ysum = 0.0;
     zsum = 0.0;
     for (ilnode = 0; ilnode < exo->eb_num_nodes_per_elem[ipix_blkid]; ilnode++) {
       // ignode = connectivity[ielem][ilnode] - 1;
-      ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+      ignode =
+          goma_ctx->mesh
+              .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + ilnode];
       xsum += goma_ctx->mesh.coor[0][ignode];
       ysum += goma_ctx->mesh.coor[1][ignode];
-      if (pd->Num_Dim == 3)
+      if (goma_ctx->fem.pd->Num_Dim == 3)
         zsum += goma_ctx->mesh.coor[2][ignode];
     }
 
     elmctrs[ielem][0] = xsum / (double)exo->eb_num_nodes_per_elem[ipix_blkid];
     elmctrs[ielem][1] = ysum / (double)exo->eb_num_nodes_per_elem[ipix_blkid];
-    if (pd->Num_Dim == 3)
+    if (goma_ctx->fem.pd->Num_Dim == 3)
       elmctrs[ielem][2] = zsum / (double)exo->eb_num_nodes_per_elem[ipix_blkid];
   }
 
@@ -264,26 +267,29 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
 
     /* Hold on, I may need load_elem_dofptr here.  and a call to bf_mp_init(pd) as in mm_fill.c */
     ielem = ElemID_data[i] - 1;
-    ei[pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
-    load_ei(ielem, exo, 0, pg->imtrx);
+    goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
+    load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
 
-    if (ei[pg->imtrx]->deforming_mesh) {
+    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->deforming_mesh) {
       if_deform = 1;
-      ei[pg->imtrx]->deforming_mesh = FALSE;
+      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->deforming_mesh = FALSE;
     }
 
     for (ilnode = 0; ilnode < exo->eb_num_nodes_per_elem[ipix_blkid]; ilnode++) {
       // ignode = connectivity[ielem][ilnode] - 1;
-      ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
-      for (j = 0; j < pd->Num_Dim; j++) {
+      ignode =
+          goma_ctx->mesh
+              .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + ilnode];
+      for (j = 0; j < goma_ctx->fem.pd->Num_Dim; j++) {
         nodecoor[ilnode][j] = goma_ctx->mesh.coor[j][ignode];
       }
     }
 
-    find_xi(ielem, xyz_data[i], xi_data[i], ei[pg->imtrx]->ielem_type, nodecoor, si, N_ext);
+    find_xi(ielem, xyz_data[i], xi_data[i], goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type,
+            nodecoor, si, N_ext);
     /* Now undo the mess if needed  */
     if (if_deform)
-      ei[pg->imtrx]->deforming_mesh = TRUE;
+      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->deforming_mesh = TRUE;
   }
 
   /*** Assemble matrix for least square fit ***********/
@@ -323,19 +329,21 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
   icount = 0;
   for (i = 0; i < txt_num_pts; i++) {
     ielem = ElemID_data[i] - 1;
-    err = load_ei(ielem, exo, 0, pg->imtrx);
+    err = load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
     GOMA_EH(err, "load_ei");
 
-    ei[pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
-    ielem_shape = type2shape(ei[pg->imtrx]->ielem_type);
+    goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
+    ielem_shape = type2shape(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
 
     for (ilnode = 0; ilnode < exo->eb_num_nodes_per_elem[ipix_blkid]; ilnode++) {
-      ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+      ignode =
+          goma_ctx->mesh
+              .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + ilnode];
       i_map[icount] = i;
       j_map[icount] = ignode;
       // Note hardwired to be Q1 now. But this should come from input deck
-      bf_mat[icount] = newshape(xi_data[i], ei[pg->imtrx]->ielem_type, PSI, ilnode, ielem_shape,
-                                efv->i[N_ext], ilnode);
+      bf_mat[icount] = newshape(xi_data[i], goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type,
+                                PSI, ilnode, ielem_shape, goma_ctx->fem.efv->i[N_ext], ilnode);
       icount++;
     }
   }
@@ -354,7 +362,7 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
   /*** Setup variables in exodus file ******************************************/
 
   // Number of variables and names
-  nod_var_names[0] = efv->name[N_ext];
+  nod_var_names[0] = goma_ctx->fem.efv->name[N_ext];
   err = ex_put_variable_param(exoin, EX_NODAL, num_nod_vars);
   err = ex_put_variable_names(exoin, EX_NODAL, num_nod_vars, nod_var_names);
 
@@ -369,9 +377,11 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
   e_start = exo->eb_ptr[ipix_blkid];
   e_end = exo->eb_ptr[ipix_blkid + 1];
   for (ielem = e_start; ielem < e_end; ielem++) {
-    load_ei(ielem, exo, 0, pg->imtrx);
+    load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
     for (ilnode = 0; ilnode < exo->eb_num_nodes_per_elem[ipix_blkid]; ilnode++) {
-      ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+      ignode =
+          goma_ctx->mesh
+              .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + ilnode];
       // printf(" node = %d, val = %f \n", i+1, x_fit[i]);
       nodal_var_vals[ignode] = (float)x_fit[ignode];
     } // End of loop over all of the nodes (i)
@@ -381,11 +391,11 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
   /* Now allocate memory for external field variable array for use and populate */
   /* You need to do this even though you have writtenit to a file */
 
-  efv->ext_fld_ndl_val[N_ext] = alloc_dbl_1(exo->num_nodes, 0.0);
-  printf("rd_pix_image: Allocated field %d for %s at %p\n", N_ext, efv->name[N_ext],
-         (void *)efv->ext_fld_ndl_val[N_ext]);
+  goma_ctx->fem.efv->ext_fld_ndl_val[N_ext] = alloc_dbl_1(exo->num_nodes, 0.0);
+  printf("rd_pix_image: Allocated field %d for %s at %p\n", N_ext, goma_ctx->fem.efv->name[N_ext],
+         (void *)goma_ctx->fem.efv->ext_fld_ndl_val[N_ext]);
   for (i = 0; i < exo->num_nodes; i++) {
-    efv->ext_fld_ndl_val[N_ext][i] = nodal_var_vals[i];
+    goma_ctx->fem.efv->ext_fld_ndl_val[N_ext][i] = nodal_var_vals[i];
   }
 
   printf("Time for pixel-to-mesh processing: %g seconds\n", ust() - time0);
@@ -516,16 +526,16 @@ extern int find_xi(int elem_id,               /*known element id number*/
 
   xi[0] = xi[1] = xi[2] = 0.;
   while ((!converged) && (inewton < 50)) {
-    error = load_basis_functions(xi, bfd);
+    error = load_basis_functions(xi, goma_ctx->fem.bfd);
     GOMA_EH(error, "load_basis_functions");
 
     error = beer_belly();
     GOMA_EH(error, "beer_belly");
 
-    for (i = 0; i < ei[pg->imtrx]->ielem_dim; i++) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; i++) {
       x_intp[i] = 0.0;
       for (j = 0; j < nodenum; j++) {
-        phi[j] = newshape(xi, elem_type, PSI, j, ielem_shape, efv->i[N_ext], j);
+        phi[j] = newshape(xi, elem_type, PSI, j, ielem_shape, goma_ctx->fem.efv->i[N_ext], j);
         x_intp[i] += nodecoor[j][i] * phi[j];
       }
       // x[i] is global xyz coordinate of the point, x_intp[i] is sum over local node basis
@@ -535,22 +545,22 @@ extern int find_xi(int elem_id,               /*known element id number*/
       // the residual
     }
 
-    for (i = 0; i < ei[pg->imtrx]->ielem_dim; i++) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; i++) {
       update[i] = 0.0;
     }
-    for (i = 0; i < ei[pg->imtrx]->ielem_dim; i++) {
-      for (j = 0; j < ei[pg->imtrx]->ielem_dim; j++) {
-        update[i] += bfd[si]->B[j][i] * R[j];
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; i++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; j++) {
+        update[i] += goma_ctx->fem.bfd[si]->B[j][i] * R[j];
       }
     }
 
     norm = 0.0;
-    for (i = 0; i < ei[pg->imtrx]->ielem_dim; i++) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; i++) {
       norm += update[i] * update[i];
     }
     converged = (norm < 1.e-10);
 
-    for (i = 0; i < ei[pg->imtrx]->ielem_dim; i++) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; i++) {
       xi[i] += update[i];
     }
 

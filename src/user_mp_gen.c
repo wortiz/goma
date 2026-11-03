@@ -384,10 +384,10 @@ int usr_viscosity_gen(dbl *mu,
   lambda = param[3];
   aexp = param[4];
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
@@ -412,7 +412,7 @@ int usr_viscosity_gen(dbl *mu,
   /*
    * d( mu )/dmesh
    */
-  if (pd->e[pg->imtrx][R_MESH1]) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (gammadot != 0.0) {
@@ -438,11 +438,11 @@ int usr_viscosity_gen(dbl *mu,
    * d( mu )/dT
    */
   var = TEMPERATURE;
-  if (pd->e[pg->imtrx][var]) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
     dmudT = 0.; /* change this line for your function */
 
-    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-      d_mu_dT[j] = dmudT * bf[var]->phi[j];
+    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      d_mu_dT[j] = dmudT * goma_ctx->fem.bf[var]->phi[j];
     }
   }
 
@@ -450,14 +450,14 @@ int usr_viscosity_gen(dbl *mu,
    * d( mu )/dC
    */
   var = MASS_FRACTION;
-  if (pd->v[pg->imtrx][var]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     dmudC = 0.; /* change this line for your function */
 
-    for (w = 0; w < pd->Num_Species_Eqn; w++) {
+    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
       var = MASS_FRACTION;
       /*	  var_offset = MAX_VARIABLE_TYPES + w; */
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu_dC[w][j] = dmudC * bf[var]->phi[j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        d_mu_dC[w][j] = dmudC * goma_ctx->fem.bf[var]->phi[j];
       }
     }
   }

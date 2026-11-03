@@ -101,11 +101,11 @@ static int **alloc_bc_unk_list_node(int inode)
 {
   int unk;
   NODE_INFO_STRUCT *node = Nodes[inode];
-  NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[pg->imtrx];
+  NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
   int num = nv->Num_Unknowns;
   int **bc_unk_list_node;
 
-  if (num <= 0 && upd->Total_Num_Matrices > 1) {
+  if (num <= 0 && goma_ctx->fem.upd->Total_Num_Matrices > 1) {
     num = 1;
   }
   bc_unk_list_node = (int **)alloc_ptr_1(num);
@@ -115,7 +115,7 @@ static int **alloc_bc_unk_list_node(int inode)
 
   int sum_unknowns = 0;
   int imtrx;
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[imtrx];
     sum_unknowns += nv->Num_Unknowns;
   }
@@ -149,7 +149,7 @@ static void free_bc_unk_list_node(int ***bc_list_node_ptr, int inode)
 {
   int unk;
   NODE_INFO_STRUCT *node = Nodes[inode];
-  NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[pg->imtrx];
+  NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
   int num = nv->Num_Unknowns;
   int **bc_list_node = *bc_list_node_ptr;
   for (unk = 0; unk < num; unk++) {
@@ -304,9 +304,9 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
   action = -1;
   i_delete = -1;
 
-  BC_dup_nodes = malloc(sizeof(int *) * (size_t)upd->Total_Num_Matrices);
-  BC_dup_list = malloc(sizeof(int ***) * (size_t)upd->Total_Num_Matrices);
-  BC_dup_ptr = malloc(sizeof(int) * (size_t)upd->Total_Num_Matrices);
+  BC_dup_nodes = malloc(sizeof(int *) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
+  BC_dup_list = malloc(sizeof(int ***) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
+  BC_dup_ptr = malloc(sizeof(int) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
 
   /*****************************************************************************/
   /*                              BLOCK 3                                      */
@@ -332,7 +332,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     matrix_used_BC = calloc((size_t)Num_BC, sizeof(int));
   }
 
-  for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+  for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+       goma_ctx->fem.pg->imtrx++) {
     /*
      * BC_list, what is it? A particular equation at a node can look to get
      * multiple specifications of what to do about the boundary condition.
@@ -476,7 +477,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                 /* the point actually makes the distinguished dup list*/
 
                 node = Nodes[inode];
-                nv = node->Nodal_Vars_Info[pg->imtrx];
+                nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
                 ndofs = get_nv_ndofs(nv, R_MOMENTUM1);
                 for (idof = 0; idof < ndofs; idof++) {
                   if (idof >= nv->Num_Var_Desc_Per_Type[R_MOMENTUM1])
@@ -553,7 +554,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
               case POLYMER_STRESS12_7:
               case POLYMER_STRESS22_7: {
                 /* used material index determined for last element on the current side set */
-                switch (pd_glob[matIndex]->i[pg->imtrx][varType]) {
+                switch (goma_ctx->fem.pd_glob[matIndex]->i[goma_ctx->fem.pg->imtrx][varType]) {
                 case I_P0:
                 case I_P1:
                 case I_PQ1:
@@ -605,13 +606,13 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
      */
 
     if (num_bc_nodes > 0) {
-      BC_dup_nodes[pg->imtrx] = alloc_int_1(num_bc_nodes, -1);
-      BC_dup_list[pg->imtrx] = (int ***)alloc_ptr_1(num_bc_nodes);
+      BC_dup_nodes[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, -1);
+      BC_dup_list[goma_ctx->fem.pg->imtrx] = (int ***)alloc_ptr_1(num_bc_nodes);
     }
 
     /* resolve conflicts between BC's at each node */
     /* first initialize the BC duplications list*/
-    BC_dup_ptr[pg->imtrx] = 0;
+    BC_dup_ptr[goma_ctx->fem.pg->imtrx] = 0;
 
     /*
      * loop through nodes and remove nodes that don't have conflicts
@@ -620,7 +621,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     for (inode = 0; inode < num_total_nodes; inode++) {
       if (BC_Unk_List[inode] != NULL) {
         node = Nodes[inode];
-        nv = node->Nodal_Vars_Info[pg->imtrx];
+        nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
         /* check for duplications */
         for (offset = 0; offset < nv->Num_Unknowns; offset++) {
           get_nv_vd_from_offset(nv, offset, &vd, &idof);
@@ -632,17 +633,19 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
            */
           if (idup > 1) {
             /* initialize new entry in the duplications list, if not already listed */
-            if (in_list(inode, 0, BC_dup_ptr[pg->imtrx], BC_dup_nodes[pg->imtrx]) == -1) {
+            if (in_list(inode, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx],
+                        BC_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
               /* Put the node in the list */
-              BC_dup_nodes[pg->imtrx][BC_dup_ptr[pg->imtrx]] = inode;
+              BC_dup_nodes[goma_ctx->fem.pg->imtrx][BC_dup_ptr[goma_ctx->fem.pg->imtrx]] = inode;
               /* Put the pointer to the BC_Unk_List for the node
                * into another list
                */
-              BC_dup_list[pg->imtrx][BC_dup_ptr[pg->imtrx]] = BC_Unk_List[inode];
-              BC_dup_ptr[pg->imtrx]++;
+              BC_dup_list[goma_ctx->fem.pg->imtrx][BC_dup_ptr[goma_ctx->fem.pg->imtrx]] =
+                  BC_Unk_List[inode];
+              BC_dup_ptr[goma_ctx->fem.pg->imtrx]++;
               if (goma_ctx->debug_flag > 0) {
                 fprintf(stderr, "New node in duplication list %d %d\n", inode + 1,
-                        BC_dup_ptr[pg->imtrx]);
+                        BC_dup_ptr[goma_ctx->fem.pg->imtrx]);
               }
             }
 
@@ -855,7 +858,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                          */
                         if (BC_Types[ibc2].desc->rotate == R_MESH1) {
                           p = eqn - R_MESH1;
-                          if (p + 1 < pd_glob[0]->Num_Dim) {
+                          if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mesh2 =
                                 get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                             idum =
@@ -875,7 +878,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           }
                         } else if (BC_Types[ibc2].desc->rotate == R_MOMENTUM1) {
                           p = eqn - R_MOMENTUM1;
-                          if (p + 1 < pd_glob[0]->Num_Dim) {
+                          if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mom2 =
                                 get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                             idum =
@@ -896,7 +899,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           }
                         } else if (BC_Types[ibc2].desc->rotate == R_SOLID1) {
                           p = eqn - R_SOLID1;
-                          if (p + 1 < pd_glob[0]->Num_Dim) {
+                          if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mom2 =
                                 get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                             idum =
@@ -1063,7 +1066,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                       if (action == 1 && BC_Types[ibc2].desc->rotate != NO_ROT) {
                         if (BC_Types[ibc2].desc->rotate == R_MESH1) {
                           p = eqn - R_MESH1;
-                          if (p + 1 < pd_glob[0]->Num_Dim) {
+                          if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mesh2 =
                                 get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                             idum =
@@ -1085,7 +1088,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           }
                         } else if (BC_Types[ibc2].desc->rotate == R_MOMENTUM1) {
                           p = eqn - R_MOMENTUM1;
-                          if (p + 1 < pd_glob[0]->Num_Dim) {
+                          if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mom2 =
                                 get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                             idum =
@@ -1194,7 +1197,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                          */
                         if (BC_Types[ibc2].desc->rotate == R_MESH1) {
                           p = eqn - R_MESH1;
-                          if (p + 1 < pd_glob[0]->Num_Dim) {
+                          if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mesh2 =
                                 get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                             idum =
@@ -1214,7 +1217,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           }
                         } else if (BC_Types[ibc2].desc->rotate == R_MOMENTUM1) {
                           p = eqn - R_MOMENTUM1;
-                          if (p + 1 < pd_glob[0]->Num_Dim) {
+                          if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mom2 =
                                 get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                             idum =
@@ -1581,7 +1584,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           }
                           if (BC_Types[imove].desc->rotate == R_MESH1) {
                             p = eqn - R_MESH1;
-                            if (p + 1 < pd_glob[0]->Num_Dim) {
+                            if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                               offset_mesh2 =
                                   get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                               idum = find_first_opening(BC_Unk_List[inode][offset_mesh2],
@@ -1601,7 +1604,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                             }
                           } else if (BC_Types[imove].desc->rotate == R_MOMENTUM1) {
                             p = eqn - R_MOMENTUM1;
-                            if (p + 1 < pd_glob[0]->Num_Dim) {
+                            if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                               offset_mom2 =
                                   get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                               idum = find_first_opening(BC_Unk_List[inode][offset_mom2],
@@ -1699,7 +1702,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 
     divert = gsum_Int(divert);
 
-    if (goma_ctx->debug_flag > 0 || pd_glob[0]->Num_Dim < 3) {
+    if (goma_ctx->debug_flag > 0 || goma_ctx->fem.pd_glob[0]->Num_Dim < 3) {
       print_sync_start(TRUE);
       if (divert) {
         strcpy(bc_divert_fn, DUP_THRESHHOLD_FILENAME);
@@ -1708,7 +1711,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
         } else {
           bc_dup_out = fopen(bc_divert_fn, "a");
         }
-        if (BC_dup_ptr[pg->imtrx] > 0) {
+        if (BC_dup_ptr[goma_ctx->fem.pg->imtrx] > 0) {
           fprintf(bc_dup_out, "BC Duplication list for Processor %d:\n", goma_ctx->proc_id);
           fprintf(bc_dup_out, "-------- --------- ----------- ----\n");
         }
@@ -1716,14 +1719,14 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
         bc_dup_out = stderr;
       }
 
-      for (i = 0; i < BC_dup_ptr[pg->imtrx]; i++) {
-        inode = BC_dup_nodes[pg->imtrx][i];
+      for (i = 0; i < BC_dup_ptr[goma_ctx->fem.pg->imtrx]; i++) {
+        inode = BC_dup_nodes[goma_ctx->fem.pg->imtrx][i];
         if (inode < (dpi->num_internal_nodes + dpi->num_boundary_nodes)) {
           node = Nodes[inode];
-          nv = node->Nodal_Vars_Info[pg->imtrx];
+          nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
           fprintf(bc_dup_out, "\nAt global node %d", node->Global_Node_Num + 1);
           fprintf(bc_dup_out, " (proc node %d)", inode + 1);
-          if (pd_glob[0]->Num_Dim < 3) {
+          if (goma_ctx->fem.pd_glob[0]->Num_Dim < 3) {
             fprintf(bc_dup_out, " (%g, %g)\n", exo->x_coord[inode], exo->y_coord[inode]);
           } else {
             fprintf(bc_dup_out, " (%g, %g, %g)\n", exo->x_coord[inode], exo->y_coord[inode],
@@ -1778,14 +1781,14 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     /* make a list of momentum and mesh nodes that will have rotated conditions
      * and the SS#'s of the sides on which they should be rotated
      */
-    num_mesh_rotate[pg->imtrx] = 0;
-    num_mom_rotate[pg->imtrx] = 0;
+    num_mesh_rotate[goma_ctx->fem.pg->imtrx] = 0;
+    num_mom_rotate[goma_ctx->fem.pg->imtrx] = 0;
 
     if (num_bc_nodes > 0) {
-      mesh_rotate_node[pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
-      mesh_rotate_ss[pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
-      mom_rotate_node[pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
-      mom_rotate_ss[pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
+      mesh_rotate_node[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
+      mesh_rotate_ss[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
+      mom_rotate_node[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
+      mom_rotate_ss[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
     }
 
     /* loop through nodes and remove nodes that don't have conflicts
@@ -1793,7 +1796,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
      */
     for (inode = 0; inode < num_total_nodes; inode++) {
       node = Nodes[inode];
-      nv = node->Nodal_Vars_Info[pg->imtrx];
+      nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
       if (BC_Unk_List[inode] != NULL) {
         for (ivar = 0; ivar < 2; ivar++) {
           /* if ivar=0 checking the MESH equations
@@ -1825,7 +1828,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
             ss_rot = -1;
             two_ss_rot = -1;
             dir_rot = -1;
-            for (jvar = 0; jvar < pd_glob[0]->Num_Dim; jvar++) {
+            for (jvar = 0; jvar < goma_ctx->fem.pd_glob[0]->Num_Dim; jvar++) {
               var = eqn + jvar;
               offset_p = get_nv_offset_idof(nv, var, idof, 0, &vd_retn1);
               idup = 0;
@@ -1874,15 +1877,15 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
             }
             /* evaluate if node needs rotation */
             i_rotate = 0;
-            if (count_rotate > 0 && count_rotate < pd_glob[0]->Num_Dim) {
+            if (count_rotate > 0 && count_rotate < goma_ctx->fem.pd_glob[0]->Num_Dim) {
               i_rotate = 1;
             }
-            if (count_rotate >= pd_glob[0]->Num_Dim && ivar == 0 &&
-                (pd_glob[0]->Num_Dim < 3 || goma_ctx->debug_flag >= 2)) {
+            if (count_rotate >= goma_ctx->fem.pd_glob[0]->Num_Dim && ivar == 0 &&
+                (goma_ctx->fem.pd_glob[0]->Num_Dim < 3 || goma_ctx->debug_flag >= 2)) {
               log_msg("Don't rotate MESH at node %d because too many rotations\n", inode + 1);
             }
-            if (count_rotate >= pd_glob[0]->Num_Dim && ivar == 1 &&
-                (pd_glob[0]->Num_Dim < 3 || goma_ctx->debug_flag >= 2)) {
+            if (count_rotate >= goma_ctx->fem.pd_glob[0]->Num_Dim && ivar == 1 &&
+                (goma_ctx->fem.pd_glob[0]->Num_Dim < 3 || goma_ctx->debug_flag >= 2)) {
               log_msg("Don't rotate MOMENTUM at node %d because too many rotations\n", inode + 1);
             }
             if (count_DC > 0) {
@@ -1904,21 +1907,27 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
               if (goma_ctx->debug_flag > 0) {
                 fprintf(stderr, "Rotate MESH for BC's at node %d\n", inode + 1);
               }
-              if (num_mesh_rotate[pg->imtrx] == 0 ||
-                  mesh_rotate_node[pg->imtrx][num_mesh_rotate[pg->imtrx] - 1] != inode) {
-                mesh_rotate_node[pg->imtrx][num_mesh_rotate[pg->imtrx]] = inode;
-                mesh_rotate_ss[pg->imtrx][num_mesh_rotate[pg->imtrx]] = ss_rot;
-                num_mesh_rotate[pg->imtrx]++;
+              if (num_mesh_rotate[goma_ctx->fem.pg->imtrx] == 0 ||
+                  mesh_rotate_node[goma_ctx->fem.pg->imtrx]
+                                  [num_mesh_rotate[goma_ctx->fem.pg->imtrx] - 1] != inode) {
+                mesh_rotate_node[goma_ctx->fem.pg->imtrx]
+                                [num_mesh_rotate[goma_ctx->fem.pg->imtrx]] = inode;
+                mesh_rotate_ss[goma_ctx->fem.pg->imtrx][num_mesh_rotate[goma_ctx->fem.pg->imtrx]] =
+                    ss_rot;
+                num_mesh_rotate[goma_ctx->fem.pg->imtrx]++;
               }
             }
             if (i_rotate && ivar == 1) {
               if (goma_ctx->debug_flag > 0)
                 fprintf(stderr, "Rotate MOMENTUM for BC's at node %d\n", inode + 1);
-              if (num_mom_rotate[pg->imtrx] == 0 ||
-                  mom_rotate_node[pg->imtrx][num_mom_rotate[pg->imtrx] - 1] != inode) {
-                mom_rotate_node[pg->imtrx][num_mom_rotate[pg->imtrx]] = inode;
-                mom_rotate_ss[pg->imtrx][num_mom_rotate[pg->imtrx]] = ss_rot;
-                num_mom_rotate[pg->imtrx]++;
+              if (num_mom_rotate[goma_ctx->fem.pg->imtrx] == 0 ||
+                  mom_rotate_node[goma_ctx->fem.pg->imtrx]
+                                 [num_mom_rotate[goma_ctx->fem.pg->imtrx] - 1] != inode) {
+                mom_rotate_node[goma_ctx->fem.pg->imtrx][num_mom_rotate[goma_ctx->fem.pg->imtrx]] =
+                    inode;
+                mom_rotate_ss[goma_ctx->fem.pg->imtrx][num_mom_rotate[goma_ctx->fem.pg->imtrx]] =
+                    ss_rot;
+                num_mom_rotate[goma_ctx->fem.pg->imtrx]++;
               }
             }
 
@@ -1941,21 +1950,26 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     }
 
     if (num_bc_nodes > 0) {
-      if (num_mesh_rotate[pg->imtrx] > 0) {
-        mesh_rotate_node[pg->imtrx] = (int *)realloc(
-            mesh_rotate_node[pg->imtrx], (size_t)num_mesh_rotate[pg->imtrx] * sizeof(int));
-        mesh_rotate_ss[pg->imtrx] = (int *)realloc(
-            mesh_rotate_ss[pg->imtrx], (size_t)num_mesh_rotate[pg->imtrx] * sizeof(int));
+      if (num_mesh_rotate[goma_ctx->fem.pg->imtrx] > 0) {
+        mesh_rotate_node[goma_ctx->fem.pg->imtrx] =
+            (int *)realloc(mesh_rotate_node[goma_ctx->fem.pg->imtrx],
+                           (size_t)num_mesh_rotate[goma_ctx->fem.pg->imtrx] * sizeof(int));
+        mesh_rotate_ss[goma_ctx->fem.pg->imtrx] =
+            (int *)realloc(mesh_rotate_ss[goma_ctx->fem.pg->imtrx],
+                           (size_t)num_mesh_rotate[goma_ctx->fem.pg->imtrx] * sizeof(int));
       }
-      if (num_mom_rotate[pg->imtrx] > 0) {
-        mom_rotate_node[pg->imtrx] = (int *)realloc(
-            mom_rotate_node[pg->imtrx], (size_t)num_mom_rotate[pg->imtrx] * sizeof(int));
-        mom_rotate_ss[pg->imtrx] = (int *)realloc(mom_rotate_ss[pg->imtrx],
-                                                  (size_t)num_mom_rotate[pg->imtrx] * sizeof(int));
+      if (num_mom_rotate[goma_ctx->fem.pg->imtrx] > 0) {
+        mom_rotate_node[goma_ctx->fem.pg->imtrx] =
+            (int *)realloc(mom_rotate_node[goma_ctx->fem.pg->imtrx],
+                           (size_t)num_mom_rotate[goma_ctx->fem.pg->imtrx] * sizeof(int));
+        mom_rotate_ss[goma_ctx->fem.pg->imtrx] =
+            (int *)realloc(mom_rotate_ss[goma_ctx->fem.pg->imtrx],
+                           (size_t)num_mom_rotate[goma_ctx->fem.pg->imtrx] * sizeof(int));
       }
     }
 
-    if (mesh_rotate_node[pg->imtrx] != NULL || mom_rotate_node[pg->imtrx] != NULL) {
+    if (mesh_rotate_node[goma_ctx->fem.pg->imtrx] != NULL ||
+        mom_rotate_node[goma_ctx->fem.pg->imtrx] != NULL) {
       int ebi = 0;
 
       while (!Use_2D_Rotation_Vectors && ebi < exo->num_elem_blocks) {
@@ -1967,18 +1981,21 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     }
 
     if (goma_ctx->debug_flag > 0) {
-      for (i = 0; i < num_mesh_rotate[pg->imtrx]; i++) {
-        fprintf(stderr, "\tMESH node %d rotate on SS %d\n", mesh_rotate_node[pg->imtrx][i] + 1,
-                mesh_rotate_ss[pg->imtrx][i]);
+      for (i = 0; i < num_mesh_rotate[goma_ctx->fem.pg->imtrx]; i++) {
+        fprintf(stderr, "\tMESH node %d rotate on SS %d\n",
+                mesh_rotate_node[goma_ctx->fem.pg->imtrx][i] + 1,
+                mesh_rotate_ss[goma_ctx->fem.pg->imtrx][i]);
       }
     }
-    if (goma_ctx->debug_flag > 0 && num_mom_rotate[pg->imtrx] > 0) {
-      fprintf(stderr, "Rotate MOMENTUM for BC's at %d NODES \n", num_mom_rotate[pg->imtrx]);
+    if (goma_ctx->debug_flag > 0 && num_mom_rotate[goma_ctx->fem.pg->imtrx] > 0) {
+      fprintf(stderr, "Rotate MOMENTUM for BC's at %d NODES \n",
+              num_mom_rotate[goma_ctx->fem.pg->imtrx]);
     }
     if (goma_ctx->debug_flag > 0) {
-      for (i = 0; i < num_mom_rotate[pg->imtrx]; i++) {
-        fprintf(stderr, "\tMOMENTUM node %d rotate on SS %d\n", mom_rotate_node[pg->imtrx][i] + 1,
-                mom_rotate_ss[pg->imtrx][i]);
+      for (i = 0; i < num_mom_rotate[goma_ctx->fem.pg->imtrx]; i++) {
+        fprintf(stderr, "\tMOMENTUM node %d rotate on SS %d\n",
+                mom_rotate_node[goma_ctx->fem.pg->imtrx][i] + 1,
+                mom_rotate_ss[goma_ctx->fem.pg->imtrx][i]);
       }
     }
 
@@ -1986,7 +2003,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
      */
     for (inode = 0; inode < num_total_nodes; inode++) {
       if (BC_Unk_List[inode] != NULL) {
-        if (in_list(inode, 0, BC_dup_ptr[pg->imtrx], BC_dup_nodes[pg->imtrx]) == -1) {
+        if (in_list(inode, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx],
+                    BC_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
           free_bc_unk_list_node(BC_Unk_List + inode, inode);
         }
       }
@@ -2006,7 +2024,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     free(matrix_used_BC);
   }
 
-  pg->imtrx = 0;
+  goma_ctx->fem.pg->imtrx = 0;
 
   return;
 }
@@ -2075,17 +2093,18 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     }
   }
 
-  BC_dup_nodes = malloc(sizeof(int *) * (size_t)upd->Total_Num_Matrices);
-  BC_dup_list = malloc(sizeof(int ***) * (size_t)upd->Total_Num_Matrices);
-  BC_dup_ptr = malloc(sizeof(int) * (size_t)upd->Total_Num_Matrices);
+  BC_dup_nodes = malloc(sizeof(int *) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
+  BC_dup_list = malloc(sizeof(int ***) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
+  BC_dup_ptr = malloc(sizeof(int) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
 
-  for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+  for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+       goma_ctx->fem.pg->imtrx++) {
 
     /***************************************************************************/
     /*                              BLOCK 3                                    */
     /*      Start Checking for Duplicate Boundary Conditions at the same node  */
     /***************************************************************************/
-    dim = pd_glob[0]->Num_Dim;
+    dim = goma_ctx->fem.pd_glob[0]->Num_Dim;
 
     num_total_nodes = (dpi->num_internal_nodes + dpi->num_boundary_nodes + dpi->num_external_nodes);
 
@@ -2474,9 +2493,9 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
      * that flow chart somewhat religiously
      */
 
-    BC_dup_nodes[pg->imtrx] = alloc_int_1(num_bc_nodes, -1);
-    BC_dup_list[pg->imtrx] = (int ***)alloc_ptr_1(num_bc_nodes);
-    BC_dup_ptr[pg->imtrx] = 0;
+    BC_dup_nodes[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, -1);
+    BC_dup_list[goma_ctx->fem.pg->imtrx] = (int ***)alloc_ptr_1(num_bc_nodes);
+    BC_dup_ptr[goma_ctx->fem.pg->imtrx] = 0;
     bool *explicit_rot_print = malloc(sizeof(bool) * Num_BC);
     for (int i = 0; i < Num_BC; i++) {
       explicit_rot_print[i] = false;
@@ -2490,7 +2509,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     for (inode = 0; inode < num_total_nodes; inode++) {
       if (BC_Unk_List[inode] != NULL) {
         node = Nodes[inode];
-        nv = node->Nodal_Vars_Info[pg->imtrx];
+        nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
         /* Currently don't worry about rotation unless a BC exists at a
          * node
          */
@@ -2533,19 +2552,22 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
               /* initialize new entry in the duplications list,
                * if not already listed
                */
-              if (in_list(inode, 0, BC_dup_ptr[pg->imtrx], BC_dup_nodes[pg->imtrx]) == -1) {
-                BC_dup_nodes[pg->imtrx][BC_dup_ptr[pg->imtrx]] = inode;             /* put node in
-                                                                                     * list
-                                                                                     */
-                BC_dup_list[pg->imtrx][BC_dup_ptr[pg->imtrx]] = BC_Unk_List[inode]; /* ptr to
-                                                                                     * eqn
-                                                                                     * BC_list
-                                                                                     */
-                BC_dup_ptr[pg->imtrx]++;
+              if (in_list(inode, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx],
+                          BC_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
+                BC_dup_nodes[goma_ctx->fem.pg->imtrx][BC_dup_ptr[goma_ctx->fem.pg->imtrx]] =
+                    inode; /* put node in
+                            * list
+                            */
+                BC_dup_list[goma_ctx->fem.pg->imtrx][BC_dup_ptr[goma_ctx->fem.pg->imtrx]] =
+                    BC_Unk_List[inode]; /* ptr to
+                                         * eqn
+                                         * BC_list
+                                         */
+                BC_dup_ptr[goma_ctx->fem.pg->imtrx]++;
                 if ((goma_ctx->solver.print3dbcdup > 1 || goma_ctx->debug_flag > 1) &&
                     goma_ctx->unlimited_output) {
                   fprintf(ofbc, "New Rot node in dup list %d %d\n", inode + 1,
-                          BC_dup_ptr[pg->imtrx]);
+                          BC_dup_ptr[goma_ctx->fem.pg->imtrx]);
                 }
               }
 
@@ -2718,14 +2740,16 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
               /* initialize new entry in the duplications list,
                *  if not already listed
                */
-              if (in_list(inode, 0, BC_dup_ptr[pg->imtrx], BC_dup_nodes[pg->imtrx]) == -1) {
-                BC_dup_nodes[pg->imtrx][BC_dup_ptr[pg->imtrx]] = inode;
-                BC_dup_list[pg->imtrx][BC_dup_ptr[pg->imtrx]] = BC_Unk_List[inode];
-                BC_dup_ptr[pg->imtrx]++;
+              if (in_list(inode, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx],
+                          BC_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
+                BC_dup_nodes[goma_ctx->fem.pg->imtrx][BC_dup_ptr[goma_ctx->fem.pg->imtrx]] = inode;
+                BC_dup_list[goma_ctx->fem.pg->imtrx][BC_dup_ptr[goma_ctx->fem.pg->imtrx]] =
+                    BC_Unk_List[inode];
+                BC_dup_ptr[goma_ctx->fem.pg->imtrx]++;
                 if ((goma_ctx->solver.print3dbcdup > 1 || goma_ctx->debug_flag > 1) &&
                     goma_ctx->unlimited_output) {
                   fprintf(ofbc, "New node in duplication list %d %d\n", inode + 1,
-                          BC_dup_ptr[pg->imtrx]);
+                          BC_dup_ptr[goma_ctx->fem.pg->imtrx]);
                 }
               }
 
@@ -2942,17 +2966,17 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
 
     /* Now print out BC_dup list for 3-D problems */
     /* Also check for potentially conflicting combinations */
-    if (pd_glob[0]->Num_Dim == 3) {
+    if (goma_ctx->fem.pd_glob[0]->Num_Dim == 3) {
       if (goma_ctx->unlimited_output) {
         fprintf(ofbc, "\nBoundary Condition Duplication List (numbers in paren are BC_ID):\n");
       }
-      for (i = 0; i < BC_dup_ptr[pg->imtrx]; i++) {
-        inode = BC_dup_nodes[pg->imtrx][i];
+      for (i = 0; i < BC_dup_ptr[goma_ctx->fem.pg->imtrx]; i++) {
+        inode = BC_dup_nodes[goma_ctx->fem.pg->imtrx][i];
         node = Nodes[inode];
         if (goma_ctx->unlimited_output) {
-          fprintf(ofbc, "N=%d:", BC_dup_nodes[pg->imtrx][i] + 1);
+          fprintf(ofbc, "N=%d:", BC_dup_nodes[goma_ctx->fem.pg->imtrx][i] + 1);
         }
-        nv = node->Nodal_Vars_Info[pg->imtrx];
+        nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
         /* check for duplications */
         for (offset = 0; offset < nv->Num_Unknowns; offset++) {
           get_nv_vd_from_offset(nv, offset, &vd, &idof);
@@ -3010,7 +3034,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     /* free memory associated with nodes that don't have duplicate BC's */
     for (inode = 0; inode < num_total_nodes; inode++) {
       if (BC_Unk_List[inode] != NULL) {
-        if (in_list(inode, 0, BC_dup_ptr[pg->imtrx], BC_dup_nodes[pg->imtrx]) == -1) {
+        if (in_list(inode, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx],
+                    BC_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
           free_bc_unk_list_node(BC_Unk_List + inode, inode);
         }
       }
@@ -3031,7 +3056,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     print_sync_end(TRUE);
   }
 
-  pg->imtrx = 0;
+  goma_ctx->fem.pg->imtrx = 0;
 
   return;
 }

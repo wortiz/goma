@@ -124,11 +124,11 @@ void sl_init(unsigned int option_mask, /* option flag */
 #endif
   int Do_Jacobian;
   struct GomaLinearSolverData *A;
-  int imtrx = pg->imtrx;
+  int imtrx = goma_ctx->fem.pg->imtrx;
 
   Do_Jacobian = (option_mask & 1);
 
-  if (Num_Calls >= upd->Total_Num_Matrices) {
+  if (Num_Calls >= goma_ctx->fem.upd->Total_Num_Matrices) {
     GOMA_EH(GOMA_ERROR, "Calls should match the number of matrices");
   } else {
     /* One of these blocks for each matrix system to be solved. */

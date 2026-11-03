@@ -75,17 +75,17 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
     int mn = Matilda[eb_index];
 
-    pd = pd_glob[mn];
-    cr = cr_glob[mn];
-    elc = elc_glob[mn];
-    elc_rs = elc_rs_glob[mn];
-    gn = gn_glob[mn];
-    mp = mp_glob[mn];
-    vn = vn_glob[mn];
-    evpl = evpl_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
+    goma_ctx->fem.elc = goma_ctx->fem.elc_glob[mn];
+    goma_ctx->fem.elc_rs = goma_ctx->fem.elc_rs_glob[mn];
+    goma_ctx->fem.gn = goma_ctx->fem.gn_glob[mn];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
+    goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];
+    goma_ctx->fem.evpl = goma_ctx->fem.evpl_glob[mn];
 
-    for (int mode = 0; mode < vn->modes; mode++) {
-      ve[mode] = ve_glob[mn][mode];
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+      goma_ctx->fem.ve[mode] = goma_ctx->fem.ve_glob[mn][mode];
     }
 
     int e_start = exo->eb_ptr[eb_index];
@@ -96,13 +96,15 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
 
       int err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old, 0);
       GOMA_EH(err, "load_elem_dofptr");
-      err = bf_mp_init(pd);
+      err = bf_mp_init(goma_ctx->fem.pd);
       GOMA_EH(err, "bf_mp_init");
 
       int eqn = PRESSURE;
-      for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-        int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+        int gnn_i =
+            goma_ctx->mesh
+                .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+        int ldof_i = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
         if (ldof_i >= 0 && ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
                             goma_ctx->num_proc == 1)) {
           if (nzp[gnn_i] == -1) {
@@ -113,10 +115,12 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
       }
       eqn = VELOCITY1;
       for (int var = eqn; var <= VELOCITY3; var++) {
-        if (upd->vp[pg->imtrx][var] >= 0) {
-          for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-            int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-            int ldof_i = ei[upd->matrix_index[var]]->ln_to_dof[var][i];
+        if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var] >= 0) {
+          for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+            int gnn_i =
+                goma_ctx->mesh
+                    .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+            int ldof_i = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[var]]->ln_to_dof[var][i];
             if (ldof_i >= 0 && ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
                                 goma_ctx->num_proc == 1)) {
               if (nzv[var - VELOCITY1][gnn_i] == -1) {
@@ -145,17 +149,17 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
     int mn = Matilda[eb_index];
 
-    pd = pd_glob[mn];
-    cr = cr_glob[mn];
-    elc = elc_glob[mn];
-    elc_rs = elc_rs_glob[mn];
-    gn = gn_glob[mn];
-    mp = mp_glob[mn];
-    vn = vn_glob[mn];
-    evpl = evpl_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
+    goma_ctx->fem.elc = goma_ctx->fem.elc_glob[mn];
+    goma_ctx->fem.elc_rs = goma_ctx->fem.elc_rs_glob[mn];
+    goma_ctx->fem.gn = goma_ctx->fem.gn_glob[mn];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
+    goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];
+    goma_ctx->fem.evpl = goma_ctx->fem.evpl_glob[mn];
 
-    for (int mode = 0; mode < vn->modes; mode++) {
-      ve[mode] = ve_glob[mn][mode];
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+      goma_ctx->fem.ve[mode] = goma_ctx->fem.ve_glob[mn][mode];
     }
 
     int e_start = exo->eb_ptr[eb_index];
@@ -166,19 +170,20 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
 
       int err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old, 0);
       GOMA_EH(err, "load_elem_dofptr");
-      err = bf_mp_init(pd);
+      err = bf_mp_init(goma_ctx->fem.pd);
       GOMA_EH(err, "bf_mp_init");
 
       int v = PRESSURE;
-      for (int j = 0; j < ei[pg->imtrx]->dof[v]; j++) {
-        int ledof = ei[pg->imtrx]->lvdof_to_ledof[v][j];
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v]; j++) {
+        int ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[v][j];
         int kv = 0;
-        int row_index =
-            Index_Solution(ei[pg->imtrx]->gnn_list[v][j], v, kv, ei[pg->imtrx]->Baby_Dolphin[v][j],
-                           ei[pg->imtrx]->matID_ledof[ledof], pg->imtrx);
+        int row_index = Index_Solution(
+            goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j], v, kv,
+            goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Baby_Dolphin[v][j],
+            goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
         GOMA_EH(row_index, "Bad var index.");
         PetscInt global_row = matrix_data->local_to_global[row_index];
-        int gnn_i = ei[pg->imtrx]->gnn_list[v][j];
+        int gnn_i = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j];
         if ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
             goma_ctx->num_proc == 1) {
           if (nzp[gnn_i] == -1) {
@@ -189,15 +194,17 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
         }
       }
       for (int v = VELOCITY1; v <= VELOCITY3; v++) {
-        for (int j = 0; j < ei[pg->imtrx]->dof[v]; j++) {
-          int ledof = ei[pg->imtrx]->lvdof_to_ledof[v][j];
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v]; j++) {
+          int ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[v][j];
           int kv = 0;
-          int row_index = Index_Solution(ei[pg->imtrx]->gnn_list[v][j], v, kv,
-                                         ei[pg->imtrx]->Baby_Dolphin[v][j],
-                                         ei[pg->imtrx]->matID_ledof[ledof], pg->imtrx);
+          int row_index =
+              Index_Solution(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j], v, kv,
+                             goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Baby_Dolphin[v][j],
+                             goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof],
+                             goma_ctx->fem.pg->imtrx);
           GOMA_EH(row_index, "Bad var index.");
           PetscInt global_row = matrix_data->local_to_global[row_index];
-          int gnn_i = ei[pg->imtrx]->gnn_list[v][j];
+          int gnn_i = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j];
           if ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
               goma_ctx->num_proc == 1) {
             if (nzv[v - VELOCITY1][gnn_i] == -1) {
@@ -241,17 +248,17 @@ goma_error count_pressure_nodes(PetscMatrixData *matrix_data,
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
     int mn = Matilda[eb_index];
 
-    pd = pd_glob[mn];
-    cr = cr_glob[mn];
-    elc = elc_glob[mn];
-    elc_rs = elc_rs_glob[mn];
-    gn = gn_glob[mn];
-    mp = mp_glob[mn];
-    vn = vn_glob[mn];
-    evpl = evpl_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
+    goma_ctx->fem.elc = goma_ctx->fem.elc_glob[mn];
+    goma_ctx->fem.elc_rs = goma_ctx->fem.elc_rs_glob[mn];
+    goma_ctx->fem.gn = goma_ctx->fem.gn_glob[mn];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
+    goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];
+    goma_ctx->fem.evpl = goma_ctx->fem.evpl_glob[mn];
 
-    for (int mode = 0; mode < vn->modes; mode++) {
-      ve[mode] = ve_glob[mn][mode];
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+      goma_ctx->fem.ve[mode] = goma_ctx->fem.ve_glob[mn][mode];
     }
 
     int e_start = exo->eb_ptr[eb_index];
@@ -262,13 +269,15 @@ goma_error count_pressure_nodes(PetscMatrixData *matrix_data,
 
       int err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old, 0);
       GOMA_EH(err, "load_elem_dofptr");
-      err = bf_mp_init(pd);
+      err = bf_mp_init(goma_ctx->fem.pd);
       GOMA_EH(err, "bf_mp_init");
 
       int eqn = PRESSURE;
-      for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-        int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+        int gnn_i =
+            goma_ctx->mesh
+                .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+        int ldof_i = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
         if (ldof_i >= 0 && ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
                             goma_ctx->num_proc == 1)) {
           if (nz[gnn_i] == -1) {
@@ -329,17 +338,17 @@ static goma_error initialize_petsc_pressure_matrix(PetscMatrixData *matrix_data,
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
     int mn = Matilda[eb_index];
 
-    pd = pd_glob[mn];
-    cr = cr_glob[mn];
-    elc = elc_glob[mn];
-    elc_rs = elc_rs_glob[mn];
-    gn = gn_glob[mn];
-    mp = mp_glob[mn];
-    vn = vn_glob[mn];
-    evpl = evpl_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
+    goma_ctx->fem.elc = goma_ctx->fem.elc_glob[mn];
+    goma_ctx->fem.elc_rs = goma_ctx->fem.elc_rs_glob[mn];
+    goma_ctx->fem.gn = goma_ctx->fem.gn_glob[mn];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
+    goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];
+    goma_ctx->fem.evpl = goma_ctx->fem.evpl_glob[mn];
 
-    for (int mode = 0; mode < vn->modes; mode++) {
-      ve[mode] = ve_glob[mn][mode];
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+      goma_ctx->fem.ve[mode] = goma_ctx->fem.ve_glob[mn][mode];
     }
 
     int e_start = exo->eb_ptr[eb_index];
@@ -350,16 +359,20 @@ static goma_error initialize_petsc_pressure_matrix(PetscMatrixData *matrix_data,
 
       int err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old, 0);
       GOMA_EH(err, "load_elem_dofptr");
-      err = bf_mp_init(pd);
+      err = bf_mp_init(goma_ctx->fem.pd);
       GOMA_EH(err, "bf_mp_init");
 
       int eqn = PRESSURE;
-      for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-        int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
-        for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-          int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
-          int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+        int gnn_i =
+            goma_ctx->mesh
+                .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+        int ldof_i = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; j++) {
+          int gnn_j =
+              goma_ctx->mesh
+                  .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + j];
+          int ldof_j = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
           if (ldof_i >= 0 && ldof_j >= 0 &&
               ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
                goma_ctx->num_proc == 1)) {
@@ -400,17 +413,17 @@ static goma_error set_pcd_matrices(PetscMatrixData *matrix_data,
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
     int mn = Matilda[eb_index];
 
-    pd = pd_glob[mn];
-    cr = cr_glob[mn];
-    elc = elc_glob[mn];
-    elc_rs = elc_rs_glob[mn];
-    gn = gn_glob[mn];
-    mp = mp_glob[mn];
-    vn = vn_glob[mn];
-    evpl = evpl_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
+    goma_ctx->fem.elc = goma_ctx->fem.elc_glob[mn];
+    goma_ctx->fem.elc_rs = goma_ctx->fem.elc_rs_glob[mn];
+    goma_ctx->fem.gn = goma_ctx->fem.gn_glob[mn];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
+    goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];
+    goma_ctx->fem.evpl = goma_ctx->fem.evpl_glob[mn];
 
-    for (int mode = 0; mode < vn->modes; mode++) {
-      ve[mode] = ve_glob[mn][mode];
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+      goma_ctx->fem.ve[mode] = goma_ctx->fem.ve_glob[mn][mode];
     }
 
     int e_start = exo->eb_ptr[eb_index];
@@ -421,9 +434,9 @@ static goma_error set_pcd_matrices(PetscMatrixData *matrix_data,
 
       int err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old, 0);
       GOMA_EH(err, "load_elem_dofptr");
-      err = bf_mp_init(pd);
+      err = bf_mp_init(goma_ctx->fem.pd);
       GOMA_EH(err, "bf_mp_init");
-      int ielem_type = ei[pg->imtrx]->ielem_type;
+      int ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type;
       int ip_total = elem_info(NQUAD, ielem_type); /* number of
                                                     * quadrature pts */
 
@@ -440,13 +453,13 @@ static goma_error set_pcd_matrices(PetscMatrixData *matrix_data,
          * find quadrature weights for current ip
          */
         dbl wt = Gq_weight(ip, ielem_type);
-        fv->wt = wt;
+        goma_ctx->fem.fv->wt = wt;
 
         /*
          * Load up basis function information for ea variable...
          * Old usage: fill_shape
          */
-        err = load_basis_functions(xi, bfd);
+        err = load_basis_functions(xi, goma_ctx->fem.bfd);
         GOMA_EH(err, "problem from load_basis_functions");
 
         /*
@@ -469,21 +482,25 @@ static goma_error set_pcd_matrices(PetscMatrixData *matrix_data,
         double gamma[DIM][DIM];
         for (int a = 0; a < VIM; a++) {
           for (int b = 0; b < VIM; b++) {
-            gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+            gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
           }
         }
-        double mu = viscosity(gn, gamma, NULL);
+        double mu = viscosity(goma_ctx->fem.gn, gamma, NULL);
         double invmu = (1.0 / mu);
 
-        dbl rho = density(NULL, tran->time_value);
+        dbl rho = density(NULL, goma_ctx->fem.tran->time_value);
 
         int eqn = PRESSURE;
-        for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-          int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
-          for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-            int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
-            int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
+        for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+          int gnn_i =
+              goma_ctx->mesh
+                  .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+          int ldof_i = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; j++) {
+            int gnn_j =
+                goma_ctx->mesh
+                    .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + j];
+            int ldof_j = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
             if (ldof_i >= 0 && ldof_j >= 0 &&
                 ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
                  goma_ctx->num_proc == 1)) {
@@ -493,23 +510,27 @@ static goma_error set_pcd_matrices(PetscMatrixData *matrix_data,
               GOMA_EH(global_row, "Row not found");
               GOMA_EH(global_col, "Col not found");
               // Mp
-              dbl mp_contrib = bf[eqn]->phi[ldof_i] * bf[eqn]->phi[ldof_j] * fv->wt * bf[eqn]->detJ;
+              dbl mp_contrib = goma_ctx->fem.bf[eqn]->phi[ldof_i] *
+                               goma_ctx->fem.bf[eqn]->phi[ldof_j] * goma_ctx->fem.fv->wt *
+                               goma_ctx->fem.bf[eqn]->detJ;
               PetscErrorCode err = MatSetValue(matrix_data->pcd_data->Mp, global_row, global_col,
                                                mp_contrib, ADD_VALUES);
               CHKERRQ(err);
 
               // Mp_mu
-              dbl mu_contrib = 0.5 * invmu * bf[eqn]->phi[ldof_i] * bf[eqn]->phi[ldof_j] * fv->wt *
-                               bf[eqn]->detJ;
+              dbl mu_contrib = 0.5 * invmu * goma_ctx->fem.bf[eqn]->phi[ldof_i] *
+                               goma_ctx->fem.bf[eqn]->phi[ldof_j] * goma_ctx->fem.fv->wt *
+                               goma_ctx->fem.bf[eqn]->detJ;
               err = MatSetValue(matrix_data->pcd_data->Mp_mu, global_row, global_col, mu_contrib,
                                 ADD_VALUES);
               CHKERRQ(err);
 
               // Ap
               dbl ap_contrib = 0.0;
-              for (int a = 0; a < pd->Num_Dim; a++) {
-                ap_contrib += mu * bf[eqn]->grad_phi[ldof_i][a] * bf[eqn]->grad_phi[ldof_j][a] *
-                              fv->wt * bf[eqn]->detJ;
+              for (int a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
+                ap_contrib += mu * goma_ctx->fem.bf[eqn]->grad_phi[ldof_i][a] *
+                              goma_ctx->fem.bf[eqn]->grad_phi[ldof_j][a] * goma_ctx->fem.fv->wt *
+                              goma_ctx->fem.bf[eqn]->detJ;
               }
               err = MatSetValue(matrix_data->pcd_data->Ap, global_row, global_col, ap_contrib,
                                 ADD_VALUES);
@@ -517,13 +538,18 @@ static goma_error set_pcd_matrices(PetscMatrixData *matrix_data,
 
               // Fp
               dbl fp_contrib = ap_contrib;
-              for (int a = 0; a < pd->Num_Dim; a++) {
-                fp_contrib += rho * fv->v[a] * bf[eqn]->grad_phi[ldof_j][a] * bf[eqn]->phi[ldof_i] *
-                              fv->wt * bf[eqn]->detJ;
+              for (int a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
+                fp_contrib += rho * goma_ctx->fem.fv->v[a] *
+                              goma_ctx->fem.bf[eqn]->grad_phi[ldof_j][a] *
+                              goma_ctx->fem.bf[eqn]->phi[ldof_i] * goma_ctx->fem.fv->wt *
+                              goma_ctx->fem.bf[eqn]->detJ;
               }
-              if (pd->TimeIntegration != STEADY) {
-                fp_contrib += (pd->etm[pg->imtrx][VELOCITY1][LOG2_MASS] / tran->delta_t) * rho *
-                              bf[eqn]->phi[ldof_i] * bf[eqn]->phi[ldof_j] * fv->wt * bf[eqn]->detJ;
+              if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+                fp_contrib +=
+                    (goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][VELOCITY1][LOG2_MASS] /
+                     goma_ctx->fem.tran->delta_t) *
+                    rho * goma_ctx->fem.bf[eqn]->phi[ldof_i] * goma_ctx->fem.bf[eqn]->phi[ldof_j] *
+                    goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->detJ;
               }
               err = MatSetValue(matrix_data->pcd_data->Fp, global_row, global_col, fp_contrib,
                                 ADD_VALUES);
@@ -672,17 +698,17 @@ static goma_error set_petsc_pressure_matrix(PetscMatrixData *matrix_data,
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
     int mn = Matilda[eb_index];
 
-    pd = pd_glob[mn];
-    cr = cr_glob[mn];
-    elc = elc_glob[mn];
-    elc_rs = elc_rs_glob[mn];
-    gn = gn_glob[mn];
-    mp = mp_glob[mn];
-    vn = vn_glob[mn];
-    evpl = evpl_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
+    goma_ctx->fem.elc = goma_ctx->fem.elc_glob[mn];
+    goma_ctx->fem.elc_rs = goma_ctx->fem.elc_rs_glob[mn];
+    goma_ctx->fem.gn = goma_ctx->fem.gn_glob[mn];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
+    goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];
+    goma_ctx->fem.evpl = goma_ctx->fem.evpl_glob[mn];
 
-    for (int mode = 0; mode < vn->modes; mode++) {
-      ve[mode] = ve_glob[mn][mode];
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+      goma_ctx->fem.ve[mode] = goma_ctx->fem.ve_glob[mn][mode];
     }
 
     int e_start = exo->eb_ptr[eb_index];
@@ -693,9 +719,9 @@ static goma_error set_petsc_pressure_matrix(PetscMatrixData *matrix_data,
 
       int err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old, 0);
       GOMA_EH(err, "load_elem_dofptr");
-      err = bf_mp_init(pd);
+      err = bf_mp_init(goma_ctx->fem.pd);
       GOMA_EH(err, "bf_mp_init");
-      int ielem_type = ei[pg->imtrx]->ielem_type;
+      int ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type;
       int ip_total = elem_info(NQUAD, ielem_type); /* number of
                                                     * quadrature pts */
 
@@ -712,13 +738,13 @@ static goma_error set_petsc_pressure_matrix(PetscMatrixData *matrix_data,
          * find quadrature weights for current ip
          */
         dbl wt = Gq_weight(ip, ielem_type);
-        fv->wt = wt;
+        goma_ctx->fem.fv->wt = wt;
 
         /*
          * Load up basis function information for ea variable...
          * Old usage: fill_shape
          */
-        err = load_basis_functions(xi, bfd);
+        err = load_basis_functions(xi, goma_ctx->fem.bfd);
         GOMA_EH(err, "problem from load_basis_functions");
 
         /*
@@ -741,27 +767,32 @@ static goma_error set_petsc_pressure_matrix(PetscMatrixData *matrix_data,
         double gamma[DIM][DIM];
         for (int a = 0; a < VIM; a++) {
           for (int b = 0; b < VIM; b++) {
-            gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+            gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
           }
         }
-        double mu = viscosity(gn, gamma, NULL);
-        for (int mode = 0; mode < vn->modes; mode++) {
-          dbl mup = viscosity(ve[mode]->gn, gamma, NULL);
+        double mu = viscosity(goma_ctx->fem.gn, gamma, NULL);
+        for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+          dbl mup = viscosity(goma_ctx->fem.ve[mode]->gn, gamma, NULL);
           mu += mup;
         }
         double invmu = (1.0 / mu);
         int eqn = PRESSURE;
-        for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-          int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
-          for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-            int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
-            int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
+        for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+          int gnn_i =
+              goma_ctx->mesh
+                  .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+          int ldof_i = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; j++) {
+            int gnn_j =
+                goma_ctx->mesh
+                    .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + j];
+            int ldof_j = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
             if (ldof_i >= 0 && ldof_j >= 0 &&
                 ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
                  goma_ctx->num_proc == 1)) {
-              dbl mm_contrib = 0.5 * invmu * bf[eqn]->phi[ldof_i] * bf[eqn]->phi[ldof_j] * fv->wt *
-                               bf[eqn]->detJ;
+              dbl mm_contrib = 0.5 * invmu * goma_ctx->fem.bf[eqn]->phi[ldof_i] *
+                               goma_ctx->fem.bf[eqn]->phi[ldof_j] * goma_ctx->fem.fv->wt *
+                               goma_ctx->fem.bf[eqn]->detJ;
               PetscInt global_row = matrix_data->schur_s_local_to_global[gnn_i];
               PetscInt global_col = matrix_data->schur_s_local_to_global[gnn_j];
               GOMA_EH(global_row, "Row not found");
@@ -787,7 +818,7 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
                                                     dbl *xdot_old,
                                                     PetscInt local_nodes,
                                                     PetscInt global_nodes) {
-  PetscMatrixData *matrix_data = (PetscMatrixData *)upd->petsc_post_proc_data;
+  PetscMatrixData *matrix_data = (PetscMatrixData *)goma_ctx->fem.upd->petsc_post_proc_data;
   PetscInt global_offset;
   MPI_Scan(&local_nodes, &global_offset, 1, MPIU_INT, MPI_SUM, MPI_COMM_WORLD);
   global_offset -= local_nodes;
@@ -812,17 +843,17 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
     int mn = Matilda[eb_index];
 
-    pd = pd_glob[mn];
-    cr = cr_glob[mn];
-    elc = elc_glob[mn];
-    elc_rs = elc_rs_glob[mn];
-    gn = gn_glob[mn];
-    mp = mp_glob[mn];
-    vn = vn_glob[mn];
-    evpl = evpl_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
+    goma_ctx->fem.elc = goma_ctx->fem.elc_glob[mn];
+    goma_ctx->fem.elc_rs = goma_ctx->fem.elc_rs_glob[mn];
+    goma_ctx->fem.gn = goma_ctx->fem.gn_glob[mn];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
+    goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];
+    goma_ctx->fem.evpl = goma_ctx->fem.evpl_glob[mn];
 
-    for (int mode = 0; mode < vn->modes; mode++) {
-      ve[mode] = ve_glob[mn][mode];
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+      goma_ctx->fem.ve[mode] = goma_ctx->fem.ve_glob[mn][mode];
     }
 
     int e_start = exo->eb_ptr[eb_index];
@@ -833,15 +864,19 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
 
       int err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old, 0);
       GOMA_EH(err, "load_elem_dofptr");
-      err = bf_mp_init(pd);
+      err = bf_mp_init(goma_ctx->fem.pd);
       GOMA_EH(err, "bf_mp_init");
 
-      int eqn = pd->ProjectionVar;
-      if (bf[eqn]->interpolation == I_N1) {
-        for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-          for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-            int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
+      int eqn = goma_ctx->fem.pd->ProjectionVar;
+      if (goma_ctx->fem.bf[eqn]->interpolation == I_N1) {
+        for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+          int gnn_i =
+              goma_ctx->mesh
+                  .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; j++) {
+            int gnn_j =
+                goma_ctx->mesh
+                    .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + j];
             if (gnn_i < num_rows) {
               if (gnn_j >= num_rows) {
                 o_nnz[gnn_i] += 1;
@@ -853,12 +888,20 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
         }
 
       } else {
-        for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-          int ldof_i = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][i];
-          for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-            int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
-            int ldof_j = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][j];
+        for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+          int gnn_i =
+              goma_ctx->mesh
+                  .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+          int ldof_i =
+              goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[goma_ctx->fem.pd->ProjectionVar]]
+                  ->ln_to_dof[eqn][i];
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; j++) {
+            int gnn_j =
+                goma_ctx->mesh
+                    .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + j];
+            int ldof_j =
+                goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[goma_ctx->fem.pd->ProjectionVar]]
+                    ->ln_to_dof[eqn][j];
             if (ldof_i >= 0 && ldof_j >= 0 &&
                 ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
                  goma_ctx->num_proc == 1)) {
@@ -885,17 +928,17 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
     int mn = Matilda[eb_index];
 
-    pd = pd_glob[mn];
-    cr = cr_glob[mn];
-    elc = elc_glob[mn];
-    elc_rs = elc_rs_glob[mn];
-    gn = gn_glob[mn];
-    mp = mp_glob[mn];
-    vn = vn_glob[mn];
-    evpl = evpl_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
+    goma_ctx->fem.elc = goma_ctx->fem.elc_glob[mn];
+    goma_ctx->fem.elc_rs = goma_ctx->fem.elc_rs_glob[mn];
+    goma_ctx->fem.gn = goma_ctx->fem.gn_glob[mn];
+    goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
+    goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];
+    goma_ctx->fem.evpl = goma_ctx->fem.evpl_glob[mn];
 
-    for (int mode = 0; mode < vn->modes; mode++) {
-      ve[mode] = ve_glob[mn][mode];
+    for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
+      goma_ctx->fem.ve[mode] = goma_ctx->fem.ve_glob[mn][mode];
     }
 
     int e_start = exo->eb_ptr[eb_index];
@@ -906,9 +949,9 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
 
       int err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old, 0);
       GOMA_EH(err, "load_elem_dofptr");
-      err = bf_mp_init(pd);
+      err = bf_mp_init(goma_ctx->fem.pd);
       GOMA_EH(err, "bf_mp_init");
-      int ielem_type = ei[pg->imtrx]->ielem_type;
+      int ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type;
       int ip_total = elem_info(NQUAD, ielem_type); /* number of
                                                     * quadrature pts */
 
@@ -925,13 +968,13 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
          * find quadrature weights for current ip
          */
         dbl wt = Gq_weight(ip, ielem_type);
-        fv->wt = wt;
+        goma_ctx->fem.fv->wt = wt;
 
         /*
          * Load up basis function information for ea variable...
          * Old usage: fill_shape
          */
-        err = load_basis_functions(xi, bfd);
+        err = load_basis_functions(xi, goma_ctx->fem.bfd);
         GOMA_EH(err, "problem from load_basis_functions");
 
         /*
@@ -942,19 +985,25 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
         err = beer_belly();
         GOMA_EH(err, "beer_belly");
 
-        err = load_coordinate_scales(pd->CoordinateSystem, fv);
+        err = load_coordinate_scales(goma_ctx->fem.pd->CoordinateSystem, goma_ctx->fem.fv);
         GOMA_EH(err, "load_coordinate_scales(fv)");
 
         err = load_bf_grad();
         GOMA_EH(err, "load_bf_grad");
 
-        int eqn = pd->ProjectionVar;
-        if (bf[eqn]->interpolation == I_N1) {
-          for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-            int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-            for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-              int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
-              dbl mm_contrib = bf[eqn]->phi[i] * bf[eqn]->phi[j] * fv->wt * bf[eqn]->detJ;
+        int eqn = goma_ctx->fem.pd->ProjectionVar;
+        if (goma_ctx->fem.bf[eqn]->interpolation == I_N1) {
+          for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+            int gnn_i =
+                goma_ctx->mesh
+                    .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+            for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; j++) {
+              int gnn_j =
+                  goma_ctx->mesh
+                      .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr +
+                                         j];
+              dbl mm_contrib = goma_ctx->fem.bf[eqn]->phi[i] * goma_ctx->fem.bf[eqn]->phi[j] *
+                               goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->detJ;
               PetscInt global_row = matrix_data->local_to_global[gnn_i];
               PetscInt global_col = matrix_data->local_to_global[gnn_j];
               PetscErrorCode err =
@@ -963,17 +1012,27 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
             }
           }
         } else {
-          for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-            int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
-            int ldof_i = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][i];
-            for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-              int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
-              int ldof_j = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][j];
+          for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+            int gnn_i =
+                goma_ctx->mesh
+                    .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+            int ldof_i =
+                goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[goma_ctx->fem.pd->ProjectionVar]]
+                    ->ln_to_dof[eqn][i];
+            for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; j++) {
+              int gnn_j =
+                  goma_ctx->mesh
+                      .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr +
+                                         j];
+              int ldof_j = goma_ctx->fem
+                               .ei[goma_ctx->fem.upd->matrix_index[goma_ctx->fem.pd->ProjectionVar]]
+                               ->ln_to_dof[eqn][j];
               if (ldof_i >= 0 && ldof_j >= 0 &&
                   ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
                    goma_ctx->num_proc == 1)) {
-                dbl mm_contrib =
-                    bf[eqn]->phi[ldof_i] * bf[eqn]->phi[ldof_j] * fv->wt * bf[eqn]->detJ;
+                dbl mm_contrib = goma_ctx->fem.bf[eqn]->phi[ldof_i] *
+                                 goma_ctx->fem.bf[eqn]->phi[ldof_j] * goma_ctx->fem.fv->wt *
+                                 goma_ctx->fem.bf[eqn]->detJ;
                 PetscInt global_row = matrix_data->local_to_global[gnn_i];
                 PetscInt global_col = matrix_data->local_to_global[gnn_j];
                 PetscErrorCode err =
@@ -1004,7 +1063,7 @@ goma_error goma_setup_petsc_post_proc_matrix(
 
   PetscMatrixData *matrix_data = malloc(sizeof(struct PetscMatrixData));
 
-  upd->petsc_post_proc_data = (void *)matrix_data;
+  goma_ctx->fem.upd->petsc_post_proc_data = (void *)matrix_data;
 
   if (goma_ctx->petsc_options != NULL && !GomaPetscOptionsInserted) {
     err = PetscOptionsInsertString(NULL, goma_ctx->petsc_options);
@@ -1012,7 +1071,7 @@ goma_error goma_setup_petsc_post_proc_matrix(
     GomaPetscOptionsInserted = true;
   }
 
-  if (pg->imtrx == 0 && !GomaPetscOptionsPrinted) {
+  if (goma_ctx->fem.pg->imtrx == 0 && !GomaPetscOptionsPrinted) {
     CHKERRQ(PetscOptionsView(NULL, PETSC_VIEWER_STDOUT_WORLD));
     GomaPetscOptionsPrinted = true;
   }
@@ -1102,7 +1161,7 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
   for (int i = 0; i < num_cols; i++) {
     dblColGIDs[i] = (double)global_offset + i;
   }
-  exchange_dof(cx[pg->imtrx], dpi, dblColGIDs, pg->imtrx);
+  exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, dblColGIDs, goma_ctx->fem.pg->imtrx);
   // convert back to Int
   for (int i = 0; i < num_cols; i++) {
     matrix_data->local_to_global[i] = (PetscInt)dblColGIDs[i];
@@ -1118,7 +1177,7 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
    * loop over all of the nodes on this processor
    */
   for (int inode = 0; inode < total_nodes; inode++) {
-    NODAL_VARS_STRUCT *nv = Nodes[inode]->Nodal_Vars_Info[pg->imtrx];
+    NODAL_VARS_STRUCT *nv = Nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     /*
      * Fill the vector list which points to the unknowns defined at this
      * node...
@@ -1151,7 +1210,7 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
       for (int j = exo->node_node_pntr[inode]; j < exo->node_node_pntr[inode + 1]; j++) {
         int inter_node = exo->node_node_list[j];
         NODE_INFO_STRUCT *nodeCol = Nodes[inter_node];
-        NODAL_VARS_STRUCT *nvCol = nodeCol->Nodal_Vars_Info[pg->imtrx];
+        NODAL_VARS_STRUCT *nvCol = nodeCol->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
         /*
          * fill the vector list which points to the unknowns
@@ -1185,7 +1244,7 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
            * Query the Interaction mask to determine if a jacobian entry
            * should be created
            */
-          int add_var = Inter_Mask[pg->imtrx][rowVarType][colVarType];
+          int add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
 
           /* The following code should be activated when solving DG viscoelastic problems
            * with full Jacobian treatment of upwind element stress terms
@@ -1194,16 +1253,16 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
               exo->centroid_list[inter_node] != -1) {
             int eb1 = exo->elem_eb[exo->centroid_list[inode]];
 
-            if (vn_glob[Matilda[eb1]]->dg_J_model == FULL_DG) {
-              int i1 = pd_glob[Matilda[eb1]]->i[pg->imtrx][rowVarType];
-              int i2 = pd_glob[Matilda[eb1]]->i[pg->imtrx][colVarType];
+            if (goma_ctx->fem.vn_glob[Matilda[eb1]]->dg_J_model == FULL_DG) {
+              int i1 = goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][rowVarType];
+              int i2 = goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][colVarType];
 
               if ((rowVarType == colVarType) &&
                   (i1 == I_P0 || i1 == I_P1 || i1 == I_PQ1 || i1 == I_PQ2) &&
                   (i2 == I_P0 || i2 == I_P1 || i2 == I_PQ1 || i2 == I_PQ2) &&
                   (rowVarType != PRESSURE) &&
                   (rowVarType > VELOCITY_GRADIENT33 || rowVarType < VELOCITY_GRADIENT11)) {
-                add_var = Inter_Mask[pg->imtrx][rowVarType][colVarType];
+                add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
               } else {
                 add_var = 0;
               }
@@ -1217,7 +1276,7 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
             /*
              * Determine the equation number of the current unknown
              */
-            int icol_index = nodeCol->First_Unknown[pg->imtrx] + inter_unknown;
+            int icol_index = nodeCol->First_Unknown[goma_ctx->fem.pg->imtrx] + inter_unknown;
             if (icol_index < num_rows) {
               row_nnz++;
             } else {
@@ -1252,11 +1311,12 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
   ;
   ams->npn_plus = dpi->num_universe_nodes;
 
-  ams->npu = num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx];
-  ams->npu_plus = num_universe_dofs[pg->imtrx];
+  ams->npu =
+      num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+  ams->npu_plus = num_universe_dofs[goma_ctx->fem.pg->imtrx];
 
-  size_t local_dofs = num_universe_dofs[pg->imtrx];
-  size_t global_dofs = num_universe_dofs[pg->imtrx];
+  size_t local_dofs = num_universe_dofs[goma_ctx->fem.pg->imtrx];
+  size_t global_dofs = num_universe_dofs[goma_ctx->fem.pg->imtrx];
   size_t local_nnz = nnz;
   size_t global_nnz = nnz;
 
@@ -1369,7 +1429,7 @@ goma_error goma_setup_petsc_matrix(struct GomaLinearSolverData *ams,
   CHKERRQ(err);
 
   char ksp_prefix[25];
-  if (upd->Total_Num_Matrices > 1) {
+  if (goma_ctx->fem.upd->Total_Num_Matrices > 1) {
     snprintf(ksp_prefix, 24, "mat%d_", imtrx);
     err = MatSetOptionsPrefix(matrix_data->mat, ksp_prefix);
     CHKERRQ(err);
@@ -1379,7 +1439,7 @@ goma_error goma_setup_petsc_matrix(struct GomaLinearSolverData *ams,
     snprintf(ksp_prefix, 24, "res%d_", imtrx);
     err = VecSetOptionsPrefix(matrix_data->residual, ksp_prefix);
     CHKERRQ(err);
-    snprintf(ksp_prefix, 24, "upd%d_", pg->imtrx);
+    snprintf(ksp_prefix, 24, "upd%d_", goma_ctx->fem.pg->imtrx);
     err = VecSetOptionsPrefix(matrix_data->update, ksp_prefix);
     CHKERRQ(err);
   } else {
@@ -1416,7 +1476,8 @@ goma_error goma_setup_petsc_matrix(struct GomaLinearSolverData *ams,
   CHKERRQ(err);
 
   if (stokes_matrix_set && stokes_matrix == imtrx) {
-    GOMA_WH(GOMA_ERROR, "stokes matrix set to %ld", stokes_matrix, pd_glob[0]->Num_Dim);
+    GOMA_WH(GOMA_ERROR, "stokes matrix set to %ld", stokes_matrix,
+            goma_ctx->fem.pd_glob[0]->Num_Dim);
     IS ufields;
     IS pfields;
 
@@ -1501,12 +1562,12 @@ void petsc_load_lec(int ielem, struct GomaLinearSolverData *ams, double resid_ve
   PetscMatrixData *matrix_data = (PetscMatrixData *)ams->PetscMatrixData;
   matrix_data->mat_entries_set = PETSC_TRUE;
   for (e = V_FIRST; e < V_LAST; e++) {
-    pe = upd->ep[pg->imtrx][e];
+    pe = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][e];
     if (pe != -1) {
       if (e == R_MASS) {
-        for (ke = 0; ke < upd->Max_Num_Species_Eqn; ke++) {
+        for (ke = 0; ke < goma_ctx->fem.upd->Max_Num_Species_Eqn; ke++) {
           pe = MAX_PROB_VAR + ke;
-          dofs = ei[pg->imtrx]->dof[e];
+          dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[e];
           for (i = 0; i < dofs; i++) {
             /*
              * Check to see whether this dof is on a
@@ -1514,23 +1575,26 @@ void petsc_load_lec(int ielem, struct GomaLinearSolverData *ams, double resid_ve
              * there is no need to fill in the processor
              * residual and Jacobian row for this variable.
              */
-            ledof = ei[pg->imtrx]->lvdof_to_ledof[e][i];
-            if (ei[pg->imtrx]->owned_ledof[ledof]) {
-              gnn = ei[pg->imtrx]->gnn_list[e][i];
-              nvdof = ei[pg->imtrx]->Baby_Dolphin[e][i];
-              je_new = ei[pg->imtrx]->ieqn_ledof[ledof] + ke;
-              row_index =
-                  Index_Solution(gnn, e, ke, nvdof, ei[pg->imtrx]->matID_ledof[ledof], pg->imtrx);
-              resid_vector[row_index] += lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)];
+            ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[e][i];
+            if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owned_ledof[ledof]) {
+              gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[e][i];
+              nvdof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Baby_Dolphin[e][i];
+              je_new = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ieqn_ledof[ledof] + ke;
+              row_index = Index_Solution(
+                  gnn, e, ke, nvdof, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof],
+                  goma_ctx->fem.pg->imtrx);
+              resid_vector[row_index] += goma_ctx->fem.lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)];
 
-              if (af->Assemble_Jacobian) {
+              if (goma_ctx->fem.af->Assemble_Jacobian) {
                 for (v = V_FIRST; v < V_LAST; v++) {
-                  pv = upd->vp[pg->imtrx][v];
-                  if (pv != -1 && (Inter_Mask[pg->imtrx][e][v])) {
-                    ei_ptr = ei[pg->imtrx];
-                    if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
-                      if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
-                        ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
+                  pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
+                  if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
+                    ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
+                    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                        ielem) {
+                      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                          -1) {
+                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
                         if (ei_ptr == 0) {
                           printf("ei_ptr == 0\n");
                           exit(-1);
@@ -1538,31 +1602,31 @@ void petsc_load_lec(int ielem, struct GomaLinearSolverData *ams, double resid_ve
                       }
                     }
                     if (v == MASS_FRACTION) {
-                      for (kv = 0; kv < upd->Max_Num_Species_Eqn; kv++) {
+                      for (kv = 0; kv < goma_ctx->fem.upd->Max_Num_Species_Eqn; kv++) {
                         pv = MAX_PROB_VAR + kv;
                         for (j = 0; j < ei_ptr->dof[v]; j++) {
                           ledof = ei_ptr->lvdof_to_ledof[v][j];
                           je_new = ei_ptr->ieqn_ledof[ledof] + kv;
-                          col_index = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
-                                                     ei_ptr->Baby_Dolphin[v][j],
-                                                     ei_ptr->matID_ledof[ledof], pg->imtrx);
+                          col_index = Index_Solution(
+                              ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
+                              ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                           GOMA_EH(col_index, "Bad var index.");
 
                           PetscInt global_row = matrix_data->local_to_global[row_index];
                           PetscInt global_col = matrix_data->local_to_global[col_index];
                           MatSetValue(matrix_data->mat, global_row, global_col,
-                                      lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
+                                      goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
                         }
                       }
                     } else {
-                      pv = upd->vp[pg->imtrx][v];
+                      pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
                       kv = 0;
                       for (j = 0; j < ei_ptr->dof[v]; j++) {
                         ledof = ei_ptr->lvdof_to_ledof[v][j];
                         je_new = ei_ptr->ieqn_ledof[ledof];
-                        col_index = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
-                                                   ei_ptr->Baby_Dolphin[v][j],
-                                                   ei_ptr->matID_ledof[ledof], pg->imtrx);
+                        col_index = Index_Solution(
+                            ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
+                            ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                         if (col_index != je_new) {
                           fprintf(stderr, "Oh fiddlesticks: je = %d, je_new = %d\n", col_index,
                                   je_new);
@@ -1572,7 +1636,7 @@ void petsc_load_lec(int ielem, struct GomaLinearSolverData *ams, double resid_ve
                         PetscInt global_row = matrix_data->local_to_global[row_index];
                         PetscInt global_col = matrix_data->local_to_global[col_index];
                         MatSetValue(matrix_data->mat, global_row, global_col,
-                                    lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
+                                    goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
                       }
                     }
                   }
@@ -1582,8 +1646,8 @@ void petsc_load_lec(int ielem, struct GomaLinearSolverData *ams, double resid_ve
           }
         }
       } else {
-        pe = upd->ep[pg->imtrx][e];
-        dofs = ei[pg->imtrx]->dof[e];
+        pe = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][e];
+        dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[e];
         for (i = 0; i < dofs; i++) {
           /*
            * Check to see whether this dof is on a
@@ -1591,35 +1655,37 @@ void petsc_load_lec(int ielem, struct GomaLinearSolverData *ams, double resid_ve
            * there is no need to fill in the processor
            * residual and Jacobian row for this variable.
            */
-          ledof = ei[pg->imtrx]->lvdof_to_ledof[e][i];
-          if (ei[pg->imtrx]->owned_ledof[ledof]) {
-            row_index = ei[pg->imtrx]->gun_list[e][i];
-            resid_vector[row_index] += lec->R[LEC_R_INDEX(pe, i)];
+          ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[e][i];
+          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owned_ledof[ledof]) {
+            row_index = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[e][i];
+            resid_vector[row_index] += goma_ctx->fem.lec->R[LEC_R_INDEX(pe, i)];
 
-            if (af->Assemble_Jacobian) {
+            if (goma_ctx->fem.af->Assemble_Jacobian) {
               for (v = V_FIRST; v < V_LAST; v++) {
-                pv = upd->vp[pg->imtrx][v];
-                if (pv != -1 && (Inter_Mask[pg->imtrx][e][v])) {
+                pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
+                if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
                   if (v == MASS_FRACTION) {
 
-                    ei_ptr = ei[pg->imtrx];
-                    if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
-                      if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
-                        ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
+                    ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
+                    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                        ielem) {
+                      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                          -1) {
+                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
                         if (ei_ptr == 0) {
                           GOMA_EH(GOMA_ERROR, "ei_ptr == 0\n");
                           exit(-1);
                         }
                       }
                     }
-                    for (kv = 0; kv < upd->Max_Num_Species_Eqn; kv++) {
+                    for (kv = 0; kv < goma_ctx->fem.upd->Max_Num_Species_Eqn; kv++) {
                       pv = MAX_PROB_VAR + kv;
                       for (j = 0; j < ei_ptr->dof[v]; j++) {
                         ledof = ei_ptr->lvdof_to_ledof[v][j];
                         je_new = ei_ptr->ieqn_ledof[ledof] + kv;
-                        col_index = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
-                                                   ei_ptr->Baby_Dolphin[v][j],
-                                                   ei_ptr->matID_ledof[ledof], pg->imtrx);
+                        col_index = Index_Solution(
+                            ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
+                            ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                         if (col_index != je_new) {
                           /*
                            * HKM -> another special case. Until we delineate
@@ -1627,23 +1693,26 @@ void petsc_load_lec(int ielem, struct GomaLinearSolverData *ams, double resid_ve
                            *        dofs, je_new will be wrong here. je
                            *        is correct.
                            */
-                          if (Nodes[ei[pg->imtrx]->gnn_list[v][j]]->Mat_List.Length < 2) {
+                          if (Nodes[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j]]
+                                  ->Mat_List.Length < 2) {
                           }
                         }
                         GOMA_EH(col_index, "Bad var index.");
                         PetscInt global_row = matrix_data->local_to_global[row_index];
                         PetscInt global_col = matrix_data->local_to_global[col_index];
                         MatSetValue(matrix_data->mat, global_row, global_col,
-                                    lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
+                                    goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
                       }
                     }
                   } else {
                     kv = 0;
                     // NEW IMPLEMENTATION
-                    ei_ptr = ei[pg->imtrx];
-                    if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
-                      if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
-                        ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
+                    ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
+                    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                        ielem) {
+                      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
+                          -1) {
+                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
                         if (ei_ptr == 0) {
                           GOMA_EH(GOMA_ERROR, "ei slave pointer is null");
                           exit(-1);
@@ -1655,7 +1724,7 @@ void petsc_load_lec(int ielem, struct GomaLinearSolverData *ams, double resid_ve
                       je_new = ei_ptr->ieqn_ledof[ledof];
                       col_index =
                           Index_Solution(ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
-                                         ei_ptr->matID_ledof[ledof], pg->imtrx);
+                                         ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
                       if (col_index != je_new) {
                         fprintf(stderr, "Oh fiddlesticks: je = %d, je_new = %d\n", col_index,
                                 je_new);
@@ -1665,7 +1734,7 @@ void petsc_load_lec(int ielem, struct GomaLinearSolverData *ams, double resid_ve
                       PetscInt global_row = matrix_data->local_to_global[row_index];
                       PetscInt global_col = matrix_data->local_to_global[col_index];
                       MatSetValue(matrix_data->mat, global_row, global_col,
-                                  lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
+                                  goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)], ADD_VALUES);
                     }
                   }
                 }
@@ -1687,7 +1756,9 @@ goma_error petsc_scale_matrix(struct GomaLinearSolverData *ams, double *b_, doub
 
   CHKERRQ(MatCreateVecs(matrix_data->mat, &row_sums, NULL));
   VecZeroEntries(row_sums);
-  for (int i = 0; i < num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]; i++) {
+  for (int i = 0;
+       i < num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+       i++) {
     PetscInt ncols;
     const PetscScalar *vals;
     MatGetRow(matrix_data->mat, matrix_data->local_to_global[i], &ncols, NULL, &vals);
@@ -1698,15 +1769,19 @@ goma_error petsc_scale_matrix(struct GomaLinearSolverData *ams, double *b_, doub
     MatRestoreRow(matrix_data->mat, matrix_data->local_to_global[i], &ncols, NULL, &vals);
     scale[i] = 1.0 / sum;
   }
-  VecSetValues(row_sums, num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx],
+  VecSetValues(row_sums,
+               num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                   num_boundary_dofs[goma_ctx->fem.pg->imtrx],
                matrix_data->local_to_global, scale, INSERT_VALUES);
   MatDiagonalScale(matrix_data->mat, row_sums, NULL);
-  for (int i = 0; i < num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]; i++) {
+  for (int i = 0;
+       i < num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+       i++) {
     b_[i] *= scale[i];
     scale[i] = 1.0 / scale[i];
   }
-  exchange_dof(cx[pg->imtrx], DPI_ptr, b_, pg->imtrx);
-  exchange_dof(cx[pg->imtrx], DPI_ptr, scale, pg->imtrx);
+  exchange_dof(cx[goma_ctx->fem.pg->imtrx], DPI_ptr, b_, goma_ctx->fem.pg->imtrx);
+  exchange_dof(cx[goma_ctx->fem.pg->imtrx], DPI_ptr, scale, goma_ctx->fem.pg->imtrx);
   CHKERRQ(VecDestroy(&row_sums));
   return GOMA_SUCCESS;
 }
@@ -1730,9 +1805,11 @@ int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *i
   matrix_data->mat_entries_set = PETSC_FALSE;
   if (matrix_data->user_schur) {
     MatZeroEntries(matrix_data->SchurS);
-    set_petsc_pressure_matrix(matrix_data, EXO_ptr, DPI_ptr, pg->matrices[pg->imtrx].x,
-                              pg->matrices[pg->imtrx].x_old, pg->matrices[pg->imtrx].xdot,
-                              pg->matrices[pg->imtrx].xdot_old);
+    set_petsc_pressure_matrix(matrix_data, EXO_ptr, DPI_ptr,
+                              goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x,
+                              goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old,
+                              goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot,
+                              goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot_old);
 
     MatAssemblyBegin(matrix_data->SchurS, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(matrix_data->SchurS, MAT_FINAL_ASSEMBLY);
@@ -1742,17 +1819,21 @@ int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *i
       PC pc;
       int err = KSPGetPC(matrix_data->ksp, &pc);
       CHKERRQ(err);
-      petsc_PCD_setup(pc, matrix_data, EXO_ptr, DPI_ptr, pg->matrices[pg->imtrx].x,
-                      pg->matrices[pg->imtrx].x_old, pg->matrices[pg->imtrx].xdot,
-                      pg->matrices[pg->imtrx].xdot_old);
+      petsc_PCD_setup(pc, matrix_data, EXO_ptr, DPI_ptr,
+                      goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x,
+                      goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old,
+                      goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot,
+                      goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot_old);
     }
     MatZeroEntries(matrix_data->pcd_data->Fp);
     MatZeroEntries(matrix_data->pcd_data->Mp);
     MatZeroEntries(matrix_data->pcd_data->Mp_mu);
     MatZeroEntries(matrix_data->pcd_data->Ap);
-    set_pcd_matrices(matrix_data, EXO_ptr, DPI_ptr, pg->matrices[pg->imtrx].x,
-                     pg->matrices[pg->imtrx].x_old, pg->matrices[pg->imtrx].xdot,
-                     pg->matrices[pg->imtrx].xdot_old);
+    set_pcd_matrices(matrix_data, EXO_ptr, DPI_ptr,
+                     goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x,
+                     goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old,
+                     goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot,
+                     goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot_old);
     MatAssemblyBegin(matrix_data->pcd_data->Fp, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(matrix_data->pcd_data->Fp, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(matrix_data->pcd_data->Mp, MAT_FINAL_ASSEMBLY);
@@ -1762,7 +1843,9 @@ int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *i
     MatAssemblyBegin(matrix_data->pcd_data->Ap, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(matrix_data->pcd_data->Ap, MAT_FINAL_ASSEMBLY);
   }
-  for (PetscInt i = 0; i < num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]; i++) {
+  for (PetscInt i = 0;
+       i < num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+       i++) {
     VecSetValue(matrix_data->residual, matrix_data->local_to_global[i], b_[i], INSERT_VALUES);
     VecSetValue(matrix_data->update, matrix_data->local_to_global[i], x_[i], INSERT_VALUES);
   }
@@ -1775,13 +1858,15 @@ int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *i
   PetscInt pits;
   KSPGetIterationNumber(matrix_data->ksp, &pits);
   *its = pits;
-  VecGetValues(matrix_data->update, num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx],
+  VecGetValues(matrix_data->update,
+               num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                   num_boundary_dofs[goma_ctx->fem.pg->imtrx],
                matrix_data->local_to_global, x_);
   return 0;
 }
 
 void petsc_solve_post_proc(double **post_proc_vect, RESULTS_DESCRIPTION_STRUCT *rd, Dpi *dpi) {
-  PetscMatrixData *matrix_data = (PetscMatrixData *)upd->petsc_post_proc_data;
+  PetscMatrixData *matrix_data = (PetscMatrixData *)goma_ctx->fem.upd->petsc_post_proc_data;
   if (!matrix_data->matrix_setup) {
     MatAssemblyBegin(matrix_data->mat, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(matrix_data->mat, MAT_FINAL_ASSEMBLY);

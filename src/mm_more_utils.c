@@ -149,9 +149,9 @@ int cnt_elem_vars(const Exo_DB *exo) {
     if (exo->eb_num_elems[i] > 0) {
       int mat_id = Matilda[i];
       for (j = V_FIRST; j < V_LAST; j++) {
-        if (pd_glob[mat_id]->v[pg->imtrx][j] != V_NOTHING) {
-          if (pd_glob[mat_id]->i[pg->imtrx][j] == I_P0) {
-            if (Num_Var_In_Type[pg->imtrx][j] > 1) {
+        if (goma_ctx->fem.pd_glob[mat_id]->v[goma_ctx->fem.pg->imtrx][j] != V_NOTHING) {
+          if (goma_ctx->fem.pd_glob[mat_id]->i[goma_ctx->fem.pg->imtrx][j] == I_P0) {
+            if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][j] > 1) {
               fprintf(stderr,
                       "%s: Too many components in variable type for element variable %s (%s)\n", yo,
                       Exo_Var_Names[j].name2, Exo_Var_Names[j].name1);
@@ -159,11 +159,11 @@ int cnt_elem_vars(const Exo_DB *exo) {
             }
             if (ev_var_mask[j - V_FIRST] == 0) {
               /* We just found a candidate for an element variable */
-              tev += Num_Var_In_Type[pg->imtrx][j];
+              tev += Num_Var_In_Type[goma_ctx->fem.pg->imtrx][j];
               ev_var_mask[j - V_FIRST] = 1; /* Only count this variable once */
             }
           }
-          if (pd_glob[mat_id]->i[pg->imtrx][j] == I_P1) {
+          if (goma_ctx->fem.pd_glob[mat_id]->i[goma_ctx->fem.pg->imtrx][j] == I_P1) {
             if (ev_var_mask[j - V_FIRST] == 0) {
               /* We just found a candidate for an element variable */
               tev += getdofs(type2shape(exo->eb_elem_itype[i]), I_P1);
@@ -192,30 +192,39 @@ int goal_post_nodal(const int var) {
   int mat;
   int value;
 
-  for (mat = 0; mat < upd->Num_Mat; mat++) {
-    post_flag |=
-        (pd_glob[mat]->i[pg->imtrx][var] == I_Q1 || pd_glob[mat]->i[pg->imtrx][var] == I_Q2 ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q1_G || pd_glob[mat]->i[pg->imtrx][var] == I_Q2_G ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q1_GP || pd_glob[mat]->i[pg->imtrx][var] == I_Q2_GP ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q1_GN || pd_glob[mat]->i[pg->imtrx][var] == I_Q2_GN ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q1_XV || pd_glob[mat]->i[pg->imtrx][var] == I_Q2_XV ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q1_XG || pd_glob[mat]->i[pg->imtrx][var] == I_Q2_XG ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q1_HV || pd_glob[mat]->i[pg->imtrx][var] == I_Q1_HG ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q1_HVG ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q2_HV || pd_glob[mat]->i[pg->imtrx][var] == I_Q2_HG ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q2_HVG ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q2_LSA || pd_glob[mat]->i[pg->imtrx][var] == I_Q1_D ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q2_D ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q2_D_LSA || pd_glob[mat]->i[pg->imtrx][var] == I_SP ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_N1);
+  for (mat = 0; mat < goma_ctx->fem.upd->Num_Mat; mat++) {
+    post_flag |= (goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q1 ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q2 ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_G ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_G ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_GP ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_GP ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_GN ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_GN ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_XV ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_XV ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_XG ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_XG ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_HV ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_HG ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_HVG ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_HV ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_HG ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_HVG ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_LSA ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q1_D ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_D ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_Q2_D_LSA ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_SP ||
+                  goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_N1);
     ;
   }
 
   if (post_flag) {
     if (var == MASS_FRACTION) {
-      value = upd->Max_Num_Species_Eqn;
+      value = goma_ctx->fem.upd->Max_Num_Species_Eqn;
     } else {
-      value = Num_Var_In_Type[pg->imtrx][var];
+      value = Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var];
     }
   } else {
     value = 0;
@@ -232,16 +241,16 @@ int goal_post_elem(const int var) {
   char *yo;
   yo = "goal_post_elem";
 
-  for (mat = 0; mat < upd->Num_Mat; mat++) {
-    post_flag |= (pd_glob[mat]->i[pg->imtrx][var] == I_P0);
+  for (mat = 0; mat < goma_ctx->fem.upd->Num_Mat; mat++) {
+    post_flag |= (goma_ctx->fem.pd_glob[mat]->i[goma_ctx->fem.pg->imtrx][var] == I_P0);
   }
 
   if (post_flag) {
-    if (Num_Var_In_Type[pg->imtrx][var] > 1) {
+    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var] > 1) {
       fprintf(stderr, "%s: Too many components in variable type for element variable\n", yo);
       exit(-1);
     }
-    value = Num_Var_In_Type[pg->imtrx][var];
+    value = Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var];
   } else {
     value = 0;
   }
@@ -369,8 +378,8 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
 
   for (eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
     mn = Matilda[eb_index];
-    pd = pd_glob[mn];
-    vn = vn_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
+    goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];
 
     /*
      * Assign local pointer pd to appropriate material
@@ -400,8 +409,8 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
 
       for (i = 0; i < num_local_nodes; i++) {
         I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
-        if (Num_Var_In_Type[pg->imtrx][var_no]) {
-          index = Index_Solution(I, var_no, ktype, 0, mn, pg->imtrx);
+        if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var_no]) {
+          index = Index_Solution(I, var_no, ktype, 0, mn, goma_ctx->fem.pg->imtrx);
           if (index != -1) {
             nodal_vec[I] = sol_vec[index];
             /* BEWARE: this routine depends upon the exact
@@ -409,8 +418,8 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
              * it or bad things will happen!
              */
             var = var_no + 24;
-            for (mode = 1; mode < vn->modes; mode++) {
-              index = Index_Solution(I, var, ktype, 0, mn, pg->imtrx);
+            for (mode = 1; mode < goma_ctx->fem.vn->modes; mode++) {
+              index = Index_Solution(I, var, ktype, 0, mn, goma_ctx->fem.pg->imtrx);
               nodal_vec[I] += sol_vec[index];
               var += 6;
             }
@@ -431,12 +440,17 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
        * check for TRIQUAD_QUAD elem type
        */
 
-      if (pd->v[pg->imtrx][var_no] &&
-          (pd->i[pg->imtrx][var_no] == I_Q1 || pd->i[pg->imtrx][var_no] == I_Q1_G ||
-           pd->i[pg->imtrx][var_no] == I_Q1_GP || pd->i[pg->imtrx][var_no] == I_Q1_GN ||
-           pd->i[pg->imtrx][var_no] == I_Q1_XV || pd->i[pg->imtrx][var_no] == I_Q1_XG ||
-           pd->i[pg->imtrx][var_no] == I_Q1_HV || pd->i[pg->imtrx][var_no] == I_Q1_HG ||
-           pd->i[pg->imtrx][var_no] == I_Q1_HVG || pd->i[pg->imtrx][var_no] == I_SP) &&
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var_no] &&
+          (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1 ||
+           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_G ||
+           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_GP ||
+           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_GN ||
+           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_XV ||
+           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_XG ||
+           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_HV ||
+           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_HG ||
+           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_HVG ||
+           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_SP) &&
           (ielem_type == S_BIQUAD_QUAD || ielem_type == BIQUAD_QUAD)) {
         /* now interpolate Q1 variables onto 9-node mesh if needed */
         for (i = 4; i < 8; i++) {
@@ -444,7 +458,7 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
           /*
            * Double check to insure there really are no dofs here.
            */
-          if (Index_Solution(I, var_no, ktype, 0, mn, pg->imtrx) == -1) {
+          if (Index_Solution(I, var_no, ktype, 0, mn, goma_ctx->fem.pg->imtrx) == -1) {
             /*
              * make node lie halfway between adjacent nodes
              * cf. PATRAN local numbering scheme for element.
@@ -455,12 +469,16 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
             if (iright == 4)
               iright = 0;
             Iright = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + iright];
-            nodal_vec[I] = 0.5 * (sol_vec[Index_Solution(Ileft, var_no, ktype, 0, mn, pg->imtrx)] +
-                                  sol_vec[Index_Solution(Iright, var_no, ktype, 0, mn, pg->imtrx)]);
+            nodal_vec[I] =
+                0.5 *
+                (sol_vec[Index_Solution(Ileft, var_no, ktype, 0, mn, goma_ctx->fem.pg->imtrx)] +
+                 sol_vec[Index_Solution(Iright, var_no, ktype, 0, mn, goma_ctx->fem.pg->imtrx)]);
             var = var_no + 24;
-            for (mode = 1; mode < vn->modes; mode++) {
-              nodal_vec[I] += 0.5 * (sol_vec[Index_Solution(Ileft, var, ktype, 0, mn, pg->imtrx)] +
-                                     sol_vec[Index_Solution(Iright, var, ktype, 0, mn, pg->imtrx)]);
+            for (mode = 1; mode < goma_ctx->fem.vn->modes; mode++) {
+              nodal_vec[I] +=
+                  0.5 *
+                  (sol_vec[Index_Solution(Ileft, var, ktype, 0, mn, goma_ctx->fem.pg->imtrx)] +
+                   sol_vec[Index_Solution(Iright, var, ktype, 0, mn, goma_ctx->fem.pg->imtrx)]);
               var += 6;
             }
           }
@@ -474,15 +492,17 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
              */
             I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + 8];
             nodal_vec[I] = 0.;
-            if (Index_Solution(I, var_no, ktype, 0, mn, pg->imtrx) == -1) {
+            if (Index_Solution(I, var_no, ktype, 0, mn, goma_ctx->fem.pg->imtrx) == -1) {
               for (ileft = 0; ileft < 4; ileft++) {
                 Ileft = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ileft];
                 nodal_vec[I] +=
-                    0.25 * sol_vec[Index_Solution(Ileft, var_no, ktype, 0, mn, pg->imtrx)];
+                    0.25 *
+                    sol_vec[Index_Solution(Ileft, var_no, ktype, 0, mn, goma_ctx->fem.pg->imtrx)];
                 var = var_no + 24;
-                for (mode = 1; mode < vn->modes; mode++) {
+                for (mode = 1; mode < goma_ctx->fem.vn->modes; mode++) {
                   nodal_vec[I] +=
-                      0.25 * sol_vec[Index_Solution(Ileft, var, ktype, 0, mn, pg->imtrx)];
+                      0.25 *
+                      sol_vec[Index_Solution(Ileft, var, ktype, 0, mn, goma_ctx->fem.pg->imtrx)];
                   var += 6;
                 }
               }
@@ -566,7 +586,7 @@ void extract_nodal_vec(double sol_vec[],
    */
   for (eb_index = exo->num_elem_blocks - 1; eb_index >= 0; eb_index--) {
     mn = Matilda[eb_index];
-    pd = pd_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     /*
      * First check to see whether the variable is defined to be
      * in the solution vector in the element block
@@ -651,12 +671,12 @@ void extract_nodal_eb_vec(double sol_vec[],
    * Find out the material number, mn, from the element block index
    */
   mn = Matilda[eb_index];
-  matrl = mp_glob[mn];
+  matrl = goma_ctx->fem.mp_glob[mn];
 
   /*
    * Assign local pointer pd to appropriate material
    */
-  pd = pd_glob[mn];
+  goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
 
   /*
    *  Check for the existence of a special case for the sum of
@@ -718,11 +738,11 @@ void extract_nodal_eb_vec(double sol_vec[],
        * HKM -> Special compatibility section
        */
       if (lastSpeciesSum) {
-        index = Index_Solution(I, var_no, 0, iDof, matIndex, pg->imtrx);
+        index = Index_Solution(I, var_no, 0, iDof, matIndex, goma_ctx->fem.pg->imtrx);
         if (index != -1) {
           nodal_vec[I] = 0.0;
           for (j = 0; j < matrl->Num_Species_Eqn; j++) {
-            index = Index_Solution(I, var_no, j, iDof, matIndex, pg->imtrx);
+            index = Index_Solution(I, var_no, j, iDof, matIndex, goma_ctx->fem.pg->imtrx);
             nodal_vec[I] -= sol_vec[index];
           }
           switch (matrl->Species_Var_Type) {
@@ -746,7 +766,7 @@ void extract_nodal_eb_vec(double sol_vec[],
           }
         }
       } else {
-        index = Index_Solution(I, var_no, ktype, iDof, matIndex, pg->imtrx);
+        index = Index_Solution(I, var_no, ktype, iDof, matIndex, goma_ctx->fem.pg->imtrx);
         if (index != -1) {
           nodal_vec[I] = sol_vec[index];
         }
@@ -762,12 +782,17 @@ void extract_nodal_eb_vec(double sol_vec[],
      *     Should add check for TRIQUAD_QUAD elem type */
 
     midside = 0;
-    if (((pd->i[pg->imtrx][var_no] == I_Q1) || (pd->i[pg->imtrx][var_no] == I_Q1_G) ||
-         (pd->i[pg->imtrx][var_no] == I_Q1_GP) || (pd->i[pg->imtrx][var_no] == I_Q1_GN) ||
-         (pd->i[pg->imtrx][var_no] == I_Q1_XV) || (pd->i[pg->imtrx][var_no] == I_Q1_XG) ||
-         (pd->i[pg->imtrx][var_no] == I_Q1_HV) || (pd->i[pg->imtrx][var_no] == I_Q1_HG) ||
-         (pd->i[pg->imtrx][var_no] == I_Q1_HVG) || (pd->i[pg->imtrx][var_no] == I_Q1_D) ||
-         (pd->i[pg->imtrx][var_no] == I_SP)) &&
+    if (((goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1) ||
+         (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_G) ||
+         (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_GP) ||
+         (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_GN) ||
+         (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_XV) ||
+         (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_XG) ||
+         (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_HV) ||
+         (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_HG) ||
+         (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_HVG) ||
+         (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_D) ||
+         (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_SP)) &&
         ((ielem_type == S_BIQUAD_QUAD) || (ielem_type == BIQUAD_QUAD))) {
       midside = 1;
     }
@@ -779,7 +804,7 @@ void extract_nodal_eb_vec(double sol_vec[],
         /*
          * Double check to insure there really are no dofs here.
          */
-        if (Index_Solution(I, var_no, ktype, 0, matIndex, pg->imtrx) == -1) {
+        if (Index_Solution(I, var_no, ktype, 0, matIndex, goma_ctx->fem.pg->imtrx) == -1) {
           /*
            * make node lie halfway between adjacent nodes
            * cf. PATRAN local numbering scheme for element.
@@ -799,10 +824,11 @@ void extract_nodal_eb_vec(double sol_vec[],
       if (ielem_type == BIQUAD_QUAD) {
         I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + 8];
         nodal_vec[I] = 0.0;
-        if ((Index_Solution(I, var_no, ktype, 0, matIndex, pg->imtrx) == -1) ||
+        if ((Index_Solution(I, var_no, ktype, 0, matIndex, goma_ctx->fem.pg->imtrx) == -1) ||
             /* for P0 jumps, overwrite jump with interpolant */
-            (pd->i[pg->imtrx][var_no] == I_Q1_HV || pd->i[pg->imtrx][var_no] == I_Q1_HG ||
-             pd->i[pg->imtrx][var_no] == I_Q1_HVG)) {
+            (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_HV ||
+             goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_HG ||
+             goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var_no] == I_Q1_HVG)) {
           for (ileft = 0; ileft < 4; ileft++) {
             Ileft = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ileft];
             nodal_vec[I] += 0.25 * nodal_vec[Ileft];
@@ -848,7 +874,7 @@ void extract_elem_vec(const double sol_vec[],
   for (eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
 
     mn = Matilda[eb_index];
-    pd = pd_glob[mn];
+    goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
 
     /*
      * Not all element variables exist in all element blocks.
@@ -895,7 +921,7 @@ void extract_elem_vec(const double sol_vec[],
              There should never be more than one of this quantity defined
              per element, or we have a problem treating it as an element
              variable. Hence the found_quantity check.                       */
-          index = Index_Solution(I, var, ktype, dof, mn, pg->imtrx);
+          index = Index_Solution(I, var, ktype, dof, mn, goma_ctx->fem.pg->imtrx);
           if (index != -1) {
             /* This should be the one node that has our value - set the element
                value to this */
@@ -919,7 +945,7 @@ void extract_elem_vec(const double sol_vec[],
            There should never be more than one of this quantity defined
            per element, or we have a problem treating it as an element
            variable. Hence the found_quantity check.                       */
-        index = Index_Solution(I, var, ktype, dof, mn, upd->matrix_index[var]);
+        index = Index_Solution(I, var, ktype, dof, mn, goma_ctx->fem.upd->matrix_index[var]);
         if (index != -1) {
           /* This should be the one node that has our value - set the element
              value to this */
@@ -993,8 +1019,8 @@ int get_new_coord(double *new_coord[DIM], double *x, const Exo_DB *exo) {
     dcopy1(num_nodes, goma_ctx->mesh.coor[p], new_coord[p]);
   }
 
-  for (p = 0; p < upd->Num_Mat; p++)
-    displacement_somewhere |= (pd_glob[p]->e[pg->imtrx][R_MESH1]);
+  for (p = 0; p < goma_ctx->fem.upd->Num_Mat; p++)
+    displacement_somewhere |= (goma_ctx->fem.pd_glob[p]->e[goma_ctx->fem.pg->imtrx][R_MESH1]);
 
   if (displacement_somewhere == FALSE)
     return (FALSE);
@@ -1011,10 +1037,10 @@ int get_new_coord(double *new_coord[DIM], double *x, const Exo_DB *exo) {
 
     load_elem_dofptr(ielem, exo, x, x, x, x, 1);
 
-    for (ln = 0; ln < ei[pg->imtrx]->num_local_nodes; ln++) {
+    for (ln = 0; ln < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; ln++) {
       double xi[3] = {0.0, 0.0, 0.0};
 
-      find_nodal_stu(ln, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
+      find_nodal_stu(ln, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
 
       gnn = exo->elem_node_list[exo->elem_node_pntr[ielem] + ln];
 
@@ -1024,14 +1050,16 @@ int get_new_coord(double *new_coord[DIM], double *x, const Exo_DB *exo) {
         for (p = 0; p < DIM; p++) {
           var = MESH_DISPLACEMENT1 + p;
 
-          for (i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
-            phi[i] = newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ei[pg->imtrx]->dof_list[var][i],
-                              ei[pg->imtrx]->ielem_shape, pd->i[pg->imtrx][var], i);
+          for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
+            phi[i] = newshape(xi, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, PSI,
+                              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[var][i],
+                              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
+                              goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var], i);
           }
 
-          if (pd->v[pg->imtrx][var]) {
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-              displacement[p] += *esp->d[p][j] * phi[j];
+          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              displacement[p] += *goma_ctx->fem.esp->d[p][j] * phi[j];
             }
             moved[gnn] = 1;
           } else

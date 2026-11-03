@@ -67,10 +67,10 @@ double polymer_time_const(struct PolymerTimeConstants *lambda_st,
   case CARREAU:
     return carreau_polymer_time_const(lambda_st, gamma_dot, d_lambda);
   case VE_LEVEL_SET:
-    if (ls != NULL) {
+    if (goma_ctx->fem.ls != NULL) {
       double pos_mup = lambda_st->pos_ls_lambda;
       double neg_mup = lambda_st->lambda0;
-      double width = ls->Length_Scale;
+      double width = goma_ctx->fem.ls->Length_Scale;
       if (d_lambda != NULL)
         err = level_set_property(neg_mup, pos_mup, width, &lambda, d_lambda->F);
       else
@@ -110,10 +110,10 @@ double power_law_time_const(struct PolymerTimeConstants *lambda_st,
   dbl offset;
   dbl lambda = 0.;
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
@@ -136,7 +136,7 @@ double power_law_time_const(struct PolymerTimeConstants *lambda_st,
     d_lambda->gd = lambda0 * (nexp - 1.0) * val;
   }
 
-  if (d_lambda != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_lambda != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -154,7 +154,7 @@ double power_law_time_const(struct PolymerTimeConstants *lambda_st,
   /*
    * d( mu )/dv
    */
-  if (d_lambda != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_lambda != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -193,10 +193,10 @@ double carreau_polymer_time_const(struct PolymerTimeConstants *lambda_st,
   dbl aexp;
   dbl carreau_lambda;
 
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
 
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
   }
 
   calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
@@ -231,7 +231,7 @@ double carreau_polymer_time_const(struct PolymerTimeConstants *lambda_st,
   /*
    * d( lambda )/dmesh
    */
-  if (d_lambda != NULL && pd->e[pg->imtrx][R_MESH1]) {
+  if (d_lambda != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
@@ -247,7 +247,7 @@ double carreau_polymer_time_const(struct PolymerTimeConstants *lambda_st,
   /*
    * d( lambda )/dv
    */
-  if (d_lambda != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
+  if (d_lambda != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {

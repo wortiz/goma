@@ -218,7 +218,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
 #endif
 
   /* Set step_fix only if parallel run and only if fix freq is enabled*/
-  if (goma_ctx->num_proc > 1 && cont->fix_freq > 0) {
+  if (goma_ctx->num_proc > 1 && goma_ctx->fem.cont->fix_freq > 0) {
     step_fix = 1; /* Always fix on the first timestep to match print frequency */
   }
 
@@ -342,12 +342,12 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
    */
   num_total_nodes = dpi->num_universe_nodes;
 
-  numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
+  numProcUnknowns = NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
 
   /* allocate memory for Volume Constraint Jacobian */
   if (nAC > 0)
     for (iAC = 0; iAC < nAC; iAC++)
-      augc[iAC].d_evol_dx = (double *)malloc(numProcUnknowns * sizeof(double));
+      goma_ctx->fem.augc[iAC].d_evol_dx = (double *)malloc(numProcUnknowns * sizeof(double));
 
   asdv(&resid_vector, numProcUnknowns);
   asdv(&resid_vector_sens, numProcUnknowns);
@@ -391,32 +391,32 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     cl_aux = fopen("goma-cl.txt", "w+");
 
     fprintf(cl_aux, "goma -a -i input ");
-    fprintf(cl_aux, "-cb %10.6e ", cont->BegParameterValue);
-    fprintf(cl_aux, "-ce %10.6e ", cont->EndParameterValue);
-    fprintf(cl_aux, "-cd %10.6e ", cont->Delta_s0);
-    fprintf(cl_aux, "-cn %d ", cont->MaxPathSteps);
-    fprintf(cl_aux, "-cmin %10.6e ", cont->Delta_s_min);
-    fprintf(cl_aux, "-cmax %10.6e ", cont->Delta_s_max);
+    fprintf(cl_aux, "-cb %10.6e ", goma_ctx->fem.cont->BegParameterValue);
+    fprintf(cl_aux, "-ce %10.6e ", goma_ctx->fem.cont->EndParameterValue);
+    fprintf(cl_aux, "-cd %10.6e ", goma_ctx->fem.cont->Delta_s0);
+    fprintf(cl_aux, "-cn %d ", goma_ctx->fem.cont->MaxPathSteps);
+    fprintf(cl_aux, "-cmin %10.6e ", goma_ctx->fem.cont->Delta_s_min);
+    fprintf(cl_aux, "-cmax %10.6e ", goma_ctx->fem.cont->Delta_s_max);
     fprintf(cl_aux, "-cm %d ", Continuation);
-    fprintf(cl_aux, "-ct %d ", cont->upType);
+    fprintf(cl_aux, "-ct %d ", goma_ctx->fem.cont->upType);
 
-    switch (cont->upType) {
+    switch (goma_ctx->fem.cont->upType) {
     case 1: /* BC TYPE */
-      fprintf(cl_aux, "-c_bc %d ", cont->upBCID);
-      fprintf(cl_aux, "-c_df %d ", cont->upDFID);
+      fprintf(cl_aux, "-c_bc %d ", goma_ctx->fem.cont->upBCID);
+      fprintf(cl_aux, "-c_df %d ", goma_ctx->fem.cont->upDFID);
       break;
     case 2: /* MAT TYPE */
-      fprintf(cl_aux, "-c_mn %d ", cont->upMTID + 1);
-      fprintf(cl_aux, "-c_mp %d ", cont->upMPID);
+      fprintf(cl_aux, "-c_mn %d ", goma_ctx->fem.cont->upMTID + 1);
+      fprintf(cl_aux, "-c_mp %d ", goma_ctx->fem.cont->upMPID);
       break;
     case 3: /* AC TYPE */
-      fprintf(cl_aux, "-c_ac %d ", cont->upBCID);
-      fprintf(cl_aux, "-c_df %d ", cont->upDFID);
+      fprintf(cl_aux, "-c_ac %d ", goma_ctx->fem.cont->upBCID);
+      fprintf(cl_aux, "-c_df %d ", goma_ctx->fem.cont->upDFID);
       break;
     case 4: /* USER MAT TYPE */
-      fprintf(cl_aux, "-c_mn %d ", cont->upMTID + 1);
-      fprintf(cl_aux, "-c_mp %d ", cont->upMPID);
-      fprintf(cl_aux, "-c_md %d ", cont->upMDID);
+      fprintf(cl_aux, "-c_mn %d ", goma_ctx->fem.cont->upMTID + 1);
+      fprintf(cl_aux, "-c_mp %d ", goma_ctx->fem.cont->upMPID);
+      fprintf(cl_aux, "-c_md %d ", goma_ctx->fem.cont->upMDID);
       break;
     case 5: /* USER-DEFINED FUNCTION TYPE */
       /* NOTE:  This is not available via the command line! */
@@ -426,7 +426,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
       GOMA_EH(GOMA_ERROR, "Angular continuation is available only in LOCA!");
       break;
     default:
-      fprintf(stderr, "%s: Bad cont->upType, %d\n", yo, cont->upType);
+      fprintf(stderr, "%s: Bad cont->upType, %d\n", yo, goma_ctx->fem.cont->upType);
       GOMA_EH(GOMA_ERROR, "Bad cont->upType");
       break; /* duh */
     }
@@ -441,8 +441,8 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
   /*
    * FIRST ORDER CONTINUATION
    */
-  lambda = cont->BegParameterValue;
-  lambdaEnd = cont->EndParameterValue;
+  lambda = goma_ctx->fem.cont->BegParameterValue;
+  lambdaEnd = goma_ctx->fem.cont->EndParameterValue;
 
   if (lambdaEnd > lambda)
     aldALC = +1;
@@ -450,12 +450,12 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     aldALC = -1;
 
   delta_s_new = 0.0;
-  Delta_s0 = cont->Delta_s0;
-  Delta_s_min = cont->Delta_s_min;
-  Delta_s_max = cont->Delta_s_max;
-  MaxPathSteps = cont->MaxPathSteps;
-  PathMax = cont->PathMax;
-  eps = cont->eps;
+  Delta_s0 = goma_ctx->fem.cont->Delta_s0;
+  Delta_s_min = goma_ctx->fem.cont->Delta_s_min;
+  Delta_s_max = goma_ctx->fem.cont->Delta_s_max;
+  MaxPathSteps = goma_ctx->fem.cont->MaxPathSteps;
+  PathMax = goma_ctx->fem.cont->PathMax;
+  eps = goma_ctx->fem.cont->eps;
 
   if (Delta_s0 < 0.0) {
     Delta_s0 = -Delta_s0;
@@ -478,7 +478,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
   delta_s = delta_s_old = delta_s_older = Delta_s0;
 
   delta_t = 0.0;
-  tran->delta_t = 0.0; /*for Newmark-Beta terms in Lagrangian Solid*/
+  goma_ctx->fem.tran->delta_t = 0.0; /*for Newmark-Beta terms in Lagrangian Solid*/
 
   /* Call prefront (or mf_setup) if necessary */
   if (goma_ctx->solver.linear_solver == FRONT) {
@@ -498,12 +498,13 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     /* NOTE: We need a overall flag in the vn_glob struct that tells whether FULL_DG
        is on anywhere in domain.  This assumes only one material.  See sl_front_setup for test.
        that test needs to be in the input parser.  */
-    if (vn_glob[0]->dg_J_model == FULL_DG)
-      max_unk_elem = (MAX_PROB_VAR + MAX_CONC) * MDE + 4 * vn_glob[0]->modes * 4 * MDE;
+    if (goma_ctx->fem.vn_glob[0]->dg_J_model == FULL_DG)
+      max_unk_elem =
+          (MAX_PROB_VAR + MAX_CONC) * MDE + 4 * goma_ctx->fem.vn_glob[0]->modes * 4 * MDE;
 
-    err = mf_setup(&exo->num_elems, &NumUnknowns[pg->imtrx], &max_unk_elem, &three, &one,
-                   exo->elem_order_map, fss->el_proc_assign, fss->level, fss->nopdof, fss->ncn,
-                   fss->constraint, goma_ctx->front_scratch_directory, &fss->ntra);
+    err = mf_setup(&exo->num_elems, &NumUnknowns[goma_ctx->fem.pg->imtrx], &max_unk_elem, &three,
+                   &one, exo->elem_order_map, fss->el_proc_assign, fss->level, fss->nopdof,
+                   fss->ncn, fss->constraint, goma_ctx->front_scratch_directory, &fss->ntra);
     GOMA_EH(err, "problems in frontal setup ");
 
 #else
@@ -541,16 +542,16 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
    */
   update_parameterC(0, path1, x, xdot, x_AC, delta_s, cx, exo, dpi);
 
-  pg->matrices = malloc(sizeof(struct Matrix_Data));
-  pg->matrices[pg->imtrx].ams = ams[JAC];
-  pg->matrices[pg->imtrx].x = x;
-  pg->matrices[pg->imtrx].x_old = x_old;
-  pg->matrices[pg->imtrx].x_older = x_older;
-  pg->matrices[pg->imtrx].xdot = xdot;
-  pg->matrices[pg->imtrx].xdot_old = xdot_old;
-  pg->matrices[pg->imtrx].x_update = x_update;
-  pg->matrices[pg->imtrx].scale = scale;
-  pg->matrices[pg->imtrx].resid_vector = resid_vector;
+  goma_ctx->fem.pg->matrices = malloc(sizeof(struct Matrix_Data));
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].ams = ams[JAC];
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x = x;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old = x_old;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_older = x_older;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot = xdot;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot_old = xdot_old;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_update = x_update;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].scale = scale;
+  goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].resid_vector = resid_vector;
 
   /* Allocate sparse matrix */
   if ((strcmp(goma_ctx->solver.matrix_format, "tpetra") == 0) ||
@@ -564,10 +565,11 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     GOMA_EH(err, "GomaSparseMatrix_CreateFromFormat");
     int local_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
                       goma_ctx->mesh.num_external_nodes;
-    err = GomaSparseMatrix_SetProblemGraph(
-        goma_matrix, num_internal_dofs[pg->imtrx], num_boundary_dofs[pg->imtrx],
-        num_external_dofs[pg->imtrx], local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,
-        dpi, cx, pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
+    err = GomaSparseMatrix_SetProblemGraph(goma_matrix, num_internal_dofs[goma_ctx->fem.pg->imtrx],
+                                           num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+                                           num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes,
+                                           Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo, dpi, cx,
+                                           goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
     GOMA_EH(err, "GomaSparseMatrix_SetProblemGraph");
     ams[JAC]->GomaMatrixData = goma_matrix;
   } else if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
@@ -577,9 +579,10 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
      * An attic to store external dofs column names is needed when
      * running in parallel.
      */
-    alloc_extern_ija_buffer(num_universe_dofs[pg->imtrx],
-                            num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx], ija,
-                            &ija_attic);
+    alloc_extern_ija_buffer(num_universe_dofs[goma_ctx->fem.pg->imtrx],
+                            num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                                num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+                            ija, &ija_attic);
     /*
      * Any necessary one time initialization of the linear
      * solver package (Aztec).
@@ -601,11 +604,14 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     ams[JAC]->npn_plus =
         dpi->num_internal_nodes + dpi->num_boundary_nodes + dpi->num_external_nodes;
 
-    ams[JAC]->npu = num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx];
-    ams[JAC]->npu_plus = num_universe_dofs[pg->imtrx];
+    ams[JAC]->npu =
+        num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+    ams[JAC]->npu_plus = num_universe_dofs[goma_ctx->fem.pg->imtrx];
 
-    ams[JAC]->nnz = ija[num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]] - 1;
-    ams[JAC]->nnz_plus = ija[num_universe_dofs[pg->imtrx]];
+    ams[JAC]->nnz = ija[num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                        num_boundary_dofs[goma_ctx->fem.pg->imtrx]] -
+                    1;
+    ams[JAC]->nnz_plus = ija[num_universe_dofs[goma_ctx->fem.pg->imtrx]];
   } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
     log_msg("alloc_VBR_sparse_arrays...");
     alloc_VBR_sparse_arrays(ams[JAC], exo, dpi);
@@ -621,20 +627,22 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc_complex, solver must be petsc_complex");
     check_parallel_error("Matrix format / Solver incompatibility");
-    pg->imtrx = 0;
+    goma_ctx->fem.pg->imtrx = 0;
     goma_error err = goma_setup_petsc_matrix_complex(
-        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[pg->imtrx],
-        num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx], pg->imtrx);
+        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[goma_ctx->fem.pg->imtrx],
+        num_boundary_dofs[goma_ctx->fem.pg->imtrx], num_external_dofs[goma_ctx->fem.pg->imtrx],
+        goma_ctx->fem.pg->imtrx);
     GOMA_EH(err, "goma_setup_petsc_matrix");
 #else
   } else if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
-    pg->imtrx = 0;
+    goma_ctx->fem.pg->imtrx = 0;
     goma_error err = goma_setup_petsc_matrix(
-        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[pg->imtrx],
-        num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx], pg->imtrx);
+        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[goma_ctx->fem.pg->imtrx],
+        num_boundary_dofs[goma_ctx->fem.pg->imtrx], num_external_dofs[goma_ctx->fem.pg->imtrx],
+        goma_ctx->fem.pg->imtrx);
     GOMA_EH(err, "goma_setup_petsc_matrix");
 #endif
 #endif
@@ -643,7 +651,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
 
 #ifdef GOMA_ENABLE_PETSC
 #if !(PETSC_USE_COMPLEX)
-  if (upd->petsc_solve_post_proc && rd->TotalNVPostOutput) {
+  if (goma_ctx->fem.upd->petsc_solve_post_proc && rd->TotalNVPostOutput) {
     goma_setup_petsc_post_proc_matrix(exo, dpi, x, x_old, xdot, xdot_old);
   }
 #endif
@@ -652,7 +660,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
 
   /*  if read ACs, update data floats */
   if (nAC > 0)
-    if (augc[0].iread == 1) {
+    if (goma_ctx->fem.augc[0].iread == 1) {
       for (iAC = 0; iAC < nAC; iAC++) {
         update_parameterAC(iAC, x, xdot, x_AC, cx, exo, dpi);
       }
@@ -669,7 +677,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
 
   find_and_set_Dirichlet(x, xdot, exo, dpi);
 
-  exchange_dof(cx, dpi, x, pg->imtrx);
+  exchange_dof(cx, dpi, x, goma_ctx->fem.pg->imtrx);
 
   dcopy1(numProcUnknowns, x, x_old);
   dcopy1(numProcUnknowns, x_old, x_older);
@@ -761,7 +769,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
      * IF STEP CHANGED, REDO FIRST ORDER PREDICTION
      */
     if (alqALC == -1) {
-      dcopy1(NumUnknowns[pg->imtrx], x_old, x);
+      dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], x_old, x);
 
       switch (Continuation) {
       case ALC_ZEROTH:
@@ -769,10 +777,10 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
       case ALC_FIRST:
         switch (aldALC) {
         case -1:
-          v1add(NumUnknowns[pg->imtrx], &x[0], -delta_s, &x_sens[0]);
+          v1add(NumUnknowns[goma_ctx->fem.pg->imtrx], &x[0], -delta_s, &x_sens[0]);
           break;
         case +1:
-          v1add(NumUnknowns[pg->imtrx], &x[0], +delta_s, &x_sens[0]);
+          v1add(NumUnknowns[goma_ctx->fem.pg->imtrx], &x[0], +delta_s, &x_sens[0]);
           break;
         default:
           DPRINTF(stderr, "%s: Bad aldALC, %d\n", yo, aldALC);
@@ -792,7 +800,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
 
     find_and_set_Dirichlet(x, xdot, exo, dpi);
 
-    exchange_dof(cx, dpi, x, pg->imtrx);
+    exchange_dof(cx, dpi, x, goma_ctx->fem.pg->imtrx);
 
     if (goma_ctx->proc_id == 0) {
       fprintf(stdout, "\n\t----------------------------------");
@@ -810,49 +818,54 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
       }
       DPRINTF(stdout, "\n\tStep number: %4d of %4d (max)", n + 1, MaxPathSteps);
       DPRINTF(stdout, "\n\tAttempting solution at:");
-      switch (cont->upType) {
+      switch (goma_ctx->fem.cont->upType) {
       case 1: /* BC */
       case 3: /* AC */
-        DPRINTF(stdout, "\n\tBCID=%3d DFID=%5d", cont->upBCID, cont->upDFID);
+        DPRINTF(stdout, "\n\tBCID=%3d DFID=%5d", goma_ctx->fem.cont->upBCID,
+                goma_ctx->fem.cont->upDFID);
         break;
       case 2: /* MT */
-        DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d", cont->upMTID, cont->upMPID);
+        DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d", goma_ctx->fem.cont->upMTID,
+                goma_ctx->fem.cont->upMPID);
         break;
       case 4: /* UM */
-        DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d MDID=%3d", cont->upMTID, cont->upMPID, cont->upMDID);
+        DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d MDID=%3d", goma_ctx->fem.cont->upMTID,
+                goma_ctx->fem.cont->upMPID, goma_ctx->fem.cont->upMDID);
         break;
 
         /* This case requires an inner switch block */
       case 5: /* UF */
         for (iUC = 0; iUC < nUC; iUC++) {
-          switch (cpuc[iUC].Type) {
+          switch (goma_ctx->fem.cpuc[iUC].Type) {
           case 1: /* BC */
           case 3: /* AC */
-            DPRINTF(stdout, "\n\tBCID=%3d DFID=%5d", cpuc[iUC].BCID, cpuc[iUC].DFID);
+            DPRINTF(stdout, "\n\tBCID=%3d DFID=%5d", goma_ctx->fem.cpuc[iUC].BCID,
+                    goma_ctx->fem.cpuc[iUC].DFID);
             break;
           case 2: /* MT */
-            DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d", cpuc[iUC].MTID, cpuc[iUC].MPID);
+            DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d", goma_ctx->fem.cpuc[iUC].MTID,
+                    goma_ctx->fem.cpuc[iUC].MPID);
             break;
           case 4: /* UM */
-            DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d MDID=%3d", cpuc[iUC].MTID, cpuc[iUC].MPID,
-                    cpuc[iUC].MDID);
+            DPRINTF(stdout, "\n\tMTID=%3d MPID=%5d MDID=%3d", goma_ctx->fem.cpuc[iUC].MTID,
+                    goma_ctx->fem.cpuc[iUC].MPID, goma_ctx->fem.cpuc[iUC].MDID);
             break;
           default:
-            DPRINTF(stdout, "%s: Bad user continuation type, %d\n", yo, cont->upType);
+            DPRINTF(stdout, "%s: Bad user continuation type, %d\n", yo, goma_ctx->fem.cont->upType);
             GOMA_EH(GOMA_ERROR, "\t");
             break;
           }
-          DPRINTF(stdout, " Parameter= % 10.6e delta_s= %10.6e", cpuc[iUC].value,
-                  (cpuc[iUC].value - cpuc[iUC].old_value));
+          DPRINTF(stdout, " Parameter= % 10.6e delta_s= %10.6e", goma_ctx->fem.cpuc[iUC].value,
+                  (goma_ctx->fem.cpuc[iUC].value - goma_ctx->fem.cpuc[iUC].old_value));
         }
         break;
 
       default:
-        DPRINTF(stderr, "%s: Bad cont->upType, %d\n", yo, cont->upType);
+        DPRINTF(stderr, "%s: Bad cont->upType, %d\n", yo, goma_ctx->fem.cont->upType);
         GOMA_EH(GOMA_ERROR, "\t");
         break; /* duh */
       }
-      if (cont->upType != 5) {
+      if (goma_ctx->fem.cont->upType != 5) {
         DPRINTF(stdout, " Parameter= % 10.6e delta_s= %10.6e", path1, delta_s);
       }
     }
@@ -892,34 +905,40 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
           DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
 
           for (iAC = 0; iAC < nAC; iAC++) {
-            evol_local = augc[iAC].evol;
+            evol_local = goma_ctx->fem.augc[iAC].evol;
 #ifdef PARALLEL
-            if (goma_ctx->num_proc > 1 &&
-                (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
-                 augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
+            if (goma_ctx->num_proc > 1 && (goma_ctx->fem.augc[iAC].Type == AC_VOLUME ||
+                                           goma_ctx->fem.augc[iAC].Type == AC_POSITION ||
+                                           goma_ctx->fem.augc[iAC].Type == AC_ANGLE ||
+                                           goma_ctx->fem.augc[iAC].Type == AC_POSITION_MT)) {
               MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
               evol_local = evol_global;
             }
 #endif
-            if (augc[iAC].Type == AC_USERBC) {
-              DPRINTF(stdout, "\tBC[%4d] DF[%4d] = %10.6e\n", augc[iAC].BCID, augc[iAC].DFID,
+            if (goma_ctx->fem.augc[iAC].Type == AC_USERBC) {
+              DPRINTF(stdout, "\tBC[%4d] DF[%4d] = %10.6e\n", goma_ctx->fem.augc[iAC].BCID,
+                      goma_ctx->fem.augc[iAC].DFID, x_AC[iAC]);
+            } else if (goma_ctx->fem.augc[iAC].Type == AC_USERMAT ||
+                       goma_ctx->fem.augc[iAC].Type == AC_FLUX_MAT) {
+              DPRINTF(stdout, "\tMT[%4d] MP[%4d] = %10.6e\n", goma_ctx->fem.augc[iAC].MTID,
+                      goma_ctx->fem.augc[iAC].MPID, x_AC[iAC]);
+            } else if (goma_ctx->fem.augc[iAC].Type == AC_VOLUME) {
+              DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n",
+                      goma_ctx->fem.augc[iAC].MTID, goma_ctx->fem.augc[iAC].VOLID, evol_local,
                       x_AC[iAC]);
-            } else if (augc[iAC].Type == AC_USERMAT || augc[iAC].Type == AC_FLUX_MAT) {
-              DPRINTF(stdout, "\tMT[%4d] MP[%4d] = %10.6e\n", augc[iAC].MTID, augc[iAC].MPID,
+            } else if (goma_ctx->fem.augc[iAC].Type == AC_POSITION ||
+                       goma_ctx->fem.augc[iAC].Type == AC_POSITION_MT) {
+              DPRINTF(stdout, "\tMT[%4d] XY[%4d]=%10.6e Param=%10.6e\n",
+                      goma_ctx->fem.augc[iAC].MTID, goma_ctx->fem.augc[iAC].VOLID, evol_local,
                       x_AC[iAC]);
-            } else if (augc[iAC].Type == AC_VOLUME) {
-              DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
-                      augc[iAC].VOLID, evol_local, x_AC[iAC]);
-            } else if (augc[iAC].Type == AC_POSITION || augc[iAC].Type == AC_POSITION_MT) {
-              DPRINTF(stdout, "\tMT[%4d] XY[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
-                      augc[iAC].VOLID, evol_local, x_AC[iAC]);
-            } else if (augc[iAC].Type == AC_ANGLE) {
-              evol_local = augc[iAC].lm_resid + augc[iAC].CONSTV;
+            } else if (goma_ctx->fem.augc[iAC].Type == AC_ANGLE) {
+              evol_local = goma_ctx->fem.augc[iAC].lm_resid + goma_ctx->fem.augc[iAC].CONSTV;
               DPRINTF(stdout, "\tNodeSet[%4d]_Ang = %g F_bal = %6.3e VC[%4d] Param=%6.3e\n",
-                      augc[iAC].MTID, evol_local, augc[iAC].lm_resid, augc[iAC].VOLID, x_AC[iAC]);
-            } else if (augc[iAC].Type == AC_FLUX) {
-              DPRINTF(stdout, "\tBC[%4d] DF[%4d]=%10.6e\n", augc[iAC].BCID, augc[iAC].DFID,
-                      x_AC[iAC]);
+                      goma_ctx->fem.augc[iAC].MTID, evol_local, goma_ctx->fem.augc[iAC].lm_resid,
+                      goma_ctx->fem.augc[iAC].VOLID, x_AC[iAC]);
+            } else if (goma_ctx->fem.augc[iAC].Type == AC_FLUX) {
+              DPRINTF(stdout, "\tBC[%4d] DF[%4d]=%10.6e\n", goma_ctx->fem.augc[iAC].BCID,
+                      goma_ctx->fem.augc[iAC].DFID, x_AC[iAC]);
             }
           }
         }
@@ -1065,7 +1084,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
          */
         find_and_set_Dirichlet(x, xdot, exo, dpi);
 
-        exchange_dof(cx, dpi, x, pg->imtrx);
+        exchange_dof(cx, dpi, x, goma_ctx->fem.pg->imtrx);
 
         /*    Should be doing first order prediction on ACs
          *    but for now, just reset the AC variables
@@ -1096,7 +1115,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
      */
     if ((ni == 1) && (n != 0) && (!const_delta_s)) {
       delta_s_new = path_step_control(num_total_nodes, delta_s, delta_s_old, x, eps, &success_ds,
-                                      cont->use_var_norm, inewton);
+                                      goma_ctx->fem.cont->use_var_norm, inewton);
       if (delta_s_new > Delta_s_max)
         delta_s_new = Delta_s_max;
     } else {
@@ -1110,7 +1129,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     i_print = 0;
     if (nt == step_print) {
       i_print = 1;
-      step_print += cont->print_freq;
+      step_print += goma_ctx->fem.cont->print_freq;
     }
 
     if (alqALC == -1)
@@ -1127,7 +1146,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
                        exo, dpi);
         nprint++;
       }
-      if (goma_ctx->anneal_mesh && cont->anneal_on_print) {
+      if (goma_ctx->anneal_mesh && goma_ctx->fem.cont->anneal_on_print) {
         err = anneal_mesh(x, tev, tev_post, NULL, rd, path1, exo, dpi);
         GOMA_EH(err, "anneal_mesh() bad return.");
       }
@@ -1148,7 +1167,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
       fix_output();
 
       /* Fix step is relative to print step */
-      step_fix += cont->fix_freq * cont->print_freq;
+      step_fix += goma_ctx->fem.cont->fix_freq * goma_ctx->fem.cont->print_freq;
     }
 #endif
 
@@ -1310,10 +1329,10 @@ free_and_clear:
 
   for (i = 0; i < MAX_NUMBER_MATLS; i++) {
     for (n = 0; n < MAX_MODES; n++) {
-      safer_free((void **)&(ve_glob[i][n]->gn));
-      safer_free((void **)&(ve_glob[i][n]));
+      safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]->gn));
+      safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]));
     }
-    safer_free((void **)&(vn_glob[i]));
+    safer_free((void **)&(goma_ctx->fem.vn_glob[i]));
   }
 
   sl_free(matrix_systems_mask, ams);
@@ -1334,8 +1353,8 @@ free_and_clear:
   }
 
   safer_free((void **)&gvec_elem);
-  if (cpcc != NULL)
-    safer_free((void **)&cpcc);
+  if (goma_ctx->fem.cpcc != NULL)
+    safer_free((void **)&goma_ctx->fem.cpcc);
 
   safer_free((void **)&rd);
   for (int i = 0; i < num_total_nodes; i++) {
@@ -1348,7 +1367,7 @@ free_and_clear:
   safer_free((void **)&Local_Offset);
   safer_free((void **)&Dolphin);
 
-  free(pg->matrices);
+  free(goma_ctx->fem.pg->matrices);
 
   if (file != NULL)
     fclose(file);

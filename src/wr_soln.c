@@ -113,7 +113,8 @@ void write_solution(char output_file[],             /* name EXODUS II file */
     for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
       int mn = Matilda[eb_index];
       if (exo->eb_num_elems[eb_index] > 0) {
-        if (pd_glob[mn]->i[upd->matrix_index[rd->evtype[i]]][rd->evtype[i]] == I_P1) {
+        if (goma_ctx->fem.pd_glob[mn]
+                ->i[goma_ctx->fem.upd->matrix_index[rd->evtype[i]]][rd->evtype[i]] == I_P1) {
           dof = MAX(getdofs(type2shape(exo->eb_elem_itype[eb_index]), I_P1), dof);
           is_P1 = TRUE;
         }
@@ -175,21 +176,26 @@ void write_solution_segregated(char output_file[],
 
   /* First nodal quantities */
   int offset = 0;
-  for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+  for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+       goma_ctx->fem.pg->imtrx++) {
     /* Special case for global post processing, usually file output */
-    post_process_global(x[pg->imtrx], exo, dpi, time_value);
+    post_process_global(x[goma_ctx->fem.pg->imtrx], exo, dpi, time_value);
 
-    if (pg->imtrx > 0) {
-      offset += rd[pg->imtrx - 1]->TotalNVSolnOutput + rd[pg->imtrx - 1]->TotalNVPostOutput;
+    if (goma_ctx->fem.pg->imtrx > 0) {
+      offset += rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVSolnOutput +
+                rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVPostOutput;
       if (TIME_DERIVATIVES != -1 && (TimeIntegration != STEADY)) {
-        offset += rd[pg->imtrx - 1]->TotalNVSolnOutput;
+        offset += rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVSolnOutput;
       }
     }
-    for (i = 0; i < rd[pg->imtrx]->TotalNVSolnOutput; i++) {
-      extract_nodal_vec(x[pg->imtrx], rd[pg->imtrx]->nvtype[i], rd[pg->imtrx]->nvkind[i],
-                        rd[pg->imtrx]->nvmatID[i], gvec[pg->imtrx], exo, FALSE, time_value);
+    for (i = 0; i < rd[goma_ctx->fem.pg->imtrx]->TotalNVSolnOutput; i++) {
+      extract_nodal_vec(x[goma_ctx->fem.pg->imtrx], rd[goma_ctx->fem.pg->imtrx]->nvtype[i],
+                        rd[goma_ctx->fem.pg->imtrx]->nvkind[i],
+                        rd[goma_ctx->fem.pg->imtrx]->nvmatID[i], gvec[goma_ctx->fem.pg->imtrx], exo,
+                        FALSE, time_value);
       step = (*nprint) + 1;
-      wr_nodal_result_exo(exo, output_file, gvec[pg->imtrx], offset + i + 1, step, time_value);
+      wr_nodal_result_exo(exo, output_file, gvec[goma_ctx->fem.pg->imtrx], offset + i + 1, step,
+                          time_value);
     }
   }
 
@@ -197,19 +203,22 @@ void write_solution_segregated(char output_file[],
    *  Add additional user-specified post processing variables
    */
   offset = 0;
-  for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-    if (pg->imtrx > 0) {
-      offset += rd[pg->imtrx - 1]->TotalNVSolnOutput + rd[pg->imtrx - 1]->TotalNVPostOutput;
+  for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+       goma_ctx->fem.pg->imtrx++) {
+    if (goma_ctx->fem.pg->imtrx > 0) {
+      offset += rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVSolnOutput +
+                rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVPostOutput;
       if (TIME_DERIVATIVES != -1 && (TimeIntegration != STEADY)) {
-        offset += rd[pg->imtrx - 1]->TotalNVSolnOutput;
+        offset += rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVSolnOutput;
       }
     }
-    if (rd[pg->imtrx]->TotalNVPostOutput > 0) {
+    if (rd[goma_ctx->fem.pg->imtrx]->TotalNVPostOutput > 0) {
       step = (*nprint) + 1;
 
-      post_process_nodal(x[pg->imtrx], NULL, x_old[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx],
-                         resid_vector[pg->imtrx], step, &time_value, delta_t, theta, x_pp, exo, dpi,
-                         rd[pg->imtrx], output_file, offset);
+      post_process_nodal(x[goma_ctx->fem.pg->imtrx], NULL, x_old[goma_ctx->fem.pg->imtrx],
+                         xdot[goma_ctx->fem.pg->imtrx], xdot_old[goma_ctx->fem.pg->imtrx],
+                         resid_vector[goma_ctx->fem.pg->imtrx], step, &time_value, delta_t, theta,
+                         x_pp, exo, dpi, rd[goma_ctx->fem.pg->imtrx], output_file, offset);
 
       /*
        *  Write out time derivatives if requested
@@ -219,37 +228,44 @@ void write_solution_segregated(char output_file[],
 
   offset = 0;
   if (tev_post != NULL) {
-    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+    for (goma_ctx->fem.pg->imtrx = 0;
+         goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+         goma_ctx->fem.pg->imtrx++) {
 
       step = (*nprint) + 1;
 
       if (TIME_DERIVATIVES != -1 && (TimeIntegration != STEADY)) {
-        if (pg->imtrx > 0) {
-          offset += rd[pg->imtrx - 1]->TotalNVSolnOutput + rd[pg->imtrx - 1]->TotalNVPostOutput +
-                    rd[pg->imtrx - 1]->TotalNVSolnOutput;
+        if (goma_ctx->fem.pg->imtrx > 0) {
+          offset += rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVSolnOutput +
+                    rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVPostOutput +
+                    rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVSolnOutput;
         }
-        for (i = 0; i < rd[pg->imtrx]->TotalNVSolnOutput; i++) {
-          i_post = rd[pg->imtrx]->TotalNVSolnOutput + rd[pg->imtrx]->TotalNVPostOutput + i;
-          extract_nodal_vec(xdot[pg->imtrx], rd[pg->imtrx]->nvtype[i_post],
-                            rd[pg->imtrx]->nvkind[i_post], rd[pg->imtrx]->nvmatID[i],
-                            gvec[pg->imtrx], exo, TRUE, time_value);
-          wr_nodal_result_exo(exo, output_file, gvec[pg->imtrx], offset + i_post + 1, *nprint + 1,
-                              time_value);
+        for (i = 0; i < rd[goma_ctx->fem.pg->imtrx]->TotalNVSolnOutput; i++) {
+          i_post = rd[goma_ctx->fem.pg->imtrx]->TotalNVSolnOutput +
+                   rd[goma_ctx->fem.pg->imtrx]->TotalNVPostOutput + i;
+          extract_nodal_vec(
+              xdot[goma_ctx->fem.pg->imtrx], rd[goma_ctx->fem.pg->imtrx]->nvtype[i_post],
+              rd[goma_ctx->fem.pg->imtrx]->nvkind[i_post], rd[goma_ctx->fem.pg->imtrx]->nvmatID[i],
+              gvec[goma_ctx->fem.pg->imtrx], exo, TRUE, time_value);
+          wr_nodal_result_exo(exo, output_file, gvec[goma_ctx->fem.pg->imtrx], offset + i_post + 1,
+                              *nprint + 1, time_value);
         }
       }
     }
   }
 
   /* Now element quantities */
-  for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-    for (i = 0; i < rd[pg->imtrx]->nev; i++) {
+  for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
+       goma_ctx->fem.pg->imtrx++) {
+    for (i = 0; i < rd[goma_ctx->fem.pg->imtrx]->nev; i++) {
       bool is_P1 = FALSE;
       int dof = 0;
       for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
         int mn = Matilda[eb_index];
         if (exo->eb_num_elems[eb_index] > 0) {
-          if (pd_glob[mn]->i[upd->matrix_index[rd[pg->imtrx]->evtype[i]]]
-                            [rd[pg->imtrx]->evtype[i]] == I_P1) {
+          if (goma_ctx->fem.pd_glob[mn]
+                  ->i[goma_ctx->fem.upd->matrix_index[rd[goma_ctx->fem.pg->imtrx]->evtype[i]]]
+                     [rd[goma_ctx->fem.pg->imtrx]->evtype[i]] == I_P1) {
             dof = MAX(getdofs(type2shape(exo->eb_elem_itype[eb_index]), I_P1), dof);
             is_P1 = TRUE;
           }
@@ -257,17 +273,19 @@ void write_solution_segregated(char output_file[],
       }
       if (is_P1) {
         for (int k = 0; k < dof; k++) {
-          extract_elem_vec(x[pg->imtrx], i, rd[pg->imtrx]->evtype[i], gvec_elem[pg->imtrx], exo, k);
+          extract_elem_vec(x[goma_ctx->fem.pg->imtrx], i, rd[goma_ctx->fem.pg->imtrx]->evtype[i],
+                           gvec_elem[goma_ctx->fem.pg->imtrx], exo, k);
           step = (*nprint) + 1;
-          wr_elem_result_exo(exo, output_file, gvec_elem[pg->imtrx], i, step, time_value,
-                             rd[pg->imtrx]);
+          wr_elem_result_exo(exo, output_file, gvec_elem[goma_ctx->fem.pg->imtrx], i, step,
+                             time_value, rd[goma_ctx->fem.pg->imtrx]);
           i++;
         }
       } else {
-        extract_elem_vec(x[pg->imtrx], i, rd[pg->imtrx]->evtype[i], gvec_elem[pg->imtrx], exo, 0);
+        extract_elem_vec(x[goma_ctx->fem.pg->imtrx], i, rd[goma_ctx->fem.pg->imtrx]->evtype[i],
+                         gvec_elem[goma_ctx->fem.pg->imtrx], exo, 0);
         step = (*nprint) + 1;
-        wr_elem_result_exo(exo, output_file, gvec_elem[pg->imtrx], i, step, time_value,
-                           rd[pg->imtrx]);
+        wr_elem_result_exo(exo, output_file, gvec_elem[goma_ctx->fem.pg->imtrx], i, step,
+                           time_value, rd[goma_ctx->fem.pg->imtrx]);
       }
     }
   }

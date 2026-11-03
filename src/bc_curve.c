@@ -150,13 +150,14 @@ int apply_integrated_curve_bc(
 
   for (ip = 0; ip < ip_total; ip++) {
     /* find the quadrature point locations for current ip */
-    param_dir = find_edge_s(ip, ielem_type, elem_edge_bc->id_edge, pd->Num_Dim, xi, &s);
+    param_dir =
+        find_edge_s(ip, ielem_type, elem_edge_bc->id_edge, goma_ctx->fem.pd->Num_Dim, xi, &s);
 
     /* find the quadrature weight for current ip */
     wt = Gq_edge_weight(ip, ielem_type);
 
     /* ****************************************/
-    err = load_basis_functions(xi, bfd);
+    err = load_basis_functions(xi, goma_ctx->fem.bfd);
     GOMA_EH(err, "problem from load_basis_functions");
 
     err = beer_belly();
@@ -194,21 +195,23 @@ int apply_integrated_curve_bc(
     /*
      * Load up porous media variables and properties, if needed
      */
-    if (mp->PorousMediaType == POROUS_UNSATURATED || mp->PorousMediaType == POROUS_SATURATED ||
-        mp->PorousMediaType == POROUS_TWO_PHASE) {
+    if (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+        goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED ||
+        goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) {
       err = load_porous_properties();
       GOMA_EH(err, "load_porous_properties");
     }
 
-    if (mp->SurfaceTensionModel != CONSTANT) {
+    if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
       load_surface_tension(dsigma_dx);
       if (neg_elem_volume)
         return (status);
     }
 
-    if (TimeIntegration != STEADY && pd->e[pg->imtrx][MESH_DISPLACEMENT1]) {
+    if (TimeIntegration != STEADY &&
+        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (icount = 0; icount < ielem_dim; icount++) {
-        x_dot[icount] = fv_dot->x[icount];
+        x_dot[icount] = goma_ctx->fem.fv_dot->x[icount];
         /* calculate surface position for wall repulsion/no penetration condition */
       }
     } else {
@@ -313,10 +316,11 @@ int apply_integrated_curve_bc(
           /* collect the normals */
           /* Free surface normal */
           for (p = 0; p < ielem_dim; p++) {
-            fsnormal[p] = fv->snormal[p];
-            for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+            fsnormal[p] = goma_ctx->fem.fv->snormal[p];
+            for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
+                 k++) {
               for (q = 0; q < ielem_dim; q++) {
-                dfsnormal_dx[q][p][k] = fv->dsnormal_dx[q][p][k];
+                dfsnormal_dx[q][p][k] = goma_ctx->fem.fv->dsnormal_dx[q][p][k];
               }
             }
           }
@@ -325,7 +329,8 @@ int apply_integrated_curve_bc(
             for (p = 0; p < ielem_dim; p++) {
               ssnormal[p] = BC_Types[bc_input_id].BC_Data_Float[p + 1];
               for (q = 0; q < ielem_dim; q++) {
-                for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+                for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
+                     k++) {
                   dssnormal_dx[q][p][k] = 0.;
                 }
               }
@@ -339,10 +344,11 @@ int apply_integrated_curve_bc(
                                            elem_edge_bc->elem_side_bc_2->local_elem_node_id);
 
             for (p = 0; p < ielem_dim; p++) {
-              ssnormal[p] = fv->snormal[p];
+              ssnormal[p] = goma_ctx->fem.fv->snormal[p];
               for (q = 0; q < ielem_dim; q++) {
-                for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
-                  dssnormal_dx[q][p][k] = fv->dsnormal_dx[q][p][k];
+                for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
+                     k++) {
+                  dssnormal_dx[q][p][k] = goma_ctx->fem.fv->dsnormal_dx[q][p][k];
                 }
               }
             }
@@ -373,10 +379,11 @@ int apply_integrated_curve_bc(
            */
 
           for (p = 0; p < ielem_dim; p++) {
-            fsnormal[p] = fv->snormal[p];
+            fsnormal[p] = goma_ctx->fem.fv->snormal[p];
             for (q = 0; q < ielem_dim; q++) {
-              for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
-                dfsnormal_dx[q][p][k] = fv->dsnormal_dx[q][p][k];
+              for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
+                   k++) {
+                dfsnormal_dx[q][p][k] = goma_ctx->fem.fv->dsnormal_dx[q][p][k];
               }
             }
           }
@@ -395,8 +402,9 @@ int apply_integrated_curve_bc(
 
           memset(dssnormal_dx, 0, sizeof(double) * DIM * DIM * MDE);
 
-          calc_CL_normal(ssnormal, dssnormal_dx, fsnormal, dfsnormal_dx, fv->stangent[1],
-                         fv->dstangent_dx[1], ielem, elem_edge_bc->edge_elem_node_id, ielem_dim,
+          calc_CL_normal(ssnormal, dssnormal_dx, fsnormal, dfsnormal_dx,
+                         goma_ctx->fem.fv->stangent[1], goma_ctx->fem.fv->dstangent_dx[1], ielem,
+                         elem_edge_bc->edge_elem_node_id, ielem_dim,
                          (int)elem_edge_bc->num_nodes_on_edge, clnormal, dclnormal_dx, exo);
 
           if (BC_Types[bc_input_id].BC_Name == VAR_CA_EDGE_BC) {
@@ -440,7 +448,8 @@ int apply_integrated_curve_bc(
              * And find the global unknown number for applying this condition
              */
             index_eq =
-                bc_eqn_index(id, I, bc_input_id, ei[pg->imtrx]->mn, p, &eqn, &matID_apply, &vd);
+                bc_eqn_index(id, I, bc_input_id, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn, p,
+                             &eqn, &matID_apply, &vd);
             if (index_eq >= 0) {
 
               /* for weak conditions weight the function by temp */
@@ -449,11 +458,12 @@ int apply_integrated_curve_bc(
                * this boundary condition on. If the unknown doesn't
                * exist, skip calculation.
                */
-              ldof_eqn = ei[pg->imtrx]->ln_to_dof[eqn][id];
+              ldof_eqn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[eqn][id];
               if (ldof_eqn >= 0) {
 
-                if (BC_Types[bc_input_id].desc->i_apply == SINGLE_PHASE || pd->e[pg->imtrx][eqn]) {
-                  phi_i = bf[eqn]->phi[ldof_eqn];
+                if (BC_Types[bc_input_id].desc->i_apply == SINGLE_PHASE ||
+                    goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
+                  phi_i = goma_ctx->fem.bf[eqn]->phi[ldof_eqn];
                   weight *= phi_i;
                 } else if (BC_Types[bc_input_id].desc->i_apply == CROSS_PHASE) {
                   /* if the equation type doesn't exist in this material,
@@ -461,16 +471,16 @@ int apply_integrated_curve_bc(
                    * using the local node number, id, as the dof number to
                    * look up the basis function.
                    */
-                  for (mn = 0; mn < upd->Num_Mat; mn++) {
-                    if (pd_glob[mn]->e[pg->imtrx][eqn] &&
+                  for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
+                    if (goma_ctx->fem.pd_glob[mn]->e[goma_ctx->fem.pg->imtrx][eqn] &&
                         (eb_in_matrl(BC_Types[bc_input_id].BC_Data_Int[0], mn) ||
                          eb_in_matrl(BC_Types[bc_input_id].BC_Data_Int[1], mn))) {
-                      type = pd_glob[mn]->w[pg->imtrx][eqn];
-                      if (bfi[type] == NULL)
+                      type = goma_ctx->fem.pd_glob[mn]->w[goma_ctx->fem.pg->imtrx][eqn];
+                      if (goma_ctx->fem.bfi[type] == NULL)
                         GOMA_EH(GOMA_ERROR, "Illegal cross basis func");
                       /* note that here, we don't have the ln_to_dof array for the adjacent
                          material - for now assume that ldof_eqn = id */
-                      phi_i = bfi[type]->phi[id];
+                      phi_i = goma_ctx->fem.bfi[type]->phi[id];
                       weight *= phi_i;
                     }
                   }
@@ -482,7 +492,7 @@ int apply_integrated_curve_bc(
                 if (BC_Types[bc_input_id].desc->method == STRONG_INT_EDGE)
                   weight *= BIG_PENALTY;
                 if (BC_Types[bc_input_id].desc->method == WEAK_INT_EDGE) {
-                  weight *= pd->etm[pg->imtrx][eqn][(LOG2_BOUNDARY)];
+                  weight *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_BOUNDARY)];
                 }
 
                 if (BC_Types[bc_input_id].BC_Name == KINEMATIC_EDGE_BC)
@@ -490,14 +500,15 @@ int apply_integrated_curve_bc(
 
                 /* if doing a weak BC - add into local element contribution also */
 
-                ieqn = upd->ep[pg->imtrx][eqn];
+                ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
                 if (eqn == R_MASS)
                   ieqn = MAX_PROB_VAR + BC_Types[bc_input_id].species_eq;
                 if (goma_automatic_rotations.automatic_rotations &&
                     (BC_Types[bc_input_id].desc->rotate != NO_ROT)) {
                   ieqn = equation_index_auto_rotate(NULL, I, eqn, p, NULL);
                 }
-                lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += weight * fv->edge_det * func[p];
+                goma_ctx->fem.lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] +=
+                    weight * goma_ctx->fem.fv->edge_det * func[p];
 
                 /*
                  * add sensitivities into matrix
@@ -506,21 +517,21 @@ int apply_integrated_curve_bc(
                  *  - add into matrix
                  */
 
-                if (af->Assemble_Jacobian) {
+                if (goma_ctx->fem.af->Assemble_Jacobian) {
                   /* if mesh displacement is variable, put in this sensitivity first */
                   /* ... unless we are computing the mass matrix
                    * for LSA.  In that case, we don't include
                    * this first term b/c it doesn't involve any
                    * primary time derivative variables.
                    */
-                  if (!af->Assemble_LSA_Mass_Matrix)
-                    for (q = 0; q < pd->Num_Dim; q++) {
+                  if (!goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
+                    for (q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
                       var = MESH_DISPLACEMENT1 + q;
-                      if (pd->v[pg->imtrx][var]) {
-                        pvar = upd->vp[pg->imtrx][var];
-                        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                          lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                              weight * func[p] * fv->dedgedet_dx[q][j];
+                      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+                        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+                        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                          goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                              weight * func[p] * goma_ctx->fem.fv->dedgedet_dx[q][j];
                         }
                       }
                     }
@@ -528,19 +539,24 @@ int apply_integrated_curve_bc(
                   /* now add in sensitivity of BC function */
 
                   for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-                    if (pd->v[pg->imtrx][var] && BC_Types[bc_input_id].desc->sens[var]) {
-                      pvar = upd->vp[pg->imtrx][var];
+                    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] &&
+                        BC_Types[bc_input_id].desc->sens[var]) {
+                      pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                       if (var != MASS_FRACTION) {
-                        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                          lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                              weight * fv->edge_det * (d_func[p][var][j] + d_func_ss[p][var][j]);
+                        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                          goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                              weight * goma_ctx->fem.fv->edge_det *
+                              (d_func[p][var][j] + d_func_ss[p][var][j]);
                         }
                       } else /* variable type is MASS_FRACTION */
                       {
-                        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                            lec->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
-                                weight * fv->edge_det * d_func[p][MAX_VARIABLE_TYPES + w][j];
+                        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
+                               j++) {
+                            goma_ctx->fem.lec
+                                ->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
+                                weight * goma_ctx->fem.fv->edge_det *
+                                d_func[p][MAX_VARIABLE_TYPES + w][j];
                           }
                         } /* end of loop over species */
                       } /* end of if MASS_FRACTION */
@@ -655,10 +671,11 @@ int apply_point_colloc_edge_bc(
       /*
        * Load the field variable values at this node point
        */
-      param_dir = find_edge_s(0, ielem_type, elem_edge_bc->id_edge, pd->Num_Dim, xi, &s);
+      param_dir =
+          find_edge_s(0, ielem_type, elem_edge_bc->id_edge, goma_ctx->fem.pd->Num_Dim, xi, &s);
       find_nodal_stu(id, ielem_type, &xi[0], &xi[1], &xi[2]);
 
-      err = load_basis_functions(xi, bfd);
+      err = load_basis_functions(xi, goma_ctx->fem.bfd);
       GOMA_EH(err, "problem from load_basis_functions");
       err = load_fv();
       GOMA_EH(err, "load_fv");
@@ -666,13 +683,14 @@ int apply_point_colloc_edge_bc(
       /*
        * Load up porous media variables and properties, if needed
        */
-      if (mp->PorousMediaType == POROUS_UNSATURATED || mp->PorousMediaType == POROUS_TWO_PHASE ||
-          mp->PorousMediaType == POROUS_SATURATED) {
+      if (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+          goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE ||
+          goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED) {
         err = load_porous_properties();
         GOMA_EH(err, "load_porous_properties");
       }
 
-      if (mp->SurfaceTensionModel != CONSTANT) {
+      if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
         load_surface_tension(dsigma_dx);
         if (neg_elem_volume)
           return (status);
@@ -680,7 +698,7 @@ int apply_point_colloc_edge_bc(
 
       if (TimeIntegration != STEADY) {
         for (icount = 0; icount < ielem_dim; icount++) {
-          x_dot[icount] = fv_dot->x[icount];
+          x_dot[icount] = goma_ctx->fem.fv_dot->x[icount];
         }
       } else {
         for (icount = 0; icount < ielem_dim; icount++) {
@@ -706,14 +724,14 @@ int apply_point_colloc_edge_bc(
            *  Dirichlet conditions,
            * And find the global unknown number for applying this condition
            */
-          index_eq =
-              bc_eqn_index(id, I, bc_input_id, ei[pg->imtrx]->mn, 0, &eqn, &matID_apply, &vd);
+          index_eq = bc_eqn_index(id, I, bc_input_id, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn,
+                                  0, &eqn, &matID_apply, &vd);
           if (index_eq >= 0) {
             memset(func, 0, MAX_PDIM * sizeof(double));
             memset(d_func, 0, MAX_PDIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
             memset(d_func_ss, 0, MAX_PDIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
 
-            ldof_eqn = ei[pg->imtrx]->ln_to_dof[eqn][id];
+            ldof_eqn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[eqn][id];
 
             /*
              * Here's a RECIPE for adding new boundary conditions so you don't have any
@@ -816,10 +834,11 @@ int apply_point_colloc_edge_bc(
 
               /* Free surface normal */
               for (p = 0; p < ielem_dim; p++) {
-                fsnormal[p] = fv->snormal[p];
-                for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+                fsnormal[p] = goma_ctx->fem.fv->snormal[p];
+                for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
+                     k++) {
                   for (q = 0; q < ielem_dim; q++) {
-                    dfsnormal_dx[q][p][k] = fv->dsnormal_dx[q][p][k];
+                    dfsnormal_dx[q][p][k] = goma_ctx->fem.fv->dsnormal_dx[q][p][k];
                   }
                 }
               }
@@ -829,7 +848,9 @@ int apply_point_colloc_edge_bc(
                 for (p = 0; p < ielem_dim; p++) {
                   ssnormal[p] = BC_Types[bc_input_id].BC_Data_Float[p + 1];
                   for (q = 0; q < ielem_dim; q++) {
-                    for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+                    for (k = 0;
+                         k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
+                         k++) {
                       dssnormal_dx[q][p][k] = 0.;
                     }
                   }
@@ -857,10 +878,12 @@ int apply_point_colloc_edge_bc(
                                              elem_edge_bc->edge_elem_node_id, param_dir);
 
                 for (p = 0; p < ielem_dim; p++) {
-                  ssnormal[p] = fv->snormal[p];
+                  ssnormal[p] = goma_ctx->fem.fv->snormal[p];
                   for (q = 0; q < ielem_dim; q++) {
-                    for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
-                      dssnormal_dx[q][p][k] = fv->dsnormal_dx[q][p][k];
+                    for (k = 0;
+                         k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
+                         k++) {
+                      dssnormal_dx[q][p][k] = goma_ctx->fem.fv->dsnormal_dx[q][p][k];
                     }
                   }
                 }
@@ -900,10 +923,11 @@ int apply_point_colloc_edge_bc(
 
               /* Free surface normal */
               for (p = 0; p < ielem_dim; p++) {
-                fsnormal[p] = fv->snormal[p];
-                for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+                fsnormal[p] = goma_ctx->fem.fv->snormal[p];
+                for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
+                     k++) {
                   for (q = 0; q < ielem_dim; q++) {
-                    dfsnormal_dx[q][p][k] = fv->dsnormal_dx[q][p][k];
+                    dfsnormal_dx[q][p][k] = goma_ctx->fem.fv->dsnormal_dx[q][p][k];
                   }
                 }
               }
@@ -913,7 +937,9 @@ int apply_point_colloc_edge_bc(
               for (p = 0; p < ielem_dim; p++) {
                 ssnormal[p] = (double)BC_Types[bc_input_id].u_BC[p + 1];
                 for (q = 0; q < ielem_dim; q++) {
-                  for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+                  for (k = 0;
+                       k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
+                       k++) {
                     dssnormal_dx[q][p][k] = 0.;
                   }
                 }
@@ -926,17 +952,20 @@ int apply_point_colloc_edge_bc(
                 fapply_CA(func, d_func, d_func_ss, fsnormal, dfsnormal_dx, ssnormal, dssnormal_dx,
                           theta_r);
               } else {
-                if (!af->Assemble_LSA_Mass_Matrix)
+                if (!goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
                   /* fix contact point where it sits right now */
                   for (p = 0; p < ielem_dim; p++) {
-                    k = Index_Solution(I, MESH_DISPLACEMENT1 + p, 0, 0, -2, pg->imtrx);
-                    ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[MESH_DISPLACEMENT1 + p][id];
-                    lec->R[LEC_R_INDEX(MESH_DISPLACEMENT1 + p, ldof_eqn)] = 0.;
+                    k = Index_Solution(I, MESH_DISPLACEMENT1 + p, 0, 0, -2,
+                                       goma_ctx->fem.pg->imtrx);
+                    ldof_eqn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
+                                   ->ln_to_first_dof[MESH_DISPLACEMENT1 + p][id];
+                    goma_ctx->fem.lec->R[LEC_R_INDEX(MESH_DISPLACEMENT1 + p, ldof_eqn)] = 0.;
                     d_func[p][MESH_DISPLACEMENT1 + p][id] = 1.;
 
-                    eqn = upd->ep[pg->imtrx][MESH_DISPLACEMENT1 + p];
-                    zero_lec_row(lec->J, eqn, ldof_eqn);
-                    lec->J[LEC_J_INDEX(eqn, eqn, ldof_eqn, ldof_eqn)] = DIRICHLET_PENALTY;
+                    eqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1 + p];
+                    zero_lec_row(goma_ctx->fem.lec->J, eqn, ldof_eqn);
+                    goma_ctx->fem.lec->J[LEC_J_INDEX(eqn, eqn, ldof_eqn, ldof_eqn)] =
+                        DIRICHLET_PENALTY;
 
                     xdot[k] = 0.0;
                     xdot_old[k] = 0.0;
@@ -967,9 +996,10 @@ int apply_point_colloc_edge_bc(
 
               GOMA_EH(iquad, "problem finding iquad in apply_point_collocated_edge_bc");
 
-              find_edge_s(iquad, ielem_type, elem_edge_bc->id_edge, pd->Num_Dim, xiq, &s);
+              find_edge_s(iquad, ielem_type, elem_edge_bc->id_edge, goma_ctx->fem.pd->Num_Dim, xiq,
+                          &s);
 
-              err = load_basis_functions(xiq, bfd);
+              err = load_basis_functions(xiq, goma_ctx->fem.bfd);
               GOMA_EH(err, "problem from load_basis_functions");
 
               err = load_fv();
@@ -1022,14 +1052,14 @@ int apply_point_colloc_edge_bc(
             /*		                         			            */
             /******************************************************************************/
             for (p = 0; p < BC_Types[bc_input_id].desc->vector; p++) {
-              ieqn = upd->ep[pg->imtrx][eqn];
+              ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
               if (eqn == R_MASS)
                 ieqn = MAX_PROB_VAR + BC_Types[bc_input_id].species_eq;
               if (goma_automatic_rotations.automatic_rotations &&
                   (BC_Types[bc_input_id].desc->rotate != NO_ROT)) {
                 ieqn = equation_index_auto_rotate(NULL, I, eqn, p, NULL);
               }
-              lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += BIG_PENALTY * func[p];
+              goma_ctx->fem.lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += BIG_PENALTY * func[p];
 
               /*
                * add sensitivities into matrix
@@ -1038,27 +1068,30 @@ int apply_point_colloc_edge_bc(
                *  - add into matrix
                */
 
-              if (af->Assemble_Jacobian) {
+              if (goma_ctx->fem.af->Assemble_Jacobian) {
                 for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-                  if (pd->v[pg->imtrx][var] && BC_Types[bc_input_id].desc->sens[var]) {
+                  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] &&
+                      BC_Types[bc_input_id].desc->sens[var]) {
                     if (var != MASS_FRACTION) {
                       /* load sensitivity index at this node point
                        * this routine determines the entry in the jacobian matrix which
                        * corresponds to this BC equation and this unknown
                        */
-                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                        pvar = upd->vp[pg->imtrx][var];
-                        ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
-                        lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+                        ldof_eqn =
+                            goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[eqn][id];
+                        goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
                             BIG_PENALTY * (d_func[p][var][j] + d_func_ss[p][var][j]);
                       }
                     } else /* variable type is MASS_FRACTION */
                     {
-                      for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+                        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                           // pvar = upd->vp[pg->imtrx][MAX_PROB_VAR + w];
-                          ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
-                          lec->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
+                          ldof_eqn =
+                              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[eqn][id];
+                          goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
                               BIG_PENALTY * d_func[p][MAX_VARIABLE_TYPES + w][j];
                         }
                       } /* end of loop over species */

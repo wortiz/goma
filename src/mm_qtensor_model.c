@@ -171,22 +171,22 @@ void assemble_qtensor(dbl *el_length) /* 2 x approximate element length scales *
   /*   if(pd->e[pg->imtrx][R_MESH1]) GOMA_EH(GOMA_ERROR, "assemble_qtensor is not deformable mesh
    * friendly."); */
 
-  ielem_type = ei[pg->imtrx]->ielem_type;  /* element type */
+  ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type; /* element type */
   ip_total = elem_info(NQUAD, ielem_type); /* number of quadrature points */
   for (ip = 0; ip < ip_total; ip++) {
     /* First get the qtensor at the gauss point. */
     find_stu(ip, ielem_type, &xi[0], &xi[1], &xi[2]); /* find quadrature point */
-    load_basis_functions(xi, bfd);
+    load_basis_functions(xi, goma_ctx->fem.bfd);
     beer_belly();
     load_fv();
     load_bf_grad();
     load_fv_grads();
-    h = fv->h;
+    h = goma_ctx->fem.fv->h;
     for (i = 0; i < DIM; i++)
-      hq[i] = fv->hq[i];
+      hq[i] = goma_ctx->fem.fv->hq[i];
     for (i = 0; i < DIM; i++)
       for (j = 0; j < DIM; j++)
-        E[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
+        E[i][j] = goma_ctx->fem.fv->grad_v[i][j] + goma_ctx->fem.fv->grad_v[j][i];
     if (print) {
       printf("BASE LOCATION:\n");
       printf("    + % 10.4g % 10.4g % 10.4g +\n", E[0][0], E[0][1], E[0][2]);
@@ -210,20 +210,20 @@ void assemble_qtensor(dbl *el_length) /* 2 x approximate element length scales *
     */
 
     /* Compute d(vd)/dq(p) */
-    for (p = 0; p < pd->Num_Dim; p++) {
+    for (p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
       delta[0] = delta[1] = delta[2] = 0.0;
       delta[p] = FINITE_DELTA * (el_length[p] / 2.0);
       map_direction(delta_xi, delta);
       for (i = 0; i < DIM; i++)
         new_xi[i] = xi[i] + delta_xi[i];
-      load_basis_functions(new_xi, bfd);
+      load_basis_functions(new_xi, goma_ctx->fem.bfd);
       beer_belly();
       load_fv();
       load_bf_grad();
       load_fv_grads();
       for (i = 0; i < DIM; i++)
         for (j = 0; j < DIM; j++)
-          E[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
+          E[i][j] = goma_ctx->fem.fv->grad_v[i][j] + goma_ctx->fem.fv->grad_v[j][i];
 
       find_super_special_eigenvector(E, vort_dir_delta, v1, v2, v3, &tmp, print);
 
@@ -237,7 +237,8 @@ void assemble_qtensor(dbl *el_length) /* 2 x approximate element length scales *
 
       if (!bias_eigenvector_to(vort_dir_delta, vort_dir_local) || print) {
         printf("DELTA %d LOCATION:\n", p);
-        printf("             x = [% 10.4g, % 10.4g % 10.4g]\n", fv->x[0], fv->x[1], fv->x[2]);
+        printf("             x = [% 10.4g, % 10.4g % 10.4g]\n", goma_ctx->fem.fv->x[0],
+               goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2]);
         printf("                 / % 10.4g % 10.4g % 10.4g \\\n", E[0][0], E[0][1], E[0][2]);
         printf("             E = | % 10.4g % 10.4g % 10.4g |\n", E[1][0], E[1][1], E[1][2]);
         printf("                 \\ % 10.4g % 10.4g % 10.4g /\n", E[2][0], E[2][1], E[2][2]);
@@ -245,9 +246,11 @@ void assemble_qtensor(dbl *el_length) /* 2 x approximate element length scales *
                vort_dir_local[2]);
         printf("vort_dir_delta = [% 10.4g % 10.4g % 10.4g]\n", vort_dir_delta[0], vort_dir_delta[1],
                vort_dir_delta[2]);
-        printf("|v| = % 10.4g\n",
-               sqrt(fv->v[0] * fv->v[0] + fv->v[1] * fv->v[1] + fv->v[2] * fv->v[2]));
-        printf("sh = % 10.4g, gd = % 10.4g, gd_delta = % 10.4g\n", fv->SH, gd_local, gd_delta);
+        printf("|v| = % 10.4g\n", sqrt(goma_ctx->fem.fv->v[0] * goma_ctx->fem.fv->v[0] +
+                                       goma_ctx->fem.fv->v[1] * goma_ctx->fem.fv->v[1] +
+                                       goma_ctx->fem.fv->v[2] * goma_ctx->fem.fv->v[2]));
+        printf("sh = % 10.4g, gd = % 10.4g, gd_delta = % 10.4g\n", goma_ctx->fem.fv->SH, gd_local,
+               gd_delta);
       }
 
       for (i = 0; i < DIM; i++)
@@ -336,22 +339,22 @@ void assemble_qtensor_vort(dbl *el_length) /* 2 x approximate element length sca
     delta_xi[i] = 0.0;
   }
 
-  ielem_type = ei[pg->imtrx]->ielem_type;  /* element type */
+  ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type; /* element type */
   ip_total = elem_info(NQUAD, ielem_type); /* number of quadrature points */
   for (ip = 0; ip < ip_total; ip++) {
     /* First get the qtensor at the gauss point. */
     find_stu(ip, ielem_type, &xi[0], &xi[1], &xi[2]); /* find quadrature point */
-    load_basis_functions(xi, bfd);
+    load_basis_functions(xi, goma_ctx->fem.bfd);
     beer_belly();
     load_fv();
     load_bf_grad();
     load_fv_grads();
-    h = fv->h;
+    h = goma_ctx->fem.fv->h;
     for (i = 0; i < DIM; i++)
-      hq[i] = fv->hq[i];
+      hq[i] = goma_ctx->fem.fv->hq[i];
     for (i = 0; i < DIM; i++)
       for (j = 0; j < DIM; j++)
-        E[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
+        E[i][j] = goma_ctx->fem.fv->grad_v[i][j] + goma_ctx->fem.fv->grad_v[j][i];
     if (print) {
       printf("BASE LOCATION:\n");
       printf("    + % 10.4g % 10.4g % 10.4g +\n", E[0][0], E[0][1], E[0][2]);
@@ -375,20 +378,20 @@ void assemble_qtensor_vort(dbl *el_length) /* 2 x approximate element length sca
     */
 
     /* Compute d(vd)/dq(p) */
-    for (p = 0; p < pd->Num_Dim; p++) {
+    for (p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
       delta[0] = delta[1] = delta[2] = 0.0;
       delta[p] = FINITE_DELTA * (el_length[p] / 2.0);
       map_direction(delta_xi, delta);
       for (i = 0; i < DIM; i++)
         new_xi[i] = xi[i] + delta_xi[i];
-      load_basis_functions(new_xi, bfd);
+      load_basis_functions(new_xi, goma_ctx->fem.bfd);
       beer_belly();
       load_fv();
       load_bf_grad();
       load_fv_grads();
       for (i = 0; i < DIM; i++)
         for (j = 0; j < DIM; j++)
-          E[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
+          E[i][j] = goma_ctx->fem.fv->grad_v[i][j] + goma_ctx->fem.fv->grad_v[j][i];
 
       find_super_special_eigenvector(E, vort_dir_delta, v1, v2, v3, &tmp, print);
 
@@ -402,7 +405,8 @@ void assemble_qtensor_vort(dbl *el_length) /* 2 x approximate element length sca
 
       if (!bias_eigenvector_to(vort_dir_delta, vort_dir_local) || print) {
         printf("DELTA %d LOCATION:\n", p);
-        printf("             x = [% 10.4g, % 10.4g % 10.4g]\n", fv->x[0], fv->x[1], fv->x[2]);
+        printf("             x = [% 10.4g, % 10.4g % 10.4g]\n", goma_ctx->fem.fv->x[0],
+               goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2]);
         printf("                 / % 10.4g % 10.4g % 10.4g \\\n", E[0][0], E[0][1], E[0][2]);
         printf("             E = | % 10.4g % 10.4g % 10.4g |\n", E[1][0], E[1][1], E[1][2]);
         printf("                 \\ % 10.4g % 10.4g % 10.4g /\n", E[2][0], E[2][1], E[2][2]);
@@ -410,9 +414,11 @@ void assemble_qtensor_vort(dbl *el_length) /* 2 x approximate element length sca
                vort_dir_local[2]);
         printf("vort_dir_delta = [% 10.4g % 10.4g % 10.4g]\n", vort_dir_delta[0], vort_dir_delta[1],
                vort_dir_delta[2]);
-        printf("|v| = % 10.4g\n",
-               sqrt(fv->v[0] * fv->v[0] + fv->v[1] * fv->v[1] + fv->v[2] * fv->v[2]));
-        printf("sh = % 10.4g, gd = % 10.4g, gd_delta = % 10.4g\n", fv->SH, gd_local, gd_delta);
+        printf("|v| = % 10.4g\n", sqrt(goma_ctx->fem.fv->v[0] * goma_ctx->fem.fv->v[0] +
+                                       goma_ctx->fem.fv->v[1] * goma_ctx->fem.fv->v[1] +
+                                       goma_ctx->fem.fv->v[2] * goma_ctx->fem.fv->v[2]));
+        printf("sh = % 10.4g, gd = % 10.4g, gd_delta = % 10.4g\n", goma_ctx->fem.fv->SH, gd_local,
+               gd_delta);
       }
 
       for (i = 0; i < DIM; i++)
@@ -485,25 +491,26 @@ void assemble_new_qtensor(dbl *el_length) /* 2 x approximate element length scal
   dbl d_qtensor[DIM][DIM][DIM];
 
   /* Catch cases which are not available */
-  if (pd->e[pg->imtrx][R_MESH1])
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1])
     GOMA_EH(GOMA_ERROR, "assemble_qtensor is not deformable mesh friendly.");
-  if (pd->Num_Dim == 3)
+  if (goma_ctx->fem.pd->Num_Dim == 3)
     GOMA_EH(GOMA_ERROR, "qtensor not ready for 3D problems yet!");
-  if (pd->CoordinateSystem != CARTESIAN && pd->CoordinateSystem != PROJECTED_CARTESIAN &&
-      pd->CoordinateSystem != CARTESIAN_2pt5D)
+  if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN &&
+      goma_ctx->fem.pd->CoordinateSystem != PROJECTED_CARTESIAN &&
+      goma_ctx->fem.pd->CoordinateSystem != CARTESIAN_2pt5D)
     GOMA_EH(GOMA_ERROR, "Qtensor requires CARTESIAN coordinates for now!");
 
   /* Do some initializations */
   memset(qtensor, 0, MDE * DIM * DIM * sizeof(double));
   memset(div_qtensor, 0, MDE * DIM * sizeof(double));
-  ielem_type = ei[pg->imtrx]->ielem_type;  /* element type */
+  ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type; /* element type */
   ip_total = elem_info(NQUAD, ielem_type); /* number of quadrature points */
 
   /* Loop over Gauss points */
   for (ip = 0; ip < ip_total; ip++) {
     /* Perform usual assembly sequence as if at a Gauss point */
     find_stu(ip, ielem_type, &xi[0], &xi[1], &xi[2]);
-    err = load_basis_functions(xi, bfd);
+    err = load_basis_functions(xi, goma_ctx->fem.bfd);
     GOMA_EH(err, "Problem from load_basis_functions!");
     err = beer_belly();
     GOMA_EH(err, "Problem from beer_belly!");
@@ -527,7 +534,7 @@ void assemble_new_qtensor(dbl *el_length) /* 2 x approximate element length scal
 
     /* Perturb the Gauss point location in each direction */
     memset(d_qtensor, 0, DIM * DIM * DIM * sizeof(double));
-    for (p = 0; p < pd->Num_Dim; p++) {
+    for (p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
       memset(delta, 0, DIM * sizeof(double));
       dp = fabs(FINITE_DELTA * el_length[p] / 2.0);
       if (dp < 0.001)
@@ -537,7 +544,7 @@ void assemble_new_qtensor(dbl *el_length) /* 2 x approximate element length scal
         map_direction(delta_xi, delta);
 
         /* Perform assembly sequence up to load_fv_grads at this point */
-        err = load_basis_functions(xi, bfd);
+        err = load_basis_functions(xi, goma_ctx->fem.bfd);
         GOMA_EH(err, "Problem from load_basis_functions!");
         err = beer_belly();
         GOMA_EH(err, "Problem from beer_belly!");
@@ -595,8 +602,8 @@ static int get_local_qtensor(double q[DIM][DIM])
   /* Evaluate strain tensors E and Erot */
   for (i = 0; i < DIM; i++) {
     for (j = 0; j < DIM; j++) {
-      E[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
-      Erot[i][j] = fv->grad_v[i][j] - fv->grad_v[j][i];
+      E[i][j] = goma_ctx->fem.fv->grad_v[i][j] + goma_ctx->fem.fv->grad_v[j][i];
+      Erot[i][j] = goma_ctx->fem.fv->grad_v[i][j] - goma_ctx->fem.fv->grad_v[j][i];
     }
   }
 
@@ -648,8 +655,8 @@ static int get_local_qtensor(double q[DIM][DIM])
    * defined by compression and tension axes
    * Note: assuming symmetric tensor!
    */
-  scc = 0.5 * (rho_k + (1.0 - rho_k) * mp->Qtensor_Extension_P);
-  stc = -mp->Qtensor_Nct;
+  scc = 0.5 * (rho_k + (1.0 - rho_k) * goma_ctx->fem.mp->Qtensor_Extension_P);
+  stc = -goma_ctx->fem.mp->Qtensor_Nct;
   stt = scc;
 
   /* Transform qtensor into Cartesian coordinates (2D case only) */
@@ -702,7 +709,7 @@ int assemble_vorticity_direction(void) {
   memset(v2, 0, DIM * sizeof(double));
   memset(v3, 0, DIM * sizeof(double));
 
-  if (!pd->e[pg->imtrx][eqn = R_VORT_DIR1]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn = R_VORT_DIR1]) {
     return (status);
   }
 
@@ -713,17 +720,18 @@ int assemble_vorticity_direction(void) {
     }
   }
 
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
   WIM = dim;
-  if (pd->CoordinateSystem == SWIRLING || pd->CoordinateSystem == PROJECTED_CARTESIAN ||
-      pd->CoordinateSystem == CARTESIAN_2pt5D)
+  if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
+      goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+      goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D)
     WIM = WIM + 1;
 
-  wt = fv->wt; /* Numerical integration weight */
+  wt = goma_ctx->fem.fv->wt; /* Numerical integration weight */
 
-  det_J = bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
+  det_J = goma_ctx->fem.bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
 
-  h3 = fv->h3; /* Differential volume element (scales). */
+  h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
 
   dV = wt * det_J * h3;
 
@@ -745,12 +753,12 @@ int assemble_vorticity_direction(void) {
    * Residuals_________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     /* Compute gammadot, grad(gammadot), gamma_dot[][], d_gd_dG, and d_grad_gd_dG */
 
     for (a = 0; a < VIM; a++) {
       for (b = 0; b < VIM; b++) {
-        gamma_dot[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+        gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
       }
     }
 
@@ -768,16 +776,16 @@ int assemble_vorticity_direction(void) {
 
     for (a = 0; a < DIM; a++) {
       eqn = R_VORT_DIR1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        wt_func = bf[eqn]->phi[i];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+        wt_func = goma_ctx->fem.bf[eqn]->phi[i];
 
         advection = 0.;
 
-        if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
           advection = -vort_dir_local[a];
           advection *= wt_func * dV;
-          advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+          advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
         }
 
         /*
@@ -786,13 +794,13 @@ int assemble_vorticity_direction(void) {
 
         source = 0;
 
-        if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-          source = fv->vd[a];
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+          source = goma_ctx->fem.fv->vd[a];
           source *= wt_func * dV;
-          source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+          source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
         }
 
-        lec->R[LEC_R_INDEX(peqn, i)] += advection + source;
+        goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += advection + source;
         /* Save a convenient local copy for numerical Jacobians */
         R_old[a][i] += advection + source;
       }
@@ -800,25 +808,25 @@ int assemble_vorticity_direction(void) {
 
   } /* end if(af->Assemble_Residual) */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     /* J_vd_vd */
     for (a = 0; a < DIM; a++) {
       eqn = R_VORT_DIR1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        wt_func = bf[eqn]->phi[i];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+        wt_func = goma_ctx->fem.bf[eqn]->phi[i];
         var = VORT_DIR1 + a;
-        pvar = upd->vp[pg->imtrx][var];
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          phi_j = bf[var]->phi[j];
+        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          phi_j = goma_ctx->fem.bf[var]->phi[j];
 
           source = 0.0;
-          if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
             source += phi_j;
             source *= wt_func * dV;
-            source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+            source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
           }
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += source;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += source;
         }
       }
     }
@@ -828,18 +836,18 @@ int assemble_vorticity_direction(void) {
     memset(vv, 0, sizeof(double) * DIM * MDE);
     var = VELOCITY1;
     for (a = 0; a < VIM; a++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        vv[a][j] = *esp->v[a][j];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        vv[a][j] = *goma_ctx->fem.esp->v[a][j];
       }
     }
     for (b = 0; b < VIM; b++) {
       var = VELOCITY1 + b;
-      pvar = upd->vp[pg->imtrx][var];
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        phi_j = bf[var]->phi[j];
+      pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-        if (*esp->v[b][j] != 0.) {
-          eps = *esp->v[b][j] * DELTA_UNKNOWN;
+        if (*goma_ctx->fem.esp->v[b][j] != 0.) {
+          eps = *goma_ctx->fem.esp->v[b][j] * DELTA_UNKNOWN;
         } else {
           eps = DELTA_UNKNOWN;
         }
@@ -849,8 +857,8 @@ int assemble_vorticity_direction(void) {
         for (p = 0; p < VIM; p++) {
           for (q = 0; q < VIM; q++) {
             for (r = 0; r < VIM; r++) {
-              for (k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
-                grad_v[p][q] += vv[r][k] * bf[var]->grad_phi_e[k][r][p][q];
+              for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; k++) {
+                grad_v[p][q] += vv[r][k] * goma_ctx->fem.bf[var]->grad_phi_e[k][r][p][q];
               }
             }
           }
@@ -871,17 +879,21 @@ int assemble_vorticity_direction(void) {
         memset(R_new, 0, sizeof(double) * DIM * MDE);
         for (a = 0; a < DIM; a++) {
           eqn = R_VORT_DIR1 + a;
-          peqn = upd->ep[pg->imtrx][eqn];
+          peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-          for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-            wt_func = bf[eqn]->phi[i];
-            R_new[a][i] = (-vort_dir_pert[a] * pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)] +
-                           fv->vd[a] * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)]) *
-                          wt_func * dV;
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += (R_old[a][i] - R_new[a][i]) / eps;
+          for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+            wt_func = goma_ctx->fem.bf[eqn]->phi[i];
+            R_new[a][i] =
+                (-vort_dir_pert[a] *
+                     goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)] +
+                 goma_ctx->fem.fv->vd[a] *
+                     goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)]) *
+                wt_func * dV;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                (R_old[a][i] - R_new[a][i]) / eps;
           }
         }
-        vv[b][j] = *esp->v[b][j];
+        vv[b][j] = *goma_ctx->fem.esp->v[b][j];
       }
     }
 
@@ -889,25 +901,26 @@ int assemble_vorticity_direction(void) {
     /* Must calculate numerical Jacobians since analytical are intractable! */
     var = MESH_DISPLACEMENT1;
 
-    if (pd->v[pg->imtrx][var] && 0) {
-      dofs = ei[pg->imtrx]->dof[var];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] && 0) {
+      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       memset(dd, 0, sizeof(double) * DIM * MDE);
       for (j = 0; j < dofs; j++) {
-        node = ei[pg->imtrx]->dof_list[R_MESH1][j];
+        node = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[R_MESH1][j];
         index =
-            goma_ctx->mesh
-                .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[pg->imtrx]->ielem] + node];
+            goma_ctx->mesh.proc_elem_connect
+                [goma_ctx->mesh.proc_connect_ptr[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem] +
+                 node];
         for (a = 0; a < dim; a++) {
-          dd[a][j] = *esp->d[a][j];
+          dd[a][j] = *goma_ctx->fem.esp->d[a][j];
           xcoor[a][j] = goma_ctx->mesh.coor[a][index];
         }
       }
       for (b = 0; b < dim; b++) {
         var = MESH_DISPLACEMENT1 + b;
-        pvar = upd->vp[pg->imtrx][var];
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          if (*esp->d[b][j] != 0.) {
-            eps = *esp->d[b][j] * DELTA_UNKNOWN;
+        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          if (*goma_ctx->fem.esp->d[b][j] != 0.) {
+            eps = *goma_ctx->fem.esp->d[b][j] * DELTA_UNKNOWN;
           } else {
             eps = DELTA_UNKNOWN;
           }
@@ -915,14 +928,14 @@ int assemble_vorticity_direction(void) {
           for (a = 0; a < dim; a++) {
             x[a] = 0.;
             for (k = 0; k < dofs; k++) {
-              x[a] += (xcoor[a][k] + dd[a][k]) * bf[R_MESH1]->phi[k];
+              x[a] += (xcoor[a][k] + dd[a][k]) * goma_ctx->fem.bf[R_MESH1]->phi[k];
             }
           }
           memset(J, 0, sizeof(double) * DIM * DIM);
           for (a = 0; a < dim; a++) {
             for (p = 0; p < dim; p++) {
               for (k = 0; k < dofs; k++) {
-                J[a][p] += (xcoor[p][k] + dd[p][k]) * bf[R_MESH1]->dphidxi[k][a];
+                J[a][p] += (xcoor[p][k] + dd[p][k]) * goma_ctx->fem.bf[R_MESH1]->dphidxi[k][a];
               }
             }
           }
@@ -955,7 +968,7 @@ int assemble_vorticity_direction(void) {
           for (k = 0; k < dofs; k++) {
             for (p = 0; p < dim; p++) {
               for (q = 0; q < dim; q++) {
-                d_phi[k][p] += B[p][q] * bf[var]->dphidxi[k][q];
+                d_phi[k][p] += B[p][q] * goma_ctx->fem.bf[var]->dphidxi[k][q];
               }
             }
           }
@@ -964,9 +977,12 @@ int assemble_vorticity_direction(void) {
             h[p] = 1.;
           }
           memset(hq, 0, DIM * DIM * sizeof(double));
-          if (pd->CoordinateSystem == CARTESIAN || pd->CoordinateSystem == PROJECTED_CARTESIAN ||
-              pd->CoordinateSystem == CARTESIAN_2pt5D) { /* Do nothing. Everything stays 1. */
-          } else if (pd->CoordinateSystem == CYLINDRICAL || pd->CoordinateSystem == SWIRLING) {
+          if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN ||
+              goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+              goma_ctx->fem.pd->CoordinateSystem ==
+                  CARTESIAN_2pt5D) { /* Do nothing. Everything stays 1. */
+          } else if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL ||
+                     goma_ctx->fem.pd->CoordinateSystem == SWIRLING) {
             radius = x[1];
             h[2] = radius;
             hq[2][1] = 1.;
@@ -974,7 +990,7 @@ int assemble_vorticity_direction(void) {
               h[2] = 1.;
               hq[2][1] = 0.;
             }
-          } else if (pd->CoordinateSystem == SPHERICAL) {
+          } else if (goma_ctx->fem.pd->CoordinateSystem == SPHERICAL) {
             radius = x[0];
             theta = x[1];
 
@@ -1007,8 +1023,9 @@ int assemble_vorticity_direction(void) {
           }
           memset(grad_e, 0, sizeof(double) * DIM * DIM * DIM);
 
-          if (pd->CoordinateSystem != CARTESIAN && pd->CoordinateSystem != PROJECTED_CARTESIAN &&
-              pd->CoordinateSystem != CARTESIAN_2pt5D) {
+          if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN &&
+              goma_ctx->fem.pd->CoordinateSystem != PROJECTED_CARTESIAN &&
+              goma_ctx->fem.pd->CoordinateSystem != CARTESIAN_2pt5D) {
             for (q = 0; q < VIM; q++) {
               for (p = 0; p < VIM; p++) {
                 grad_e[q][p][p] = hq[p][q] / (h[p] * h[q]);
@@ -1021,13 +1038,14 @@ int assemble_vorticity_direction(void) {
             }
           }
 
-          if (pd->CoordinateSystem != CARTESIAN && pd->CoordinateSystem != PROJECTED_CARTESIAN &&
-              pd->CoordinateSystem != CARTESIAN_2pt5D) {
+          if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN &&
+              goma_ctx->fem.pd->CoordinateSystem != PROJECTED_CARTESIAN &&
+              goma_ctx->fem.pd->CoordinateSystem != CARTESIAN_2pt5D) {
             for (k = 0; k < dofs; k++) {
               for (r = 0; r < WIM; r++) {
                 for (p = 0; p < VIM; p++) {
                   for (q = 0; q < VIM; q++) {
-                    grad_phi_e[k][r][p][q] += bf[var]->phi[k] * grad_e[r][p][q];
+                    grad_phi_e[k][r][p][q] += goma_ctx->fem.bf[var]->phi[k] * grad_e[r][p][q];
                   }
                 }
               }
@@ -1038,8 +1056,8 @@ int assemble_vorticity_direction(void) {
           for (p = 0; p < VIM; p++) {
             for (q = 0; q < VIM; q++) {
               for (r = 0; r < VIM; r++) {
-                for (k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
-                  grad_v[p][q] += *esp->v[r][k] * grad_phi_e[k][r][p][q];
+                for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; k++) {
+                  grad_v[p][q] += *goma_ctx->fem.esp->v[r][k] * grad_phi_e[k][r][p][q];
                 }
               }
             }
@@ -1060,17 +1078,21 @@ int assemble_vorticity_direction(void) {
           memset(R_new, 0, sizeof(double) * DIM * MDE);
           for (a = 0; a < DIM; a++) {
             eqn = R_VORT_DIR1 + a;
-            peqn = upd->ep[pg->imtrx][eqn];
+            peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-            for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-              wt_func = bf[eqn]->phi[i];
-              R_new[a][i] = (-vort_dir_pert[a] * pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)] +
-                             fv->vd[a] * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)]) *
-                            wt_func * wt * hh3 * detJ1;
-              lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += (R_old[a][i] - R_new[a][i]) / eps;
+            for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+              wt_func = goma_ctx->fem.bf[eqn]->phi[i];
+              R_new[a][i] =
+                  (-vort_dir_pert[a] *
+                       goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)] +
+                   goma_ctx->fem.fv->vd[a] *
+                       goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)]) *
+                  wt_func * wt * hh3 * detJ1;
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                  (R_old[a][i] - R_new[a][i]) / eps;
             }
           }
-          dd[b][j] = *esp->d[b][j];
+          dd[b][j] = *goma_ctx->fem.esp->d[b][j];
         }
       }
     }
@@ -1131,7 +1153,7 @@ int hydro_qtensor_flux(struct Species_Conservation_Terms *st, int w) /* species 
   dbl grad_phi_j_VQVt[DIM]; /* grad(phi_j) . (V Q V^t) */
   dbl VQVt_grad_phi_j[DIM]; /* (V Q V^t) . grad(phi_j) */
 
-  if (!pd->e[pg->imtrx][VORT_DIR3] && 0) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][VORT_DIR3] && 0) {
     GOMA_EH(GOMA_ERROR,
             "Cannot use QTENSOR without the VORT_DIR{1,2,3} equations/variables active!");
     exit(-1);
@@ -1143,26 +1165,26 @@ int hydro_qtensor_flux(struct Species_Conservation_Terms *st, int w) /* species 
   }
 
   /* Set up some convenient local variables and pointers */
-  Y = fv->c;
-  grad_Y = fv->grad_c;
-  grad_gammadot = fv->grad_SH;
-  gammadot = fv->SH;
+  Y = goma_ctx->fem.fv->c;
+  grad_Y = goma_ctx->fem.fv->grad_c;
+  grad_gammadot = goma_ctx->fem.fv->grad_SH;
+  gammadot = goma_ctx->fem.fv->SH;
   /*
   grad_gammadot = grad_gd[MMH_ip];
   gammadot = gd[MMH_ip];
   */
 
-  dmu_dY = &(mp->d_viscosity[MAX_VARIABLE_TYPES]);
-  d2mu_dY2 = &(mp->d2_viscosity[MAX_VARIABLE_TYPES]);
+  dmu_dY = &(goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES]);
+  d2mu_dY2 = &(goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES]);
 
   memset(gamma_dot, 0, DIM * DIM * sizeof(dbl));
 
   for (a = 0; a < DIM; a++)
     for (b = 0; b < DIM; b++)
-      gamma_dot[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+      gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
 
   /* get mu and grad_mu */
-  mu = viscosity(gn, gamma_dot, d_mu);
+  mu = viscosity(goma_ctx->fem.gn, gamma_dot, d_mu);
 
   memset(grad_mu, 0, DIM * sizeof(dbl));
   memset(grad_mu1, 0, DIM * sizeof(dbl));
@@ -1179,8 +1201,8 @@ int hydro_qtensor_flux(struct Species_Conservation_Terms *st, int w) /* species 
    * This is to get a better match with the data.
    */
   for (a = 0; a < DIM; a++) {
-    grad_mu[a] += dmu_dY[w] * fv->grad_c[w][a];
-    grad_mu1[a] += d_mu->gd * fv->grad_SH[a];
+    grad_mu[a] += dmu_dY[w] * goma_ctx->fem.fv->grad_c[w][a];
+    grad_mu1[a] += d_mu->gd * goma_ctx->fem.fv->grad_SH[a];
   }
 
   /* Compute HYDRODYNAMIC diffusive fluxes */
@@ -1190,64 +1212,73 @@ int hydro_qtensor_flux(struct Species_Conservation_Terms *st, int w) /* species 
    *  or it defaults to zero
    */
   del_rho = 0.;
-  if (mp->DensityModel == SUSPENSION) {
-    del_rho = (mp->u_density[2] - mp->u_density[1]);
+  if (goma_ctx->fem.mp->DensityModel == SUSPENSION) {
+    del_rho = (goma_ctx->fem.mp->u_density[2] - goma_ctx->fem.mp->u_density[1]);
   }
 
   /* Compute HYDRODYNAMIC diffusive fluxes */
   /* Assign diffusivity values to each term */
 
   if (Y[w] > 0.) {
-    if (mp->GamDiffType[w] == LINEAR) {
-      Dc = mp->u_gadiffusivity[w][0] * 1.4 * Y[w];
-    } else if (mp->GamDiffType[w] == LEVEL_SET) {
+    if (goma_ctx->fem.mp->GamDiffType[w] == LINEAR) {
+      Dc = goma_ctx->fem.mp->u_gadiffusivity[w][0] * 1.4 * Y[w];
+    } else if (goma_ctx->fem.mp->GamDiffType[w] == LEVEL_SET) {
       double width;
-      if (ls == NULL)
+      if (goma_ctx->fem.ls == NULL)
         GOMA_EH(GOMA_ERROR,
                 "Need to activate to Level Set Interface Tracking to use this model.\n");
 
-      width = (mp->u_gadiffusivity[w][2] == 0.0) ? ls->Length_Scale : mp->u_gadiffusivity[w][2];
+      width = (goma_ctx->fem.mp->u_gadiffusivity[w][2] == 0.0)
+                  ? goma_ctx->fem.ls->Length_Scale
+                  : goma_ctx->fem.mp->u_gadiffusivity[w][2];
 
-      ls_transport_property(mp->u_gadiffusivity[w][0], mp->u_gadiffusivity[w][1], width, &Dc, NULL);
+      ls_transport_property(goma_ctx->fem.mp->u_gadiffusivity[w][0],
+                            goma_ctx->fem.mp->u_gadiffusivity[w][1], width, &Dc, NULL);
     }
 
     else {
-      Dc = mp->gam_diffusivity[w];
+      Dc = goma_ctx->fem.mp->gam_diffusivity[w];
     }
 
-    if (mp->MuDiffType[w] == LINEAR) {
-      Dmu = mp->u_mdiffusivity[w][0] * 1.4 * Y[w];
-    } else if (mp->MuDiffType[w] == LEVEL_SET) {
+    if (goma_ctx->fem.mp->MuDiffType[w] == LINEAR) {
+      Dmu = goma_ctx->fem.mp->u_mdiffusivity[w][0] * 1.4 * Y[w];
+    } else if (goma_ctx->fem.mp->MuDiffType[w] == LEVEL_SET) {
       double width;
-      if (ls == NULL)
+      if (goma_ctx->fem.ls == NULL)
         GOMA_EH(GOMA_ERROR,
                 "Need to activate to Level Set Interface Tracking to use this model.\n");
 
-      width = (mp->u_mdiffusivity[w][2] == 0.0) ? ls->Length_Scale : mp->u_mdiffusivity[w][2];
+      width = (goma_ctx->fem.mp->u_mdiffusivity[w][2] == 0.0)
+                  ? goma_ctx->fem.ls->Length_Scale
+                  : goma_ctx->fem.mp->u_mdiffusivity[w][2];
 
-      ls_transport_property(mp->u_mdiffusivity[w][0], mp->u_mdiffusivity[w][1], width, &Dmu, NULL);
+      ls_transport_property(goma_ctx->fem.mp->u_mdiffusivity[w][0],
+                            goma_ctx->fem.mp->u_mdiffusivity[w][1], width, &Dmu, NULL);
     } else {
-      Dmu = mp->mu_diffusivity[w];
+      Dmu = goma_ctx->fem.mp->mu_diffusivity[w];
     }
 
-    if (mp->GravDiffType[w] == BISECTION) {
-      Dg = mp->u_gdiffusivity[w][0] * del_rho;
-    } else if (mp->GravDiffType[w] == RZBISECTION) {
-      Dg = mp->u_gdiffusivity[w][0] * del_rho;
-    } else if (mp->GravDiffType[w] == RICHARDSON_ZAKI) {
-      Dg = mp->u_gdiffusivity[w][0] * del_rho;
-    } else if (mp->GravDiffType[w] == LEVEL_SET) {
+    if (goma_ctx->fem.mp->GravDiffType[w] == BISECTION) {
+      Dg = goma_ctx->fem.mp->u_gdiffusivity[w][0] * del_rho;
+    } else if (goma_ctx->fem.mp->GravDiffType[w] == RZBISECTION) {
+      Dg = goma_ctx->fem.mp->u_gdiffusivity[w][0] * del_rho;
+    } else if (goma_ctx->fem.mp->GravDiffType[w] == RICHARDSON_ZAKI) {
+      Dg = goma_ctx->fem.mp->u_gdiffusivity[w][0] * del_rho;
+    } else if (goma_ctx->fem.mp->GravDiffType[w] == LEVEL_SET) {
       double width;
-      if (ls == NULL)
+      if (goma_ctx->fem.ls == NULL)
         GOMA_EH(GOMA_ERROR,
                 "Need to activate to Level Set Interface Tracking to use this model.\n");
 
-      width = (mp->u_gdiffusivity[w][2] == 0.0) ? ls->Length_Scale : mp->u_gdiffusivity[w][2];
+      width = (goma_ctx->fem.mp->u_gdiffusivity[w][2] == 0.0)
+                  ? goma_ctx->fem.ls->Length_Scale
+                  : goma_ctx->fem.mp->u_gdiffusivity[w][2];
 
-      ls_transport_property(mp->u_gdiffusivity[w][0], mp->u_gdiffusivity[w][1], width, &Dg, NULL);
+      ls_transport_property(goma_ctx->fem.mp->u_gdiffusivity[w][0],
+                            goma_ctx->fem.mp->u_gdiffusivity[w][1], width, &Dg, NULL);
       Dg *= del_rho;
     } else {
-      Dg = mp->g_diffusivity[w] * del_rho;
+      Dg = goma_ctx->fem.mp->g_diffusivity[w] * del_rho;
     }
   } else {
     Dg = 0.;
@@ -1305,15 +1336,15 @@ int hydro_qtensor_flux(struct Species_Conservation_Terms *st, int w) /* species 
 
   /* Assemble Jacobian */
   /* Currently no mesh displacement dependencies. */
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = MASS_FRACTION;
     memset(st->d_diff_flux_dc, 0, MAX_CONC * DIM * MAX_CONC * MDE * sizeof(dbl));
     for (a = 0; a < DIM; a++)
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         c_term = 0.0;
         mu_term = 0.0;
-        phi_j = bf[var]->phi[j];
-        grad_phi_j = bf[var]->grad_phi[j];
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
+        grad_phi_j = goma_ctx->fem.bf[var]->grad_phi[j];
 
         /* Compute grad(phi) . VQVt.  This is different for
          * different dependency functions (when
@@ -1348,11 +1379,11 @@ int hydro_qtensor_flux(struct Species_Conservation_Terms *st, int w) /* species 
     var = SHEAR_RATE;
     memset(st->d_diff_flux_dSH[w], 0, DIM * MDE * sizeof(dbl));
     for (a = 0; a < DIM; a++)
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         c_term = 0.0;
         mu_term = 0.0;
-        phi_j = bf[var]->phi[j];
-        grad_phi_j = bf[var]->grad_phi[j];
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
+        grad_phi_j = goma_ctx->fem.bf[var]->grad_phi[j];
 
         /* Compute grad(phi) . VQVt.  This is different for
          * different dependency functions (when
@@ -1443,8 +1474,8 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
 
   dbl d_div_gdYVQVt_dvd[DIM][DIM][MDE];
 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    if (pd->e[imtrx][VORT_DIR1]) {
+  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (goma_ctx->fem.pd->e[imtrx][VORT_DIR1]) {
       vort_dir_on = 1;
     }
   }
@@ -1457,23 +1488,23 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
   }
 
   /* Set up some convenient local variables and pointers */
-  Y = fv->c;
-  grad_Y = fv->grad_c;
-  grad_gammadot = fv->grad_SH;
-  gammadot = fv->SH;
+  Y = goma_ctx->fem.fv->c;
+  grad_Y = goma_ctx->fem.fv->grad_c;
+  grad_gammadot = goma_ctx->fem.fv->grad_SH;
+  gammadot = goma_ctx->fem.fv->SH;
 
-  dmu_dY = &(mp->d_viscosity[MAX_VARIABLE_TYPES]);
-  d2mu_dY2 = &(mp->d2_viscosity[MAX_VARIABLE_TYPES]);
+  dmu_dY = &(goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES]);
+  d2mu_dY2 = &(goma_ctx->fem.mp->d2_viscosity[MAX_VARIABLE_TYPES]);
 
   memset(gamma_dot, 0, DIM * DIM * sizeof(dbl));
   memset(dDd_dgrady, 0, DIM * sizeof(dbl));
 
   for (a = 0; a < DIM; a++)
     for (b = 0; b < DIM; b++)
-      gamma_dot[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+      gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
 
   /* get mu and grad_mu */
-  mu = viscosity(gn, gamma_dot, d_mu);
+  mu = viscosity(goma_ctx->fem.gn, gamma_dot, d_mu);
 
   memset(grad_mu, 0, DIM * sizeof(dbl));
   memset(grad_mu1, 0, DIM * sizeof(dbl));
@@ -1490,8 +1521,8 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
    * This is to get a better match with the data.
    */
   for (a = 0; a < DIM; a++) {
-    grad_mu[a] += dmu_dY[w] * fv->grad_c[w][a];
-    grad_mu1[a] += d_mu->gd * fv->grad_SH[a];
+    grad_mu[a] += dmu_dY[w] * goma_ctx->fem.fv->grad_c[w][a];
+    grad_mu1[a] += d_mu->gd * goma_ctx->fem.fv->grad_SH[a];
   }
 
   /* Compute HYDRODYNAMIC diffusive fluxes */
@@ -1501,64 +1532,73 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
    *  or it defaults to zero
    */
   del_rho = 0.;
-  if (mp->DensityModel == SUSPENSION) {
-    del_rho = (mp->u_density[2] - mp->u_density[1]);
+  if (goma_ctx->fem.mp->DensityModel == SUSPENSION) {
+    del_rho = (goma_ctx->fem.mp->u_density[2] - goma_ctx->fem.mp->u_density[1]);
   }
 
   /* Compute HYDRODYNAMIC diffusive fluxes */
   /* Assign diffusivity values to each term */
 
   if (Y[w] > 0.) {
-    if (mp->GamDiffType[w] == LINEAR) {
-      Dc = mp->u_gadiffusivity[w][0] * 1.4 * Y[w];
-    } else if (mp->GamDiffType[w] == LEVEL_SET) {
+    if (goma_ctx->fem.mp->GamDiffType[w] == LINEAR) {
+      Dc = goma_ctx->fem.mp->u_gadiffusivity[w][0] * 1.4 * Y[w];
+    } else if (goma_ctx->fem.mp->GamDiffType[w] == LEVEL_SET) {
       double width;
-      if (ls == NULL)
+      if (goma_ctx->fem.ls == NULL)
         GOMA_EH(GOMA_ERROR,
                 "Need to activate to Level Set Interface Tracking to use this model.\n");
 
-      width = (mp->u_gadiffusivity[w][2] == 0.0) ? ls->Length_Scale : mp->u_gadiffusivity[w][2];
+      width = (goma_ctx->fem.mp->u_gadiffusivity[w][2] == 0.0)
+                  ? goma_ctx->fem.ls->Length_Scale
+                  : goma_ctx->fem.mp->u_gadiffusivity[w][2];
 
-      ls_transport_property(mp->u_gadiffusivity[w][0], mp->u_gadiffusivity[w][1], width, &Dc, NULL);
+      ls_transport_property(goma_ctx->fem.mp->u_gadiffusivity[w][0],
+                            goma_ctx->fem.mp->u_gadiffusivity[w][1], width, &Dc, NULL);
     }
 
     else {
-      Dc = mp->gam_diffusivity[w];
+      Dc = goma_ctx->fem.mp->gam_diffusivity[w];
     }
 
-    if (mp->MuDiffType[w] == LINEAR) {
-      Dmu = mp->u_mdiffusivity[w][0] * 1.4 * Y[w];
-    } else if (mp->MuDiffType[w] == LEVEL_SET) {
+    if (goma_ctx->fem.mp->MuDiffType[w] == LINEAR) {
+      Dmu = goma_ctx->fem.mp->u_mdiffusivity[w][0] * 1.4 * Y[w];
+    } else if (goma_ctx->fem.mp->MuDiffType[w] == LEVEL_SET) {
       double width;
-      if (ls == NULL)
+      if (goma_ctx->fem.ls == NULL)
         GOMA_EH(GOMA_ERROR,
                 "Need to activate to Level Set Interface Tracking to use this model.\n");
 
-      width = (mp->u_mdiffusivity[w][2] == 0.0) ? ls->Length_Scale : mp->u_mdiffusivity[w][2];
+      width = (goma_ctx->fem.mp->u_mdiffusivity[w][2] == 0.0)
+                  ? goma_ctx->fem.ls->Length_Scale
+                  : goma_ctx->fem.mp->u_mdiffusivity[w][2];
 
-      ls_transport_property(mp->u_mdiffusivity[w][0], mp->u_mdiffusivity[w][1], width, &Dmu, NULL);
+      ls_transport_property(goma_ctx->fem.mp->u_mdiffusivity[w][0],
+                            goma_ctx->fem.mp->u_mdiffusivity[w][1], width, &Dmu, NULL);
     } else {
-      Dmu = mp->mu_diffusivity[w];
+      Dmu = goma_ctx->fem.mp->mu_diffusivity[w];
     }
 
-    if (mp->GravDiffType[w] == BISECTION) {
-      Dg = mp->u_gdiffusivity[w][0] * del_rho;
-    } else if (mp->GravDiffType[w] == RZBISECTION) {
-      Dg = mp->u_gdiffusivity[w][0] * del_rho;
-    } else if (mp->GravDiffType[w] == RICHARDSON_ZAKI) {
-      Dg = mp->u_gdiffusivity[w][0] * del_rho;
-    } else if (mp->GravDiffType[w] == LEVEL_SET) {
+    if (goma_ctx->fem.mp->GravDiffType[w] == BISECTION) {
+      Dg = goma_ctx->fem.mp->u_gdiffusivity[w][0] * del_rho;
+    } else if (goma_ctx->fem.mp->GravDiffType[w] == RZBISECTION) {
+      Dg = goma_ctx->fem.mp->u_gdiffusivity[w][0] * del_rho;
+    } else if (goma_ctx->fem.mp->GravDiffType[w] == RICHARDSON_ZAKI) {
+      Dg = goma_ctx->fem.mp->u_gdiffusivity[w][0] * del_rho;
+    } else if (goma_ctx->fem.mp->GravDiffType[w] == LEVEL_SET) {
       double width;
-      if (ls == NULL)
+      if (goma_ctx->fem.ls == NULL)
         GOMA_EH(GOMA_ERROR,
                 "Need to activate to Level Set Interface Tracking to use this model.\n");
 
-      width = (mp->u_gdiffusivity[w][2] == 0.0) ? ls->Length_Scale : mp->u_gdiffusivity[w][2];
+      width = (goma_ctx->fem.mp->u_gdiffusivity[w][2] == 0.0)
+                  ? goma_ctx->fem.ls->Length_Scale
+                  : goma_ctx->fem.mp->u_gdiffusivity[w][2];
 
-      ls_transport_property(mp->u_gdiffusivity[w][0], mp->u_gdiffusivity[w][1], width, &Dg, NULL);
+      ls_transport_property(goma_ctx->fem.mp->u_gdiffusivity[w][0],
+                            goma_ctx->fem.mp->u_gdiffusivity[w][1], width, &Dg, NULL);
       Dg *= del_rho;
     } else {
-      Dg = mp->g_diffusivity[w] * del_rho;
+      Dg = goma_ctx->fem.mp->g_diffusivity[w] * del_rho;
     }
   } else {
     Dg = 0.;
@@ -1570,24 +1610,26 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
    *  in mat file it is direction dependent
    */
 
-  if (mp->FickDiffType[w] == ANISOTROPIC) {
+  if (goma_ctx->fem.mp->FickDiffType[w] == ANISOTROPIC) {
     for (a = 0; a < DIM; a++) {
-      Dd[a] = mp->u_fdiffusivity[w][a];
+      Dd[a] = goma_ctx->fem.mp->u_fdiffusivity[w][a];
       dDd_dy[a] = 0.;
     }
-  } else if (mp->FickDiffType[w] == EXP_DECAY) {
+  } else if (goma_ctx->fem.mp->FickDiffType[w] == EXP_DECAY) {
     for (a = 0; a < DIM; a++) {
       if (Y[w] >= 0. && Y[w] <= maxpack) {
-        Dd[a] = mp->u_fdiffusivity[w][0] * (exp(-mp->u_fdiffusivity[w][1] * Y[w]) +
-                                            exp(-mp->u_fdiffusivity[w][1] * fabs(maxpack - Y[w])));
-        dDd_dy[a] = -mp->u_fdiffusivity[w][0] * mp->u_fdiffusivity[w][1] *
-                    (exp(-mp->u_fdiffusivity[w][1] * Y[w]) -
-                     exp(-mp->u_fdiffusivity[w][1] * fabs(maxpack - Y[w])));
+        Dd[a] = goma_ctx->fem.mp->u_fdiffusivity[w][0] *
+                (exp(-goma_ctx->fem.mp->u_fdiffusivity[w][1] * Y[w]) +
+                 exp(-goma_ctx->fem.mp->u_fdiffusivity[w][1] * fabs(maxpack - Y[w])));
+        dDd_dy[a] = -goma_ctx->fem.mp->u_fdiffusivity[w][0] *
+                    goma_ctx->fem.mp->u_fdiffusivity[w][1] *
+                    (exp(-goma_ctx->fem.mp->u_fdiffusivity[w][1] * Y[w]) -
+                     exp(-goma_ctx->fem.mp->u_fdiffusivity[w][1] * fabs(maxpack - Y[w])));
       } else if (Y[w] < 0.) {
-        Dd[a] = mp->u_fdiffusivity[w][0];
+        Dd[a] = goma_ctx->fem.mp->u_fdiffusivity[w][0];
         dDd_dy[a] = 0.;
       } else if (Y[w] > maxpack) {
-        Dd[a] = mp->u_fdiffusivity[w][0];
+        Dd[a] = goma_ctx->fem.mp->u_fdiffusivity[w][0];
         dDd_dy[a] = 0.;
       }
     }
@@ -1617,15 +1659,16 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
 
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
-      qtensor_loc[a][b] = (dbl)delta(a, b) - 0.5 * fv->vd[a] * fv->vd[b];
+      qtensor_loc[a][b] =
+          (dbl)delta(a, b) - 0.5 * goma_ctx->fem.fv->vd[a] * goma_ctx->fem.fv->vd[b];
     }
   }
 
   memset(div_q, 0, DIM * sizeof(dbl));
   for (a = 0; a < VIM; a++) {
-    div_q[a] = -0.5 * fv->vd[a] * fv->div_vd;
+    div_q[a] = -0.5 * goma_ctx->fem.fv->vd[a] * goma_ctx->fem.fv->div_vd;
     for (b = 0; b < VIM; b++) {
-      div_q[a] -= 0.5 * fv->vd[b] * fv->grad_vd[b][a];
+      div_q[a] -= 0.5 * goma_ctx->fem.fv->vd[b] * goma_ctx->fem.fv->grad_vd[b][a];
     }
   }
 
@@ -1659,7 +1702,7 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
 
   /* Assemble Jacobian */
   /* Currently no mesh displacement dependencies. */
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     var = MASS_FRACTION;
     memset(st->d_diff_flux_dc, 0, MAX_CONC * DIM * MAX_CONC * MDE * sizeof(dbl));
@@ -1672,19 +1715,19 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
     memset(grad_phi_Q, 0, DIM * MDE * sizeof(dbl));
 
     for (b = 0; b < DIM; b++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         for (a = 0; a < DIM; a++) {
-          Q_grad_phi[b][j] += qtensor_loc[b][a] * bf[var]->grad_phi[j][a];
-          grad_phi_Q[b][j] += bf[var]->grad_phi[j][a] * qtensor_loc[a][b];
+          Q_grad_phi[b][j] += qtensor_loc[b][a] * goma_ctx->fem.bf[var]->grad_phi[j][a];
+          grad_phi_Q[b][j] += goma_ctx->fem.bf[var]->grad_phi[j][a] * qtensor_loc[a][b];
         }
       }
     }
 
     for (a = 0; a < DIM; a++)
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         c_term = 0.0;
         mu_term = 0.0;
-        phi_j = bf[var]->phi[j];
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
 
         c_term += phi_j * div_gdYVQVt[a];
         c_term += Y[w] * gammadot * grad_phi_Q[a][j];
@@ -1696,8 +1739,9 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
         mu_term += Y[w] * dmu_dY[w] * Q_grad_phi[a][j];
         mu_term *= -Dmu * gammadot * Y[w] / mu;
 
-        d_term = -bf[var]->grad_phi[j][a] * Dd[a] - grad_Y[w][a] * dDd_dy[a] * bf[var]->phi[j] -
-                 grad_Y[w][a] * dDd_dgrady[a] * bf[var]->grad_phi[j][a];
+        d_term = -goma_ctx->fem.bf[var]->grad_phi[j][a] * Dd[a] -
+                 grad_Y[w][a] * dDd_dy[a] * goma_ctx->fem.bf[var]->phi[j] -
+                 grad_Y[w][a] * dDd_dgrady[a] * goma_ctx->fem.bf[var]->grad_phi[j][a];
 
         st->d_diff_flux_dc[w][a][w][j] = c_term + mu_term + d_term;
       }
@@ -1711,17 +1755,17 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
      */
     memset(grad_phi_Q, 0, DIM * MDE * sizeof(dbl));
     for (b = 0; b < VIM; b++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         for (a = 0; a < VIM; a++) {
-          grad_phi_Q[b][j] += bf[var]->grad_phi[j][a] * qtensor_loc[a][b];
+          grad_phi_Q[b][j] += goma_ctx->fem.bf[var]->grad_phi[j][a] * qtensor_loc[a][b];
         }
       }
     }
     for (a = 0; a < VIM; a++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         c_term = 0.0;
         mu_term = 0.0;
-        phi_j = bf[var]->phi[j];
+        phi_j = goma_ctx->fem.bf[var]->phi[j];
 
         c_term += Y[w] * grad_phi_Q[a][j];
         c_term += phi_j * (grad_Y_VQVt[a] + Y[w] * div_q[a]);
@@ -1740,9 +1784,10 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
     for (p = 0; p < DIM; p++) {
       for (q = 0; q < DIM; q++) {
         for (b = 0; b < DIM; b++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             d_qtensor_dvd[p][q][b][j] =
-                -0.5 * phi_j * (fv->vd[q] * delta(p, b) + fv->vd[p] * delta(q, b));
+                -0.5 * phi_j *
+                (goma_ctx->fem.fv->vd[q] * delta(p, b) + goma_ctx->fem.fv->vd[p] * delta(q, b));
           }
         }
       }
@@ -1751,17 +1796,18 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
     memset(d_div_q_dvd, 0, DIM * DIM * MDE * sizeof(dbl));
     for (a = 0; a < DIM; a++) {
       for (b = 0; b < DIM; b++) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           div_phi_j_e_b = 0.;
           for (p = 0; p < VIM; p++) {
-            div_phi_j_e_b += bf[var]->grad_phi_e[j][b][p][p];
+            div_phi_j_e_b += goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][p];
           }
 
-          d_div_q_dvd[a][b][j] =
-              -0.5 * (phi_j * delta(a, b) * fv->div_vd + fv->vd[a] * div_phi_j_e_b);
+          d_div_q_dvd[a][b][j] = -0.5 * (phi_j * delta(a, b) * goma_ctx->fem.fv->div_vd +
+                                         goma_ctx->fem.fv->vd[a] * div_phi_j_e_b);
           for (p = 0; p < VIM; p++) {
-            d_div_q_dvd[a][b][j] -= 0.5 * phi_j * delta(p, b) * fv->grad_vd[p][a] +
-                                    0.5 * fv->vd[p] * bf[var]->grad_phi_e[j][b][p][a];
+            d_div_q_dvd[a][b][j] -=
+                0.5 * phi_j * delta(p, b) * goma_ctx->fem.fv->grad_vd[p][a] +
+                0.5 * goma_ctx->fem.fv->vd[p] * goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][a];
           }
         }
       }
@@ -1772,7 +1818,7 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
     memset(d_VQVt_grad_mu_dvd, 0, DIM * DIM * MDE * sizeof(dbl));
     memset(d_VQVt_grad_Y_dvd, 0, DIM * DIM * MDE * sizeof(dbl));
     for (b = 0; b < DIM; b++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         for (a = 0; a < DIM; a++) {
           for (i = 0; i < DIM; i++) {
             d_grad_Y_VQVt_dvd[a][b][j] += grad_Y[w][i] * d_qtensor_dvd[i][a][b][j];
@@ -1787,7 +1833,7 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
     /* Compute d_div(gammadot * Y * (V Q V^t))_dvd */
     memset(d_div_gdYVQVt_dvd, 0, DIM * DIM * MDE * sizeof(dbl));
     for (b = 0; b < DIM; b++) {
-      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         for (a = 0; a < DIM; a++) {
           d_div_gdYVQVt_dvd[a][b][j] += Y[w] * d_grad_gd_VQVt_dvd[a][b][j];
           d_div_gdYVQVt_dvd[a][b][j] += gammadot * d_grad_Y_VQVt_dvd[a][b][j];
@@ -1798,7 +1844,7 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
 
     for (a = 0; a < DIM; a++) {
       for (b = 0; b < DIM; b++) {
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
           c_term = -Dc * Y[w] * d_div_gdYVQVt_dvd[a][b][j];
           mu_term = -Dmu * Y[w] * Y[w] * gammadot * d_VQVt_grad_mu_dvd[a][b][j] / mu;
@@ -3091,7 +3137,7 @@ void compute_VQVt_directly(dbl T[3][3], dbl VQVt[3][3], int print) {
     }
   diagonalize_symmetric_tensor(VQVt, v0, v1, v2, lambda, print);
 #ifdef DEBUG_QTENSOR
-  if (print && ei[pg->imtrx]->ielem == 0) {
+  if (print && goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem == 0) {
     printf("Evalues = %g (flow), %g (norm), %g (vort)\n", lambda[0], lambda[1], lambda[2]);
     printf("Flow direction = [% 10.4g, %10.4g, %10.4g]\n", v0[0], v0[1], v0[2]);
     printf("Norm direction = [% 10.4g, %10.4g, %10.4g]\n", v1[0], v1[1], v1[2]);
@@ -3115,7 +3161,7 @@ void please_work(dbl T[3][3], /* Rate of deformation tensor */
   dbl v0[3], v2[3], evalues[3];
 
   for (i = 0; i < DIM; i++)
-    v_flow[i] = fv->v[i];
+    v_flow[i] = goma_ctx->fem.fv->v[i];
   normalize_really_simple_vector(v_flow, DIM);
 
   /* v1 will be the eigenvector with smallest |eigenvalue| since the

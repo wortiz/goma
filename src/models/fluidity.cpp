@@ -61,16 +61,16 @@ extern "C" dbl
 fluidity_viscosity(int fluidity_species, /* integer associated with conc eqn for bond */
                    VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
   /* Local Variables */
-  if (!pd->gv[MASS_FRACTION]) {
+  if (!goma_ctx->fem.pd->gv[MASS_FRACTION]) {
     GOMA_EH(GOMA_ERROR, "Fluidity viscosity but no Species Concentration Equation\n");
   }
 
-  dbl *params = mp->u_species_source[fluidity_species];
+  dbl *params = goma_ctx->fem.mp->u_species_source[fluidity_species];
 
   dbl phi_0 = params[0];
   dbl phi_inf = params[1];
 
-  dbl phi_star = fv->c[fluidity_species];
+  dbl phi_star = goma_ctx->fem.fv->c[fluidity_species];
 
   bool disable_deriv = false;
   if (phi_star < 0) {
@@ -84,8 +84,9 @@ fluidity_viscosity(int fluidity_species, /* integer associated with conc eqn for
   /* Calculate the fluidity */
   dbl phi = phi_0 + (phi_inf - phi_0) * phi_star;
   if (d_mu != NULL && !disable_deriv) {
-    for (int j = 0; j < ei[pg->imtrx]->dof[MASS_FRACTION]; j++)
-      d_mu->C[fluidity_species][j] = bf[MASS_FRACTION]->phi[j] * -(phi_inf - phi_0) / (phi * phi);
+    for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MASS_FRACTION]; j++)
+      d_mu->C[fluidity_species][j] =
+          goma_ctx->fem.bf[MASS_FRACTION]->phi[j] * -(phi_inf - phi_0) / (phi * phi);
   }
 
   return 1.0 / phi;
@@ -101,11 +102,11 @@ sfad sfad_fluidity_source(int species_no, dbl *params) {
   dbl m = params[6];
   dbl m_y = params[7];
 
-  sfad phi_star(10, 0, fv->c[species_no]);
+  sfad phi_star(10, 0, goma_ctx->fem.fv->c[species_no]);
   sfad grad_v[DIM][DIM];
   for (int i = 0; i < VIM; i++) {
     for (int j = 0; j < VIM; j++) {
-      grad_v[i][j] = fv->grad_v[i][j];
+      grad_v[i][j] = goma_ctx->fem.fv->grad_v[i][j];
       int idx = 1 + i * VIM + j;
       grad_v[i][j].fastAccessDx(idx) = 1.0;
     }
@@ -117,8 +118,8 @@ sfad sfad_fluidity_source(int species_no, dbl *params) {
   sfad mu = 1 / phi;
 
   sfad tau[DIM][DIM] = {{0.}};
-  for (int i = 0; i < pd->Num_Dim; i++) {
-    for (int j = 0; j < pd->Num_Dim; j++) {
+  for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
+    for (int j = 0; j < goma_ctx->fem.pd->Num_Dim; j++) {
       tau[i][j] = mu * (grad_v[i][j] + grad_v[j][i]);
     }
   }
@@ -168,38 +169,41 @@ sfad sfad_fluidity_source(int species_no, dbl *params) {
 extern "C" int fluidity_source(int species_no, struct Species_Conservation_Terms *st, dbl *params) {
   sfad F = sfad_fluidity_source(species_no, params);
   int eqn = MASS_FRACTION;
-  if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
     st->MassSource[species_no] = F.val();
 
     /* Jacobian entries for source term */
     int var = MASS_FRACTION;
-    if (pd->v[pg->imtrx][var]) {
-      for (int j = 0; j < ei[pg->imtrx]->dof[MASS_FRACTION]; j++) {
-        st->d_MassSource_dc[species_no][species_no][j] = bf[MASS_FRACTION]->phi[j] * F.dx(0);
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MASS_FRACTION]; j++) {
+        st->d_MassSource_dc[species_no][species_no][j] =
+            goma_ctx->fem.bf[MASS_FRACTION]->phi[j] * F.dx(0);
       }
     }
 
     var = VELOCITY1;
-    if (pd->v[pg->imtrx][var]) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       for (int a = 0; a < VIM; a++) {
         for (int p = 0; p < VIM; p++) {
           for (int q = 0; q < VIM; q++) {
-            for (int j = 0; j < ei[pg->imtrx]->dof[VELOCITY1 + a]; j++) {
+            for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1 + a];
+                 j++) {
               st->d_MassSource_dv[species_no][a][j] +=
-                  F.dx(1 + p * VIM + q) * bf[VELOCITY1 + a]->grad_phi_e[j][a][p][q];
+                  F.dx(1 + p * VIM + q) * goma_ctx->fem.bf[VELOCITY1 + a]->grad_phi_e[j][a][p][q];
             }
           }
         }
       }
     }
     var = MESH_DISPLACEMENT1;
-    if (pd->v[pg->imtrx][var]) {
-      for (int a = 0; a < pd->Num_Dim; a++) {
-        for (int p = 0; p < pd->Num_Dim; p++) {
-          for (int q = 0; q < pd->Num_Dim; q++) {
-            for (int j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1 + a]; j++) {
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      for (int a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
+        for (int p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
+          for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
+            for (int j = 0;
+                 j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1 + a]; j++) {
               st->d_MassSource_dmesh[species_no][a][j] +=
-                  F.dx(1 + p * VIM + q) * fv->d_grad_v_dmesh[p][q][a][j];
+                  F.dx(1 + p * VIM + q) * goma_ctx->fem.fv->d_grad_v_dmesh[p][q][a][j];
             }
           }
         }
@@ -226,38 +230,39 @@ extern "C" void fluidity_equilibrium_surf(double func[DIM],
                                           const double dt) {
 
   int eqn = R_MASS;
-  sfad F = sfad_fluidity_source(fluidity_species, mp->u_species_source[fluidity_species]);
-  sfad c_dot = fv_dot->c[fluidity_species];
+  sfad F =
+      sfad_fluidity_source(fluidity_species, goma_ctx->fem.mp->u_species_source[fluidity_species]);
+  sfad c_dot = goma_ctx->fem.fv_dot->c[fluidity_species];
   c_dot.fastAccessDx(0) = (1 + 2 * theta) / dt;
   sfad func_fad = 0;
-  if (pd->e[pg->imtrx][eqn] & T_MASS) {
-    if (pd->TimeIntegration != STEADY) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
+    if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
       func_fad = -c_dot;
     }
   }
 
-  if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
     func_fad += F;
   }
 
   func[0] = func_fad.val();
   /* Jacobian entries for source term */
   int var = MASS_FRACTION;
-  if (pd->v[pg->imtrx][var]) {
-    for (int j = 0; j < ei[pg->imtrx]->dof[MASS_FRACTION]; j++) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MASS_FRACTION]; j++) {
       d_func[0][MAX_VARIABLE_TYPES + fluidity_species][j] =
-          bf[MASS_FRACTION]->phi[j] * func_fad.dx(0);
+          goma_ctx->fem.bf[MASS_FRACTION]->phi[j] * func_fad.dx(0);
     }
   }
 
   var = VELOCITY1;
-  if (pd->v[pg->imtrx][var]) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     for (int a = 0; a < VIM; a++) {
       for (int p = 0; p < VIM; p++) {
         for (int q = 0; q < VIM; q++) {
-          for (int j = 0; j < ei[pg->imtrx]->dof[VELOCITY1 + a]; j++) {
-            d_func[0][VELOCITY1 + a][j] +=
-                func_fad.dx(1 + p * VIM + q) * bf[VELOCITY1 + a]->grad_phi_e[j][a][p][q];
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1 + a]; j++) {
+            d_func[0][VELOCITY1 + a][j] += func_fad.dx(1 + p * VIM + q) *
+                                           goma_ctx->fem.bf[VELOCITY1 + a]->grad_phi_e[j][a][p][q];
           }
         }
       }

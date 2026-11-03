@@ -145,18 +145,18 @@ int assemble_emwave(double time, /* present time value */
   /*
    * Unpack variables from structures for local convenience...
    */
-  dim = pd->Num_Dim;
+  dim = goma_ctx->fem.pd->Num_Dim;
   eqn = em_eqn;
   /*
    * Bail out fast if there's nothing to do...
    */
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (status);
   }
 
-  wt = fv->wt;           /* Gauss point weight. */
-  h3 = fv->h3;           /* Differential volume element. */
-  det_J = bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
+  wt = goma_ctx->fem.fv->wt;           /* Gauss point weight. */
+  h3 = goma_ctx->fem.fv->h3;           /* Differential volume element. */
+  det_J = goma_ctx->fem.bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
 
   /*
    * Material property constants, etc. Any variations at this Gauss point
@@ -166,7 +166,7 @@ int assemble_emwave(double time, /* present time value */
    * with temperature, spatial coordinates, and species concentration.
    */
 
-  omega = upd->EM_Frequency;
+  omega = goma_ctx->fem.upd->EM_Frequency;
   n = refractive_index(d_n, time);
 
   k = extinction_index(d_k, time);
@@ -177,69 +177,69 @@ int assemble_emwave(double time, /* present time value */
 
   cpx_refractive_index = n + _Complex_I * k; // k > 0 is extinction
   cpx_rel_permittivity = SQUARE(cpx_refractive_index);
-  cpx_permittivity = cpx_rel_permittivity * mp->permittivity;
+  cpx_permittivity = cpx_rel_permittivity * goma_ctx->fem.mp->permittivity;
 
   // impedance = csqrt(mag_permeability/rel_permittivity);
 
   switch (em_var) {
   case EM_E1_REAL:
-    EMF = fv->em_er[0];
-    EMF_conj = fv->em_ei[0];
+    EMF = goma_ctx->fem.fv->em_er[0];
+    EMF_conj = goma_ctx->fem.fv->em_ei[0];
     dir = 0;
     break;
   case EM_E1_IMAG:
-    EMF = fv->em_ei[0];
-    EMF_conj = fv->em_er[0];
+    EMF = goma_ctx->fem.fv->em_ei[0];
+    EMF_conj = goma_ctx->fem.fv->em_er[0];
     dir = 0;
     break;
   case EM_E2_REAL:
-    EMF = fv->em_er[1];
-    EMF_conj = fv->em_ei[1];
+    EMF = goma_ctx->fem.fv->em_er[1];
+    EMF_conj = goma_ctx->fem.fv->em_ei[1];
     dir = 1;
     break;
   case EM_E2_IMAG:
-    EMF = fv->em_ei[1];
-    EMF_conj = fv->em_er[1];
+    EMF = goma_ctx->fem.fv->em_ei[1];
+    EMF_conj = goma_ctx->fem.fv->em_er[1];
     dir = 1;
     break;
   case EM_E3_REAL:
-    EMF = fv->em_er[2];
-    EMF_conj = fv->em_ei[2];
+    EMF = goma_ctx->fem.fv->em_er[2];
+    EMF_conj = goma_ctx->fem.fv->em_ei[2];
     dir = 2;
     break;
   case EM_E3_IMAG:
-    EMF = fv->em_ei[2];
-    EMF_conj = fv->em_er[2];
+    EMF = goma_ctx->fem.fv->em_ei[2];
+    EMF_conj = goma_ctx->fem.fv->em_er[2];
     dir = 2;
     break;
   case EM_H1_REAL:
-    EMF = fv->em_hr[0];
-    EMF_conj = fv->em_hi[0];
+    EMF = goma_ctx->fem.fv->em_hr[0];
+    EMF_conj = goma_ctx->fem.fv->em_hi[0];
     dir = 0;
     break;
   case EM_H1_IMAG:
-    EMF = fv->em_hi[0];
-    EMF_conj = fv->em_hr[0];
+    EMF = goma_ctx->fem.fv->em_hi[0];
+    EMF_conj = goma_ctx->fem.fv->em_hr[0];
     dir = 0;
     break;
   case EM_H2_REAL:
-    EMF = fv->em_hr[1];
-    EMF_conj = fv->em_hi[1];
+    EMF = goma_ctx->fem.fv->em_hr[1];
+    EMF_conj = goma_ctx->fem.fv->em_hi[1];
     dir = 1;
     break;
   case EM_H2_IMAG:
-    EMF = fv->em_hi[1];
-    EMF_conj = fv->em_hr[1];
+    EMF = goma_ctx->fem.fv->em_hi[1];
+    EMF_conj = goma_ctx->fem.fv->em_hr[1];
     dir = 1;
     break;
   case EM_H3_REAL:
-    EMF = fv->em_hr[2];
-    EMF_conj = fv->em_hi[2];
+    EMF = goma_ctx->fem.fv->em_hr[2];
+    EMF_conj = goma_ctx->fem.fv->em_hi[2];
     dir = 2;
     break;
   case EM_H3_IMAG:
-    EMF = fv->em_hi[2];
-    EMF_conj = fv->em_hr[2];
+    EMF = goma_ctx->fem.fv->em_hi[2];
+    EMF_conj = goma_ctx->fem.fv->em_hr[2];
     dir = 2;
     break;
   default:
@@ -260,7 +260,7 @@ int assemble_emwave(double time, /* present time value */
     conj_coeff_dk = -omega * creal(cpx_permittivity) / k;
     cross_field_var = EM_H1_REAL;
     for (p = 0; p < VIM; p++) {
-      cross_field[p] = fv->em_hr[p];
+      cross_field[p] = goma_ctx->fem.fv->em_hr[p];
     }
     em_stab.stabilization_field_var = EM_E1_REAL;
     calc_emwave_stabilization_term(&em_stab, 1.0);
@@ -278,7 +278,7 @@ int assemble_emwave(double time, /* present time value */
     conj_coeff_dk = omega * creal(cpx_permittivity) / k;
     cross_field_var = EM_H1_IMAG;
     for (p = 0; p < VIM; p++) {
-      cross_field[p] = fv->em_hi[p];
+      cross_field[p] = goma_ctx->fem.fv->em_hi[p];
     }
     em_stab.stabilization_field_var = EM_E1_IMAG;
     calc_emwave_stabilization_term(&em_stab, 1.0);
@@ -295,7 +295,7 @@ int assemble_emwave(double time, /* present time value */
     conj_coeff_dk = 0;
     cross_field_var = EM_E1_REAL;
     for (p = 0; p < VIM; p++) {
-      cross_field[p] = fv->em_er[p];
+      cross_field[p] = goma_ctx->fem.fv->em_er[p];
     }
     em_stab.stabilization_field_var = EM_H1_REAL;
     calc_emwave_stabilization_term(&em_stab, 1.0);
@@ -312,7 +312,7 @@ int assemble_emwave(double time, /* present time value */
     conj_coeff_dk = 0;
     cross_field_var = EM_E1_IMAG;
     for (p = 0; p < VIM; p++) {
-      cross_field[p] = fv->em_ei[p];
+      cross_field[p] = goma_ctx->fem.fv->em_ei[p];
     }
     em_stab.stabilization_field_var = EM_H1_IMAG;
     calc_emwave_stabilization_term(&em_stab, 1.0);
@@ -325,35 +325,36 @@ int assemble_emwave(double time, /* present time value */
    * Residuals___________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     eqn = em_eqn;
-    peqn = upd->ep[pg->imtrx][eqn];
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
     var = em_var;
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
       /* this is an optimization for xfem */
       if (xfem != NULL) {
         int xfem_active, extended_dof, base_interp, base_dof;
-        xfem_dof_state(i, pd->i[pg->imtrx][eqn], ei[pg->imtrx]->ielem_shape, &xfem_active,
+        xfem_dof_state(i, goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn],
+                       goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape, &xfem_active,
                        &extended_dof, &base_interp, &base_dof);
         if (extended_dof && !xfem_active)
           continue;
       }
-      phi_i = bf[eqn]->phi[i];
+      phi_i = goma_ctx->fem.bf[eqn]->phi[i];
 
       advection = 0.;
-      if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
         advection += emf_coeff * EMF;
         advection += conj_coeff * EMF_conj;
         advection *= phi_i * h3;
         advection *= det_J * wt;
-        advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+        advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
       }
 
       diffusion = 0.;
-      if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
         for (p = 0; p < VIM; p++) {
-          grad_phi_i[p] = bf[eqn]->grad_phi[i][p];
+          grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
         }
 
         for (p = 0; p < VIM; p++) {
@@ -366,10 +367,10 @@ int assemble_emwave(double time, /* present time value */
 
         diffusion *= det_J * wt;
         diffusion *= h3;
-        diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+        diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
       }
 
-      lec->R[LEC_R_INDEX(peqn, i)] += advection + diffusion;
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += advection + diffusion;
     }
   }
 
@@ -377,21 +378,22 @@ int assemble_emwave(double time, /* present time value */
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     eqn = em_eqn;
-    peqn = upd->ep[pg->imtrx][eqn];
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
       // this is an optimization for xfem
       if (xfem != NULL) {
         int xfem_active, extended_dof, base_interp, base_dof;
-        xfem_dof_state(i, pd->i[pg->imtrx][eqn], ei[pg->imtrx]->ielem_shape, &xfem_active,
+        xfem_dof_state(i, goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn],
+                       goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape, &xfem_active,
                        &extended_dof, &base_interp, &base_dof);
         if (extended_dof && !xfem_active)
           continue;
       }
 
-      phi_i = bf[eqn]->phi[i];
+      phi_i = goma_ctx->fem.bf[eqn]->phi[i];
 
       /*
        * Set up some preliminaries that are needed for the (a,i)
@@ -399,45 +401,45 @@ int assemble_emwave(double time, /* present time value */
        */
 
       for (p = 0; p < VIM; p++) {
-        grad_phi_i[p] = bf[eqn]->grad_phi[i][p];
+        grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
       }
 
       /*
        * EMF
        */
       var = em_var;
-      if (pd->gv[var]) {
-        pvar = upd->vp[pg->imtrx][var];
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          phi_j = bf[var]->phi[j];
+      if (goma_ctx->fem.pd->gv[var]) {
+        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          phi_j = goma_ctx->fem.bf[var]->phi[j];
 
           advection = 0.;
-          if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
             advection += phi_i * emf_coeff * phi_j * det_J * wt;
             advection *= h3;
-            advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+            advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
           }
 
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection;
         }
       }
       /*
        *  EMF_conj
        */
       var = em_conjvar;
-      if (pd->gv[var]) {
-        pvar = upd->vp[pg->imtrx][var];
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          phi_j = bf[var]->phi[j];
+      if (goma_ctx->fem.pd->gv[var]) {
+        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          phi_j = goma_ctx->fem.bf[var]->phi[j];
 
           advection = 0.;
-          if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
             advection += phi_i * conj_coeff * phi_j * det_J * wt;
             advection *= h3;
-            advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+            advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
           }
 
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection;
         }
       }
       /*
@@ -445,19 +447,19 @@ int assemble_emwave(double time, /* present time value */
        */
       for (b = 0; b < dim; b++) {
         var = cross_field_var + b;
-        if (pd->gv[var]) {
-          pvar = upd->vp[pg->imtrx][var];
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        if (goma_ctx->fem.pd->gv[var]) {
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             // for a cross product, this isn't quite right
             // but it will work as along as all scalar
             // components of the vector field have the
             // same basis functions
-            phi_j = bf[var]->phi[j];
+            phi_j = goma_ctx->fem.bf[var]->phi[j];
 
             diffusion = 0.;
-            if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
               for (p = 0; p < VIM; p++) {
-                grad_phi_i[p] = bf[eqn]->grad_phi[i][p];
+                grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
               }
 
               for (p = 0; p < VIM; p++) {
@@ -471,9 +473,9 @@ int assemble_emwave(double time, /* present time value */
 
               diffusion *= det_J * wt;
               diffusion *= h3;
-              diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+              diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
-              lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += diffusion;
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += diffusion;
             }
           }
         }
@@ -483,18 +485,18 @@ int assemble_emwave(double time, /* present time value */
        */
       for (b = 0; b < dim; b++) {
         var = em_stab.stabilization_field_var + b;
-        if (pd->gv[var]) {
-          pvar = upd->vp[pg->imtrx][var];
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        if (goma_ctx->fem.pd->gv[var]) {
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             diffusion = 0.;
-            if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
               diffusion += em_stab.jacobian_term[i][b][j];
 
               diffusion *= det_J * wt;
               diffusion *= h3;
-              diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+              diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
-              lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += diffusion;
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += diffusion;
             }
           }
         }
@@ -503,22 +505,22 @@ int assemble_emwave(double time, /* present time value */
        * J_e_T
        */
       var = TEMPERATURE;
-      if (pd->gv[var]) {
-        pvar = upd->vp[pg->imtrx][var];
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          phi_j = bf[var]->phi[j];
+      if (goma_ctx->fem.pd->gv[var]) {
+        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          phi_j = goma_ctx->fem.bf[var]->phi[j];
 
           advection = 0.;
-          if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
             advection += phi_i *
                          (EMF * (emf_coeff_dn * d_n->T[j] + emf_coeff_dk * d_k->T[j]) +
                           EMF_conj * (conj_coeff_dn * d_n->T[j] + conj_coeff_dk * d_k->T[j])) *
                          det_J * wt;
             advection *= h3;
-            advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+            advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
           }
 
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection;
         }
       }
 
@@ -527,17 +529,17 @@ int assemble_emwave(double time, /* present time value */
        */
       for (b = 0; b < dim; b++) {
         var = MESH_DISPLACEMENT1 + b;
-        if (pd->gv[var]) {
-          pvar = upd->vp[pg->imtrx][var];
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            phi_j = bf[var]->phi[j];
+        if (goma_ctx->fem.pd->gv[var]) {
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-            dh3dmesh_bj = fv->dh3dq[b] * bf[var]->phi[j];
+            dh3dmesh_bj = goma_ctx->fem.fv->dh3dq[b] * goma_ctx->fem.bf[var]->phi[j];
 
-            d_det_J_dmeshbj = bf[eqn]->d_det_J_dm[b][j];
+            d_det_J_dmeshbj = goma_ctx->fem.bf[eqn]->d_det_J_dm[b][j];
 
             advection = 0.;
-            if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
               advection +=
                   phi_i *
                   (EMF * (emf_coeff_dn * d_n->X[b][j] + emf_coeff_dk * d_k->X[b][j]) +
@@ -545,7 +547,7 @@ int assemble_emwave(double time, /* present time value */
                   det_J * h3 * wt;
               advection += phi_i * (emf_coeff * EMF + conj_coeff * EMF_conj) *
                            (d_det_J_dmeshbj * h3 + det_J * dh3dmesh_bj) * wt;
-              advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+              advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
             }
 
             /*
@@ -556,10 +558,10 @@ int assemble_emwave(double time, /* present time value */
              *	diff_d = Int(...grad_phi_i.q dh3/dmesh |Jv|  )
              */
             diffusion = 0.;
-            if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
               diff_a = 0.;
               for (p = 0; p < dim; p++) {
-                dgrad_phi_i_dmesh[p] = bf[eqn]->d_grad_phi_dmesh[i][p][b][j];
+                dgrad_phi_i_dmesh[p] = goma_ctx->fem.bf[eqn]->d_grad_phi_dmesh[i][p][b][j];
 
                 diff_a += dgrad_phi_i_dmesh[p];
               }
@@ -585,10 +587,10 @@ int assemble_emwave(double time, /* present time value */
 
               diffusion = diff_a + diff_b + diff_c + diff_d;
 
-              diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+              diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
             }
 
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection + diffusion;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection + diffusion;
           }
         }
       }
@@ -597,23 +599,23 @@ int assemble_emwave(double time, /* present time value */
        * J_e_c
        */
       var = MASS_FRACTION;
-      if (pd->e[pg->imtrx][eqn] && pd->gv[var]) {
-        for (w = 0; w < pd->Num_Species_Eqn; w++) {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            phi_j = bf[var]->phi[j];
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] && goma_ctx->fem.pd->gv[var]) {
+        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            phi_j = goma_ctx->fem.bf[var]->phi[j];
 
             advection = 0.;
-            if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
               advection +=
                   phi_i *
                   (EMF * (emf_coeff_dn * d_n->C[w][j] + emf_coeff_dk * d_k->C[w][j]) +
                    EMF_conj * (conj_coeff_dn * d_n->C[w][j] + conj_coeff_dk * d_k->C[w][j])) *
                   det_J * wt;
               advection *= h3;
-              advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+              advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
             }
 
-            lec->J[LEC_J_INDEX(peqn, MAX_PROB_VAR + w, i, j)] += advection;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, MAX_PROB_VAR + w, i, j)] += advection;
           }
         }
       }
@@ -657,7 +659,7 @@ int assemble_ewave(double time,      // present time
                    const int em_var  //  variable id - should match me_eqn
 ) {
   int eqn, peqn, i;
-  dbl mag_permeability = mp->magnetic_permeability;
+  dbl mag_permeability = goma_ctx->fem.mp->magnetic_permeability;
   double omega, re_coeff, im_coeff;
   dbl n; /* Refractive index. */
   CONDUCTIVITY_DEPENDENCE_STRUCT d_n_struct;
@@ -705,13 +707,13 @@ int assemble_ewave(double time,      // present time
   /*
    * Bail out fast if there's nothing to do...
    */
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (1);
   }
 
-  wt = fv->wt;           /* Gauss point weight. */
-  h3 = fv->h3;           /* Differential volume element. */
-  det_J = bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
+  wt = goma_ctx->fem.fv->wt;           /* Gauss point weight. */
+  h3 = goma_ctx->fem.fv->h3;           /* Differential volume element. */
+  det_J = goma_ctx->fem.bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
 
   /*
    * Material property constants, etc. Any variations at this Gauss point
@@ -721,7 +723,7 @@ int assemble_ewave(double time,      // present time
    * with temperature, spatial coordinates, and species concentration.
    */
 
-  omega = upd->EM_Frequency;
+  omega = goma_ctx->fem.upd->EM_Frequency;
   n = refractive_index(d_n, time);
 
   k = extinction_index(d_k, time);
@@ -733,7 +735,7 @@ int assemble_ewave(double time,      // present time
 
   cpx_refractive_index = n + _Complex_I * k; // k > 0 is extinction
   cpx_rel_permittivity = SQUARE(cpx_refractive_index);
-  cpx_permittivity = cpx_rel_permittivity * mp->permittivity;
+  cpx_permittivity = cpx_rel_permittivity * goma_ctx->fem.mp->permittivity;
 
   // assumed to be constant in an element block
   r_elperm = creal(cpx_permittivity);
@@ -749,7 +751,7 @@ int assemble_ewave(double time,      // present time
     for (int p = 0; p < DIM; p++) {
       for (int q = 0; q < DIM; q++) {
         for (int r = 0; r < DIM; r++) {
-          curl_field[p] += permute(p, q, r) * fv->grad_em_er[q][r];
+          curl_field[p] += permute(p, q, r) * goma_ctx->fem.fv->grad_em_er[q][r];
         }
       }
     }
@@ -766,7 +768,7 @@ int assemble_ewave(double time,      // present time
       for (int q = 0; q < DIM; q++) {
         for (int r = 0; r < DIM; r++) {
 
-          curl_field[p] += permute(p, q, r) * fv->grad_em_ei[q][r];
+          curl_field[p] += permute(p, q, r) * goma_ctx->fem.fv->grad_em_ei[q][r];
         }
       }
     }
@@ -780,24 +782,24 @@ int assemble_ewave(double time,      // present time
     GOMA_EH(GOMA_ERROR, "assemble_ewave must be called with only electric field for em_eqn!");
     break;
   }
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     eqn = em_eqn;
-    peqn = upd->ep[pg->imtrx][eqn];
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-      phi_i = bf[eqn]->phi[i];
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+      phi_i = goma_ctx->fem.bf[eqn]->phi[i];
 
       advection = 0.;
-      if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-        advection += re_coeff * fv->em_er[field_index];
-        advection += im_coeff + fv->em_ei[field_index];
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
+        advection += re_coeff * goma_ctx->fem.fv->em_er[field_index];
+        advection += im_coeff + goma_ctx->fem.fv->em_ei[field_index];
         advection *= phi_i * h3;
         advection *= det_J * wt;
-        advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+        advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
       }
       diffusion = 0.;
-      if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
         for (int p = 0; p < VIM; p++) {
-          grad_phi_i[p] = bf[eqn]->grad_phi[i][p];
+          grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
         }
 
         for (int p = 0; p < VIM; p++) {
@@ -811,10 +813,10 @@ int assemble_ewave(double time,      // present time
 
         diffusion *= det_J * wt;
         diffusion *= h3;
-        diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+        diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
       }
 
-      lec->R[LEC_R_INDEX(peqn, i)] += advection + diffusion;
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += advection + diffusion;
     }
   }
   return (0);
@@ -860,7 +862,7 @@ int assemble_ewave_curlcurl(double time,      // present time
                             const int em_var  //  variable id - should match me_eqn
 ) {
   int eqn;
-  dbl mag_permeability = mp->magnetic_permeability;
+  dbl mag_permeability = goma_ctx->fem.mp->magnetic_permeability;
   double omega, re_coeff, im_coeff;
   /*
   struct emwave_stabilization em_stab;
@@ -876,16 +878,16 @@ int assemble_ewave_curlcurl(double time,      // present time
    * But we might have the wrong eqn
    */
   for (int a = 0; a < DIM; a++) {
-    if (pd->e[pg->imtrx][R_EM_E1_REAL + a]) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL + a]) {
       eqn = R_EM_E1_REAL + a;
       break;
     }
   }
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (1);
   }
 
-  omega = upd->EM_Frequency;
+  omega = goma_ctx->fem.upd->EM_Frequency;
   dbl n; /* Refractive index. */
   CONDUCTIVITY_DEPENDENCE_STRUCT d_n_struct;
   CONDUCTIVITY_DEPENDENCE_STRUCT *d_n = &d_n_struct;
@@ -904,7 +906,7 @@ int assemble_ewave_curlcurl(double time,      // present time
 
   cpx_refractive_index = n + _Complex_I * k; // k > 0 is extinction
   cpx_rel_permittivity = SQUARE(cpx_refractive_index);
-  cpx_permittivity = cpx_rel_permittivity * mp->permittivity;
+  cpx_permittivity = cpx_rel_permittivity * goma_ctx->fem.mp->permittivity;
 
   // assumed to be constant in an element block
   r_elperm = creal(cpx_permittivity);
@@ -918,31 +920,33 @@ int assemble_ewave_curlcurl(double time,      // present time
   // double rmass_etm;
   // double imass_etm;
   double stab_scale = 4.0;
-  if (af->Assemble_Residual) {
-    for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
       for (int a = 0; a < DIM; a++) {
         reqn = R_EM_E1_REAL + a;
         ieqn = R_EM_E1_IMAG + a;
         // rmass_etm = pd->etm[pg->imtrx][reqn][(LOG2_MASS)];
-        radvection_etm = pd->etm[pg->imtrx][reqn][(LOG2_ADVECTION)];
-        rdiffusion_etm = pd->etm[pg->imtrx][reqn][(LOG2_DIFFUSION)];
-        rsource_etm = pd->etm[pg->imtrx][reqn][(LOG2_SOURCE)];
+        radvection_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][reqn][(LOG2_ADVECTION)];
+        rdiffusion_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][reqn][(LOG2_DIFFUSION)];
+        rsource_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][reqn][(LOG2_SOURCE)];
         // imass_etm = pd->etm[pg->imtrx][ieqn][(LOG2_MASS)];
-        iadvection_etm = pd->etm[pg->imtrx][ieqn][(LOG2_ADVECTION)];
-        idiffusion_etm = pd->etm[pg->imtrx][ieqn][(LOG2_DIFFUSION)];
-        isource_etm = pd->etm[pg->imtrx][ieqn][(LOG2_SOURCE)];
+        iadvection_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][ieqn][(LOG2_ADVECTION)];
+        idiffusion_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][ieqn][(LOG2_DIFFUSION)];
+        isource_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][ieqn][(LOG2_SOURCE)];
 
-        if (pd->e[pg->imtrx][R_EM_E1_REAL + a]) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL + a]) {
           int eqn_real = EM_E1_REAL + a;
           int eqn_imag = EM_E1_IMAG + a;
-          int peqn_real = upd->ep[pg->imtrx][eqn_real];
-          int peqn_imag = upd->ep[pg->imtrx][eqn_imag];
+          int peqn_real = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn_real];
+          int peqn_imag = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn_imag];
 
           double diffusion_real = 0.0;
           double diffusion_imag = 0.0;
           for (int q = 0; q < DIM; q++) {
-            diffusion_real += bf[eqn_real]->curl_phi_e[i][a][q] * fv->curl_em_er[q];
-            diffusion_imag += bf[eqn_imag]->curl_phi_e[i][a][q] * fv->curl_em_ei[q];
+            diffusion_real +=
+                goma_ctx->fem.bf[eqn_real]->curl_phi_e[i][a][q] * goma_ctx->fem.fv->curl_em_er[q];
+            diffusion_imag +=
+                goma_ctx->fem.bf[eqn_imag]->curl_phi_e[i][a][q] * goma_ctx->fem.fv->curl_em_ei[q];
             // diffusion_real += bf->[eqn_real]->ref_phi_e[i][a][q] * fv->em_er[q];
             // diffusion_imag += bf->[eqn_imag]->ref_phi_e[i][a][q] * fv->em_ei[q];
 
@@ -958,25 +962,29 @@ int assemble_ewave_curlcurl(double time,      // present time
           double lagr_term_real = 0.0;
           double lagr_term_imag = 0.0;
 
-          if (pd->gv[R_EM_CONT_REAL] && pd->gv[R_EM_CONT_IMAG]) {
-            lagr_term_real =
-                bf[eqn_real]->grad_phi[i][a] * (r_elperm * fv->epr - i_elperm * fv->epi);
-            lagr_term_imag =
-                bf[eqn_real]->grad_phi[i][a] * (r_elperm * fv->epi + i_elperm * fv->epr);
-            lagr_term_real = bf[eqn_real]->grad_phi[i][a] * (fv->epr);
-            lagr_term_imag = bf[eqn_real]->grad_phi[i][a] * (fv->epi);
+          if (goma_ctx->fem.pd->gv[R_EM_CONT_REAL] && goma_ctx->fem.pd->gv[R_EM_CONT_IMAG]) {
+            lagr_term_real = goma_ctx->fem.bf[eqn_real]->grad_phi[i][a] *
+                             (r_elperm * goma_ctx->fem.fv->epr - i_elperm * goma_ctx->fem.fv->epi);
+            lagr_term_imag = goma_ctx->fem.bf[eqn_real]->grad_phi[i][a] *
+                             (r_elperm * goma_ctx->fem.fv->epi + i_elperm * goma_ctx->fem.fv->epr);
+            lagr_term_real = goma_ctx->fem.bf[eqn_real]->grad_phi[i][a] * (goma_ctx->fem.fv->epr);
+            lagr_term_imag = goma_ctx->fem.bf[eqn_real]->grad_phi[i][a] * (goma_ctx->fem.fv->epi);
           } else {
-            stab_real = stab_scale * bf[eqn_real]->grad_phi[i][a] *
-                        (fv->grad_em_er[0][0] + fv->grad_em_er[1][1] + fv->grad_em_er[2][2]);
-            stab_imag = stab_scale * bf[eqn_real]->grad_phi[i][a] *
-                        (fv->grad_em_ei[0][0] + fv->grad_em_ei[1][1] + fv->grad_em_ei[2][2]);
+            stab_real = stab_scale * goma_ctx->fem.bf[eqn_real]->grad_phi[i][a] *
+                        (goma_ctx->fem.fv->grad_em_er[0][0] + goma_ctx->fem.fv->grad_em_er[1][1] +
+                         goma_ctx->fem.fv->grad_em_er[2][2]);
+            stab_imag = stab_scale * goma_ctx->fem.bf[eqn_real]->grad_phi[i][a] *
+                        (goma_ctx->fem.fv->grad_em_ei[0][0] + goma_ctx->fem.fv->grad_em_ei[1][1] +
+                         goma_ctx->fem.fv->grad_em_ei[2][2]);
           }
           // double advection_real = 0.0;
           // double advection_imag = 0.0;
           double advection_real =
-              -bf[eqn_real]->phi[i] * (re_coeff * fv->em_er[a] - im_coeff * fv->em_ei[a]);
+              -goma_ctx->fem.bf[eqn_real]->phi[i] *
+              (re_coeff * goma_ctx->fem.fv->em_er[a] - im_coeff * goma_ctx->fem.fv->em_ei[a]);
           double advection_imag =
-              -bf[eqn_imag]->phi[i] * (re_coeff * fv->em_ei[a] + im_coeff * fv->em_er[a]);
+              -goma_ctx->fem.bf[eqn_imag]->phi[i] *
+              (re_coeff * goma_ctx->fem.fv->em_ei[a] + im_coeff * goma_ctx->fem.fv->em_er[a]);
           double src_real = 0.0;
           double src_imag = 0.0;
           switch (a) {
@@ -1008,49 +1016,49 @@ int assemble_ewave_curlcurl(double time,      // present time
 
             break;
           }
-          lec->R[LEC_R_INDEX(peqn_real, i)] +=
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn_real, i)] +=
               (advection_real * radvection_etm + diffusion_real * rdiffusion_etm + stab_real +
                src_real * rsource_etm + lagr_term_real) *
-              bf[eqn_real]->detJ * fv->wt * fv->h3;
+              goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
 
-          lec->R[LEC_R_INDEX(peqn_imag, i)] +=
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn_imag, i)] +=
               (advection_imag * iadvection_etm + diffusion_imag * idiffusion_etm + stab_imag +
                src_imag * isource_etm + lagr_term_imag) *
-              bf[eqn_imag]->detJ * fv->wt * fv->h3;
+              goma_ctx->fem.bf[eqn_imag]->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
         }
       }
     }
   }
-  if (af->Assemble_Jacobian) {
-    for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
       for (int a = 0; a < DIM; a++) {
         reqn = R_EM_E1_REAL + a;
         ieqn = R_EM_E1_IMAG + a;
         // rmass_etm = pd->etm[pg->imtrx][reqn][(LOG2_MASS)];
-        radvection_etm = pd->etm[pg->imtrx][reqn][(LOG2_ADVECTION)];
-        rdiffusion_etm = pd->etm[pg->imtrx][reqn][(LOG2_DIFFUSION)];
-        rsource_etm = pd->etm[pg->imtrx][reqn][(LOG2_SOURCE)];
+        radvection_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][reqn][(LOG2_ADVECTION)];
+        rdiffusion_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][reqn][(LOG2_DIFFUSION)];
+        rsource_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][reqn][(LOG2_SOURCE)];
         // imass_etm = pd->etm[pg->imtrx][ieqn][(LOG2_MASS)];
-        iadvection_etm = pd->etm[pg->imtrx][ieqn][(LOG2_ADVECTION)];
-        idiffusion_etm = pd->etm[pg->imtrx][ieqn][(LOG2_DIFFUSION)];
-        isource_etm = pd->etm[pg->imtrx][ieqn][(LOG2_SOURCE)];
-        if (pd->e[pg->imtrx][R_EM_E1_REAL + a]) {
+        iadvection_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][ieqn][(LOG2_ADVECTION)];
+        idiffusion_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][ieqn][(LOG2_DIFFUSION)];
+        isource_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][ieqn][(LOG2_SOURCE)];
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL + a]) {
           int eqn_real = EM_E1_REAL + a;
           int eqn_imag = EM_E1_IMAG + a;
-          int peqn_real = upd->ep[pg->imtrx][eqn_real];
-          int peqn_imag = upd->ep[pg->imtrx][eqn_imag];
+          int peqn_real = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn_real];
+          int peqn_imag = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn_imag];
 
           // Sensitivity to real parts of electric field
           for (int b = 0; b < DIM; b++) {
-            if (pd->e[pg->imtrx][R_EM_E1_REAL + b]) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL + b]) {
               int var = EM_E1_REAL + b;
-              int pvar_real = upd->vp[pg->imtrx][var];
-              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              int pvar_real = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+              for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 double diffusion_real = 0;
                 double diffusion_imag = 0;
                 for (int q = 0; q < DIM; q++) {
-                  diffusion_real +=
-                      bf[eqn_real]->curl_phi_e[i][a][q] * bf[eqn_real]->curl_phi_e[j][b][q];
+                  diffusion_real += goma_ctx->fem.bf[eqn_real]->curl_phi_e[i][a][q] *
+                                    goma_ctx->fem.bf[eqn_real]->curl_phi_e[j][b][q];
                 }
                 // R = curl(E)
                 // diffusion_real += bf[eqn_real]->phi[i]*bf[eqn_real]->curl_phi_e[j][b][a];
@@ -1060,43 +1068,45 @@ int assemble_ewave_curlcurl(double time,      // present time
 
                 double stab_real = 0;
                 double stab_imag = 0;
-                if (!(pd->gv[R_EM_CONT_REAL] && pd->gv[R_EM_CONT_IMAG])) {
-                  stab_real = stab_scale * bf[eqn_real]->grad_phi[i][a] *
-                              (bf[var]->grad_phi_e[j][b][0][0] + bf[var]->grad_phi_e[j][b][1][1] +
-                               bf[var]->grad_phi_e[j][b][2][2]);
+                if (!(goma_ctx->fem.pd->gv[R_EM_CONT_REAL] &&
+                      goma_ctx->fem.pd->gv[R_EM_CONT_IMAG])) {
+                  stab_real = stab_scale * goma_ctx->fem.bf[eqn_real]->grad_phi[i][a] *
+                              (goma_ctx->fem.bf[var]->grad_phi_e[j][b][0][0] +
+                               goma_ctx->fem.bf[var]->grad_phi_e[j][b][1][1] +
+                               goma_ctx->fem.bf[var]->grad_phi_e[j][b][2][2]);
                 }
 
                 // double advection_real = 0;
                 // double advection_imag = 0;
-                double advection_real =
-                    -bf[eqn_real]->phi[i] * (delta(a, b) * re_coeff * bf[var]->phi[j]);
-                double advection_imag =
-                    -bf[eqn_imag]->phi[i] * (delta(a, b) * im_coeff * bf[var]->phi[j]);
+                double advection_real = -goma_ctx->fem.bf[eqn_real]->phi[i] *
+                                        (delta(a, b) * re_coeff * goma_ctx->fem.bf[var]->phi[j]);
+                double advection_imag = -goma_ctx->fem.bf[eqn_imag]->phi[i] *
+                                        (delta(a, b) * im_coeff * goma_ctx->fem.bf[var]->phi[j]);
 
-                lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
                     (diffusion_real * rdiffusion_etm + advection_real * radvection_etm +
                      stab_real) *
-                    bf[eqn_real]->detJ * fv->wt * fv->h3;
+                    goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
 
-                lec->J[LEC_J_INDEX(peqn_imag, pvar_real, i, j)] +=
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_imag, pvar_real, i, j)] +=
                     (diffusion_imag * idiffusion_etm + advection_imag * iadvection_etm +
                      stab_imag) *
-                    bf[eqn_imag]->detJ * fv->wt * fv->h3;
+                    goma_ctx->fem.bf[eqn_imag]->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
               }
             }
           }
 
           // Sensitivity to imaginary parts of electric field
           for (int b = 0; b < DIM; b++) {
-            if (pd->e[pg->imtrx][R_EM_E1_REAL + b]) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL + b]) {
               int var = EM_E1_IMAG + b;
-              int pvar_imag = upd->vp[pg->imtrx][var];
-              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              int pvar_imag = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+              for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 double diffusion_real = 0;
                 double diffusion_imag = 0;
                 for (int q = 0; q < DIM; q++) {
-                  diffusion_imag +=
-                      bf[eqn_imag]->curl_phi_e[i][a][q] * bf[var]->curl_phi_e[j][b][q];
+                  diffusion_imag += goma_ctx->fem.bf[eqn_imag]->curl_phi_e[i][a][q] *
+                                    goma_ctx->fem.bf[var]->curl_phi_e[j][b][q];
                 }
 
                 // R = curl(E)
@@ -1110,61 +1120,69 @@ int assemble_ewave_curlcurl(double time,      // present time
 
                 double stab_real = 0;
                 double stab_imag = 0;
-                if (!(pd->gv[R_EM_CONT_REAL] && pd->gv[R_EM_CONT_IMAG])) {
-                  stab_imag = stab_scale * bf[eqn_real]->grad_phi[i][a] *
-                              (bf[var]->grad_phi_e[j][b][0][0] + bf[var]->grad_phi_e[j][b][1][1] +
-                               bf[var]->grad_phi_e[j][b][2][2]);
+                if (!(goma_ctx->fem.pd->gv[R_EM_CONT_REAL] &&
+                      goma_ctx->fem.pd->gv[R_EM_CONT_IMAG])) {
+                  stab_imag = stab_scale * goma_ctx->fem.bf[eqn_real]->grad_phi[i][a] *
+                              (goma_ctx->fem.bf[var]->grad_phi_e[j][b][0][0] +
+                               goma_ctx->fem.bf[var]->grad_phi_e[j][b][1][1] +
+                               goma_ctx->fem.bf[var]->grad_phi_e[j][b][2][2]);
                 }
 
                 // double advection_real = 0;
                 // double advection_imag = 0;
-                double advection_real =
-                    bf[eqn_real]->phi[i] * (delta(a, b) * im_coeff * bf[var]->phi[j]);
-                double advection_imag =
-                    -bf[eqn_imag]->phi[i] * (delta(a, b) * re_coeff * bf[var]->phi[j]);
-                lec->J[LEC_J_INDEX(peqn_real, pvar_imag, i, j)] +=
+                double advection_real = goma_ctx->fem.bf[eqn_real]->phi[i] *
+                                        (delta(a, b) * im_coeff * goma_ctx->fem.bf[var]->phi[j]);
+                double advection_imag = -goma_ctx->fem.bf[eqn_imag]->phi[i] *
+                                        (delta(a, b) * re_coeff * goma_ctx->fem.bf[var]->phi[j]);
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_real, pvar_imag, i, j)] +=
                     (diffusion_real * rdiffusion_etm + advection_real * radvection_etm +
                      stab_real) *
-                    bf[eqn_real]->detJ * fv->wt * fv->h3;
+                    goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
 
-                lec->J[LEC_J_INDEX(peqn_imag, pvar_imag, i, j)] +=
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_imag, pvar_imag, i, j)] +=
                     (diffusion_imag * idiffusion_etm + advection_imag * iadvection_etm +
                      stab_imag) *
-                    bf[eqn_imag]->detJ * fv->wt * fv->h3;
+                    goma_ctx->fem.bf[eqn_imag]->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
               }
             }
           }
 
           {
             int var = EM_CONT_REAL;
-            if (pd->e[pg->imtrx][var]) {
-              int pvar = upd->vp[pg->imtrx][var];
-              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+              int pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+              for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 // dbl lagr_term_real = bf[eqn]->grad_phi[i][a] * r_elperm * bf[var]->phi[j];
                 // dbl lagr_term_imag = bf[eqn]->grad_phi[i][a] * i_elperm * bf[var]->phi[j];
-                dbl lagr_term_real = bf[eqn]->grad_phi[i][a] * bf[var]->phi[j];
+                dbl lagr_term_real =
+                    goma_ctx->fem.bf[eqn]->grad_phi[i][a] * goma_ctx->fem.bf[var]->phi[j];
                 dbl lagr_term_imag = 0;
-                lec->J[LEC_J_INDEX(peqn_real, pvar, i, j)] +=
-                    (lagr_term_real)*bf[eqn_real]->detJ * fv->wt * fv->h3;
-                lec->J[LEC_J_INDEX(peqn_imag, pvar, i, j)] +=
-                    (lagr_term_imag)*bf[eqn_real]->detJ * fv->wt * fv->h3;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_real, pvar, i, j)] +=
+                    (lagr_term_real)*goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+                    goma_ctx->fem.fv->h3;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_imag, pvar, i, j)] +=
+                    (lagr_term_imag)*goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+                    goma_ctx->fem.fv->h3;
               }
             }
           }
 
           {
             int var = EM_CONT_IMAG;
-            if (pd->e[pg->imtrx][var]) {
-              int pvar = upd->vp[pg->imtrx][var];
-              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+              int pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+              for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 // dbl lagr_term_real = bf[eqn]->grad_phi[i][a] * i_elperm * bf[var]->phi[j];
                 // dbl lagr_term_imag = bf[eqn]->grad_phi[i][a] * r_elperm * bf[var]->phi[j];
                 dbl lagr_term_real = 0;
-                dbl lagr_term_imag = bf[eqn]->grad_phi[i][a] * bf[var]->phi[j];
-                lec->J[LEC_J_INDEX(peqn_real, pvar, i, j)] +=
-                    (lagr_term_real)*bf[eqn_real]->detJ * fv->wt * fv->h3;
-                lec->J[LEC_J_INDEX(peqn_imag, pvar, i, j)] +=
-                    (lagr_term_imag)*bf[eqn_real]->detJ * fv->wt * fv->h3;
+                dbl lagr_term_imag =
+                    goma_ctx->fem.bf[eqn]->grad_phi[i][a] * goma_ctx->fem.bf[var]->phi[j];
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_real, pvar, i, j)] +=
+                    (lagr_term_real)*goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+                    goma_ctx->fem.fv->h3;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_imag, pvar, i, j)] +=
+                    (lagr_term_imag)*goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+                    goma_ctx->fem.fv->h3;
               }
             }
           }
@@ -1210,7 +1228,7 @@ int assemble_ewave_laplacian(double time,      // present time
                              const int em_var  //  variable id - should match me_eqn
 ) {
   int eqn;
-  dbl mag_permeability = mp->magnetic_permeability;
+  dbl mag_permeability = goma_ctx->fem.mp->magnetic_permeability;
   double omega, re_coeff, im_coeff;
   /*
   struct emwave_stabilization em_stab;
@@ -1226,16 +1244,16 @@ int assemble_ewave_laplacian(double time,      // present time
    * But we might have the wrong eqn
    */
   for (int a = 0; a < DIM; a++) {
-    if (pd->e[pg->imtrx][R_EM_E1_REAL + a]) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL + a]) {
       eqn = R_EM_E1_REAL + a;
       break;
     }
   }
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (1);
   }
 
-  omega = upd->EM_Frequency;
+  omega = goma_ctx->fem.upd->EM_Frequency;
   dbl n; /* Refractive index. */
   CONDUCTIVITY_DEPENDENCE_STRUCT d_n_struct;
   CONDUCTIVITY_DEPENDENCE_STRUCT *d_n = &d_n_struct;
@@ -1254,7 +1272,7 @@ int assemble_ewave_laplacian(double time,      // present time
 
   cpx_refractive_index = n + _Complex_I * k; // k > 0 is extinction
   cpx_rel_permittivity = SQUARE(cpx_refractive_index);
-  cpx_permittivity = cpx_rel_permittivity * mp->permittivity;
+  cpx_permittivity = cpx_rel_permittivity * goma_ctx->fem.mp->permittivity;
 
   // assumed to be constant in an element block
   r_elperm = creal(cpx_permittivity);
@@ -1263,22 +1281,24 @@ int assemble_ewave_laplacian(double time,      // present time
   im_coeff = omega * omega * mag_permeability * i_elperm;
 
   double stab_scale = 0.0;
-  if (af->Assemble_Residual) {
-    for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
       for (int a = 0; a < DIM; a++) {
-        if (pd->e[pg->imtrx][R_EM_E1_REAL + a]) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL + a]) {
           int eqn_real = EM_E1_REAL + a;
           int eqn_imag = EM_E1_IMAG + a;
-          int peqn_real = upd->ep[pg->imtrx][eqn_real];
-          int peqn_imag = upd->ep[pg->imtrx][eqn_imag];
+          int peqn_real = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn_real];
+          int peqn_imag = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn_imag];
 
           double diffusion_real = 0.0;
           double diffusion_imag = 0.0;
 
           for (int q = 0; q < DIM; q++) {
             // R = - (gradphi)_a dot (gradE)_a
-            diffusion_real += -bf[eqn_real]->grad_phi[i][q] * fv->grad_em_er[q][a];
-            diffusion_imag += -bf[eqn_imag]->grad_phi[i][q] * fv->grad_em_ei[q][a];
+            diffusion_real +=
+                -goma_ctx->fem.bf[eqn_real]->grad_phi[i][q] * goma_ctx->fem.fv->grad_em_er[q][a];
+            diffusion_imag +=
+                -goma_ctx->fem.bf[eqn_imag]->grad_phi[i][q] * goma_ctx->fem.fv->grad_em_ei[q][a];
           }
           // diffusion_real = -fv->grad_em_er[a][0];
           //  R = E
@@ -1289,24 +1309,28 @@ int assemble_ewave_laplacian(double time,      // present time
           double lagr_term_real = 0.0;
           double lagr_term_imag = 0.0;
 
-          if (pd->gv[R_EM_CONT_REAL] && pd->gv[R_EM_CONT_IMAG]) {
+          if (goma_ctx->fem.pd->gv[R_EM_CONT_REAL] && goma_ctx->fem.pd->gv[R_EM_CONT_IMAG]) {
             // lagr_term_real = bf[eqn_real]->grad_phi[i][a] * (r_elperm * fv->epr + i_elperm *
             // fv->epi); lagr_term_imag = bf[eqn_real]->grad_phi[i][a] * (r_elperm * fv->epi +
             // i_elperm * fv->epr); lagr_term_real = bf[eqn_real]->grad_phi[i][a] * (fv->epr);
             // lagr_term_imag = bf[eqn_real]->grad_phi[i][a] * (fv->epi);
           } else {
-            stab_real = stab_scale * bf[eqn_real]->grad_phi[i][a] *
-                        (fv->grad_em_er[0][0] + fv->grad_em_er[1][1] + fv->grad_em_er[2][2]);
-            stab_imag = stab_scale * bf[eqn_real]->grad_phi[i][a] *
-                        (fv->grad_em_ei[0][0] + fv->grad_em_ei[1][1] + fv->grad_em_ei[2][2]);
+            stab_real = stab_scale * goma_ctx->fem.bf[eqn_real]->grad_phi[i][a] *
+                        (goma_ctx->fem.fv->grad_em_er[0][0] + goma_ctx->fem.fv->grad_em_er[1][1] +
+                         goma_ctx->fem.fv->grad_em_er[2][2]);
+            stab_imag = stab_scale * goma_ctx->fem.bf[eqn_real]->grad_phi[i][a] *
+                        (goma_ctx->fem.fv->grad_em_ei[0][0] + goma_ctx->fem.fv->grad_em_ei[1][1] +
+                         goma_ctx->fem.fv->grad_em_ei[2][2]);
           }
 
           double advection_real = 0.0;
           double advection_imag = 0.0;
           advection_real =
-              bf[eqn_real]->phi[i] * (re_coeff * fv->em_er[a] - im_coeff * fv->em_ei[a]);
+              goma_ctx->fem.bf[eqn_real]->phi[i] *
+              (re_coeff * goma_ctx->fem.fv->em_er[a] - im_coeff * goma_ctx->fem.fv->em_ei[a]);
           advection_imag =
-              bf[eqn_imag]->phi[i] * (re_coeff * fv->em_ei[a] + im_coeff * fv->em_er[a]);
+              goma_ctx->fem.bf[eqn_imag]->phi[i] *
+              (re_coeff * goma_ctx->fem.fv->em_ei[a] + im_coeff * goma_ctx->fem.fv->em_er[a]);
 
           double src_term = 0.0;
           switch (a) {
@@ -1338,38 +1362,38 @@ int assemble_ewave_laplacian(double time,      // present time
 
             break;
           }
-          lec->R[LEC_R_INDEX(peqn_real, i)] +=
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn_real, i)] +=
               (advection_real + diffusion_real + stab_real + src_term + lagr_term_real) *
-              bf[eqn_real]->detJ * fv->wt * fv->h3;
-          lec->R[LEC_R_INDEX(peqn_imag, i)] +=
-              (advection_imag + diffusion_imag + stab_imag + lagr_term_imag) * bf[eqn_imag]->detJ *
-              fv->wt * fv->h3;
+              goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn_imag, i)] +=
+              (advection_imag + diffusion_imag + stab_imag + lagr_term_imag) *
+              goma_ctx->fem.bf[eqn_imag]->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
         }
       }
     }
   }
-  if (af->Assemble_Jacobian) {
-    for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
       for (int a = 0; a < DIM; a++) {
-        if (pd->e[pg->imtrx][R_EM_E1_REAL + a]) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL + a]) {
           int eqn_real = EM_E1_REAL + a;
           int eqn_imag = EM_E1_IMAG + a;
-          int peqn_real = upd->ep[pg->imtrx][eqn_real];
-          int peqn_imag = upd->ep[pg->imtrx][eqn_imag];
+          int peqn_real = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn_real];
+          int peqn_imag = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn_imag];
 
           // Sensitivity to real parts of electric field
           for (int b = 0; b < DIM; b++) {
-            if (pd->e[pg->imtrx][R_EM_E1_REAL + b]) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL + b]) {
               int var = EM_E1_REAL + b;
-              int pvar_real = upd->vp[pg->imtrx][var];
-              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              int pvar_real = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+              for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 double diffusion_real = 0;
                 double diffusion_imag = 0;
                 for (int q = 0; q < DIM; q++) {
                   // diffusion_real += bf[eqn_real]->curl_phi_e[i][a][q] *
                   // bf[eqn_real]->curl_phi_e[j][b][q];
-                  diffusion_real +=
-                      -delta(a, b) * bf[eqn_real]->grad_phi[i][q] * bf[eqn_real]->grad_phi[j][q];
+                  diffusion_real += -delta(a, b) * goma_ctx->fem.bf[eqn_real]->grad_phi[i][q] *
+                                    goma_ctx->fem.bf[eqn_real]->grad_phi[j][q];
                 }
 
                 // diffusion_real += -bf[eqn_real]->grad_phi[j][b];
@@ -1382,39 +1406,43 @@ int assemble_ewave_laplacian(double time,      // present time
 
                 double stab_real = 0;
                 double stab_imag = 0;
-                if (!(pd->gv[R_EM_CONT_REAL] && pd->gv[R_EM_CONT_IMAG])) {
-                  stab_real = stab_scale * bf[eqn_real]->grad_phi[i][a] *
-                              (bf[var]->grad_phi_e[j][b][0][0] + bf[var]->grad_phi_e[j][b][1][1] +
-                               bf[var]->grad_phi_e[j][b][2][2]);
+                if (!(goma_ctx->fem.pd->gv[R_EM_CONT_REAL] &&
+                      goma_ctx->fem.pd->gv[R_EM_CONT_IMAG])) {
+                  stab_real = stab_scale * goma_ctx->fem.bf[eqn_real]->grad_phi[i][a] *
+                              (goma_ctx->fem.bf[var]->grad_phi_e[j][b][0][0] +
+                               goma_ctx->fem.bf[var]->grad_phi_e[j][b][1][1] +
+                               goma_ctx->fem.bf[var]->grad_phi_e[j][b][2][2]);
                 }
 
                 double advection_real = 0;
                 double advection_imag = 0;
 
-                advection_real = bf[eqn_real]->phi[i] * (delta(a, b) * re_coeff * bf[var]->phi[j]);
-                advection_imag = bf[eqn_imag]->phi[i] * (delta(a, b) * im_coeff * bf[var]->phi[j]);
+                advection_real = goma_ctx->fem.bf[eqn_real]->phi[i] *
+                                 (delta(a, b) * re_coeff * goma_ctx->fem.bf[var]->phi[j]);
+                advection_imag = goma_ctx->fem.bf[eqn_imag]->phi[i] *
+                                 (delta(a, b) * im_coeff * goma_ctx->fem.bf[var]->phi[j]);
 
-                lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
-                    (diffusion_real + advection_real + stab_real) * bf[eqn_real]->detJ * fv->wt *
-                    fv->h3;
-                lec->J[LEC_J_INDEX(peqn_imag, pvar_real, i, j)] +=
-                    (diffusion_imag + advection_imag + stab_imag) * bf[eqn_imag]->detJ * fv->wt *
-                    fv->h3;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
+                    (diffusion_real + advection_real + stab_real) *
+                    goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_imag, pvar_real, i, j)] +=
+                    (diffusion_imag + advection_imag + stab_imag) *
+                    goma_ctx->fem.bf[eqn_imag]->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
               }
             }
           }
 
           // Sensitivity to imaginary parts of electric field
           for (int b = 0; b < DIM; b++) {
-            if (pd->e[pg->imtrx][R_EM_E1_REAL + b]) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL + b]) {
               int var = EM_E1_IMAG + b;
-              int pvar_imag = upd->vp[pg->imtrx][var];
-              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              int pvar_imag = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+              for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 double diffusion_real = 0;
                 double diffusion_imag = 0;
                 for (int q = 0; q < DIM; q++) {
-                  diffusion_imag +=
-                      -delta(a, b) * bf[eqn_imag]->grad_phi[i][q] * bf[eqn_imag]->grad_phi[j][q];
+                  diffusion_imag += -delta(a, b) * goma_ctx->fem.bf[eqn_imag]->grad_phi[i][q] *
+                                    goma_ctx->fem.bf[eqn_imag]->grad_phi[j][q];
                 }
 
                 // R = curl(E)
@@ -1428,57 +1456,67 @@ int assemble_ewave_laplacian(double time,      // present time
 
                 double stab_real = 0;
                 double stab_imag = 0;
-                if (!(pd->gv[R_EM_CONT_REAL] && pd->gv[R_EM_CONT_IMAG])) {
-                  stab_imag = stab_scale * bf[eqn_real]->grad_phi[i][a] *
-                              (bf[var]->grad_phi_e[j][b][0][0] + bf[var]->grad_phi_e[j][b][1][1] +
-                               bf[var]->grad_phi_e[j][b][2][2]);
+                if (!(goma_ctx->fem.pd->gv[R_EM_CONT_REAL] &&
+                      goma_ctx->fem.pd->gv[R_EM_CONT_IMAG])) {
+                  stab_imag = stab_scale * goma_ctx->fem.bf[eqn_real]->grad_phi[i][a] *
+                              (goma_ctx->fem.bf[var]->grad_phi_e[j][b][0][0] +
+                               goma_ctx->fem.bf[var]->grad_phi_e[j][b][1][1] +
+                               goma_ctx->fem.bf[var]->grad_phi_e[j][b][2][2]);
                 }
 
                 double advection_real = 0;
                 double advection_imag = 0;
 
-                advection_real = bf[eqn_real]->phi[i] * (delta(a, b) * -im_coeff * bf[var]->phi[j]);
-                advection_imag = bf[eqn_imag]->phi[i] * (delta(a, b) * re_coeff * bf[var]->phi[j]);
-                lec->J[LEC_J_INDEX(peqn_real, pvar_imag, i, j)] +=
-                    (diffusion_real + advection_real + stab_real) * bf[eqn_real]->detJ * fv->wt *
-                    fv->h3;
-                lec->J[LEC_J_INDEX(peqn_imag, pvar_imag, i, j)] +=
-                    (diffusion_imag + advection_imag + stab_imag) * bf[eqn_imag]->detJ * fv->wt *
-                    fv->h3;
+                advection_real = goma_ctx->fem.bf[eqn_real]->phi[i] *
+                                 (delta(a, b) * -im_coeff * goma_ctx->fem.bf[var]->phi[j]);
+                advection_imag = goma_ctx->fem.bf[eqn_imag]->phi[i] *
+                                 (delta(a, b) * re_coeff * goma_ctx->fem.bf[var]->phi[j]);
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_real, pvar_imag, i, j)] +=
+                    (diffusion_real + advection_real + stab_real) *
+                    goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_imag, pvar_imag, i, j)] +=
+                    (diffusion_imag + advection_imag + stab_imag) *
+                    goma_ctx->fem.bf[eqn_imag]->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
               }
             }
           }
 
           {
             int var = EM_CONT_REAL;
-            if (pd->e[pg->imtrx][var]) {
-              int pvar = upd->vp[pg->imtrx][var];
-              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+              int pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+              for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 // dbl lagr_term_real = bf[eqn]->grad_phi[i][a] * r_elperm * bf[var]->phi[j];
                 // dbl lagr_term_imag = bf[eqn]->grad_phi[i][a] * i_elperm * bf[var]->phi[j];
-                dbl lagr_term_real = bf[eqn]->grad_phi[i][a] * bf[var]->phi[j];
+                dbl lagr_term_real =
+                    goma_ctx->fem.bf[eqn]->grad_phi[i][a] * goma_ctx->fem.bf[var]->phi[j];
                 dbl lagr_term_imag = 0;
-                lec->J[LEC_J_INDEX(peqn_real, pvar, i, j)] +=
-                    (lagr_term_real)*bf[eqn_real]->detJ * fv->wt * fv->h3;
-                lec->J[LEC_J_INDEX(peqn_imag, pvar, i, j)] +=
-                    (lagr_term_imag)*bf[eqn_real]->detJ * fv->wt * fv->h3;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_real, pvar, i, j)] +=
+                    (lagr_term_real)*goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+                    goma_ctx->fem.fv->h3;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_imag, pvar, i, j)] +=
+                    (lagr_term_imag)*goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+                    goma_ctx->fem.fv->h3;
               }
             }
           }
 
           {
             int var = EM_CONT_IMAG;
-            if (pd->e[pg->imtrx][var]) {
-              int pvar = upd->vp[pg->imtrx][var];
-              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
+              int pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+              for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 // dbl lagr_term_real = bf[eqn]->grad_phi[i][a] * i_elperm * bf[var]->phi[j];
                 // dbl lagr_term_imag = bf[eqn]->grad_phi[i][a] * r_elperm * bf[var]->phi[j];
                 dbl lagr_term_real = 0;
-                dbl lagr_term_imag = bf[eqn]->grad_phi[i][a] * bf[var]->phi[j];
-                lec->J[LEC_J_INDEX(peqn_real, pvar, i, j)] +=
-                    (lagr_term_real)*bf[eqn_real]->detJ * fv->wt * fv->h3;
-                lec->J[LEC_J_INDEX(peqn_imag, pvar, i, j)] +=
-                    (lagr_term_imag)*bf[eqn_real]->detJ * fv->wt * fv->h3;
+                dbl lagr_term_imag =
+                    goma_ctx->fem.bf[eqn]->grad_phi[i][a] * goma_ctx->fem.bf[var]->phi[j];
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_real, pvar, i, j)] +=
+                    (lagr_term_real)*goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+                    goma_ctx->fem.fv->h3;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_imag, pvar, i, j)] +=
+                    (lagr_term_imag)*goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+                    goma_ctx->fem.fv->h3;
               }
             }
           }
@@ -1490,7 +1528,8 @@ int assemble_ewave_laplacian(double time,      // present time
 } // end of assemble_ewave_laplacian
 
 int assemble_em_continuity() {
-  if (!(pd->e[pg->imtrx][R_EM_CONT_REAL] && pd->e[pg->imtrx][R_EM_CONT_IMAG])) {
+  if (!(goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EM_CONT_REAL] &&
+        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_EM_CONT_IMAG])) {
     return -1;
   }
 
@@ -1512,7 +1551,7 @@ int assemble_em_continuity() {
 
   cpx_refractive_index = n + _Complex_I * k; // k > 0 is extinction
   cpx_rel_permittivity = SQUARE(cpx_refractive_index);
-  cpx_permittivity = cpx_rel_permittivity * mp->permittivity;
+  cpx_permittivity = cpx_rel_permittivity * goma_ctx->fem.mp->permittivity;
 
   // assumed to be constant in an element block
   r_elperm = creal(cpx_permittivity);
@@ -1521,72 +1560,80 @@ int assemble_em_continuity() {
   dbl div_E_real = 0;
   dbl div_E_imag = 0;
 
-  dbl dim = pd->Num_Dim;
+  dbl dim = goma_ctx->fem.pd->Num_Dim;
   double factor = 1e3;
   for (int i = 0; i < dim; i++) {
-    div_E_real += fv->grad_em_er[i][i];
-    div_E_imag += fv->grad_em_ei[i][i];
+    div_E_real += goma_ctx->fem.fv->grad_em_er[i][i];
+    div_E_imag += goma_ctx->fem.fv->grad_em_ei[i][i];
   }
-  if (af->Assemble_Residual) {
-    for (int i = 0; i < ei[pg->imtrx]->dof[R_EM_CONT_REAL]; i++) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_EM_CONT_REAL]; i++) {
       int eqn_real = R_EM_CONT_REAL;
       int eqn_imag = R_EM_CONT_IMAG;
-      int peqn_real = upd->ep[pg->imtrx][eqn_real];
-      int peqn_imag = upd->ep[pg->imtrx][eqn_imag];
+      int peqn_real = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn_real];
+      int peqn_imag = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn_imag];
 
-      double advection_real =
-          -factor * bf[eqn_real]->phi[i] * (r_elperm * div_E_real + i_elperm * div_E_imag);
-      double advection_imag =
-          -factor * bf[eqn_imag]->phi[i] * (r_elperm * div_E_imag + i_elperm * div_E_real);
+      double advection_real = -factor * goma_ctx->fem.bf[eqn_real]->phi[i] *
+                              (r_elperm * div_E_real + i_elperm * div_E_imag);
+      double advection_imag = -factor * goma_ctx->fem.bf[eqn_imag]->phi[i] *
+                              (r_elperm * div_E_imag + i_elperm * div_E_real);
 
-      lec->R[LEC_R_INDEX(peqn_real, i)] += (advection_real)*bf[eqn_real]->detJ * fv->wt * fv->h3;
-      lec->R[LEC_R_INDEX(peqn_imag, i)] += (advection_imag)*bf[eqn_imag]->detJ * fv->wt * fv->h3;
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn_real, i)] +=
+          (advection_real)*goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+          goma_ctx->fem.fv->h3;
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn_imag, i)] +=
+          (advection_imag)*goma_ctx->fem.bf[eqn_imag]->detJ * goma_ctx->fem.fv->wt *
+          goma_ctx->fem.fv->h3;
     }
   }
-  if (af->Assemble_Jacobian) {
-    for (int i = 0; i < ei[pg->imtrx]->dof[R_EM_CONT_REAL]; i++) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_EM_CONT_REAL]; i++) {
       int eqn_real = EM_CONT_REAL;
       int eqn_imag = EM_CONT_IMAG;
-      int peqn_real = upd->ep[pg->imtrx][eqn_real];
-      int peqn_imag = upd->ep[pg->imtrx][eqn_imag];
+      int peqn_real = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn_real];
+      int peqn_imag = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn_imag];
 
       for (int b = 0; b < dim; b++) {
         int var = EM_E1_REAL + b;
-        int pvar_real = upd->ep[pg->imtrx][var];
-        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        int pvar_real = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][var];
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           double advection_real = 0;
           double advection_imag = 0;
           for (int q = 0; q < dim; q++) {
-            advection_real +=
-                -factor * bf[eqn_real]->phi[i] * r_elperm * bf[var]->grad_phi_e[j][b][q][q];
-            advection_imag +=
-                -factor * bf[eqn_imag]->phi[i] * i_elperm * bf[var]->grad_phi_e[j][b][q][q];
+            advection_real += -factor * goma_ctx->fem.bf[eqn_real]->phi[i] * r_elperm *
+                              goma_ctx->fem.bf[var]->grad_phi_e[j][b][q][q];
+            advection_imag += -factor * goma_ctx->fem.bf[eqn_imag]->phi[i] * i_elperm *
+                              goma_ctx->fem.bf[var]->grad_phi_e[j][b][q][q];
           }
 
-          lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
-              (advection_real)*bf[eqn_real]->detJ * fv->wt * fv->h3;
-          lec->J[LEC_J_INDEX(peqn_imag, pvar_real, i, j)] +=
-              (advection_imag)*bf[eqn_imag]->detJ * fv->wt * fv->h3;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
+              (advection_real)*goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+              goma_ctx->fem.fv->h3;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_imag, pvar_real, i, j)] +=
+              (advection_imag)*goma_ctx->fem.bf[eqn_imag]->detJ * goma_ctx->fem.fv->wt *
+              goma_ctx->fem.fv->h3;
         }
       }
 
       for (int b = 0; b < dim; b++) {
         int var = EM_E1_IMAG + b;
-        int pvar_imag = upd->ep[pg->imtrx][var];
-        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        int pvar_imag = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][var];
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           double advection_real = 0;
           double advection_imag = 0;
           for (int q = 0; q < dim; q++) {
-            advection_real +=
-                -factor * bf[eqn_real]->phi[i] * i_elperm * bf[var]->grad_phi_e[j][b][q][q];
-            advection_imag +=
-                -factor * bf[eqn_imag]->phi[i] * r_elperm * bf[var]->grad_phi_e[j][b][q][q];
+            advection_real += -factor * goma_ctx->fem.bf[eqn_real]->phi[i] * i_elperm *
+                              goma_ctx->fem.bf[var]->grad_phi_e[j][b][q][q];
+            advection_imag += -factor * goma_ctx->fem.bf[eqn_imag]->phi[i] * r_elperm *
+                              goma_ctx->fem.bf[var]->grad_phi_e[j][b][q][q];
           }
 
-          lec->J[LEC_J_INDEX(peqn_real, pvar_imag, i, j)] +=
-              (advection_real)*bf[eqn_real]->detJ * fv->wt * fv->h3;
-          lec->J[LEC_J_INDEX(peqn_imag, pvar_imag, i, j)] +=
-              (advection_imag)*bf[eqn_imag]->detJ * fv->wt * fv->h3;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_real, pvar_imag, i, j)] +=
+              (advection_real)*goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+              goma_ctx->fem.fv->h3;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_imag, pvar_imag, i, j)] +=
+              (advection_imag)*goma_ctx->fem.bf[eqn_imag]->detJ * goma_ctx->fem.fv->wt *
+              goma_ctx->fem.fv->h3;
         }
       }
     }
@@ -1604,10 +1651,10 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
    */
   switch (em_stab->type) {
   case EM_STAB_NONE:
-    for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
       em_stab->residual_term[i] = 0.0;
       for (int b = 0; b < DIM; b++) {
-        for (int j = 0; j < ei[pg->imtrx]->dof[em_stab->em_var]; j++) {
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_var]; j++) {
           em_stab->jacobian_term[i][b][j] = 0.0;
         }
       }
@@ -1621,28 +1668,28 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
     case EM_E1_REAL:
       for (int p = 0; p < VIM; p++) {
         for (int q = 0; q < VIM; q++) {
-          grad_stabilization_field[p][q] = fv->grad_em_er[p][q];
+          grad_stabilization_field[p][q] = goma_ctx->fem.fv->grad_em_er[p][q];
         }
       }
       break;
     case EM_E1_IMAG:
       for (int p = 0; p < VIM; p++) {
         for (int q = 0; q < VIM; q++) {
-          grad_stabilization_field[p][q] = fv->grad_em_ei[p][q];
+          grad_stabilization_field[p][q] = goma_ctx->fem.fv->grad_em_ei[p][q];
         }
       }
       break;
     case EM_H1_REAL:
       for (int p = 0; p < VIM; p++) {
         for (int q = 0; q < VIM; q++) {
-          grad_stabilization_field[p][q] = fv->grad_em_hr[p][q];
+          grad_stabilization_field[p][q] = goma_ctx->fem.fv->grad_em_hr[p][q];
         }
       }
       break;
     case EM_H1_IMAG:
       for (int p = 0; p < VIM; p++) {
         for (int q = 0; q < VIM; q++) {
-          grad_stabilization_field[p][q] = fv->grad_em_hi[p][q];
+          grad_stabilization_field[p][q] = goma_ctx->fem.fv->grad_em_hi[p][q];
         }
       }
       break;
@@ -1659,7 +1706,8 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
     case EM_H1_IMAG:
       for (int p = 0; p < VIM; p++) {
         for (int q = 0; q < VIM; q++) {
-          grad_stabilization_field[p][q] = fv->grad_em_er[p][q] + _Complex_I * fv->grad_em_ei[p][q];
+          grad_stabilization_field[p][q] =
+              goma_ctx->fem.fv->grad_em_er[p][q] + _Complex_I * goma_ctx->fem.fv->grad_em_ei[p][q];
         }
       }
       break;
@@ -1667,7 +1715,8 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
     case EM_E1_IMAG:
       for (int p = 0; p < VIM; p++) {
         for (int q = 0; q < VIM; q++) {
-          grad_stabilization_field[p][q] = fv->grad_em_hr[p][q] + _Complex_I * fv->grad_em_hi[p][q];
+          grad_stabilization_field[p][q] =
+              goma_ctx->fem.fv->grad_em_hr[p][q] + _Complex_I * goma_ctx->fem.fv->grad_em_hi[p][q];
         }
       }
       break;
@@ -1707,15 +1756,16 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
       div_stabilization_field += grad_stabilization_field[p][p];
     }
 
-    for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
-      em_stab->residual_term[i] = bf[em_stab->em_eqn]->grad_phi[i][cartesian_index] *
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+      em_stab->residual_term[i] = goma_ctx->fem.bf[em_stab->em_eqn]->grad_phi[i][cartesian_index] *
                                   stabilization_coefficient * creal(div_stabilization_field);
 
       for (int b = 0; b < DIM; b++) {
-        for (int j = 0; j < ei[pg->imtrx]->dof[em_stab->em_var]; j++) {
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_var]; j++) {
           em_stab->jacobian_term[i][b][j] =
-              bf[em_stab->em_eqn]->grad_phi[i][cartesian_index] * stabilization_coefficient *
-              bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
+              goma_ctx->fem.bf[em_stab->em_eqn]->grad_phi[i][cartesian_index] *
+              stabilization_coefficient *
+              goma_ctx->fem.bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
         }
       }
     }
@@ -1729,21 +1779,21 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
     for (int p = 0; p < VIM; p++) {
       div_stabilization_field += grad_stabilization_field[p][p];
     }
-    for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
       for (int p = 0; p < DIM; p++) {
-        div_phi[i] += bf[em_stab->em_eqn]->grad_phi[i][p];
+        div_phi[i] += goma_ctx->fem.bf[em_stab->em_eqn]->grad_phi[i][p];
       }
     }
 
-    for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
       em_stab->residual_term[i] =
           div_phi[i] * stabilization_coefficient * creal(div_stabilization_field);
 
       for (int b = 0; b < DIM; b++) {
-        for (int j = 0; j < ei[pg->imtrx]->dof[em_stab->em_var]; j++) {
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_var]; j++) {
           em_stab->jacobian_term[i][b][j] =
               div_phi[i] * stabilization_coefficient *
-              bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
+              goma_ctx->fem.bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
         }
       }
     }
@@ -1758,57 +1808,69 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
     div_stabilization_field_squared = div_stabilization_field * div_stabilization_field;
     switch (em_stab->stabilization_field_var) {
     case EM_E1_REAL:
-      for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
-        em_stab->residual_term[i] = bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient *
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+        em_stab->residual_term[i] = goma_ctx->fem.bf[em_stab->em_eqn]->phi[i] *
+                                    stabilization_coefficient *
                                     creal(div_stabilization_field_squared);
         //*mp->permittivity;
         for (int b = 0; b < DIM; b++) {
-          for (int j = 0; j < ei[pg->imtrx]->dof[em_stab->em_var]; j++) {
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_var];
+               j++) {
             em_stab->jacobian_term[i][b][j] =
-                bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
-                div_stabilization_field * bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
+                goma_ctx->fem.bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
+                div_stabilization_field *
+                goma_ctx->fem.bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
           }
         }
       }
       break;
     case EM_H1_REAL:
-      for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
-        em_stab->residual_term[i] = bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient *
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+        em_stab->residual_term[i] = goma_ctx->fem.bf[em_stab->em_eqn]->phi[i] *
+                                    stabilization_coefficient *
                                     creal(div_stabilization_field_squared);
         //*mag_permeability;
         for (int b = 0; b < DIM; b++) {
-          for (int j = 0; j < ei[pg->imtrx]->dof[em_stab->em_var]; j++) {
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_var];
+               j++) {
             em_stab->jacobian_term[i][b][j] =
-                bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
-                div_stabilization_field * bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
+                goma_ctx->fem.bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
+                div_stabilization_field *
+                goma_ctx->fem.bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
           }
         }
       }
       break;
     case EM_E1_IMAG:
-      for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
-        em_stab->residual_term[i] = bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient *
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+        em_stab->residual_term[i] = goma_ctx->fem.bf[em_stab->em_eqn]->phi[i] *
+                                    stabilization_coefficient *
                                     cimag(div_stabilization_field_squared);
         //*mp->permittivity;
         for (int b = 0; b < DIM; b++) {
-          for (int j = 0; j < ei[pg->imtrx]->dof[em_stab->em_var]; j++) {
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_var];
+               j++) {
             em_stab->jacobian_term[i][b][j] =
-                bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
-                div_stabilization_field * bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
+                goma_ctx->fem.bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
+                div_stabilization_field *
+                goma_ctx->fem.bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
           }
         }
       }
       break;
     case EM_H1_IMAG:
-      for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
-        em_stab->residual_term[i] = bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient *
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+        em_stab->residual_term[i] = goma_ctx->fem.bf[em_stab->em_eqn]->phi[i] *
+                                    stabilization_coefficient *
                                     cimag(div_stabilization_field_squared);
         //*mag_permeability;
         for (int b = 0; b < DIM; b++) {
-          for (int j = 0; j < ei[pg->imtrx]->dof[em_stab->em_var]; j++) {
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_var];
+               j++) {
             em_stab->jacobian_term[i][b][j] =
-                bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
-                div_stabilization_field * bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
+                goma_ctx->fem.bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
+                div_stabilization_field *
+                goma_ctx->fem.bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
           }
         }
       }
@@ -1833,61 +1895,69 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
     div_stabilization_field_squared = div_stabilization_field * div_stabilization_field;
     switch (em_stab->stabilization_field_var) {
     case EM_E1_REAL:
-      for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
-        em_stab->residual_term[i] = bf[em_stab->em_eqn]->grad_phi[i][cartesian_index] *
-                                    stabilization_coefficient *
-                                    creal(div_stabilization_field_squared) / mag_permeability;
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+        em_stab->residual_term[i] =
+            goma_ctx->fem.bf[em_stab->em_eqn]->grad_phi[i][cartesian_index] *
+            stabilization_coefficient * creal(div_stabilization_field_squared) / mag_permeability;
         //*mp->permittivity;
         for (int b = 0; b < DIM; b++) {
-          for (int j = 0; j < ei[pg->imtrx]->dof[em_stab->em_var]; j++) {
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_var];
+               j++) {
             em_stab->jacobian_term[i][b][j] =
-                bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
-                div_stabilization_field * bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
+                goma_ctx->fem.bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
+                div_stabilization_field *
+                goma_ctx->fem.bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
           }
         }
       }
       break;
     case EM_H1_REAL:
-      for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
-        em_stab->residual_term[i] = bf[em_stab->em_eqn]->grad_phi[i][cartesian_index] *
-                                    stabilization_coefficient *
-                                    creal(div_stabilization_field_squared);
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+        em_stab->residual_term[i] =
+            goma_ctx->fem.bf[em_stab->em_eqn]->grad_phi[i][cartesian_index] *
+            stabilization_coefficient * creal(div_stabilization_field_squared);
         //*mag_permeability;
         for (int b = 0; b < DIM; b++) {
-          for (int j = 0; j < ei[pg->imtrx]->dof[em_stab->em_var]; j++) {
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_var];
+               j++) {
             em_stab->jacobian_term[i][b][j] =
-                bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
-                div_stabilization_field * bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
+                goma_ctx->fem.bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
+                div_stabilization_field *
+                goma_ctx->fem.bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
           }
         }
       }
       break;
     case EM_E1_IMAG:
-      for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
-        em_stab->residual_term[i] = bf[em_stab->em_eqn]->grad_phi[i][cartesian_index] *
-                                    stabilization_coefficient *
-                                    cimag(div_stabilization_field_squared) / mag_permeability;
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+        em_stab->residual_term[i] =
+            goma_ctx->fem.bf[em_stab->em_eqn]->grad_phi[i][cartesian_index] *
+            stabilization_coefficient * cimag(div_stabilization_field_squared) / mag_permeability;
         //*mp->permittivity;
         for (int b = 0; b < DIM; b++) {
-          for (int j = 0; j < ei[pg->imtrx]->dof[em_stab->em_var]; j++) {
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_var];
+               j++) {
             em_stab->jacobian_term[i][b][j] =
-                bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
-                div_stabilization_field * bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
+                goma_ctx->fem.bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
+                div_stabilization_field *
+                goma_ctx->fem.bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
           }
         }
       }
       break;
     case EM_H1_IMAG:
-      for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
-        em_stab->residual_term[i] = bf[em_stab->em_eqn]->grad_phi[i][cartesian_index] *
-                                    stabilization_coefficient *
-                                    cimag(div_stabilization_field_squared);
+      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+        em_stab->residual_term[i] =
+            goma_ctx->fem.bf[em_stab->em_eqn]->grad_phi[i][cartesian_index] *
+            stabilization_coefficient * cimag(div_stabilization_field_squared);
         //*mag_permeability;
         for (int b = 0; b < DIM; b++) {
-          for (int j = 0; j < ei[pg->imtrx]->dof[em_stab->em_var]; j++) {
+          for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_var];
+               j++) {
             em_stab->jacobian_term[i][b][j] =
-                bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
-                div_stabilization_field * bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
+                goma_ctx->fem.bf[em_stab->em_eqn]->phi[i] * stabilization_coefficient * 2.0 *
+                div_stabilization_field *
+                goma_ctx->fem.bf[em_stab->stabilization_field_var + b]->grad_phi[j][b];
           }
         }
       }
@@ -1900,10 +1970,10 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
     break;
   case EM_STAB_NONE:
   default:
-    for (int i = 0; i < ei[pg->imtrx]->dof[em_stab->em_eqn]; i++) {
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
       em_stab->residual_term[i] = 0.0;
       for (int b = 0; b < DIM; b++) {
-        for (int j = 0; j < ei[pg->imtrx]->dof[em_stab->em_var]; j++) {
+        for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_var]; j++) {
           em_stab->jacobian_term[i][b][j] = 0.0;
         }
       }
@@ -1936,12 +2006,13 @@ void complex_cross_vectors(const complex double *v0, /* v0 */
 bool relative_permittivity_model(complex double *permittivity_out,
                                  complex double *permittivity_matrix) {
   complex double permittivity = 0;
-  switch (mp->PermittivityModel) {
+  switch (goma_ctx->fem.mp->PermittivityModel) {
   case CONSTANT:
-    permittivity = mp->permittivity;
+    permittivity = goma_ctx->fem.mp->permittivity;
     break;
   case COMPLEX_CONSTANT:
-    permittivity = mp->permittivity - _Complex_I * mp->permittivity_imag;
+    permittivity =
+        goma_ctx->fem.mp->permittivity - _Complex_I * goma_ctx->fem.mp->permittivity_imag;
     break;
   case REFRACTIVE_INDEX: {
     dbl n = refractive_index(NULL, 0.0);
@@ -1949,21 +2020,22 @@ bool relative_permittivity_model(complex double *permittivity_out,
     permittivity = cpow((n - _Complex_I * k), 2);
   } break;
   case RADIAL_PML: {
-    dbl amp = mp->u_permittivity[0];
-    dbl power = mp->u_permittivity[1];
-    dbl cond_max = mp->u_permittivity[2];
-    dbl pml_inner_radius = mp->u_permittivity[3];
-    dbl pml_outer_radius = mp->u_permittivity[4];
+    dbl amp = goma_ctx->fem.mp->u_permittivity[0];
+    dbl power = goma_ctx->fem.mp->u_permittivity[1];
+    dbl cond_max = goma_ctx->fem.mp->u_permittivity[2];
+    dbl pml_inner_radius = goma_ctx->fem.mp->u_permittivity[3];
+    dbl pml_outer_radius = goma_ctx->fem.mp->u_permittivity[4];
 
-    const double c0 = 1.0 / (sqrt(upd->Free_Space_Permittivity * upd->Free_Space_Permeability));
-    const double eps0 = upd->Free_Space_Permittivity;
-    const double mu0 = upd->Free_Space_Permeability;
+    const double c0 = 1.0 / (sqrt(goma_ctx->fem.upd->Free_Space_Permittivity *
+                                  goma_ctx->fem.upd->Free_Space_Permeability));
+    const double eps0 = goma_ctx->fem.upd->Free_Space_Permittivity;
+    const double mu0 = goma_ctx->fem.upd->Free_Space_Permeability;
     const double nu0 = sqrt(mu0 / eps0);
 
-    dbl x = fv->x[0];
-    dbl y = fv->x[1];
-    dbl z = fv->x[2];
-    dbl freq = upd->EM_Frequency;
+    dbl x = goma_ctx->fem.fv->x[0];
+    dbl y = goma_ctx->fem.fv->x[1];
+    dbl z = goma_ctx->fem.fv->x[2];
+    dbl freq = goma_ctx->fem.upd->EM_Frequency;
     dbl lambda0 = c0 / freq;
     dbl k0 = 2 * M_PI / lambda0;
     dbl d = pml_outer_radius - pml_inner_radius;
@@ -2020,30 +2092,32 @@ bool relative_permittivity_model(complex double *permittivity_out,
 bool relative_permeability_model(complex double *permeability_out,
                                  complex double *permeability_matrix) {
   complex double permeability = 0;
-  switch (mp->PermeabilityModel) {
+  switch (goma_ctx->fem.mp->PermeabilityModel) {
   case CONSTANT:
-    permeability = mp->permeability;
+    permeability = goma_ctx->fem.mp->permeability;
     break;
   case COMPLEX_CONSTANT:
-    permeability = mp->permeability + _Complex_I * mp->permeability_imag;
+    permeability =
+        goma_ctx->fem.mp->permeability + _Complex_I * goma_ctx->fem.mp->permeability_imag;
     break;
 
   case RADIAL_PML: {
-    dbl amp = mp->u_permeability[0];
-    dbl power = mp->u_permeability[1];
-    dbl cond_max = mp->u_permeability[2];
-    dbl pml_inner_radius = mp->u_permeability[3];
-    dbl pml_outer_radius = mp->u_permeability[4];
+    dbl amp = goma_ctx->fem.mp->u_permeability[0];
+    dbl power = goma_ctx->fem.mp->u_permeability[1];
+    dbl cond_max = goma_ctx->fem.mp->u_permeability[2];
+    dbl pml_inner_radius = goma_ctx->fem.mp->u_permeability[3];
+    dbl pml_outer_radius = goma_ctx->fem.mp->u_permeability[4];
 
-    const double c0 = 1.0 / (sqrt(upd->Free_Space_Permittivity * upd->Free_Space_Permeability));
-    const double eps0 = upd->Free_Space_Permittivity;
-    const double mu0 = upd->Free_Space_Permeability;
+    const double c0 = 1.0 / (sqrt(goma_ctx->fem.upd->Free_Space_Permittivity *
+                                  goma_ctx->fem.upd->Free_Space_Permeability));
+    const double eps0 = goma_ctx->fem.upd->Free_Space_Permittivity;
+    const double mu0 = goma_ctx->fem.upd->Free_Space_Permeability;
     const double nu0 = sqrt(mu0 / eps0);
 
-    dbl x = fv->x[0];
-    dbl y = fv->x[1];
-    dbl z = fv->x[2];
-    dbl freq = upd->EM_Frequency;
+    dbl x = goma_ctx->fem.fv->x[0];
+    dbl y = goma_ctx->fem.fv->x[1];
+    dbl z = goma_ctx->fem.fv->x[2];
+    dbl freq = goma_ctx->fem.upd->EM_Frequency;
     dbl lambda0 = c0 / freq;
     dbl k0 = 2 * M_PI / lambda0;
 
@@ -2099,7 +2173,7 @@ bool relative_permeability_model(complex double *permeability_out,
 int incident_wave(
     dbl x, dbl y, dbl z, dbl omega, complex double wave[DIM], complex double curl_wave[DIM]) {
 
-  switch (mp->IncidentWaveModel) {
+  switch (goma_ctx->fem.mp->IncidentWaveModel) {
   case CONSTANT: {
     GOMA_WH(GOMA_ERROR,
             "Incident wave being called but was not set or is set to CONSTANT, will not be used");
@@ -2114,13 +2188,13 @@ int incident_wave(
       curl_wave[i] = 0;
     }
 
-    dbl E0 = mp->u_incident_wave[0];
+    dbl E0 = goma_ctx->fem.mp->u_incident_wave[0];
 
     wave[0] = E0 * cexp(-_Complex_I * omega * z);
     curl_wave[1] = -E0 * _Complex_I * omega * cexp(-_Complex_I * omega * z);
   } break;
   default:
-    GOMA_EH(GOMA_ERROR, "Unknown Incident wave model %d", mp->IncidentWaveModel);
+    GOMA_EH(GOMA_ERROR, "Unknown Incident wave model %d", goma_ctx->fem.mp->IncidentWaveModel);
   }
 
   return 0;
@@ -2134,23 +2208,25 @@ int assemble_ewave_nedelec(dbl time) {
   int eqn_real = EM_E1_REAL;
   int eqn_imag = EM_E1_IMAG;
 
-  const double c0 = 1.0 / (sqrt(upd->Free_Space_Permittivity * upd->Free_Space_Permeability));
+  const double c0 = 1.0 / (sqrt(goma_ctx->fem.upd->Free_Space_Permittivity *
+                                goma_ctx->fem.upd->Free_Space_Permeability));
   /*
    * Bail out fast if there's nothing to do...
    * But we might have the wrong eqn
    */
-  if (!pd->e[pg->imtrx][eqn_real] || !pd->e[pg->imtrx][eqn_imag]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn_real] ||
+      !goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn_imag]) {
     return (-1);
   }
 
-  dbl x = fv->x[0];
-  dbl y = fv->x[1];
-  dbl z = fv->x[2];
-  dbl freq = upd->EM_Frequency;
+  dbl x = goma_ctx->fem.fv->x[0];
+  dbl y = goma_ctx->fem.fv->x[1];
+  dbl z = goma_ctx->fem.fv->x[2];
+  dbl freq = goma_ctx->fem.upd->EM_Frequency;
   dbl lambda0 = c0 / freq;
   dbl k0 = 2 * M_PI / lambda0;
 
-  dbl sigma = mp->electrical_conductivity;
+  dbl sigma = goma_ctx->fem.mp->electrical_conductivity;
   complex double wave[3];
   complex double curl_wave[3];
   incident_wave(x, y, z, k0, wave, curl_wave);
@@ -2163,20 +2239,22 @@ int assemble_ewave_nedelec(dbl time) {
   bool permittivity_is_matrix = relative_permittivity_model(&permittivity, permittivity_matrix);
 
   int reqn = R_EM_E1_REAL;
-  int peqn_real = upd->ep[pg->imtrx][reqn];
+  int peqn_real = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][reqn];
   int ieqn = R_EM_E1_IMAG;
-  int peqn_imag = upd->ep[pg->imtrx][ieqn];
-  if (af->Assemble_Residual) {
-    for (int i = 0; i < ei[pg->imtrx]->dof[eqn_real]; i++) {
+  int peqn_imag = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][ieqn];
+  if (goma_ctx->fem.af->Assemble_Residual) {
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn_real]; i++) {
       complex double diffusion = 0.0;
 
       for (int q = 0; q < DIM; q++) {
         if (permeability_is_matrix) {
-          diffusion += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability_matrix[q]) *
-                       (fv->curl_em_er[q] + fv->curl_em_ei[q] * _Complex_I);
+          diffusion +=
+              goma_ctx->fem.bf[ieqn]->curl_phi[i][q] * (1.0 / permeability_matrix[q]) *
+              (goma_ctx->fem.fv->curl_em_er[q] + goma_ctx->fem.fv->curl_em_ei[q] * _Complex_I);
         } else {
-          diffusion += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) *
-                       (fv->curl_em_er[q] + fv->curl_em_ei[q] * _Complex_I);
+          diffusion +=
+              goma_ctx->fem.bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) *
+              (goma_ctx->fem.fv->curl_em_er[q] + goma_ctx->fem.fv->curl_em_ei[q] * _Complex_I);
         }
       }
 
@@ -2184,38 +2262,41 @@ int assemble_ewave_nedelec(dbl time) {
 
       for (int q = 0; q < DIM; q++) {
         if (permittivity_is_matrix) {
-          advection -= k0 * k0 * bf[ieqn]->phi_e[i][q] *
-                       (permittivity_matrix[q] * (fv->em_er[q] + fv->em_ei[q] * _Complex_I));
+          advection -= k0 * k0 * goma_ctx->fem.bf[ieqn]->phi_e[i][q] *
+                       (permittivity_matrix[q] *
+                        (goma_ctx->fem.fv->em_er[q] + goma_ctx->fem.fv->em_ei[q] * _Complex_I));
         } else {
-          advection -= k0 * k0 * bf[ieqn]->phi_e[i][q] *
+          advection -= k0 * k0 * goma_ctx->fem.bf[ieqn]->phi_e[i][q] *
                        (((permittivity - _Complex_I * sigma / k0) *
-                         (fv->em_er[q] + fv->em_ei[q] * _Complex_I)));
+                         (goma_ctx->fem.fv->em_er[q] + goma_ctx->fem.fv->em_ei[q] * _Complex_I)));
         }
       }
       dbl source = 0;
 
-      lec->R[LEC_R_INDEX(peqn_real, i)] +=
-          creal(diffusion + advection + source) * bf[eqn_real]->detJ * fv->wt * fv->h3;
-      lec->R[LEC_R_INDEX(peqn_imag, i)] +=
-          cimag(diffusion + advection + source) * bf[eqn_imag]->detJ * fv->wt * fv->h3;
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn_real, i)] +=
+          creal(diffusion + advection + source) * goma_ctx->fem.bf[eqn_real]->detJ *
+          goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn_imag, i)] +=
+          cimag(diffusion + advection + source) * goma_ctx->fem.bf[eqn_imag]->detJ *
+          goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
     }
   }
 
-  if (af->Assemble_Jacobian) {
-    for (int i = 0; i < ei[pg->imtrx]->dof[eqn_real]; i++) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
+    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn_real]; i++) {
       int var = EM_E1_REAL;
-      int pvar_real = upd->vp[pg->imtrx][var];
-      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      int pvar_real = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
         complex double diffusion = 0.0;
 
         for (int q = 0; q < DIM; q++) {
           if (permeability_is_matrix) {
-            diffusion += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability_matrix[q]) *
-                         (bf[var]->curl_phi[j][q]);
+            diffusion += goma_ctx->fem.bf[ieqn]->curl_phi[i][q] * (1.0 / permeability_matrix[q]) *
+                         (goma_ctx->fem.bf[var]->curl_phi[j][q]);
           } else {
-            diffusion +=
-                bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) * (bf[var]->curl_phi[j][q]);
+            diffusion += goma_ctx->fem.bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) *
+                         (goma_ctx->fem.bf[var]->curl_phi[j][q]);
           }
         }
 
@@ -2223,33 +2304,36 @@ int assemble_ewave_nedelec(dbl time) {
 
         for (int q = 0; q < DIM; q++) {
           if (permittivity_is_matrix) {
-            advection -=
-                k0 * k0 * bf[ieqn]->phi_e[i][q] * (permittivity_matrix[q]) * (bf[var]->phi_e[j][q]);
+            advection -= k0 * k0 * goma_ctx->fem.bf[ieqn]->phi_e[i][q] * (permittivity_matrix[q]) *
+                         (goma_ctx->fem.bf[var]->phi_e[j][q]);
           } else {
-            advection -= k0 * k0 * bf[ieqn]->phi_e[i][q] *
-                         (permittivity - _Complex_I * sigma / k0) * (bf[var]->phi_e[j][q]);
+            advection -= k0 * k0 * goma_ctx->fem.bf[ieqn]->phi_e[i][q] *
+                         (permittivity - _Complex_I * sigma / k0) *
+                         (goma_ctx->fem.bf[var]->phi_e[j][q]);
           }
         }
 
-        lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
-            creal(diffusion + advection) * bf[eqn_real]->detJ * fv->wt * fv->h3;
-        lec->J[LEC_J_INDEX(peqn_imag, pvar_real, i, j)] +=
-            cimag(diffusion + advection) * bf[eqn_real]->detJ * fv->wt * fv->h3;
+        goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
+            creal(diffusion + advection) * goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+            goma_ctx->fem.fv->h3;
+        goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_imag, pvar_real, i, j)] +=
+            cimag(diffusion + advection) * goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+            goma_ctx->fem.fv->h3;
       }
 
       var = EM_E1_IMAG;
-      int pvar_imag = upd->vp[pg->imtrx][var];
-      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      int pvar_imag = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
         complex double diffusion = 0.0;
 
         for (int q = 0; q < DIM; q++) {
           if (permeability_is_matrix) {
-            diffusion += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability_matrix[q]) *
-                         (bf[var]->curl_phi[j][q] * _Complex_I);
+            diffusion += goma_ctx->fem.bf[ieqn]->curl_phi[i][q] * (1.0 / permeability_matrix[q]) *
+                         (goma_ctx->fem.bf[var]->curl_phi[j][q] * _Complex_I);
           } else {
-            diffusion += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) *
-                         (bf[var]->curl_phi[j][q] * _Complex_I);
+            diffusion += goma_ctx->fem.bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) *
+                         (goma_ctx->fem.bf[var]->curl_phi[j][q] * _Complex_I);
           }
         }
 
@@ -2257,19 +2341,21 @@ int assemble_ewave_nedelec(dbl time) {
 
         for (int q = 0; q < DIM; q++) {
           if (permittivity_is_matrix) {
-            advection -= k0 * k0 * bf[ieqn]->phi_e[i][q] * (permittivity_matrix[q]) *
-                         (bf[var]->phi_e[j][q] * _Complex_I);
+            advection -= k0 * k0 * goma_ctx->fem.bf[ieqn]->phi_e[i][q] * (permittivity_matrix[q]) *
+                         (goma_ctx->fem.bf[var]->phi_e[j][q] * _Complex_I);
           } else {
-            advection -= k0 * k0 * bf[ieqn]->phi_e[i][q] *
+            advection -= k0 * k0 * goma_ctx->fem.bf[ieqn]->phi_e[i][q] *
                          (permittivity - _Complex_I * sigma / k0) *
-                         (bf[var]->phi_e[j][q] * _Complex_I);
+                         (goma_ctx->fem.bf[var]->phi_e[j][q] * _Complex_I);
           }
         }
 
-        lec->J[LEC_J_INDEX(peqn_real, pvar_imag, i, j)] +=
-            creal(diffusion + advection) * bf[eqn_real]->detJ * fv->wt * fv->h3;
-        lec->J[LEC_J_INDEX(peqn_imag, pvar_imag, i, j)] +=
-            cimag(diffusion + advection) * bf[eqn_real]->detJ * fv->wt * fv->h3;
+        goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_real, pvar_imag, i, j)] +=
+            creal(diffusion + advection) * goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+            goma_ctx->fem.fv->h3;
+        goma_ctx->fem.lec->J[LEC_J_INDEX(peqn_imag, pvar_imag, i, j)] +=
+            cimag(diffusion + advection) * goma_ctx->fem.bf[eqn_real]->detJ * goma_ctx->fem.fv->wt *
+            goma_ctx->fem.fv->h3;
       }
     }
   }

@@ -138,9 +138,9 @@ void print_msr_matrix(int n, int *ija, double *a, double *x)
 
     fprintf(of, "%d %d %23.16e %23.16e\n", global_row, global_row, a[row], x[row]);
 #if 0
-    if (row < num_internal_dofs[pg->imtrx] ) {
+    if (row < num_internal_dofs[goma_ctx->fem.pg->imtrx] ) {
       row_kind = 'I';
-    } else if (row < num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]) {
+    } else if (row < num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx]) {
       row_kind = 'B';
     } else {
       row_kind = 'E';
@@ -164,16 +164,16 @@ void print_msr_matrix(int n, int *ija, double *a, double *x)
 
       fprintf(of, "%d %d %23.16e\n", global_row, global_col, a[i]);
 #if 0
-      if (row < num_internal_dofs[pg->imtrx] ) {
+      if (row < num_internal_dofs[goma_ctx->fem.pg->imtrx] ) {
 	row_kind = 'I';
-      } else if ( row < num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx] ) {
+      } else if ( row < num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx] ) {
 	row_kind = 'B';
       } else {
 	row_kind = 'E';
       }
-      if (col < num_internal_dofs[pg->imtrx]) {
+      if (col < num_internal_dofs[goma_ctx->fem.pg->imtrx]) {
 	col_kind = 'I';
-      } else if (col < num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx] ) {
+      } else if (col < num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx] ) {
 	col_kind = 'B';
       } else {
 	col_kind = 'E';
@@ -247,8 +247,8 @@ void print_vbr_matrix(struct GomaLinearSolverData *ams, /* matrix info */
           col_dof += unknowns_per_node[ii];
         }
 
-        row = Nodes[i]->First_Unknown[pg->imtrx];
-        col = Nodes[col_node]->First_Unknown[pg->imtrx];
+        row = Nodes[i]->First_Unknown[goma_ctx->fem.pg->imtrx];
+        col = Nodes[col_node]->First_Unknown[goma_ctx->fem.pg->imtrx];
       } else {
         row = ams->rpntr[i];
         col = ams->cpntr[block];
@@ -265,9 +265,10 @@ void print_vbr_matrix(struct GomaLinearSolverData *ams, /* matrix info */
           offset++;
 
           if (goma_ctx->num_proc > 1) {
-            if (col < num_internal_dofs[pg->imtrx]) {
+            if (col < num_internal_dofs[goma_ctx->fem.pg->imtrx]) {
               col_kind = 'I';
-            } else if (col < num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]) {
+            } else if (col < num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                                 num_boundary_dofs[goma_ctx->fem.pg->imtrx]) {
               col_kind = 'B';
             } else {
               col_kind = 'E';
@@ -465,7 +466,8 @@ void row_sum_scaling_scale(struct GomaLinearSolverData *ams, double b[], double 
 
 void row_sum_scaling_scale_AC(double **cAC, double **dAC, double *gAC, int nAC) {
   int iAC, jAC, i;
-  int numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
+  int numProcUnknowns =
+      NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
   double *row_sums, *local_sums, row_sum_inv;
 
   row_sums = alloc_dbl_1(nAC, 0.0);
@@ -528,7 +530,7 @@ void row_sum_scale_MSR(int N, double a[], int ija[], double b[], double scale[])
     if (fabs(row_sum) == 0.0) {
       if (dofname) {
         printf("row_sum_scaling_scale ERROR: Row %d is zero, dofname = %s\n", irow,
-               dofname[pg->imtrx][irow]);
+               dofname[goma_ctx->fem.pg->imtrx][irow]);
       } else {
         printf("row_sum_scaling_scale ERROR: Row %d is zero, dofname = unknown\n", irow);
         vd = Index_Solution_Inv(irow, &inode, &i_Var_Desc, &i_offset, &idof);
@@ -565,15 +567,15 @@ void row_sum_scale_MSR(int N, double a[], int ija[], double b[], double scale[])
       int inode = 0;
       VARIABLE_DESCRIPTION_STRUCT *vd;
       GOMA_WH(-1, "row_sum_scale_MSR ERROR: row_sum = 0.0,");
-      vd = Index_Solution_Inv(irow, &inode, &i_Var_Desc, &i_offset, &idof, pg->imtrx);
+      vd = Index_Solution_Inv(irow, &inode, &i_Var_Desc, &i_offset, &idof, goma_ctx->fem.pg->imtrx);
       x[0] = goma_ctx->mesh.coor[0][inode];
       x[1] = goma_ctx->mesh.coor[1][inode];
-      if (pd_glob[0]->Num_Dim == 3)
+      if (goma_ctx->fem.pd_glob[0]->Num_Dim == 3)
         x[2] = goma_ctx->mesh.coor[2][inode];
       if (dofname) {
         fprintf(stderr,
                 "row_sum_scaling_scale ERROR: Proc %d Row %d is zero, dofname = %s, x=(%g,%g,%g)\n",
-                goma_ctx->proc_id, irow, dofname[pg->imtrx][irow], x[0], x[1], x[2]);
+                goma_ctx->proc_id, irow, dofname[goma_ctx->fem.pg->imtrx][irow], x[0], x[1], x[2]);
       } else {
         fprintf(stderr, "row_sum_scaling_scale ERROR: Proc %d Row %d is zero, dofname = unknown\n",
                 goma_ctx->proc_id, irow);

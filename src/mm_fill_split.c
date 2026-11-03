@@ -41,12 +41,12 @@ int assemble_ustar(dbl time_value, /* current time */
   //! WIM is the length of the velocity vector
   int i, j, a, b;
   int ledof, eqn, var, ii, peqn, pvar;
-  int *pdv = pd->v[pg->imtrx];
+  int *pdv = goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx];
 
   int status = 0;
 
   eqn = USTAR;
-  double d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+  double d_area = goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->detJ * goma_ctx->fem.fv->h3;
   double gamma[DIM][DIM];
 
   double rho;
@@ -63,12 +63,12 @@ int assemble_ustar(dbl time_value, /* current time */
 
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
-      gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+      gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
 
   rho = density(d_rho, time_value);
-  mu = viscosity(gn, gamma, d_mu);
+  mu = viscosity(goma_ctx->fem.gn, gamma, d_mu);
 
   momentum_source_term(f, df, time_value);
 
@@ -76,43 +76,44 @@ int assemble_ustar(dbl time_value, /* current time */
    * Residuals_________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     /*
      * Assemble each component "a" of the momentum equation...
      */
     for (a = 0; a < WIM; a++) {
       eqn = USTAR + a;
-      peqn = upd->ep[pg->imtrx][eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
           /*
            *  Here is where we figure out whether the row is to placed in
            *  the normal spot (e.g., ii = i), or whether a boundary condition
            *  require that the volumetric contribution be stuck in another
            *  ldof pertaining to the same variable type.
            */
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
-          double resid = rho * (fv->v_star[a] - fv->v[a]) / dt;
-          resid *= -bf[eqn]->phi[i] * d_area;
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          double resid = rho * (goma_ctx->fem.fv->v_star[a] - goma_ctx->fem.fv->v[a]) / dt;
+          resid *= -goma_ctx->fem.bf[eqn]->phi[i] * d_area;
 
           double adv = 0;
           for (int p = 0; p < VIM; p++) {
-            adv += rho * fv_old->v_star[p] * fv->grad_v_star[p][a];
+            adv += rho * goma_ctx->fem.fv_old->v_star[p] * goma_ctx->fem.fv->grad_v_star[p][a];
           }
 
           // adv += 0.5 * fv->div_v * fv->v[a];
 
-          adv *= -bf[eqn]->phi[i] * d_area;
+          adv *= -goma_ctx->fem.bf[eqn]->phi[i] * d_area;
 
-          double pres = fv->grad_P_star[a] * bf[eqn]->phi[i];
+          double pres = goma_ctx->fem.fv->grad_P_star[a] * goma_ctx->fem.bf[eqn]->phi[i];
           pres *= -d_area;
 
           double diff = 0;
           for (int p = 0; p < VIM; p++) {
             for (int q = 0; q < VIM; q++) {
-              diff += mu * (fv->grad_v_star[p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
+              diff += mu * (goma_ctx->fem.fv->grad_v_star[p][q]) *
+                      goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q];
             }
           }
 
@@ -120,9 +121,9 @@ int assemble_ustar(dbl time_value, /* current time */
 
           double source = 0;
 
-          source += f[a] * bf[eqn]->phi[i] * d_area;
+          source += f[a] * goma_ctx->fem.bf[eqn]->phi[i] * d_area;
 
-          lec->R[LEC_R_INDEX(peqn, ii)] += resid + adv + pres + diff + source;
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, ii)] += resid + adv + pres + diff + source;
         } /*end if (active_dofs) */
       } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
     }
@@ -132,35 +133,36 @@ int assemble_ustar(dbl time_value, /* current time */
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (a = 0; a < WIM; a++) {
       eqn = USTAR + a;
-      peqn = upd->ep[pg->imtrx][eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+        ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
           /*
            *  Here is where we figure out whether the row is to placed in
            *  the normal spot (e.g., ii = i), or whether a boundary condition
            *  require that the volumetric contribution be stuck in another
            *  ldof pertaining to the same variable type.
            */
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           for (b = 0; b < WIM; b++) {
             var = USTAR + b;
             if (pdv[var]) {
-              pvar = upd->vp[pg->imtrx][var];
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                double resid = rho * bf[var]->phi[j] / dt;
-                resid *= -delta(a, b) * bf[eqn]->phi[i] * d_area;
+              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                double resid = rho * goma_ctx->fem.bf[var]->phi[j] / dt;
+                resid *= -delta(a, b) * goma_ctx->fem.bf[eqn]->phi[i] * d_area;
 
                 double adv = 0; // bf[var]->phi[j] * fv->grad_v[b][a];
                 for (int p = 0; p < VIM; p++) {
-                  adv += rho * fv_old->v_star[p] * bf[var]->grad_phi_e[j][b][p][a];
+                  adv += rho * goma_ctx->fem.fv_old->v_star[p] *
+                         goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][a];
                 }
                 // double div_phi_j_e_b = 0.;
                 // for (int p = 0; p < VIM; p++) {
@@ -169,13 +171,13 @@ int assemble_ustar(dbl time_value, /* current time */
 
                 // adv += 0.5 * (div_phi_j_e_b * fv->v[a] +  fv->div_v * bf[var]->phi[j]);
 
-                adv *= -bf[eqn]->phi[i] * d_area;
+                adv *= -goma_ctx->fem.bf[eqn]->phi[i] * d_area;
 
                 double diff = 0;
                 for (int p = 0; p < VIM; p++) {
                   for (int q = 0; q < VIM; q++) {
-                    diff += mu * (bf[VELOCITY1 + q]->grad_phi_e[j][b][p][q]) *
-                            bf[eqn]->grad_phi_e[i][a][p][q];
+                    diff += mu * (goma_ctx->fem.bf[VELOCITY1 + q]->grad_phi_e[j][b][p][q]) *
+                            goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q];
                   }
                 }
 
@@ -183,9 +185,9 @@ int assemble_ustar(dbl time_value, /* current time */
 
                 double source = 0;
 
-                source += df->v[a][b][j] * bf[eqn]->phi[i] * -d_area;
+                source += df->v[a][b][j] * goma_ctx->fem.bf[eqn]->phi[i] * -d_area;
 
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += resid + adv + diff + source;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += resid + adv + diff + source;
               }
             }
           }
@@ -222,7 +224,7 @@ int assemble_pstar(dbl time_value, /* current time */
    * Variables for Pressure Stabilization Petrov-Galerkin...
    */
 
-  int *pdv = pd->v[pg->imtrx];
+  int *pdv = goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx];
 
   dbl mass;
 
@@ -237,19 +239,19 @@ int assemble_pstar(dbl time_value, /* current time */
    */
 
   eqn = R_PSTAR;
-  peqn = upd->ep[pg->imtrx][eqn];
+  peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
   /*
    * Bail out fast if there's nothing to do...
    */
 
-  if (!pd->e[pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
     return (status);
   }
 
-  wt = fv->wt;
-  det_J = bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
-  h3 = fv->h3;           /* Differential volume element (scales). */
+  wt = goma_ctx->fem.fv->wt;
+  det_J = goma_ctx->fem.bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
+  h3 = goma_ctx->fem.fv->h3;           /* Differential volume element (scales). */
 
   d_area = wt * det_J * h3;
   /*
@@ -258,8 +260,8 @@ int assemble_pstar(dbl time_value, /* current time */
 
   rho = density(d_rho, time_value);
 
-  if (af->Assemble_Residual) {
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
 #if 1
       /* this is an optimization for xfem */
@@ -267,7 +269,8 @@ int assemble_pstar(dbl time_value, /* current time */
       if (xfem != NULL) {
         int xfem_active, extended_dof, base_interp, base_dof;
 
-        xfem_dof_state(i, pd->i[pg->imtrx][eqn], ei[pg->imtrx]->ielem_shape, &xfem_active,
+        xfem_dof_state(i, goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn],
+                       goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape, &xfem_active,
                        &extended_dof, &base_interp, &base_dof);
 
         if (extended_dof && !xfem_active)
@@ -280,11 +283,12 @@ int assemble_pstar(dbl time_value, /* current time */
        */
       mass = 0;
       for (a = 0; a < WIM; a++) {
-        mass += (fv->grad_P_star[a] - fv_old->grad_P_star[a]) / rho * bf[eqn]->grad_phi[i][a];
+        mass += (goma_ctx->fem.fv->grad_P_star[a] - goma_ctx->fem.fv_old->grad_P_star[a]) / rho *
+                goma_ctx->fem.bf[eqn]->grad_phi[i][a];
       }
 
       double tmp = 0;
-      tmp += (1 / dt) * (fv->div_v_star * bf[eqn]->phi[i]);
+      tmp += (1 / dt) * (goma_ctx->fem.fv->div_v_star * goma_ctx->fem.bf[eqn]->phi[i]);
 
       mass += tmp;
       mass *= -d_area;
@@ -293,26 +297,27 @@ int assemble_pstar(dbl time_value, /* current time */
        *  Add up the individual contributions and sum them into the local element
        *  contribution for the total continuity equation for the ith local unknown
        */
-      lec->R[LEC_R_INDEX(peqn, i)] += mass;
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += mass;
     }
   }
 
-  if (af->Assemble_Jacobian) {
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
       var = PSTAR;
       if (pdv[var]) {
-        pvar = upd->vp[pg->imtrx][var];
+        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           mass = 0;
           for (a = 0; a < WIM; a++) {
-            mass += (bf[var]->grad_phi[j][a] / rho) * bf[eqn]->grad_phi[i][a];
+            mass += (goma_ctx->fem.bf[var]->grad_phi[j][a] / rho) *
+                    goma_ctx->fem.bf[eqn]->grad_phi[i][a];
           }
 
           mass *= -d_area;
 
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass;
         }
       }
     }
@@ -328,39 +333,40 @@ int assemble_continuity_segregated(dbl time_value, /* current time */
                                    const PG_DATA *pg_data) {
   int i, j;
   int ledof, eqn, var, ii, peqn, pvar;
-  int *pdv = pd->v[pg->imtrx];
+  int *pdv = goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx];
 
   int status = 0;
 
   eqn = R_PRESSURE;
 
-  double d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+  double d_area = goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->detJ * goma_ctx->fem.fv->h3;
 
   /*
    * Residuals_________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     /*
      * Assemble each component "a" of the momentum equation...
      */
-    peqn = upd->ep[pg->imtrx][eqn];
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-      ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-      if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+      ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
         /*
          *  Here is where we figure out whether the row is to placed in
          *  the normal spot (e.g., ii = i), or whether a boundary condition
          *  require that the volumetric contribution be stuck in another
          *  ldof pertaining to the same variable type.
          */
-        ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+        ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-        double resid = fv->P - fv->P_star - fv_old->P; // + 0.1 * fv->div_v;
-        resid *= -bf[eqn]->phi[i] * d_area;
+        double resid = goma_ctx->fem.fv->P - goma_ctx->fem.fv->P_star -
+                       goma_ctx->fem.fv_old->P; // + 0.1 * fv->div_v;
+        resid *= -goma_ctx->fem.bf[eqn]->phi[i] * d_area;
         /*lec->R[peqn][ii] += mass + advection + porous + diffusion + source;*/
-        lec->R[LEC_R_INDEX(peqn, ii)] += resid;
+        goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, ii)] += resid;
 
 #ifdef DEBUG_MOMENTUM_RES
         printf("R_m[%d][%d] += %10f %10f %10f %10f %10f\n", a, i, mass, advection, porous,
@@ -375,32 +381,32 @@ int assemble_continuity_segregated(dbl time_value, /* current time */
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
 
     eqn = PRESSURE;
-    peqn = upd->ep[pg->imtrx][eqn];
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-      ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+      ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-      ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-      if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+      ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
         /*
          *  Here is where we figure out whether the row is to placed in
          *  the normal spot (e.g., ii = i), or whether a boundary condition
          *  require that the volumetric contribution be stuck in another
          *  ldof pertaining to the same variable type.
          */
-        ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+        ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
         var = PRESSURE;
         if (pdv[var]) {
-          pvar = upd->vp[pg->imtrx][var];
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            double resid = bf[var]->phi[j] * bf[eqn]->phi[i];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            double resid = goma_ctx->fem.bf[var]->phi[j] * goma_ctx->fem.bf[eqn]->phi[i];
             resid *= -d_area;
-            lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += resid;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += resid;
           }
         }
       }
@@ -420,12 +426,12 @@ int assemble_momentum_segregated(dbl time, /* current time */
   //! WIM is the length of the velocity vector
   int i, j, a, b;
   int ledof, eqn, var, ii, peqn, pvar;
-  int *pdv = pd->v[pg->imtrx];
+  int *pdv = goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx];
 
   int status = 0;
 
   eqn = R_MOMENTUM1;
-  double d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+  double d_area = goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->detJ * goma_ctx->fem.fv->h3;
 
   double rho;
   DENSITY_DEPENDENCE_STRUCT d_rho_struct;
@@ -437,31 +443,32 @@ int assemble_momentum_segregated(dbl time, /* current time */
    * Residuals_________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     /*
      * Assemble each component "a" of the momentum equation...
      */
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
           /*
            *  Here is where we figure out whether the row is to placed in
            *  the normal spot (e.g., ii = i), or whether a boundary condition
            *  require that the volumetric contribution be stuck in another
            *  ldof pertaining to the same variable type.
            */
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           double resid =
-              fv->v[a] - fv->v_star[a] + dt * (fv->grad_P_star[a] - fv_old->grad_P_star[a]) / rho;
-          resid *= -bf[eqn]->phi[i] * d_area;
+              goma_ctx->fem.fv->v[a] - goma_ctx->fem.fv->v_star[a] +
+              dt * (goma_ctx->fem.fv->grad_P_star[a] - goma_ctx->fem.fv_old->grad_P_star[a]) / rho;
+          resid *= -goma_ctx->fem.bf[eqn]->phi[i] * d_area;
 
           /*lec->R[peqn][ii] += mass + advection + porous + diffusion + source;*/
-          lec->R[LEC_R_INDEX(peqn, ii)] += resid;
+          goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, ii)] += resid;
 
 #ifdef DEBUG_MOMENTUM_RES
           printf("R_m[%d][%d] += %10f %10f %10f %10f %10f\n", a, i, mass, advection, porous,
@@ -477,34 +484,34 @@ int assemble_momentum_segregated(dbl time, /* current time */
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = upd->ep[pg->imtrx][eqn];
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+        ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
           /*
            *  Here is where we figure out whether the row is to placed in
            *  the normal spot (e.g., ii = i), or whether a boundary condition
            *  require that the volumetric contribution be stuck in another
            *  ldof pertaining to the same variable type.
            */
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           for (b = 0; b < WIM; b++) {
             var = VELOCITY1 + b;
             if (pdv[var]) {
-              pvar = upd->vp[pg->imtrx][var];
+              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
-                double resid = bf[var]->phi[j];
-                resid *= -delta(a, b) * bf[eqn]->phi[i] * d_area;
+                double resid = goma_ctx->fem.bf[var]->phi[j];
+                resid *= -delta(a, b) * goma_ctx->fem.bf[eqn]->phi[i] * d_area;
 
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += resid;
+                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += resid;
               }
             }
           }

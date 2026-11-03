@@ -67,19 +67,19 @@ static int calc_sa_S(dbl *S,              /* strain rate invariant */
 
   /* get stuff for Jacobian entries */
   v = VELOCITY1;
-  vdofs = ei[pg->imtrx]->dof[v];
+  vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
 
   if (d_S_dmesh != NULL || d_S_dv != NULL) {
-    if (pd->v[pg->imtrx][R_MESH1]) {
-      mdofs = ei[pg->imtrx]->dof[R_MESH1];
+    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+      mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
     }
 
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
         for (a = 0; a < VIM; a++) {
           for (i = 0; i < vdofs; i++) {
-            grad_phi_e_omega[i][a][p][q] =
-                bf[v]->grad_phi_e[i][a][p][q] - bf[v]->grad_phi_e[i][a][q][p];
+            grad_phi_e_omega[i][a][p][q] = goma_ctx->fem.bf[v]->grad_phi_e[i][a][p][q] -
+                                           goma_ctx->fem.bf[v]->grad_phi_e[i][a][q][p];
           }
         }
       }
@@ -90,15 +90,15 @@ static int calc_sa_S(dbl *S,              /* strain rate invariant */
    * d( gamma_dot )/dmesh
    */
 
-  if (pd->v[pg->imtrx][R_MESH1] && d_S_dmesh != NULL) {
+  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][R_MESH1] && d_S_dmesh != NULL) {
 
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
         for (b = 0; b < VIM; b++) {
           for (j = 0; j < mdofs; j++) {
 
-            d_omega_dmesh[p][q][b][j] =
-                fv->d_grad_v_dmesh[p][q][b][j] - fv->d_grad_v_dmesh[q][p][b][j];
+            d_omega_dmesh[p][q][b][j] = goma_ctx->fem.fv->d_grad_v_dmesh[p][q][b][j] -
+                                        goma_ctx->fem.fv->d_grad_v_dmesh[q][p][b][j];
           }
         }
       }
@@ -172,7 +172,7 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
   //! WIM is the length of the velocity vector
   int i, j, a, b;
   int eqn, var, peqn, pvar;
-  int *pdv = pd->v[pg->imtrx];
+  int *pdv = goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx];
 
   double mass, adv, src, diff;
   double src_1, src_2, diff_1, diff_2;
@@ -180,10 +180,10 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
   int status = 0;
 
   eqn = EDDY_NU;
-  double d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+  double d_area = goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->detJ * goma_ctx->fem.fv->h3;
 
   /* Get Eddy viscosity at Gauss point */
-  double mu_e = fv->eddy_nu;
+  double mu_e = goma_ctx->fem.fv->eddy_nu;
 
   int negative_sa = false;
   // Previous workaround, see comment for negative_Se below
@@ -205,15 +205,15 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
   }
 
   /* Get fluid viscosity */
-  double mu_newt = mp->viscosity;
+  double mu_newt = goma_ctx->fem.mp->viscosity;
 
   /* Rate of rotation tensor  */
   double omega[DIM][DIM];
   double omega_old[DIM][DIM];
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
-      omega[a][b] = (fv->grad_v[a][b] - fv->grad_v[b][a]);
-      omega_old[a][b] = (fv_old->grad_v[a][b] - fv_old->grad_v[b][a]);
+      omega[a][b] = (goma_ctx->fem.fv->grad_v[a][b] - goma_ctx->fem.fv->grad_v[b][a]);
+      omega_old[a][b] = (goma_ctx->fem.fv_old->grad_v[a][b] - goma_ctx->fem.fv_old->grad_v[b][a]);
     }
   }
 
@@ -225,7 +225,7 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
   calc_sa_S(&S, omega, dS_dvelo, dS_dmesh);
   calc_sa_S(&S_old, omega_old, NULL, NULL);
 
-  double d = fv->wall_distance;
+  double d = goma_ctx->fem.fv->wall_distance;
   /* Get distance from nearest wall */
   if (d < 1.0e-6)
     d = 1.0e-6;
@@ -344,52 +344,54 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
 
   dbl supg = 1.;
   SUPG_terms supg_terms;
-  if (mp->Mwt_funcModel == GALERKIN) {
+  if (goma_ctx->fem.mp->Mwt_funcModel == GALERKIN) {
     supg = 0.;
-  } else if (mp->Mwt_funcModel == SUPG || mp->Mwt_funcModel == SUPG_GP ||
-             mp->Mwt_funcModel == SUPG_SHAKIB) {
-    supg = mp->Mwt_func;
-    supg_tau_shakib(&supg_terms, pd->Num_Dim, dt, mu_newt, EDDY_NU);
+  } else if (goma_ctx->fem.mp->Mwt_funcModel == SUPG ||
+             goma_ctx->fem.mp->Mwt_funcModel == SUPG_GP ||
+             goma_ctx->fem.mp->Mwt_funcModel == SUPG_SHAKIB) {
+    supg = goma_ctx->fem.mp->Mwt_func;
+    supg_tau_shakib(&supg_terms, goma_ctx->fem.pd->Num_Dim, dt, mu_newt, EDDY_NU);
   }
 
   /*
    * Residuals_________________________________________________________________
    */
 
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     /*
      * Assemble residual for eddy viscosity
      */
     eqn = EDDY_NU;
-    peqn = upd->ep[pg->imtrx][eqn];
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-      dbl wt_func = bf[eqn]->phi[i];
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+      dbl wt_func = goma_ctx->fem.bf[eqn]->phi[i];
 
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < VIM; p++) {
-            wt_func += supg * supg_terms.supg_tau * fv->v[p] * bf[eqn]->grad_phi[i][p];
+            wt_func += supg * supg_terms.supg_tau * goma_ctx->fem.fv->v[p] *
+                       goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
 
       /* Assemble mass term */
       mass = 0.0;
-      if (pd->TimeIntegration != STEADY) {
-        if (pd->e[pg->imtrx][eqn] & T_MASS) {
-          mass += fv_dot->eddy_nu * wt_func * d_area;
-          mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+      if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
+          mass += goma_ctx->fem.fv_dot->eddy_nu * wt_func * d_area;
+          mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
 
       /* Assemble advection term */
       adv = 0;
       for (int p = 0; p < VIM; p++) {
-        adv += fv->v[p] * fv->grad_eddy_nu[p];
+        adv += goma_ctx->fem.fv->v[p] * goma_ctx->fem.fv->grad_eddy_nu[p];
       }
       adv *= wt_func * d_area;
-      adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+      adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
 
       double neg_c = 1.0;
       if (negative_sa) {
@@ -401,20 +403,22 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
       src_2 = neg_c * cw1 * fw * (mu_e * mu_e) / (d * d);
       src = -src_1 + src_2;
       src *= wt_func * d_area;
-      src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+      src *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
       /* Assemble diffusion terms */
       diff_1 = 0.0;
       diff_2 = 0.0;
       for (int p = 0; p < VIM; p++) {
-        diff_1 += bf[eqn]->grad_phi[i][p] * (mu_newt + mu_e * fn) * fv->grad_eddy_nu[p];
-        diff_2 += wt_func * cb2 * fv->grad_eddy_nu[p] * fv->grad_eddy_nu[p];
+        diff_1 += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu_newt + mu_e * fn) *
+                  goma_ctx->fem.fv->grad_eddy_nu[p];
+        diff_2 +=
+            wt_func * cb2 * goma_ctx->fem.fv->grad_eddy_nu[p] * goma_ctx->fem.fv->grad_eddy_nu[p];
       }
       diff = (1.0 / sigma) * (diff_1 - diff_2);
       diff *= d_area;
-      diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
-      lec->R[LEC_R_INDEX(peqn, i)] += mass + adv + src + diff;
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += mass + adv + src + diff;
     } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
   } /* end of if assemble residual */
 
@@ -422,13 +426,13 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     eqn = EDDY_NU;
-    peqn = upd->ep[pg->imtrx][eqn];
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
-      dbl wt_func = bf[eqn]->phi[i];
+      dbl wt_func = goma_ctx->fem.bf[eqn]->phi[i];
 
       dbl r_mass = 0;
       dbl r_adv = 0;
@@ -437,25 +441,26 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < VIM; p++) {
-            wt_func += supg * supg_terms.supg_tau * fv->v[p] * bf[eqn]->grad_phi[i][p];
+            wt_func += supg * supg_terms.supg_tau * goma_ctx->fem.fv->v[p] *
+                       goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
 
         /* Assemble mass term */
         r_mass = 0.0;
-        if (pd->TimeIntegration != STEADY) {
-          if (pd->e[pg->imtrx][eqn] & T_MASS) {
-            r_mass += fv_dot->eddy_nu;
-            mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+        if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
+            r_mass += goma_ctx->fem.fv_dot->eddy_nu;
+            mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
           }
         }
 
         /* Assemble advection term */
         r_adv = 0;
         for (int p = 0; p < VIM; p++) {
-          r_adv += fv->v[p] * fv->grad_eddy_nu[p];
+          r_adv += goma_ctx->fem.fv->v[p] * goma_ctx->fem.fv->grad_eddy_nu[p];
         }
-        r_adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+        r_adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
 
         double neg_c = 1.0;
         if (negative_sa) {
@@ -466,68 +471,72 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
         src_1 = cb1 * S_e * mu_e;
         src_2 = neg_c * cw1 * fw * (mu_e * mu_e) / (d * d);
         r_src = -src_1 + src_2;
-        r_src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+        r_src *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
         /* Assemble diffusion terms */
         diff_1 = 0.0;
         diff_2 = 0.0;
         for (int p = 0; p < VIM; p++) {
-          diff_2 += wt_func * cb2 * fv->grad_eddy_nu[p] * fv->grad_eddy_nu[p];
+          diff_2 +=
+              wt_func * cb2 * goma_ctx->fem.fv->grad_eddy_nu[p] * goma_ctx->fem.fv->grad_eddy_nu[p];
         }
         r_diff = (1.0 / sigma) * (diff_1 - diff_2);
-        r_diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+        r_diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
       }
 
       /* Sensitivity w.r.t. eddy viscosity */
       var = EDDY_NU;
       if (pdv[var]) {
-        pvar = upd->vp[pg->imtrx][var];
+        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
           /* Assemble mass term */
           mass = 0.0;
-          if (pd->TimeIntegration != STEADY) {
-            if (pd->e[pg->imtrx][eqn] & T_MASS) {
-              mass += (1.0 + 2.0 * tt) / dt * bf[eqn]->phi[j] * wt_func * d_area;
-              mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+          if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
+              mass += (1.0 + 2.0 * tt) / dt * goma_ctx->fem.bf[eqn]->phi[j] * wt_func * d_area;
+              mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
             }
           }
 
           /* Assemble advection term */
           adv = 0.0;
           for (int p = 0; p < VIM; p++) {
-            adv += fv->v[p] * bf[eqn]->grad_phi[j][p];
+            adv += goma_ctx->fem.fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[j][p];
           }
           adv *= wt_func * d_area;
-          adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+          adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
 
           double neg_c = 1.0;
           if (negative_sa) {
             neg_c = -1.0;
           }
           /* Assemble source term */
-          src_1 = cb1 * (dS_e_dmu_e * bf[eqn]->phi[j] * mu_e + S_e * bf[eqn]->phi[j]);
-          src_2 = neg_c *
-                  ((cw1 / d / d) * bf[var]->phi[j] * (dfw_dmu_e * mu_e * mu_e + fw * 2.0 * mu_e));
+          src_1 = cb1 * (dS_e_dmu_e * goma_ctx->fem.bf[eqn]->phi[j] * mu_e +
+                         S_e * goma_ctx->fem.bf[eqn]->phi[j]);
+          src_2 = neg_c * ((cw1 / d / d) * goma_ctx->fem.bf[var]->phi[j] *
+                           (dfw_dmu_e * mu_e * mu_e + fw * 2.0 * mu_e));
           src = -src_1 + src_2;
           src *= wt_func * d_area;
-          src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+          src *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
           /* Assemble diffusion terms */
           diff_1 = 0.0;
           diff_2 = 0.0;
           for (int p = 0; p < VIM; p++) {
-            diff_1 += bf[eqn]->grad_phi[i][p] *
-                      ((fn + mu_e * dfn_dmu_e) * bf[eqn]->phi[j] * fv->grad_eddy_nu[p] +
-                       (mu_newt + mu_e * fn) * bf[eqn]->grad_phi[j][p]);
-            diff_2 += wt_func * cb2 * 2.0 * fv->grad_eddy_nu[p] * bf[var]->grad_phi[j][p];
+            diff_1 += goma_ctx->fem.bf[eqn]->grad_phi[i][p] *
+                      ((fn + mu_e * dfn_dmu_e) * goma_ctx->fem.bf[eqn]->phi[j] *
+                           goma_ctx->fem.fv->grad_eddy_nu[p] +
+                       (mu_newt + mu_e * fn) * goma_ctx->fem.bf[eqn]->grad_phi[j][p]);
+            diff_2 += wt_func * cb2 * 2.0 * goma_ctx->fem.fv->grad_eddy_nu[p] *
+                      goma_ctx->fem.bf[var]->grad_phi[j][p];
           }
           diff = (1.0 / sigma) * (diff_1 - diff_2);
           diff *= d_area;
-          diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+          diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass + adv + src + diff;
+          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass + adv + src + diff;
         } /* End of loop over j */
       } /* End of if the variable is active */
 
@@ -535,24 +544,24 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
       for (b = 0; b < VIM; b++) {
         var = VELOCITY1 + b;
         if (pdv[var]) {
-          pvar = upd->vp[pg->imtrx][var];
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             if (supg > 0) {
-              dbl d_wt_func =
-                  supg * bf[var]->phi[j] * supg_terms.supg_tau * bf[eqn]->grad_phi[i][b];
+              dbl d_wt_func = supg * goma_ctx->fem.bf[var]->phi[j] * supg_terms.supg_tau *
+                              goma_ctx->fem.bf[eqn]->grad_phi[i][b];
               for (int p = 0; p < VIM; p++) {
-                d_wt_func +=
-                    supg * fv->v[p] * supg_terms.d_supg_tau_dv[p][j] * bf[eqn]->grad_phi[i][p];
+                d_wt_func += supg * goma_ctx->fem.fv->v[p] * supg_terms.d_supg_tau_dv[p][j] *
+                             goma_ctx->fem.bf[eqn]->grad_phi[i][p];
               }
-              lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
                   (r_mass + r_adv + r_src + r_diff) * d_area * d_wt_func;
             }
 
             /* Assemble advection term */
-            adv = bf[var]->phi[j] * fv->grad_eddy_nu[b];
+            adv = goma_ctx->fem.bf[var]->phi[j] * goma_ctx->fem.fv->grad_eddy_nu[b];
             adv *= wt_func * d_area;
-            adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+            adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
 
             double neg_c = 1.0;
             if (negative_sa) {
@@ -563,56 +572,58 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
             src_2 = neg_c * cw1 * dfw_dS * dS_dvelo[b][j] * (mu_e / d) * (mu_e / d);
             src = -src_1 + src_2;
             src *= wt_func * d_area;
-            src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+            src *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += adv + src;
+            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += adv + src;
 
           } /* End of loop over j */
         } /* End of if the variale is active */
       } /* End of loop over velocity components */
 
       /* Sensistivity w.r.t. mesh */
-      for (b = pd->Num_Dim; b < pd->Num_Dim; b++) {
+      for (b = goma_ctx->fem.pd->Num_Dim; b < goma_ctx->fem.pd->Num_Dim; b++) {
         var = MESH_DISPLACEMENT1 + b;
         if (pdv[var]) {
-          pvar = upd->vp[pg->imtrx][var];
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            double d_area_dmesh = +fv->wt * bf[eqn]->d_det_J_dm[b][j] * fv->h3 +
-                                  fv->wt * bf[eqn]->detJ * fv->dh3dmesh[b][j];
+          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            double d_area_dmesh = +goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->d_det_J_dm[b][j] *
+                                      goma_ctx->fem.fv->h3 +
+                                  goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->detJ *
+                                      goma_ctx->fem.fv->dh3dmesh[b][j];
             if (supg > 0) {
               dbl d_wt_func = 0;
               for (int p = 0; p < VIM; p++) {
-                d_wt_func +=
-                    supg * fv->v[p] * supg_terms.d_supg_tau_dX[p][j] * bf[eqn]->grad_phi[i][p];
-                d_wt_func +=
-                    supg * fv->v[p] * supg_terms.supg_tau * bf[eqn]->d_grad_phi_dmesh[i][p][b][j];
+                d_wt_func += supg * goma_ctx->fem.fv->v[p] * supg_terms.d_supg_tau_dX[p][j] *
+                             goma_ctx->fem.bf[eqn]->grad_phi[i][p];
+                d_wt_func += supg * goma_ctx->fem.fv->v[p] * supg_terms.supg_tau *
+                             goma_ctx->fem.bf[eqn]->d_grad_phi_dmesh[i][p][b][j];
               }
-              lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
                   (r_mass + r_adv + r_src + r_diff) * d_area * d_wt_func +
                   (r_mass + r_adv + r_src + r_diff) * d_area_dmesh * wt_func;
             }
 
             /* Assemble mass term */
             mass = 0.0;
-            if (pd->TimeIntegration != STEADY) {
-              if (pd->e[pg->imtrx][eqn] & T_MASS) {
-                mass += fv_dot->eddy_nu * wt_func * d_area_dmesh;
-                mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+            if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
+                mass += goma_ctx->fem.fv_dot->eddy_nu * wt_func * d_area_dmesh;
+                mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
               }
             }
 
             /* Assemble advection term */
             adv = 0;
             for (int p = 0; p < VIM; p++) {
-              adv += fv->v[p] * fv->grad_eddy_nu[p];
+              adv += goma_ctx->fem.fv->v[p] * goma_ctx->fem.fv->grad_eddy_nu[p];
             }
             dbl d_adv = 0;
             for (int p = 0; p < VIM; p++) {
-              d_adv += fv->v[p] * fv->d_grad_eddy_nu_dmesh[p][b][j];
+              d_adv += goma_ctx->fem.fv->v[p] * goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[p][b][j];
             }
             adv *= wt_func * d_area_dmesh;
             adv += d_adv * wt_func * d_area;
-            adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+            adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
 
             double neg_c = 1.0;
             if (negative_sa) {
@@ -628,7 +639,7 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
             dbl d_src = -d_src_1 + d_src_2;
             src *= wt_func * d_area_dmesh;
             src += d_src * wt_func * d_area;
-            src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+            src *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
             /* Assemble diffusion terms */
             dbl d_diff_1 = 0;
@@ -636,23 +647,25 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
             diff_1 = 0.0;
             diff_2 = 0.0;
             for (int p = 0; p < VIM; p++) {
-              diff_1 += bf[eqn]->grad_phi[i][p] * (mu_newt + mu_e * fn) * fv->grad_eddy_nu[p];
-              diff_2 += wt_func * cb2 * fv->grad_eddy_nu[p] * fv->grad_eddy_nu[p];
+              diff_1 += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu_newt + mu_e * fn) *
+                        goma_ctx->fem.fv->grad_eddy_nu[p];
+              diff_2 += wt_func * cb2 * goma_ctx->fem.fv->grad_eddy_nu[p] *
+                        goma_ctx->fem.fv->grad_eddy_nu[p];
 
-              d_diff_1 += bf[eqn]->d_grad_phi_dmesh[i][p][b][j] * (mu_newt + mu_e * fn) *
-                          fv->grad_eddy_nu[p];
-              d_diff_1 += bf[eqn]->grad_phi[i][p] * (mu_newt + mu_e * fn) *
-                          fv->d_grad_eddy_nu_dmesh[p][b][j];
-              d_diff_2 +=
-                  wt_func * cb2 * 2.0 * fv->d_grad_eddy_nu_dmesh[p][b][j] * fv->grad_eddy_nu[p];
+              d_diff_1 += goma_ctx->fem.bf[eqn]->d_grad_phi_dmesh[i][p][b][j] *
+                          (mu_newt + mu_e * fn) * goma_ctx->fem.fv->grad_eddy_nu[p];
+              d_diff_1 += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu_newt + mu_e * fn) *
+                          goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[p][b][j];
+              d_diff_2 += wt_func * cb2 * 2.0 * goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[p][b][j] *
+                          goma_ctx->fem.fv->grad_eddy_nu[p];
             }
             diff = (1.0 / sigma) * (diff_1 - diff_2);
             dbl d_diff = (1.0 / sigma) * (d_diff_1 - d_diff_2);
             diff *= d_area_dmesh;
             diff += d_diff * d_area;
-            diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+            diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
-            lec->R[LEC_R_INDEX(peqn, i)] += mass + adv + src + diff;
+            goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] += mass + adv + src + diff;
           } /* End of loop over j */
         }
       }
@@ -663,18 +676,19 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
 }
 
 void compute_sst_blending(dbl *F1, dbl *F2) {
-  dbl mu = mp->viscosity;
-  dbl rho = density(NULL, tran->time_value);
+  dbl mu = goma_ctx->fem.mp->viscosity;
+  dbl rho = density(NULL, goma_ctx->fem.tran->time_value);
 
   dbl grad_k_dot_grad_omega = 0.;
   for (int i = 0; i < DIM; i++) {
-    grad_k_dot_grad_omega += fv_old->grad_turb_k[i] * fv_old->grad_turb_omega[i];
+    grad_k_dot_grad_omega +=
+        goma_ctx->fem.fv_old->grad_turb_k[i] * goma_ctx->fem.fv_old->grad_turb_omega[i];
   }
-  dbl omega = fmax(1e-20, fv_old->turb_omega);
-  dbl k = fmax(1e-20, fv_old->turb_k);
+  dbl omega = fmax(1e-20, goma_ctx->fem.fv_old->turb_omega);
+  dbl k = fmax(1e-20, goma_ctx->fem.fv_old->turb_k);
   dbl sigma_omega2 = 0.856;
   dbl beta_star = 0.09;
-  dbl d = fv->wall_distance;
+  dbl d = goma_ctx->fem.fv->wall_distance;
 
   dbl CD_kw = fmax(2 * rho * sigma_omega2 * (1 / omega) * grad_k_dot_grad_omega, 1e-10);
 
@@ -689,11 +703,11 @@ void compute_sst_blending(dbl *F1, dbl *F2) {
 }
 
 dbl sst_viscosity(const dbl Omega_old, const dbl F2) {
-  dbl omega = fmax(1e-20, fv_old->turb_omega);
-  dbl k = fmax(1e-20, fv_old->turb_k);
-  dbl rho = density(NULL, tran->time_value);
+  dbl omega = fmax(1e-20, goma_ctx->fem.fv_old->turb_omega);
+  dbl k = fmax(1e-20, goma_ctx->fem.fv_old->turb_k);
+  dbl rho = density(NULL, goma_ctx->fem.tran->time_value);
   dbl a1 = 0.31;
-  dbl mu_turb = mp->viscosity + rho * a1 * k / (fmax(a1 * omega, Omega_old * F2));
+  dbl mu_turb = goma_ctx->fem.mp->viscosity + rho * a1 * k / (fmax(a1 * omega, Omega_old * F2));
   return mu_turb;
 }
 
@@ -718,7 +732,7 @@ int assemble_k_omega_sst_modified(dbl time_value, /* current time */
   double W[DIM][DIM];
   for (int i = 0; i < DIM; i++) {
     for (int j = 0; j < DIM; j++) {
-      W[i][j] = 0.5 * (fv->grad_v[i][j] - fv->grad_v[j][i]);
+      W[i][j] = 0.5 * (goma_ctx->fem.fv->grad_v[i][j] - goma_ctx->fem.fv->grad_v[j][i]);
     }
   }
 
@@ -728,14 +742,15 @@ int assemble_k_omega_sst_modified(dbl time_value, /* current time */
   double Omega = 0.0;
   calc_sa_S(&Omega, W, d_Omega_dv, d_Omega_dm);
 
-  dbl mu = mp->viscosity;
+  dbl mu = goma_ctx->fem.mp->viscosity;
 
   dbl grad_k_dot_grad_omega = 0.;
-  for (int i = 0; i < pd->Num_Dim; i++) {
-    grad_k_dot_grad_omega += fv_old->grad_turb_k[i] * fv_old->grad_turb_omega[i];
+  for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
+    grad_k_dot_grad_omega +=
+        goma_ctx->fem.fv_old->grad_turb_k[i] * goma_ctx->fem.fv_old->grad_turb_omega[i];
   }
 
-  dbl omega = fmax(1e-20, fv_old->turb_omega);
+  dbl omega = fmax(1e-20, goma_ctx->fem.fv_old->turb_omega);
   dbl sigma_omega1 = 0.5;
   dbl sigma_omega2 = 0.856;
   dbl sigma_k1 = 0.85;
@@ -758,31 +773,32 @@ int assemble_k_omega_sst_modified(dbl time_value, /* current time */
   dbl beta = beta1 * F1 + beta2 * (1 - F1);
 
   dbl gamma = gamma1 * F1 + gamma2 * (1 - F1);
-  dbl omega_old = fmax(1e-20, fv_old->turb_omega);
-  dbl k_old = fmax(1e-20, fv_old->turb_k);
+  dbl omega_old = fmax(1e-20, goma_ctx->fem.fv_old->turb_omega);
+  dbl k_old = fmax(1e-20, goma_ctx->fem.fv_old->turb_k);
 
-  dbl d = fv->wall_distance;
+  dbl d = goma_ctx->fem.fv->wall_distance;
   dbl exp_diff = 1 * 1e-4 * exp(-3000 * d);
 
   dbl P = mu_turb * Omega * Omega;
-  dbl Plim_k = fmin(P, 10 * beta_star * rho * fv->turb_omega * k_old);
+  dbl Plim_k = fmin(P, 10 * beta_star * rho * goma_ctx->fem.fv->turb_omega * k_old);
   dbl Plim_omega = P;
 
   SUPG_terms supg_terms;
-  supg_tau_shakib(&supg_terms, pd->Num_Dim, dt, mu + sigma_omega * mu_turb, TURB_OMEGA);
+  supg_tau_shakib(&supg_terms, goma_ctx->fem.pd->Num_Dim, dt, mu + sigma_omega * mu_turb,
+                  TURB_OMEGA);
   dbl tau_supg_w = supg_terms.supg_tau;
-  supg_tau_shakib(&supg_terms, pd->Num_Dim, dt, mu + sigma_k * mu_turb, TURB_K);
+  supg_tau_shakib(&supg_terms, goma_ctx->fem.pd->Num_Dim, dt, mu + sigma_k * mu_turb, TURB_K);
   dbl tau_supg_k = supg_terms.supg_tau;
   /*
    * Residuals_________________________________________________________________
    */
-  if (af->Assemble_Residual) {
+  if (goma_ctx->fem.af->Assemble_Residual) {
     /*
      * Assemble residual for eddy viscosity
      */
     eqn = TURB_K;
-    peqn = upd->ep[pg->imtrx][eqn];
-    dbl d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+    dbl d_area = goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->detJ * goma_ctx->fem.fv->h3;
 
     // dbl Z_k = rho * fv_dot->turb_k;
     // for (int i = 0; i < pd->Num_Dim; i++) {
@@ -845,60 +861,63 @@ int assemble_k_omega_sst_modified(dbl time_value, /* current time */
     // }
     dbl vshock_k = 0;
 
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-      dbl wt_func = bf[eqn]->phi[i];
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+      dbl wt_func = goma_ctx->fem.bf[eqn]->phi[i];
 
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < VIM; p++) {
-            wt_func += supg * tau_supg_k * fv->v[p] * bf[eqn]->grad_phi[i][p];
+            wt_func +=
+                supg * tau_supg_k * goma_ctx->fem.fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
 
       /* Assemble mass term */
       dbl mass = 0.0;
-      if (pd->TimeIntegration != STEADY) {
-        if (pd->e[pg->imtrx][eqn] & T_MASS) {
-          mass += rho * fv_dot->turb_k;
+      if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
+          mass += rho * goma_ctx->fem.fv_dot->turb_k;
           mass *= wt_func * d_area;
-          mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+          mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
 
       /* Assemble advection term */
       dbl adv = 0;
       for (int p = 0; p < VIM; p++) {
-        if (pd->gv[R_MESH1]) {
-          adv += rho * (fv->v[p] - fv_dot->x[p]) * fv->grad_turb_k[p];
+        if (goma_ctx->fem.pd->gv[R_MESH1]) {
+          adv += rho * (goma_ctx->fem.fv->v[p] - goma_ctx->fem.fv_dot->x[p]) *
+                 goma_ctx->fem.fv->grad_turb_k[p];
         } else {
-          adv += rho * fv->v[p] * fv->grad_turb_k[p];
+          adv += rho * goma_ctx->fem.fv->v[p] * goma_ctx->fem.fv->grad_turb_k[p];
         }
       }
       adv *= wt_func * d_area;
-      adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+      adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
 
       /* Assemble source terms */
       // Production - Destruction
-      dbl src = Plim_k - beta_star * rho * fv->turb_omega * fv->turb_k;
+      dbl src = Plim_k - beta_star * rho * goma_ctx->fem.fv->turb_omega * goma_ctx->fem.fv->turb_k;
       src *= -wt_func * d_area;
-      src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+      src *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
       /* Assemble diffusion terms */
       dbl diff = 0.0;
       for (int p = 0; p < VIM; p++) {
-        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_k + vshock_k) * fv->grad_turb_k[p];
+        diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_k + vshock_k) *
+                goma_ctx->fem.fv->grad_turb_k[p];
         // + bf[eqn]->grad_phi[i][p] * vshock_k * gs_inner_dot[p];
       }
       diff *= d_area;
-      diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
-      lec->R[LEC_R_INDEX(peqn, i)] -= mass + adv + src + diff;
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] -= mass + adv + src + diff;
     } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
 
     eqn = TURB_OMEGA;
-    peqn = upd->ep[pg->imtrx][eqn];
-    d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+    d_area = goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->detJ * goma_ctx->fem.fv->h3;
     // dbl Z_w = rho * fv->turb_omega_dot;
     // for (int i = 0; i < pd->Num_Dim; i++) {
     //   Z_w += rho * fv->v[i] * fv->grad_turb_omega[i];
@@ -948,40 +967,43 @@ int assemble_k_omega_sst_modified(dbl time_value, /* current time */
     // }
     dbl vshock_w = 0;
 
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-      dbl wt_func = bf[eqn]->phi[i];
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+      dbl wt_func = goma_ctx->fem.bf[eqn]->phi[i];
 
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < VIM; p++) {
-            wt_func += supg * tau_supg_w * fv->v[p] * bf[eqn]->grad_phi[i][p];
+            wt_func +=
+                supg * tau_supg_w * goma_ctx->fem.fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
 
       /* Assemble mass term */
       dbl mass = 0.0;
-      if (pd->TimeIntegration != STEADY) {
-        if (pd->e[pg->imtrx][eqn] & T_MASS) {
-          mass += rho * fv_dot->turb_omega * wt_func * d_area;
-          mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+      if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+        if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
+          mass += rho * goma_ctx->fem.fv_dot->turb_omega * wt_func * d_area;
+          mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
 
       /* Assemble advection term */
       dbl adv = 0;
       for (int p = 0; p < VIM; p++) {
-        if (pd->gv[R_MESH1]) {
-          adv += rho * (fv->v[p] - fv_dot->x[p]) * fv->grad_turb_omega[p];
+        if (goma_ctx->fem.pd->gv[R_MESH1]) {
+          adv += rho * (goma_ctx->fem.fv->v[p] - goma_ctx->fem.fv_dot->x[p]) *
+                 goma_ctx->fem.fv->grad_turb_omega[p];
         } else {
-          adv += rho * fv->v[p] * fv->grad_turb_omega[p];
+          adv += rho * goma_ctx->fem.fv->v[p] * goma_ctx->fem.fv->grad_turb_omega[p];
         }
       }
       adv *= wt_func * d_area;
-      adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+      adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
 
       /* Assemble source terms */
-      dbl src = (gamma * rho / mu_turb) * Plim_omega - beta * rho * omega * fv->turb_omega +
+      dbl src = (gamma * rho / mu_turb) * Plim_omega -
+                beta * rho * omega * goma_ctx->fem.fv->turb_omega +
                 2 * (1 - F1) * (rho * sigma_omega2 / omega_old) * grad_k_dot_grad_omega;
       // penalty for near wall
       // if (d < 0.4) {
@@ -994,19 +1016,20 @@ int assemble_k_omega_sst_modified(dbl time_value, /* current time */
       //   }
       // }
       src *= -wt_func * d_area;
-      src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+      src *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
       /* Assemble diffusion terms */
       dbl diff = 0.0;
       for (int p = 0; p < VIM; p++) {
-        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_omega + vshock_w + exp_diff) *
-                fv->grad_turb_omega[p];
+        diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] *
+                (mu + mu_turb * sigma_omega + vshock_w + exp_diff) *
+                goma_ctx->fem.fv->grad_turb_omega[p];
         // + bf[eqn]->grad_phi[i][p] * vshock_w * gs_inner_dot[p];
       }
       diff *= d_area;
-      diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
-      lec->R[LEC_R_INDEX(peqn, i)] -= mass + adv + src + diff;
+      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] -= mass + adv + src + diff;
     } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
   } /* end of if assemble residual */
 
@@ -1014,123 +1037,128 @@ int assemble_k_omega_sst_modified(dbl time_value, /* current time */
    * Jacobian terms...
    */
 
-  if (af->Assemble_Jacobian) {
+  if (goma_ctx->fem.af->Assemble_Jacobian) {
     eqn = TURB_OMEGA;
-    peqn = upd->ep[pg->imtrx][eqn];
-    dbl d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+    dbl d_area = goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->detJ * goma_ctx->fem.fv->h3;
 
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
       dbl vshock_w = 0;
-      dbl wt_func = bf[eqn]->phi[i];
+      dbl wt_func = goma_ctx->fem.bf[eqn]->phi[i];
 
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < VIM; p++) {
-            wt_func += supg * tau_supg_w * fv->v[p] * bf[eqn]->grad_phi[i][p];
+            wt_func +=
+                supg * tau_supg_w * goma_ctx->fem.fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
       int var = TURB_OMEGA;
-      int pvar = upd->vp[pg->imtrx][var];
-      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      int pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
         /* Assemble mass term */
         dbl mass = 0.0;
-        if (pd->TimeIntegration != STEADY) {
-          if (pd->e[pg->imtrx][eqn] & T_MASS) {
-            mass += rho * (1.0 + 2.0 * tt) / dt * bf[eqn]->phi[j] * wt_func * d_area;
-            mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+        if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
+            mass += rho * (1.0 + 2.0 * tt) / dt * goma_ctx->fem.bf[eqn]->phi[j] * wt_func * d_area;
+            mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
           }
         }
 
         /* Assemble advection term */
         dbl adv = 0;
         for (int p = 0; p < VIM; p++) {
-          if (pd->gv[R_MESH1]) {
-            adv += rho * (fv->v[p] - fv_dot->x[p]) * bf[var]->grad_phi[j][p];
+          if (goma_ctx->fem.pd->gv[R_MESH1]) {
+            adv += rho * (goma_ctx->fem.fv->v[p] - goma_ctx->fem.fv_dot->x[p]) *
+                   goma_ctx->fem.bf[var]->grad_phi[j][p];
           } else {
-            adv += rho * fv->v[p] * bf[var]->grad_phi[j][p];
+            adv += rho * goma_ctx->fem.fv->v[p] * goma_ctx->fem.bf[var]->grad_phi[j][p];
           }
         }
         adv *= wt_func * d_area;
-        adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+        adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
 
         /* Assemble diffusion terms */
         dbl diff = 0.0;
         for (int p = 0; p < VIM; p++) {
-          diff += bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_omega + vshock_w + exp_diff) *
-                  bf[eqn]->grad_phi[j][p];
+          diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] *
+                  (mu + mu_turb * sigma_omega + vshock_w + exp_diff) *
+                  goma_ctx->fem.bf[eqn]->grad_phi[j][p];
           // + bf[eqn]->grad_phi[i][p] * vshock_w * gs_inner_dot[p];
         }
         diff *= d_area;
-        diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+        diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
         /* Assemble source terms */
-        dbl src = -beta * rho * omega * bf[var]->phi[j];
+        dbl src = -beta * rho * omega * goma_ctx->fem.bf[var]->phi[j];
         src *= -wt_func * d_area;
-        src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+        src *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
-        lec->J[LEC_J_INDEX(peqn, pvar, i, j)] -= mass + adv + src + diff;
+        goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] -= mass + adv + src + diff;
       } /* End of if the variale is active */
     }
     eqn = TURB_K;
-    peqn = upd->ep[pg->imtrx][eqn];
-    d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+    peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+    d_area = goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->detJ * goma_ctx->fem.fv->h3;
 
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
       dbl vshock_k = 0;
-      dbl wt_func = bf[eqn]->phi[i];
+      dbl wt_func = goma_ctx->fem.bf[eqn]->phi[i];
 
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < VIM; p++) {
-            wt_func += supg * tau_supg_k * fv->v[p] * bf[eqn]->grad_phi[i][p];
+            wt_func +=
+                supg * tau_supg_k * goma_ctx->fem.fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
       int var = TURB_K;
-      int pvar = upd->vp[pg->imtrx][var];
-      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      int pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+      for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
         /* Assemble mass term */
         dbl mass = 0.0;
-        if (pd->TimeIntegration != STEADY) {
-          if (pd->e[pg->imtrx][eqn] & T_MASS) {
-            mass += rho * (1.0 + 2.0 * tt) / dt * bf[var]->phi[j];
+        if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+          if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
+            mass += rho * (1.0 + 2.0 * tt) / dt * goma_ctx->fem.bf[var]->phi[j];
             mass *= wt_func * d_area;
-            mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+            mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
           }
         }
 
         /* Assemble advection term */
         dbl adv = 0;
         for (int p = 0; p < VIM; p++) {
-          if (pd->gv[R_MESH1]) {
-            adv += rho * (fv->v[p] - fv_dot->x[p]) * bf[var]->grad_phi[j][p];
+          if (goma_ctx->fem.pd->gv[R_MESH1]) {
+            adv += rho * (goma_ctx->fem.fv->v[p] - goma_ctx->fem.fv_dot->x[p]) *
+                   goma_ctx->fem.bf[var]->grad_phi[j][p];
           } else {
-            adv += rho * fv->v[p] * bf[var]->grad_phi[j][p];
+            adv += rho * goma_ctx->fem.fv->v[p] * goma_ctx->fem.bf[var]->grad_phi[j][p];
           }
         }
         adv *= wt_func * d_area;
-        adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+        adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
 
         /* Assemble source terms */
         // Production - Destruction
-        dbl src = -beta * rho * omega * bf[var]->phi[j];
+        dbl src = -beta * rho * omega * goma_ctx->fem.bf[var]->phi[j];
         src *= -wt_func * d_area;
-        src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+        src *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
         /* Assemble diffusion terms */
         dbl diff = 0.0;
         for (int p = 0; p < VIM; p++) {
-          diff += bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_k + vshock_k) *
-                  bf[var]->grad_phi[j][p];
+          diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_k + vshock_k) *
+                  goma_ctx->fem.bf[var]->grad_phi[j][p];
           // + bf[eqn]->grad_phi[i][p] * vshock_k * gs_inner_dot[p];
         }
         diff *= d_area;
-        diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+        diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
-        lec->J[LEC_J_INDEX(peqn, pvar, i, j)] -= mass + adv + src + diff;
+        goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] -= mass + adv + src + diff;
       } /* End of if the variale is active */
     }
   } /* End of if assemble Jacobian */

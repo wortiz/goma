@@ -118,30 +118,32 @@ void load_extra_unknownsAC(int iAC,     /* ID NUMBER OF AC'S */
   if (iAC < 0)
     return;
 
-  if (augc[iAC].Type == AC_LGRM) {
-    xa[iAC] = augc[iAC].DataFlt[0];
+  if (goma_ctx->fem.augc[iAC].Type == AC_LGRM) {
+    xa[iAC] = goma_ctx->fem.augc[iAC].DataFlt[0];
     return;
   }
 
-  if (augc[iAC].Type == AC_OVERLAP || augc[iAC].Type == AC_PF_CONSTRAINT) {
-    xa[iAC] = augc[iAC].lm_value;
+  if (goma_ctx->fem.augc[iAC].Type == AC_OVERLAP ||
+      goma_ctx->fem.augc[iAC].Type == AC_PF_CONSTRAINT) {
+    xa[iAC] = goma_ctx->fem.augc[iAC].lm_value;
   }
 
-  if (augc[iAC].Type == AC_PERIODIC) {
-    xa[iAC] = augc[iAC].lm_value;
+  if (goma_ctx->fem.augc[iAC].Type == AC_PERIODIC) {
+    xa[iAC] = goma_ctx->fem.augc[iAC].lm_value;
   }
 
-  if (augc[iAC].Type == AC_USERBC || augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_FLUX ||
-      augc[iAC].Type == AC_LS_VEL || augc[iAC].Type == AC_POSITION || augc[iAC].Type == AC_ANGLE ||
-      augc[iAC].Type == AC_POSITION_MT) {
+  if (goma_ctx->fem.augc[iAC].Type == AC_USERBC || goma_ctx->fem.augc[iAC].Type == AC_VOLUME ||
+      goma_ctx->fem.augc[iAC].Type == AC_FLUX || goma_ctx->fem.augc[iAC].Type == AC_LS_VEL ||
+      goma_ctx->fem.augc[iAC].Type == AC_POSITION || goma_ctx->fem.augc[iAC].Type == AC_ANGLE ||
+      goma_ctx->fem.augc[iAC].Type == AC_POSITION_MT) {
 
-    ibc = augc[iAC].BCID;
-    idf = augc[iAC].DFID;
+    ibc = goma_ctx->fem.augc[iAC].BCID;
+    idf = goma_ctx->fem.augc[iAC].DFID;
 
     /*  case for user defined parameter  */
 
     if (ibc == APREPRO_AC_BCID || ibc == APREPRO_LIB_AC_BCID) {
-      xa[iAC] = augc[iAC].DataFlt[0];
+      xa[iAC] = goma_ctx->fem.augc[iAC].DataFlt[0];
     } else {
 
       switch (BC_Types[ibc].BC_Name) {
@@ -198,114 +200,115 @@ void load_extra_unknownsAC(int iAC,     /* ID NUMBER OF AC'S */
       }
     }
 
-  } else if (augc[iAC].Type == AC_USERMAT || augc[iAC].Type == AC_FLUX_MAT) {
+  } else if (goma_ctx->fem.augc[iAC].Type == AC_USERMAT ||
+             goma_ctx->fem.augc[iAC].Type == AC_FLUX_MAT) {
 
-    mn = map_mat_index(augc[iAC].MTID);
+    mn = map_mat_index(goma_ctx->fem.augc[iAC].MTID);
 
-    switch (augc[iAC].MPID) {
+    switch (goma_ctx->fem.augc[iAC].MPID) {
 
       /*
        * General Model Constants
        */
 
     case TAGC_THERMAL_CONDUCTIVITY:
-      xa[iAC] = mp_glob[mn]->thermal_conductivity;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->thermal_conductivity;
       break;
 
     case TAGC_ACOUSTIC_WAVENUMBER:
-      xa[iAC] = mp_glob[mn]->wave_number;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->wave_number;
       break;
 
     case TAGC_ACOUSTIC_IMPEDANCE:
-      xa[iAC] = mp_glob[mn]->acoustic_impedance;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->acoustic_impedance;
       break;
 
     case TAGC_ACOUSTIC_ABSORPTION:
-      xa[iAC] = mp_glob[mn]->acoustic_absorption;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->acoustic_absorption;
       break;
 
     case TAGC_REFRACTIVE_INDEX:
-      xa[iAC] = mp_glob[mn]->refractive_index;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->refractive_index;
       break;
 
     case TAGC_LIGHT_ABSORPTION:
-      xa[iAC] = mp_glob[mn]->light_absorption;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->light_absorption;
       break;
 
     case TAGC_EXTINCTION_INDEX:
-      xa[iAC] = mp_glob[mn]->extinction_index;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->extinction_index;
       break;
 
     case TAGC_ELECTRICAL_CONDUCTIVITY:
-      xa[iAC] = mp_glob[mn]->electrical_conductivity;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->electrical_conductivity;
       break;
 
     case TAGC_PERMITTIVITY:
-      xa[iAC] = mp_glob[mn]->permittivity;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->permittivity;
       break;
 
     case TAGC_VISCOSITY:
-      xa[iAC] = mp_glob[mn]->viscosity;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->viscosity;
       break;
 
     case TAGC_SURFACE_TENSION:
-      xa[iAC] = mp_glob[mn]->surface_tension;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->surface_tension;
       break;
 
     case TAGC_HEAT_CAPACITY:
-      xa[iAC] = mp_glob[mn]->heat_capacity;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->heat_capacity;
       break;
 
     case TAGC_VOLUME_EXPANSION:
-      xa[iAC] = mp_glob[mn]->Volume_Expansion;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->Volume_Expansion;
       break;
 
     case TAGC_DENSITY:
-      xa[iAC] = mp_glob[mn]->density;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->density;
       break;
 
     case TAGC_POROSITY:
-      xa[iAC] = mp_glob[mn]->porosity;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->porosity;
       break;
 
     case TAGC_POROUS_COMPRESSIBILITY:
-      xa[iAC] = mp_glob[mn]->porous_compressibility;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->porous_compressibility;
       break;
 
     case TAGC_PERMEABILITY:
-      xa[iAC] = mp_glob[mn]->permeability;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->permeability;
       break;
 
     case TAGC_REL_GAS_PERM:
-      xa[iAC] = mp_glob[mn]->rel_gas_perm;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->rel_gas_perm;
       break;
 
     case TAGC_REL_LIQ_PERM:
-      xa[iAC] = mp_glob[mn]->rel_liq_perm;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->rel_liq_perm;
       break;
 
     case TAGC_SATURATION:
-      xa[iAC] = mp_glob[mn]->saturation;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->saturation;
       break;
 
     case TAGC_MELTING_POINT_LIQUIDUS:
-      xa[iAC] = mp_glob[mn]->melting_point_liquidus;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->melting_point_liquidus;
       break;
 
     case TAGC_MELTING_POINT_SOLIDUS:
-      xa[iAC] = mp_glob[mn]->melting_point_solidus;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->melting_point_solidus;
       break;
 
     case TAGC_FLOWINGLIQUID_VISCOSITY:
-      xa[iAC] = mp_glob[mn]->FlowingLiquid_viscosity;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->FlowingLiquid_viscosity;
       break;
 
     case TAGC_DIFFUSIVITY_0:
-      xa[iAC] = mp_glob[mn]->diffusivity[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->diffusivity[0];
       break;
 
     case TAGC_DIFFUSIVITY_1:
-      xa[iAC] = mp_glob[mn]->diffusivity[1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->diffusivity[1];
       break;
 
       /*
@@ -314,76 +317,76 @@ void load_extra_unknownsAC(int iAC,     /* ID NUMBER OF AC'S */
        */
 
     case TAGC_MU0:
-      xa[iAC] = gn_glob[mn]->mu0;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->mu0;
       break;
     case TAGC_NEXP:
-      xa[iAC] = gn_glob[mn]->nexp;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->nexp;
       break;
     case TAGC_MUINF:
-      xa[iAC] = gn_glob[mn]->muinf;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->muinf;
       break;
     case TAGC_LAM:
-      xa[iAC] = gn_glob[mn]->lam;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->lam;
       break;
     case TAGC_AEXP:
-      xa[iAC] = gn_glob[mn]->aexp;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->aexp;
       break;
     case TAGC_ATEXP:
-      xa[iAC] = gn_glob[mn]->atexp;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->atexp;
       break;
 
       /*  CARREAU_WLF    */
 
     case TAGC_WLFC2:
-      xa[iAC] = gn_glob[mn]->wlfc2;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->wlfc2;
       break;
 
     case TAGC_REFTEMP:
-      xa[iAC] = mp_glob[mn]->reference[TEMPERATURE];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->reference[TEMPERATURE];
       break;
 
       /* these are for the BINGHAM yielding material model */
 
     case TAGC_TAU_Y:
-      xa[iAC] = gn_glob[mn]->tau_y;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->tau_y;
       break;
     case TAGC_FEXP:
-      xa[iAC] = gn_glob[mn]->fexp;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->fexp;
       break;
 
       /* these are for SUSPENSION/FILLED_EPOXY models */
 
     case TAGC_MAXPACK:
-      xa[iAC] = gn_glob[mn]->maxpack;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->maxpack;
       break;
     case TAGC_FICKDIFF_X:
-      xa[iAC] = mp_glob[mn]->u_fdiffusivity[0][0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_fdiffusivity[0][0];
       break;
     case TAGC_FICKDIFF_Y:
-      xa[iAC] = mp_glob[mn]->u_fdiffusivity[0][1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_fdiffusivity[0][1];
       break;
 
       /* these can be implemented for Ryan's Qtensor model as needed */
 
 #if 0
       case TAGC_QTENSOR_EXTENSION_P:
-	xa[iAC] = mp_glob[mn]->Qtensor_Extension_P;
+	xa[iAC] = goma_ctx->fem.mp_glob[mn]->Qtensor_Extension_P;
 	break;
       case TAGC_QTENSOR_NCT:
-	xa[iAC] = mp_glob[mn]->Qtensor_Nct;
+	xa[iAC] = goma_ctx->fem.mp_glob[mn]->Qtensor_Nct;
 	break;
 #endif
 
       /* these are for CURE/EPOXY/FILLED_EPOXY models */
 
     case TAGC_GELPOINT:
-      xa[iAC] = gn_glob[mn]->gelpoint;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->gelpoint;
       break;
     case TAGC_CUREAEXP:
-      xa[iAC] = gn_glob[mn]->cureaexp;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->cureaexp;
       break;
     case TAGC_CUREBEXP:
-      xa[iAC] = gn_glob[mn]->curebexp;
+      xa[iAC] = goma_ctx->fem.gn_glob[mn]->curebexp;
       break;
 
       /*
@@ -398,11 +401,12 @@ void load_extra_unknownsAC(int iAC,     /* ID NUMBER OF AC'S */
     case TAGC_TIME_CONST5:
     case TAGC_TIME_CONST6:
     case TAGC_TIME_CONST7:
-      xa[iAC] = ve_glob[mn][augc[iAC].MPID - TAGC_TIME_CONST]->time_const_st->lambda0;
+      xa[iAC] = goma_ctx->fem.ve_glob[mn][goma_ctx->fem.augc[iAC].MPID - TAGC_TIME_CONST]
+                    ->time_const_st->lambda0;
       break;
 
     case TAGC_WT_FUNC:
-      xa[iAC] = vn_glob[mn]->wt_func;
+      xa[iAC] = goma_ctx->fem.vn_glob[mn]->wt_func;
       break;
 
     case TAGC_ALPHA:
@@ -413,127 +417,130 @@ void load_extra_unknownsAC(int iAC,     /* ID NUMBER OF AC'S */
     case TAGC_ALPHA5:
     case TAGC_ALPHA6:
     case TAGC_ALPHA7:
-      xa[iAC] = ve_glob[mn][augc[iAC].MPID - TAGC_ALPHA]->alpha;
+      xa[iAC] = goma_ctx->fem.ve_glob[mn][goma_ctx->fem.augc[iAC].MPID - TAGC_ALPHA]->alpha;
       break;
 
     case TAGC_PTT_XI:
-      xa[iAC] = ve_glob[mn][augc[iAC].MPID - TAGC_PTT_XI]->xi;
+      xa[iAC] = goma_ctx->fem.ve_glob[mn][goma_ctx->fem.augc[iAC].MPID - TAGC_PTT_XI]->xi;
       break;
 
     case TAGC_PTT_EPS:
-      xa[iAC] = ve_glob[mn][augc[iAC].MPID - TAGC_PTT_EPS]->eps;
+      xa[iAC] = goma_ctx->fem.ve_glob[mn][goma_ctx->fem.augc[iAC].MPID - TAGC_PTT_EPS]->eps;
       break;
 
     case TAGC_SHIFT_FUNC:
     case TAGC_SHIFT_FUNC1:
-      xa[iAC] = vn_glob[mn]->shift[augc[iAC].MPID - TAGC_SHIFT_FUNC];
+      xa[iAC] = goma_ctx->fem.vn_glob[mn]->shift[goma_ctx->fem.augc[iAC].MPID - TAGC_SHIFT_FUNC];
       break;
 
     case TAGC_POLYMER_YIELD_STRESS:
-      xa[iAC] = ve_glob[mn][augc[iAC].MPID - TAGC_POLYMER_YIELD_STRESS]->gn->tau_y;
+      xa[iAC] = goma_ctx->fem.ve_glob[mn][goma_ctx->fem.augc[iAC].MPID - TAGC_POLYMER_YIELD_STRESS]
+                    ->gn->tau_y;
       break;
 
     case TAGC_POLYMER_YIELD_EXPONENT:
-      xa[iAC] = ve_glob[mn][augc[iAC].MPID - TAGC_POLYMER_YIELD_EXPONENT]->gn->fexp;
+      xa[iAC] =
+          goma_ctx->fem.ve_glob[mn][goma_ctx->fem.augc[iAC].MPID - TAGC_POLYMER_YIELD_EXPONENT]
+              ->gn->fexp;
       break;
       /*
        * Constants used in the Elasticity Constitutive Equations
        */
 
     case TAGC_LAME_MU:
-      xa[iAC] = elc_glob[mn]->lame_mu;
+      xa[iAC] = goma_ctx->fem.elc_glob[mn]->lame_mu;
       break;
 
     case TAGC_LAME_MU_CONTACT_LINE_G0:
-      xa[iAC] = *(elc_glob[mn]->u_mu + 1);
+      xa[iAC] = *(goma_ctx->fem.elc_glob[mn]->u_mu + 1);
       break;
 
     case TAGC_LAME_MU_CONTACT_LINE_G1:
-      xa[iAC] = *(elc_glob[mn]->u_mu + 2);
+      xa[iAC] = *(goma_ctx->fem.elc_glob[mn]->u_mu + 2);
       break;
 
     case TAGC_LAME_MU_CONTACT_LINE_R0:
-      xa[iAC] = *(elc_glob[mn]->u_mu + 3);
+      xa[iAC] = *(goma_ctx->fem.elc_glob[mn]->u_mu + 3);
       break;
 
     case TAGC_LAME_LAMBDA:
-      xa[iAC] = elc_glob[mn]->lame_lambda;
+      xa[iAC] = goma_ctx->fem.elc_glob[mn]->lame_lambda;
       break;
 
     case TAGC_BEND_STIFFNESS:
-      xa[iAC] = elc_glob[mn]->bend_stiffness;
+      xa[iAC] = goma_ctx->fem.elc_glob[mn]->bend_stiffness;
       break;
 
     case TAGC_CONV_LAG_VELX:
-      xa[iAC] = *(elc_glob[mn]->v_mesh_sfs);
+      xa[iAC] = *(goma_ctx->fem.elc_glob[mn]->v_mesh_sfs);
       break;
 
     case TAGC_CONV_LAG_VELY:
-      xa[iAC] = *(elc_glob[mn]->v_mesh_sfs + 1);
+      xa[iAC] = *(goma_ctx->fem.elc_glob[mn]->v_mesh_sfs + 1);
       break;
 
     case TAGC_CONV_LAG_VELZ:
-      xa[iAC] = *(elc_glob[mn]->v_mesh_sfs + 2);
+      xa[iAC] = *(goma_ctx->fem.elc_glob[mn]->v_mesh_sfs + 2);
       break;
 
     case TAGC_CONV_LAG_ROTRATE:
-      xa[iAC] = *(elc_glob[mn]->u_v_mesh_sfs);
+      xa[iAC] = *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs);
       break;
 
     case TAGC_CONV_LAG_ROT_X0:
-      xa[iAC] = *(elc_glob[mn]->u_v_mesh_sfs + 1);
+      xa[iAC] = *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs + 1);
       break;
 
     case TAGC_CONV_LAG_ROT_Y0:
-      xa[iAC] = *(elc_glob[mn]->u_v_mesh_sfs + 2);
+      xa[iAC] = *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs + 2);
       break;
 
     case TAGC_CONV_LAG_ROT_Z0:
-      xa[iAC] = *(elc_glob[mn]->u_v_mesh_sfs + 3);
+      xa[iAC] = *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs + 3);
       break;
 
     case TAGC_RS_LAME_MU:
-      xa[iAC] = elc_rs_glob[mn]->lame_mu;
+      xa[iAC] = goma_ctx->fem.elc_rs_glob[mn]->lame_mu;
       break;
 
     case TAGC_RS_LAME_LAMBDA:
-      xa[iAC] = elc_rs_glob[mn]->lame_lambda;
+      xa[iAC] = goma_ctx->fem.elc_rs_glob[mn]->lame_lambda;
       break;
 
     case TAGC_RS_CONV_LAG_VELX:
-      xa[iAC] = *(elc_rs_glob[mn]->v_mesh_sfs);
+      xa[iAC] = *(goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs);
       break;
 
     case TAGC_RS_CONV_LAG_VELY:
-      xa[iAC] = *(elc_rs_glob[mn]->v_mesh_sfs + 1);
+      xa[iAC] = *(goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs + 1);
       break;
 
     case TAGC_RS_CONV_LAG_VELZ:
-      xa[iAC] = *(elc_rs_glob[mn]->v_mesh_sfs + 2);
+      xa[iAC] = *(goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs + 2);
       break;
 
     case TAGC_RS_CONV_LAG_ROTRATE:
-      xa[iAC] = *(elc_rs_glob[mn]->u_v_mesh_sfs);
+      xa[iAC] = *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs);
       break;
 
     case TAGC_RS_CONV_LAG_ROT_X0:
-      xa[iAC] = *(elc_rs_glob[mn]->u_v_mesh_sfs + 1);
+      xa[iAC] = *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs + 1);
       break;
 
     case TAGC_RS_CONV_LAG_ROT_Y0:
-      xa[iAC] = *(elc_rs_glob[mn]->u_v_mesh_sfs + 2);
+      xa[iAC] = *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs + 2);
       break;
 
     case TAGC_RS_CONV_LAG_ROT_Z0:
-      xa[iAC] = *(elc_rs_glob[mn]->u_v_mesh_sfs + 3);
+      xa[iAC] = *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs + 3);
       break;
 
     case TAGC_POISSON:
-      xa[iAC] = elc_glob[mn]->poisson;
+      xa[iAC] = goma_ctx->fem.elc_glob[mn]->poisson;
       break;
 
     case TAGC_STRSS_FR_SOL_VOL_FRAC:
-      xa[iAC] = elc_glob[mn]->Strss_fr_sol_vol_frac;
+      xa[iAC] = goma_ctx->fem.elc_glob[mn]->Strss_fr_sol_vol_frac;
       break;
 
       /*
@@ -541,268 +548,268 @@ void load_extra_unknownsAC(int iAC,     /* ID NUMBER OF AC'S */
        */
 
     case TAGC_NSS_A0:
-      xa[iAC] = mp_glob[mn]->momentum_source[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->momentum_source[0];
       break;
 
     case TAGC_NSS_A1:
-      xa[iAC] = mp_glob[mn]->momentum_source[1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->momentum_source[1];
       break;
 
     case TAGC_NSS_A2:
-      xa[iAC] = mp_glob[mn]->momentum_source[2];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->momentum_source[2];
       break;
 
     case TAGC_NSS_A3:
-      xa[iAC] = mp_glob[mn]->u_momentum_source[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_momentum_source[0];
       break;
 
     case TAGC_LUB_HGT_U0:
-      xa[iAC] = mp_glob[mn]->u_heightU_function_constants[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[0];
       break;
 
     case TAGC_LUB_HGT_U1:
-      xa[iAC] = mp_glob[mn]->u_heightU_function_constants[1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[1];
       break;
 
     case TAGC_LUB_HGT_U2:
-      xa[iAC] = mp_glob[mn]->u_heightU_function_constants[2];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[2];
       break;
 
     case TAGC_LUB_HGT_U3:
-      xa[iAC] = mp_glob[mn]->u_heightU_function_constants[3];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[3];
       break;
 
     case TAGC_LUB_HGT_U4:
-      xa[iAC] = mp_glob[mn]->u_heightU_function_constants[4];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[4];
       break;
 
     case TAGC_LUB_HGT_U5:
-      xa[iAC] = mp_glob[mn]->u_heightU_function_constants[5];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[5];
       break;
 
     case TAGC_LUB_HGT_U6:
-      xa[iAC] = mp_glob[mn]->u_heightU_function_constants[6];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[6];
       break;
 
     case TAGC_LUB_HGT_U7:
-      xa[iAC] = mp_glob[mn]->u_heightU_function_constants[7];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[7];
       break;
 
     case TAGC_LUB_HGT_L0:
-      xa[iAC] = mp_glob[mn]->u_heightL_function_constants[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[0];
       break;
 
     case TAGC_LUB_HGT_L1:
-      xa[iAC] = mp_glob[mn]->u_heightL_function_constants[1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[1];
       break;
 
     case TAGC_LUB_HGT_L2:
-      xa[iAC] = mp_glob[mn]->u_heightL_function_constants[2];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[2];
       break;
 
     case TAGC_LUB_HGT_L3:
-      xa[iAC] = mp_glob[mn]->u_heightL_function_constants[3];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[3];
       break;
 
     case TAGC_LUB_HGT_L4:
-      xa[iAC] = mp_glob[mn]->u_heightL_function_constants[4];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[4];
       break;
 
     case TAGC_LUB_HGT_L5:
-      xa[iAC] = mp_glob[mn]->u_heightL_function_constants[5];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[5];
       break;
 
     case TAGC_LUB_HGT_L6:
-      xa[iAC] = mp_glob[mn]->u_heightL_function_constants[6];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[6];
       break;
 
     case TAGC_LUB_HGT_L7:
-      xa[iAC] = mp_glob[mn]->u_heightL_function_constants[7];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[7];
       break;
 
     case TAGC_U_LUB_VELO_U0:
-      xa[iAC] = mp_glob[mn]->u_veloU_function_constants[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[0];
       break;
 
     case TAGC_U_LUB_VELO_U1:
-      xa[iAC] = mp_glob[mn]->u_veloU_function_constants[1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[1];
       break;
 
     case TAGC_U_LUB_VELO_U2:
-      xa[iAC] = mp_glob[mn]->u_veloU_function_constants[2];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[2];
       break;
 
     case TAGC_U_LUB_VELO_U3:
-      xa[iAC] = mp_glob[mn]->u_veloU_function_constants[3];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[3];
       break;
 
     case TAGC_U_LUB_VELO_U4:
-      xa[iAC] = mp_glob[mn]->u_veloU_function_constants[4];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[4];
       break;
 
     case TAGC_U_LUB_VELO_U5:
-      xa[iAC] = mp_glob[mn]->u_veloU_function_constants[5];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[5];
       break;
 
     case TAGC_U_LUB_VELO_L0:
-      xa[iAC] = mp_glob[mn]->u_veloL_function_constants[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[0];
       break;
 
     case TAGC_U_LUB_VELO_L1:
-      xa[iAC] = mp_glob[mn]->u_veloL_function_constants[1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[1];
       break;
 
     case TAGC_U_LUB_VELO_L2:
-      xa[iAC] = mp_glob[mn]->u_veloL_function_constants[2];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[2];
       break;
 
     case TAGC_U_LUB_VELO_L3:
-      xa[iAC] = mp_glob[mn]->u_veloL_function_constants[3];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[3];
       break;
 
     case TAGC_U_LUB_VELO_L4:
-      xa[iAC] = mp_glob[mn]->u_veloL_function_constants[4];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[4];
       break;
 
     case TAGC_U_LUB_VELO_L5:
-      xa[iAC] = mp_glob[mn]->u_veloL_function_constants[5];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[5];
       break;
 
     case TAGC_LUB_VELO_U0:
-      xa[iAC] = mp_glob[mn]->veloU[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->veloU[0];
       break;
 
     case TAGC_LUB_VELO_U1:
-      xa[iAC] = mp_glob[mn]->veloU[1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->veloU[1];
       break;
 
     case TAGC_LUB_VELO_U2:
-      xa[iAC] = mp_glob[mn]->veloU[2];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->veloU[2];
       break;
 
     case TAGC_LUB_VELO_L0:
-      xa[iAC] = mp_glob[mn]->veloL[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->veloL[0];
       break;
 
     case TAGC_LUB_VELO_L1:
-      xa[iAC] = mp_glob[mn]->veloL[1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->veloL[1];
       break;
 
     case TAGC_LUB_VELO_L2:
-      xa[iAC] = mp_glob[mn]->veloL[2];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->veloL[2];
       break;
 
     case TAGC_LUB_DCA_U0:
-      xa[iAC] = mp_glob[mn]->u_dcaU_function_constants[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[0];
       break;
 
     case TAGC_LUB_DCA_U1:
-      xa[iAC] = mp_glob[mn]->u_dcaU_function_constants[1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[1];
       break;
 
     case TAGC_LUB_DCA_U2:
-      xa[iAC] = mp_glob[mn]->u_dcaU_function_constants[2];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[2];
       break;
 
     case TAGC_LUB_DCA_U3:
-      xa[iAC] = mp_glob[mn]->u_dcaU_function_constants[3];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[3];
       break;
 
     case TAGC_LUB_DCA_L0:
-      xa[iAC] = mp_glob[mn]->u_dcaL_function_constants[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[0];
       break;
 
     case TAGC_LUB_DCA_L1:
-      xa[iAC] = mp_glob[mn]->u_dcaL_function_constants[1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[1];
       break;
 
     case TAGC_LUB_DCA_L2:
-      xa[iAC] = mp_glob[mn]->u_dcaL_function_constants[2];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[2];
       break;
 
     case TAGC_LUB_DCA_L3:
-      xa[iAC] = mp_glob[mn]->u_dcaL_function_constants[3];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[3];
       break;
 
     case TAGC_LUB_SOURCE_0:
-      xa[iAC] = mp_glob[mn]->u_lubsource_function_constants[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_lubsource_function_constants[0];
       break;
 
     case TAGC_LUB_SOURCE_1:
-      xa[iAC] = mp_glob[mn]->u_lubsource_function_constants[1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_lubsource_function_constants[1];
       break;
 
     case TAGC_LUB_SOURCE_2:
-      xa[iAC] = mp_glob[mn]->u_lubsource_function_constants[2];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_lubsource_function_constants[2];
       break;
 
     case TAGC_RST_FUNC_0:
-      xa[iAC] = mp_glob[mn]->Rst_func;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->Rst_func;
       break;
 
     case TAGC_RST_FUNC_1:
-      xa[iAC] = mp_glob[mn]->Rst_diffusion;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->Rst_diffusion;
       break;
 
     case TAGC_RST_FUNC_2:
-      xa[iAC] = mp_glob[mn]->Rst_func_supg;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->Rst_func_supg;
       break;
 
     case TAGC_RST_FUNC_3:
-      xa[iAC] = mp_glob[mn]->Rst_epsilon;
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->Rst_epsilon;
       break;
 
     case TAGC_HEAT_SOURCE_0:
-      xa[iAC] = mp_glob[mn]->u_heat_source[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_heat_source[0];
       break;
 
     case TAGC_SPECIES_SOURCE_0_P0:
-      xa[iAC] = mp_glob[mn]->u_species_source[0][0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_species_source[0][0];
       break;
 
     case TAGC_SPECIES_SOURCE_0_P1:
-      xa[iAC] = mp_glob[mn]->u_species_source[0][1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_species_source[0][1];
       break;
 
     case TAGC_SPECIES_SOURCE_0_P2:
-      xa[iAC] = mp_glob[mn]->u_species_source[0][2];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_species_source[0][2];
       break;
 
     case TAGC_SPECIES_SOURCE_0_P3:
-      xa[iAC] = mp_glob[mn]->u_species_source[0][3];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_species_source[0][3];
       break;
 
     case TAGC_SPECIES_SOURCE_1_P0:
-      xa[iAC] = mp_glob[mn]->u_species_source[1][0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_species_source[1][0];
       break;
 
     case TAGC_SPECIES_SOURCE_1_P1:
-      xa[iAC] = mp_glob[mn]->u_species_source[1][1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_species_source[1][1];
       break;
 
     case TAGC_SPECIES_SOURCE_1_P2:
-      xa[iAC] = mp_glob[mn]->u_species_source[1][2];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_species_source[1][2];
       break;
 
     case TAGC_SPECIES_SOURCE_1_P3:
-      xa[iAC] = mp_glob[mn]->u_species_source[1][3];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->u_species_source[1][3];
       break;
 
     case TAGC_LATENT_HEAT_0:
-      xa[iAC] = mp_glob[mn]->latent_heat_vap[0];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->latent_heat_vap[0];
       break;
 
     case TAGC_LATENT_HEAT_1:
-      xa[iAC] = mp_glob[mn]->latent_heat_vap[1];
+      xa[iAC] = goma_ctx->fem.mp_glob[mn]->latent_heat_vap[1];
       break;
 
     default:
-      printf("\n\t Error: Invalid Material Property Tag %d\n", augc[iAC].MPID);
+      printf("\n\t Error: Invalid Material Property Tag %d\n", goma_ctx->fem.augc[iAC].MPID);
       exit(0);
       break;
     }
   }
-  augc[iAC].tmp1 = xa[iAC];
+  goma_ctx->fem.augc[iAC].tmp1 = xa[iAC];
 } /* END of routine load_extra_unknownsAC  */
 /*****************************************************************************/
 
@@ -844,43 +851,45 @@ void update_parameterAC(
    */
 
   lambda = xa[iAC];
-  augc[iAC].tmp1 = lambda;
+  goma_ctx->fem.augc[iAC].tmp1 = lambda;
 
-  if (augc[iAC].Type == AC_LGRM) {
-    augc[iAC].DataFlt[0] = lambda;
+  if (goma_ctx->fem.augc[iAC].Type == AC_LGRM) {
+    goma_ctx->fem.augc[iAC].DataFlt[0] = lambda;
     return;
   }
 
-  if (augc[iAC].Type == AC_OVERLAP || augc[iAC].Type == AC_PF_CONSTRAINT) {
-    augc[iAC].lm_value = lambda;
+  if (goma_ctx->fem.augc[iAC].Type == AC_OVERLAP ||
+      goma_ctx->fem.augc[iAC].Type == AC_PF_CONSTRAINT) {
+    goma_ctx->fem.augc[iAC].lm_value = lambda;
   }
 
-  if (augc[iAC].Type == AC_PERIODIC) {
-    augc[iAC].lm_value = lambda;
+  if (goma_ctx->fem.augc[iAC].Type == AC_PERIODIC) {
+    goma_ctx->fem.augc[iAC].lm_value = lambda;
   }
 
-  if (augc[iAC].Type == AC_ARC_LENGTH) {
-    delta = lambda - cont->BegParameterValue;
+  if (goma_ctx->fem.augc[iAC].Type == AC_ARC_LENGTH) {
+    delta = lambda - goma_ctx->fem.cont->BegParameterValue;
 
     for (iCC = 0; iCC < nCC; iCC++) {
-      value = cpcc[iCC].Beg_CC_Value + cpcc[iCC].ratio * delta;
-      update_parameterC(iCC, value, x, xdot, xa, cont->Delta_s0, cx, exo, dpi);
+      value = goma_ctx->fem.cpcc[iCC].Beg_CC_Value + goma_ctx->fem.cpcc[iCC].ratio * delta;
+      update_parameterC(iCC, value, x, xdot, xa, goma_ctx->fem.cont->Delta_s0, cx, exo, dpi);
     }
   }
 
-  if (augc[iAC].Type == AC_USERBC || augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_FLUX ||
-      augc[iAC].Type == AC_LS_VEL || augc[iAC].Type == AC_POSITION || augc[iAC].Type == AC_ANGLE) {
+  if (goma_ctx->fem.augc[iAC].Type == AC_USERBC || goma_ctx->fem.augc[iAC].Type == AC_VOLUME ||
+      goma_ctx->fem.augc[iAC].Type == AC_FLUX || goma_ctx->fem.augc[iAC].Type == AC_LS_VEL ||
+      goma_ctx->fem.augc[iAC].Type == AC_POSITION || goma_ctx->fem.augc[iAC].Type == AC_ANGLE) {
 
-    ibc = augc[iAC].BCID;
-    idf = augc[iAC].DFID;
+    ibc = goma_ctx->fem.augc[iAC].BCID;
+    idf = goma_ctx->fem.augc[iAC].DFID;
 
     /*  case for user defined parameter  */
 
 #ifdef GOMA_ENABLE_APREPRO_LIB
     if (ibc == APREPRO_LIB_AC_BCID) {
-      goma_error err = aprepro_parse_goma_augc(&augc[iAC], lambda);
+      goma_error err = aprepro_parse_goma_augc(&goma_ctx->fem.augc[iAC], lambda);
       GOMA_EH(err, "Issue with aprepro augmenting condition parsing");
-      augc[iAC].DataFlt[0] = lambda;
+      goma_ctx->fem.augc[iAC].DataFlt[0] = lambda;
     } else if (ibc == APREPRO_AC_BCID) {
 #else
     if (ibc == APREPRO_AC_BCID) {
@@ -895,12 +904,13 @@ void update_parameterAC(
       if (goma_ctx->num_proc != 1) {
         GOMA_EH(GOMA_ERROR, "aprepro AC condition not ready for parallel");
       }
-      sprintf(cmd_str, "%s %s %s %s %s %s %.20g", "bcdiff.pl", "-p", augc[iAC].Params_File, "-i",
-              goma_ctx->input_file, augc[iAC].AP_param, lambda);
+      sprintf(cmd_str, "%s %s %s %s %s %s %.20g", "bcdiff.pl", "-p",
+              goma_ctx->fem.augc[iAC].Params_File, "-i", goma_ctx->input_file,
+              goma_ctx->fem.augc[iAC].AP_param, lambda);
       err = system(cmd_str);
       GOMA_EH(err, "Error could not create process for bcdiff.pl");
 
-      augc[iAC].DataFlt[0] = lambda;
+      goma_ctx->fem.augc[iAC].DataFlt[0] = lambda;
 
       jfp = fopen("tmp.bcdiff", "r");
 
@@ -976,7 +986,7 @@ void update_parameterAC(
           if (fscanf(jfp, "%d %lf %lf", &idf_user, &temp, &lambda_user) != 3) {
             GOMA_EH(GOMA_ERROR, "error reading bcdiff");
           }
-          augc[ibc_user].DataFlt[idf_user] = lambda_user;
+          goma_ctx->fem.augc[ibc_user].DataFlt[idf_user] = lambda_user;
         } /* if ibc_user  */
       } /* while ibc_user  */
       fclose(jfp);
@@ -1039,106 +1049,107 @@ void update_parameterAC(
       }
     }
 
-  } else if (augc[iAC].Type == AC_USERMAT || augc[iAC].Type == AC_FLUX_MAT) {
+  } else if (goma_ctx->fem.augc[iAC].Type == AC_USERMAT ||
+             goma_ctx->fem.augc[iAC].Type == AC_FLUX_MAT) {
 
-    mn = map_mat_index(augc[iAC].MTID);
+    mn = map_mat_index(goma_ctx->fem.augc[iAC].MTID);
 
-    switch (augc[iAC].MPID) {
+    switch (goma_ctx->fem.augc[iAC].MPID) {
 
       /*
        * General Model Constants
        */
 
     case TAGC_THERMAL_CONDUCTIVITY:
-      mp_glob[mn]->thermal_conductivity = lambda;
+      goma_ctx->fem.mp_glob[mn]->thermal_conductivity = lambda;
       break;
 
     case TAGC_ACOUSTIC_WAVENUMBER:
-      mp_glob[mn]->wave_number = lambda;
+      goma_ctx->fem.mp_glob[mn]->wave_number = lambda;
       break;
 
     case TAGC_ACOUSTIC_IMPEDANCE:
-      mp_glob[mn]->acoustic_impedance = lambda;
+      goma_ctx->fem.mp_glob[mn]->acoustic_impedance = lambda;
       break;
 
     case TAGC_ACOUSTIC_ABSORPTION:
-      mp_glob[mn]->acoustic_absorption = lambda;
+      goma_ctx->fem.mp_glob[mn]->acoustic_absorption = lambda;
       break;
 
     case TAGC_REFRACTIVE_INDEX:
-      mp_glob[mn]->refractive_index = lambda;
+      goma_ctx->fem.mp_glob[mn]->refractive_index = lambda;
       break;
 
     case TAGC_LIGHT_ABSORPTION:
-      mp_glob[mn]->light_absorption = lambda;
+      goma_ctx->fem.mp_glob[mn]->light_absorption = lambda;
       break;
 
     case TAGC_EXTINCTION_INDEX:
-      mp_glob[mn]->extinction_index = lambda;
+      goma_ctx->fem.mp_glob[mn]->extinction_index = lambda;
       break;
 
     case TAGC_ELECTRICAL_CONDUCTIVITY:
-      mp_glob[mn]->electrical_conductivity = lambda;
+      goma_ctx->fem.mp_glob[mn]->electrical_conductivity = lambda;
       break;
 
     case TAGC_VISCOSITY:
-      mp_glob[mn]->viscosity = lambda;
+      goma_ctx->fem.mp_glob[mn]->viscosity = lambda;
       break;
 
     case TAGC_SURFACE_TENSION:
-      mp_glob[mn]->surface_tension = lambda;
+      goma_ctx->fem.mp_glob[mn]->surface_tension = lambda;
       break;
 
     case TAGC_HEAT_CAPACITY:
-      mp_glob[mn]->heat_capacity = lambda;
+      goma_ctx->fem.mp_glob[mn]->heat_capacity = lambda;
       break;
 
     case TAGC_VOLUME_EXPANSION:
-      mp_glob[mn]->Volume_Expansion = lambda;
+      goma_ctx->fem.mp_glob[mn]->Volume_Expansion = lambda;
       break;
 
     case TAGC_DENSITY:
-      mp_glob[mn]->density = lambda;
+      goma_ctx->fem.mp_glob[mn]->density = lambda;
       break;
 
     case TAGC_POROSITY:
-      mp_glob[mn]->porosity = lambda;
+      goma_ctx->fem.mp_glob[mn]->porosity = lambda;
       break;
 
     case TAGC_PERMEABILITY:
-      mp_glob[mn]->permeability = lambda;
+      goma_ctx->fem.mp_glob[mn]->permeability = lambda;
       break;
 
     case TAGC_REL_GAS_PERM:
-      mp_glob[mn]->rel_gas_perm = lambda;
+      goma_ctx->fem.mp_glob[mn]->rel_gas_perm = lambda;
       break;
 
     case TAGC_REL_LIQ_PERM:
-      mp_glob[mn]->rel_liq_perm = lambda;
+      goma_ctx->fem.mp_glob[mn]->rel_liq_perm = lambda;
       break;
 
     case TAGC_SATURATION:
-      mp_glob[mn]->saturation = lambda;
+      goma_ctx->fem.mp_glob[mn]->saturation = lambda;
       break;
 
     case TAGC_MELTING_POINT_LIQUIDUS:
-      mp_glob[mn]->melting_point_liquidus = lambda;
+      goma_ctx->fem.mp_glob[mn]->melting_point_liquidus = lambda;
       break;
 
     case TAGC_MELTING_POINT_SOLIDUS:
-      mp_glob[mn]->melting_point_solidus = lambda;
+      goma_ctx->fem.mp_glob[mn]->melting_point_solidus = lambda;
       break;
 
     case TAGC_FLOWINGLIQUID_VISCOSITY:
-      mp_glob[mn]->FlowingLiquid_viscosity = lambda;
+      goma_ctx->fem.mp_glob[mn]->FlowingLiquid_viscosity = lambda;
       break;
 
     case TAGC_DIFFUSIVITY_0:
-      mp_glob[mn]->diffusivity[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->diffusivity[0] = lambda;
       break;
 
     case TAGC_DIFFUSIVITY_1:
-      mp_glob[mn]->diffusivity[1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->diffusivity[1] = lambda;
       break;
 
       /*
@@ -1147,65 +1158,65 @@ void update_parameterAC(
        */
 
     case TAGC_MU0:
-      gn_glob[mn]->mu0 = lambda;
+      goma_ctx->fem.gn_glob[mn]->mu0 = lambda;
       break;
     case TAGC_NEXP:
-      gn_glob[mn]->nexp = lambda;
+      goma_ctx->fem.gn_glob[mn]->nexp = lambda;
       break;
     case TAGC_MUINF:
-      gn_glob[mn]->muinf = lambda;
+      goma_ctx->fem.gn_glob[mn]->muinf = lambda;
       break;
     case TAGC_LAM:
-      gn_glob[mn]->lam = lambda;
+      goma_ctx->fem.gn_glob[mn]->lam = lambda;
       break;
     case TAGC_AEXP:
-      gn_glob[mn]->aexp = lambda;
+      goma_ctx->fem.gn_glob[mn]->aexp = lambda;
       break;
     case TAGC_ATEXP:
-      gn_glob[mn]->atexp = lambda;
+      goma_ctx->fem.gn_glob[mn]->atexp = lambda;
       break;
 
       /*  CARREAU_WLF  */
 
     case TAGC_WLFC2:
-      gn_glob[mn]->wlfc2 = lambda;
+      goma_ctx->fem.gn_glob[mn]->wlfc2 = lambda;
       break;
 
     case TAGC_REFTEMP:
-      mp_glob[mn]->reference[TEMPERATURE] = lambda;
+      goma_ctx->fem.mp_glob[mn]->reference[TEMPERATURE] = lambda;
       break;
 
       /* these are for the BINGHAM yielding material model */
 
     case TAGC_TAU_Y:
-      gn_glob[mn]->tau_y = lambda;
+      goma_ctx->fem.gn_glob[mn]->tau_y = lambda;
       break;
     case TAGC_FEXP:
-      gn_glob[mn]->fexp = lambda;
+      goma_ctx->fem.gn_glob[mn]->fexp = lambda;
       break;
 
       /* these are for SUSPENSION/FILLED_EPOXY models */
 
     case TAGC_MAXPACK:
-      gn_glob[mn]->maxpack = lambda;
+      goma_ctx->fem.gn_glob[mn]->maxpack = lambda;
       break;
     case TAGC_FICKDIFF_X:
-      mp_glob[mn]->u_fdiffusivity[0][0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_fdiffusivity[0][0] = lambda;
       break;
     case TAGC_FICKDIFF_Y:
-      mp_glob[mn]->u_fdiffusivity[0][1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_fdiffusivity[0][1] = lambda;
       break;
 
       /* these are for CURE/EPOXY/FILLED_EPOXY models */
 
     case TAGC_GELPOINT:
-      gn_glob[mn]->gelpoint = lambda;
+      goma_ctx->fem.gn_glob[mn]->gelpoint = lambda;
       break;
     case TAGC_CUREAEXP:
-      gn_glob[mn]->cureaexp = lambda;
+      goma_ctx->fem.gn_glob[mn]->cureaexp = lambda;
       break;
     case TAGC_CUREBEXP:
-      gn_glob[mn]->curebexp = lambda;
+      goma_ctx->fem.gn_glob[mn]->curebexp = lambda;
       break;
 
       /*
@@ -1220,11 +1231,12 @@ void update_parameterAC(
     case TAGC_TIME_CONST5:
     case TAGC_TIME_CONST6:
     case TAGC_TIME_CONST7:
-      ve_glob[mn][augc[iAC].MPID - TAGC_TIME_CONST]->time_const_st->lambda0 = lambda;
+      goma_ctx->fem.ve_glob[mn][goma_ctx->fem.augc[iAC].MPID - TAGC_TIME_CONST]
+          ->time_const_st->lambda0 = lambda;
       break;
 
     case TAGC_WT_FUNC:
-      vn_glob[mn]->wt_func = lambda;
+      goma_ctx->fem.vn_glob[mn]->wt_func = lambda;
       break;
 
     case TAGC_ALPHA:
@@ -1235,28 +1247,30 @@ void update_parameterAC(
     case TAGC_ALPHA5:
     case TAGC_ALPHA6:
     case TAGC_ALPHA7:
-      ve_glob[mn][augc[iAC].MPID - TAGC_ALPHA]->alpha = lambda;
+      goma_ctx->fem.ve_glob[mn][goma_ctx->fem.augc[iAC].MPID - TAGC_ALPHA]->alpha = lambda;
       break;
 
     case TAGC_PTT_XI:
-      ve_glob[mn][augc[iAC].MPID - TAGC_PTT_XI]->xi = lambda;
+      goma_ctx->fem.ve_glob[mn][goma_ctx->fem.augc[iAC].MPID - TAGC_PTT_XI]->xi = lambda;
       break;
 
     case TAGC_PTT_EPS:
-      ve_glob[mn][augc[iAC].MPID - TAGC_PTT_EPS]->eps = lambda;
+      goma_ctx->fem.ve_glob[mn][goma_ctx->fem.augc[iAC].MPID - TAGC_PTT_EPS]->eps = lambda;
       break;
 
     case TAGC_SHIFT_FUNC:
     case TAGC_SHIFT_FUNC1:
-      vn_glob[mn]->shift[augc[iAC].MPID - TAGC_SHIFT_FUNC] = lambda;
+      goma_ctx->fem.vn_glob[mn]->shift[goma_ctx->fem.augc[iAC].MPID - TAGC_SHIFT_FUNC] = lambda;
       break;
 
     case TAGC_POLYMER_YIELD_STRESS:
-      ve_glob[mn][augc[iAC].MPID - TAGC_POLYMER_YIELD_STRESS]->gn->tau_y = lambda;
+      goma_ctx->fem.ve_glob[mn][goma_ctx->fem.augc[iAC].MPID - TAGC_POLYMER_YIELD_STRESS]
+          ->gn->tau_y = lambda;
       break;
 
     case TAGC_POLYMER_YIELD_EXPONENT:
-      ve_glob[mn][augc[iAC].MPID - TAGC_POLYMER_YIELD_EXPONENT]->gn->fexp = lambda;
+      goma_ctx->fem.ve_glob[mn][goma_ctx->fem.augc[iAC].MPID - TAGC_POLYMER_YIELD_EXPONENT]
+          ->gn->fexp = lambda;
       break;
 
       /*
@@ -1264,99 +1278,99 @@ void update_parameterAC(
        */
 
     case TAGC_LAME_MU:
-      elc_glob[mn]->lame_mu = lambda;
+      goma_ctx->fem.elc_glob[mn]->lame_mu = lambda;
       break;
 
     case TAGC_LAME_MU_CONTACT_LINE_G0:
-      *(elc_glob[mn]->u_mu + 1) = lambda;
+      *(goma_ctx->fem.elc_glob[mn]->u_mu + 1) = lambda;
       break;
 
     case TAGC_LAME_MU_CONTACT_LINE_G1:
-      *(elc_glob[mn]->u_mu + 2) = lambda;
+      *(goma_ctx->fem.elc_glob[mn]->u_mu + 2) = lambda;
       break;
 
     case TAGC_LAME_MU_CONTACT_LINE_R0:
-      *(elc_glob[mn]->u_mu + 3) = lambda;
+      *(goma_ctx->fem.elc_glob[mn]->u_mu + 3) = lambda;
       break;
 
     case TAGC_LAME_LAMBDA:
-      elc_glob[mn]->lame_lambda = lambda;
+      goma_ctx->fem.elc_glob[mn]->lame_lambda = lambda;
       break;
 
     case TAGC_BEND_STIFFNESS:
-      elc_glob[mn]->bend_stiffness = lambda;
+      goma_ctx->fem.elc_glob[mn]->bend_stiffness = lambda;
       break;
 
     case TAGC_CONV_LAG_VELX:
-      *(elc_glob[mn]->v_mesh_sfs) = lambda;
+      *(goma_ctx->fem.elc_glob[mn]->v_mesh_sfs) = lambda;
       break;
 
     case TAGC_CONV_LAG_VELY:
-      *(elc_glob[mn]->v_mesh_sfs + 1) = lambda;
+      *(goma_ctx->fem.elc_glob[mn]->v_mesh_sfs + 1) = lambda;
       break;
 
     case TAGC_CONV_LAG_VELZ:
-      *(elc_glob[mn]->v_mesh_sfs + 2) = lambda;
+      *(goma_ctx->fem.elc_glob[mn]->v_mesh_sfs + 2) = lambda;
       break;
 
     case TAGC_CONV_LAG_ROTRATE:
-      *(elc_glob[mn]->u_v_mesh_sfs) = lambda;
+      *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs) = lambda;
       break;
 
     case TAGC_CONV_LAG_ROT_X0:
-      *(elc_glob[mn]->u_v_mesh_sfs + 1) = lambda;
+      *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs + 1) = lambda;
       break;
 
     case TAGC_CONV_LAG_ROT_Y0:
-      *(elc_glob[mn]->u_v_mesh_sfs + 2) = lambda;
+      *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs + 2) = lambda;
       break;
 
     case TAGC_CONV_LAG_ROT_Z0:
-      *(elc_glob[mn]->u_v_mesh_sfs + 3) = lambda;
+      *(goma_ctx->fem.elc_glob[mn]->u_v_mesh_sfs + 3) = lambda;
       break;
 
     case TAGC_RS_LAME_MU:
-      elc_rs_glob[mn]->lame_mu = lambda;
+      goma_ctx->fem.elc_rs_glob[mn]->lame_mu = lambda;
       break;
 
     case TAGC_RS_LAME_LAMBDA:
-      elc_rs_glob[mn]->lame_lambda = lambda;
+      goma_ctx->fem.elc_rs_glob[mn]->lame_lambda = lambda;
       break;
 
     case TAGC_RS_CONV_LAG_VELX:
-      *(elc_rs_glob[mn]->v_mesh_sfs) = lambda;
+      *(goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs) = lambda;
       break;
 
     case TAGC_RS_CONV_LAG_VELY:
-      *(elc_rs_glob[mn]->v_mesh_sfs + 1) = lambda;
+      *(goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs + 1) = lambda;
       break;
 
     case TAGC_RS_CONV_LAG_VELZ:
-      *(elc_rs_glob[mn]->v_mesh_sfs + 2) = lambda;
+      *(goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs + 2) = lambda;
       break;
 
     case TAGC_RS_CONV_LAG_ROTRATE:
-      *(elc_rs_glob[mn]->u_v_mesh_sfs) = lambda;
+      *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs) = lambda;
       break;
 
     case TAGC_RS_CONV_LAG_ROT_X0:
-      *(elc_rs_glob[mn]->u_v_mesh_sfs + 1) = lambda;
+      *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs + 1) = lambda;
       break;
 
     case TAGC_RS_CONV_LAG_ROT_Y0:
-      *(elc_rs_glob[mn]->u_v_mesh_sfs + 2) = lambda;
+      *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs + 2) = lambda;
       break;
 
     case TAGC_RS_CONV_LAG_ROT_Z0:
-      *(elc_rs_glob[mn]->u_v_mesh_sfs + 3) = lambda;
+      *(goma_ctx->fem.elc_rs_glob[mn]->u_v_mesh_sfs + 3) = lambda;
       break;
 
     case TAGC_POISSON:
-      elc_glob[mn]->poisson = lambda;
+      goma_ctx->fem.elc_glob[mn]->poisson = lambda;
       break;
 
     case TAGC_STRSS_FR_SOL_VOL_FRAC:
-      elc_glob[mn]->Strss_fr_sol_vol_frac = lambda;
+      goma_ctx->fem.elc_glob[mn]->Strss_fr_sol_vol_frac = lambda;
       break;
 
       /*
@@ -1364,263 +1378,263 @@ void update_parameterAC(
        */
 
     case TAGC_NSS_A0:
-      mp_glob[mn]->momentum_source[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->momentum_source[0] = lambda;
       break;
 
     case TAGC_NSS_A1:
-      mp_glob[mn]->momentum_source[1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->momentum_source[1] = lambda;
       break;
 
     case TAGC_NSS_A2:
-      mp_glob[mn]->momentum_source[2] = lambda;
+      goma_ctx->fem.mp_glob[mn]->momentum_source[2] = lambda;
       break;
 
     case TAGC_NSS_A3:
-      mp_glob[mn]->u_momentum_source[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_momentum_source[0] = lambda;
       break;
 
     case TAGC_LUB_HGT_U0:
-      mp_glob[mn]->u_heightU_function_constants[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[0] = lambda;
       break;
 
     case TAGC_LUB_HGT_U1:
-      mp_glob[mn]->u_heightU_function_constants[1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[1] = lambda;
       break;
 
     case TAGC_LUB_HGT_U2:
-      mp_glob[mn]->u_heightU_function_constants[2] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[2] = lambda;
       break;
 
     case TAGC_LUB_HGT_U3:
-      mp_glob[mn]->u_heightU_function_constants[3] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[3] = lambda;
       break;
 
     case TAGC_LUB_HGT_U4:
-      mp_glob[mn]->u_heightU_function_constants[4] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[4] = lambda;
       break;
 
     case TAGC_LUB_HGT_U5:
-      mp_glob[mn]->u_heightU_function_constants[5] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[5] = lambda;
       break;
 
     case TAGC_LUB_HGT_U6:
-      mp_glob[mn]->u_heightU_function_constants[6] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[6] = lambda;
       break;
 
     case TAGC_LUB_HGT_U7:
-      mp_glob[mn]->u_heightU_function_constants[7] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightU_function_constants[7] = lambda;
       break;
 
     case TAGC_LUB_HGT_L0:
-      mp_glob[mn]->u_heightL_function_constants[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[0] = lambda;
       break;
 
     case TAGC_LUB_HGT_L1:
-      mp_glob[mn]->u_heightL_function_constants[1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[1] = lambda;
       break;
 
     case TAGC_LUB_HGT_L2:
-      mp_glob[mn]->u_heightL_function_constants[2] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[2] = lambda;
       break;
 
     case TAGC_LUB_HGT_L3:
-      mp_glob[mn]->u_heightL_function_constants[3] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[3] = lambda;
       break;
 
     case TAGC_LUB_HGT_L4:
-      mp_glob[mn]->u_heightL_function_constants[4] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[4] = lambda;
       break;
 
     case TAGC_LUB_HGT_L5:
-      mp_glob[mn]->u_heightL_function_constants[5] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[5] = lambda;
       break;
 
     case TAGC_LUB_HGT_L6:
-      mp_glob[mn]->u_heightL_function_constants[6] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[6] = lambda;
       break;
 
     case TAGC_LUB_HGT_L7:
-      mp_glob[mn]->u_heightL_function_constants[7] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heightL_function_constants[7] = lambda;
       break;
 
     case TAGC_U_LUB_VELO_U0:
-      mp_glob[mn]->u_veloU_function_constants[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[0] = lambda;
       break;
 
     case TAGC_U_LUB_VELO_U1:
-      mp_glob[mn]->u_veloU_function_constants[1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[1] = lambda;
       break;
 
     case TAGC_U_LUB_VELO_U2:
-      mp_glob[mn]->u_veloU_function_constants[2] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[2] = lambda;
       break;
 
     case TAGC_U_LUB_VELO_U3:
-      mp_glob[mn]->u_veloU_function_constants[3] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[3] = lambda;
       break;
 
     case TAGC_U_LUB_VELO_U4:
-      mp_glob[mn]->u_veloU_function_constants[4] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[4] = lambda;
       break;
 
     case TAGC_U_LUB_VELO_U5:
-      mp_glob[mn]->u_veloU_function_constants[5] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_veloU_function_constants[5] = lambda;
       break;
 
     case TAGC_U_LUB_VELO_L0:
-      mp_glob[mn]->u_veloL_function_constants[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[0] = lambda;
       break;
 
     case TAGC_U_LUB_VELO_L1:
-      mp_glob[mn]->u_veloL_function_constants[1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[1] = lambda;
       break;
 
     case TAGC_U_LUB_VELO_L2:
-      mp_glob[mn]->u_veloL_function_constants[2] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[2] = lambda;
       break;
 
     case TAGC_U_LUB_VELO_L3:
-      mp_glob[mn]->u_veloL_function_constants[3] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[3] = lambda;
       break;
 
     case TAGC_U_LUB_VELO_L4:
-      mp_glob[mn]->u_veloL_function_constants[4] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[4] = lambda;
       break;
 
     case TAGC_U_LUB_VELO_L5:
-      mp_glob[mn]->u_veloL_function_constants[5] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_veloL_function_constants[5] = lambda;
       break;
 
     case TAGC_LUB_VELO_U0:
-      mp_glob[mn]->veloU[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->veloU[0] = lambda;
       break;
 
     case TAGC_LUB_VELO_U1:
-      mp_glob[mn]->veloU[1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->veloU[1] = lambda;
       break;
 
     case TAGC_LUB_VELO_U2:
-      mp_glob[mn]->veloU[2] = lambda;
+      goma_ctx->fem.mp_glob[mn]->veloU[2] = lambda;
       break;
 
     case TAGC_LUB_VELO_L0:
-      mp_glob[mn]->veloL[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->veloL[0] = lambda;
       break;
 
     case TAGC_LUB_VELO_L1:
-      mp_glob[mn]->veloL[1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->veloL[1] = lambda;
       break;
 
     case TAGC_LUB_VELO_L2:
-      mp_glob[mn]->veloL[2] = lambda;
+      goma_ctx->fem.mp_glob[mn]->veloL[2] = lambda;
       break;
 
     case TAGC_LUB_DCA_U0:
-      mp_glob[mn]->u_dcaU_function_constants[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[0] = lambda;
       break;
 
     case TAGC_LUB_DCA_U1:
-      mp_glob[mn]->u_dcaU_function_constants[1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[1] = lambda;
       break;
 
     case TAGC_LUB_DCA_U2:
-      mp_glob[mn]->u_dcaU_function_constants[2] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[2] = lambda;
       break;
 
     case TAGC_LUB_DCA_U3:
-      mp_glob[mn]->u_dcaU_function_constants[3] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_dcaU_function_constants[3] = lambda;
       break;
 
     case TAGC_LUB_DCA_L0:
-      mp_glob[mn]->u_dcaL_function_constants[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[0] = lambda;
       break;
 
     case TAGC_LUB_DCA_L1:
-      mp_glob[mn]->u_dcaL_function_constants[1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[1] = lambda;
       break;
 
     case TAGC_LUB_DCA_L2:
-      mp_glob[mn]->u_dcaL_function_constants[2] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[2] = lambda;
       break;
 
     case TAGC_LUB_DCA_L3:
-      mp_glob[mn]->u_dcaL_function_constants[3] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_dcaL_function_constants[3] = lambda;
       break;
 
     case TAGC_LUB_SOURCE_0:
-      mp_glob[mn]->u_lubsource_function_constants[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_lubsource_function_constants[0] = lambda;
       break;
 
     case TAGC_LUB_SOURCE_1:
-      mp_glob[mn]->u_lubsource_function_constants[1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_lubsource_function_constants[1] = lambda;
       break;
 
     case TAGC_LUB_SOURCE_2:
-      mp_glob[mn]->u_lubsource_function_constants[2] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_lubsource_function_constants[2] = lambda;
       break;
 
     case TAGC_RST_FUNC_0:
-      mp_glob[mn]->Rst_func = lambda;
+      goma_ctx->fem.mp_glob[mn]->Rst_func = lambda;
       break;
 
     case TAGC_RST_FUNC_1:
-      mp_glob[mn]->Rst_diffusion = lambda;
+      goma_ctx->fem.mp_glob[mn]->Rst_diffusion = lambda;
       break;
 
     case TAGC_RST_FUNC_2:
-      mp_glob[mn]->Rst_func_supg = lambda;
+      goma_ctx->fem.mp_glob[mn]->Rst_func_supg = lambda;
       break;
 
     case TAGC_RST_FUNC_3:
-      mp_glob[mn]->Rst_epsilon = lambda;
+      goma_ctx->fem.mp_glob[mn]->Rst_epsilon = lambda;
       break;
 
     case TAGC_HEAT_SOURCE_0:
-      mp_glob[mn]->u_heat_source[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_heat_source[0] = lambda;
       break;
 
     case TAGC_SPECIES_SOURCE_0_P0:
-      mp_glob[mn]->u_species_source[0][0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_species_source[0][0] = lambda;
       break;
 
     case TAGC_SPECIES_SOURCE_0_P1:
-      mp_glob[mn]->u_species_source[0][1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_species_source[0][1] = lambda;
       break;
 
     case TAGC_SPECIES_SOURCE_0_P2:
-      mp_glob[mn]->u_species_source[0][2] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_species_source[0][2] = lambda;
       break;
 
     case TAGC_SPECIES_SOURCE_0_P3:
-      mp_glob[mn]->u_species_source[0][3] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_species_source[0][3] = lambda;
       break;
 
     case TAGC_SPECIES_SOURCE_1_P0:
-      mp_glob[mn]->u_species_source[1][0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_species_source[1][0] = lambda;
       break;
 
     case TAGC_SPECIES_SOURCE_1_P1:
-      mp_glob[mn]->u_species_source[1][1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_species_source[1][1] = lambda;
       break;
 
     case TAGC_SPECIES_SOURCE_1_P2:
-      mp_glob[mn]->u_species_source[1][2] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_species_source[1][2] = lambda;
       break;
 
     case TAGC_SPECIES_SOURCE_1_P3:
-      mp_glob[mn]->u_species_source[1][3] = lambda;
+      goma_ctx->fem.mp_glob[mn]->u_species_source[1][3] = lambda;
       break;
 
     case TAGC_LATENT_HEAT_0:
-      mp_glob[mn]->latent_heat_vap[0] = lambda;
+      goma_ctx->fem.mp_glob[mn]->latent_heat_vap[0] = lambda;
       break;
 
     case TAGC_LATENT_HEAT_1:
-      mp_glob[mn]->latent_heat_vap[1] = lambda;
+      goma_ctx->fem.mp_glob[mn]->latent_heat_vap[1] = lambda;
       break;
 
     default:
-      printf("\n\t Error: Invalid Material Property Tag %d\n", augc[iAC].MPID);
+      printf("\n\t Error: Invalid Material Property Tag %d\n", goma_ctx->fem.augc[iAC].MPID);
       exit(0);
       break;
     }
@@ -1649,7 +1663,7 @@ int user_aug_cond(int iAC,
   int jAC = 0, have_bAC = FALSE, have_cAC = FALSE, have_dAC = FALSE;
 
   int i, err = -99;
-  const int Jac_state = af->Assemble_Jacobian;
+  const int Jac_state = goma_ctx->fem.af->Assemble_Jacobian;
 
   double p_save, dp_save = 0.0;
   double fd_factor = FD_FACTOR;
@@ -1696,10 +1710,10 @@ int user_aug_cond(int iAC,
     update_parameterAC(iAC, mf_args->x, mf_args->xdot, x_AC, cx, mf_args->exo, mf_args->dpi);
 
     init_vec_value(res_p, 0.0, numProcUnknowns);
-    af->Assemble_Residual = TRUE;
-    af->Assemble_Jacobian = FALSE;
-    af->Assemble_LSA_Jacobian_Matrix = FALSE;
-    af->Assemble_LSA_Mass_Matrix = FALSE;
+    goma_ctx->fem.af->Assemble_Residual = TRUE;
+    goma_ctx->fem.af->Assemble_Jacobian = FALSE;
+    goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix = FALSE;
+    goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
 
     err = matrix_fill_full(mf_args->ams, mf_args->x, res_p, mf_args->x_old, mf_args->x_older,
                            mf_args->xdot, mf_args->xdot_old, mf_args->x_update, mf_args->delta_t,
@@ -1716,10 +1730,10 @@ int user_aug_cond(int iAC,
 
     init_vec_value(res_m, 0.0, numProcUnknowns);
 
-    af->Assemble_Residual = TRUE;
-    af->Assemble_Jacobian = FALSE;
-    af->Assemble_LSA_Jacobian_Matrix = FALSE;
-    af->Assemble_LSA_Mass_Matrix = FALSE;
+    goma_ctx->fem.af->Assemble_Residual = TRUE;
+    goma_ctx->fem.af->Assemble_Jacobian = FALSE;
+    goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix = FALSE;
+    goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
 
     err = matrix_fill_full(mf_args->ams, mf_args->x, res_m, mf_args->x_old, mf_args->x_older,
                            mf_args->xdot, mf_args->xdot_old, mf_args->x_update, mf_args->delta_t,
@@ -1820,7 +1834,7 @@ int user_aug_cond(int iAC,
 
   safe_free((void *)res_p);
   safe_free((void *)res_m);
-  af->Assemble_Jacobian = Jac_state;
+  goma_ctx->fem.af->Assemble_Jacobian = Jac_state;
 
   return (TRUE);
 }
@@ -1876,24 +1890,25 @@ int std_aug_cond(int iAC,
    * dN/dx  This is the sensitivity of the flux constraint with respect all the
    *        FEM degrees of freedom ( i.e. everything except the augmenting parameter )
    */
-  if (augc[iAC].Type == AC_FLUX) {
-    inventory = evaluate_flux(mf_args->exo, mf_args->dpi, augc[iAC].SSID, augc[iAC].MFID, NULL,
-                              augc[iAC].MTID, augc[iAC].COMPID, NULL, FALSE, mf_args->x,
+  if (goma_ctx->fem.augc[iAC].Type == AC_FLUX) {
+    inventory = evaluate_flux(mf_args->exo, mf_args->dpi, goma_ctx->fem.augc[iAC].SSID,
+                              goma_ctx->fem.augc[iAC].MFID, NULL, goma_ctx->fem.augc[iAC].MTID,
+                              goma_ctx->fem.augc[iAC].COMPID, NULL, FALSE, mf_args->x,
                               mf_args->xdot, cAC[iAC], *(mf_args->delta_t), *(mf_args->time), 0);
-    if (augc[iAC].len_AC > 2) {
+    if (goma_ctx->fem.augc[iAC].len_AC > 2) {
       int mfid, ssid, mtid, compid;
       double inventory1, ac_factor = 1.0;
 
-      mfid = (int)augc[iAC].DataFlt[0];
-      ssid = (int)augc[iAC].DataFlt[1];
-      mtid = (int)augc[iAC].DataFlt[2];
-      if (augc[iAC].len_AC > 3) {
-        compid = (int)augc[iAC].DataFlt[3];
+      mfid = (int)goma_ctx->fem.augc[iAC].DataFlt[0];
+      ssid = (int)goma_ctx->fem.augc[iAC].DataFlt[1];
+      mtid = (int)goma_ctx->fem.augc[iAC].DataFlt[2];
+      if (goma_ctx->fem.augc[iAC].len_AC > 3) {
+        compid = (int)goma_ctx->fem.augc[iAC].DataFlt[3];
       } else {
         compid = 0;
       }
-      if (augc[iAC].len_AC > 4) {
-        ac_factor = augc[iAC].DataFlt[4];
+      if (goma_ctx->fem.augc[iAC].len_AC > 4) {
+        ac_factor = goma_ctx->fem.augc[iAC].DataFlt[4];
       }
       inventory1 = evaluate_flux(mf_args->exo, mf_args->dpi, ssid, mfid, NULL, mtid, compid, NULL,
                                  FALSE, mf_args->x, mf_args->xdot, cAC[iAC], *(mf_args->delta_t),
@@ -1907,10 +1922,11 @@ int std_aug_cond(int iAC,
       dAC[iAC][jAC] = 0.0;
     }
     // Formulate and store the residual for the augmented condition
-    gAC[iAC] = (inventory - augc[iAC].CONSTV);
-  } else if (augc[iAC].Type == AC_FLUX_MAT) {
-    inventory = evaluate_flux(mf_args->exo, mf_args->dpi, augc[iAC].SSID, augc[iAC].MFID, NULL,
-                              augc[iAC].MDID, augc[iAC].COMPID, NULL, FALSE, mf_args->x,
+    gAC[iAC] = (inventory - goma_ctx->fem.augc[iAC].CONSTV);
+  } else if (goma_ctx->fem.augc[iAC].Type == AC_FLUX_MAT) {
+    inventory = evaluate_flux(mf_args->exo, mf_args->dpi, goma_ctx->fem.augc[iAC].SSID,
+                              goma_ctx->fem.augc[iAC].MFID, NULL, goma_ctx->fem.augc[iAC].MDID,
+                              goma_ctx->fem.augc[iAC].COMPID, NULL, FALSE, mf_args->x,
                               mf_args->xdot, cAC[iAC], *(mf_args->delta_t), *(mf_args->time), 0);
 
     /*
@@ -1920,9 +1936,9 @@ int std_aug_cond(int iAC,
       dAC[iAC][jAC] = 0.0;
     }
     // Formulate and store the residual for the augmented condition
-    gAC[iAC] = (inventory - augc[iAC].CONSTV);
-  } else if (augc[iAC].Type == AC_VOLUME) {
-    if (augc[iAC].VOLID >= 10) {
+    gAC[iAC] = (inventory - goma_ctx->fem.augc[iAC].CONSTV);
+  } else if (goma_ctx->fem.augc[iAC].Type == AC_VOLUME) {
+    if (goma_ctx->fem.augc[iAC].VOLID >= 10) {
       user_aug_cond_volume_residuals(iAC, mf_args->x, mf_args->xdot, *(mf_args->delta_t),
                                      *(mf_args->time), x_AC, gAC, cAC, dAC, numProcUnknowns,
                                      mf_args->exo, mf_args->dpi, cx);
@@ -1930,7 +1946,7 @@ int std_aug_cond(int iAC,
       // I guess we stored the volume calculation in evol on a previous
       // step. Here we combine the contributions across processors and come up
       // with a global unknown.
-      inventory = augc[iAC].evol;
+      inventory = goma_ctx->fem.augc[iAC].evol;
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -1938,21 +1954,21 @@ int std_aug_cond(int iAC,
       }
 #endif
       // Formulate and store the residual for the augmented condition
-      gAC[iAC] = (inventory - augc[iAC].CONSTV);
+      gAC[iAC] = (inventory - goma_ctx->fem.augc[iAC].CONSTV);
 
       for (i = 0; i < numProcUnknowns; i++) {
-        cAC[iAC][i] = augc[iAC].d_evol_dx[i];
+        cAC[iAC][i] = goma_ctx->fem.augc[iAC].d_evol_dx[i];
       }
       for (jAC = 0; jAC < nAC; jAC++) {
         dAC[iAC][jAC] = 0.0;
       }
     }
-  } else if (augc[iAC].Type == AC_LS_VEL) {
-    if (augc[iAC].d_lsvol_dx == 0)
+  } else if (goma_ctx->fem.augc[iAC].Type == AC_LS_VEL) {
+    if (goma_ctx->fem.augc[iAC].d_lsvol_dx == 0)
       DPRINTF(stderr, "\n can't see vectors ");
 
-    inventory = augc[iAC].lsvol;
-    LSvel_inventory = augc[iAC].lsvel;
+    inventory = goma_ctx->fem.augc[iAC].lsvol;
+    LSvel_inventory = goma_ctx->fem.augc[iAC].lsvel;
 
 #ifdef PARALLEL
     if (goma_ctx->num_proc > 1) {
@@ -1966,8 +1982,9 @@ int std_aug_cond(int iAC,
 #endif /* PARALLEL */
 
     for (i = 0; i < numProcUnknowns; i++) {
-      cAC[iAC][i] = (augc[iAC].d_lsvel_dx[i] / inventory -
-                     augc[iAC].d_lsvol_dx[i] * augc[iAC].lsvel / inventory / inventory);
+      cAC[iAC][i] = (goma_ctx->fem.augc[iAC].d_lsvel_dx[i] / inventory -
+                     goma_ctx->fem.augc[iAC].d_lsvol_dx[i] * goma_ctx->fem.augc[iAC].lsvel /
+                         inventory / inventory);
     }
 
     inventory = LSvel_inventory / inventory;
@@ -1979,10 +1996,11 @@ int std_aug_cond(int iAC,
       dAC[iAC][jAC] = 0.0;
     }
     // Formulate and store the residual for the augmented condition
-    gAC[iAC] = (inventory - augc[iAC].CONSTV);
+    gAC[iAC] = (inventory - goma_ctx->fem.augc[iAC].CONSTV);
 
-  } else if (augc[iAC].Type == AC_POSITION || augc[iAC].Type == AC_POSITION_MT) {
-    inventory = getPositionAC(augc + iAC, cAC[iAC], mf_args->x, mf_args->exo);
+  } else if (goma_ctx->fem.augc[iAC].Type == AC_POSITION ||
+             goma_ctx->fem.augc[iAC].Type == AC_POSITION_MT) {
+    inventory = getPositionAC(goma_ctx->fem.augc + iAC, cAC[iAC], mf_args->x, mf_args->exo);
 #ifdef PARALLEL
     if (goma_ctx->num_proc > 1) {
       MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -1996,9 +2014,9 @@ int std_aug_cond(int iAC,
       dAC[iAC][jAC] = 0.0;
     }
     // Formulate and store the residual for the augmented condition
-    gAC[iAC] = (inventory - augc[iAC].CONSTV);
-  } else if (augc[iAC].Type == AC_ANGLE) {
-    inventory = getAngleAC(augc + iAC, cAC[iAC], mf_args->x, mf_args->exo);
+    gAC[iAC] = (inventory - goma_ctx->fem.augc[iAC].CONSTV);
+  } else if (goma_ctx->fem.augc[iAC].Type == AC_ANGLE) {
+    inventory = getAngleAC(goma_ctx->fem.augc + iAC, cAC[iAC], mf_args->x, mf_args->exo);
 #ifdef PARALLEL
     if (goma_ctx->num_proc > 1) {
       MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -2012,7 +2030,7 @@ int std_aug_cond(int iAC,
       dAC[iAC][jAC] = 0.0;
     }
     // Formulate and store the residual for the augmented condition
-    gAC[iAC] = (inventory - augc[iAC].CONSTV);
+    gAC[iAC] = (inventory - goma_ctx->fem.augc[iAC].CONSTV);
   }
 
   // Time dependent augmenting conditions. This small section provides an
@@ -2076,7 +2094,7 @@ int alc_aug_cond(int iAC,
   alceq_p = dp_ds * (lambda - lambda_old);
 
   /* Solution contribution:  dx_ds * (x - x_old) with scale factor */
-  for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
+  for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
     alceq_s += sv[i] * sv[i] * dx[i] * (x[i] - x_old[i]);
   }
   if (goma_ctx->num_proc > 1) {
@@ -2095,7 +2113,7 @@ int alc_aug_cond(int iAC,
   estimate_bAC(iAC, x_AC, bAC, numProcUnknowns, cx, mf_args);
 
   /* cAC is solution sensitivity from LOCA */
-  for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
+  for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
     cAC[iAC][i] = dx[i] * sv[i] * sv[i];
   }
 
@@ -2140,9 +2158,9 @@ void overlap_aug_cond(int ija[],
   int ac_lm = -1;
 
   /* Get element block indices for solid, fluid, and Lagrange surface material */
-  solid_eb = augc[nAC - 1].solid_eb + 1;
-  fluid_eb = augc[nAC - 1].fluid_eb + 1;
-  lm_eb = augc[nAC - 1].lm_eb + 1;
+  solid_eb = goma_ctx->fem.augc[nAC - 1].solid_eb + 1;
+  fluid_eb = goma_ctx->fem.augc[nAC - 1].fluid_eb + 1;
+  lm_eb = goma_ctx->fem.augc[nAC - 1].lm_eb + 1;
   if (solid_eb == fluid_eb)
     GOMA_EH(GOMA_ERROR, "Solid and fluid must be on different blocks!");
 
@@ -2175,16 +2193,17 @@ void overlap_aug_cond(int ija[],
     for (ielem = e_start; ielem < e_end; ielem++) {
 
       /* Check for level set going through element (fill unknown sign change) */
-      if (elem_overlaps_interface(ielem, x, exo, ls->Length_Scale)) {
+      if (elem_overlaps_interface(ielem, x, exo, goma_ctx->fem.ls->Length_Scale)) {
         load_elem_dofptr(ielem, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
 
         /* Assemble embedded BC's into gAC, bAC, and cAC */
-        if (ls->Length_Scale == 0.) {
+        if (goma_ctx->fem.ls->Length_Scale == 0.) {
           apply_embedded_bc(ielem, x, *mf_args->delta_t, *mf_args->theta_, *mf_args->time, NULL, 0,
                             gAC, bAC, cAC, exo);
         } else {
-          apply_distributed_sources(ielem, ls->Length_Scale, x, exo, *mf_args->delta_t,
-                                    *mf_args->theta_, *mf_args->time, NULL, 0, gAC, bAC, cAC);
+          apply_distributed_sources(ielem, goma_ctx->fem.ls->Length_Scale, x, exo,
+                                    *mf_args->delta_t, *mf_args->theta_, *mf_args->time, NULL, 0,
+                                    gAC, bAC, cAC);
         }
       }
     }
@@ -2201,9 +2220,9 @@ void overlap_aug_cond(int ija[],
     jside = -1;
 
     for (jAC = 0; jAC < nAC; jAC++) {
-      if (augc[jAC].Type == AC_OVERLAP) {
-        ielem = augc[jAC].lm_elem;
-        iside = augc[jAC].lm_side;
+      if (goma_ctx->fem.augc[jAC].Type == AC_OVERLAP) {
+        ielem = goma_ctx->fem.augc[jAC].lm_elem;
+        iside = goma_ctx->fem.augc[jAC].lm_side;
         if (ielem != jelem || iside != jside) {
 
           /* This is the next element side that needs to be processed */
@@ -2213,7 +2232,7 @@ void overlap_aug_cond(int ija[],
           }
 
           /* Find the appropriate side and point elem_side_bc to it */
-          elem_side_bc = First_Elem_Side_BC_Array[pg->imtrx][ielem];
+          elem_side_bc = First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx][ielem];
           jside = elem_side_bc->id_side;
           if (iside != jside) {
             do {
@@ -2225,8 +2244,10 @@ void overlap_aug_cond(int ija[],
           /* Now fill in all gAC, bAC, and cAC terms for this side */
           err = apply_contact_bc(
               x, mf_args->resid, *mf_args->delta_t, *mf_args->theta_, *mf_args->h_elem_avg, h,
-              mu_avg, *mf_args->U_norm, First_Elem_Side_BC_Array[pg->imtrx], ielem,
-              ei[pg->imtrx]->ielem_type, ei[pg->imtrx]->num_local_nodes, ei[pg->imtrx]->ielem_dim,
+              mu_avg, *mf_args->U_norm, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], ielem,
+              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type,
+              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
+              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim,
               goma_ctx->mesh.proc_connect_ptr[ielem], elem_side_bc, *mf_args->num_total_nodes,
               CONTACT_SURF, jAC, gAC, bAC, cAC, dAC, *mf_args->time, exo);
           GOMA_EH(err, " apply_contact_bc");
@@ -2242,9 +2263,9 @@ void overlap_aug_cond(int ija[],
     jside = -1;
 
     for (jAC = 0; jAC < nAC; jAC++) {
-      if (augc[jAC].Type == AC_OVERLAP) {
-        ielem = augc[jAC].lm_elem;
-        iside = augc[jAC].lm_side;
+      if (goma_ctx->fem.augc[jAC].Type == AC_OVERLAP) {
+        ielem = goma_ctx->fem.augc[jAC].lm_elem;
+        iside = goma_ctx->fem.augc[jAC].lm_side;
         if (ielem == -1 || ielem != jelem || iside != jside) {
 
           /* This is the next element side that needs to be processed */
@@ -2252,17 +2273,18 @@ void overlap_aug_cond(int ija[],
           if (ielem >= 0 && ielem != jelem) {
             load_elem_dofptr(ielem, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
           }
-          if (ielem >= 0 && current_elem_overlaps_interface(ls->Length_Scale)) {
-            if (ls->Length_Scale == 0.) {
+          if (ielem >= 0 && current_elem_overlaps_interface(goma_ctx->fem.ls->Length_Scale)) {
+            if (goma_ctx->fem.ls->Length_Scale == 0.) {
               apply_embedded_bc(ielem, x, *mf_args->delta_t, *mf_args->theta_, *mf_args->time, NULL,
                                 jAC, gAC, bAC, cAC, exo);
             } else {
-              apply_distributed_sources(ielem, ls->Length_Scale, x, exo, *mf_args->delta_t,
-                                        *mf_args->theta_, *mf_args->time, NULL, jAC, gAC, bAC, cAC);
+              apply_distributed_sources(ielem, goma_ctx->fem.ls->Length_Scale, x, exo,
+                                        *mf_args->delta_t, *mf_args->theta_, *mf_args->time, NULL,
+                                        jAC, gAC, bAC, cAC);
             }
           } else {
             /* trivialize augmenting conditions in elements that don't cross interface */
-            gAC[jAC] = augc[jAC].lm_value;
+            gAC[jAC] = goma_ctx->fem.augc[jAC].lm_value;
             dAC[jAC][jAC] = 1.;
           }
         } /* END of "if (ielem != jelem || iside != jside)" */
@@ -2281,7 +2303,7 @@ void overlap_aug_cond(int ija[],
       if (First_Elem_Side_BC_Array[ielem] != NULL) {
         int call_contact;
         int ibc, bc_input_id, bct;
-        elem_side_bc = First_Elem_Side_BC_Array[pg->imtrx][ielem];
+        elem_side_bc = First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx][ielem];
 
         load_elem_dofptr(ielem, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
         /*****************************************************************************/
@@ -2299,8 +2321,10 @@ void overlap_aug_cond(int ija[],
           if (call_contact) {
             err = apply_contact_bc(
                 x, mf_args->resid, *mf_args->delta_t, *mf_args->theta_, *mf_args->h_elem_avg, h,
-                mu_avg, *mf_args->U_norm, First_Elem_Side_BC_Array[pg->imtrx], ielem,
-                ei[pg->imtrx]->ielem_type, ei[pg->imtrx]->num_local_nodes, ei[pg->imtrx]->ielem_dim,
+                mu_avg, *mf_args->U_norm, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], ielem,
+                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type,
+                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
+                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim,
                 goma_ctx->mesh.proc_connect_ptr[ielem], elem_side_bc, *mf_args->num_total_nodes,
                 CONTACT_SURF, jAC, gAC, bAC, cAC, dAC, *mf_args->time, exo);
           }
@@ -2314,14 +2338,14 @@ void overlap_aug_cond(int ija[],
 #if 0
    {
      int index;
-     int numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
+     int numProcUnknowns = NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
      for (jAC = 0; jAC < nAC; jAC++)
        {
-         printf("jAC=%d, LM=%g, gAC=%g, dAC[%d][%d]=%g\n",jAC,augc[jAC].lm_value,gAC[jAC],jAC,jAC,dAC[jAC][jAC]);
+         printf("jAC=%d, LM=%g, gAC=%g, dAC[%d][%d]=%g\n",jAC,goma_ctx->fem.augc[jAC].lm_value,gAC[jAC],jAC,jAC,dAC[jAC][jAC]);
          for ( index = 0; index<numProcUnknowns; index++)
            {
-             if (bAC[jAC][index] != 0. ) printf(" eqntype=%d, N=%d, bAC[jAC][%d]=%g\n",idv[pg->imtrx][index][0],idv[pg->imtrx][index][2],index,bAC[jAC][index]);
-             if (cAC[jAC][index] != 0. ) printf(" vartype=%d, N=%d, cAC[jAC][%d]=%g\n",idv[pg->imtrx][index][0],idv[pg->imtrx][index][2],index,cAC[jAC][index]);
+             if (bAC[jAC][index] != 0. ) printf(" eqntype=%d, N=%d, bAC[jAC][%d]=%g\n",idv[goma_ctx->fem.pg->imtrx][index][0],idv[goma_ctx->fem.pg->imtrx][index][2],index,bAC[jAC][index]);
+             if (cAC[jAC][index] != 0. ) printf(" vartype=%d, N=%d, cAC[jAC][%d]=%g\n",idv[goma_ctx->fem.pg->imtrx][index][0],idv[goma_ctx->fem.pg->imtrx][index][2],index,cAC[jAC][index]);
            }
        }
    }
@@ -2350,21 +2374,21 @@ static int estimate_bAC(
 
   update_parameterAC(iAC, mf_args->x, mf_args->xdot, x_AC, cx, mf_args->exo, mf_args->dpi);
 
-  af->Assemble_Residual = TRUE;
-  af->Assemble_Jacobian = FALSE;
-  af->Assemble_LSA_Jacobian_Matrix = FALSE;
-  af->Assemble_LSA_Mass_Matrix = FALSE;
+  goma_ctx->fem.af->Assemble_Residual = TRUE;
+  goma_ctx->fem.af->Assemble_Jacobian = FALSE;
+  goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix = FALSE;
+  goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
 
-  if (augc[iAC].Type == AC_VOLUME) {
-    init_vec_value(augc[iAC].d_evol_dx, 0.0, numProcUnknowns);
-    augc[iAC].evol = 0.;
+  if (goma_ctx->fem.augc[iAC].Type == AC_VOLUME) {
+    init_vec_value(goma_ctx->fem.augc[iAC].d_evol_dx, 0.0, numProcUnknowns);
+    goma_ctx->fem.augc[iAC].evol = 0.;
   }
 
-  if (augc[iAC].Type == AC_LS_VEL) {
-    init_vec_value(augc[iAC].d_lsvel_dx, 0.0, numProcUnknowns);
-    init_vec_value(augc[iAC].d_lsvol_dx, 0.0, numProcUnknowns);
-    augc[iAC].lsvel = 0.;
-    augc[iAC].lsvol = 0.;
+  if (goma_ctx->fem.augc[iAC].Type == AC_LS_VEL) {
+    init_vec_value(goma_ctx->fem.augc[iAC].d_lsvel_dx, 0.0, numProcUnknowns);
+    init_vec_value(goma_ctx->fem.augc[iAC].d_lsvol_dx, 0.0, numProcUnknowns);
+    goma_ctx->fem.augc[iAC].lsvel = 0.;
+    goma_ctx->fem.augc[iAC].lsvol = 0.;
   }
 
   err = matrix_fill_full(mf_args->ams, mf_args->x, res_p, mf_args->x_old, mf_args->x_older,
@@ -2381,21 +2405,21 @@ static int estimate_bAC(
 
   update_parameterAC(iAC, mf_args->x, mf_args->xdot, x_AC, cx, mf_args->exo, mf_args->dpi);
 
-  af->Assemble_Residual = TRUE;
-  af->Assemble_Jacobian = FALSE;
-  af->Assemble_LSA_Jacobian_Matrix = FALSE;
-  af->Assemble_LSA_Mass_Matrix = FALSE;
+  goma_ctx->fem.af->Assemble_Residual = TRUE;
+  goma_ctx->fem.af->Assemble_Jacobian = FALSE;
+  goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix = FALSE;
+  goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
 
-  if (augc[iAC].Type == AC_VOLUME) {
-    init_vec_value(augc[iAC].d_evol_dx, 0.0, numProcUnknowns);
-    augc[iAC].evol = 0.;
+  if (goma_ctx->fem.augc[iAC].Type == AC_VOLUME) {
+    init_vec_value(goma_ctx->fem.augc[iAC].d_evol_dx, 0.0, numProcUnknowns);
+    goma_ctx->fem.augc[iAC].evol = 0.;
   }
 
-  if (augc[iAC].Type == AC_LS_VEL) {
-    init_vec_value(augc[iAC].d_lsvel_dx, 0.0, numProcUnknowns);
-    init_vec_value(augc[iAC].d_lsvol_dx, 0.0, numProcUnknowns);
-    augc[iAC].lsvel = 0.;
-    augc[iAC].lsvol = 0.;
+  if (goma_ctx->fem.augc[iAC].Type == AC_LS_VEL) {
+    init_vec_value(goma_ctx->fem.augc[iAC].d_lsvel_dx, 0.0, numProcUnknowns);
+    init_vec_value(goma_ctx->fem.augc[iAC].d_lsvol_dx, 0.0, numProcUnknowns);
+    goma_ctx->fem.augc[iAC].lsvel = 0.;
+    goma_ctx->fem.augc[iAC].lsvol = 0.;
   }
 
   err = matrix_fill_full(mf_args->ams, mf_args->x, res_m, mf_args->x_old, mf_args->x_older,
@@ -2415,7 +2439,7 @@ static int estimate_bAC(
 
   update_parameterAC(iAC, mf_args->x, mf_args->xdot, x_AC, cx, mf_args->exo, mf_args->dpi);
 
-  af->Assemble_Jacobian = TRUE;
+  goma_ctx->fem.af->Assemble_Jacobian = TRUE;
 
   safe_free((void *)res_p);
   safe_free((void *)res_m);
@@ -2440,9 +2464,9 @@ static int estimate_dAC_LSvel(
   int jAC = 0, chosen_vel = 0;
 
   for (jAC = 0; jAC < nAC; jAC++) {
-    if (augc[jAC].Type == AC_LS_VEL && iAC == jAC) {
+    if (goma_ctx->fem.augc[jAC].Type == AC_LS_VEL && iAC == jAC) {
 
-      chosen_vel = augc[jAC].DIR;
+      chosen_vel = goma_ctx->fem.augc[jAC].DIR;
 
       p_save = x_AC[jAC];
 
@@ -2456,7 +2480,7 @@ static int estimate_dAC_LSvel(
 
       inventory_p =
           find_LS_vel(mf_args->exo, mf_args->dpi, NULL, chosen_vel, mf_args->x, numProcUnknowns);
-      inventory_p -= augc[iAC].CONSTV;
+      inventory_p -= goma_ctx->fem.augc[iAC].CONSTV;
 
       /*  */
       x_AC[jAC] = p_save - dp_save;
@@ -2465,7 +2489,7 @@ static int estimate_dAC_LSvel(
 
       inventory_m =
           find_LS_vel(mf_args->exo, mf_args->dpi, NULL, chosen_vel, mf_args->x, numProcUnknowns);
-      inventory_m -= augc[iAC].CONSTV;
+      inventory_m -= goma_ctx->fem.augc[iAC].CONSTV;
 
       /*  */
       xm = 0.5 / dp_save;
@@ -2521,10 +2545,11 @@ static int estimate_dAC_ALC(
 
   /* Evaluate perturbed residuals of all AC's except arc length */
   for (jAC = 0; jAC < iAC; jAC++) {
-    switch (augc[jAC].Type) {
+    switch (goma_ctx->fem.augc[jAC].Type) {
     case AC_FLUX:
-      inventory = evaluate_flux(mf_args->exo, mf_args->dpi, augc[jAC].SSID, augc[jAC].MFID, NULL,
-                                augc[jAC].MTID, augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
+      inventory = evaluate_flux(mf_args->exo, mf_args->dpi, goma_ctx->fem.augc[jAC].SSID,
+                                goma_ctx->fem.augc[jAC].MFID, NULL, goma_ctx->fem.augc[jAC].MTID,
+                                goma_ctx->fem.augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
                                 *(mf_args->delta_t), *(mf_args->time), 0);
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
@@ -2532,12 +2557,13 @@ static int estimate_dAC_ALC(
         inventory = global_inventory;
       }
 #endif
-      res_p[jAC] = inventory - augc[jAC].CONSTV;
+      res_p[jAC] = inventory - goma_ctx->fem.augc[jAC].CONSTV;
       break;
 
     case AC_FLUX_MAT:
-      inventory = evaluate_flux(mf_args->exo, mf_args->dpi, augc[jAC].SSID, augc[jAC].MFID, NULL,
-                                augc[jAC].MDID, augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
+      inventory = evaluate_flux(mf_args->exo, mf_args->dpi, goma_ctx->fem.augc[jAC].SSID,
+                                goma_ctx->fem.augc[jAC].MFID, NULL, goma_ctx->fem.augc[jAC].MDID,
+                                goma_ctx->fem.augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
                                 *(mf_args->delta_t), *(mf_args->time), 0);
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
@@ -2545,25 +2571,25 @@ static int estimate_dAC_ALC(
         inventory = global_inventory;
       }
 #endif
-      res_p[jAC] = inventory - augc[jAC].CONSTV;
+      res_p[jAC] = inventory - goma_ctx->fem.augc[jAC].CONSTV;
       break;
 
     case AC_VOLUME:
-      inventory = augc[jAC].evol;
+      inventory = goma_ctx->fem.augc[jAC].evol;
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         inventory = global_inventory;
       }
 #endif
-      res_p[jAC] = inventory - augc[jAC].CONSTV;
+      res_p[jAC] = inventory - goma_ctx->fem.augc[jAC].CONSTV;
       break;
 
     case AC_LS_VEL:
-      if (augc[iAC].d_lsvol_dx == 0)
+      if (goma_ctx->fem.augc[iAC].d_lsvol_dx == 0)
         DPRINTF(stderr, "\n can't see vectors ");
-      inventory = augc[jAC].lsvol;
-      LSvel_inventory = augc[jAC].lsvel;
+      inventory = goma_ctx->fem.augc[jAC].lsvol;
+      LSvel_inventory = goma_ctx->fem.augc[jAC].lsvel;
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -2574,17 +2600,18 @@ static int estimate_dAC_ALC(
       }
 #endif
       inventory = LSvel_inventory / inventory;
-      res_p[jAC] = inventory - augc[jAC].CONSTV;
+      res_p[jAC] = inventory - goma_ctx->fem.augc[jAC].CONSTV;
       break;
 
     case AC_LGRM:
-      if (augc[jAC].MFID != VOLUME_FLUX) {
+      if (goma_ctx->fem.augc[jAC].MFID != VOLUME_FLUX) {
         GOMA_EH(GOMA_ERROR, "This Lagrange multiplier type is not yet supported!");
       } else {
-        ibc = augc[jAC].BCID;
-        idf = augc[jAC].DFID;
-        inventory = evaluate_flux(mf_args->exo, mf_args->dpi, augc[jAC].SSID, augc[jAC].MFID, NULL,
-                                  augc[jAC].MTID, augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
+        ibc = goma_ctx->fem.augc[jAC].BCID;
+        idf = goma_ctx->fem.augc[jAC].DFID;
+        inventory = evaluate_flux(mf_args->exo, mf_args->dpi, goma_ctx->fem.augc[jAC].SSID,
+                                  goma_ctx->fem.augc[jAC].MFID, NULL, goma_ctx->fem.augc[jAC].MTID,
+                                  goma_ctx->fem.augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
                                   *(mf_args->delta_t), *(mf_args->time), 0);
         res_p[jAC] = inventory - (-BC_Types[ibc].BC_Data_Float[idf]);
       }
@@ -2595,7 +2622,7 @@ static int estimate_dAC_ALC(
       // I believe this can be done for the position type ac by copying the structure above (line
       // 1992) this should calculate the residual at the updated x
 
-      inventory = getPositionAC(augc + jAC, dAC[jAC], mf_args->x, mf_args->exo);
+      inventory = getPositionAC(goma_ctx->fem.augc + jAC, dAC[jAC], mf_args->x, mf_args->exo);
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -2604,7 +2631,7 @@ static int estimate_dAC_ALC(
 #endif
       // Formulate and store the perturbed residual for the augmented condition
       // seems correct. -BW 04/18/2022 + WO 04/21/2023
-      res_p[jAC] = inventory - augc[jAC].CONSTV;
+      res_p[jAC] = inventory - goma_ctx->fem.augc[jAC].CONSTV;
       break;
 
     case AC_USERBC:
@@ -2629,10 +2656,11 @@ static int estimate_dAC_ALC(
 
   /* Evaluate perturbed residuals of all AC's except arc length */
   for (jAC = 0; jAC < iAC; jAC++) {
-    switch (augc[jAC].Type) {
+    switch (goma_ctx->fem.augc[jAC].Type) {
     case AC_FLUX:
-      inventory = evaluate_flux(mf_args->exo, mf_args->dpi, augc[jAC].SSID, augc[jAC].MFID, NULL,
-                                augc[jAC].MTID, augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
+      inventory = evaluate_flux(mf_args->exo, mf_args->dpi, goma_ctx->fem.augc[jAC].SSID,
+                                goma_ctx->fem.augc[jAC].MFID, NULL, goma_ctx->fem.augc[jAC].MTID,
+                                goma_ctx->fem.augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
                                 *(mf_args->delta_t), *(mf_args->time), 0);
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
@@ -2640,12 +2668,13 @@ static int estimate_dAC_ALC(
         inventory = global_inventory;
       }
 #endif
-      res_m[jAC] = inventory - augc[jAC].CONSTV;
+      res_m[jAC] = inventory - goma_ctx->fem.augc[jAC].CONSTV;
       break;
 
     case AC_FLUX_MAT:
-      inventory = evaluate_flux(mf_args->exo, mf_args->dpi, augc[jAC].SSID, augc[jAC].MFID, NULL,
-                                augc[jAC].MDID, augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
+      inventory = evaluate_flux(mf_args->exo, mf_args->dpi, goma_ctx->fem.augc[jAC].SSID,
+                                goma_ctx->fem.augc[jAC].MFID, NULL, goma_ctx->fem.augc[jAC].MDID,
+                                goma_ctx->fem.augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
                                 *(mf_args->delta_t), *(mf_args->time), 0);
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
@@ -2653,25 +2682,25 @@ static int estimate_dAC_ALC(
         inventory = global_inventory;
       }
 #endif
-      res_m[jAC] = inventory - augc[jAC].CONSTV;
+      res_m[jAC] = inventory - goma_ctx->fem.augc[jAC].CONSTV;
       break;
 
     case AC_VOLUME:
-      inventory = augc[jAC].evol;
+      inventory = goma_ctx->fem.augc[jAC].evol;
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         inventory = global_inventory;
       }
 #endif
-      res_m[jAC] = inventory - augc[jAC].CONSTV;
+      res_m[jAC] = inventory - goma_ctx->fem.augc[jAC].CONSTV;
       break;
 
     case AC_LS_VEL:
-      if (augc[iAC].d_lsvol_dx == 0)
+      if (goma_ctx->fem.augc[iAC].d_lsvol_dx == 0)
         DPRINTF(stderr, "\n can't see vectors ");
-      inventory = augc[jAC].lsvol;
-      LSvel_inventory = augc[jAC].lsvel;
+      inventory = goma_ctx->fem.augc[jAC].lsvol;
+      LSvel_inventory = goma_ctx->fem.augc[jAC].lsvel;
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -2682,31 +2711,32 @@ static int estimate_dAC_ALC(
       }
 #endif
       inventory = LSvel_inventory / inventory;
-      res_m[jAC] = inventory - augc[jAC].CONSTV;
+      res_m[jAC] = inventory - goma_ctx->fem.augc[jAC].CONSTV;
       break;
 
     case AC_LGRM:
-      if (augc[jAC].MFID != VOLUME_FLUX) {
+      if (goma_ctx->fem.augc[jAC].MFID != VOLUME_FLUX) {
         GOMA_EH(GOMA_ERROR, "This Lagrange multiplier type is not yet supported!");
       } else {
-        ibc = augc[jAC].BCID;
-        idf = augc[jAC].DFID;
-        inventory = evaluate_flux(mf_args->exo, mf_args->dpi, augc[jAC].SSID, augc[jAC].MFID, NULL,
-                                  augc[jAC].MTID, augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
+        ibc = goma_ctx->fem.augc[jAC].BCID;
+        idf = goma_ctx->fem.augc[jAC].DFID;
+        inventory = evaluate_flux(mf_args->exo, mf_args->dpi, goma_ctx->fem.augc[jAC].SSID,
+                                  goma_ctx->fem.augc[jAC].MFID, NULL, goma_ctx->fem.augc[jAC].MTID,
+                                  goma_ctx->fem.augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
                                   *(mf_args->delta_t), *(mf_args->time), 0);
         res_m[jAC] = inventory - (-BC_Types[ibc].BC_Data_Float[idf]);
       }
       break;
     case AC_POSITION:
       // just do it again
-      inventory = getPositionAC(augc + jAC, dAC[jAC], mf_args->x, mf_args->exo);
+      inventory = getPositionAC(goma_ctx->fem.augc + jAC, dAC[jAC], mf_args->x, mf_args->exo);
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         inventory = global_inventory;
       }
 #endif
-      res_m[jAC] = inventory - augc[jAC].CONSTV;
+      res_m[jAC] = inventory - goma_ctx->fem.augc[jAC].CONSTV;
       break;
 
     case AC_USERBC:
@@ -2766,7 +2796,8 @@ int std_lgr_cond(int iAC,
   double global_inventory = 0.0;
 #endif
 
-  if (upd->CoordinateSystem == CYLINDRICAL || upd->CoordinateSystem == SWIRLING) {
+  if (goma_ctx->fem.upd->CoordinateSystem == CYLINDRICAL ||
+      goma_ctx->fem.upd->CoordinateSystem == SWIRLING) {
     theta_scale =
         2.0 *
         M_PIE; /* this scaling is to remove the azimuthal factor that is applied by evaluate_flux */
@@ -2779,29 +2810,30 @@ int std_lgr_cond(int iAC,
    */
   load_extra_unknownsAC(iAC, x_AC, cx, mf_args->exo, mf_args->dpi);
 
-  if (augc[iAC].Type == AC_LGRM) {
+  if (goma_ctx->fem.augc[iAC].Type == AC_LGRM) {
 
-    switch (augc[iAC].MFID) {
+    switch (goma_ctx->fem.augc[iAC].MFID) {
 
     case VOLUME_FLUX: {
       int inode, i_offset;
       VARIABLE_DESCRIPTION_STRUCT *vd;
-      int ibc = augc[iAC].BCID, idf = augc[iAC].DFID;
+      int ibc = goma_ctx->fem.augc[iAC].BCID, idf = goma_ctx->fem.augc[iAC].DFID;
 
-      inventory = evaluate_flux(mf_args->exo, mf_args->dpi, augc[iAC].SSID, augc[iAC].MFID, NULL,
-                                augc[iAC].MTID, augc[iAC].COMPID, NULL, FALSE, mf_args->x,
+      inventory = evaluate_flux(mf_args->exo, mf_args->dpi, goma_ctx->fem.augc[iAC].SSID,
+                                goma_ctx->fem.augc[iAC].MFID, NULL, goma_ctx->fem.augc[iAC].MTID,
+                                goma_ctx->fem.augc[iAC].COMPID, NULL, FALSE, mf_args->x,
                                 mf_args->xdot, cAC[iAC], *(mf_args->delta_t), *(mf_args->time), 0);
 
       gAC[iAC] = inventory - (-BC_Types[ibc].BC_Data_Float[idf]);
 
       for (inode = 0, i = 0; i < numProcUnknowns; i++) {
         int var, isDBC = -1;
-        vd = Index_Solution_Inv(i, &inode, NULL, &i_offset, NULL, pg->imtrx);
+        vd = Index_Solution_Inv(i, &inode, NULL, &i_offset, NULL, goma_ctx->fem.pg->imtrx);
 
         var = vd->Variable_Type;
 
-        if (Nodes[inode]->DBC[pg->imtrx])
-          isDBC = Nodes[inode]->DBC[pg->imtrx][i_offset];
+        if (Nodes[inode]->DBC[goma_ctx->fem.pg->imtrx])
+          isDBC = Nodes[inode]->DBC[goma_ctx->fem.pg->imtrx][i_offset];
 
         if ((var >= VELOCITY1 &&
              var <= VELOCITY3) && /* this stuff only gets added to velocity dofs */
@@ -2815,8 +2847,8 @@ int std_lgr_cond(int iAC,
 
       GOMA_EH(GOMA_ERROR, "Cannot find Lagrange Multiplier condition.");
     }
-  } else if (augc[iAC].Type == AC_PF_CONSTRAINT) {
-    inventory = pfd->Constraint_Integral;
+  } else if (goma_ctx->fem.augc[iAC].Type == AC_PF_CONSTRAINT) {
+    inventory = goma_ctx->fem.pfd->Constraint_Integral;
 #ifdef PARALLEL
     if (goma_ctx->num_proc > 1) {
       MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -2824,11 +2856,11 @@ int std_lgr_cond(int iAC,
     }
 #endif
     for (i = 0; i < numProcUnknowns; i++) {
-      cAC[iAC][i] = pfd->jac_info->d_lm_pf[i];
-      bAC[iAC][i] = pfd->jac_info->d_pf_lm[i];
+      cAC[iAC][i] = goma_ctx->fem.pfd->jac_info->d_lm_pf[i];
+      bAC[iAC][i] = goma_ctx->fem.pfd->jac_info->d_pf_lm[i];
     }
 
-    gAC[iAC] = (inventory - augc[iAC].CONSTV);
+    gAC[iAC] = (inventory - goma_ctx->fem.augc[iAC].CONSTV);
     /*	  gAC[iAC] = (inventory ) ;  */
   }
 
@@ -2902,14 +2934,14 @@ int periodic_bc_cond(int iAC,
    *      so I am using the fluid_eb and solid_eb to hold the equation indices that are tied
    * together by this augmenting condition
    */
-  var1 = augc[iAC].fluid_eb;
-  var2 = augc[iAC].solid_eb;
+  var1 = goma_ctx->fem.augc[iAC].fluid_eb;
+  var2 = goma_ctx->fem.augc[iAC].solid_eb;
   if (var1 >= 0 && var2 >= 0) {
     /*fprintf(stderr,"v1=%g,v2=%g,r1=%g,r2=%g,lm=%g\n",
     mf_args->x[var1],mf_args->x[var2],resid_vector[var1],resid_vector[var2],augc[iAC].lm_value);*/
 
-    resid_vector[var1] += augc[iAC].lm_value / scale[var1];
-    resid_vector[var2] -= augc[iAC].lm_value / scale[var2];
+    resid_vector[var1] += goma_ctx->fem.augc[iAC].lm_value / scale[var1];
+    resid_vector[var2] -= goma_ctx->fem.augc[iAC].lm_value / scale[var2];
 
     bAC[iAC][var1] = 1.;
     bAC[iAC][var2] = -1.;
@@ -2920,7 +2952,7 @@ int periodic_bc_cond(int iAC,
     for (jAC = 0; jAC < nAC; jAC++)
       dAC[iAC][jAC] = 0.0;
   } else {
-    gAC[iAC] = augc[iAC].lm_value;
+    gAC[iAC] = goma_ctx->fem.augc[iAC].lm_value;
     for (jAC = 0; jAC < nAC; jAC++)
       dAC[iAC][jAC] = 0.0;
     dAC[iAC][iAC] = 1.;
@@ -2948,7 +2980,7 @@ int create_overlap_acs(Exo_DB *exo, int iAC)
   int sb, fb, lb;
   int e, s;
   int found = FALSE;
-  int dim = pd->Num_Dim;
+  int dim = goma_ctx->fem.pd->Num_Dim;
   int sse_first[MAX_NGV];
   int inode, ac_lm = 0;
   int num_elem = 0;
@@ -2959,9 +2991,9 @@ int create_overlap_acs(Exo_DB *exo, int iAC)
   ac_count = old_nAC - 1;
 
   /* Read inputs from overlap AC card */
-  sb = augc[iAC].solid_eb;
-  fb = augc[iAC].fluid_eb;
-  lb = augc[iAC].lm_eb;
+  sb = goma_ctx->fem.augc[iAC].solid_eb;
+  fb = goma_ctx->fem.augc[iAC].fluid_eb;
+  lb = goma_ctx->fem.augc[iAC].lm_eb;
 
   /* Check for valid Lagrange multiplier specification */
   if (lb == sb) {
@@ -2989,7 +3021,7 @@ int create_overlap_acs(Exo_DB *exo, int iAC)
      */
 
     /* Find the solid side set index */
-    si = augc[iAC].SSID;
+    si = goma_ctx->fem.augc[iAC].SSID;
     for (i = 0; i < exo->num_side_sets; i++) {
       if (!found && exo->ss_id[i] == si) {
         found = TRUE;
@@ -3017,7 +3049,8 @@ int create_overlap_acs(Exo_DB *exo, int iAC)
   }
 
   /* Now, expand augc to make room for them */
-  augc = (struct AC_Information *)realloc_struct_1(augc, struct AC_Information, new_nAC, old_nAC);
+  goma_ctx->fem.augc = (struct AC_Information *)realloc_struct_1(
+      goma_ctx->fem.augc, struct AC_Information, new_nAC, old_nAC);
 
   if (ac_lm == 1) {
     /* Open ID output file for overlap AC data */
@@ -3041,23 +3074,23 @@ int create_overlap_acs(Exo_DB *exo, int iAC)
        */
       if (sse_first[i]) {
         for (j = 0; j < nqp; j++) {
-          for (k = 0; k < pd->Num_Dim; k++) {
-            augc[ac_count].Type = AC_OVERLAP;
-            augc[ac_count].BCID = -99;
-            augc[ac_count].VOLID = -99;
-            augc[ac_count].MPID = -99;
-            augc[ac_count].MFID = -99;
-            augc[ac_count].MTID = -99;
-            augc[ac_count].MDID = -99;
-            augc[ac_count].SSID = si;
-            augc[ac_count].fluid_eb = fb - 1;
-            augc[ac_count].solid_eb = sb - 1;
-            augc[ac_count].lm_eb = lb - 1;
-            augc[ac_count].lm_elem = e;
-            augc[ac_count].lm_side = s;
-            augc[ac_count].lm_dim = k;
-            augc[ac_count].lm_value = 0.0;
-            augc[ac_count].lm_resid = 0.0;
+          for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
+            goma_ctx->fem.augc[ac_count].Type = AC_OVERLAP;
+            goma_ctx->fem.augc[ac_count].BCID = -99;
+            goma_ctx->fem.augc[ac_count].VOLID = -99;
+            goma_ctx->fem.augc[ac_count].MPID = -99;
+            goma_ctx->fem.augc[ac_count].MFID = -99;
+            goma_ctx->fem.augc[ac_count].MTID = -99;
+            goma_ctx->fem.augc[ac_count].MDID = -99;
+            goma_ctx->fem.augc[ac_count].SSID = si;
+            goma_ctx->fem.augc[ac_count].fluid_eb = fb - 1;
+            goma_ctx->fem.augc[ac_count].solid_eb = sb - 1;
+            goma_ctx->fem.augc[ac_count].lm_eb = lb - 1;
+            goma_ctx->fem.augc[ac_count].lm_elem = e;
+            goma_ctx->fem.augc[ac_count].lm_side = s;
+            goma_ctx->fem.augc[ac_count].lm_dim = k;
+            goma_ctx->fem.augc[ac_count].lm_value = 0.0;
+            goma_ctx->fem.augc[ac_count].lm_resid = 0.0;
 
             ac_count++;
           }
@@ -3072,23 +3105,23 @@ int create_overlap_acs(Exo_DB *exo, int iAC)
     fclose(ac_id);
   } else if (ac_lm == 2) {
     for (i = 0; i < num_elem; i++) {
-      for (k = 0; k < pd->Num_Dim; k++) {
-        augc[ac_count].Type = AC_OVERLAP;
-        augc[ac_count].BCID = -99;
-        augc[ac_count].VOLID = -99;
-        augc[ac_count].MPID = -99;
-        augc[ac_count].MFID = -99;
-        augc[ac_count].MTID = -99;
-        augc[ac_count].MDID = -99;
-        augc[ac_count].SSID = si;
-        augc[ac_count].fluid_eb = fb - 1;
-        augc[ac_count].solid_eb = sb - 1;
-        augc[ac_count].lm_eb = lb - 1;
-        augc[ac_count].lm_elem = -1; /* no elem assigned yet */
-        augc[ac_count].lm_side = -1; /* side has no meaning in this formulation */
-        augc[ac_count].lm_dim = k;
-        augc[ac_count].lm_value = 0.0;
-        augc[ac_count].lm_resid = 0.0;
+      for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
+        goma_ctx->fem.augc[ac_count].Type = AC_OVERLAP;
+        goma_ctx->fem.augc[ac_count].BCID = -99;
+        goma_ctx->fem.augc[ac_count].VOLID = -99;
+        goma_ctx->fem.augc[ac_count].MPID = -99;
+        goma_ctx->fem.augc[ac_count].MFID = -99;
+        goma_ctx->fem.augc[ac_count].MTID = -99;
+        goma_ctx->fem.augc[ac_count].MDID = -99;
+        goma_ctx->fem.augc[ac_count].SSID = si;
+        goma_ctx->fem.augc[ac_count].fluid_eb = fb - 1;
+        goma_ctx->fem.augc[ac_count].solid_eb = sb - 1;
+        goma_ctx->fem.augc[ac_count].lm_eb = lb - 1;
+        goma_ctx->fem.augc[ac_count].lm_elem = -1; /* no elem assigned yet */
+        goma_ctx->fem.augc[ac_count].lm_side = -1; /* side has no meaning in this formulation */
+        goma_ctx->fem.augc[ac_count].lm_dim = k;
+        goma_ctx->fem.augc[ac_count].lm_value = 0.0;
+        goma_ctx->fem.augc[ac_count].lm_resid = 0.0;
 
         ac_count++;
       }
@@ -3097,7 +3130,7 @@ int create_overlap_acs(Exo_DB *exo, int iAC)
 
   /* Update ALL AC's with new nAC value */
   for (i = 0; i < new_nAC; i++) {
-    augc[i].nAC = new_nAC;
+    goma_ctx->fem.augc[i].nAC = new_nAC;
   }
   DPRINTF(stdout, "\tCreated %d new AC's for overlap algorithm.\n", new_ACs);
 
@@ -3121,16 +3154,16 @@ int assign_overlap_acs(double x[], Exo_DB *exo)
   int ibf = -1, ib;
 
   for (iAC = 0; iAC < nAC; iAC++) {
-    if (augc[iAC].Type == AC_OVERLAP)
+    if (goma_ctx->fem.augc[iAC].Type == AC_OVERLAP)
       break;
   }
-  if (augc[iAC].Type != AC_OVERLAP) {
+  if (goma_ctx->fem.augc[iAC].Type != AC_OVERLAP) {
     GOMA_EH(GOMA_ERROR, "Cannot locate first overlap AC\n");
   }
 
   /* Read inputs from existing overlap AC */
-  fb = augc[iAC].fluid_eb + 1;
-  lb = augc[iAC].lm_eb + 1;
+  fb = goma_ctx->fem.augc[iAC].fluid_eb + 1;
+  lb = goma_ctx->fem.augc[iAC].lm_eb + 1;
 
   /* only need to reassign if AC LM lives on fluid mesh */
   if (lb != fb)
@@ -3149,16 +3182,16 @@ int assign_overlap_acs(double x[], Exo_DB *exo)
   /* now populate augc with elem number */
   for (e = e_start; e < e_end; e++) {
     /* Check for level set going through element (fill unknown sign change) */
-    if (elem_overlaps_interface(e, x, exo, ls->Length_Scale)) {
-      for (k = 0; k < pd->Num_Dim; k++) {
-        if (iAC >= nAC || (augc[iAC].Type != AC_OVERLAP)) {
+    if (elem_overlaps_interface(e, x, exo, goma_ctx->fem.ls->Length_Scale)) {
+      for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
+        if (iAC >= nAC || (goma_ctx->fem.augc[iAC].Type != AC_OVERLAP)) {
           /* Sometimes we get here cuz there is a defgrad.  In this
            * case, we want the time step to fail so that we can
            * continue and not abort.
            */
           return -1;
         }
-        augc[iAC].lm_elem = e;
+        goma_ctx->fem.augc[iAC].lm_elem = e;
 
         iAC++;
       }
@@ -3166,8 +3199,8 @@ int assign_overlap_acs(double x[], Exo_DB *exo)
   }
   printf("Overlap AC: %d of the available %d ACs are currently assigned\n", iAC, nAC);
   for (; iAC < nAC; iAC++) {
-    if (augc[iAC].Type == AC_OVERLAP)
-      augc[iAC].lm_elem = -1;
+    if (goma_ctx->fem.augc[iAC].Type == AC_OVERLAP)
+      goma_ctx->fem.augc[iAC].lm_elem = -1;
   }
 
   return (-2);
@@ -3193,23 +3226,23 @@ int create_periodic_acs(Exo_DB *exo)
   int num_nodes_on_side, max_sides, max_nodes;
   int *node_list1, *node_list2, *node_list2match;
   int count1, count2, beg, end, n, node_num;
-  int dim_count, dim = pd->Num_Dim;
+  int dim_count, dim = goma_ctx->fem.pd->Num_Dim;
   double scale;
 
   /* Save old nAC value */
   old_nAC = nAC;
 
   for (iAC = 0; iAC < old_nAC; iAC++) {
-    if (augc[iAC].Type == AC_PERIODIC) {
+    if (goma_ctx->fem.augc[iAC].Type == AC_PERIODIC) {
 
       /* Read inputs from overlap AC card */
-      var = augc[iAC].VAR;
-      ssid1 = augc[iAC].SSID;
-      ssid2 = augc[iAC].SSID2;
+      var = goma_ctx->fem.augc[iAC].VAR;
+      ssid1 = goma_ctx->fem.augc[iAC].SSID;
+      ssid2 = goma_ctx->fem.augc[iAC].SSID2;
 
       /* set vars to -1 for this entry */
-      augc[iAC].fluid_eb = -1;
-      augc[iAC].solid_eb = -1;
+      goma_ctx->fem.augc[iAC].fluid_eb = -1;
+      goma_ctx->fem.augc[iAC].solid_eb = -1;
 
       found = FALSE;
       for (i = 0; i < exo->num_side_sets; i++) {
@@ -3314,7 +3347,7 @@ int create_periodic_acs(Exo_DB *exo)
        */
       count2 = 0;
       for (i = 0; i < count1; i++) {
-        ie = Index_Solution(node_list1[i], var, 0, 0, -1, pg->imtrx);
+        ie = Index_Solution(node_list1[i], var, 0, 0, -1, goma_ctx->fem.pg->imtrx);
         if (ie >= 0)
           count2++;
       }
@@ -3329,28 +3362,29 @@ int create_periodic_acs(Exo_DB *exo)
       }
 
       /* Now, expand augc to make room for them */
-      augc = (struct AC_Information *)realloc_struct_1(augc, struct AC_Information, new_nAC, nAC);
+      goma_ctx->fem.augc = (struct AC_Information *)realloc_struct_1(
+          goma_ctx->fem.augc, struct AC_Information, new_nAC, nAC);
 
       /*
        * Now fill in data for each new AC constraint.
        */
       ac_count = nAC;
       for (i = 0; (i < count1) && (ac_count < new_nAC); i++) {
-        augc[ac_count].Type = AC_PERIODIC;
-        augc[ac_count].VAR = var;
-        augc[ac_count].SSID = ssid1;
-        augc[ac_count].SSID2 = ssid2;
-        augc[ac_count].lm_value = 0.;
+        goma_ctx->fem.augc[ac_count].Type = AC_PERIODIC;
+        goma_ctx->fem.augc[ac_count].VAR = var;
+        goma_ctx->fem.augc[ac_count].SSID = ssid1;
+        goma_ctx->fem.augc[ac_count].SSID2 = ssid2;
+        goma_ctx->fem.augc[ac_count].lm_value = 0.;
         /* DRN: probably a dumb idea, but I hate to just make the list of augmenting vars longer
          *      so I am using the fluid_eb and solid_eb to hold the equation indices that are tied
          * together by this augmenting condition
          */
-        ie = Index_Solution(node_list1[i], var, 0, 0, -1, pg->imtrx);
+        ie = Index_Solution(node_list1[i], var, 0, 0, -1, goma_ctx->fem.pg->imtrx);
         if (ie == -1)
           continue;
-        augc[ac_count].fluid_eb = ie;
-        ie = Index_Solution(node_list2match[i], var, 0, 0, -1, pg->imtrx);
-        augc[ac_count].solid_eb = ie;
+        goma_ctx->fem.augc[ac_count].fluid_eb = ie;
+        ie = Index_Solution(node_list2match[i], var, 0, 0, -1, goma_ctx->fem.pg->imtrx);
+        goma_ctx->fem.augc[ac_count].solid_eb = ie;
         /*
         fprintf(stderr,"ac_count=%d,node1=%d,node2=%d,ie1=%d,ie2=%d\n",
           ac_count,node_list1[i],node_list2match[i],augc[ac_count].fluid_eb,augc[ac_count].solid_eb);
@@ -3361,7 +3395,7 @@ int create_periodic_acs(Exo_DB *exo)
 
       /* Update ALL AC's with new nAC value */
       for (i = 0; i < new_nAC; i++) {
-        augc[i].nAC = new_nAC;
+        goma_ctx->fem.augc[i].nAC = new_nAC;
       }
       nAC = new_nAC;
       DPRINTF(stderr, "\tCreated %d new AC's for periodic bc.\n", new_ACs);
@@ -3450,7 +3484,7 @@ double getPositionAC(struct AC_Information *augc, double *cAC_iAC, double *x, Ex
     RETN_COORD(node, &posNode[0], &posNode[1], &posNode[2]);
     // Now add in the displacements
     //            ( we assume here no complications due to subparametric mapping)
-    i = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, -1, pg->imtrx);
+    i = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, -1, goma_ctx->fem.pg->imtrx);
     if (i != -1) {
       posNode[0] += x[i];
       posNode[1] += x[i + 1];
@@ -3577,8 +3611,8 @@ double getAngleAC(struct AC_Information *augc, double *cAC_iAC, double *x, Exo_D
     } else {
       GOMA_WH(-1, "block id doesn't match first element");
     }
-    load_ei(elem_list[0], exo, 0, pg->imtrx);
-    for (face = 0; face < ei[pg->imtrx]->num_sides; face++) {
+    load_ei(elem_list[0], exo, 0, goma_ctx->fem.pg->imtrx);
+    for (face = 0; face < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_sides; face++) {
       ielem = exo->elem_elem_list[exo->elem_elem_pntr[elem_list[0]] + face];
       if (ielem != -1) {
         node2 = in_list(node, exo->elem_node_pntr[ielem], exo->elem_node_pntr[ielem + 1],
@@ -3612,7 +3646,7 @@ double getAngleAC(struct AC_Information *augc, double *cAC_iAC, double *x, Exo_D
        * With the side names, we can find the normal vector.
        * Again, assume the sides live on the same element.
        */
-      load_ei(elem_list[ielem], exo, 0, pg->imtrx);
+      load_ei(elem_list[ielem], exo, 0, goma_ctx->fem.pg->imtrx);
 
       /*
        * We abuse the argument list under the conditions that
@@ -3623,16 +3657,17 @@ double getAngleAC(struct AC_Information *augc, double *cAC_iAC, double *x, Exo_D
       err = load_elem_dofptr(elem_list[ielem], exo, x, x, x, x, 0);
       GOMA_EH(err, "load_elem_dofptr");
 
-      err = bf_mp_init(pd);
+      err = bf_mp_init(goma_ctx->fem.pd);
       GOMA_EH(err, "bf_mp_init");
 
       /*
        * What are the local coordinates of the nodes in a quadrilateral?
        */
 
-      find_nodal_stu(local_node[ielem], ei[pg->imtrx]->ielem_type, &xi[0], &xi[1], &xi[2]);
+      find_nodal_stu(local_node[ielem], goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type,
+                     &xi[0], &xi[1], &xi[2]);
 
-      err = load_basis_functions(xi, bfd);
+      err = load_basis_functions(xi, goma_ctx->fem.bfd);
       GOMA_EH(err, "problem from load_basis_functions");
 
       err = beer_belly();
@@ -3643,37 +3678,41 @@ double getAngleAC(struct AC_Information *augc, double *cAC_iAC, double *x, Exo_D
 
       /* First, one side... */
 
-      get_side_info(ei[pg->imtrx]->ielem_type, local_side[0] + 1, &num_nodes_on_side, side_nodes);
+      get_side_info(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, local_side[0] + 1,
+                    &num_nodes_on_side, side_nodes);
 
       surface_determinant_and_normal(elem_list[ielem], exo->elem_node_pntr[elem_list[ielem]],
-                                     ei[pg->imtrx]->num_local_nodes, ei[pg->imtrx]->ielem_dim - 1,
+                                     goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
+                                     goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim - 1,
                                      local_side[0] + 1, num_nodes_on_side, side_nodes);
 
-      n1[0] = fv->snormal[0];
-      n1[1] = fv->snormal[1];
-      ielem_dim = ei[pg->imtrx]->ielem_dim;
+      n1[0] = goma_ctx->fem.fv->snormal[0];
+      n1[1] = goma_ctx->fem.fv->snormal[1];
+      ielem_dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
       for (p = 0; p < ielem_dim; p++) {
         for (q = 0; q < ielem_dim; q++) {
-          for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
-            n1_dx[p][q][k] = fv->dsnormal_dx[p][q][k];
+          for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+            n1_dx[p][q][k] = goma_ctx->fem.fv->dsnormal_dx[p][q][k];
           }
         }
       }
 
       /* Second, the adjacent side of the quad... */
 
-      get_side_info(ei[pg->imtrx]->ielem_type, local_side[1] + 1, &num_nodes_on_side, side_nodes);
+      get_side_info(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, local_side[1] + 1,
+                    &num_nodes_on_side, side_nodes);
 
       surface_determinant_and_normal(elem_list[ielem], exo->elem_node_pntr[elem_list[ielem]],
-                                     ei[pg->imtrx]->num_local_nodes, ei[pg->imtrx]->ielem_dim - 1,
+                                     goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
+                                     goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim - 1,
                                      local_side[1] + 1, num_nodes_on_side, side_nodes);
 
-      n2[0] = fv->snormal[0];
-      n2[1] = fv->snormal[1];
+      n2[0] = goma_ctx->fem.fv->snormal[0];
+      n2[1] = goma_ctx->fem.fv->snormal[1];
       for (p = 0; p < ielem_dim; p++) {
         for (q = 0; q < ielem_dim; q++) {
-          for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
-            n2_dx[p][q][k] = fv->dsnormal_dx[p][q][k];
+          for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+            n2_dx[p][q][k] = goma_ctx->fem.fv->dsnormal_dx[p][q][k];
           }
         }
       }
@@ -3689,7 +3728,7 @@ double getAngleAC(struct AC_Information *augc, double *cAC_iAC, double *x, Exo_D
       ordinate += M_PI - acos(n_dot_n / sqrt(n1_mag * n2_mag));
       for (p = 0; p < ielem_dim; p++) {
         for (q = 0; q < ielem_dim; q++) {
-          for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+          for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
             d_ord_dx[ielem][p][q][k] +=
                 (n1[p] * n2_dx[p][q][k] + n2[p] * n1_dx[p][q][k]) / sqrt(1. - SQUARE(n_dot_n));
           }
@@ -3703,14 +3742,14 @@ double getAngleAC(struct AC_Information *augc, double *cAC_iAC, double *x, Exo_D
      */
 
     int je;
-    i = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, mat_num, pg->imtrx);
+    i = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, mat_num, goma_ctx->fem.pg->imtrx);
     for (ielem = 0; ielem < elem_ct; ielem++) {
-      load_ei(elem_list[ielem], exo, 0, pg->imtrx);
+      load_ei(elem_list[ielem], exo, 0, goma_ctx->fem.pg->imtrx);
 
       for (p = 0; p < ielem_dim; p++) {
         for (q = 0; q < ielem_dim; q++) {
-          for (k = 0; k < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
-            je = ei[pg->imtrx]->gun_list[MESH_DISPLACEMENT1][k];
+          for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; k++) {
+            je = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[MESH_DISPLACEMENT1][k];
             GOMA_EH(je, "Bad var index.");
             cAC_iAC[je] += d_ord_dx[ielem][p][q][k];
           }

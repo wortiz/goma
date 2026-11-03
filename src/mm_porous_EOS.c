@@ -71,31 +71,32 @@ void load_enthalpy(double saturation, double pressure)
    */
 
   Pg = pressure;
-  Pl = fv->p_liq;
-  T = fv->T;
-  Pl_old = fv_old->p_liq;
-  if (pd->e[pg->imtrx][R_POR_GAS_PRES])
-    Pg_old = fv_old->p_gas;
+  Pl = goma_ctx->fem.fv->p_liq;
+  T = goma_ctx->fem.fv->T;
+  Pl_old = goma_ctx->fem.fv_old->p_liq;
+  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES])
+    Pg_old = goma_ctx->fem.fv_old->p_gas;
   else
     Pg_old = pressure;
-  T_old = fv_old->T;
+  T_old = goma_ctx->fem.fv_old->T;
 
   if (saturation != 0.0) {
-    pmv->enthalpy[0] = h_water_compressed_EOS(Pl, T, &dh_dP, &dh_dT, d_dh_dP, d_dh_dT);
+    goma_ctx->fem.pmv->enthalpy[0] =
+        h_water_compressed_EOS(Pl, T, &dh_dP, &dh_dT, d_dh_dP, d_dh_dT);
     /* fill only the non-zero terms */
-    pmv->d_enthalpy[0][POR_LIQ_PRES] = dh_dP;
-    pmv->d_d_enthalpy[0][POR_LIQ_PRES][POR_LIQ_PRES] = d_dh_dP[0];
+    goma_ctx->fem.pmv->d_enthalpy[0][POR_LIQ_PRES] = dh_dP;
+    goma_ctx->fem.pmv->d_d_enthalpy[0][POR_LIQ_PRES][POR_LIQ_PRES] = d_dh_dP[0];
 
-    pmv->d_enthalpy[0][POR_TEMP] = dh_dT;
-    pmv->d_d_enthalpy[0][POR_LIQ_PRES][POR_TEMP] = d_dh_dP[1];
-    pmv->d_d_enthalpy[0][POR_TEMP][POR_LIQ_PRES] = d_dh_dT[0];
-    pmv->d_d_enthalpy[0][POR_TEMP][POR_TEMP] = d_dh_dT[1];
+    goma_ctx->fem.pmv->d_enthalpy[0][POR_TEMP] = dh_dT;
+    goma_ctx->fem.pmv->d_d_enthalpy[0][POR_LIQ_PRES][POR_TEMP] = d_dh_dP[1];
+    goma_ctx->fem.pmv->d_d_enthalpy[0][POR_TEMP][POR_LIQ_PRES] = d_dh_dT[0];
+    goma_ctx->fem.pmv->d_d_enthalpy[0][POR_TEMP][POR_TEMP] = d_dh_dT[1];
 
-    if (pd->TimeIntegration == TRANSIENT) {
-      pmv_old->enthalpy[0] =
+    if (goma_ctx->fem.pd->TimeIntegration == TRANSIENT) {
+      goma_ctx->fem.pmv_old->enthalpy[0] =
           h_water_compressed_EOS(Pl_old, T_old, &dh_dP, &dh_dT, d_dh_dP, d_dh_dT);
-      pmv_old->d_enthalpy[0][POR_LIQ_PRES] = dh_dP;
-      pmv_old->d_enthalpy[0][POR_TEMP] = dh_dT;
+      goma_ctx->fem.pmv_old->d_enthalpy[0][POR_LIQ_PRES] = dh_dP;
+      goma_ctx->fem.pmv_old->d_enthalpy[0][POR_TEMP] = dh_dT;
     }
   }
 
@@ -110,50 +111,52 @@ void load_enthalpy(double saturation, double pressure)
 
       /* Use Pvsat as pressure; note h is f(T) only here! */
 
-      pmv->enthalpy[1] = h_water_superheat_EOS(Pvsat, T, &dh_dP, &dh_dT, d_dh_dP, d_dh_dT);
+      goma_ctx->fem.pmv->enthalpy[1] =
+          h_water_superheat_EOS(Pvsat, T, &dh_dP, &dh_dT, d_dh_dP, d_dh_dT);
 
       /* fill only the non-zero terms */
-      pmv->d_enthalpy[1][POR_TEMP] = dh_dT + dh_dP * dPvsat_dT;
-      pmv->d_d_enthalpy[1][POR_TEMP][POR_TEMP] =
+      goma_ctx->fem.pmv->d_enthalpy[1][POR_TEMP] = dh_dT + dh_dP * dPvsat_dT;
+      goma_ctx->fem.pmv->d_d_enthalpy[1][POR_TEMP][POR_TEMP] =
           d_dh_dT[1] + d_dh_dT[0] * dPvsat_dT + d_dh_dP[1] * dPvsat_dT + dh_dP * d_dPvsat_dT;
     } else {
 
       /* Use Pg as pressure; note h is f(Pg,T) here! */
 
-      pmv->enthalpy[1] = h_water_superheat_EOS(Pg, T, &dh_dP, &dh_dT, d_dh_dP, d_dh_dT);
+      goma_ctx->fem.pmv->enthalpy[1] =
+          h_water_superheat_EOS(Pg, T, &dh_dP, &dh_dT, d_dh_dP, d_dh_dT);
       /* fill only the non-zero terms */
 
-      pmv->d_enthalpy[1][POR_TEMP] = dh_dT;
-      pmv->d_d_enthalpy[1][POR_TEMP][POR_TEMP] = d_dh_dT[1];
+      goma_ctx->fem.pmv->d_enthalpy[1][POR_TEMP] = dh_dT;
+      goma_ctx->fem.pmv->d_d_enthalpy[1][POR_TEMP][POR_TEMP] = d_dh_dT[1];
 
-      pmv->d_enthalpy[1][POR_GAS_PRES] = dh_dP;
-      pmv->d_d_enthalpy[1][POR_GAS_PRES][POR_GAS_PRES] = d_dh_dP[0];
-      pmv->d_d_enthalpy[1][POR_GAS_PRES][POR_TEMP] = d_dh_dP[1];
-      pmv->d_d_enthalpy[1][POR_TEMP][POR_GAS_PRES] = d_dh_dT[0];
+      goma_ctx->fem.pmv->d_enthalpy[1][POR_GAS_PRES] = dh_dP;
+      goma_ctx->fem.pmv->d_d_enthalpy[1][POR_GAS_PRES][POR_GAS_PRES] = d_dh_dP[0];
+      goma_ctx->fem.pmv->d_d_enthalpy[1][POR_GAS_PRES][POR_TEMP] = d_dh_dP[1];
+      goma_ctx->fem.pmv->d_d_enthalpy[1][POR_TEMP][POR_GAS_PRES] = d_dh_dT[0];
     }
 
-    if (pd->TimeIntegration == TRANSIENT) {
+    if (goma_ctx->fem.pd->TimeIntegration == TRANSIENT) {
       Pvsat = P_water_sat_EOS(T_old, &dPvsat_dT, &d_dPvsat_dT);
       /* P = MIN (P, Pvsat); */
       if (Pg_old >= Pvsat) {
 
         /* Use Pvsat as pressure; note h is f(T) only here! */
 
-        pmv_old->enthalpy[1] =
+        goma_ctx->fem.pmv_old->enthalpy[1] =
             h_water_superheat_EOS(Pvsat, T_old, &dh_dP, &dh_dT, d_dh_dP, d_dh_dT);
         /* fill only the non-zero terms */
-        pmv_old->d_enthalpy[1][POR_TEMP] = dh_dT + dh_dP * dPvsat_dT;
+        goma_ctx->fem.pmv_old->d_enthalpy[1][POR_TEMP] = dh_dT + dh_dP * dPvsat_dT;
       } else {
 
         /* Use Pg as pressure; note h is f(Pg,T) here! */
 
-        pmv_old->enthalpy[1] =
+        goma_ctx->fem.pmv_old->enthalpy[1] =
             h_water_superheat_EOS(Pg_old, T_old, &dh_dP, &dh_dT, d_dh_dP, d_dh_dT);
         /* fill only the non-zero terms */
 
-        pmv_old->d_enthalpy[1][POR_TEMP] = dh_dT;
+        goma_ctx->fem.pmv_old->d_enthalpy[1][POR_TEMP] = dh_dT;
 
-        pmv_old->d_enthalpy[1][POR_GAS_PRES] = dh_dP;
+        goma_ctx->fem.pmv_old->d_enthalpy[1][POR_GAS_PRES] = dh_dP;
       }
     }
   }
@@ -163,17 +166,17 @@ void load_enthalpy(double saturation, double pressure)
    */
 
   if (saturation < 1.0) {
-    pmv->enthalpy[2] = h_air_EOS(T, &dh_dT, &d_dha_dT);
+    goma_ctx->fem.pmv->enthalpy[2] = h_air_EOS(T, &dh_dT, &d_dha_dT);
 
     /* fill only the non-zero terms */
-    pmv->d_enthalpy[2][POR_LIQ_PRES] = 0.0;
-    pmv->d_enthalpy[2][POR_GAS_PRES] = 0.0;
-    pmv->d_enthalpy[2][POR_TEMP] = dh_dT;
-    pmv->d_d_enthalpy[2][POR_TEMP][POR_TEMP] = d_dha_dT;
+    goma_ctx->fem.pmv->d_enthalpy[2][POR_LIQ_PRES] = 0.0;
+    goma_ctx->fem.pmv->d_enthalpy[2][POR_GAS_PRES] = 0.0;
+    goma_ctx->fem.pmv->d_enthalpy[2][POR_TEMP] = dh_dT;
+    goma_ctx->fem.pmv->d_d_enthalpy[2][POR_TEMP][POR_TEMP] = d_dha_dT;
 
-    if (pd->TimeIntegration == TRANSIENT) {
-      pmv_old->enthalpy[2] = h_air_EOS(T_old, &dh_dT, &d_dha_dT);
-      pmv_old->d_enthalpy[2][POR_TEMP] = dh_dT;
+    if (goma_ctx->fem.pd->TimeIntegration == TRANSIENT) {
+      goma_ctx->fem.pmv_old->enthalpy[2] = h_air_EOS(T_old, &dh_dT, &d_dha_dT);
+      goma_ctx->fem.pmv_old->d_enthalpy[2][POR_TEMP] = dh_dT;
     }
   }
 

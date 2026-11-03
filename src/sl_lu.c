@@ -54,12 +54,12 @@ void lu(const int N,
   spREAL norm;
 #endif
 
-  if (pg->imtrx != prev_matrix) {
+  if (goma_ctx->fem.pg->imtrx != prev_matrix) {
     if (first_time == FALSE) {
       spDestroy(matrix);
     }
     first_time = TRUE;
-    prev_matrix = pg->imtrx;
+    prev_matrix = goma_ctx->fem.pg->imtrx;
   }
 
   call++;
