@@ -266,7 +266,7 @@ int assemble_pstar(dbl time_value, /* current time */
 #if 1
       /* this is an optimization for xfem */
 
-      if (xfem != NULL) {
+      if (goma_ctx->fem.xfem != NULL) {
         int xfem_active, extended_dof, base_interp, base_dof;
 
         xfem_dof_state(i, goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn],

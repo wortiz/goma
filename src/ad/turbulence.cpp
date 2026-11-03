@@ -54,11 +54,12 @@ ADType ad_dcdd(int dim, int eqn, const ADType grad_U[DIM], ADType gs_inner_dot[D
   ADType s[DIM] = {0.0};
   ADType r[DIM] = {0.0};
   for (int w = 0; w < dim; w++) {
-    tmp += (ad_fv->v[w] - ad_fv->x_dot[w]) * (ad_fv->v[w] - ad_fv->x_dot[w]);
+    tmp += (goma_ctx->fem.ad_fv->v[w] - goma_ctx->fem.ad_fv->x_dot[w]) *
+           (goma_ctx->fem.ad_fv->v[w] - goma_ctx->fem.ad_fv->x_dot[w]);
   }
   tmp = 1.0 / (sqrt(tmp + 1e-32));
   for (int w = 0; w < dim; w++) {
-    s[w] = (ad_fv->v[w] - ad_fv->x_dot[w]) * tmp;
+    s[w] = (goma_ctx->fem.ad_fv->v[w] - goma_ctx->fem.ad_fv->x_dot[w]) * tmp;
   }
   ADType mags = 0;
   for (int w = 0; w < dim; w++) {
@@ -73,7 +74,8 @@ ADType ad_dcdd(int dim, int eqn, const ADType grad_U[DIM], ADType gs_inner_dot[D
   for (int q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; q++) {
     ADType tmp = 0;
     for (int w = 0; w < dim; w++) {
-      tmp += ad_fv->basis[eqn].grad_phi[q][w] * ad_fv->basis[eqn].grad_phi[q][w];
+      tmp += goma_ctx->fem.ad_fv->basis[eqn].grad_phi[q][w] *
+             goma_ctx->fem.ad_fv->basis[eqn].grad_phi[q][w];
     }
     he += 1.0 / sqrt(std::max(tmp, 1e-20));
   }
@@ -81,14 +83,14 @@ ADType ad_dcdd(int dim, int eqn, const ADType grad_U[DIM], ADType gs_inner_dot[D
   tmp = 0;
   for (int q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; q++) {
     for (int w = 0; w < dim; w++) {
-      tmp += fabs(r[w] * ad_fv->basis[eqn].grad_phi[q][w]);
+      tmp += fabs(r[w] * goma_ctx->fem.ad_fv->basis[eqn].grad_phi[q][w]);
     }
   }
   ADType hrgn = 1.0 / (tmp + 1e-14);
 
   ADType magv = 0.0;
   for (int q = 0; q < goma_ctx->problem.vim; q++) {
-    magv += ad_fv->v[q] * ad_fv->v[q];
+    magv += goma_ctx->fem.ad_fv->v[q] * goma_ctx->fem.ad_fv->v[q];
   }
   magv = sqrt(magv + 1e-32);
 
@@ -148,12 +150,12 @@ extern "C" void ad_sa_wall_func(double func[DIM],
   // kind of hacky, near wall velocity is velocity at central node
   ADType unw[DIM];
   ADType eddy_nw;
-  unw[0] =
-      ADType(ad_fv->total_ad_variables, ad_fv->offset[VELOCITY1] + 8, *goma_ctx->fem.esp->v[0][8]);
-  unw[1] =
-      ADType(ad_fv->total_ad_variables, ad_fv->offset[VELOCITY2] + 8, *goma_ctx->fem.esp->v[1][8]);
-  eddy_nw =
-      ADType(ad_fv->total_ad_variables, ad_fv->offset[EDDY_NU] + 8, *goma_ctx->fem.esp->eddy_nu[8]);
+  unw[0] = ADType(goma_ctx->fem.ad_fv->total_ad_variables,
+                  goma_ctx->fem.ad_fv->offset[VELOCITY1] + 8, *goma_ctx->fem.esp->v[0][8]);
+  unw[1] = ADType(goma_ctx->fem.ad_fv->total_ad_variables,
+                  goma_ctx->fem.ad_fv->offset[VELOCITY2] + 8, *goma_ctx->fem.esp->v[1][8]);
+  eddy_nw = ADType(goma_ctx->fem.ad_fv->total_ad_variables,
+                   goma_ctx->fem.ad_fv->offset[EDDY_NU] + 8, *goma_ctx->fem.esp->eddy_nu[8]);
 
   ADType mu = 0;
   dbl scale = 1.0;
@@ -191,7 +193,7 @@ extern "C" void ad_sa_wall_func(double func[DIM],
   ADType normgv = 0;
   for (int i = 0; i < 2; i++) {
     for (int j = 0; j < 2; j++) {
-      normgv += ad_fv->grad_v[i][j] * ad_fv->grad_v[i][j];
+      normgv += goma_ctx->fem.ad_fv->grad_v[i][j] * goma_ctx->fem.ad_fv->grad_v[i][j];
     }
   }
   normgv = std::sqrt(normgv);
@@ -241,10 +243,10 @@ extern "C" void ad_omega_wall_func(double func[DIM],
   ADType d = std::max(goma_ctx->fem.fv->wall_distance, 0.0004);
   dbl nu = 1.5e-5;
   dbl beta1 = 0.075;
-  ADType r = ad_fv->turb_omega - 6 * nu / (beta1 * d * d);
+  ADType r = goma_ctx->fem.ad_fv->turb_omega - 6 * nu / (beta1 * d * d);
   func[0] = r.val();
   for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TURB_OMEGA]; j++) {
-    d_func[0][TURB_OMEGA][j] = r.dx(ad_fv->offset[TURB_OMEGA] + j);
+    d_func[0][TURB_OMEGA][j] = r.dx(goma_ctx->fem.ad_fv->offset[TURB_OMEGA] + j);
   }
 }
 
@@ -288,7 +290,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
   double d_area = goma_ctx->fem.fv->wt * goma_ctx->fem.bf[eqn]->detJ * goma_ctx->fem.fv->h3;
 
   /* Get Eddy viscosity at Gauss point */
-  ADType mu_e = ad_fv->eddy_nu;
+  ADType mu_e = goma_ctx->fem.ad_fv->eddy_nu;
 
   int negative_sa = false;
   // Previous workaround, see comment for negative_Se below
@@ -317,7 +319,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
   double omega_old[DIM][DIM];
   for (a = 0; a < goma_ctx->problem.vim; a++) {
     for (b = 0; b < goma_ctx->problem.vim; b++) {
-      omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
+      omega[a][b] = (goma_ctx->fem.ad_fv->grad_v[a][b] - goma_ctx->fem.ad_fv->grad_v[b][a]);
       omega_old[a][b] = (goma_ctx->fem.fv_old->grad_v[a][b] - goma_ctx->fem.fv_old->grad_v[b][a]);
     }
   }
@@ -427,7 +429,8 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < goma_ctx->problem.vim; p++) {
-            wt_func += supg * supg_tau * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
+            wt_func +=
+                supg * supg_tau * goma_ctx->fem.ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -436,7 +439,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
       ADType mass = 0.0;
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
-          mass += ad_fv->eddy_nu_dot * wt_func * d_area;
+          mass += goma_ctx->fem.ad_fv->eddy_nu_dot * wt_func * d_area;
           mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
@@ -444,7 +447,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
       /* Assemble advection term */
       ADType adv = 0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
-        adv += ad_fv->v[p] * ad_fv->grad_eddy_nu[p];
+        adv += goma_ctx->fem.ad_fv->v[p] * goma_ctx->fem.ad_fv->grad_eddy_nu[p];
       }
       adv *= wt_func * d_area;
       adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
@@ -465,9 +468,10 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
       ADType diff_1 = 0.0;
       ADType diff_2 = 0.0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
-        diff_1 +=
-            goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu_newt + mu_e * fn) * ad_fv->grad_eddy_nu[p];
-        diff_2 += wt_func * cb2 * ad_fv->grad_eddy_nu[p] * ad_fv->grad_eddy_nu[p];
+        diff_1 += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu_newt + mu_e * fn) *
+                  goma_ctx->fem.ad_fv->grad_eddy_nu[p];
+        diff_2 += wt_func * cb2 * goma_ctx->fem.ad_fv->grad_eddy_nu[p] *
+                  goma_ctx->fem.ad_fv->grad_eddy_nu[p];
       }
       ADType diff = (1.0 / sigma) * (diff_1 - diff_2);
       diff *= d_area;
@@ -495,7 +499,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
 
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-              resid[i].dx(ad_fv->offset[EDDY_NU] + j);
+              resid[i].dx(goma_ctx->fem.ad_fv->offset[EDDY_NU] + j);
         } /* End of loop over j */
       } /* End of if the variable is active */
 
@@ -507,7 +511,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
 
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                resid[i].dx(ad_fv->offset[var] + j);
+                resid[i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         } /* End of if the variale is active */
@@ -548,14 +552,14 @@ ADType turb_omega_wall_bc(void) {
 static void
 calc_blending_functions(dbl rho, DENSITY_DEPENDENCE_STRUCT *d_rho, ADType &F1, ADType &F2) {
   dbl d = goma_ctx->fem.fv->wall_distance;
-  ADType k = ad_fv->turb_k;
-  ADType omega = ad_fv->turb_omega;
+  ADType k = goma_ctx->fem.ad_fv->turb_k;
+  ADType omega = goma_ctx->fem.ad_fv->turb_omega;
   dbl nu = goma_ctx->fem.mp->viscosity / rho;
   dbl beta_star = 0.09;
   dbl sigma_omega2 = 0.856;
   ADType ddkdomega = 0;
   for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
-    ddkdomega += ad_fv->grad_turb_k[i] * ad_fv->grad_turb_omega[i];
+    ddkdomega += goma_ctx->fem.ad_fv->grad_turb_k[i] * goma_ctx->fem.ad_fv->grad_turb_omega[i];
   }
   ADType CD_komega = std::max(2 * rho * sigma_omega2 * ddkdomega / (omega + 1e-20), 1e-20);
   ADType C500 = 500 * nu / (d * d * omega + 1e-20);
@@ -649,7 +653,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
   ADType gamma_dot[DIM][DIM];
   for (int i = 0; i < DIM; i++) {
     for (int j = 0; j < DIM; j++) {
-      gamma_dot[i][j] = (ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i]);
+      gamma_dot[i][j] = (goma_ctx->fem.ad_fv->grad_v[i][j] + goma_ctx->fem.ad_fv->grad_v[j][i]);
     }
   }
   ad_calc_shearrate(SI, gamma_dot);
@@ -659,7 +663,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
   ADType omega[DIM][DIM];
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
-      omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
+      omega[a][b] = (goma_ctx->fem.ad_fv->grad_v[a][b] - goma_ctx->fem.ad_fv->grad_v[b][a]);
     }
   }
 
@@ -693,10 +697,10 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
   ADType sigma_k = F1 * sigma_k1 + (1 - F1) * sigma_k2;
 
   ADType mu_t = rho * a1 * goma_ctx->fem.fv_old->turb_k /
-                (std::max(a1 * ad_fv->turb_omega, Omega * F2) + 1e-16);
+                (std::max(a1 * goma_ctx->fem.ad_fv->turb_omega, Omega * F2) + 1e-16);
   ADType P = mu_t * SI * SI;
-  ADType Plim =
-      std::min(P, 20 * beta_star * rho * ad_fv->turb_omega * goma_ctx->fem.fv_old->turb_k);
+  ADType Plim = std::min(P, 20 * beta_star * rho * goma_ctx->fem.ad_fv->turb_omega *
+                                goma_ctx->fem.fv_old->turb_k);
 
   std::vector<ADType> resid(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]);
   for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
@@ -718,7 +722,8 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < goma_ctx->problem.vim; p++) {
-            wt_func += supg * supg_tau * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
+            wt_func +=
+                supg * supg_tau * goma_ctx->fem.ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -727,7 +732,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
       ADType mass = 0.0;
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
-          mass += rho * ad_fv->turb_k_dot * wt_func * d_area;
+          mass += rho * goma_ctx->fem.ad_fv->turb_k_dot * wt_func * d_area;
           mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
@@ -735,21 +740,22 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
       /* Assemble advection term */
       ADType adv = 0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
-        adv += rho * (ad_fv->v[p] - x_dot[p]) * ad_fv->grad_turb_k[p];
+        adv += rho * (goma_ctx->fem.ad_fv->v[p] - x_dot[p]) * goma_ctx->fem.ad_fv->grad_turb_k[p];
       }
       adv *= wt_func * d_area;
       adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
 
       /* Assemble source terms */
-      ADType src = Plim - beta_star * rho * ad_fv->turb_omega * goma_ctx->fem.fv_old->turb_k;
+      ADType src =
+          Plim - beta_star * rho * goma_ctx->fem.ad_fv->turb_omega * goma_ctx->fem.fv_old->turb_k;
       src *= -wt_func * d_area;
       src *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
 
       /* Assemble diffusion terms */
       ADType diff = 0.0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
-        diff +=
-            goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_k) * ad_fv->grad_turb_k[p];
+        diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_k) *
+                goma_ctx->fem.ad_fv->grad_turb_k[p];
       }
       diff *= d_area;
       diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -777,7 +783,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
           for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
             goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                resid[i].dx(ad_fv->offset[var] + j);
+                resid[i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         } /* End of if the variale is active */
@@ -799,14 +805,15 @@ ADType ad_only_turb_k_omega_sst_viscosity(void) {
   ADType omega[DIM][DIM];
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
-      omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
+      omega[a][b] = (goma_ctx->fem.ad_fv->grad_v[a][b] - goma_ctx->fem.ad_fv->grad_v[b][a]);
     }
   }
   /* Vorticity */
   ADType Omega = 0.0;
   calc_vort_mag(Omega, omega);
   dbl a1 = 0.31;
-  ADType mu_t = rho * a1 * ad_fv->turb_k / (std::max(a1 * ad_fv->turb_omega, Omega * F2) + 1e-16);
+  ADType mu_t = rho * a1 * goma_ctx->fem.ad_fv->turb_k /
+                (std::max(a1 * goma_ctx->fem.ad_fv->turb_omega, Omega * F2) + 1e-16);
 
   mu = mu_newt + mu_t;
   return mu;
@@ -826,27 +833,28 @@ extern "C" dbl ad_turb_k_omega_sst_viscosity(VISCOSITY_DEPENDENCE_STRUCT *d_mu) 
   ADType omega[DIM][DIM];
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
-      omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
+      omega[a][b] = (goma_ctx->fem.ad_fv->grad_v[a][b] - goma_ctx->fem.ad_fv->grad_v[b][a]);
     }
   }
   /* Vorticity */
   ADType Omega = 0.0;
   calc_vort_mag(Omega, omega);
   dbl a1 = 0.31;
-  ADType mu_t = rho * a1 * ad_fv->turb_k / (std::max(a1 * ad_fv->turb_omega, Omega * F2) + 1e-16);
+  ADType mu_t = rho * a1 * goma_ctx->fem.ad_fv->turb_k /
+                (std::max(a1 * goma_ctx->fem.ad_fv->turb_omega, Omega * F2) + 1e-16);
 
   mu = mu_newt + mu_t;
   if (d_mu != NULL) {
     for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TURB_OMEGA]; j++) {
-      d_mu->turb_omega[j] = mu.dx(ad_fv->offset[TURB_OMEGA] + j);
+      d_mu->turb_omega[j] = mu.dx(goma_ctx->fem.ad_fv->offset[TURB_OMEGA] + j);
     }
     for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TURB_K]; j++) {
-      d_mu->turb_k[j] = mu.dx(ad_fv->offset[TURB_K] + j);
+      d_mu->turb_k[j] = mu.dx(goma_ctx->fem.ad_fv->offset[TURB_K] + j);
     }
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
       int var = VELOCITY1 + b;
       for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-        d_mu->v[b][j] = mu.dx(ad_fv->offset[var] + j);
+        d_mu->v[b][j] = mu.dx(goma_ctx->fem.ad_fv->offset[var] + j);
       }
     }
   }
@@ -898,14 +906,14 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
   ADType gamma_dot[DIM][DIM];
   for (int i = 0; i < DIM; i++) {
     for (int j = 0; j < DIM; j++) {
-      gamma_dot[i][j] = (ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i]);
+      gamma_dot[i][j] = (goma_ctx->fem.ad_fv->grad_v[i][j] + goma_ctx->fem.ad_fv->grad_v[j][i]);
     }
   }
 
   ADType omega[DIM][DIM];
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
-      omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
+      omega[a][b] = (goma_ctx->fem.ad_fv->grad_v[a][b] - goma_ctx->fem.ad_fv->grad_v[b][a]);
     }
   }
   /* Vorticity */
@@ -949,11 +957,11 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
   ADType sigma_omega = F1 * sigma_omega1 + (1 - F1) * sigma_omega2;
   ADType beta = F1 * beta1 + (1 - F1) * beta2;
 
-  ADType mu_t = rho * a1 * ad_fv->turb_k /
+  ADType mu_t = rho * a1 * goma_ctx->fem.ad_fv->turb_k /
                 (std::max(a1 * goma_ctx->fem.fv_old->turb_omega, Omega * F2) + 1e-16);
   ADType P = mu_t * SI * SI;
-  ADType Plim =
-      std::min(P, 10 * beta_star * rho * goma_ctx->fem.fv_old->turb_omega * ad_fv->turb_k);
+  ADType Plim = std::min(P, 10 * beta_star * rho * goma_ctx->fem.fv_old->turb_omega *
+                                goma_ctx->fem.ad_fv->turb_k);
 
   std::vector<ADType> resid(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]);
   for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
@@ -975,7 +983,8 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < goma_ctx->problem.vim; p++) {
-            wt_func += supg * supg_tau * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
+            wt_func +=
+                supg * supg_tau * goma_ctx->fem.ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -984,7 +993,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
       ADType mass = 0.0;
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
-          mass += rho * ad_fv->turb_omega_dot * wt_func * d_area;
+          mass += rho * goma_ctx->fem.ad_fv->turb_omega_dot * wt_func * d_area;
           mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
@@ -992,7 +1001,8 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
       /* Assemble advection term */
       ADType adv = 0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
-        adv += rho * (ad_fv->v[p] - x_dot[p]) * ad_fv->grad_turb_omega[p];
+        adv +=
+            rho * (goma_ctx->fem.ad_fv->v[p] - x_dot[p]) * goma_ctx->fem.ad_fv->grad_turb_omega[p];
       }
       adv *= wt_func * d_area;
       adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
@@ -1003,7 +1013,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
                                                                 goma_ctx->fem.fv_old->turb_omega;
       ADType src2 = 0;
       for (int p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
-        src2 += ad_fv->grad_turb_k[p] * goma_ctx->fem.fv_old->grad_turb_omega[p];
+        src2 += goma_ctx->fem.ad_fv->grad_turb_k[p] * goma_ctx->fem.fv_old->grad_turb_omega[p];
       }
       src2 *= 2 * (1 - F1) * rho * sigma_omega2 / (goma_ctx->fem.fv_old->turb_omega + 1e-16);
       ADType src = src1 + src2;
@@ -1014,7 +1024,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
       ADType diff = 0.0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_omega) *
-                ad_fv->grad_turb_omega[p];
+                goma_ctx->fem.ad_fv->grad_turb_omega[p];
       }
       diff *= d_area;
       diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -1042,7 +1052,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
           for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
             goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                resid[i].dx(ad_fv->offset[var] + j);
+                resid[i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         } /* End of if the variale is active */
@@ -1071,11 +1081,12 @@ ADType ad_only_turb_k_omega_viscosity(void) {
   ADType mu = 0;
   double mu_newt = goma_ctx->fem.mp->viscosity;
   dbl k_inf = goma_ctx->fem.upd->turbulent_info->k_inf;
-  ADType psi = clipping_func(ad_fv->turb_k, 0, 10 * k_inf);
-  ADType psi_neg = clipping_func(-ad_fv->turb_k, 0, 10 * k_inf);
+  ADType psi = clipping_func(goma_ctx->fem.ad_fv->turb_k, 0, 10 * k_inf);
+  ADType psi_neg = clipping_func(-goma_ctx->fem.ad_fv->turb_k, 0, 10 * k_inf);
   dbl rho = density(NULL, goma_ctx->fem.tran->time_value);
 
-  ADType mu_t = rho * psi * ad_fv->turb_k / (std::exp(ad_fv->turb_omega));
+  ADType mu_t =
+      rho * psi * goma_ctx->fem.ad_fv->turb_k / (std::exp(goma_ctx->fem.ad_fv->turb_omega));
   mu = mu_newt + mu_t;
   return mu;
 }
@@ -1101,10 +1112,10 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
   dbl k_inf = goma_ctx->fem.upd->turbulent_info->k_inf;
 
   // logarithmic formulation of k-omega model
-  ADType omega = std::exp(ad_fv->turb_omega);
-  ADType psi = clipping_func(ad_fv->turb_k, 0, 10 * k_inf);
+  ADType omega = std::exp(goma_ctx->fem.ad_fv->turb_omega);
+  ADType psi = clipping_func(goma_ctx->fem.ad_fv->turb_k, 0, 10 * k_inf);
   ADType psi_neg = clipping_func(-goma_ctx->fem.fv_old->turb_k, 0, 10 * k_inf);
-  ADType k = psi * ad_fv->turb_k;
+  ADType k = psi * goma_ctx->fem.ad_fv->turb_k;
   // ADType k = psi * fv_old->turb_k;
 
   dbl sigma_k = 0.5;
@@ -1114,14 +1125,14 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
   ADType gamma_dot[DIM][DIM];
   for (int i = 0; i < DIM; i++) {
     for (int j = 0; j < DIM; j++) {
-      gamma_dot[i][j] = (ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i]);
+      gamma_dot[i][j] = (goma_ctx->fem.ad_fv->grad_v[i][j] + goma_ctx->fem.ad_fv->grad_v[j][i]);
     }
   }
 
   ADType Omega_tens[DIM][DIM];
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
-      Omega_tens[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
+      Omega_tens[a][b] = (goma_ctx->fem.ad_fv->grad_v[a][b] - goma_ctx->fem.ad_fv->grad_v[b][a]);
     }
   }
   /* Vorticity */
@@ -1170,7 +1181,8 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < goma_ctx->problem.vim; p++) {
-            wt_func += supg * supg_tau * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
+            wt_func +=
+                supg * supg_tau * goma_ctx->fem.ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -1179,7 +1191,7 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
       ADType mass = 0.0;
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
-          mass += rho * ad_fv->turb_k_dot * wt_func * d_area;
+          mass += rho * goma_ctx->fem.ad_fv->turb_k_dot * wt_func * d_area;
           mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
@@ -1187,7 +1199,8 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
       /* Assemble advection term */
       ADType adv = 0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
-        adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_k[p];
+        adv += rho * (goma_ctx->fem.ad_fv->v[p] - goma_ctx->fem.ad_fv->x_dot[p]) *
+               goma_ctx->fem.ad_fv->grad_turb_k[p];
       }
       adv *= wt_func * d_area;
       adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
@@ -1207,7 +1220,7 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
       ADType diff = 0.0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t_kdiff * sigma_k) *
-                ad_fv->grad_turb_k[p];
+                goma_ctx->fem.ad_fv->grad_turb_k[p];
       }
       diff *= d_area;
       diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -1235,7 +1248,7 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
           for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
             goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                resid[i].dx(ad_fv->offset[var] + j);
+                resid[i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         } /* End of if the variale is active */
@@ -1265,10 +1278,10 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
   dbl k_inf = goma_ctx->fem.upd->turbulent_info->k_inf;
 
   // logarithmic formulation of k-omega model
-  ADType omega = std::exp(ad_fv->turb_omega);
-  ADType psi = clipping_func(ad_fv->turb_k, 0, 10 * k_inf);
-  ADType psi_neg = clipping_func(-ad_fv->turb_k, 0, 10 * k_inf);
-  ADType k = psi * ad_fv->turb_k;
+  ADType omega = std::exp(goma_ctx->fem.ad_fv->turb_omega);
+  ADType psi = clipping_func(goma_ctx->fem.ad_fv->turb_k, 0, 10 * k_inf);
+  ADType psi_neg = clipping_func(-goma_ctx->fem.ad_fv->turb_k, 0, 10 * k_inf);
+  ADType k = psi * goma_ctx->fem.ad_fv->turb_k;
 
   dbl sigma_omega = 0.5;
   dbl beta_star = 9.0 / 100.0;
@@ -1279,14 +1292,14 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
   ADType gamma_dot[DIM][DIM];
   for (int i = 0; i < DIM; i++) {
     for (int j = 0; j < DIM; j++) {
-      gamma_dot[i][j] = (ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i]);
+      gamma_dot[i][j] = (goma_ctx->fem.ad_fv->grad_v[i][j] + goma_ctx->fem.ad_fv->grad_v[j][i]);
     }
   }
 
   ADType Omega_tens[DIM][DIM];
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
-      Omega_tens[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
+      Omega_tens[a][b] = (goma_ctx->fem.ad_fv->grad_v[a][b] - goma_ctx->fem.ad_fv->grad_v[b][a]);
     }
   }
   /* Vorticity */
@@ -1298,7 +1311,8 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
   dbl rho = density(NULL, time_value);
 
   ADType mu_t = rho * k / (omega + 1e-16);
-  ADType mu_t_kdiff = rho * k / (omega + 1e-16) - rho * psi_neg * ad_fv->turb_k / omega_inf;
+  ADType mu_t_kdiff =
+      rho * k / (omega + 1e-16) - rho * psi_neg * goma_ctx->fem.ad_fv->turb_k / omega_inf;
   dbl mu = goma_ctx->fem.mp->viscosity;
 
   // ADType P = mu_t * SI * SI;
@@ -1336,7 +1350,8 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < goma_ctx->problem.vim; p++) {
-            wt_func += supg * supg_tau * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
+            wt_func +=
+                supg * supg_tau * goma_ctx->fem.ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -1345,7 +1360,7 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
       ADType mass = 0.0;
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
-          mass += rho * ad_fv->turb_omega_dot * wt_func * d_area;
+          mass += rho * goma_ctx->fem.ad_fv->turb_omega_dot * wt_func * d_area;
           mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
@@ -1353,7 +1368,8 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
       /* Assemble advection term */
       ADType adv = 0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
-        adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_omega[p];
+        adv += rho * (goma_ctx->fem.ad_fv->v[p] - goma_ctx->fem.ad_fv->x_dot[p]) *
+               goma_ctx->fem.ad_fv->grad_turb_omega[p];
       }
       adv *= wt_func * d_area;
       adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
@@ -1363,7 +1379,8 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
 
       ADType src2 = 0;
       for (int p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
-        src2 += (mu + sigma_omega * mu_t) * ad_fv->grad_turb_omega[p] * ad_fv->grad_turb_omega[p];
+        src2 += (mu + sigma_omega * mu_t) * goma_ctx->fem.ad_fv->grad_turb_omega[p] *
+                goma_ctx->fem.ad_fv->grad_turb_omega[p];
       }
       ADType src = src1 + src2;
       src *= -wt_func * d_area;
@@ -1373,7 +1390,7 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
       ADType diff = 0.0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_omega) *
-                ad_fv->grad_turb_omega[p];
+                goma_ctx->fem.ad_fv->grad_turb_omega[p];
       }
       diff *= d_area;
       diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -1402,7 +1419,7 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
           for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
             goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                resid[i].dx(ad_fv->offset[var] + j);
+                resid[i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         } /* End of if the variale is active */
@@ -1433,10 +1450,10 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
   dbl k_inf = goma_ctx->fem.upd->turbulent_info->k_inf;
 
   // logarithmic formulation of k-omega model
-  ADType omega = std::exp(ad_fv->turb_omega);
-  ADType psi = clipping_func(ad_fv->turb_k, 0, 10 * k_inf);
-  ADType psi_neg = clipping_func(-ad_fv->turb_k, 0, 10 * k_inf);
-  ADType k = psi * ad_fv->turb_k;
+  ADType omega = std::exp(goma_ctx->fem.ad_fv->turb_omega);
+  ADType psi = clipping_func(goma_ctx->fem.ad_fv->turb_k, 0, 10 * k_inf);
+  ADType psi_neg = clipping_func(-goma_ctx->fem.ad_fv->turb_k, 0, 10 * k_inf);
+  ADType k = psi * goma_ctx->fem.ad_fv->turb_k;
 
   dbl sigma_k = 0.5;
   dbl sigma_omega = 0.5;
@@ -1448,14 +1465,14 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
   ADType gamma_dot[DIM][DIM];
   for (int i = 0; i < DIM; i++) {
     for (int j = 0; j < DIM; j++) {
-      gamma_dot[i][j] = (ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i]);
+      gamma_dot[i][j] = (goma_ctx->fem.ad_fv->grad_v[i][j] + goma_ctx->fem.ad_fv->grad_v[j][i]);
     }
   }
 
   ADType Omega_tens[DIM][DIM];
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
-      Omega_tens[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
+      Omega_tens[a][b] = (goma_ctx->fem.ad_fv->grad_v[a][b] - goma_ctx->fem.ad_fv->grad_v[b][a]);
     }
   }
   /* Vorticity */
@@ -1468,7 +1485,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
 
   ADType mu_t = rho * k / (omega);
   // ADType mu_t_kdiff = rho * k / (omega);// - rho * psi_neg * ad_fv->turb_k / omega_inf;
-  ADType mu_t_kdiff = rho * k / (omega)-rho * psi_neg * ad_fv->turb_k / omega_inf;
+  ADType mu_t_kdiff = rho * k / (omega)-rho * psi_neg * goma_ctx->fem.ad_fv->turb_k / omega_inf;
   dbl mu = goma_ctx->fem.mp->viscosity;
 
   ADType P = mu_t * Omega * Omega;
@@ -1499,10 +1516,11 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
     ad_supg_tau_shakib(supg_tau_w, goma_ctx->fem.pd->Num_Dim, dt, mu + sigma_omega * mu_t,
                        TURB_OMEGA);
     ad_supg_tau_shakib(supg_tau_k, goma_ctx->fem.pd->Num_Dim, dt, mu + sigma_k * mu_t, TURB_K);
-    ADType vshock_k = ad_dcdd(goma_ctx->fem.pd->Num_Dim, TURB_K, ad_fv->grad_turb_k, gs_inner_dot);
+    ADType vshock_k =
+        ad_dcdd(goma_ctx->fem.pd->Num_Dim, TURB_K, goma_ctx->fem.ad_fv->grad_turb_k, gs_inner_dot);
     vshock_k = std::min(supg_tau_k, vshock_k);
-    ADType vshock_w =
-        ad_dcdd(goma_ctx->fem.pd->Num_Dim, TURB_OMEGA, ad_fv->grad_turb_omega, gs_inner_dot);
+    ADType vshock_w = ad_dcdd(goma_ctx->fem.pd->Num_Dim, TURB_OMEGA,
+                              goma_ctx->fem.ad_fv->grad_turb_omega, gs_inner_dot);
     vshock_k = std::min(supg_tau_w, vshock_w);
     /*
      * Assemble residual for eddy viscosity
@@ -1516,7 +1534,8 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < goma_ctx->problem.vim; p++) {
-            wt_func += supg * supg_tau_w * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
+            wt_func += supg * supg_tau_w * goma_ctx->fem.ad_fv->v[p] *
+                       goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -1525,7 +1544,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       ADType mass = 0.0;
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
-          mass += rho * ad_fv->turb_omega_dot * wt_func * d_area;
+          mass += rho * goma_ctx->fem.ad_fv->turb_omega_dot * wt_func * d_area;
           mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
@@ -1533,7 +1552,8 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       /* Assemble advection term */
       ADType adv = 0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
-        adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_omega[p];
+        adv += rho * (goma_ctx->fem.ad_fv->v[p] - goma_ctx->fem.ad_fv->x_dot[p]) *
+               goma_ctx->fem.ad_fv->grad_turb_omega[p];
       }
       adv *= wt_func * d_area;
       adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
@@ -1544,7 +1564,8 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
 
       ADType src2 = 0;
       for (int p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
-        src2 += (mu + sigma_omega * mu_t) * ad_fv->grad_turb_omega[p] * ad_fv->grad_turb_omega[p];
+        src2 += (mu + sigma_omega * mu_t) * goma_ctx->fem.ad_fv->grad_turb_omega[p] *
+                goma_ctx->fem.ad_fv->grad_turb_omega[p];
       }
       ADType src = src1 + src2;
       src *= -wt_func * d_area;
@@ -1554,7 +1575,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       ADType diff = 0.0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_omega + vshock_w) *
-                ad_fv->grad_turb_omega[p];
+                goma_ctx->fem.ad_fv->grad_turb_omega[p];
       }
       diff *= d_area;
       diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -1572,7 +1593,8 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < goma_ctx->problem.vim; p++) {
-            wt_func += supg * supg_tau_k * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
+            wt_func += supg * supg_tau_k * goma_ctx->fem.ad_fv->v[p] *
+                       goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -1581,7 +1603,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       ADType mass = 0.0;
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
-          mass += rho * ad_fv->turb_k_dot * wt_func * d_area;
+          mass += rho * goma_ctx->fem.ad_fv->turb_k_dot * wt_func * d_area;
           mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
@@ -1589,7 +1611,8 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       /* Assemble advection term */
       ADType adv = 0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
-        adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_k[p];
+        adv += rho * (goma_ctx->fem.ad_fv->v[p] - goma_ctx->fem.ad_fv->x_dot[p]) *
+               goma_ctx->fem.ad_fv->grad_turb_k[p];
       }
       adv *= wt_func * d_area;
       adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
@@ -1598,7 +1621,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       ADType src1 = std::min(P, 10 * beta_star * rho * omega * k) - beta_star * rho * omega * k;
       // ADType src2 = 0;
 
-      ADType src2 = -beta_star * rho * omega_inf * psi_neg * ad_fv->turb_k;
+      ADType src2 = -beta_star * rho * omega_inf * psi_neg * goma_ctx->fem.ad_fv->turb_k;
       ADType src = src1 + src2;
       src *= -wt_func * d_area;
       src *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
@@ -1607,7 +1630,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       ADType diff = 0.0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t_kdiff * sigma_k + vshock_k) *
-                ad_fv->grad_turb_k[p];
+                goma_ctx->fem.ad_fv->grad_turb_k[p];
       }
       diff *= d_area;
       diff *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -1635,7 +1658,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
           for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
             goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                resid[0][i].dx(ad_fv->offset[var] + j);
+                resid[0][i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         } /* End of if the variale is active */
@@ -1654,7 +1677,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
           for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
             goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                resid[1][i].dx(ad_fv->offset[var] + j);
+                resid[1][i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         } /* End of if the variale is active */
@@ -1670,10 +1693,11 @@ void compute_sst_blending(ADType &F1, ADType &F2) {
 
   ADType grad_k_dot_grad_omega = 0.;
   for (int i = 0; i < DIM; i++) {
-    grad_k_dot_grad_omega += ad_fv->grad_turb_k[i] * ad_fv->grad_turb_omega[i];
+    grad_k_dot_grad_omega +=
+        goma_ctx->fem.ad_fv->grad_turb_k[i] * goma_ctx->fem.ad_fv->grad_turb_omega[i];
   }
-  ADType omega = std::max(1e-20, ad_fv->turb_omega);
-  ADType k = std::max(1e-20, ad_fv->turb_k);
+  ADType omega = std::max(1e-20, goma_ctx->fem.ad_fv->turb_omega);
+  ADType k = std::max(1e-20, goma_ctx->fem.ad_fv->turb_k);
   dbl sigma_omega2 = 0.856;
   dbl beta_star = 0.09;
   dbl d = goma_ctx->fem.fv->wall_distance;
@@ -1706,7 +1730,7 @@ ADType ad_yzbeta(int dim, int eqn, ADType Y, ADType Z, const ADType grad_U[DIM])
   ADType hdc = 0.0;
   for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
     for (int a = 0; a < dim; a++) {
-      hdc += std::abs(grad_U[a] / js) * ad_fv->basis[eqn].grad_phi[i][a];
+      hdc += std::abs(grad_U[a] / js) * goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][a];
     }
   }
   hdc = 2.0 / std::max(hdc, 1e-20);
@@ -1742,13 +1766,14 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
 
   ADType G[DIM][DIM];
 
-  ad_get_metric_tensor(ad_fv->B, goma_ctx->fem.pd->Num_Dim,
+  ad_get_metric_tensor(goma_ctx->fem.ad_fv->B, goma_ctx->fem.pd->Num_Dim,
                        goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, G);
 
   ADType v_d_gv = 0;
   for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
     for (int j = 0; j < goma_ctx->fem.pd->Num_Dim; j++) {
-      v_d_gv += fabs((ad_fv->v[i] - ad_fv->x_dot[i]) * G[i][j] * (ad_fv->v[j] - ad_fv->x_dot[j]));
+      v_d_gv += fabs((goma_ctx->fem.ad_fv->v[i] - goma_ctx->fem.ad_fv->x_dot[i]) * G[i][j] *
+                     (goma_ctx->fem.ad_fv->v[j] - goma_ctx->fem.ad_fv->x_dot[j]));
     }
   }
 
@@ -1757,7 +1782,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
   ADType W[DIM][DIM];
   for (int i = 0; i < DIM; i++) {
     for (int j = 0; j < DIM; j++) {
-      W[i][j] = 0.5 * (ad_fv->grad_v[i][j] - ad_fv->grad_v[j][i]);
+      W[i][j] = 0.5 * (goma_ctx->fem.ad_fv->grad_v[i][j] - goma_ctx->fem.ad_fv->grad_v[j][i]);
     }
   }
 
@@ -1773,11 +1798,12 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
 
   ADType grad_k_dot_grad_omega = 0.;
   for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
-    grad_k_dot_grad_omega += ad_fv->grad_turb_k[i] * ad_fv->grad_turb_omega[i];
+    grad_k_dot_grad_omega +=
+        goma_ctx->fem.ad_fv->grad_turb_k[i] * goma_ctx->fem.ad_fv->grad_turb_omega[i];
   }
 
-  ADType omega = std::max(1e-20, ad_fv->turb_omega);
-  ADType k = std::max(1e-20, ad_fv->turb_k);
+  ADType omega = std::max(1e-20, goma_ctx->fem.ad_fv->turb_omega);
+  ADType k = std::max(1e-20, goma_ctx->fem.ad_fv->turb_k);
   dbl sigma_omega1 = 0.5;
   dbl sigma_omega2 = 0.856;
   dbl sigma_k1 = 0.85;
@@ -1804,7 +1830,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
   ADType P = mu_turb * Omega * Omega;
   ADType Plim = std::min(P, 10 * beta_star * rho * omega * k);
 
-  ADType d_area = goma_ctx->fem.fv->wt * ad_fv->detJ * goma_ctx->fem.fv->h3;
+  ADType d_area = goma_ctx->fem.fv->wt * goma_ctx->fem.ad_fv->detJ * goma_ctx->fem.fv->h3;
   std::vector<std::vector<ADType>> resid(2);
   resid[0].resize(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TURB_K]);
   resid[1].resize(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TURB_OMEGA]);
@@ -1824,9 +1850,9 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
     eqn = TURB_K;
     peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
-    ADType Z_k = rho * ad_fv->turb_k_dot;
+    ADType Z_k = rho * goma_ctx->fem.ad_fv->turb_k_dot;
     for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
-      Z_k += rho * ad_fv->v[i] * ad_fv->grad_turb_k[i];
+      Z_k += rho * goma_ctx->fem.ad_fv->v[i] * goma_ctx->fem.ad_fv->grad_turb_k[i];
     }
     ADType coeff = 12 * (mu + mu_turb * sigma_k) * (mu + mu_turb * sigma_k);
 
@@ -1840,7 +1866,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
     ADType sugn1 = 0;
     for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
       for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; j++) {
-        sugn1 += std::abs(ad_fv->v[i] * goma_ctx->fem.bf[eqn]->grad_phi[j][i]);
+        sugn1 += std::abs(goma_ctx->fem.ad_fv->v[i] * goma_ctx->fem.bf[eqn]->grad_phi[j][i]);
       }
     }
     sugn1 = 1.0 / std::max(sugn1, 1e-20);
@@ -1850,11 +1876,11 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
     ADType r[DIM] = {0};
     ADType norm_grad_k = 0;
     for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
-      norm_grad_k = ad_fv->grad_turb_k[i] * ad_fv->grad_turb_k[i];
+      norm_grad_k = goma_ctx->fem.ad_fv->grad_turb_k[i] * goma_ctx->fem.ad_fv->grad_turb_k[i];
     }
     norm_grad_k = sqrt(norm_grad_k);
     for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
-      r[i] = std::abs(ad_fv->grad_turb_k[i]) / norm_grad_k;
+      r[i] = std::abs(goma_ctx->fem.ad_fv->grad_turb_k[i]) / norm_grad_k;
     }
 
     ADType h_rgn = 0;
@@ -1893,7 +1919,8 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < goma_ctx->problem.vim; p++) {
-            wt_func += supg * tau_supg_k * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
+            wt_func += supg * tau_supg_k * goma_ctx->fem.ad_fv->v[p] *
+                       goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -1902,7 +1929,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
       ADType mass = 0.0;
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
-          mass += rho * ad_fv->turb_k_dot;
+          mass += rho * goma_ctx->fem.ad_fv->turb_k_dot;
           mass *= wt_func * d_area;
           mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
         }
@@ -1911,7 +1938,8 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
       /* Assemble advection term */
       ADType adv = 0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
-        adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_k[p];
+        adv += rho * (goma_ctx->fem.ad_fv->v[p] - goma_ctx->fem.ad_fv->x_dot[p]) *
+               goma_ctx->fem.ad_fv->grad_turb_k[p];
       }
       adv *= wt_func * d_area;
       adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
@@ -1926,7 +1954,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
       ADType diff = 0.0;
       for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_k + vshock_k) *
-                ad_fv->grad_turb_k[p];
+                goma_ctx->fem.ad_fv->grad_turb_k[p];
         // + bf[eqn]->grad_phi[i][p] * vshock_k * gs_inner_dot[p];
       }
       diff *= d_area;
@@ -1950,7 +1978,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
         ADType mass = 0.0;
         if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
           if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
-            mass += 1e1 * ad_fv->turb_omega * wt_func * d_area;
+            mass += 1e1 * goma_ctx->fem.ad_fv->turb_omega * wt_func * d_area;
             mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
           }
         }
@@ -1979,9 +2007,9 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
     }
     {
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
-      ADType Z_w = rho * ad_fv->turb_omega_dot;
+      ADType Z_w = rho * goma_ctx->fem.ad_fv->turb_omega_dot;
       for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
-        Z_w += rho * ad_fv->v[i] * ad_fv->grad_turb_omega[i];
+        Z_w += rho * goma_ctx->fem.ad_fv->v[i] * goma_ctx->fem.ad_fv->grad_turb_omega[i];
       }
 
       coeff = 12 * (mu + mu_turb * sigma_omega) * (mu + mu_turb * sigma_omega);
@@ -1995,11 +2023,12 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
 
       ADType norm_grad_omega = 0;
       for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
-        norm_grad_omega = ad_fv->grad_turb_omega[i] * ad_fv->grad_turb_omega[i];
+        norm_grad_omega =
+            goma_ctx->fem.ad_fv->grad_turb_omega[i] * goma_ctx->fem.ad_fv->grad_turb_omega[i];
       }
       norm_grad_omega = sqrt(norm_grad_omega);
       for (int i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
-        r[i] = std::abs(ad_fv->grad_turb_omega[i]) / norm_grad_omega;
+        r[i] = std::abs(goma_ctx->fem.ad_fv->grad_turb_omega[i]) / norm_grad_omega;
       }
 
       h_rgn = 0;
@@ -2037,7 +2066,8 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
         if (supg > 0) {
           if (supg != 0.0) {
             for (int p = 0; p < goma_ctx->problem.vim; p++) {
-              wt_func += supg * tau_supg_w * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
+              wt_func += supg * tau_supg_w * goma_ctx->fem.ad_fv->v[p] *
+                         goma_ctx->fem.bf[eqn]->grad_phi[i][p];
             }
           }
         }
@@ -2046,7 +2076,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
         ADType mass = 0.0;
         if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
           if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
-            mass += rho * ad_fv->turb_omega_dot * wt_func * d_area;
+            mass += rho * goma_ctx->fem.ad_fv->turb_omega_dot * wt_func * d_area;
             mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
           }
         }
@@ -2054,7 +2084,8 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
         /* Assemble advection term */
         ADType adv = 0;
         for (int p = 0; p < goma_ctx->problem.vim; p++) {
-          adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_omega[p];
+          adv += rho * (goma_ctx->fem.ad_fv->v[p] - goma_ctx->fem.ad_fv->x_dot[p]) *
+                 goma_ctx->fem.ad_fv->grad_turb_omega[p];
         }
         adv *= wt_func * d_area;
         adv *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
@@ -2079,7 +2110,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
         ADType diff = 0.0;
         for (int p = 0; p < goma_ctx->problem.vim; p++) {
           diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_omega + vshock_w) *
-                  ad_fv->grad_turb_omega[p];
+                  goma_ctx->fem.ad_fv->grad_turb_omega[p];
           // + bf[eqn]->grad_phi[i][p] * vshock_w * gs_inner_dot[p];
         }
         diff *= d_area;
@@ -2110,7 +2141,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
           for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
             goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                resid[1][i].dx(ad_fv->offset[var] + j);
+                resid[1][i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         } /* End of if the variale is active */
@@ -2129,7 +2160,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
           for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
             goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                resid[0][i].dx(ad_fv->offset[var] + j);
+                resid[0][i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         } /* End of if the variale is active */
@@ -2184,12 +2215,12 @@ int ad_assemble_invariant(double tt, /* parameter to vary time integration from
 
   wt = goma_ctx->fem.fv->wt; /* Numerical integration weight */
 
-  ADType det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
+  ADType det_J = goma_ctx->fem.ad_fv->detJ; /* Really, ought to be mesh eqn. */
 
   ADType omega[DIM][DIM];
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
-      omega[a][b] = ad_fv->grad_v[a][b] + ad_fv->grad_v[b][a];
+      omega[a][b] = goma_ctx->fem.ad_fv->grad_v[a][b] + goma_ctx->fem.ad_fv->grad_v[b][a];
     }
   }
 
@@ -2242,7 +2273,8 @@ int ad_assemble_invariant(double tt, /* parameter to vary time integration from
 
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
         for (p = 0; p < dim; p++) {
-          diffusion += ad_fv->basis[eqn].grad_phi[i][p] * ad_fv->grad_SH[p];
+          diffusion +=
+              goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][p] * goma_ctx->fem.ad_fv->grad_SH[p];
         }
 
         diffusion *= det_J * wt * h3;
@@ -2256,7 +2288,7 @@ int ad_assemble_invariant(double tt, /* parameter to vary time integration from
       ADType source = 0;
 
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
-        source += ad_fv->SH;
+        source += goma_ctx->fem.ad_fv->SH;
         source *= wt_func * det_J * h3 * wt;
         source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
       }
@@ -2286,7 +2318,7 @@ int ad_assemble_invariant(double tt, /* parameter to vary time integration from
           for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
             goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                resid[i].dx(ad_fv->offset[var] + j);
+                resid[i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         } /* End of if the variale is active */
@@ -2303,10 +2335,10 @@ extern "C" dbl visc_diss_heat_source_film_use_ad(HEAT_SOURCE_DEPENDENCE_STRUCT *
   ADType gamma_dot[DIM][DIM];
   for (int i = 0; i < 2; i++) {
     for (int j = 0; j < 2; j++) {
-      gamma_dot[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
+      gamma_dot[i][j] = goma_ctx->fem.ad_fv->grad_v[i][j] + goma_ctx->fem.ad_fv->grad_v[j][i];
     }
   }
-  gamma_dot[2][2] = 2.0 * (-ad_fv->grad_v[0][0] - ad_fv->grad_v[1][1]);
+  gamma_dot[2][2] = 2.0 * (-goma_ctx->fem.ad_fv->grad_v[0][0] - goma_ctx->fem.ad_fv->grad_v[1][1]);
 
   ADType gammadot;
   ad_calc_shearrate(gammadot, gamma_dot);
@@ -2315,32 +2347,33 @@ extern "C" dbl visc_diss_heat_source_film_use_ad(HEAT_SOURCE_DEPENDENCE_STRUCT *
 
   for (int i = 0; i < 2; i++) {
     for (int j = 0; j < 2; j++) {
-      h += mu * gamma_dot[j][i] * ad_fv->grad_v[i][j];
+      h += mu * gamma_dot[j][i] * goma_ctx->fem.ad_fv->grad_v[i][j];
     }
   }
-  h += mu * gamma_dot[2][2] * (-ad_fv->grad_v[0][0] - ad_fv->grad_v[1][1]);
+  h += mu * gamma_dot[2][2] *
+       (-goma_ctx->fem.ad_fv->grad_v[0][0] - goma_ctx->fem.ad_fv->grad_v[1][1]);
   h = mu * gammadot * gammadot;
   h *= scale; // ad_fv->film_height;
 
   dbl alpha = goma_ctx->fem.mp->u_heat_source[0];
   dbl T_alpha = goma_ctx->fem.mp->u_heat_source[1];
-  h += -alpha * (ad_fv->T - T_alpha) / ad_fv->film_height;
+  h += -alpha * (goma_ctx->fem.ad_fv->T - T_alpha) / goma_ctx->fem.ad_fv->film_height;
 
   for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TEMPERATURE]; j++) {
-    d_h->T[j] = h.dx(ad_fv->offset[TEMPERATURE] + j);
+    d_h->T[j] = h.dx(goma_ctx->fem.ad_fv->offset[TEMPERATURE] + j);
   }
 
   for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[FILM_HEIGHT]; j++) {
-    d_h->film_height[j] = h.dx(ad_fv->offset[FILM_HEIGHT] + j);
+    d_h->film_height[j] = h.dx(goma_ctx->fem.ad_fv->offset[FILM_HEIGHT] + j);
   }
 
   for (int b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
     for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1 + b];
          j++) {
-      d_h->X[b][j] = h.dx(ad_fv->offset[MESH_DISPLACEMENT1 + b] + j);
+      d_h->X[b][j] = h.dx(goma_ctx->fem.ad_fv->offset[MESH_DISPLACEMENT1 + b] + j);
     }
     for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1 + b]; j++) {
-      d_h->v[b][j] = h.dx(ad_fv->offset[VELOCITY1 + b] + j);
+      d_h->v[b][j] = h.dx(goma_ctx->fem.ad_fv->offset[VELOCITY1 + b] + j);
     }
   }
 

@@ -10065,9 +10065,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO("\n---Initialization\n", echo_file);
 
-  Num_Var_Init_Mat[mn] = 0;
+  goma_ctx->problem.num_var_init_mat[mn] = 0;
   while ((iread = look_forward_optional(imp, "Initialize", input, '=')) == 1) {
-    Var_init_mat[mn][Num_Var_Init_Mat[mn]].len_u_pars = -1;
+    goma_ctx->problem.var_init_mat[mn][goma_ctx->problem.num_var_init_mat[mn]].len_u_pars = -1;
     /*
      *  Read the variable name to be fixed
      */
@@ -10079,34 +10079,41 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     (void)strip(input);
     var = variable_string_to_int(input, "Variable for matrl initialization");
     if (var >= 0) {
-      Var_init_mat[mn][Num_Var_Init_Mat[mn]].var = var;
+      goma_ctx->problem.var_init_mat[mn][goma_ctx->problem.num_var_init_mat[mn]].var = var;
     } else {
       sprintf(err_msg, "Invalid choice of initialization variable in material, %s",
               mat_ptr->Material_Name);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
-    if (fscanf(imp, "%d %lf", &Var_init_mat[mn][Num_Var_Init_Mat[mn]].ktype,
-               &Var_init_mat[mn][Num_Var_Init_Mat[mn]].init_val) != 2)
+    if (fscanf(
+            imp, "%d %lf",
+            &goma_ctx->problem.var_init_mat[mn][goma_ctx->problem.num_var_init_mat[mn]].ktype,
+            &goma_ctx->problem.var_init_mat[mn][goma_ctx->problem.num_var_init_mat[mn]].init_val) !=
+        2)
       GOMA_EH(GOMA_ERROR, "Error reading initialization data");
 
-    SPF(es, "%s = %s %d %.4g", "Initialize", input, Var_init_mat[mn][Num_Var_Init_Mat[mn]].ktype,
-        Var_init_mat[mn][Num_Var_Init_Mat[mn]].init_val);
+    SPF(es, "%s = %s %d %.4g", "Initialize", input,
+        goma_ctx->problem.var_init_mat[mn][goma_ctx->problem.num_var_init_mat[mn]].ktype,
+        goma_ctx->problem.var_init_mat[mn][goma_ctx->problem.num_var_init_mat[mn]].init_val);
 
-    if (fscanf(imp, "%d", &Var_init_mat[mn][Num_Var_Init_Mat[mn]].slave_block) != 1) {
-      Var_init_mat[mn][Num_Var_Init_Mat[mn]].slave_block = 0;
+    if (fscanf(imp, "%d",
+               &goma_ctx->problem.var_init_mat[mn][goma_ctx->problem.num_var_init_mat[mn]]
+                    .slave_block) != 1) {
+      goma_ctx->problem.var_init_mat[mn][goma_ctx->problem.num_var_init_mat[mn]].slave_block = 0;
     } else
-      SPF(endofstring(es), " %d", Var_init_mat[mn][Num_Var_Init_Mat[mn]].slave_block);
+      SPF(endofstring(es), " %d",
+          goma_ctx->problem.var_init_mat[mn][goma_ctx->problem.num_var_init_mat[mn]].slave_block);
 
-    Num_Var_Init_Mat[mn]++;
+    goma_ctx->problem.num_var_init_mat[mn]++;
     ECHO(es, echo_file);
   }
 
   while ((iread = look_forward_optional(imp, "User Initialize", input, '=')) == 1) {
-    int curr_var = Num_Var_Init_Mat[mn];
+    int curr_var = goma_ctx->problem.num_var_init_mat[mn];
     double tmp;
 
-    Var_init_mat[mn][curr_var].len_u_pars = -1;
+    goma_ctx->problem.var_init_mat[mn][curr_var].len_u_pars = -1;
     /*
      *  Read the variable name to be fixed
      */
@@ -10118,36 +10125,38 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     (void)strip(input);
     var = variable_string_to_int(input, "Variable for matrl initialization");
     if (var >= 0) {
-      Var_init_mat[mn][curr_var].var = var;
+      goma_ctx->problem.var_init_mat[mn][curr_var].var = var;
     } else {
       sprintf(err_msg, "Invalid choice of user initialization variable in material, %s",
               mat_ptr->Material_Name);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
-    if (fscanf(imp, "%d %lf", &Var_init_mat[mn][Num_Var_Init_Mat[mn]].ktype,
-               &Var_init_mat[mn][curr_var].init_val) != 2)
+    if (fscanf(imp, "%d %lf",
+               &goma_ctx->problem.var_init_mat[mn][goma_ctx->problem.num_var_init_mat[mn]].ktype,
+               &goma_ctx->problem.var_init_mat[mn][curr_var].init_val) != 2)
       GOMA_EH(GOMA_ERROR, "Error reading initialization data");
 
-    SPF(es, "%s = %s %d %.4g", "User Initialize", input, Var_init_mat[mn][curr_var].ktype,
-        Var_init_mat[mn][curr_var].init_val);
+    SPF(es, "%s = %s %d %.4g", "User Initialize", input,
+        goma_ctx->problem.var_init_mat[mn][curr_var].ktype,
+        goma_ctx->problem.var_init_mat[mn][curr_var].init_val);
 
-    if (fscanf(imp, "%d", &Var_init_mat[mn][curr_var].slave_block) != 1) {
-      Var_init_mat[mn][curr_var].slave_block = 0;
+    if (fscanf(imp, "%d", &goma_ctx->problem.var_init_mat[mn][curr_var].slave_block) != 1) {
+      goma_ctx->problem.var_init_mat[mn][curr_var].slave_block = 0;
     } else
-      SPF(endofstring(es), " %d", Var_init_mat[mn][curr_var].slave_block);
+      SPF(endofstring(es), " %d", goma_ctx->problem.var_init_mat[mn][curr_var].slave_block);
 
     /* add float list */
-    Var_init_mat[mn][curr_var].u_pars = alloc_dbl_1(MAX_NUMBER_PARAMS, 0.0);
-    Var_init_mat[mn][curr_var].len_u_pars = 0;
+    goma_ctx->problem.var_init_mat[mn][curr_var].u_pars = alloc_dbl_1(MAX_NUMBER_PARAMS, 0.0);
+    goma_ctx->problem.var_init_mat[mn][curr_var].len_u_pars = 0;
     while (fscanf(imp, "%lf ", &tmp) == 1) {
-      i = Var_init_mat[mn][curr_var].len_u_pars;
-      Var_init_mat[mn][curr_var].u_pars[i] = tmp;
-      Var_init_mat[mn][curr_var].len_u_pars++;
+      i = goma_ctx->problem.var_init_mat[mn][curr_var].len_u_pars;
+      goma_ctx->problem.var_init_mat[mn][curr_var].u_pars[i] = tmp;
+      goma_ctx->problem.var_init_mat[mn][curr_var].len_u_pars++;
       SPF(endofstring(echo_string), " %.4g", tmp);
     }
 
-    Num_Var_Init_Mat[mn]++;
+    goma_ctx->problem.num_var_init_mat[mn]++;
     ECHO(es, echo_file);
   }
 
@@ -12186,8 +12195,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
    *  Check the input for consistency
    */
   NO_SPECIES = 0;
-  for (i = 0; i < Num_Var_Init_Mat[mn]; i++) {
-    if (Var_init_mat[mn][i].var == MASS_FRACTION)
+  for (i = 0; i < goma_ctx->problem.num_var_init_mat[mn]; i++) {
+    if (goma_ctx->problem.var_init_mat[mn][i].var == MASS_FRACTION)
       NO_SPECIES++;
   }
   if (NO_SPECIES > pd_ptr->Num_Species) {

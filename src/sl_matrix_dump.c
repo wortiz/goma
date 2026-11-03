@@ -324,7 +324,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
   }
 
   for (i = 0; i < num_owned_nodes; i++) {
-    node = Nodes[i];
+    node = goma_ctx->fem.nodes[i];
     ordered_gnodes[i] = node->Global_Node_Num;
     ordered_index[i] = i;
   }
@@ -402,7 +402,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
          *   Store the pointer to the node structure corresponding to
          *   the correct global node
          */
-        node = Nodes[oindex];
+        node = goma_ctx->fem.nodes[oindex];
 
         /*
          *   Check to see if this processor actually owns that node
@@ -451,7 +451,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
          */
         for (j = 0; j < num_cols; j++) {
           jblk = col_list_umi.List[j];
-          nodeC = Nodes[jblk];
+          nodeC = goma_ctx->fem.nodes[jblk];
           gNodeS[j] = nodeC->Global_Node_Num;
           iorder[j] = j;
           n1 = nodeC->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx]->Num_Unknowns;
@@ -544,7 +544,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
         for (i = 0; i < num_unknowns_node; i++) {
           vdT = Index_Solution_Inv(ieqn, &inode, &i_Var_Desc, &i_offset, &idof,
                                    goma_ctx->fem.pg->imtrx);
-          nodeT = Nodes[inode];
+          nodeT = goma_ctx->fem.nodes[inode];
           /*
            * Output specific information about the variable
            */
@@ -592,7 +592,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
            *  to the current block column, nodeC.
            */
 
-          nodeC = Nodes[jblk];
+          nodeC = goma_ctx->fem.nodes[jblk];
           /*
            *  Calculate the equation number for the first unknown
            *  in the current block column
@@ -925,7 +925,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
   }
 
   for (i = 0; i < num_owned_nodes; i++) {
-    node = Nodes[i];
+    node = goma_ctx->fem.nodes[i];
     ordered_gnodes[i] = node->Global_Node_Num;
     ordered_index[i] = i;
   }
@@ -998,7 +998,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
          *   the correct global node
          */
 
-        node = Nodes[oindex];
+        node = goma_ctx->fem.nodes[oindex];
 
         /*
          *   Check to see if this processor actually owns that node
@@ -1053,7 +1053,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
         k = 0;
         for (j = bpntr[iblk_row]; j < bpntr[iblk_row + 1]; j++) {
           jblk = bindx[j];
-          nodeC = Nodes[jblk];
+          nodeC = goma_ctx->fem.nodes[jblk];
           gNodeS[k] = nodeC->Global_Node_Num;
           iorder[k] = k;
           k++;
@@ -1118,7 +1118,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
         for (i = 0; i < num_unknowns_node; i++) {
           vdT = Index_Solution_Inv(ieqn, &inode, &i_Var_Desc, &i_offset, &idof,
                                    goma_ctx->fem.pg->imtrx);
-          nodeT = Nodes[inode];
+          nodeT = goma_ctx->fem.nodes[inode];
           /*
            * Output specific information about the variable
            */
@@ -1165,7 +1165,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
            *  to the current block column, nodeC.
            */
 
-          nodeC = Nodes[jblk];
+          nodeC = goma_ctx->fem.nodes[jblk];
 
           /*
            *  Calculate the equation number for the first unknown
@@ -1229,7 +1229,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
           for (i = 0; i < n1; i++) {
             vdT = Index_Solution_Inv(ieqn, &inode, &i_Var_Desc, &i_offset, &idof,
                                      goma_ctx->fem.pg->imtrx);
-            nodeT = Nodes[inode];
+            nodeT = goma_ctx->fem.nodes[inode];
             /*
              * Output specific information about the variable
              */

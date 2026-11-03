@@ -78,14 +78,6 @@ static int look_forward_optional_until(
  * have a mm_mp_structs and mm_mp.h to declare what these are.
  */
 
-int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwrite  *
-                                         * with material-specific            *
-                                         * initialization                    */
-
-struct Variable_Initialization Var_init[MAX_VARIABLE_TYPES + MAX_CONC];
-
-struct Variable_Initialization Var_init_mat[MAX_NUMBER_MATLS][MAX_VARIABLE_TYPES + MAX_CONC];
-
 static char aprepro_command[1024];
 
 static Spfrtn sr;
@@ -917,10 +909,10 @@ void rd_genl_specs(FILE *ifp, char *input) {
   ECHO(echo_string, echo_file);
 
 #ifdef MATRIX_DUMP
-  (void)look_for_optional_int(ifp, "Number of Jacobian File Dumps", &Number_Jac_Dump, 0);
+  (void)look_for_optional_int(ifp, "Number of Jacobian File Dumps", &goma_ctx->number_jac_dump, 0);
 
   snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of Jacobian File Dumps",
-           Number_Jac_Dump);
+           goma_ctx->number_jac_dump);
   ECHO(echo_string, echo_file);
 #endif
 
@@ -1000,19 +992,19 @@ void rd_genl_specs(FILE *ifp, char *input) {
      *  Translate the string variable name to the internal integer value for
      *  that variable.
      */
-    Var_init[goma_ctx->num_var_bound].var =
+    goma_ctx->problem.var_init[goma_ctx->num_var_bound].var =
         variable_string_to_int(input, "Initialize Keyword Error");
 
-    if (fscanf(ifp, "%d %lf %lf", &Var_init[goma_ctx->num_var_bound].ktype,
-               &Var_init[goma_ctx->num_var_bound].init_val_min,
-               &Var_init[goma_ctx->num_var_bound].init_val_max) != 3) {
+    if (fscanf(ifp, "%d %lf %lf", &goma_ctx->problem.var_init[goma_ctx->num_var_bound].ktype,
+               &goma_ctx->problem.var_init[goma_ctx->num_var_bound].init_val_min,
+               &goma_ctx->problem.var_init[goma_ctx->num_var_bound].init_val_max) != 3) {
       GOMA_EH(GOMA_ERROR, "Error reading Variable Bound data");
     }
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s %d %f %f", "Initialization Bound", input,
-             Var_init[goma_ctx->num_var_bound].ktype,
-             Var_init[goma_ctx->num_var_bound].init_val_min,
-             Var_init[goma_ctx->num_var_bound].init_val_max);
+             goma_ctx->problem.var_init[goma_ctx->num_var_bound].ktype,
+             goma_ctx->problem.var_init[goma_ctx->num_var_bound].init_val_min,
+             goma_ctx->problem.var_init[goma_ctx->num_var_bound].init_val_max);
     ECHO(echo_string, echo_file);
 
     goma_ctx->num_var_bound++;
@@ -1058,17 +1050,18 @@ void rd_genl_specs(FILE *ifp, char *input) {
      *  Translate the string variable name to the internal integer value for
      *  that variable.
      */
-    Var_init[goma_ctx->num_var_init].len_u_pars = -1;
-    Var_init[goma_ctx->num_var_init].var =
+    goma_ctx->problem.var_init[goma_ctx->num_var_init].len_u_pars = -1;
+    goma_ctx->problem.var_init[goma_ctx->num_var_init].var =
         variable_string_to_int(input, "Initialize Keyword Error");
 
-    if (fscanf(ifp, "%d %lf", &Var_init[goma_ctx->num_var_init].ktype,
-               &Var_init[goma_ctx->num_var_init].init_val) != 2) {
+    if (fscanf(ifp, "%d %lf", &goma_ctx->problem.var_init[goma_ctx->num_var_init].ktype,
+               &goma_ctx->problem.var_init[goma_ctx->num_var_init].init_val) != 2) {
       GOMA_EH(GOMA_ERROR, "Error reading initialization data");
     }
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s %d %f", "Initialize", input,
-             Var_init[goma_ctx->num_var_init].ktype, Var_init[goma_ctx->num_var_init].init_val);
+             goma_ctx->problem.var_init[goma_ctx->num_var_init].ktype,
+             goma_ctx->problem.var_init[goma_ctx->num_var_init].init_val);
     ECHO(echo_string, echo_file);
 
     goma_ctx->num_var_init++;
@@ -1308,7 +1301,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
     int curr_var = goma_ctx->num_var_init, var;
     double tmp;
 
-    Var_init[curr_var].len_u_pars = -1;
+    goma_ctx->problem.var_init[curr_var].len_u_pars = -1;
     if (fscanf(ifp, "%80s", input) != 1) {
       sprintf(err_msg, "Error reading variable for user initialization");
       GOMA_EH(GOMA_ERROR, err_msg);
@@ -1316,30 +1309,30 @@ void rd_genl_specs(FILE *ifp, char *input) {
     (void)strip(input);
     var = variable_string_to_int(input, "Variable for user initialization");
     if (var >= 0) {
-      Var_init[curr_var].var = var;
+      goma_ctx->problem.var_init[curr_var].var = var;
     } else {
       sprintf(err_msg, "Invalid choice of user initialization variable");
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
-    if (fscanf(ifp, "%d %lf", &Var_init[goma_ctx->num_var_init].ktype,
-               &Var_init[curr_var].init_val) != 2)
+    if (fscanf(ifp, "%d %lf", &goma_ctx->problem.var_init[goma_ctx->num_var_init].ktype,
+               &goma_ctx->problem.var_init[curr_var].init_val) != 2)
       GOMA_EH(GOMA_ERROR, "Error reading initialization data");
 
-    SPF(err_msg, "%s = %s %d %.4g", "User Initialize", input, Var_init[curr_var].ktype,
-        Var_init[curr_var].init_val);
+    SPF(err_msg, "%s = %s %d %.4g", "User Initialize", input,
+        goma_ctx->problem.var_init[curr_var].ktype, goma_ctx->problem.var_init[curr_var].init_val);
 
-    if (fscanf(ifp, "%d", &Var_init[curr_var].slave_block) != 1) {
-      Var_init[curr_var].slave_block = 0;
+    if (fscanf(ifp, "%d", &goma_ctx->problem.var_init[curr_var].slave_block) != 1) {
+      goma_ctx->problem.var_init[curr_var].slave_block = 0;
     } else
-      SPF(endofstring(err_msg), " %d", Var_init[curr_var].slave_block);
+      SPF(endofstring(err_msg), " %d", goma_ctx->problem.var_init[curr_var].slave_block);
 
-    Var_init[curr_var].u_pars = alloc_dbl_1(MAX_NUMBER_PARAMS, 0.0);
-    Var_init[curr_var].len_u_pars = 0;
+    goma_ctx->problem.var_init[curr_var].u_pars = alloc_dbl_1(MAX_NUMBER_PARAMS, 0.0);
+    goma_ctx->problem.var_init[curr_var].len_u_pars = 0;
     while (fscanf(ifp, "%lf ", &tmp) == 1) {
-      iread = Var_init[curr_var].len_u_pars;
-      Var_init[curr_var].u_pars[iread] = tmp;
-      Var_init[curr_var].len_u_pars++;
+      iread = goma_ctx->problem.var_init[curr_var].len_u_pars;
+      goma_ctx->problem.var_init[curr_var].u_pars[iread] = tmp;
+      goma_ctx->problem.var_init[curr_var].len_u_pars++;
       SPF(endofstring(err_msg), " %.4g", tmp);
     }
 
@@ -2000,16 +1993,19 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       /* OK.  Let us put the Variables initialized index by LS on the end of the original Var_init
        * array. This is why we add Num_Var_Init to the ls->Num_Var_Init to define index
        */
-      Var_init[index].var = variable_string_to_int(input, "Initialize Keyword Error");
+      goma_ctx->problem.var_init[index].var =
+          variable_string_to_int(input, "Initialize Keyword Error");
 
-      if (fscanf(ifp, "%d %lf %lf", &(Var_init[index].ktype), &(Var_init[index].init_val_minus),
-                 &(Var_init[index].init_val_plus)) != 3) {
+      if (fscanf(ifp, "%d %lf %lf", &(goma_ctx->problem.var_init[index].ktype),
+                 &(goma_ctx->problem.var_init[index].init_val_minus),
+                 &(goma_ctx->problem.var_init[index].init_val_plus)) != 3) {
         GOMA_EH(GOMA_ERROR, "Need one int and two floats on LS initialization card \n");
       }
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s %d %.4g %.4g", "Level Set Initialize",
-               input, Var_init[index].ktype, Var_init[index].init_val_minus,
-               Var_init[index].init_val_plus);
+               input, goma_ctx->problem.var_init[index].ktype,
+               goma_ctx->problem.var_init[index].init_val_minus,
+               goma_ctx->problem.var_init[index].init_val_plus);
       ECHO(echo_string, echo_file);
 
       goma_ctx->fem.ls->Num_Var_Init++;
@@ -7389,15 +7385,15 @@ void rd_solver_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (!strncmp(input, "no", 2))
-      Linear_Stability = LSA_NONE;
+      goma_ctx->problem.linear_stability = LSA_NONE;
     else if (!strncmp(input, "yes", 3) || !strncmp(input, "inline", 6))
-      Linear_Stability = LSA_NORMAL;
+      goma_ctx->problem.linear_stability = LSA_NORMAL;
     else if (!strncmp(input, "file", 4))
-      Linear_Stability = LSA_SAVE;
+      goma_ctx->problem.linear_stability = LSA_SAVE;
     else if (!strncmp(input, "3D", 2))
-      Linear_Stability = LSA_3D_OF_2D;
+      goma_ctx->problem.linear_stability = LSA_3D_OF_2D;
     else if (!strncmp(input, "3Dfile", 6))
-      Linear_Stability = LSA_3D_OF_2D_SAVE;
+      goma_ctx->problem.linear_stability = LSA_3D_OF_2D_SAVE;
     else
       GOMA_EH(GOMA_ERROR, "Invalid choice: Linear Stability must be yes, no, file, 3D, or 3Dfile");
 
@@ -7405,7 +7401,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
 
   } else
-    Linear_Stability = LSA_NONE;
+    goma_ctx->problem.linear_stability = LSA_NONE;
 
   iread = look_for_optional(ifp, "Filter Concentration", input, '=');
   if (iread == 1) {
@@ -7470,7 +7466,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
     for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       for (eq = 0; eq < MAX_VARIABLE_TYPES; eq++) {
         for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-          Ignore_Deps[imtrx][eq][var] = FALSE;
+          goma_ctx->problem.ignore_deps[imtrx][eq][var] = FALSE;
         }
       }
     }
@@ -7513,10 +7509,10 @@ void rd_solver_specs(FILE *ifp, char *input) {
             if (var != eq) /* keep this entry only */
             {
               if (symmetric_flag) {
-                Ignore_Deps[imtrx][eq][var] = TRUE;
-                Ignore_Deps[imtrx][var][eq] = TRUE;
+                goma_ctx->problem.ignore_deps[imtrx][eq][var] = TRUE;
+                goma_ctx->problem.ignore_deps[imtrx][var][eq] = TRUE;
               } else {
-                Ignore_Deps[imtrx][eq][var] = TRUE;
+                goma_ctx->problem.ignore_deps[imtrx][eq][var] = TRUE;
               }
             }
           }
@@ -7535,10 +7531,10 @@ void rd_solver_specs(FILE *ifp, char *input) {
           var--; /* this got incremented one more time than desired */
 
           if (symmetric_flag) {
-            Ignore_Deps[imtrx][eq][var] = TRUE;
-            Ignore_Deps[imtrx][var][eq] = TRUE;
+            goma_ctx->problem.ignore_deps[imtrx][eq][var] = TRUE;
+            goma_ctx->problem.ignore_deps[imtrx][var][eq] = TRUE;
           } else {
-            Ignore_Deps[imtrx][eq][var] = TRUE;
+            goma_ctx->problem.ignore_deps[imtrx][eq][var] = TRUE;
           }
         }
       }
@@ -7570,7 +7566,7 @@ void rd_eigen_specs(FILE *ifp, char *input) {
 
   /* READ IN EIGENSOLVER SPECIFICATIONS */
 
-  if (Linear_Stability == LSA_NONE)
+  if (goma_ctx->problem.linear_stability == LSA_NONE)
     return;
   iread = look_for_optional(ifp, "Eigensolver Specifications", input, '=');
 
@@ -7645,7 +7641,7 @@ void rd_eigen_specs(FILE *ifp, char *input) {
       /* For non-LOCA continuation, this card does not apply */
     default:
       fprintf(stdout, "LSA not available for continuation without LOCA!");
-      Linear_Stability = LSA_NONE;
+      goma_ctx->problem.linear_stability = LSA_NONE;
       break;
     }
   }
@@ -7996,25 +7992,28 @@ void rd_eigen_specs(FILE *ifp, char *input) {
     strip(input);
     strncpy(copy_of_input, input, MAX_CHAR_IN_INPUT - 1); /* leave room for trailing \0 */
     if (strtok(copy_of_input, " \t\n"))
-      LSA_number_wave_numbers++;
+      goma_ctx->problem.lsa_number_wave_numbers++;
     else
       GOMA_EH(GOMA_ERROR, "Bad Eigen Wave Numbers card");
     while (strtok(NULL, " \t\n"))
-      LSA_number_wave_numbers++;
-    LSA_wave_numbers = (dbl *)malloc(LSA_number_wave_numbers * sizeof(dbl));
-    if (!LSA_wave_numbers)
+      goma_ctx->problem.lsa_number_wave_numbers++;
+    goma_ctx->problem.lsa_wave_numbers =
+        (dbl *)malloc(goma_ctx->problem.lsa_number_wave_numbers * sizeof(dbl));
+    if (!goma_ctx->problem.lsa_wave_numbers)
       GOMA_EH(GOMA_ERROR, "Could not allocate space for LSA_wave_numbers");
-    LSA_wave_numbers[0] = atof(strtok(input, " \t\n"));
-    if (LSA_wave_numbers[0] == 0.)
+    goma_ctx->problem.lsa_wave_numbers[0] = atof(strtok(input, " \t\n"));
+    if (goma_ctx->problem.lsa_wave_numbers[0] == 0.)
       GOMA_EH(GOMA_ERROR, "Cannot solve 3D of 2D for zero wave number");
-    for (i = 1; i < LSA_number_wave_numbers; i++) {
-      LSA_wave_numbers[i] = atof(strtok(NULL, " \t\n"));
-      if (LSA_wave_numbers[i] == 0.)
+    for (i = 1; i < goma_ctx->problem.lsa_number_wave_numbers; i++) {
+      goma_ctx->problem.lsa_wave_numbers[i] = atof(strtok(NULL, " \t\n"));
+      if (goma_ctx->problem.lsa_wave_numbers[i] == 0.)
         GOMA_EH(GOMA_ERROR, "cannot solve 3D of 2D for zero wave number");
     }
 
-    SPF_DBL_VEC(endofstring(echo_string), LSA_number_wave_numbers, LSA_wave_numbers);
-  } else if (Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE)
+    SPF_DBL_VEC(endofstring(echo_string), goma_ctx->problem.lsa_number_wave_numbers,
+                goma_ctx->problem.lsa_wave_numbers);
+  } else if (goma_ctx->problem.linear_stability == LSA_3D_OF_2D ||
+             goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE)
     GOMA_EH(GOMA_ERROR,
             "3D stability of 2D flow requested, but missing \"Eigen Wave Numbers\" card");
 
@@ -10478,7 +10477,8 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_BOUNDARY)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_DIFFUSION)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_SOURCE)])) != 5) {
-          if (goma_ctx->problem.time_integration == TRANSIENT || Linear_Stability != LSA_NONE) {
+          if (goma_ctx->problem.time_integration == TRANSIENT ||
+              goma_ctx->problem.linear_stability != LSA_NONE) {
             pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)] = 1.0;
           } else {
             pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)] = .0;
@@ -10525,7 +10525,8 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_DIFFUSION)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_SOURCE)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_POROUS_BRINK)])) != 6) {
-          if (goma_ctx->problem.time_integration == TRANSIENT || Linear_Stability != LSA_NONE) {
+          if (goma_ctx->problem.time_integration == TRANSIENT ||
+              goma_ctx->problem.linear_stability != LSA_NONE) {
             pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)] = 1.0;
           } else {
             pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)] = .0;
@@ -10869,7 +10870,8 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
 
     /* Consistency diagnostics for runs involving 3D stability of
      * 2D flows... */
-    if (Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE) {
+    if (goma_ctx->problem.linear_stability == LSA_3D_OF_2D ||
+        goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE) {
       if (!goma_ctx->fem.pd_glob[mn]->e[0][R_MOMENTUM3] ||
           !goma_ctx->fem.pd_glob[mn]->v[0][VELOCITY3]) {
         fprintf(stderr, "\nR_MOMENTUM3/VELOCITY3 are required for a 3D stability of a 2D flow.\n");
@@ -14516,13 +14518,14 @@ void echo_compiler_settings(void) {
           (goma_ctx->solver.pspp > 0 ? "yes" : "no"));
   fprintf(echo_file, "%-30s= %f\n", "Stabilization Scaling ", goma_ctx->solver.ps_scaling);
   fprintf(echo_file, "%-30s= %s\n", "Linear Stability",
-          (Linear_Stability == LSA_NORMAL
+          (goma_ctx->problem.linear_stability == LSA_NORMAL
                ? "yes"
-               : (Linear_Stability == LSA_SAVE
+               : (goma_ctx->problem.linear_stability == LSA_SAVE
                       ? "file"
-                      : (Linear_Stability == LSA_3D_OF_2D
+                      : (goma_ctx->problem.linear_stability == LSA_3D_OF_2D
                              ? "3D"
-                             : (Linear_Stability == LSA_3D_OF_2D_SAVE ? "3Dfile" : "no")))));
+                             : (goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE ? "3Dfile"
+                                                                                        : "no")))));
 
   return;
 }

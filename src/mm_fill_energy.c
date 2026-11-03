@@ -327,7 +327,7 @@ int assemble_energy(
 
 #if 1
       /* this is an optimization for xfem */
-      if (xfem != NULL) {
+      if (goma_ctx->fem.xfem != NULL) {
         int xfem_active, extended_dof, base_interp, base_dof;
         xfem_dof_state(i, pd->i[pg->imtrx][eqn], ei[pg->imtrx]->ielem_shape, &xfem_active,
                        &extended_dof, &base_interp, &base_dof);
@@ -410,7 +410,7 @@ int assemble_energy(
     for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
 #if 1
       /* this is an optimization for xfem */
-      if (xfem != NULL) {
+      if (goma_ctx->fem.xfem != NULL) {
         int xfem_active, extended_dof, base_interp, base_dof;
         xfem_dof_state(i, pd->i[pg->imtrx][eqn], ei[pg->imtrx]->ielem_shape, &xfem_active,
                        &extended_dof, &base_interp, &base_dof);

@@ -75,7 +75,7 @@ int dof_lnode_var_type(const int n,
   /*
    * Store whether this node is on an edge of the grid or not
    */
-  edge = (int)Nodes[proc_node_num]->EDGE;
+  edge = (int)goma_ctx->fem.nodes[proc_node_num]->EDGE;
 
   /*
    * Now, given the local node number, n, the element type, and the
@@ -103,7 +103,7 @@ int num_varType_at_node(const int inode, const int varType)
  *       the node number as input
  *******************************************************************/
 {
-  NODE_INFO_STRUCT *node = Nodes[inode];
+  NODE_INFO_STRUCT *node = goma_ctx->fem.nodes[inode];
   int num = get_nv_ndofs(node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx], varType);
   return num;
 }
@@ -432,8 +432,8 @@ int MatchAdd_Node_Vars_List(NODAL_VARS_STRUCT *newNV, NODAL_VARS_STRUCT **matchN
    * Lets determine if we can match any existing entry in the
    * global processor list
    */
-  for (i = 0; i < Nodal_Vars_List_Length; i++) {
-    oldNV = Nodal_Vars_List[i];
+  for (i = 0; i < goma_ctx->problem.nodal_vars_list_length; i++) {
+    oldNV = goma_ctx->problem.nodal_vars_list[i];
     if (nodal_vars_comparison(oldNV, newNV)) {
       *matchNV_hdl = oldNV;
       return TRUE;
@@ -446,10 +446,12 @@ int MatchAdd_Node_Vars_List(NODAL_VARS_STRUCT *newNV, NODAL_VARS_STRUCT **matchN
    *  We do this by reallocating the Nodal_Vars list,
    *  Proc_Nodal_Vars_List.
    */
-  realloc_ptr_1((void ***)&Nodal_Vars_List, Nodal_Vars_List_Length + 1, Nodal_Vars_List_Length);
-  Nodal_Vars_List[Nodal_Vars_List_Length] = newNV;
-  newNV->list_index = Nodal_Vars_List_Length;
-  Nodal_Vars_List_Length++;
+  realloc_ptr_1((void ***)&goma_ctx->problem.nodal_vars_list,
+                goma_ctx->problem.nodal_vars_list_length + 1,
+                goma_ctx->problem.nodal_vars_list_length);
+  goma_ctx->problem.nodal_vars_list[goma_ctx->problem.nodal_vars_list_length] = newNV;
+  newNV->list_index = goma_ctx->problem.nodal_vars_list_length;
+  goma_ctx->problem.nodal_vars_list_length++;
   *matchNV_hdl = newNV;
   return FALSE;
 }

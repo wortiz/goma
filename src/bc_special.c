@@ -298,7 +298,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
          *  structure pertaining to that node.
          */
         I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
-        node = Nodes[I];
+        node = goma_ctx->fem.nodes[I];
 
         /*
          * Load the field variable values at this node point
@@ -329,7 +329,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
 
         if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
           load_surface_tension(dsigma_dx);
-          if (neg_elem_volume)
+          if (goma_ctx->solver.neg_elem_volume)
             return (status);
         }
 
@@ -598,7 +598,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
 
                 if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
                   load_surface_tension(dsigma_dx);
-                  if (neg_elem_volume)
+                  if (goma_ctx->solver.neg_elem_volume)
                     return (status);
                 }
 
@@ -1009,7 +1009,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
 	    if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) 
               {
                 load_surface_tension(dsigma_dx);
-                if( neg_elem_volume ) return(status);
+                if( goma_ctx->solver.neg_elem_volume ) return(status);
               }
     
 	    if (goma_ctx->problem.time_integration != STEADY) {
@@ -1390,9 +1390,9 @@ int apply_shell_grad_bc(double x[],              /* Solution vector for the curr
   }
 
   /* Loop over friends of the current element */
-  nf = num_elem_friends[ielem];
+  nf = goma_ctx->fem.num_elem_friends[ielem];
   for (ef = 0; ef < nf; ef++) {
-    elem2 = elem_friends[ielem][ef];
+    elem2 = goma_ctx->fem.elem_friends[ielem][ef];
     eb2 = find_elemblock_index(elem2, exo);
     ebid2 = exo->eb_id[eb2];
     m2 = goma_ctx->problem.matilda[eb2];
@@ -1578,7 +1578,8 @@ int apply_shell_grad_bc(double x[],              /* Solution vector for the curr
   } /* End of loop over friends of bulk element */
 
   /* Cleanup: return to bulk element */
-  err = load_elem_dofptr(elem1, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
+  err = load_elem_dofptr(elem1, exo, goma_ctx->fem.x_static, goma_ctx->fem.x_old_static,
+                         goma_ctx->fem.xdot_static, goma_ctx->fem.xdot_old_static, 0);
   safe_free((void *)n_dof);
   safe_free((void *)bulk_gnn_list);
 

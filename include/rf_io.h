@@ -31,13 +31,6 @@
 				  * -> We need this include dor this file */
 #include "util/goma_context.h"
 
-#ifdef MATRIX_DUMP
-extern int Number_Jac_Dump; /* Number of jacobians to dump out
-                             * If the value is negative, then the one
-                             * jacobian, the -n'th jacobian, is dumped
-                             * out */
-#endif
-
 extern const char anneal_file[];
 
 #endif

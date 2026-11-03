@@ -26,7 +26,6 @@
 #include "rf_fem.h"
 
 // GLOBAL
-AD_Field_Variables *ad_fv = NULL;
 
 int ad_calc_shearrate(ADType &gammadot,             /* strain rate invariant */
                       ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
@@ -49,8 +48,8 @@ int ad_calc_shearrate(ADType &gammadot,             /* strain rate invariant */
   return 0;
 }
 int ad_beer_belly(void) {
-  if (ad_fv == NULL) {
-    ad_fv = new AD_Field_Variables();
+  if (goma_ctx->fem.ad_fv == NULL) {
+    goma_ctx->fem.ad_fv = new AD_Field_Variables();
   }
   int status = 0, i, j, k, dim, pdim, mdof, index, node, si;
   int DeformingMesh, ShapeVar;
@@ -116,7 +115,7 @@ int ad_beer_belly(void) {
    * parametrically...
    */
   for (i = 0; i < goma_ctx->problem.vim; i++) {
-    ad_fv->x[i] = 0.;
+    goma_ctx->fem.ad_fv->x[i] = 0.;
   }
 
   /*
@@ -134,10 +133,11 @@ int ad_beer_belly(void) {
                          [goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->ielem] +
                      node];
 
-        ad_fv->x[i] += (goma_ctx->mesh.coor[i][index] + ADType(ad_fv->total_ad_variables,
-                                                               ad_fv->offset[R_MESH1 + i] + k,
-                                                               *goma_ctx->fem.esp->d[i][k])) *
-                       goma_ctx->fem.bf[R_MESH1]->phi[k];
+        goma_ctx->fem.ad_fv->x[i] +=
+            (goma_ctx->mesh.coor[i][index] + ADType(goma_ctx->fem.ad_fv->total_ad_variables,
+                                                    goma_ctx->fem.ad_fv->offset[R_MESH1 + i] + k,
+                                                    *goma_ctx->fem.esp->d[i][k])) *
+            goma_ctx->fem.bf[R_MESH1]->phi[k];
       }
     } else {
       for (k = 0; k < mdof; k++) {
@@ -148,7 +148,7 @@ int ad_beer_belly(void) {
                 .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[goma_ctx->fem.ei[imtrx]->ielem] +
                                    node];
 
-        ad_fv->x[i] += goma_ctx->mesh.coor[i][index] * MapBf->phi[k];
+        goma_ctx->fem.ad_fv->x[i] += goma_ctx->mesh.coor[i][index] * MapBf->phi[k];
       }
     }
   }
@@ -160,7 +160,7 @@ int ad_beer_belly(void) {
 
   for (i = 0; i < dim; i++) {
     for (j = 0; j < pdim; j++) {
-      ad_fv->J[i][j] = 0.0;
+      goma_ctx->fem.ad_fv->J[i][j] = 0.0;
       if (DeformingMesh) {
         for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
              k++) {
@@ -171,17 +171,18 @@ int ad_beer_belly(void) {
                            [goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->ielem] +
                        node];
 
-          ad_fv->J[i][j] += (goma_ctx->mesh.coor[j][index] + ADType(ad_fv->total_ad_variables,
-                                                                    ad_fv->offset[R_MESH1 + j] + k,
-                                                                    *goma_ctx->fem.esp->d[j][k])) *
-                            goma_ctx->fem.bf[R_MESH1]->dphidxi[k][i];
+          goma_ctx->fem.ad_fv->J[i][j] +=
+              (goma_ctx->mesh.coor[j][index] + ADType(goma_ctx->fem.ad_fv->total_ad_variables,
+                                                      goma_ctx->fem.ad_fv->offset[R_MESH1 + j] + k,
+                                                      *goma_ctx->fem.esp->d[j][k])) *
+              goma_ctx->fem.bf[R_MESH1]->dphidxi[k][i];
         }
       } else {
         for (k = 0; k < mdof; k++) {
           node = MapBf->interpolation == I_N1 ? k : goma_ctx->fem.ei[imtrx]->dof_list[ShapeVar][k];
           index = goma_ctx->mesh.proc_elem_connect
                       [goma_ctx->mesh.proc_connect_ptr[goma_ctx->fem.ei[imtrx]->ielem] + node];
-          ad_fv->J[i][j] +=
+          goma_ctx->fem.ad_fv->J[i][j] +=
               goma_ctx->mesh.coor[j][index] * goma_ctx->fem.bf[ShapeVar]->dphidxi[k][i];
         }
       }
@@ -192,8 +193,8 @@ int ad_beer_belly(void) {
       (goma_ctx->fem.mp->ehl_integration_kind == SIK_S)) {
     dim++;
     for (j = 0; j < pdim; j++) {
-      ad_fv->J[goma_ctx->fem.pd->Num_Dim - 1][j] = MapBf->J[goma_ctx->fem.pd->Num_Dim - 1][j] =
-          (j + 1) * 1.0;
+      goma_ctx->fem.ad_fv->J[goma_ctx->fem.pd->Num_Dim - 1][j] =
+          MapBf->J[goma_ctx->fem.pd->Num_Dim - 1][j] = (j + 1) * 1.0;
     }
 
     /*Real Quick check on Jacobian to make sure this arbitrary assignment
@@ -201,21 +202,29 @@ int ad_beer_belly(void) {
      *negative, but it is important to point out that we are not using it for
      *for integration, but only as a crutch for inversion of J */
     if (goma_ctx->fem.pd->Num_Dim == 3) {
-      ad_fv->detJ =
-          ad_fv->J[0][0] * (ad_fv->J[1][1] * ad_fv->J[2][2] - ad_fv->J[1][2] * ad_fv->J[2][1]) -
-          ad_fv->J[0][1] * (ad_fv->J[1][0] * ad_fv->J[2][2] - ad_fv->J[2][0] * ad_fv->J[1][2]) +
-          ad_fv->J[0][2] * (ad_fv->J[1][0] * ad_fv->J[2][1] - ad_fv->J[2][0] * ad_fv->J[1][1]);
+      goma_ctx->fem.ad_fv->detJ =
+          goma_ctx->fem.ad_fv->J[0][0] *
+              (goma_ctx->fem.ad_fv->J[1][1] * goma_ctx->fem.ad_fv->J[2][2] -
+               goma_ctx->fem.ad_fv->J[1][2] * goma_ctx->fem.ad_fv->J[2][1]) -
+          goma_ctx->fem.ad_fv->J[0][1] *
+              (goma_ctx->fem.ad_fv->J[1][0] * goma_ctx->fem.ad_fv->J[2][2] -
+               goma_ctx->fem.ad_fv->J[2][0] * goma_ctx->fem.ad_fv->J[1][2]) +
+          goma_ctx->fem.ad_fv->J[0][2] *
+              (goma_ctx->fem.ad_fv->J[1][0] * goma_ctx->fem.ad_fv->J[2][1] -
+               goma_ctx->fem.ad_fv->J[2][0] * goma_ctx->fem.ad_fv->J[1][1]);
     }
     if (goma_ctx->fem.pd->Num_Dim == 2) {
-      ad_fv->detJ = ad_fv->J[0][0] * ad_fv->J[1][1] - ad_fv->J[0][1] * ad_fv->J[1][0];
+      goma_ctx->fem.ad_fv->detJ = goma_ctx->fem.ad_fv->J[0][0] * goma_ctx->fem.ad_fv->J[1][1] -
+                                  goma_ctx->fem.ad_fv->J[0][1] * goma_ctx->fem.ad_fv->J[1][0];
     }
 
-    if (fabs(ad_fv->detJ) < 1.e-10) {
-      zero_detJ = TRUE;
+    if (fabs(goma_ctx->fem.ad_fv->detJ) < 1.e-10) {
+      goma_ctx->solver.zero_detj = TRUE;
 #ifdef PARALLEL
-      fprintf(stderr, "\nP_%d: Uh-oh, detJ =  %e\n", goma_ctx->proc_id, fabs(ad_fv->detJ.val()));
+      fprintf(stderr, "\nP_%d: Uh-oh, detJ =  %e\n", goma_ctx->proc_id,
+              fabs(goma_ctx->fem.ad_fv->detJ.val()));
 #else
-      fprintf(stderr, "\n Uh-oh, detJ =  %e\n", fabs(ad_fv->detJ));
+      fprintf(stderr, "\n Uh-oh, detJ =  %e\n", fabs(goma_ctx->fem.ad_fv->detJ));
 #endif
       return (2);
     }
@@ -233,12 +242,13 @@ int ad_beer_belly(void) {
 
   case 2:
     dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
-    ad_fv->detJ = ad_fv->J[0][0] * ad_fv->J[1][1] - ad_fv->J[0][1] * ad_fv->J[1][0];
+    goma_ctx->fem.ad_fv->detJ = goma_ctx->fem.ad_fv->J[0][0] * goma_ctx->fem.ad_fv->J[1][1] -
+                                goma_ctx->fem.ad_fv->J[0][1] * goma_ctx->fem.ad_fv->J[1][0];
 
-    ad_fv->B[0][0] = ad_fv->J[1][1] / ad_fv->detJ;
-    ad_fv->B[0][1] = -ad_fv->J[0][1] / ad_fv->detJ;
-    ad_fv->B[1][0] = -ad_fv->J[1][0] / ad_fv->detJ;
-    ad_fv->B[1][1] = ad_fv->J[0][0] / ad_fv->detJ;
+    goma_ctx->fem.ad_fv->B[0][0] = goma_ctx->fem.ad_fv->J[1][1] / goma_ctx->fem.ad_fv->detJ;
+    goma_ctx->fem.ad_fv->B[0][1] = -goma_ctx->fem.ad_fv->J[0][1] / goma_ctx->fem.ad_fv->detJ;
+    goma_ctx->fem.ad_fv->B[1][0] = -goma_ctx->fem.ad_fv->J[1][0] / goma_ctx->fem.ad_fv->detJ;
+    goma_ctx->fem.ad_fv->B[1][1] = goma_ctx->fem.ad_fv->J[0][0] / goma_ctx->fem.ad_fv->detJ;
 
     break;
 
@@ -247,37 +257,51 @@ int ad_beer_belly(void) {
     /* Now that we are here, reset dim for the shell case */
     dim = goma_ctx->fem.ei[imtrx]->ielem_dim;
 
-    ad_fv->detJ =
-        ad_fv->J[0][0] * (ad_fv->J[1][1] * ad_fv->J[2][2] - ad_fv->J[1][2] * ad_fv->J[2][1]) -
-        ad_fv->J[0][1] * (ad_fv->J[1][0] * ad_fv->J[2][2] - ad_fv->J[2][0] * ad_fv->J[1][2]) +
-        ad_fv->J[0][2] * (ad_fv->J[1][0] * ad_fv->J[2][1] - ad_fv->J[2][0] * ad_fv->J[1][1]);
+    goma_ctx->fem.ad_fv->detJ = goma_ctx->fem.ad_fv->J[0][0] *
+                                    (goma_ctx->fem.ad_fv->J[1][1] * goma_ctx->fem.ad_fv->J[2][2] -
+                                     goma_ctx->fem.ad_fv->J[1][2] * goma_ctx->fem.ad_fv->J[2][1]) -
+                                goma_ctx->fem.ad_fv->J[0][1] *
+                                    (goma_ctx->fem.ad_fv->J[1][0] * goma_ctx->fem.ad_fv->J[2][2] -
+                                     goma_ctx->fem.ad_fv->J[2][0] * goma_ctx->fem.ad_fv->J[1][2]) +
+                                goma_ctx->fem.ad_fv->J[0][2] *
+                                    (goma_ctx->fem.ad_fv->J[1][0] * goma_ctx->fem.ad_fv->J[2][1] -
+                                     goma_ctx->fem.ad_fv->J[2][0] * goma_ctx->fem.ad_fv->J[1][1]);
 
-    ad_fv->B[0][0] =
-        (ad_fv->J[1][1] * ad_fv->J[2][2] - ad_fv->J[2][1] * ad_fv->J[1][2]) / (ad_fv->detJ);
+    goma_ctx->fem.ad_fv->B[0][0] = (goma_ctx->fem.ad_fv->J[1][1] * goma_ctx->fem.ad_fv->J[2][2] -
+                                    goma_ctx->fem.ad_fv->J[2][1] * goma_ctx->fem.ad_fv->J[1][2]) /
+                                   (goma_ctx->fem.ad_fv->detJ);
 
-    ad_fv->B[0][1] =
-        -(ad_fv->J[0][1] * ad_fv->J[2][2] - ad_fv->J[2][1] * ad_fv->J[0][2]) / (ad_fv->detJ);
+    goma_ctx->fem.ad_fv->B[0][1] = -(goma_ctx->fem.ad_fv->J[0][1] * goma_ctx->fem.ad_fv->J[2][2] -
+                                     goma_ctx->fem.ad_fv->J[2][1] * goma_ctx->fem.ad_fv->J[0][2]) /
+                                   (goma_ctx->fem.ad_fv->detJ);
 
-    ad_fv->B[0][2] =
-        (ad_fv->J[0][1] * ad_fv->J[1][2] - ad_fv->J[1][1] * ad_fv->J[0][2]) / (ad_fv->detJ);
+    goma_ctx->fem.ad_fv->B[0][2] = (goma_ctx->fem.ad_fv->J[0][1] * goma_ctx->fem.ad_fv->J[1][2] -
+                                    goma_ctx->fem.ad_fv->J[1][1] * goma_ctx->fem.ad_fv->J[0][2]) /
+                                   (goma_ctx->fem.ad_fv->detJ);
 
-    ad_fv->B[1][0] =
-        -(ad_fv->J[1][0] * ad_fv->J[2][2] - ad_fv->J[2][0] * ad_fv->J[1][2]) / (ad_fv->detJ);
+    goma_ctx->fem.ad_fv->B[1][0] = -(goma_ctx->fem.ad_fv->J[1][0] * goma_ctx->fem.ad_fv->J[2][2] -
+                                     goma_ctx->fem.ad_fv->J[2][0] * goma_ctx->fem.ad_fv->J[1][2]) /
+                                   (goma_ctx->fem.ad_fv->detJ);
 
-    ad_fv->B[1][1] =
-        (ad_fv->J[0][0] * ad_fv->J[2][2] - ad_fv->J[2][0] * ad_fv->J[0][2]) / (ad_fv->detJ);
+    goma_ctx->fem.ad_fv->B[1][1] = (goma_ctx->fem.ad_fv->J[0][0] * goma_ctx->fem.ad_fv->J[2][2] -
+                                    goma_ctx->fem.ad_fv->J[2][0] * goma_ctx->fem.ad_fv->J[0][2]) /
+                                   (goma_ctx->fem.ad_fv->detJ);
 
-    ad_fv->B[1][2] =
-        -(ad_fv->J[0][0] * ad_fv->J[1][2] - ad_fv->J[1][0] * ad_fv->J[0][2]) / (ad_fv->detJ);
+    goma_ctx->fem.ad_fv->B[1][2] = -(goma_ctx->fem.ad_fv->J[0][0] * goma_ctx->fem.ad_fv->J[1][2] -
+                                     goma_ctx->fem.ad_fv->J[1][0] * goma_ctx->fem.ad_fv->J[0][2]) /
+                                   (goma_ctx->fem.ad_fv->detJ);
 
-    ad_fv->B[2][0] =
-        (ad_fv->J[1][0] * ad_fv->J[2][1] - ad_fv->J[1][1] * ad_fv->J[2][0]) / (ad_fv->detJ);
+    goma_ctx->fem.ad_fv->B[2][0] = (goma_ctx->fem.ad_fv->J[1][0] * goma_ctx->fem.ad_fv->J[2][1] -
+                                    goma_ctx->fem.ad_fv->J[1][1] * goma_ctx->fem.ad_fv->J[2][0]) /
+                                   (goma_ctx->fem.ad_fv->detJ);
 
-    ad_fv->B[2][1] =
-        -(ad_fv->J[0][0] * ad_fv->J[2][1] - ad_fv->J[2][0] * ad_fv->J[0][1]) / (ad_fv->detJ);
+    goma_ctx->fem.ad_fv->B[2][1] = -(goma_ctx->fem.ad_fv->J[0][0] * goma_ctx->fem.ad_fv->J[2][1] -
+                                     goma_ctx->fem.ad_fv->J[2][0] * goma_ctx->fem.ad_fv->J[0][1]) /
+                                   (goma_ctx->fem.ad_fv->detJ);
 
-    ad_fv->B[2][2] =
-        (ad_fv->J[0][0] * ad_fv->J[1][1] - ad_fv->J[1][0] * ad_fv->J[0][1]) / (ad_fv->detJ);
+    goma_ctx->fem.ad_fv->B[2][2] = (goma_ctx->fem.ad_fv->J[0][0] * goma_ctx->fem.ad_fv->J[1][1] -
+                                    goma_ctx->fem.ad_fv->J[1][0] * goma_ctx->fem.ad_fv->J[0][1]) /
+                                   (goma_ctx->fem.ad_fv->detJ);
 
     break;
 
@@ -310,8 +334,8 @@ int ad_load_bf_grad(void) {
   /* zero array for initialization */
   /*  v_length = DIM*DIM*DIM*MDE;
       init_vec_value(zero_array, 0., v_length); */
-  if (ad_fv->basis.empty()) {
-    ad_fv->basis.resize(V_LAST);
+  if (goma_ctx->fem.ad_fv->basis.empty()) {
+    goma_ctx->fem.ad_fv->basis.resize(V_LAST);
   }
 
   for (int v = V_FIRST; v < V_LAST; v++) {
@@ -332,32 +356,38 @@ int ad_load_bf_grad(void) {
       switch (goma_ctx->fem.pd->Num_Dim) {
       case 1:
         for (i = 0; i < dofs; i++) {
-          ad_fv->basis[v].d_phi[i][0] =
-              (ad_fv->B[0][0] * bfv->dphidxi[i][0] + ad_fv->B[0][1] * bfv->dphidxi[i][1]);
-          ad_fv->basis[v].d_phi[i][1] = 0.0;
-          ad_fv->basis[v].d_phi[i][2] = 0.0;
+          goma_ctx->fem.ad_fv->basis[v].d_phi[i][0] =
+              (goma_ctx->fem.ad_fv->B[0][0] * bfv->dphidxi[i][0] +
+               goma_ctx->fem.ad_fv->B[0][1] * bfv->dphidxi[i][1]);
+          goma_ctx->fem.ad_fv->basis[v].d_phi[i][1] = 0.0;
+          goma_ctx->fem.ad_fv->basis[v].d_phi[i][2] = 0.0;
         }
         break;
       case 2:
         for (i = 0; i < dofs; i++) {
-          ad_fv->basis[v].d_phi[i][0] =
-              (ad_fv->B[0][0] * bfv->dphidxi[i][0] + ad_fv->B[0][1] * bfv->dphidxi[i][1]);
-          ad_fv->basis[v].d_phi[i][1] =
-              (ad_fv->B[1][0] * bfv->dphidxi[i][0] + ad_fv->B[1][1] * bfv->dphidxi[i][1]);
-          ad_fv->basis[v].d_phi[i][2] = 0.0;
+          goma_ctx->fem.ad_fv->basis[v].d_phi[i][0] =
+              (goma_ctx->fem.ad_fv->B[0][0] * bfv->dphidxi[i][0] +
+               goma_ctx->fem.ad_fv->B[0][1] * bfv->dphidxi[i][1]);
+          goma_ctx->fem.ad_fv->basis[v].d_phi[i][1] =
+              (goma_ctx->fem.ad_fv->B[1][0] * bfv->dphidxi[i][0] +
+               goma_ctx->fem.ad_fv->B[1][1] * bfv->dphidxi[i][1]);
+          goma_ctx->fem.ad_fv->basis[v].d_phi[i][2] = 0.0;
         }
         break;
       case 3:
         for (i = 0; i < dofs; i++) {
-          ad_fv->basis[v].d_phi[i][0] =
-              (ad_fv->B[0][0] * bfv->dphidxi[i][0] + ad_fv->B[0][1] * bfv->dphidxi[i][1] +
-               ad_fv->B[0][2] * bfv->dphidxi[i][2]);
-          ad_fv->basis[v].d_phi[i][1] =
-              (ad_fv->B[1][0] * bfv->dphidxi[i][0] + ad_fv->B[1][1] * bfv->dphidxi[i][1] +
-               ad_fv->B[1][2] * bfv->dphidxi[i][2]);
-          ad_fv->basis[v].d_phi[i][2] =
-              (ad_fv->B[2][0] * bfv->dphidxi[i][0] + ad_fv->B[2][1] * bfv->dphidxi[i][1] +
-               ad_fv->B[2][2] * bfv->dphidxi[i][2]);
+          goma_ctx->fem.ad_fv->basis[v].d_phi[i][0] =
+              (goma_ctx->fem.ad_fv->B[0][0] * bfv->dphidxi[i][0] +
+               goma_ctx->fem.ad_fv->B[0][1] * bfv->dphidxi[i][1] +
+               goma_ctx->fem.ad_fv->B[0][2] * bfv->dphidxi[i][2]);
+          goma_ctx->fem.ad_fv->basis[v].d_phi[i][1] =
+              (goma_ctx->fem.ad_fv->B[1][0] * bfv->dphidxi[i][0] +
+               goma_ctx->fem.ad_fv->B[1][1] * bfv->dphidxi[i][1] +
+               goma_ctx->fem.ad_fv->B[1][2] * bfv->dphidxi[i][2]);
+          goma_ctx->fem.ad_fv->basis[v].d_phi[i][2] =
+              (goma_ctx->fem.ad_fv->B[2][0] * bfv->dphidxi[i][0] +
+               goma_ctx->fem.ad_fv->B[2][1] * bfv->dphidxi[i][1] +
+               goma_ctx->fem.ad_fv->B[2][2] * bfv->dphidxi[i][2]);
         }
         break;
       default:
@@ -374,7 +404,8 @@ int ad_load_bf_grad(void) {
 
       for (i = 0; i < dofs; i++) {
         for (p = 0; p < WIM; p++) {
-          ad_fv->basis[v].grad_phi[i][p] = (ad_fv->basis[v].d_phi[i][p]) / (goma_ctx->fem.fv->h[p]);
+          goma_ctx->fem.ad_fv->basis[v].grad_phi[i][p] =
+              (goma_ctx->fem.ad_fv->basis[v].d_phi[i][p]) / (goma_ctx->fem.fv->h[p]);
         }
       }
 
@@ -383,9 +414,10 @@ int ad_load_bf_grad(void) {
           for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (int q = 0; q < goma_ctx->problem.vim; q++) {
               if (q == a)
-                ad_fv->basis[v].grad_phi_e[i][a][p][a] = ad_fv->basis[v].grad_phi[i][p];
+                goma_ctx->fem.ad_fv->basis[v].grad_phi_e[i][a][p][a] =
+                    goma_ctx->fem.ad_fv->basis[v].grad_phi[i][p];
               else
-                ad_fv->basis[v].grad_phi_e[i][a][p][q] = 0.0;
+                goma_ctx->fem.ad_fv->basis[v].grad_phi_e[i][a][p][q] = 0.0;
             }
           }
         }
@@ -403,44 +435,44 @@ int ad_load_bf_grad(void) {
 }
 
 extern "C" void fill_ad_field_variables() {
-  if (ad_fv == NULL) {
-    ad_fv = new AD_Field_Variables();
+  if (goma_ctx->fem.ad_fv == NULL) {
+    goma_ctx->fem.ad_fv = new AD_Field_Variables();
   }
-  ad_fv->ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
+  goma_ctx->fem.ad_fv->ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
   int num_ad_variables = 0;
   for (int i = V_FIRST; i < V_LAST; i++) {
-    ad_fv->offset[i] = 0;
+    goma_ctx->fem.ad_fv->offset[i] = 0;
     // if (af->Assemble_Jacobian == TRUE) {
     if (goma_ctx->fem.pd->gv[i]) {
-      ad_fv->offset[i] = num_ad_variables;
+      goma_ctx->fem.ad_fv->offset[i] = num_ad_variables;
       num_ad_variables += goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[i]]->dof[i];
     }
     // }
   }
 
-  ad_fv->total_ad_variables = num_ad_variables;
+  goma_ctx->fem.ad_fv->total_ad_variables = num_ad_variables;
 
   ad_beer_belly();
   ad_load_bf_grad();
   for (int p = 0; p < goma_ctx->problem.wim; p++) {
-    ad_fv->x_dot[p] = 0;
+    goma_ctx->fem.ad_fv->x_dot[p] = 0;
   }
   if (goma_ctx->fem.pd->gv[R_MESH1]) {
     for (int p = 0; p < goma_ctx->problem.wim; p++) {
       for (int i = 0;
            i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1 + p]]->dof[R_MESH1 + p];
            i++) {
-        ad_fv->d[p] += set_ad_or_dbl(*goma_ctx->fem.esp->d[p][i], R_MESH1 + p, i) *
-                       goma_ctx->fem.bf[R_MESH1 + p]->phi[i];
+        goma_ctx->fem.ad_fv->d[p] += set_ad_or_dbl(*goma_ctx->fem.esp->d[p][i], R_MESH1 + p, i) *
+                                     goma_ctx->fem.bf[R_MESH1 + p]->phi[i];
         if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
           ADType udot = set_ad_or_dbl(*goma_ctx->fem.esp_dot->d[p][i], R_MESH1 + p, i);
           if (goma_ctx->fem.af->Assemble_Jacobian == TRUE) {
-            udot.fastAccessDx(ad_fv->offset[R_MESH1 + p] + i) =
+            udot.fastAccessDx(goma_ctx->fem.ad_fv->offset[R_MESH1 + p] + i) =
                 (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
           }
-          ad_fv->x_dot[p] += udot * goma_ctx->fem.bf[R_MESH1 + p]->phi[i];
+          goma_ctx->fem.ad_fv->x_dot[p] += udot * goma_ctx->fem.bf[R_MESH1 + p]->phi[i];
         } else {
-          ad_fv->x_dot[p] = 0;
+          goma_ctx->fem.ad_fv->x_dot[p] = 0;
         }
       }
     }
@@ -448,36 +480,37 @@ extern "C" void fill_ad_field_variables() {
 
   if (goma_ctx->fem.pd->gv[VELOCITY1]) {
     for (int p = 0; p < goma_ctx->problem.wim; p++) {
-      ad_fv->v[p] = 0;
-      ad_fv->v_dot[p] = 0;
+      goma_ctx->fem.ad_fv->v[p] = 0;
+      goma_ctx->fem.ad_fv->v_dot[p] = 0;
       for (int i = 0;
            i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[VELOCITY1 + p]]->dof[VELOCITY1 + p];
            i++) {
-        ad_fv->v[p] += set_ad_or_dbl(*goma_ctx->fem.esp->v[p][i], VELOCITY1 + p, i) *
-                       goma_ctx->fem.bf[VELOCITY1 + p]->phi[i];
+        goma_ctx->fem.ad_fv->v[p] += set_ad_or_dbl(*goma_ctx->fem.esp->v[p][i], VELOCITY1 + p, i) *
+                                     goma_ctx->fem.bf[VELOCITY1 + p]->phi[i];
         if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
           ADType udot = set_ad_or_dbl(*goma_ctx->fem.esp_dot->v[p][i], VELOCITY1 + p, i);
           if (goma_ctx->fem.af->Assemble_Jacobian == TRUE) {
-            udot.fastAccessDx(ad_fv->offset[VELOCITY1 + p] + i) =
+            udot.fastAccessDx(goma_ctx->fem.ad_fv->offset[VELOCITY1 + p] + i) =
                 (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
           }
-          ad_fv->v_dot[p] += udot * goma_ctx->fem.bf[VELOCITY1 + p]->phi[i];
+          goma_ctx->fem.ad_fv->v_dot[p] += udot * goma_ctx->fem.bf[VELOCITY1 + p]->phi[i];
         } else {
-          ad_fv->v_dot[p] = 0;
+          goma_ctx->fem.ad_fv->v_dot[p] = 0;
         }
       }
     }
     for (int p = 0; p < goma_ctx->problem.vim; p++) {
       for (int q = 0; q < goma_ctx->problem.vim; q++) {
-        ad_fv->grad_v[p][q] = 0;
+        goma_ctx->fem.ad_fv->grad_v[p][q] = 0;
 
         for (int r = 0; r < goma_ctx->problem.wim; r++) {
           for (int i = 0;
                i <
                goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[VELOCITY1 + r]]->dof[VELOCITY1 + r];
                i++) {
-            ad_fv->grad_v[p][q] += set_ad_or_dbl(*goma_ctx->fem.esp->v[r][i], VELOCITY1 + r, i) *
-                                   ad_fv->basis[VELOCITY1 + r].grad_phi_e[i][r][p][q];
+            goma_ctx->fem.ad_fv->grad_v[p][q] +=
+                set_ad_or_dbl(*goma_ctx->fem.esp->v[r][i], VELOCITY1 + r, i) *
+                goma_ctx->fem.ad_fv->basis[VELOCITY1 + r].grad_phi_e[i][r][p][q];
           }
         }
       }
@@ -485,251 +518,267 @@ extern "C" void fill_ad_field_variables() {
   }
 
   if (goma_ctx->fem.pd->gv[SHEAR_RATE]) {
-    ad_fv->SH = 0;
+    goma_ctx->fem.ad_fv->SH = 0;
     for (int i = 0;
          i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[SHEAR_RATE]]->dof[SHEAR_RATE]; i++) {
-      ad_fv->SH +=
-          ADType(num_ad_variables, ad_fv->offset[SHEAR_RATE] + i, *goma_ctx->fem.esp->SH[i]) *
+      goma_ctx->fem.ad_fv->SH +=
+          ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[SHEAR_RATE] + i,
+                 *goma_ctx->fem.esp->SH[i]) *
           goma_ctx->fem.bf[SHEAR_RATE]->phi[i];
     }
 
     for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
-      ad_fv->grad_eddy_nu[q] = 0;
+      goma_ctx->fem.ad_fv->grad_eddy_nu[q] = 0;
 
       for (int i = 0;
            i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[SHEAR_RATE]]->dof[SHEAR_RATE];
            i++) {
-        ad_fv->grad_eddy_nu[q] +=
-            ADType(num_ad_variables, ad_fv->offset[SHEAR_RATE] + i, *goma_ctx->fem.esp->SH[i]) *
-            ad_fv->basis[SHEAR_RATE].grad_phi[i][q];
+        goma_ctx->fem.ad_fv->grad_eddy_nu[q] +=
+            ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[SHEAR_RATE] + i,
+                   *goma_ctx->fem.esp->SH[i]) *
+            goma_ctx->fem.ad_fv->basis[SHEAR_RATE].grad_phi[i][q];
       }
     }
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_SAT_1]) {
-    ad_fv->sh_sat_1 = 0;
+    goma_ctx->fem.ad_fv->sh_sat_1 = 0;
     for (int i = 0;
          i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[SHELL_SAT_1]]->dof[SHELL_SAT_1];
          i++) {
-      ad_fv->sh_sat_1 += ADType(num_ad_variables, ad_fv->offset[SHELL_SAT_1] + i,
-                                *goma_ctx->fem.esp->sh_sat_1[i]) *
-                         goma_ctx->fem.bf[SHELL_SAT_1]->phi[i];
+      goma_ctx->fem.ad_fv->sh_sat_1 +=
+          ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[SHELL_SAT_1] + i,
+                 *goma_ctx->fem.esp->sh_sat_1[i]) *
+          goma_ctx->fem.bf[SHELL_SAT_1]->phi[i];
     }
 
     for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
-      ad_fv->grad_sh_sat_1[q] = 0;
+      goma_ctx->fem.ad_fv->grad_sh_sat_1[q] = 0;
 
       for (int i = 0;
            i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[SHELL_SAT_1]]->dof[SHELL_SAT_1];
            i++) {
-        ad_fv->grad_sh_sat_1[q] += ADType(num_ad_variables, ad_fv->offset[SHELL_SAT_1] + i,
-                                          *goma_ctx->fem.esp->sh_sat_1[i]) *
-                                   ad_fv->basis[SHELL_SAT_1].grad_phi[i][q];
+        goma_ctx->fem.ad_fv->grad_sh_sat_1[q] +=
+            ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[SHELL_SAT_1] + i,
+                   *goma_ctx->fem.esp->sh_sat_1[i]) *
+            goma_ctx->fem.ad_fv->basis[SHELL_SAT_1].grad_phi[i][q];
       }
     }
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_SAT_2]) {
-    ad_fv->sh_sat_2 = 0;
+    goma_ctx->fem.ad_fv->sh_sat_2 = 0;
     for (int i = 0;
          i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[SHELL_SAT_2]]->dof[SHELL_SAT_2];
          i++) {
-      ad_fv->sh_sat_2 += ADType(num_ad_variables, ad_fv->offset[SHELL_SAT_2] + i,
-                                *goma_ctx->fem.esp->sh_sat_2[i]) *
-                         goma_ctx->fem.bf[SHELL_SAT_2]->phi[i];
+      goma_ctx->fem.ad_fv->sh_sat_2 +=
+          ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[SHELL_SAT_2] + i,
+                 *goma_ctx->fem.esp->sh_sat_2[i]) *
+          goma_ctx->fem.bf[SHELL_SAT_2]->phi[i];
     }
 
     for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
-      ad_fv->grad_sh_sat_2[q] = 0;
+      goma_ctx->fem.ad_fv->grad_sh_sat_2[q] = 0;
 
       for (int i = 0;
            i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[SHELL_SAT_2]]->dof[SHELL_SAT_2];
            i++) {
-        ad_fv->grad_sh_sat_2[q] += ADType(num_ad_variables, ad_fv->offset[SHELL_SAT_2] + i,
-                                          *goma_ctx->fem.esp->sh_sat_2[i]) *
-                                   ad_fv->basis[SHELL_SAT_2].grad_phi[i][q];
+        goma_ctx->fem.ad_fv->grad_sh_sat_2[q] +=
+            ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[SHELL_SAT_2] + i,
+                   *goma_ctx->fem.esp->sh_sat_2[i]) *
+            goma_ctx->fem.ad_fv->basis[SHELL_SAT_2].grad_phi[i][q];
       }
     }
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_SAT_3]) {
-    ad_fv->sh_sat_3 = 0;
+    goma_ctx->fem.ad_fv->sh_sat_3 = 0;
     for (int i = 0;
          i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[SHELL_SAT_3]]->dof[SHELL_SAT_3];
          i++) {
-      ad_fv->sh_sat_3 += ADType(num_ad_variables, ad_fv->offset[SHELL_SAT_3] + i,
-                                *goma_ctx->fem.esp->sh_sat_3[i]) *
-                         goma_ctx->fem.bf[SHELL_SAT_3]->phi[i];
+      goma_ctx->fem.ad_fv->sh_sat_3 +=
+          ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[SHELL_SAT_3] + i,
+                 *goma_ctx->fem.esp->sh_sat_3[i]) *
+          goma_ctx->fem.bf[SHELL_SAT_3]->phi[i];
     }
 
     for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
-      ad_fv->grad_sh_sat_3[q] = 0;
+      goma_ctx->fem.ad_fv->grad_sh_sat_3[q] = 0;
 
       for (int i = 0;
            i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[SHELL_SAT_3]]->dof[SHELL_SAT_3];
            i++) {
-        ad_fv->grad_sh_sat_3[q] += ADType(num_ad_variables, ad_fv->offset[SHELL_SAT_3] + i,
-                                          *goma_ctx->fem.esp->sh_sat_3[i]) *
-                                   ad_fv->basis[SHELL_SAT_3].grad_phi[i][q];
+        goma_ctx->fem.ad_fv->grad_sh_sat_3[q] +=
+            ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[SHELL_SAT_3] + i,
+                   *goma_ctx->fem.esp->sh_sat_3[i]) *
+            goma_ctx->fem.ad_fv->basis[SHELL_SAT_3].grad_phi[i][q];
       }
     }
   }
 
   if (goma_ctx->fem.pd->gv[EDDY_NU]) {
-    ad_fv->eddy_nu = 0;
-    ad_fv->eddy_nu_dot = 0;
+    goma_ctx->fem.ad_fv->eddy_nu = 0;
+    goma_ctx->fem.ad_fv->eddy_nu_dot = 0;
     for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[EDDY_NU]]->dof[EDDY_NU];
          i++) {
-      ad_fv->eddy_nu +=
-          ADType(num_ad_variables, ad_fv->offset[EDDY_NU] + i, *goma_ctx->fem.esp->eddy_nu[i]) *
+      goma_ctx->fem.ad_fv->eddy_nu +=
+          ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[EDDY_NU] + i,
+                 *goma_ctx->fem.esp->eddy_nu[i]) *
           goma_ctx->fem.bf[EDDY_NU]->phi[i];
 
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-        ADType ednudot = ADType(num_ad_variables, ad_fv->offset[EDDY_NU] + i,
+        ADType ednudot = ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[EDDY_NU] + i,
                                 *goma_ctx->fem.esp_dot->eddy_nu[i]);
-        ednudot.fastAccessDx(ad_fv->offset[EDDY_NU] + i) =
+        ednudot.fastAccessDx(goma_ctx->fem.ad_fv->offset[EDDY_NU] + i) =
             (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
-        ad_fv->eddy_nu_dot += ednudot * goma_ctx->fem.bf[EDDY_NU]->phi[i];
+        goma_ctx->fem.ad_fv->eddy_nu_dot += ednudot * goma_ctx->fem.bf[EDDY_NU]->phi[i];
       } else {
-        ad_fv->eddy_nu_dot = 0;
+        goma_ctx->fem.ad_fv->eddy_nu_dot = 0;
       }
     }
 
     for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
-      ad_fv->grad_eddy_nu[q] = 0;
+      goma_ctx->fem.ad_fv->grad_eddy_nu[q] = 0;
 
       for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[EDDY_NU]]->dof[EDDY_NU];
            i++) {
-        ad_fv->grad_eddy_nu[q] +=
-            ADType(num_ad_variables, ad_fv->offset[EDDY_NU] + i, *goma_ctx->fem.esp->eddy_nu[i]) *
-            ad_fv->basis[EDDY_NU].grad_phi[i][q];
+        goma_ctx->fem.ad_fv->grad_eddy_nu[q] +=
+            ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[EDDY_NU] + i,
+                   *goma_ctx->fem.esp->eddy_nu[i]) *
+            goma_ctx->fem.ad_fv->basis[EDDY_NU].grad_phi[i][q];
       }
     }
   }
 
   if (goma_ctx->fem.pd->gv[TURB_K]) {
-    ad_fv->turb_k = 0;
-    ad_fv->turb_k_dot = 0;
+    goma_ctx->fem.ad_fv->turb_k = 0;
+    goma_ctx->fem.ad_fv->turb_k_dot = 0;
     for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[TURB_K]]->dof[TURB_K];
          i++) {
-      ad_fv->turb_k +=
-          ADType(num_ad_variables, ad_fv->offset[TURB_K] + i, *goma_ctx->fem.esp->turb_k[i]) *
+      goma_ctx->fem.ad_fv->turb_k +=
+          ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[TURB_K] + i,
+                 *goma_ctx->fem.esp->turb_k[i]) *
           goma_ctx->fem.bf[TURB_K]->phi[i];
 
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-        ADType ednudot =
-            ADType(num_ad_variables, ad_fv->offset[TURB_K] + i, *goma_ctx->fem.esp_dot->turb_k[i]);
-        ednudot.fastAccessDx(ad_fv->offset[TURB_K] + i) =
+        ADType ednudot = ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[TURB_K] + i,
+                                *goma_ctx->fem.esp_dot->turb_k[i]);
+        ednudot.fastAccessDx(goma_ctx->fem.ad_fv->offset[TURB_K] + i) =
             (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
-        ad_fv->turb_k_dot += ednudot * goma_ctx->fem.bf[TURB_K]->phi[i];
+        goma_ctx->fem.ad_fv->turb_k_dot += ednudot * goma_ctx->fem.bf[TURB_K]->phi[i];
       } else {
-        ad_fv->turb_k_dot = 0;
+        goma_ctx->fem.ad_fv->turb_k_dot = 0;
       }
     }
 
     for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
-      ad_fv->grad_turb_k[q] = 0;
+      goma_ctx->fem.ad_fv->grad_turb_k[q] = 0;
 
       for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[TURB_K]]->dof[TURB_K];
            i++) {
-        ad_fv->grad_turb_k[q] +=
-            ADType(num_ad_variables, ad_fv->offset[TURB_K] + i, *goma_ctx->fem.esp->turb_k[i]) *
-            ad_fv->basis[TURB_K].grad_phi[i][q];
+        goma_ctx->fem.ad_fv->grad_turb_k[q] +=
+            ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[TURB_K] + i,
+                   *goma_ctx->fem.esp->turb_k[i]) *
+            goma_ctx->fem.ad_fv->basis[TURB_K].grad_phi[i][q];
       }
     }
   }
 
   if (goma_ctx->fem.pd->gv[TURB_OMEGA]) {
-    ad_fv->turb_omega = 0;
-    ad_fv->turb_omega_dot = 0;
+    goma_ctx->fem.ad_fv->turb_omega = 0;
+    goma_ctx->fem.ad_fv->turb_omega_dot = 0;
     for (int i = 0;
          i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[TURB_OMEGA]]->dof[TURB_OMEGA]; i++) {
-      ad_fv->turb_omega += ADType(num_ad_variables, ad_fv->offset[TURB_OMEGA] + i,
-                                  *goma_ctx->fem.esp->turb_omega[i]) *
-                           goma_ctx->fem.bf[TURB_OMEGA]->phi[i];
+      goma_ctx->fem.ad_fv->turb_omega +=
+          ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[TURB_OMEGA] + i,
+                 *goma_ctx->fem.esp->turb_omega[i]) *
+          goma_ctx->fem.bf[TURB_OMEGA]->phi[i];
 
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-        ADType ednudot = ADType(num_ad_variables, ad_fv->offset[TURB_OMEGA] + i,
+        ADType ednudot = ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[TURB_OMEGA] + i,
                                 *goma_ctx->fem.esp_dot->turb_omega[i]);
-        ednudot.fastAccessDx(ad_fv->offset[TURB_OMEGA] + i) =
+        ednudot.fastAccessDx(goma_ctx->fem.ad_fv->offset[TURB_OMEGA] + i) =
             (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
-        ad_fv->turb_omega_dot += ednudot * goma_ctx->fem.bf[TURB_OMEGA]->phi[i];
+        goma_ctx->fem.ad_fv->turb_omega_dot += ednudot * goma_ctx->fem.bf[TURB_OMEGA]->phi[i];
       } else {
-        ad_fv->turb_omega_dot = 0;
+        goma_ctx->fem.ad_fv->turb_omega_dot = 0;
       }
     }
 
     for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
-      ad_fv->grad_turb_omega[q] = 0;
+      goma_ctx->fem.ad_fv->grad_turb_omega[q] = 0;
 
       for (int i = 0;
            i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[TURB_OMEGA]]->dof[TURB_OMEGA];
            i++) {
-        ad_fv->grad_turb_omega[q] += ADType(num_ad_variables, ad_fv->offset[TURB_OMEGA] + i,
-                                            *goma_ctx->fem.esp->turb_omega[i]) *
-                                     ad_fv->basis[TURB_OMEGA].grad_phi[i][q];
+        goma_ctx->fem.ad_fv->grad_turb_omega[q] +=
+            ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[TURB_OMEGA] + i,
+                   *goma_ctx->fem.esp->turb_omega[i]) *
+            goma_ctx->fem.ad_fv->basis[TURB_OMEGA].grad_phi[i][q];
       }
     }
   }
   if (goma_ctx->fem.pd->gv[FILM_HEIGHT]) {
-    ad_fv->film_height = 0;
-    ad_fv->film_height_dot = 0;
+    goma_ctx->fem.ad_fv->film_height = 0;
+    goma_ctx->fem.ad_fv->film_height_dot = 0;
     for (int i = 0;
          i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[FILM_HEIGHT]]->dof[FILM_HEIGHT];
          i++) {
-      ad_fv->film_height += ADType(num_ad_variables, ad_fv->offset[FILM_HEIGHT] + i,
-                                   *goma_ctx->fem.esp->film_height[i]) *
-                            goma_ctx->fem.bf[FILM_HEIGHT]->phi[i];
+      goma_ctx->fem.ad_fv->film_height +=
+          ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[FILM_HEIGHT] + i,
+                 *goma_ctx->fem.esp->film_height[i]) *
+          goma_ctx->fem.bf[FILM_HEIGHT]->phi[i];
 
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-        ADType ednudot = ADType(num_ad_variables, ad_fv->offset[FILM_HEIGHT] + i,
+        ADType ednudot = ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[FILM_HEIGHT] + i,
                                 *goma_ctx->fem.esp_dot->film_height[i]);
-        ednudot.fastAccessDx(ad_fv->offset[FILM_HEIGHT] + i) =
+        ednudot.fastAccessDx(goma_ctx->fem.ad_fv->offset[FILM_HEIGHT] + i) =
             (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
-        ad_fv->film_height_dot += ednudot * goma_ctx->fem.bf[FILM_HEIGHT]->phi[i];
+        goma_ctx->fem.ad_fv->film_height_dot += ednudot * goma_ctx->fem.bf[FILM_HEIGHT]->phi[i];
       } else {
-        ad_fv->film_height_dot = 0;
+        goma_ctx->fem.ad_fv->film_height_dot = 0;
       }
     }
 
     for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
-      ad_fv->grad_film_height[q] = 0;
+      goma_ctx->fem.ad_fv->grad_film_height[q] = 0;
 
       for (int i = 0;
            i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[FILM_HEIGHT]]->dof[FILM_HEIGHT];
            i++) {
-        ad_fv->grad_film_height[q] += ADType(num_ad_variables, ad_fv->offset[FILM_HEIGHT] + i,
-                                             *goma_ctx->fem.esp->film_height[i]) *
-                                      ad_fv->basis[FILM_HEIGHT].grad_phi[i][q];
+        goma_ctx->fem.ad_fv->grad_film_height[q] +=
+            ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[FILM_HEIGHT] + i,
+                   *goma_ctx->fem.esp->film_height[i]) *
+            goma_ctx->fem.ad_fv->basis[FILM_HEIGHT].grad_phi[i][q];
       }
     }
   }
 
   if (goma_ctx->fem.pd->gv[PRESSURE]) {
-    ad_fv->P = 0;
+    goma_ctx->fem.ad_fv->P = 0;
     for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[PRESSURE]]->dof[PRESSURE];
          i++) {
-      ad_fv->P +=
+      goma_ctx->fem.ad_fv->P +=
           set_ad_or_dbl(*goma_ctx->fem.esp->P[i], PRESSURE, i) * goma_ctx->fem.bf[PRESSURE]->phi[i];
     }
     for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
-      ad_fv->grad_P[q] = 0;
+      goma_ctx->fem.ad_fv->grad_P[q] = 0;
 
       for (int i = 0;
            i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[PRESSURE]]->dof[PRESSURE]; i++) {
-        ad_fv->grad_P[q] += set_ad_or_dbl(*goma_ctx->fem.esp->P[i], PRESSURE, i) *
-                            ad_fv->basis[PRESSURE].grad_phi[i][q];
+        goma_ctx->fem.ad_fv->grad_P[q] += set_ad_or_dbl(*goma_ctx->fem.esp->P[i], PRESSURE, i) *
+                                          goma_ctx->fem.ad_fv->basis[PRESSURE].grad_phi[i][q];
       }
     }
   }
 
   if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
-    ad_fv->T = 0;
+    goma_ctx->fem.ad_fv->T = 0;
     for (int i = 0;
          i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[TEMPERATURE]]->dof[TEMPERATURE];
          i++) {
-      ad_fv->T += set_ad_or_dbl(*goma_ctx->fem.esp->T[i], TEMPERATURE, i) *
-                  goma_ctx->fem.bf[TEMPERATURE]->phi[i];
+      goma_ctx->fem.ad_fv->T += set_ad_or_dbl(*goma_ctx->fem.esp->T[i], TEMPERATURE, i) *
+                                goma_ctx->fem.bf[TEMPERATURE]->phi[i];
     }
   }
 
@@ -742,8 +791,8 @@ extern "C" void fill_ad_field_variables() {
     for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       for (int p = 0; p < sdim; p++) {
         for (int q = 0; q < sdim; q++) {
-          ad_fv->S[mode][p][q] = 0;
-          ad_fv->S_dot[mode][p][q] = 0;
+          goma_ctx->fem.ad_fv->S[mode][p][q] = 0;
+          goma_ctx->fem.ad_fv->S_dot[mode][p][q] = 0;
         }
       }
     }
@@ -755,39 +804,42 @@ extern "C" void fill_ad_field_variables() {
             if (goma_ctx->fem.pd->gv[v]) {
               int dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
               for (int i = 0; i < dofs; i++) {
-                ad_fv->S[mode][p][q] += ADType(num_ad_variables, ad_fv->offset[v] + i,
-                                               *goma_ctx->fem.esp->S[mode][p][q][i]) *
-                                        goma_ctx->fem.bf[v]->phi[i];
+                goma_ctx->fem.ad_fv->S[mode][p][q] +=
+                    ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[v] + i,
+                           *goma_ctx->fem.esp->S[mode][p][q][i]) *
+                    goma_ctx->fem.bf[v]->phi[i];
                 if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-                  ADType sdot = ADType(num_ad_variables, ad_fv->offset[v] + i,
+                  ADType sdot = ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[v] + i,
                                        *goma_ctx->fem.esp_dot->S[mode][p][q][i]);
-                  sdot.fastAccessDx(ad_fv->offset[v] + i) =
+                  sdot.fastAccessDx(goma_ctx->fem.ad_fv->offset[v] + i) =
                       (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
-                  ad_fv->S_dot[mode][p][q] += sdot * goma_ctx->fem.bf[v]->phi[i];
+                  goma_ctx->fem.ad_fv->S_dot[mode][p][q] += sdot * goma_ctx->fem.bf[v]->phi[i];
                 } else {
-                  ad_fv->S_dot[mode][p][q] = 0;
+                  goma_ctx->fem.ad_fv->S_dot[mode][p][q] = 0;
                 }
               }
             }
             /* form the entire symmetric stress matrix for the momentum equation */
-            ad_fv->S[mode][q][p] = ad_fv->S[mode][p][q];
-            ad_fv->S_dot[mode][q][p] = ad_fv->S_dot[mode][p][q];
+            goma_ctx->fem.ad_fv->S[mode][q][p] = goma_ctx->fem.ad_fv->S[mode][p][q];
+            goma_ctx->fem.ad_fv->S_dot[mode][q][p] = goma_ctx->fem.ad_fv->S_dot[mode][p][q];
           }
           for (int r = 0; r < sdim; r++) {
-            ad_fv->grad_S[mode][r][p][q] = 0.;
+            goma_ctx->fem.ad_fv->grad_S[mode][r][p][q] = 0.;
             int v = v_s[mode][p][q];
             if (goma_ctx->fem.pd->gv[v]) {
               int dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
 
               for (int i = 0; i < dofs; i++) {
                 if (p <= q) {
-                  ad_fv->grad_S[mode][r][p][q] += ADType(num_ad_variables, ad_fv->offset[v] + i,
-                                                         *goma_ctx->fem.esp->S[mode][p][q][i]) *
-                                                  ad_fv->basis[v].grad_phi[i][r];
+                  goma_ctx->fem.ad_fv->grad_S[mode][r][p][q] +=
+                      ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[v] + i,
+                             *goma_ctx->fem.esp->S[mode][p][q][i]) *
+                      goma_ctx->fem.ad_fv->basis[v].grad_phi[i][r];
                 } else {
-                  ad_fv->grad_S[mode][r][p][q] += ADType(num_ad_variables, ad_fv->offset[v] + i,
-                                                         *goma_ctx->fem.esp->S[mode][q][p][i]) *
-                                                  ad_fv->basis[v].grad_phi[i][r];
+                  goma_ctx->fem.ad_fv->grad_S[mode][r][p][q] +=
+                      ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[v] + i,
+                             *goma_ctx->fem.esp->S[mode][q][p][i]) *
+                      goma_ctx->fem.ad_fv->basis[v].grad_phi[i][r];
                 }
               }
             }
@@ -795,10 +847,10 @@ extern "C" void fill_ad_field_variables() {
         }
       }
       for (int r = 0; r < goma_ctx->fem.pd->Num_Dim; r++) {
-        ad_fv->div_S[mode][r] = 0.0;
+        goma_ctx->fem.ad_fv->div_S[mode][r] = 0.0;
 
         for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
-          ad_fv->div_S[mode][r] += ad_fv->grad_S[mode][q][q][r];
+          goma_ctx->fem.ad_fv->div_S[mode][r] += goma_ctx->fem.ad_fv->grad_S[mode][q][q][r];
         }
       }
     }
@@ -816,12 +868,13 @@ extern "C" void fill_ad_field_variables() {
     v_g[2][2] = VELOCITY_GRADIENT33;
     for (int q = 0; q < 3; q++) {
       int v = v_g[p][q];
-      ad_fv->G[p][q] = 0;
+      goma_ctx->fem.ad_fv->G[p][q] = 0;
       if (goma_ctx->fem.pd->gv[v]) {
         int dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
         for (int i = 0; i < dofs; i++) {
-          ad_fv->G[p][q] +=
-              ADType(num_ad_variables, ad_fv->offset[v] + i, *goma_ctx->fem.esp->G[p][q][i]) *
+          goma_ctx->fem.ad_fv->G[p][q] +=
+              ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[v] + i,
+                     *goma_ctx->fem.esp->G[p][q][i]) *
               goma_ctx->fem.bf[v]->phi[i];
         }
       }
@@ -830,12 +883,13 @@ extern "C" void fill_ad_field_variables() {
       for (int q = 0; q < 3; q++) {
         int v = v_g[p][q];
         for (int r = 0; r < goma_ctx->problem.vim; r++) {
-          ad_fv->grad_G[r][p][q] = 0.0;
+          goma_ctx->fem.ad_fv->grad_G[r][p][q] = 0.0;
           if (goma_ctx->fem.pd->gv[v]) {
             int dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
             for (int i = 0; i < dofs; i++) {
-              ad_fv->grad_G[r][p][q] +=
-                  ADType(num_ad_variables, ad_fv->offset[v] + i, *goma_ctx->fem.esp->G[p][q][i]) *
+              goma_ctx->fem.ad_fv->grad_G[r][p][q] +=
+                  ADType(num_ad_variables, goma_ctx->fem.ad_fv->offset[v] + i,
+                         *goma_ctx->fem.esp->G[p][q][i]) *
                   goma_ctx->fem.bf[v]->grad_phi[i][r];
             }
           }
@@ -847,9 +901,9 @@ extern "C" void fill_ad_field_variables() {
      * div(G) - this is a vector!
      */
     for (int r = 0; r < goma_ctx->fem.pd->Num_Dim; r++) {
-      ad_fv->div_G[r] = 0.0;
+      goma_ctx->fem.ad_fv->div_G[r] = 0.0;
       for (int q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
-        ad_fv->div_G[r] += ad_fv->grad_G[q][q][r];
+        goma_ctx->fem.ad_fv->div_G[r] += goma_ctx->fem.ad_fv->grad_G[q][q][r];
       }
     }
   }
@@ -861,25 +915,25 @@ extern "C" void fill_ad_field_variables() {
 #if 0
   // check field variables
   for (int p = 0; p < goma_ctx->problem.vim; p++) {
-    if (fabs(ad_fv->v[p].val() - goma_ctx->fem.fv->v[p]) > 1e-14) {
-      printf("diff in fv->v[%d] %.12f != %.12f\n", p, ad_fv->v[p].val(), goma_ctx->fem.fv->v[p]);
+    if (fabs(goma_ctx->fem.ad_fv->v[p].val() - goma_ctx->fem.fv->v[p]) > 1e-14) {
+      printf("diff in fv->v[%d] %.12f != %.12f\n", p, goma_ctx->fem.ad_fv->v[p].val(), goma_ctx->fem.fv->v[p]);
     }
     for (int q = 0; q < goma_ctx->problem.vim; q++) {
-      if (fabs(ad_fv->grad_v[p][q].val() - goma_ctx->fem.fv->grad_v[p][q]) > 1e-12) {
-        printf("diff in fv->grad_v[%d][%d] %.12f != %.12f\n", p, q, ad_fv->grad_v[p][q].val(),
+      if (fabs(goma_ctx->fem.ad_fv->grad_v[p][q].val() - goma_ctx->fem.fv->grad_v[p][q]) > 1e-12) {
+        printf("diff in fv->grad_v[%d][%d] %.12f != %.12f\n", p, q, goma_ctx->fem.ad_fv->grad_v[p][q].val(),
                goma_ctx->fem.fv->grad_v[p][q]);
       }
     }
   }
-  if (fabs(ad_fv->eddy_nu.val() - goma_ctx->fem.fv->eddy_nu) > 1e-14) {
-    printf("diff in fv->eddy_nu %.12f != %.12f\n", ad_fv->eddy_nu.val(), goma_ctx->fem.fv->eddy_nu);
+  if (fabs(goma_ctx->fem.ad_fv->eddy_nu.val() - goma_ctx->fem.fv->eddy_nu) > 1e-14) {
+    printf("diff in fv->eddy_nu %.12f != %.12f\n", goma_ctx->fem.ad_fv->eddy_nu.val(), goma_ctx->fem.fv->eddy_nu);
   }
-  if (fabs(ad_fv->eddy_nu_dot.val() - goma_ctx->fem.fv_dot->eddy_nu) > 1e-14) {
-    printf("diff in fv->eddy_nu_dot %.12f != %.12f\n", ad_fv->eddy_nu_dot.val(), goma_ctx->fem.fv_dot->eddy_nu);
+  if (fabs(goma_ctx->fem.ad_fv->eddy_nu_dot.val() - goma_ctx->fem.fv_dot->eddy_nu) > 1e-14) {
+    printf("diff in fv->eddy_nu_dot %.12f != %.12f\n", goma_ctx->fem.ad_fv->eddy_nu_dot.val(), goma_ctx->fem.fv_dot->eddy_nu);
   }
   for (int p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {
-    if (fabs(ad_fv->grad_eddy_nu[p].val() - goma_ctx->fem.fv->grad_eddy_nu[p]) > 1e-14) {
-      printf("diff in fv->grad_eddy_nu[%d] %.12f != %.12f\n", p, ad_fv->grad_eddy_nu[p].val(),
+    if (fabs(goma_ctx->fem.ad_fv->grad_eddy_nu[p].val() - goma_ctx->fem.fv->grad_eddy_nu[p]) > 1e-14) {
+      printf("diff in fv->grad_eddy_nu[%d] %.12f != %.12f\n", p, goma_ctx->fem.ad_fv->grad_eddy_nu[p].val(),
              goma_ctx->fem.fv->grad_eddy_nu[p]);
     }
   }

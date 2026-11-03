@@ -1036,7 +1036,7 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
   free_dpi_uni(dpi);
   free(monolith);
   free(dpi);
-  free(Element_Blocks);
+  free(goma_ctx->fem.element_blocks);
 
   for (int i = 0; i < MAX_MAT_PER_SS + 1; i++) {
     free(goma_ctx->bc.ss_to_blks[i]);

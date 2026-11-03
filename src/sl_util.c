@@ -308,7 +308,7 @@ void sl_init(unsigned int option_mask, /* option flag */
       }
 #endif
 #ifdef MATRIX_DUMP
-      A->Number_Jac_Dump = Number_Jac_Dump;
+      A->Number_Jac_Dump = goma_ctx->number_jac_dump;
 #endif /* MATRIX_DUMP */
     }
   }

@@ -688,7 +688,7 @@ ADType ad_por_mass_source_model(void)
 
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_SAT_1]) /* Saturation formulation */
   {
-    saturation = ad_fv->sh_sat_1;
+    saturation = goma_ctx->fem.ad_fv->sh_sat_1;
   } else {
     GOMA_EH(GOMA_ERROR, "Cannot find appropriate saturation model");
   }
@@ -969,14 +969,14 @@ void ad_porous_shell_open_source_model(ADType j_1_2, // Flux between porous laye
       switch (ipore) {
       case 0:
         sat_normalized_1 = sat_nodes[ipore] - sat_center_1;
-        sat_nodes[ipore] = ad_fv->sh_sat_3;
+        sat_nodes[ipore] = goma_ctx->fem.ad_fv->sh_sat_3;
         break;
       case 1:
-        sat_nodes[ipore] = ad_fv->sh_sat_2;
+        sat_nodes[ipore] = goma_ctx->fem.ad_fv->sh_sat_2;
         sat_normalized_2 = sat_nodes[ipore] - sat_center_2;
         break;
       case 2:
-        sat_nodes[ipore] = ad_fv->sh_sat_3;
+        sat_nodes[ipore] = goma_ctx->fem.ad_fv->sh_sat_3;
         sat_normalized_3 = sat_nodes[ipore] - sat_center_3;
         break;
       }
@@ -1282,7 +1282,7 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
           sat_nodes[ipore][j] = set_ad_or_dbl(*goma_ctx->fem.esp->sh_sat_1[j], R_SHELL_SAT_1, j);
           ADType udot = set_ad_or_dbl(*goma_ctx->fem.esp_dot->sh_sat_1[j], R_SHELL_SAT_1, j);
           if (goma_ctx->fem.af->Assemble_Jacobian == TRUE) {
-            udot.fastAccessDx(ad_fv->offset[R_SHELL_SAT_1] + j) =
+            udot.fastAccessDx(goma_ctx->fem.ad_fv->offset[R_SHELL_SAT_1] + j) =
                 (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
           }
           sat_dot_nodes[ipore][j] = udot;
@@ -1291,7 +1291,7 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
           sat_nodes[ipore][j] = set_ad_or_dbl(*goma_ctx->fem.esp->sh_sat_2[j], R_SHELL_SAT_2, j);
           ADType udot = set_ad_or_dbl(*goma_ctx->fem.esp_dot->sh_sat_2[j], R_SHELL_SAT_2, j);
           if (goma_ctx->fem.af->Assemble_Jacobian == TRUE) {
-            udot.fastAccessDx(ad_fv->offset[R_SHELL_SAT_2] + j) =
+            udot.fastAccessDx(goma_ctx->fem.ad_fv->offset[R_SHELL_SAT_2] + j) =
                 (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
           }
           sat_dot_nodes[ipore][j] = udot;
@@ -1300,7 +1300,7 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
           sat_nodes[ipore][j] = set_ad_or_dbl(*goma_ctx->fem.esp->sh_sat_3[j], R_SHELL_SAT_3, j);
           ADType udot = set_ad_or_dbl(*goma_ctx->fem.esp_dot->sh_sat_3[j], R_SHELL_SAT_3, j);
           if (goma_ctx->fem.af->Assemble_Jacobian == TRUE) {
-            udot.fastAccessDx(ad_fv->offset[R_SHELL_SAT_3] + j) =
+            udot.fastAccessDx(goma_ctx->fem.ad_fv->offset[R_SHELL_SAT_3] + j) =
                 (1. + 2. * goma_ctx->fem.tran->current_theta) / goma_ctx->fem.tran->delta_t;
           }
           sat_dot_nodes[ipore][j] = udot;
@@ -1309,28 +1309,28 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
       }
       switch (ipore) {
       case 0:
-        sat_gauss[ipore] = ad_fv->sh_sat_1;
-        sat_dot_gauss[ipore] = ad_fv->sh_sat_1_dot;
+        sat_gauss[ipore] = goma_ctx->fem.ad_fv->sh_sat_1;
+        sat_dot_gauss[ipore] = goma_ctx->fem.ad_fv->sh_sat_1_dot;
         break;
       case 1:
-        sat_gauss[ipore] = ad_fv->sh_sat_2;
-        sat_dot_gauss[ipore] = ad_fv->sh_sat_2_dot;
+        sat_gauss[ipore] = goma_ctx->fem.ad_fv->sh_sat_2;
+        sat_dot_gauss[ipore] = goma_ctx->fem.ad_fv->sh_sat_2_dot;
         break;
       case 2:
-        sat_gauss[ipore] = ad_fv->sh_sat_3;
-        sat_dot_gauss[ipore] = ad_fv->sh_sat_3_dot;
+        sat_gauss[ipore] = goma_ctx->fem.ad_fv->sh_sat_3;
+        sat_dot_gauss[ipore] = goma_ctx->fem.ad_fv->sh_sat_3_dot;
         break;
       }
       for (a = 0; a < DIM; a++) {
         switch (ipore) {
         case 0:
-          grad_sat_gauss[ipore][a] = ad_fv->grad_sh_sat_1[a];
+          grad_sat_gauss[ipore][a] = goma_ctx->fem.ad_fv->grad_sh_sat_1[a];
           break;
         case 1:
-          grad_sat_gauss[ipore][a] = ad_fv->grad_sh_sat_2[a];
+          grad_sat_gauss[ipore][a] = goma_ctx->fem.ad_fv->grad_sh_sat_2[a];
           break;
         case 2:
-          grad_sat_gauss[ipore][a] = ad_fv->grad_sh_sat_3[a];
+          grad_sat_gauss[ipore][a] = goma_ctx->fem.ad_fv->grad_sh_sat_3[a];
           break;
         }
       }
@@ -1598,7 +1598,7 @@ extern "C" int ad_assemble_porous_shell_saturation(dbl tt,           // Time int
             for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
               goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                  resid[ipore][i].dx(ad_fv->offset[var] + j);
+                  resid[ipore][i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
             } /* End of loop over j */
           } /* End of if the variale is active */

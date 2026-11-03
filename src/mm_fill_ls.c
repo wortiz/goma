@@ -94,9 +94,6 @@
 
 #define GOMA_MM_FILL_LS_C
 
-struct Extended_Shape_Fcn_Basics
-    *xfem;             /* This is a global structure for the basic pieces needed for XFEM */
-NTREE *Subgrid_Tree;   /* This is a global pointer to the subgrid integration shape function tree */
 NTREE_INT Subgrid_Int; /* This is a global structure for the subgrid integration points and weights
                           specific to element */
 
@@ -523,8 +520,9 @@ huygens_renormalization ( double *x,
   double renorm_width = goma_ctx->fem.ls->Length_Scale * goma_ctx->fem.ls->Control_Width;
 
   if (goma_ctx->fem.ls->Length_Scale == 0.) {
-    renorm_width = goma_ctx->fem.ls->Control_Width *
-                   global_h_elem_siz(x, x_old_static, xdot_static, x, exo, dpi);
+    renorm_width =
+        goma_ctx->fem.ls->Control_Width *
+        global_h_elem_siz(x, goma_ctx->fem.x_old_static, goma_ctx->fem.xdot_static, x, exo, dpi);
   }
 
   ls_err = gradient_norm_err(x, xdot, exo, dpi, renorm_width);
@@ -1663,7 +1661,8 @@ create_surfs_from_iso(int isovar, double isoval, double x[], Exo_DB *exo) {
 
         if (elem_on_isosurface(e, x, exo, isovar, isoval)) {
 
-          load_elem_dofptr(e, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
+          load_elem_dofptr(e, exo, goma_ctx->fem.x_static, goma_ctx->fem.x_old_static,
+                           goma_ctx->fem.xdot_static, goma_ctx->fem.xdot_old_static, 0);
 
           bf_mp_init(goma_ctx->fem.pd);
 
@@ -2192,7 +2191,7 @@ int current_elem_on_isosurface(int isovar, double isoval) {
   if (!(goma_ctx->fem.pd->gv[isovar]))
     return (FALSE);
 
-  esp = x_static +
+  esp = goma_ctx->fem.x_static +
         goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
             ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[isovar][0]];
   f[0] = *esp - isoval;
@@ -2201,7 +2200,7 @@ int current_elem_on_isosurface(int isovar, double isoval) {
    * sign than node 0
    */
   for (i = 1; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[isovar]; i++) {
-    esp = x_static +
+    esp = goma_ctx->fem.x_static +
           goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
               ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[isovar][i]];
     f[i] = *esp - isoval;
@@ -3577,12 +3576,12 @@ find_quad_facets(struct LS_Surf_List *list, int isovar, double isoval, int *quad
     J = goma_ctx->mesh
             .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + j];
 
-    esp = x_static +
+    esp = goma_ctx->fem.x_static +
           goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
               ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[isovar][i]];
     val_I = *esp - isoval;
 
-    esp = x_static +
+    esp = goma_ctx->fem.x_static +
           goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
               ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[isovar][j]];
     val_J = *esp - isoval;
@@ -3851,7 +3850,7 @@ static void compute_link_level_set(double *xi,
     for (i = 0, *F = -isoval, *dF = 0.0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[isovar];
          i++) {
 
-      esp = x_static +
+      esp = goma_ctx->fem.x_static +
             goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
                 ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[isovar][i]];
 
@@ -3876,7 +3875,7 @@ static void compute_link_level_set(double *xi,
     for (i = 0, *F = -isoval, *dF = 0.0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[isovar];
          i++) {
 
-      esp = x_static +
+      esp = goma_ctx->fem.x_static +
             goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
                 ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[isovar][i]];
 
@@ -4194,22 +4193,23 @@ void ls_var_initialization(double **u, Exo_DB *exo, Dpi *dpi, Comm_Ex **cx) {
 
           for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
 
-            nv = Nodes[i]->Nodal_Vars_Info[imtrx];
+            nv = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[imtrx];
 
             for (j = goma_ctx->num_var_init + goma_ctx->num_var_bound;
                  j <
                  goma_ctx->fem.ls->Num_Var_Init + goma_ctx->num_var_init + goma_ctx->num_var_bound;
                  j++) {
 
-              var = Var_init[j].var;
+              var = goma_ctx->problem.var_init[j].var;
 
               nunks = get_nv_ndofs_modMF(nv, var);
 
               if (nunks > 0 && goma_ctx->fem.pd->i[imtrx][var]) {
                 if (nunks == 1) {
-                  ie = Index_Solution(i, var, Var_init[j].ktype, 0, mn, imtrx);
+                  ie = Index_Solution(i, var, goma_ctx->problem.var_init[j].ktype, 0, mn, imtrx);
 
-                  level_set_property(Var_init[j].init_val_minus, Var_init[j].init_val_plus,
+                  level_set_property(goma_ctx->problem.var_init[j].init_val_minus,
+                                     goma_ctx->problem.var_init[j].init_val_plus,
                                      goma_ctx->fem.ls->Length_Scale, &(u[imtrx][ie]), NULL);
 
                 } else {
@@ -4239,9 +4239,10 @@ static double scalar_value_at_local_node(
   double xi[DIM], val = 0;
   double scr1, scr2;
 
-  if (u == x_static) /* be the least disruptive possible */
+  if (u == goma_ctx->fem.x_static) /* be the least disruptive possible */
   {
-    load_elem_dofptr(ielem, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
+    load_elem_dofptr(ielem, exo, goma_ctx->fem.x_static, goma_ctx->fem.x_old_static,
+                     goma_ctx->fem.xdot_static, goma_ctx->fem.xdot_old_static, 0);
   } else {
     load_elem_dofptr(ielem, exo, u, u, u, u, 0);
   }
@@ -4787,17 +4788,19 @@ void load_xfem_for_elem(double x[], const Exo_DB *exo) {
   int eqn;
 
   /* only evaluate element quantities if new element */
-  if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem != xfem->ielem || goma_ctx->debug_flag < 0) {
-    xfem->ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
-    xfem->elem_state = current_elem_xfem_state(xfem->node_var_state, &xfem->elem_var_state, x, exo);
+  if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem != goma_ctx->fem.xfem->ielem ||
+      goma_ctx->debug_flag < 0) {
+    goma_ctx->fem.xfem->ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
+    goma_ctx->fem.xfem->elem_state = current_elem_xfem_state(
+        goma_ctx->fem.xfem->node_var_state, &goma_ctx->fem.xfem->elem_var_state, x, exo);
     /* fill in bogus values to avoid pathological cases */
-    xfem->xi[0] = -2;
-    xfem->xi[1] = -2;
-    xfem->xi[2] = -2;
+    goma_ctx->fem.xfem->xi[0] = -2;
+    goma_ctx->fem.xfem->xi[1] = -2;
+    goma_ctx->fem.xfem->xi[2] = -2;
 
     /* check if gradients will be needed for XG-type interpolations */
-    xfem->have_XG = FALSE;
-    for (eqn = V_FIRST; eqn < V_LAST && !xfem->have_XG; eqn++) {
+    goma_ctx->fem.xfem->have_XG = FALSE;
+    for (eqn = V_FIRST; eqn < V_LAST && !goma_ctx->fem.xfem->have_XG; eqn++) {
       if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_P1_XG ||
           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_XG ||
           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_XG ||
@@ -4805,20 +4808,20 @@ void load_xfem_for_elem(double x[], const Exo_DB *exo) {
           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_HVG ||
           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_HG ||
           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_HVG)
-        xfem->have_XG = TRUE;
+        goma_ctx->fem.xfem->have_XG = TRUE;
     }
 
     /* check if quantities will be needed for discontinuous-type interpolations
      */
-    xfem->have_disc = FALSE;
-    for (eqn = V_FIRST; eqn < V_LAST && !xfem->have_disc; eqn++) {
+    goma_ctx->fem.xfem->have_disc = FALSE;
+    for (eqn = V_FIRST; eqn < V_LAST && !goma_ctx->fem.xfem->have_disc; eqn++) {
       if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_HV ||
           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_HG ||
           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1_HVG ||
           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_HV ||
           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_HG ||
           goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2_HVG)
-        xfem->have_disc = TRUE;
+        goma_ctx->fem.xfem->have_disc = TRUE;
     }
 #if 0
       /* possibly dangerous, but try to speed things up by setting
@@ -4920,18 +4923,19 @@ void load_xfem_for_stu(const double xi[]) {
   /* here, we evaluate these functions */
 
   /* make sure xfem has been set up for element */
-  if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem != xfem->ielem) {
+  if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem != goma_ctx->fem.xfem->ielem) {
     GOMA_EH(GOMA_ERROR, "Must call load_xfem_for_elem before calling load_xfem_for_stu.\n");
   }
 
-  if (xfem->elem_state == 1) {
+  if (goma_ctx->fem.xfem->elem_state == 1) {
     /* only evaluate distance if at new point */
-    if (xi[0] != xfem->xi[0] || xi[1] != xfem->xi[1] || xi[2] != xfem->xi[2]) {
+    if (xi[0] != goma_ctx->fem.xfem->xi[0] || xi[1] != goma_ctx->fem.xfem->xi[1] ||
+        xi[2] != goma_ctx->fem.xfem->xi[2]) {
       double alpha = 0.5 * goma_ctx->fem.ls->Length_Scale;
 
-      xfem->xi[0] = xi[0];
-      xfem->xi[1] = xi[1];
-      xfem->xi[2] = xi[2];
+      goma_ctx->fem.xfem->xi[0] = xi[0];
+      goma_ctx->fem.xfem->xi[1] = xi[1];
+      goma_ctx->fem.xfem->xi[2] = xi[2];
 
       dof_ls = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[goma_ctx->fem.ls->var];
 
@@ -4940,58 +4944,60 @@ void load_xfem_for_stu(const double xi[]) {
       } else if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][FILL] == I_Q2) {
         F_elem_type = goma_ctx->fem.pd->Num_Dim == 2 ? BIQUAD_QUAD : TRIQUAD_HEX;
       } else if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][FILL] == I_NOTHING) {
-        xfem->near = FALSE;
-        xfem->F = 2. * goma_ctx->fem.ls->Length_Scale;
-        xfem->H = 1.;
-        xfem->delta = 0.;
-        xfem->dF_xi[0] = 0.;
-        xfem->dF_xi[1] = 0.;
-        xfem->dF_xi[2] = 0.;
-        xfem->bf_plus = 0.;
-        xfem->F_plus = 0.;
-        xfem->grad_bf_plus[0] = 0.;
-        xfem->grad_bf_plus[1] = 0.;
-        xfem->grad_bf_plus[2] = 0.;
-        xfem->grad_F_plus[0] = 0.;
-        xfem->grad_F_plus[1] = 0.;
-        xfem->grad_F_plus[2] = 0.;
+        goma_ctx->fem.xfem->near = FALSE;
+        goma_ctx->fem.xfem->F = 2. * goma_ctx->fem.ls->Length_Scale;
+        goma_ctx->fem.xfem->H = 1.;
+        goma_ctx->fem.xfem->delta = 0.;
+        goma_ctx->fem.xfem->dF_xi[0] = 0.;
+        goma_ctx->fem.xfem->dF_xi[1] = 0.;
+        goma_ctx->fem.xfem->dF_xi[2] = 0.;
+        goma_ctx->fem.xfem->bf_plus = 0.;
+        goma_ctx->fem.xfem->F_plus = 0.;
+        goma_ctx->fem.xfem->grad_bf_plus[0] = 0.;
+        goma_ctx->fem.xfem->grad_bf_plus[1] = 0.;
+        goma_ctx->fem.xfem->grad_bf_plus[2] = 0.;
+        goma_ctx->fem.xfem->grad_F_plus[0] = 0.;
+        goma_ctx->fem.xfem->grad_F_plus[1] = 0.;
+        goma_ctx->fem.xfem->grad_F_plus[2] = 0.;
         return;
       } else
         GOMA_EH(GOMA_ERROR, "Unexpected interpolation for FILL");
 
-      xfem->F = 0.;
+      goma_ctx->fem.xfem->F = 0.;
       for (i = 0; i < dof_ls; i++) {
-        xfem->F += shape(xi[0], xi[1], xi[2], F_elem_type, PSI, i) * *goma_ctx->fem.esp->F[i];
+        goma_ctx->fem.xfem->F +=
+            shape(xi[0], xi[1], xi[2], F_elem_type, PSI, i) * *goma_ctx->fem.esp->F[i];
       }
 
-      if (fabs(xfem->F) < alpha) {
-        xfem->near = TRUE;
-        xfem->H = 0.5 * (1. + xfem->F / alpha + sin(M_PIE * xfem->F / alpha) / M_PIE);
-        xfem->delta = 0.5 * (1. + cos(M_PIE * xfem->F / alpha)) / alpha;
+      if (fabs(goma_ctx->fem.xfem->F) < alpha) {
+        goma_ctx->fem.xfem->near = TRUE;
+        goma_ctx->fem.xfem->H = 0.5 * (1. + goma_ctx->fem.xfem->F / alpha +
+                                       sin(M_PIE * goma_ctx->fem.xfem->F / alpha) / M_PIE);
+        goma_ctx->fem.xfem->delta = 0.5 * (1. + cos(M_PIE * goma_ctx->fem.xfem->F / alpha)) / alpha;
       } else {
-        xfem->near = FALSE;
-        xfem->H = (xfem->F < 0.0) ? 0.0 : 1.0;
-        xfem->delta = 0.;
+        goma_ctx->fem.xfem->near = FALSE;
+        goma_ctx->fem.xfem->H = (goma_ctx->fem.xfem->F < 0.0) ? 0.0 : 1.0;
+        goma_ctx->fem.xfem->delta = 0.;
         /* DRN: not sure if we want to do this or not */
         /*if( fabs(xfem->F) < DBL_SMALL) xfem->H = 0.5;*/
         if (goma_ctx->fem.ls->on_sharp_surf) {
-          xfem->H = (goma_ctx->fem.ls->Elem_Sign < 0) ? 0.0 : 1.0;
-          xfem->delta = 0.;
+          goma_ctx->fem.xfem->H = (goma_ctx->fem.ls->Elem_Sign < 0) ? 0.0 : 1.0;
+          goma_ctx->fem.xfem->delta = 0.;
         }
       }
 
       /* gradients and other derived quantities */
-      xfem->dF_xi[0] = 0.;
-      xfem->dF_xi[1] = 0.;
-      xfem->dF_xi[2] = 0.;
-      xfem->bf_plus = 0.;
-      xfem->F_plus = 0.;
-      xfem->grad_bf_plus[0] = 0.;
-      xfem->grad_bf_plus[1] = 0.;
-      xfem->grad_bf_plus[2] = 0.;
-      xfem->grad_F_plus[0] = 0.;
-      xfem->grad_F_plus[1] = 0.;
-      xfem->grad_F_plus[2] = 0.;
+      goma_ctx->fem.xfem->dF_xi[0] = 0.;
+      goma_ctx->fem.xfem->dF_xi[1] = 0.;
+      goma_ctx->fem.xfem->dF_xi[2] = 0.;
+      goma_ctx->fem.xfem->bf_plus = 0.;
+      goma_ctx->fem.xfem->F_plus = 0.;
+      goma_ctx->fem.xfem->grad_bf_plus[0] = 0.;
+      goma_ctx->fem.xfem->grad_bf_plus[1] = 0.;
+      goma_ctx->fem.xfem->grad_bf_plus[2] = 0.;
+      goma_ctx->fem.xfem->grad_F_plus[0] = 0.;
+      goma_ctx->fem.xfem->grad_F_plus[1] = 0.;
+      goma_ctx->fem.xfem->grad_F_plus[2] = 0.;
 
       /* drn - this contains somewhat convoluted logic to desparately try to
          keep the costs low but keep from having too many if tests
@@ -5006,41 +5012,46 @@ void load_xfem_for_stu(const double xi[]) {
          below sometimes calculates unnecessary quantities, but should avoid
          unnecessary calls to shape.
        */
-      if (xfem->have_XG || xfem->have_disc || xfem->near) {
+      if (goma_ctx->fem.xfem->have_XG || goma_ctx->fem.xfem->have_disc ||
+          goma_ctx->fem.xfem->near) {
         double phi, dphi = 0.0;
 
-        if (xfem->have_XG || xfem->have_disc) {
+        if (goma_ctx->fem.xfem->have_XG || goma_ctx->fem.xfem->have_disc) {
           for (i = 0; i < dof_ls; i++) {
             if (*goma_ctx->fem.esp->F[i] >= 0.) {
               phi = shape(xi[0], xi[1], xi[2], F_elem_type, PSI, i);
-              xfem->bf_plus += phi;
-              xfem->F_plus += phi * *goma_ctx->fem.esp->F[i];
+              goma_ctx->fem.xfem->bf_plus += phi;
+              goma_ctx->fem.xfem->F_plus += phi * *goma_ctx->fem.esp->F[i];
             }
           }
         }
 
         /* 1-D, 2-D, or 3-D (I guess that's everybody!) */
         for (i = 0; i < dof_ls; i++) {
-          if (xfem->near || xfem->have_XG || *goma_ctx->fem.esp->F[i] >= 0.) {
+          if (goma_ctx->fem.xfem->near || goma_ctx->fem.xfem->have_XG ||
+              *goma_ctx->fem.esp->F[i] >= 0.) {
             dphi = shape(xi[0], xi[1], xi[2], F_elem_type, DPSI_S, i);
-            xfem->dF_xi[0] += dphi * *goma_ctx->fem.esp->F[i];
+            goma_ctx->fem.xfem->dF_xi[0] += dphi * *goma_ctx->fem.esp->F[i];
           }
-          if ((xfem->have_XG || xfem->have_disc) && *goma_ctx->fem.esp->F[i] >= 0.) {
-            xfem->grad_bf_plus[0] += dphi;
-            xfem->grad_F_plus[0] += dphi * *goma_ctx->fem.esp->F[i];
+          if ((goma_ctx->fem.xfem->have_XG || goma_ctx->fem.xfem->have_disc) &&
+              *goma_ctx->fem.esp->F[i] >= 0.) {
+            goma_ctx->fem.xfem->grad_bf_plus[0] += dphi;
+            goma_ctx->fem.xfem->grad_F_plus[0] += dphi * *goma_ctx->fem.esp->F[i];
           }
         }
 
         /* 2-D or 3-D */
         if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim > 1) {
           for (i = 0; i < dof_ls; i++) {
-            if (xfem->near || xfem->have_XG || *goma_ctx->fem.esp->F[i] >= 0.) {
+            if (goma_ctx->fem.xfem->near || goma_ctx->fem.xfem->have_XG ||
+                *goma_ctx->fem.esp->F[i] >= 0.) {
               dphi = shape(xi[0], xi[1], xi[2], F_elem_type, DPSI_T, i);
-              xfem->dF_xi[1] += dphi * *goma_ctx->fem.esp->F[i];
+              goma_ctx->fem.xfem->dF_xi[1] += dphi * *goma_ctx->fem.esp->F[i];
             }
-            if ((xfem->have_XG || xfem->have_disc) && *goma_ctx->fem.esp->F[i] >= 0.) {
-              xfem->grad_bf_plus[1] += dphi;
-              xfem->grad_F_plus[1] += dphi * *goma_ctx->fem.esp->F[i];
+            if ((goma_ctx->fem.xfem->have_XG || goma_ctx->fem.xfem->have_disc) &&
+                *goma_ctx->fem.esp->F[i] >= 0.) {
+              goma_ctx->fem.xfem->grad_bf_plus[1] += dphi;
+              goma_ctx->fem.xfem->grad_F_plus[1] += dphi * *goma_ctx->fem.esp->F[i];
             }
           }
         }
@@ -5048,13 +5059,15 @@ void load_xfem_for_stu(const double xi[]) {
         /* 3-D only */
         if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim > 2) {
           for (i = 0; i < dof_ls; i++) {
-            if (xfem->near || xfem->have_XG || *goma_ctx->fem.esp->F[i] >= 0.) {
+            if (goma_ctx->fem.xfem->near || goma_ctx->fem.xfem->have_XG ||
+                *goma_ctx->fem.esp->F[i] >= 0.) {
               dphi = shape(xi[0], xi[1], xi[2], F_elem_type, DPSI_U, i);
-              xfem->dF_xi[2] += dphi * *goma_ctx->fem.esp->F[i];
+              goma_ctx->fem.xfem->dF_xi[2] += dphi * *goma_ctx->fem.esp->F[i];
             }
-            if ((xfem->have_XG || xfem->have_disc) && *goma_ctx->fem.esp->F[i] >= 0.) {
-              xfem->grad_bf_plus[2] += dphi;
-              xfem->grad_F_plus[2] += dphi * *goma_ctx->fem.esp->F[i];
+            if ((goma_ctx->fem.xfem->have_XG || goma_ctx->fem.xfem->have_disc) &&
+                *goma_ctx->fem.esp->F[i] >= 0.) {
+              goma_ctx->fem.xfem->grad_bf_plus[2] += dphi;
+              goma_ctx->fem.xfem->grad_F_plus[2] += dphi * *goma_ctx->fem.esp->F[i];
             }
           }
         }
@@ -5079,7 +5092,7 @@ void xfem_correct(int num_total_nodes,
   int ioffset;
 
   for (I = 0; I < num_total_nodes; I++) {
-    node = Nodes[I];
+    node = goma_ctx->fem.nodes[I];
     nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     ioffset = 0;
     for (lvdesc = 0; lvdesc < nv->Num_Var_Desc; lvdesc++) {
@@ -5290,7 +5303,7 @@ void xfem_predict(int num_total_nodes,
   }
 
   for (I = 0; I < num_total_nodes; I++) {
-    node = Nodes[I];
+    node = goma_ctx->fem.nodes[I];
     nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     ioffset = 0;
     for (lvdesc = 0; lvdesc < nv->Num_Var_Desc; lvdesc++) {
@@ -5475,7 +5488,7 @@ void xfem_var_diff(int var, double *vdiff, double phidiff[MDE], double gradvdiff
       xfem_dof_state(i, interp, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
                      &xfem_active, &extended_dof, &base_interp, &base_dof);
       if (extended_dof) {
-        esp = x_static +
+        esp = goma_ctx->fem.x_static +
               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
                   ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][i]];
 
@@ -6624,7 +6637,7 @@ void xfem_dof_state(const int ledof,
   case I_P0_GP:
   case I_P1_GP:
     *base_dof = ledof;
-    *extended_dof = xfem->elem_var_state == 1 || lnn_distance(*base_dof) < 0.;
+    *extended_dof = goma_ctx->fem.xfem->elem_var_state == 1 || lnn_distance(*base_dof) < 0.;
     break;
   case I_Q1_GN:
   case I_Q2_GN:
@@ -6634,7 +6647,7 @@ void xfem_dof_state(const int ledof,
   case I_P0_GN:
   case I_P1_GN:
     *base_dof = ledof;
-    *extended_dof = xfem->elem_var_state == 1 || lnn_distance(*base_dof) >= 0.;
+    *extended_dof = goma_ctx->fem.xfem->elem_var_state == 1 || lnn_distance(*base_dof) >= 0.;
     break;
   default:
     GOMA_EH(GOMA_ERROR, "Unrecognized extended shape function.");
@@ -6655,7 +6668,7 @@ void xfem_dof_state(const int ledof,
   case I_Q2_HV:
   case I_Q2_HG:
   case I_Q2_HVG:
-    *xfem_active = (xfem->elem_var_state == 1);
+    *xfem_active = (goma_ctx->fem.xfem->elem_var_state == 1);
     break;
   case I_Q1_G:
   case I_Q2_G:
@@ -6667,7 +6680,7 @@ void xfem_dof_state(const int ledof,
   case I_Q1_XG:
   case I_Q2_XV:
   case I_Q2_XG:
-    *xfem_active = (xfem->node_var_state[*base_dof] == 1);
+    *xfem_active = (goma_ctx->fem.xfem->node_var_state[*base_dof] == 1);
     break;
   default:
     GOMA_EH(GOMA_ERROR, "Unrecognized extended shape function.");
@@ -8739,7 +8752,7 @@ void get_subelement_descriptions(double x[], Exo_DB *exo, Integ_Elem_Desc_List *
   /* gather subelement information into a single list */
   int ebi, ielem, e_start, e_end;
   Integ_Elem *e;
-  double *x_current = x_static;
+  double *x_current = goma_ctx->fem.x_static;
 
   list->size = 0;
   list->start = NULL;
@@ -8757,7 +8770,8 @@ void get_subelement_descriptions(double x[], Exo_DB *exo, Integ_Elem_Desc_List *
 
         if (elem_on_isosurface(ielem, x, exo, goma_ctx->fem.ls->var, 0.)) {
 
-          load_elem_dofptr(ielem, exo, x, x_old_static, xdot_static, xdot_old_static, 0);
+          load_elem_dofptr(ielem, exo, x, goma_ctx->fem.x_old_static, goma_ctx->fem.xdot_static,
+                           goma_ctx->fem.xdot_old_static, 0);
 
           e = create_integ_elements(0.);
 
@@ -8770,7 +8784,7 @@ void get_subelement_descriptions(double x[], Exo_DB *exo, Integ_Elem_Desc_List *
   }
 
   /* restore static pointer */
-  x_static = x_current;
+  goma_ctx->fem.x_static = x_current;
 
   return;
 }
@@ -9276,8 +9290,9 @@ double Courant_Time_Step(double x[],
         h_elem = sqrt(h_elem / ((double)goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim));
 
         if (goma_ctx->fem.ls->Integration_Depth > 0) {
-          ip_total = get_subgrid_integration_pts(Subgrid_Tree, &element_search_grid, &Subgrid_Int.s,
-                                                 &Subgrid_Int.wt, goma_ctx->fem.ls->Length_Scale);
+          ip_total = get_subgrid_integration_pts(goma_ctx->fem.subgrid_tree, &element_search_grid,
+                                                 &Subgrid_Int.s, &Subgrid_Int.wt,
+                                                 goma_ctx->fem.ls->Length_Scale);
         } else if (goma_ctx->fem.ls->SubElemIntegration) {
           ip_total = get_subelement_integration_pts(&Subgrid_Int.s, &Subgrid_Int.wt,
                                                     &Subgrid_Int.ip_sign, 0., -1, 0);
@@ -9385,12 +9400,12 @@ int get_subelement_integration_pts(
   int num_gpts;
 
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][LS]) {
-    neg_elem_volume |= fail_courant_condition();
+    goma_ctx->solver.neg_elem_volume |= fail_courant_condition();
   } else {
-    neg_elem_volume = 0;
+    goma_ctx->solver.neg_elem_volume = 0;
   }
 
-  if (neg_elem_volume)
+  if (goma_ctx->solver.neg_elem_volume)
     return (0);
 
   e = create_integ_elements(isoval);
@@ -9723,7 +9738,7 @@ void build_integ_element(Integ_Elem *e,
   int tri_type;
   double sum_f;
 
-  if (xfem != NULL && xfem->have_XG &&
+  if (goma_ctx->fem.xfem != NULL && goma_ctx->fem.xfem->have_XG &&
       goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type == BIQUAD_QUAD)
     tri_type = QUAD6_TRI;
   else
@@ -10836,7 +10851,7 @@ int gather_subelement_integration_pts(
           detJ = subelement_detJ(e, yi, TRUE);
           if (detJ < 0.) {
             if (fabs(detJ) > 0.01)
-              neg_elem_volume = TRUE;
+              goma_ctx->solver.neg_elem_volume = TRUE;
 #define DEBUG_DRN 0
 #if DEBUG_DRN
             printf("for elem=%d, subelement detJ = %g\n",
@@ -10867,8 +10882,8 @@ void clear_xfem_contribution(int N) {
   */
 
   for (ie = 0; ie < N; ie++) {
-    xfem->active_vol[ie] = 0.;
-    xfem->tot_vol[ie] = 0.;
+    goma_ctx->fem.xfem->active_vol[ie] = 0.;
+    goma_ctx->fem.xfem->tot_vol[ie] = 0.;
   }
 }
 
@@ -10901,8 +10916,8 @@ void compute_xfem_contribution(int N) {
                   GOMA_EH(GOMA_ERROR, "compute_xfem_contrib, ie out of bounds\n");
                 }
 
-                xfem->active_vol[ie] += goma_ctx->fem.bf[eqn]->phi[i] * dV;
-                xfem->tot_vol[ie] += dV;
+                goma_ctx->fem.xfem->active_vol[ie] += goma_ctx->fem.bf[eqn]->phi[i] * dV;
+                goma_ctx->fem.xfem->tot_vol[ie] += dV;
               }
             } else {
               ie = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ieqn_ledof[ledof];
@@ -10912,8 +10927,8 @@ void compute_xfem_contribution(int N) {
                 GOMA_EH(GOMA_ERROR, "compute_xfem_contrib, ie out of bounds\n");
               }
 
-              xfem->active_vol[ie] += goma_ctx->fem.bf[eqn]->phi[i] * dV;
-              xfem->tot_vol[ie] += dV;
+              goma_ctx->fem.xfem->active_vol[ie] += goma_ctx->fem.bf[eqn]->phi[i] * dV;
+              goma_ctx->fem.xfem->tot_vol[ie] += dV;
             }
           }
         }
@@ -10941,14 +10956,14 @@ void check_xfem_contribution(
         eps = eps_diffusive;
       else
         eps = eps_standard;
-      if (fabs(xfem->active_vol[irow]) < eps * xfem->tot_vol[irow]) {
+      if (fabs(goma_ctx->fem.xfem->active_vol[irow]) < eps * goma_ctx->fem.xfem->tot_vol[irow]) {
         j_last = ija[irow + 1] - ija[irow];
         ija_row = ija[irow];
 
 #if 0
             /* set value to predicted one */
             a[irow] = 1.;
-            resid[irow] = x[irow]-x_pred_static[irow];
+            resid[irow] = x[irow]-goma_ctx->fem.x_pred_static[irow];
 #endif
 #if 0
             /* set value to zero */
@@ -10963,7 +10978,7 @@ void check_xfem_contribution(
 #if 1
         /* set time derivative to zero */
         a[irow] = 1.;
-        resid[irow] = x[irow] - x_old_static[irow];
+        resid[irow] = x[irow] - goma_ctx->fem.x_old_static[irow];
 #endif
 
         for (j = 0; j < j_last; j++) {
@@ -10971,11 +10986,11 @@ void check_xfem_contribution(
           a[k] = 0.;
         }
 
-        if (FALSE && xfem->active_vol[irow] != 0.) /* debugging */
+        if (FALSE && goma_ctx->fem.xfem->active_vol[irow] != 0.) /* debugging */
         {
           DPRINTF(stderr, "kill partial equation, row=%d, n = %d, active/tot=%g\n", irow,
                   goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][irow][2] + 1,
-                  fabs(xfem->active_vol[irow]) / xfem->tot_vol[irow]);
+                  fabs(goma_ctx->fem.xfem->active_vol[irow]) / goma_ctx->fem.xfem->tot_vol[irow]);
         }
       }
     }
@@ -10987,16 +11002,16 @@ void check_xfem_contribution(
       } else {
         eps = eps_standard;
       }
-      if (fabs(xfem->active_vol[irow]) < eps * xfem->tot_vol[irow]) {
+      if (fabs(goma_ctx->fem.xfem->active_vol[irow]) < eps * goma_ctx->fem.xfem->tot_vol[irow]) {
         GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
         matrix->zero_global_row_set_diag(matrix, matrix->global_ids[irow]);
-        resid[irow] = x[irow] - x_old_static[irow];
+        resid[irow] = x[irow] - goma_ctx->fem.x_old_static[irow];
 
-        if (FALSE && xfem->active_vol[irow] != 0.) /* debugging */
+        if (FALSE && goma_ctx->fem.xfem->active_vol[irow] != 0.) /* debugging */
         {
           DPRINTF(stderr, "kill partial equation, row=%d, n = %d, active/tot=%g\n", irow,
                   goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][irow][2] + 1,
-                  fabs(xfem->active_vol[irow]) / xfem->tot_vol[irow]);
+                  fabs(goma_ctx->fem.xfem->active_vol[irow]) / goma_ctx->fem.xfem->tot_vol[irow]);
         }
       }
     }

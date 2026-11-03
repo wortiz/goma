@@ -76,7 +76,4 @@
  * Inter_Mask is Defined in mm_unknown_map.c
  */
 
-extern int Inter_Mask[MAX_NUM_MATRICES][MAX_VARIABLE_TYPES][MAX_VARIABLE_TYPES];
-extern int Ignore_Deps[MAX_NUM_MATRICES][MAX_VARIABLE_TYPES][MAX_VARIABLE_TYPES];
-
 #endif

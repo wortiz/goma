@@ -50,10 +50,6 @@
  * have a mm_mp_structs and mm_mp.h to declare what these are.
  */
 
-extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwrite  *
-                                                * with material-specific            *
-                                                * initialization                    */
-
 static Spfrtn sr;
 
 /*

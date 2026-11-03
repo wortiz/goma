@@ -208,25 +208,26 @@ void check_parallel_error_FL(char *errstring, char *file_name, int lineno)
 {
 #ifdef PARALLEL
 
-  MPI_Allreduce(&parallel_err, &parallel_err_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
-  if (parallel_err_global) {
+  MPI_Allreduce(&goma_ctx->solver.parallel_err, &goma_ctx->solver.parallel_err_global, 1, MPI_INT,
+                MPI_LOR, MPI_COMM_WORLD);
+  if (goma_ctx->solver.parallel_err_global) {
     DPRINTF(stderr, "PARALLEL ERROR: ");
     if (errstring)
       DPRINTF(stderr, "%s", errstring);
     DPRINTF(stderr, " check previous output for cause of error: %s line %d", file_name, lineno);
     fflush(stderr);
-    if (parallel_err) {
+    if (goma_ctx->solver.parallel_err) {
       fprintf(stderr, "\tP_%d had a flagged error\n", goma_ctx->proc_id);
     }
     (void)MPI_Finalize();
     exit(-1);
   }
 #else
-  if (parallel_err || parallel_err_global) {
+  if (goma_ctx->solver.parallel_err || goma_ctx->solver.parallel_err_global) {
     DPRINTF(stderr, "SERIAL PROG ERROR: ");
     DPRINTF(stderr, " check previous output for cause of error: %s line %d", file_name, lineno);
     fflush(stderr);
-    if (parallel_err) {
+    if (goma_ctx->solver.parallel_err) {
       fprintf(stderr, "\tP_%d had a flagged error\n", goma_ctx->proc_id);
     }
     exit(-1);

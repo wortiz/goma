@@ -362,7 +362,7 @@ int countmap_vardofs(const int varType, const int num_nodes, int *map) {
     GOMA_EH(-1, "Attempt to count a bogus variable.");
   }
   for (node = 0; node < num_nodes; node++) {
-    nv = Nodes[node]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+    nv = goma_ctx->fem.nodes[node]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     nun = get_nv_ndofs_modMF(nv, varType);
     if (nun > 0) {
       map[node] = count;
@@ -639,7 +639,8 @@ double time_step_control(const double delta_t,
 #endif
 
     /* ignore corrections caused by changing side of interface */
-    if (goma_ctx->fem.ls != NULL && xfem != NULL && goma_ctx->fem.ls->Length_Scale == 0.) {
+    if (goma_ctx->fem.ls != NULL && goma_ctx->fem.xfem != NULL &&
+        goma_ctx->fem.ls->Length_Scale == 0.) {
       int MatID = vd->MatID;
       int interp;
       double F, Fold;
@@ -1647,15 +1648,15 @@ void init_vec(
      */
     if (goma_ctx->num_var_bound > 0) {
       int idv;
-      var = Var_init[0].var;
+      var = goma_ctx->problem.var_init[0].var;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (i = 0; i < DPI_ptr->num_owned_nodes; i++) {
+        for (i = 0; i < goma_ctx->dpi->num_owned_nodes; i++) {
           idv = Index_Solution(i, var, 0, 0, -1, goma_ctx->fem.pg->imtrx);
           if (idv != -1) {
-            if (u[idv] < Var_init[0].init_val_min)
-              u[idv] = Var_init[0].init_val_min;
-            if (u[idv] > Var_init[0].init_val_max)
-              u[idv] = Var_init[0].init_val_max;
+            if (u[idv] < goma_ctx->problem.var_init[0].init_val_min)
+              u[idv] = goma_ctx->problem.var_init[0].init_val_min;
+            if (u[idv] > goma_ctx->problem.var_init[0].init_val_max)
+              u[idv] = goma_ctx->problem.var_init[0].init_val_max;
           }
         }
       }
@@ -1716,13 +1717,14 @@ void init_vec(
    */
   if (goma_ctx->num_var_init > 0) {
     retn = 0;
-    dum_var = alloc_dbl_1(DPI_ptr->num_universe_nodes, DBL_NOINIT);
+    dum_var = alloc_dbl_1(goma_ctx->dpi->num_universe_nodes, DBL_NOINIT);
     for (i = goma_ctx->num_var_bound; i < goma_ctx->num_var_init; i++) {
-      switch (Var_init[i].var) {
+      switch (goma_ctx->problem.var_init[i].var) {
       case MASS_FRACTION:
         DPRINTF(stdout, "\tSetting %s number %d (variable [%d]) to %g\n",
-                Var_Name[Var_init[i].var].name1, Var_init[i].ktype, Var_init[i].var,
-                Var_init[i].init_val);
+                Var_Name[goma_ctx->problem.var_init[i].var].name1,
+                goma_ctx->problem.var_init[i].ktype, goma_ctx->problem.var_init[i].var,
+                goma_ctx->problem.var_init[i].init_val);
 
         break;
       case SPECIES_MASS_FRACTION:
@@ -1731,13 +1733,17 @@ void init_vec(
         retn = 1;
         continue;
       default:
-        DPRINTF(stdout, "\tSetting %s (variable [%d]) to %g\n", Var_Name[Var_init[i].var].name1,
-                Var_init[i].var, Var_init[i].init_val);
+        DPRINTF(stdout, "\tSetting %s (variable [%d]) to %g\n",
+                Var_Name[goma_ctx->problem.var_init[i].var].name1,
+                goma_ctx->problem.var_init[i].var, goma_ctx->problem.var_init[i].init_val);
         break;
       }
-      if (1 || Var_init[i].len_u_pars == -1) { /* Disabled for now, still some bugs */
-        init_vec_value(dum_var, Var_init[i].init_val, DPI_ptr->num_universe_nodes);
-        inject_nodal_vec(u, Var_init[i].var, Var_init[i].ktype, 0, -2, dum_var);
+      if (1 ||
+          goma_ctx->problem.var_init[i].len_u_pars == -1) { /* Disabled for now, still some bugs */
+        init_vec_value(dum_var, goma_ctx->problem.var_init[i].init_val,
+                       goma_ctx->dpi->num_universe_nodes);
+        inject_nodal_vec(u, goma_ctx->problem.var_init[i].var, goma_ctx->problem.var_init[i].ktype,
+                         0, -2, dum_var);
       } else {
         double xpt[DIM] = {0, 0, 0}, var_val[MAX_VARIABLE_TYPES];
         int dir, ierr;
@@ -1745,8 +1751,9 @@ void init_vec(
           xpt[dir] = goma_ctx->mesh.coor[dir][i];
         }
         init_vec_value(var_val, 0.0, MAX_VARIABLE_TYPES);
-        ierr = user_initialize(Var_init[i].var, u, Var_init[i].init_val, Var_init[i].u_pars, xpt,
-                               var_val);
+        ierr = user_initialize(goma_ctx->problem.var_init[i].var, u,
+                               goma_ctx->problem.var_init[i].init_val,
+                               goma_ctx->problem.var_init[i].u_pars, xpt, var_val);
         if (ierr == -1) {
           GOMA_EH(ierr, "Problem with user_initialize...");
         }
@@ -1765,7 +1772,7 @@ void init_vec(
      */
     if (retn == 1) {
       frac_vec = alloc_dbl_1(goma_ctx->fem.upd->Max_Num_Species, 0.0);
-      retn = check_consistent_fraction_vector(Var_init, goma_ctx->num_var_init,
+      retn = check_consistent_fraction_vector(goma_ctx->problem.var_init, goma_ctx->num_var_init,
                                               goma_ctx->fem.upd->Max_Num_Species, frac_vec);
 
       /*
@@ -1784,7 +1791,7 @@ void init_vec(
        * inject the maximum number of species equations.
        */
       for (i = 0; i < goma_ctx->fem.upd->Max_Num_Species_Eqn; i++) {
-        init_vec_value(dum_var, frac_vec[i], DPI_ptr->num_owned_nodes);
+        init_vec_value(dum_var, frac_vec[i], goma_ctx->dpi->num_owned_nodes);
         inject_nodal_vec(u, MASS_FRACTION, i, 0, -2, dum_var);
       }
       safer_free((void **)&frac_vec);
@@ -1831,15 +1838,17 @@ void init_vec(
     }
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
-    if (Num_Var_Init_Mat[mn] > 0) {
+    if (goma_ctx->problem.num_var_init_mat[mn] > 0) {
       e_start = exo->eb_ptr[ebi];
       e_end = exo->eb_ptr[ebi + 1];
 
-      for (j = 0; j < Num_Var_Init_Mat[mn]; j++) {
-        if (Var_init_mat[mn][j].len_u_pars < 0) {
+      for (j = 0; j < goma_ctx->problem.num_var_init_mat[mn]; j++) {
+        if (goma_ctx->problem.var_init_mat[mn][j].len_u_pars < 0) {
           DPRINTF(stdout, "\tSetting MAT %d %s number %d (variable [%d]) to %g\n", mn,
-                  Var_Name[Var_init_mat[mn][j].var].name1, Var_init_mat[mn][j].ktype,
-                  Var_init_mat[mn][j].var, Var_init_mat[mn][j].init_val);
+                  Var_Name[goma_ctx->problem.var_init_mat[mn][j].var].name1,
+                  goma_ctx->problem.var_init_mat[mn][j].ktype,
+                  goma_ctx->problem.var_init_mat[mn][j].var,
+                  goma_ctx->problem.var_init_mat[mn][j].init_val);
         }
       }
       /*
@@ -1854,15 +1863,15 @@ void init_vec(
          */
         for (n = 0; n < num_nodes; n++) {
           i = goma_ctx->mesh.proc_elem_connect[index++];
-          nv = Nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
-          for (j = 0; j < Num_Var_Init_Mat[mn]; j++) {
-            int slaved = Var_init_mat[mn][j].slave_block;
+          nv = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+          for (j = 0; j < goma_ctx->problem.num_var_init_mat[mn]; j++) {
+            int slaved = goma_ctx->problem.var_init_mat[mn][j].slave_block;
 
-            var = Var_init_mat[mn][j].var;
+            var = goma_ctx->problem.var_init_mat[mn][j].var;
             nunks = get_nv_ndofs_modMF(nv, var);
 
             if (slaved == 1)
-              slaved = Nodes[i]->Mat_List.Length > 1;
+              slaved = goma_ctx->fem.nodes[i]->Mat_List.Length > 1;
 
             /*
              * We only want to initialize a variable at a node
@@ -1871,19 +1880,19 @@ void init_vec(
              * current element block
              */
             if (nunks > 0 && goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] && !slaved &&
-                Var_init_mat[mn][j].len_u_pars < 0) {
+                goma_ctx->problem.var_init_mat[mn][j].len_u_pars < 0) {
               /*
                * Check against ktype here to make sure we have
                * an associated unknown
                */
-              if (var == MASS_FRACTION &&
-                  Var_init_mat[mn][j].ktype >= goma_ctx->fem.pd->Num_Species_Eqn) {
+              if (var == MASS_FRACTION && goma_ctx->problem.var_init_mat[mn][j].ktype >=
+                                              goma_ctx->fem.pd->Num_Species_Eqn) {
                 continue;
               }
               if (nunks == 1) {
-                ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn,
+                ipos = Index_Solution(i, var, goma_ctx->problem.var_init_mat[mn][j].ktype, 0, mn,
                                       goma_ctx->fem.pg->imtrx);
-                u[ipos] = Var_init_mat[mn][j].init_val;
+                u[ipos] = goma_ctx->problem.var_init_mat[mn][j].init_val;
               } else {
                 /*
                  * Ok, there is more than one degree of freedom for this
@@ -1897,9 +1906,9 @@ void init_vec(
                   /*
                    *  For P0 and P1 interpolation, only first dof is set
                    */
-                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn,
+                  ipos = Index_Solution(i, var, goma_ctx->problem.var_init_mat[mn][j].ktype, 0, mn,
                                         goma_ctx->fem.pg->imtrx);
-                  u[ipos] = Var_init_mat[mn][j].init_val;
+                  u[ipos] = goma_ctx->problem.var_init_mat[mn][j].init_val;
                 } else if (interpType == I_PQ1 || interpType == I_PQ2) {
                   /*
                    * For linear and quadratic discontinuous interpolations
@@ -1914,9 +1923,9 @@ void init_vec(
                   if (interpType == I_PQ2)
                     ndof = 9;
                   for (k = 0; k < ndof; k++) {
-                    ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, k, mn,
-                                          goma_ctx->fem.pg->imtrx);
-                    u[ipos] = Var_init_mat[mn][j].init_val;
+                    ipos = Index_Solution(i, var, goma_ctx->problem.var_init_mat[mn][j].ktype, k,
+                                          mn, goma_ctx->fem.pg->imtrx);
+                    u[ipos] = goma_ctx->problem.var_init_mat[mn][j].init_val;
                   }
                 } else {
                   /*
@@ -1926,9 +1935,9 @@ void init_vec(
                    *   This currently is determined by a even odd
                    *   scheme wrt the element block id.
                    */
-                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn,
+                  ipos = Index_Solution(i, var, goma_ctx->problem.var_init_mat[mn][j].ktype, 0, mn,
                                         goma_ctx->fem.pg->imtrx);
-                  u[ipos] = Var_init_mat[mn][j].init_val;
+                  u[ipos] = goma_ctx->problem.var_init_mat[mn][j].init_val;
                 }
               }
             }
@@ -2061,18 +2070,20 @@ void init_vec(
     }
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
-    if (Num_Var_Init_Mat[mn] > 0) {
+    if (goma_ctx->problem.num_var_init_mat[mn] > 0) {
       e_start = exo->eb_ptr[ebi];
       e_end = exo->eb_ptr[ebi + 1];
 
-      for (j = 0; j < Num_Var_Init_Mat[mn]; j++) {
-        if (Var_init_mat[mn][j].len_u_pars > 0) {
+      for (j = 0; j < goma_ctx->problem.num_var_init_mat[mn]; j++) {
+        if (goma_ctx->problem.var_init_mat[mn][j].len_u_pars > 0) {
           DPRINTF(stdout, "\tSetting MAT %d %s number %d (variable [%d]) to USER %g\n", mn,
-                  Var_Name[Var_init_mat[mn][j].var].name1, Var_init_mat[mn][j].ktype,
-                  Var_init_mat[mn][j].var, Var_init_mat[mn][j].init_val);
+                  Var_Name[goma_ctx->problem.var_init_mat[mn][j].var].name1,
+                  goma_ctx->problem.var_init_mat[mn][j].ktype,
+                  goma_ctx->problem.var_init_mat[mn][j].var,
+                  goma_ctx->problem.var_init_mat[mn][j].init_val);
           DPRINTF(stdout, "\tUser parameters");
-          for (i = 0; i < Var_init_mat[mn][j].len_u_pars; i++) {
-            DPRINTF(stdout, "\t %g", Var_init_mat[mn][j].u_pars[i]);
+          for (i = 0; i < goma_ctx->problem.var_init_mat[mn][j].len_u_pars; i++) {
+            DPRINTF(stdout, "\t %g", goma_ctx->problem.var_init_mat[mn][j].u_pars[i]);
           }
           DPRINTF(stdout, " \n");
         }
@@ -2089,15 +2100,15 @@ void init_vec(
          */
         for (n = 0; n < num_nodes; n++) {
           i = goma_ctx->mesh.proc_elem_connect[index++];
-          nv = Nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
-          for (j = 0; j < Num_Var_Init_Mat[mn]; j++) {
-            int slaved = Var_init_mat[mn][j].slave_block;
+          nv = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+          for (j = 0; j < goma_ctx->problem.num_var_init_mat[mn]; j++) {
+            int slaved = goma_ctx->problem.var_init_mat[mn][j].slave_block;
 
-            var = Var_init_mat[mn][j].var;
+            var = goma_ctx->problem.var_init_mat[mn][j].var;
             nunks = get_nv_ndofs_modMF(nv, var);
 
             if (slaved == 1)
-              slaved = Nodes[i]->Mat_List.Length > 1;
+              slaved = goma_ctx->fem.nodes[i]->Mat_List.Length > 1;
 
             /*
              * We only want to initialize a variable at a node
@@ -2106,7 +2117,7 @@ void init_vec(
              * current element block
              */
             if (nunks > 0 && goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var] && !slaved &&
-                Var_init_mat[mn][j].len_u_pars >= 0) {
+                goma_ctx->problem.var_init_mat[mn][j].len_u_pars >= 0) {
               double xpt[DIM] = {0, 0, 0}, var_val[MAX_VARIABLE_TYPES];
               int dir;
               for (dir = 0; dir < goma_ctx->fem.pd->Num_Dim; dir++) {
@@ -2125,15 +2136,16 @@ void init_vec(
                * Check against ktype here to make sure we have
                * an associated unknown
                */
-              if (var == MASS_FRACTION &&
-                  Var_init_mat[mn][j].ktype >= goma_ctx->fem.pd->Num_Species_Eqn) {
+              if (var == MASS_FRACTION && goma_ctx->problem.var_init_mat[mn][j].ktype >=
+                                              goma_ctx->fem.pd->Num_Species_Eqn) {
                 continue;
               }
               if (nunks == 1) {
-                ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn,
+                ipos = Index_Solution(i, var, goma_ctx->problem.var_init_mat[mn][j].ktype, 0, mn,
                                       goma_ctx->fem.pg->imtrx);
-                u[ipos] = user_mat_init(var, i, Var_init_mat[mn][j].init_val,
-                                        Var_init_mat[mn][j].u_pars, xpt, mn, var_val);
+                u[ipos] =
+                    user_mat_init(var, i, goma_ctx->problem.var_init_mat[mn][j].init_val,
+                                  goma_ctx->problem.var_init_mat[mn][j].u_pars, xpt, mn, var_val);
               } else {
                 /*
                  * Ok, there is more than one degree of freedom for this
@@ -2147,10 +2159,11 @@ void init_vec(
                   /*
                    *  For P0 and P1 interpolation, only first dof is set
                    */
-                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn,
+                  ipos = Index_Solution(i, var, goma_ctx->problem.var_init_mat[mn][j].ktype, 0, mn,
                                         goma_ctx->fem.pg->imtrx);
-                  u[ipos] = user_mat_init(var, i, Var_init_mat[mn][j].init_val,
-                                          Var_init_mat[mn][j].u_pars, xpt, mn, var_val);
+                  u[ipos] =
+                      user_mat_init(var, i, goma_ctx->problem.var_init_mat[mn][j].init_val,
+                                    goma_ctx->problem.var_init_mat[mn][j].u_pars, xpt, mn, var_val);
                 } else if (interpType == I_PQ1 || interpType == I_PQ2) {
                   /*
                    * For linear and quadratic discontinuous interpolations
@@ -2165,10 +2178,11 @@ void init_vec(
                   if (interpType == I_PQ2)
                     ndof = 9;
                   for (k = 0; k < ndof; k++) {
-                    ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, k, mn,
-                                          goma_ctx->fem.pg->imtrx);
-                    u[ipos] = user_mat_init(var, i, Var_init_mat[mn][j].init_val,
-                                            Var_init_mat[mn][j].u_pars, xpt, mn, var_val);
+                    ipos = Index_Solution(i, var, goma_ctx->problem.var_init_mat[mn][j].ktype, k,
+                                          mn, goma_ctx->fem.pg->imtrx);
+                    u[ipos] = user_mat_init(var, i, goma_ctx->problem.var_init_mat[mn][j].init_val,
+                                            goma_ctx->problem.var_init_mat[mn][j].u_pars, xpt, mn,
+                                            var_val);
                   }
                 } else {
                   /*
@@ -2178,10 +2192,11 @@ void init_vec(
                    *   This currently is determined by a even odd
                    *   scheme wrt the element block id.
                    */
-                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn,
+                  ipos = Index_Solution(i, var, goma_ctx->problem.var_init_mat[mn][j].ktype, 0, mn,
                                         goma_ctx->fem.pg->imtrx);
-                  u[ipos] = user_mat_init(var, i, Var_init_mat[mn][j].init_val,
-                                          Var_init_mat[mn][j].u_pars, xpt, mn, var_val);
+                  u[ipos] =
+                      user_mat_init(var, i, goma_ctx->problem.var_init_mat[mn][j].init_val,
+                                    goma_ctx->problem.var_init_mat[mn][j].u_pars, xpt, mn, var_val);
                 }
               }
             }
@@ -2767,7 +2782,8 @@ int rd_vectors_from_exoII(double u[],
           }
         }
 
-        exchange_node(cx[0], DPI_ptr, goma_ctx->fem.efv->ext_fld_ndl_val[variable_no]);
+        exchange_node(goma_ctx->cx[0], goma_ctx->dpi,
+                      goma_ctx->fem.efv->ext_fld_ndl_val[variable_no]);
         free(tmp_vector);
 
         GOMA_EH(error, "ex_get_var nodal");
@@ -3248,9 +3264,9 @@ static void inject_nodal_vec(double sol_vec[],
   int index, i, j, vindex;
   NODAL_VARS_STRUCT *nv;
   VARIABLE_DESCRIPTION_STRUCT *vd;
-  for (i = 0; i < DPI_ptr->num_universe_nodes; i++) {
-    nv = Nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
-    int base_index = EXO_ptr->ghost_node_to_base[i];
+  for (i = 0; i < goma_ctx->dpi->num_universe_nodes; i++) {
+    nv = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+    int base_index = goma_ctx->exo->ghost_node_to_base[i];
     if (base_index != -1) {
       if (matID == -2) {
         for (j = 0; j < (int)nv->Num_Var_Desc_Per_Type[varType]; j++) {
@@ -3263,8 +3279,8 @@ static void inject_nodal_vec(double sol_vec[],
           }
 #endif
           if (k == (int)vd->Subvar_Index) {
-            index = (Nodes[i]->First_Unknown[goma_ctx->fem.pg->imtrx] + nv->Nodal_Offset[vindex] +
-                     idof);
+            index = (goma_ctx->fem.nodes[i]->First_Unknown[goma_ctx->fem.pg->imtrx] +
+                     nv->Nodal_Offset[vindex] + idof);
             sol_vec[index] = nodal_vec[base_index];
           }
         }
@@ -3474,7 +3490,7 @@ int build_node_index_var(const int varType,
   count = 0;
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (node = 0; node < num_nodes; node++) {
-      nv = Nodes[node]->Nodal_Vars_Info[imtrx];
+      nv = goma_ctx->fem.nodes[node]->Nodal_Vars_Info[imtrx];
       if (nv->Num_Var_Desc_Per_Type[varType] > 0) {
         map[count] = node_index_global[node];
         var_node_list[count] = node;
@@ -3510,7 +3526,7 @@ int count_vardofs(const int varType, const int num_nodes) {
   count = 0;
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (node = 0; node < num_nodes; node++) {
-      nv = Nodes[node]->Nodal_Vars_Info[imtrx];
+      nv = goma_ctx->fem.nodes[node]->Nodal_Vars_Info[imtrx];
       nun = get_nv_ndofs_modMF(nv, varType);
       count += nun;
     }

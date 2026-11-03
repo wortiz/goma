@@ -130,7 +130,6 @@
  *     solution vector at each node at each matrix.
  *        Dimension = [upd->Total_Num_Matrices][total_num_nodes];
  */
-int **First_Unknown = NULL;
 
 /*
  * dofname -- holds strings telling the name of the variable (u1, T, P, etc)
@@ -148,7 +147,6 @@ int **First_Unknown = NULL;
  * rf_mask.h
  */
 int Inter_Mask[MAX_NUM_MATRICES][MAX_VARIABLE_TYPES][MAX_VARIABLE_TYPES] = {{{0}}};
-int Ignore_Deps[MAX_NUM_MATRICES][MAX_VARIABLE_TYPES][MAX_VARIABLE_TYPES];
 
 /*
  * Prototypes declarations of static functions defined in this file.
@@ -229,13 +227,14 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
    *  other pointer arrays into the solution vector. The Variable_Mask
    *  structure is an array of bit fields.
    */
-  First_Unknown = (int **)malloc((goma_ctx->fem.upd->Total_Num_Matrices) * sizeof(int *));
+  goma_ctx->problem.first_unknown =
+      (int **)malloc((goma_ctx->fem.upd->Total_Num_Matrices) * sizeof(int *));
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    First_Unknown[imtrx] = (int *)malloc(total_nodes * sizeof(int));
+    goma_ctx->problem.first_unknown[imtrx] = (int *)malloc(total_nodes * sizeof(int));
   }
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
-      First_Unknown[imtrx][i] = -1;
+      goma_ctx->problem.first_unknown[imtrx][i] = -1;
     }
   }
   /*
@@ -440,7 +439,7 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
        * Copy the pointer to the node vars structure into the node_info
        * structure for the current node.
        */
-      Nodes[i]->Nodal_Vars_Info[imtrx] = nv_match;
+      goma_ctx->fem.nodes[i]->Nodal_Vars_Info[imtrx] = nv_match;
 
       /*
        * Do a consistency check between the new and old way of
@@ -502,7 +501,7 @@ void print_vars_at_nodes(void)
 
   maxLength = -1;
   for (i = 0; i < total_nodes; i++) {
-    node_ptr = Nodes[i];
+    node_ptr = goma_ctx->fem.nodes[i];
     list = &(node_ptr->Mat_List);
     maxLength = MAX(maxLength, list->Length);
   }
@@ -515,7 +514,7 @@ void print_vars_at_nodes(void)
   fprint_line(stdout, "-", 80);
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
-      node_ptr = Nodes[i];
+      node_ptr = goma_ctx->fem.nodes[i];
       nv = node_ptr->Nodal_Vars_Info[imtrx];
       printf("%-6d %-6d|", i, node_ptr->Global_Node_Num);
       list = &(node_ptr->Mat_List);
@@ -614,7 +613,7 @@ void setup_external_nodal_vars(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
       for (i = 0; i < goma_ctx->problem.ptr_node_send[dpi->num_neighbors]; i++) {
         node_num = goma_ctx->problem.list_node_send[i];
         nvp[imtrx] = nvp_send[imtrx] + i * goma_ctx->problem.max_var_per_node;
-        pack_nv(nvp[imtrx], Nodes[node_num]->Nodal_Vars_Info[imtrx]);
+        pack_nv(nvp[imtrx], goma_ctx->fem.nodes[node_num]->Nodal_Vars_Info[imtrx]);
       }
 
       np_ptr = np_base[imtrx];
@@ -656,12 +655,12 @@ void setup_external_nodal_vars(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
          * Copy the pointer to the node vars structure into the node_info
          * structure for the current node.
          */
-        Nodes[node_num]->Nodal_Vars_Info[imtrx] = nv_match;
+        goma_ctx->fem.nodes[node_num]->Nodal_Vars_Info[imtrx] = nv_match;
 
         /*
          * Fill in other node structure information
          */
-        Nodes[node_num]->Proc_Node_Num = node_num;
+        goma_ctx->fem.nodes[node_num]->Proc_Node_Num = node_num;
 
         /*
          *  Fill in the correct results for the number of degrees of freedom
@@ -719,8 +718,8 @@ int find_MaxUnknownNode(void)
   int maxUnknowns = -1, gmax = 0;
   NODAL_VARS_STRUCT *nv;
 
-  for (i = 0; i < Nodal_Vars_List_Length; i++) {
-    nv = Nodal_Vars_List[i];
+  for (i = 0; i < goma_ctx->problem.nodal_vars_list_length; i++) {
+    nv = goma_ctx->problem.nodal_vars_list[i];
     if (nv->Num_Unknowns > maxUnknowns) {
       maxUnknowns = nv->Num_Unknowns;
     }
@@ -782,7 +781,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
        * Store the pointer to the nodal variables info at the
        * current node
        */
-      nv = Nodes[i]->Nodal_Vars_Info[imtrx];
+      nv = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[imtrx];
 
       count = 0;
       for (var_type = V_FIRST; var_type < V_LAST; var_type++) {
@@ -819,7 +818,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    */
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
-      nv = Nodes[i]->Nodal_Vars_Info[imtrx];
+      nv = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[imtrx];
       if (nv->Num_Unknowns == -1) {
         fprintf(stderr, "P_%d: local node index (%d) at matrix %d lost track.\n", goma_ctx->proc_id,
                 i + 1, imtrx + 1);
@@ -849,7 +848,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     goma_ctx->problem.num_internal_dofs[imtrx] = 0;
     for (i = 0; i < goma_ctx->mesh.num_internal_nodes; i++) {
-      nv = Nodes[i]->Nodal_Vars_Info[imtrx];
+      nv = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[imtrx];
       goma_ctx->problem.num_internal_dofs[imtrx] += nv->Num_Unknowns;
     }
   }
@@ -861,7 +860,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
     goma_ctx->problem.num_boundary_dofs[imtrx] = 0;
     for (i = goma_ctx->mesh.num_internal_nodes;
          i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes; i++) {
-      nv = Nodes[i]->Nodal_Vars_Info[imtrx];
+      nv = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[imtrx];
       goma_ctx->problem.num_boundary_dofs[imtrx] += nv->Num_Unknowns;
     }
   }
@@ -876,7 +875,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
          i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
                  goma_ctx->mesh.num_external_nodes;
          i++) {
-      nv = Nodes[i]->Nodal_Vars_Info[imtrx];
+      nv = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[imtrx];
       goma_ctx->problem.num_external_dofs[imtrx] += nv->Num_Unknowns;
     }
   }
@@ -966,9 +965,9 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     index = 0;
     for (i = 0; i < total_nodes; i++) {
-      First_Unknown[imtrx][i] = index;
-      Nodes[i]->First_Unknown[imtrx] = index;
-      nv = Nodes[i]->Nodal_Vars_Info[imtrx];
+      goma_ctx->problem.first_unknown[imtrx][i] = index;
+      goma_ctx->fem.nodes[i]->First_Unknown[imtrx] = index;
+      nv = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[imtrx];
       index += nv->Num_Unknowns;
     }
   }
@@ -1025,8 +1024,8 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    */
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
-      nv = Nodes[i]->Nodal_Vars_Info[imtrx];
-      gcount = First_Unknown[imtrx][i];
+      nv = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[imtrx];
+      gcount = goma_ctx->problem.first_unknown[imtrx][i];
 
       if (goma_ctx->num_proc > 1) {
         gdof = gcount;
@@ -1225,7 +1224,7 @@ static void set_interaction_masks(Exo_DB *exo)
   for (imtrx = 0; imtrx < MAX_NUM_MATRICES; imtrx++) {
     for (n = 0; n < MAX_VARIABLE_TYPES; n++) {
       for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
-        Inter_Mask[imtrx][n][i] = 0;
+        goma_ctx->problem.inter_mask[imtrx][n][i] = 0;
         eqn_var_mask[imtrx][n][i] = 0;
       }
     }
@@ -5264,7 +5263,7 @@ static void set_interaction_masks(Exo_DB *exo)
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (e = 0; e < MAX_EQNS; e++) {
       for (v = 0; v < MAX_VARIABLE_TYPES; v++) {
-        if (Ignore_Deps[imtrx][e][v])
+        if (goma_ctx->problem.ignore_deps[imtrx][e][v])
           eqn_var_mask[imtrx][e][v] = 0;
       }
     }
@@ -5284,7 +5283,7 @@ static void set_interaction_masks(Exo_DB *exo)
     for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       for (e = 0; e < MAX_EQNS; e++) {
         for (v = 0; v < MAX_VARIABLE_TYPES; v++) {
-          Inter_Mask[imtrx][e][v] |=
+          goma_ctx->problem.inter_mask[imtrx][e][v] |=
               (goma_ctx->fem.pd_glob[mn]->e[imtrx][e] & eqn_var_mask[imtrx][e][v]) ? 1 : 0;
         }
       }
@@ -5297,7 +5296,7 @@ static void set_interaction_masks(Exo_DB *exo)
       for (n = 0; n < MAX_VARIABLE_TYPES; n++) {
         printf("\n");
         for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
-          printf(" %d ", Inter_Mask[imtrx][n][i]);
+          printf(" %d ", goma_ctx->problem.inter_mask[imtrx][n][i]);
         }
       }
     }
@@ -5367,7 +5366,7 @@ int Index_Solution(const int nodeNum,
   /*
    * Pointer to the node info struct for this node
    */
-  NODE_INFO_STRUCT *node_ptr = Nodes[nodeNum];
+  NODE_INFO_STRUCT *node_ptr = goma_ctx->fem.nodes[nodeNum];
   NODAL_VARS_STRUCT *nv = node_ptr->Nodal_Vars_Info[imtrx];
   VARIABLE_DESCRIPTION_STRUCT *vd_match = NULL, *vd;
   /*
@@ -5596,8 +5595,8 @@ VARIABLE_DESCRIPTION_STRUCT *Index_Solution_Inv(
    * increasing function of the processor node number.
    *  Note: log(N) cost so this is well worth it.
    */
-  top = DPI_ptr->num_owned_nodes + DPI_ptr->num_external_nodes - 1;
-  val_top = Nodes[top]->First_Unknown[imtrx];
+  top = goma_ctx->dpi->num_owned_nodes + goma_ctx->dpi->num_external_nodes - 1;
+  val_top = goma_ctx->fem.nodes[top]->First_Unknown[imtrx];
   if (gindex >= val_top) {
     Inode = top;
     goto found_node;
@@ -5611,13 +5610,13 @@ VARIABLE_DESCRIPTION_STRUCT *Index_Solution_Inv(
   if (inode) {
     middle = (int)(*inode);
     if (middle >= 0 && middle < top) {
-      if (gindex < Nodes[middle + 1]->First_Unknown[imtrx]) {
-        if (gindex >= Nodes[middle]->First_Unknown[imtrx]) {
+      if (gindex < goma_ctx->fem.nodes[middle + 1]->First_Unknown[imtrx]) {
+        if (gindex >= goma_ctx->fem.nodes[middle]->First_Unknown[imtrx]) {
           Inode = middle;
           goto found_node;
         }
       } else {
-        if (gindex < Nodes[middle + 2]->First_Unknown[imtrx]) {
+        if (gindex < goma_ctx->fem.nodes[middle + 2]->First_Unknown[imtrx]) {
           Inode = middle + 1;
           goto found_node;
         }
@@ -5630,7 +5629,7 @@ VARIABLE_DESCRIPTION_STRUCT *Index_Solution_Inv(
   bottom = 0;
   while ((diff = top - bottom) > 1) {
     middle = bottom + diff / 2;
-    val_mid = Nodes[middle]->First_Unknown[imtrx];
+    val_mid = goma_ctx->fem.nodes[middle]->First_Unknown[imtrx];
     if (gindex > val_mid) {
       bottom = middle;
     } else if (gindex < val_mid) {
@@ -5654,17 +5653,17 @@ found_node:;
    * until we hit a node with unknowns.
    */
 
-  nv = Nodes[Inode]->Nodal_Vars_Info[imtrx];
+  nv = goma_ctx->fem.nodes[Inode]->Nodal_Vars_Info[imtrx];
   while (nv->Num_Unknowns == 0) {
     Inode++;
-    nv = Nodes[Inode]->Nodal_Vars_Info[imtrx];
+    nv = goma_ctx->fem.nodes[Inode]->Nodal_Vars_Info[imtrx];
   }
   /*
    * OK, we found the global node number, Inode.
    */
   if (inode)
     *inode = Inode;
-  I_offset = gindex - Nodes[Inode]->First_Unknown[imtrx];
+  I_offset = gindex - goma_ctx->fem.nodes[Inode]->First_Unknown[imtrx];
   if (i_offset)
     *i_offset = I_offset;
   bottom = 0;

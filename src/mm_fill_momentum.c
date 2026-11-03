@@ -534,7 +534,7 @@ int assemble_momentum(dbl time,       /* current time */
           grad_phi_i_e_a = bfm->grad_phi_e[i][a];
 
           /* this is an optimization for xfem */
-          if (xfem != NULL) {
+          if (goma_ctx->fem.xfem != NULL) {
             int xfem_active, extended_dof, base_interp, base_dof;
             xfem_dof_state(i, goma_ctx->fem.pd->i[pg->imtrx][eqn], ei[pg->imtrx]->ielem_shape,
                            &xfem_active, &extended_dof, &base_interp, &base_dof);
@@ -726,7 +726,7 @@ int assemble_momentum(dbl time,       /* current time */
           grad_phi_i_e_a = bfm->grad_phi_e[i][a];
 
           /* this is an optimization for xfem */
-          if (xfem != NULL) {
+          if (goma_ctx->fem.xfem != NULL) {
             int xfem_active, extended_dof, base_interp, base_dof;
             xfem_dof_state(i, goma_ctx->fem.pd->i[pg->imtrx][eqn], ei[pg->imtrx]->ielem_shape,
                            &xfem_active, &extended_dof, &base_interp, &base_dof);

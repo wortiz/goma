@@ -6097,7 +6097,7 @@ void load_neighbor_pointers(Exo_DB *exo,
          * (according to this element) Note: this can be zero...
          *
          */
-        nv = Nodes[gnn]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+        nv = goma_ctx->fem.nodes[gnn]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
         nunks = get_nv_ndofs_modMF(nv, v);
         dof[v] += nunks;
         GOMA_EH(nunks, "problem with nun for this var.");

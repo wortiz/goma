@@ -270,7 +270,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
               elem_block_index = find_elemblock_index(ielem, exo);
               matID = goma_ctx->problem.matilda[elem_block_index];
               if (goma_ctx->bc.bc_types[ibc].BC_EBID_Apply != -1) {
-                if (Element_Blocks[elem_block_index].Elem_Blk_Id !=
+                if (goma_ctx->fem.element_blocks[elem_block_index].Elem_Blk_Id !=
                     goma_ctx->bc.bc_types[ibc].BC_EBID_Apply) {
                   continue;
                 }
@@ -430,7 +430,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
     mn = find_mat_number(goma_ctx->bc.pressure_datum_element, exo);
     for (n = 0; n < num_nodes; n++) {
       inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + n];
-      node = Nodes[inode];
+      node = goma_ctx->fem.nodes[inode];
       nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
       if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][PRESSURE] > 0 && datum_set) {
         datum_set = 0;
@@ -480,7 +480,7 @@ static int set_nodal_Dirichlet_BC(int inode,
 {
   int eqn, w, ieqn, offset;
   int ndof = 0;
-  NODE_INFO_STRUCT *node = Nodes[inode];
+  NODE_INFO_STRUCT *node = goma_ctx->fem.nodes[inode];
   NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
   VARIABLE_DESCRIPTION_STRUCT *vd;
   /*
@@ -1899,7 +1899,7 @@ int find_bc_unk_offset(struct Boundary_Condition *bc,
   int matIndex = -1, ndofs_ieqn, offset, imat;
   struct BC_descriptions *bc_desc = bc->desc;
   int ieqn = bc_desc->equation + p;
-  NODE_INFO_STRUCT *node = Nodes[inode];
+  NODE_INFO_STRUCT *node = goma_ctx->fem.nodes[inode];
   NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
   PROBLEM_DESCRIPTION_STRUCT *pd_curr = 0;
   int bc_name = bc_desc->BC_Name;
@@ -2634,7 +2634,7 @@ static void elem_side_matrl_list(struct elem_side_bc_struct *side)
   node_list = side->local_node_id;
   matrl_list = alloc_int_1(goma_ctx->fem.upd->Num_Mat, 0);
   for (i = 0; i < num_nodes; i++) {
-    node = Nodes[node_list[i]];
+    node = goma_ctx->fem.nodes[node_list[i]];
     mlist = &(node->Mat_List);
     for (j = 0; j < mlist->Length; j++) {
 #ifdef DEBUG_IGNORE_ELEMENT_BLOCK_CAPABILITY
@@ -2686,7 +2686,7 @@ static void vcrr_determination(struct elem_side_bc_struct *side,
       /*
        * Find the current material
        */
-      ebn = find_elemblock_index(ielem, EXO_ptr);
+      ebn = find_elemblock_index(ielem, goma_ctx->exo);
       mn = goma_ctx->problem.matilda[ebn];
       mn_low = MIN(bc->BC_matrl_index_1, bc->BC_matrl_index_2);
       if (mn_low != mn) {
@@ -2705,7 +2705,7 @@ static void vcrr_determination(struct elem_side_bc_struct *side,
         for (i = 0; i < side->num_nodes_on_side; i++) {
           node_num = side->local_node_id[i];
           lnn = side->local_elem_node_id[i];
-          node_info = Nodes[node_num];
+          node_info = goma_ctx->fem.nodes[node_num];
           if (!(node_info->Resid_Wksp)) {
             node_info->Resid_Wksp = nodal_resid_wksp_alloc();
           }

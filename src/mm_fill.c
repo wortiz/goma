@@ -124,9 +124,6 @@
  * total assembly time for all the elements and not just one element.
  */
 
-double mm_fill_total;
-extern int PRS_mat_ielem;
-
 static void load_lec(Exo_DB *, /* Exodus database pointer */
                      int,      /* element number we are working on */
                      struct GomaLinearSolverData *,
@@ -188,7 +185,7 @@ int matrix_fill_full(struct GomaLinearSolverData *ams,
   }
 #endif
 
-  if (xfem != NULL)
+  if (goma_ctx->fem.xfem != NULL)
     clear_xfem_contribution(ams->npu);
 
 #define DEBUG_LS_INTEGRATION 0
@@ -212,14 +209,15 @@ int matrix_fill_full(struct GomaLinearSolverData *ams,
    * -> This would be a good spot to loop over each element block instead
    *    Then allocate memory here for common data elements
    */
-  neg_elem_volume = FALSE;
-  neg_lub_height = FALSE;
-  zero_detJ = FALSE;
+  goma_ctx->solver.neg_elem_volume = FALSE;
+  goma_ctx->solver.neg_lub_height = FALSE;
+  goma_ctx->solver.zero_detj = FALSE;
 
   e_start = exo->eb_ptr[0];
   e_end = exo->eb_ptr[exo->num_elem_blocks];
 
-  for (ielem = e_start, ebn = 0; ielem < e_end && !neg_elem_volume && !neg_lub_height && !zero_detJ;
+  for (ielem = e_start, ebn = 0; ielem < e_end && !goma_ctx->solver.neg_elem_volume &&
+                                 !goma_ctx->solver.neg_lub_height && !goma_ctx->solver.zero_detj;
        ielem++) {
 
     /*First we must calculate the material-referenced element
@@ -232,7 +230,7 @@ int matrix_fill_full(struct GomaLinearSolverData *ams,
     }
 
     /*needed for saturation hyst. func. */
-    PRS_mat_ielem = ielem - exo->eb_ptr[ebn];
+    goma_ctx->fem.prs_mat_ielem = ielem - exo->eb_ptr[ebn];
 
     err = matrix_fill(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, ptr_delta_t,
                       ptr_theta, first_elem_side_BC_array, ptr_time_value, exo, dpi, &ielem,
@@ -241,17 +239,17 @@ int matrix_fill_full(struct GomaLinearSolverData *ams,
     if (err)
       break;
 
-    if (neg_elem_volume) {
+    if (goma_ctx->solver.neg_elem_volume) {
       log_msg("Negative elem det J in element (%d)", ielem + 1);
       if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->SubElemIntegration)
         subelement_mesh_output(x, exo);
     }
 
-    if (neg_lub_height) {
+    if (goma_ctx->solver.neg_lub_height) {
       log_msg("Negative lubrication height in element (%d)", ielem + 1);
     }
 
-    if (zero_detJ) {
+    if (goma_ctx->solver.zero_detj) {
       log_msg("Zero determinant of Jacobian of transformation (%d)", ielem + 1);
     }
   }
@@ -266,14 +264,17 @@ int matrix_fill_full(struct GomaLinearSolverData *ams,
    * volume in an element and negative lubrication height
    */
 #ifdef PARALLEL
-  MPI_Allreduce(&neg_elem_volume, &neg_elem_volume_global, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  neg_elem_volume = neg_elem_volume_global;
+  MPI_Allreduce(&goma_ctx->solver.neg_elem_volume, &goma_ctx->solver.neg_elem_volume_global, 1,
+                MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  goma_ctx->solver.neg_elem_volume = goma_ctx->solver.neg_elem_volume_global;
 
-  MPI_Allreduce(&neg_lub_height, &neg_lub_height_global, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  neg_lub_height = neg_lub_height_global;
+  MPI_Allreduce(&goma_ctx->solver.neg_lub_height, &goma_ctx->solver.neg_lub_height_global, 1,
+                MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  goma_ctx->solver.neg_lub_height = goma_ctx->solver.neg_lub_height_global;
 
-  MPI_Allreduce(&zero_detJ, &zero_detJ_global, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  zero_detJ = zero_detJ_global;
+  MPI_Allreduce(&goma_ctx->solver.zero_detj, &goma_ctx->solver.zero_detj_global, 1, MPI_INT,
+                MPI_MAX, MPI_COMM_WORLD);
+  goma_ctx->solver.zero_detj = goma_ctx->solver.zero_detj_global;
 
   MPI_Allreduce(&err, &err_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   err = err_global;
@@ -288,7 +289,7 @@ int matrix_fill_full(struct GomaLinearSolverData *ams,
    * debug mode
    */
 
-  if (xfem != NULL)
+  if (goma_ctx->fem.xfem != NULL)
     check_xfem_contribution(ams->npu, ams, resid_vector, x, exo);
 
 #if DEBUG_LS_INTEGRATION
@@ -300,11 +301,11 @@ int matrix_fill_full(struct GomaLinearSolverData *ams,
   }
 #endif
 
-  if (neg_elem_volume)
+  if (goma_ctx->solver.neg_elem_volume)
     return -1;
-  if (neg_lub_height)
+  if (goma_ctx->solver.neg_lub_height)
     return -1;
-  if (zero_detJ)
+  if (goma_ctx->solver.zero_detj)
     return -1;
 
   return 0;
@@ -559,7 +560,7 @@ Revised:         Summer 1998, SY Tam (UNM)
           int n_nodes = exo->ns_num_nodes[nsp];
           if (n_nodes > 0) {
             nspk = exo->ns_node_list[exo->ns_node_index[nsp]];
-            if (Nodes[nspk]->Proc == goma_ctx->proc_id) {
+            if (goma_ctx->fem.nodes[nspk]->Proc == goma_ctx->proc_id) {
               count++;
               CA_proc[count] = goma_ctx->proc_id;
             }
@@ -572,7 +573,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     /*
      * Initialize the accumulated CPU time for assembly...
      */
-    mm_fill_total = 0;
+    goma_ctx->fem.mm_fill_total = 0;
   }
 
   /*
@@ -678,9 +679,9 @@ Revised:         Summer 1998, SY Tam (UNM)
                                                           &Subgrid_Int.ip_sign, 0., -2, 0);
     /*DPRINTF(stderr,"DEBUG ielem=%d, ip_total=%d\n",ei[pg->imtrx]->ielem,Subgrid_Int.ip_total);*/
 #else
-    Subgrid_Int.ip_total =
-        get_subgrid_integration_pts(Subgrid_Tree, &element_search_grid, &Subgrid_Int.s,
-                                    &Subgrid_Int.wt, goma_ctx->fem.ls->Length_Scale);
+    Subgrid_Int.ip_total = get_subgrid_integration_pts(
+        goma_ctx->fem.subgrid_tree, &element_search_grid, &Subgrid_Int.s, &Subgrid_Int.wt,
+        goma_ctx->fem.ls->Length_Scale);
     /*DPRINTF(stderr,"DEBUG ielem=%d, ip_total=%d\n",ei[pg->imtrx]->ielem,Subgrid_Int.ip_total);*/
 #endif
 #if 0
@@ -691,11 +692,11 @@ Revised:         Summer 1998, SY Tam (UNM)
     Subgrid_Int.active = TRUE;
     Subgrid_Int.ip_total = get_subelement_integration_pts(&Subgrid_Int.s, &Subgrid_Int.wt,
                                                           &Subgrid_Int.ip_sign, 0., -2, 0);
-    if (neg_elem_volume) {
+    if (goma_ctx->solver.neg_elem_volume) {
 #if 0
 	  /* Squawk then turn off the switch. */
           GOMA_WH( -1, "Negative subelement volume detected.");
-	  neg_elem_volume = FALSE;
+	  goma_ctx->solver.neg_elem_volume = FALSE;
 #endif
 #if 1
       /* Squawk then fail timestep. */
@@ -721,7 +722,7 @@ Revised:         Summer 1998, SY Tam (UNM)
   /* XFEM setup */
   /* DRN-now using check_xfem_contribution to do this */
 #if 0
-  if ( xfem!= NULL ) kill_extended_eqns( x, exo );
+  if ( goma_ctx->fem.xfem!= NULL ) kill_extended_eqns( x, exo );
 #endif
   if (goma_ctx->fem.ls != NULL)
     goma_ctx->fem.ls->Elem_Sign = 0;
@@ -1062,7 +1063,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     for (ip = 0; ip < ip_total; ip++) {
-      MMH_ip = ip;
+      goma_ctx->fem.mmh_ip = ip;
 
       find_stu(ip, ielem_type, &s, &t, &u); /* find quadrature point */
       wt = Gq_weight(ip, ielem_type);       /* find quadrature weights for */
@@ -1106,9 +1107,9 @@ Revised:         Summer 1998, SY Tam (UNM)
 
       err = beer_belly();
       GOMA_EH(err, "beer_belly");
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         return -1;
-      if (zero_detJ)
+      if (goma_ctx->solver.zero_detj)
         return -1;
 
       /*
@@ -1232,7 +1233,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     ip_total = elem_info(NQUAD, ielem_type);
   } else if (goma_ctx->fem.ls->Integration_Depth == 0 && !goma_ctx->fem.ls->SubElemIntegration &&
              !goma_ctx->fem.ls->AdaptIntegration) {
-    if (xfem != NULL) {
+    if (goma_ctx->fem.xfem != NULL) {
       /* case 2: XFEM with normal gauss integration */
       ip_total = 2 * elem_info(NQUAD, ielem_type);
     } else {
@@ -1240,7 +1241,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       ip_total = elem_info(NQUAD, ielem_type);
     }
   } else if (Subgrid_Int.active && goma_ctx->fem.ls->Integration_Depth > 0) {
-    if (xfem != NULL) {
+    if (goma_ctx->fem.xfem != NULL) {
       /* case 4: XFEM with subgrid integration */
       ip_total = 2 * Subgrid_Int.ip_total;
     } else {
@@ -1254,7 +1255,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     /* case 7: Adaptive weight integration - same as case 2 and 3 */
     ip_total = elem_info(NQUAD, ielem_type);
 
-    if (xfem != NULL) {
+    if (goma_ctx->fem.xfem != NULL) {
       for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
         ls_F[i] = *esp->F[i];
       }
@@ -1276,7 +1277,7 @@ Revised:         Summer 1998, SY Tam (UNM)
   /* Loop over all the Volume Quadrature integration points */
 
   for (ip = 0; ip < ip_total; ip++) {
-    MMH_ip = ip;
+    goma_ctx->fem.mmh_ip = ip;
 
     if (goma_ctx->fem.ls == NULL || !goma_ctx->fem.ls->elem_overlap_state) {
       /* case 1: normal gauss integration */
@@ -1284,7 +1285,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       wt = Gq_weight(ip, ielem_type);       /* find quadrature weights for */
     } else if (goma_ctx->fem.ls->Integration_Depth == 0 && !goma_ctx->fem.ls->SubElemIntegration &&
                !goma_ctx->fem.ls->AdaptIntegration) {
-      if (xfem != NULL) {
+      if (goma_ctx->fem.xfem != NULL) {
         /* case 2: XFEM with normal gauss integration */
         find_stu(ip / 2, ielem_type, &s, &t, &u); /* find quadrature point */
         wt = Gq_weight(ip / 2, ielem_type);       /* find quadrature weights for */
@@ -1299,7 +1300,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         goma_ctx->fem.ls->Elem_Sign = 0;
       }
     } else if (Subgrid_Int.active && goma_ctx->fem.ls->Integration_Depth > 0) {
-      if (xfem != NULL) {
+      if (goma_ctx->fem.xfem != NULL) {
         /* case 4: XFEM with subgrid integration */
         s = Subgrid_Int.s[ip / 2][0];
         t = Subgrid_Int.s[ip / 2][1];
@@ -1326,7 +1327,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       goma_ctx->fem.ls->Elem_Sign = Subgrid_Int.ip_sign[ip];
     } else if (Subgrid_Int.active && goma_ctx->fem.ls->AdaptIntegration) {
       /* case 7: Adaptive weight integration - similiar to case 2 and 3 */
-      if (xfem != NULL) {
+      if (goma_ctx->fem.xfem != NULL) {
         find_stu(ip / 2, ielem_type, &s, &t, &u); /* find quadrature point */
         if (ip % 2 == 0) {
           wt = ad_wtneg[ip_total / 2 - 1 - ip / 2];
@@ -1382,9 +1383,9 @@ Revised:         Summer 1998, SY Tam (UNM)
 
     err = beer_belly();
     GOMA_EH(err, "beer_belly");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return -1;
-    if (zero_detJ)
+    if (goma_ctx->solver.zero_detj)
       return -1;
 
     /*
@@ -1444,8 +1445,9 @@ Revised:         Summer 1998, SY Tam (UNM)
 
     /* special section for XFEM with diffuse integration */
     /* this is cases 2 and 4 from above */
-    if (goma_ctx->fem.ls != NULL && xfem != NULL && goma_ctx->fem.ls->elem_overlap_state &&
-        !goma_ctx->fem.ls->SubElemIntegration && !goma_ctx->fem.ls->AdaptIntegration) {
+    if (goma_ctx->fem.ls != NULL && goma_ctx->fem.xfem != NULL &&
+        goma_ctx->fem.ls->elem_overlap_state && !goma_ctx->fem.ls->SubElemIntegration &&
+        !goma_ctx->fem.ls->AdaptIntegration) {
       load_lsi(goma_ctx->fem.ls->Length_Scale);
       if (goma_ctx->fem.ls->Elem_Sign == -1) {
         wt *= 1. - goma_ctx->fem.lsi->H;
@@ -1475,7 +1477,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       }
     }
 #endif
-    if (xfem != NULL) {
+    if (goma_ctx->fem.xfem != NULL) {
       compute_xfem_contribution(ams->npu);
     }
 
@@ -1700,7 +1702,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (err)
         return -1;
 #endif
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         return -1;
     } else if (pde[R_MESH1] && !pde[R_SHELL_CURVATURE] && !pde[R_SHELL_TENSION]) {
       err = assemble_mesh(time_value, theta, delta_t, ielem, ip, ip_total);
@@ -1710,7 +1712,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (err)
         return -1;
 #endif
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         return -1;
     }
 
@@ -1736,7 +1738,8 @@ Revised:         Summer 1998, SY Tam (UNM)
           GOMA_EH(err, "problem in getting the partially-saturated porous  terms");
 
           /* Determine what curve to follow and if switch is in order */
-          err = evaluate_sat_hyst_criterion(ip, PRS_mat_ielem, &pm_terms, theta, delta_t);
+          err = evaluate_sat_hyst_criterion(ip, goma_ctx->fem.prs_mat_ielem, &pm_terms, theta,
+                                            delta_t);
 
           /* Now that you have re-evaluated the switching parameter,
            * load up the saturation again in this case.
@@ -1758,7 +1761,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
     }
@@ -1771,7 +1774,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (err)
         return -1;
 #endif
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         return -1;
     }
 
@@ -1911,7 +1914,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (err)
         return -1;
 #endif
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         return -1;
     }
 
@@ -2138,7 +2141,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (err)
         return -1;
 #endif
-      if (neg_lub_height)
+      if (goma_ctx->solver.neg_lub_height)
         return -1;
     }
 
@@ -2150,7 +2153,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (err)
         return -1;
 #endif
-      if (neg_lub_height)
+      if (goma_ctx->solver.neg_lub_height)
         return -1;
     }
 
@@ -2163,7 +2166,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (err)
         return -1;
 #endif
-      if (neg_lub_height)
+      if (goma_ctx->solver.neg_lub_height)
         return -1;
     }
 
@@ -2526,7 +2529,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       }
 #endif
 
-      if (neg_lub_height) {
+      if (goma_ctx->solver.neg_lub_height) {
         GOMA_WH(
             -1,
             "returning from matrix fill because neg_lub_height after assemble_shell_lubrication");
@@ -2756,7 +2759,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 #ifdef CHECK_FINITE
         CHECKFINITE("assemble_continuity");
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       } else {
         if (upd->AutoDiff) {
@@ -2773,7 +2776,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 #ifdef CHECK_FINITE
         CHECKFINITE("assemble_continuity");
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
     }
@@ -2785,7 +2788,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 #ifdef CHECK_FINITE
         CHECKFINITE("assemble_pstar");
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       } else {
         GOMA_EH(-1, "Only implemented for Segregated Solve");
@@ -2799,7 +2802,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 #ifdef CHECK_FINITE
         CHECKFINITE("assemble_ustar");
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       } else {
         GOMA_EH(-1, "Only implemented for Segregated Solve");
@@ -3080,7 +3083,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         }
         if ((goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_SHELL_GRAD ||
              goma_ctx->bc.bc_types[bc_input_id].desc->method == STRONG_SHELL_GRAD) &&
-            (num_elem_friends[ielem] > 0) && (ielem_dim > 1)) {
+            (goma_ctx->fem.num_elem_friends[ielem] > 0) && (ielem_dim > 1)) {
           call_shell_grad = TRUE;
         }
         if (goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_SHARP_INT)
@@ -3098,7 +3101,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -3113,7 +3116,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
       if (call_sharp_int) {
@@ -3127,7 +3130,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (err)
         return -1;
 #endif
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         return -1;
       if (call_nedelec) {
         err = apply_nedelec_bc(x, resid_vector, delta_t, theta, &pg_data, ielem, ielem_type,
@@ -3140,7 +3143,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -3189,7 +3192,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
       /****************************************************************************/
@@ -3512,7 +3515,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -3539,7 +3542,7 @@ Revised:         Summer 1998, SY Tam (UNM)
           id3,  lec->R[1][id3]);
           }*/
 
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -3562,7 +3565,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -3592,7 +3595,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
 
         goma_ctx->fem.ls = ls_save;
@@ -3616,7 +3619,7 @@ Revised:         Summer 1998, SY Tam (UNM)
           id3,  lec->R[1][id3]);
           }*/
 
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
       /****************************************************************************/
@@ -3665,7 +3668,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -3684,7 +3687,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -3715,7 +3718,7 @@ Revised:         Summer 1998, SY Tam (UNM)
   if (pde[R_MESH1] && pde[R_SHELL_TENSION]) {
     for (i = 0; i < num_local_nodes; i++) {
       I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
-      node = Nodes[I];
+      node = goma_ctx->fem.nodes[I];
       /*Now apply condition */
       if (node->DBSH_SLOPE_X == 1) {
         eqn = R_MESH1;
@@ -3728,7 +3731,8 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
   }
 
-  if ((Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE) &&
+  if ((goma_ctx->problem.linear_stability == LSA_3D_OF_2D ||
+       goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE) &&
       !(af->Assemble_LSA_Jacobian_Matrix) && !(af->Assemble_LSA_Mass_Matrix))
     /* Cheap, but effective!  Zero out the equation rows for
      * R_MOMENTUM3, and the columns for sensitivities to VELOCITY3,
@@ -3750,8 +3754,10 @@ Revised:         Summer 1998, SY Tam (UNM)
    * condition" for all internal nodes, so we put a 1 on the diagonal
    * for the same reason(s) as above.  We don't want this to be
    * subtracted out, so we only apply it on one pass. */
-  if ((Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE) &&
-      af->Assemble_LSA_Jacobian_Matrix && LSA_3D_of_2D_wave_number == 0 && LSA_3D_of_2D_pass == 1)
+  if ((goma_ctx->problem.linear_stability == LSA_3D_OF_2D ||
+       goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE) &&
+      af->Assemble_LSA_Jacobian_Matrix && goma_ctx->problem.lsa_3d_of_2d_wave_number == 0 &&
+      goma_ctx->problem.lsa_3d_of_2d_pass == 1)
     for (i = 0; i < lec->max_dof; i++)
       lec->J[LEC_J_INDEX(R_MOMENTUM3, VELOCITY3, i, i)] = 1.0;
 
@@ -3856,7 +3862,7 @@ Revised:         Summer 1998, SY Tam (UNM)
    *  free any memory that was allocated on the element level
    */
   mm_fill_end = ut();
-  mm_fill_total += mm_fill_end - mm_fill_start;
+  goma_ctx->fem.mm_fill_total += mm_fill_end - mm_fill_start;
 
   /*
    *  Free up Subgrid integration arrays
@@ -3872,7 +3878,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 
   if (goma_ctx->debug_flag > 1) {
     P0PRINTF("%s: ends\n", yo);
-    MMH_ip = -1;
+    goma_ctx->fem.mmh_ip = -1;
   }
 
   if (goma_ctx->mesh.proc_ns_list_length > 0 &&
@@ -4071,7 +4077,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
       case VELO_THETA_SHIK_BC:
         nsp = match_nsid(goma_ctx->bc.bc_types[j].BC_ID);
         nspk = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp]];
-        if (nsp != -1 && Nodes[nspk]->Proc == goma_ctx->proc_id) {
+        if (nsp != -1 && goma_ctx->fem.nodes[nspk]->Proc == goma_ctx->proc_id) {
           count++;
           CA_proc[count] = goma_ctx->proc_id;
         }
@@ -4082,7 +4088,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
     /*
      * Initialize the accumulated CPU time for assembly...
      */
-    mm_fill_total = 0;
+    goma_ctx->fem.mm_fill_total = 0;
   }
 
   err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old, 0);
@@ -4355,7 +4361,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
   /* Loop over all the Volume Quadrature integration points */
 
   for (ip = 0; ip < ip_total; ip++) {
-    MMH_ip = ip;
+    goma_ctx->fem.mmh_ip = ip;
 
     /* case 1: normal gauss integration */
     find_stu(ip, ielem_type, &s, &t, &u); /* find quadrature point */
@@ -4388,9 +4394,9 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
 
     err = beer_belly();
     GOMA_EH(err, "beer_belly");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return -1;
-    if (zero_detJ)
+    if (goma_ctx->solver.zero_detj)
       return -1;
 
     err = load_bf_grad();
@@ -4687,7 +4693,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
         }
         if ((goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_SHELL_GRAD ||
              goma_ctx->bc.bc_types[bc_input_id].desc->method == STRONG_SHELL_GRAD) &&
-            (num_elem_friends[ielem] > 0) && (ielem_dim > 1)) {
+            (goma_ctx->fem.num_elem_friends[ielem] > 0) && (ielem_dim > 1)) {
           call_shell_grad = TRUE;
         }
         if (goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_SHARP_INT)
@@ -4705,7 +4711,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -4720,7 +4726,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
       if (call_sharp_int) {
@@ -4734,7 +4740,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
       if (err)
         return -1;
 #endif
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         return -1;
 
     } while ((elem_side_bc = elem_side_bc->next_side_bc) != NULL);
@@ -4782,7 +4788,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
       /****************************************************************************/
@@ -5016,7 +5022,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -5043,7 +5049,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
           id3,  lec->R[1][id3]);
           }*/
 
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -5066,7 +5072,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -5096,7 +5102,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
 
         goma_ctx->fem.ls = ls_save;
@@ -5147,7 +5153,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -5166,7 +5172,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
         if (err)
           return -1;
 #endif
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return -1;
       }
 
@@ -5197,7 +5203,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
   if (pde[R_MESH1] && pde[R_SHELL_TENSION]) {
     for (i = 0; i < num_local_nodes; i++) {
       I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
-      node = Nodes[I];
+      node = goma_ctx->fem.nodes[I];
       /*Now apply condition */
       if (node->DBSH_SLOPE_X == 1) {
         eqn = R_MESH1;
@@ -5212,7 +5218,8 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
     }
   }
 
-  if ((Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE) &&
+  if ((goma_ctx->problem.linear_stability == LSA_3D_OF_2D ||
+       goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE) &&
       !(goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix) &&
       !(goma_ctx->fem.af->Assemble_LSA_Mass_Matrix))
     /* Cheap, but effective!  Zero out the equation rows for
@@ -5235,9 +5242,10 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
    * condition" for all internal nodes, so we put a 1 on the diagonal
    * for the same reason(s) as above.  We don't want this to be
    * subtracted out, so we only apply it on one pass. */
-  if ((Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE) &&
-      goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix && LSA_3D_of_2D_wave_number == 0 &&
-      LSA_3D_of_2D_pass == 1)
+  if ((goma_ctx->problem.linear_stability == LSA_3D_OF_2D ||
+       goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE) &&
+      goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix &&
+      goma_ctx->problem.lsa_3d_of_2d_wave_number == 0 && goma_ctx->problem.lsa_3d_of_2d_pass == 1)
     for (i = 0; i < goma_ctx->fem.lec->max_dof; i++)
       goma_ctx->fem.lec->J[LEC_J_INDEX(R_MOMENTUM3, VELOCITY3, i, i)] = 1.0;
 
@@ -5265,7 +5273,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
    *  free any memory that was allocated on the element level
    */
   mm_fill_end = ut();
-  mm_fill_total += mm_fill_end - mm_fill_start;
+  goma_ctx->fem.mm_fill_total += mm_fill_end - mm_fill_start;
 
   /*
    *  Free up Subgrid integration arrays
@@ -5281,7 +5289,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
 
   if (goma_ctx->debug_flag > 1) {
     P0PRINTF("%s: ends\n", yo);
-    MMH_ip = -1;
+    goma_ctx->fem.mmh_ip = -1;
   }
   if ((goma_ctx->solver.linear_solver != FRONT && ielem == exo->eb_ptr[exo->num_elem_blocks] - 1) ||
       (goma_ctx->solver.linear_solver == FRONT &&
@@ -5354,12 +5362,12 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
   fprintf(rrrr, "------------------------------------------------------\n");
   fprintf(rrrr, "local element = %d, Proc = %d\n", ei[pg->imtrx]->ielem, goma_ctx->proc_id);
   fprintf(rrrr, "lec_it = %d\n", lec_it);
-  fprintf(rrrr, "global element = %d\n", DPI_ptr->elem_index_global[ei[pg->imtrx]->ielem]);
+  fprintf(rrrr, "global element = %d\n", goma_ctx->dpi->elem_index_global[ei[pg->imtrx]->ielem]);
   fprintf(rrrr, "\nGlobal_NN Proc_NN  Equation    idof    Proc_SolnNum     ResidValue\n");
   fprintf(llll, "------------------------------------------------------\n");
   fprintf(llll, "local element = %d, Proc = %d\n", ei[pg->imtrx]->ielem, goma_ctx->proc_id);
   fprintf(llll, "lec_it = %d\n", lec_it);
-  fprintf(llll, "global element = %d\n", DPI_ptr->elem_index_global[ei[pg->imtrx]->ielem]);
+  fprintf(llll, "global element = %d\n", goma_ctx->dpi->elem_index_global[ei[pg->imtrx]->ielem]);
   fprintf(llll, "\nGlobal_NN Proc_NN  Equation    idof    Proc_SolnNum     ResidValue\n");
 #endif
 
@@ -5412,7 +5420,7 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                     if (fabs(lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)]) > DBL_SMALL ||
                         Print_Zeroes) {
                       fprintf(rrrr, "%7d %7d MF%-3d %9d -  %12d - %.10f\n",
-                              DPI_ptr->node_index_global[gnn], gnn, ke, i, ie,
+                              goma_ctx->dpi->node_index_global[gnn], gnn, ke, i, ie,
                               lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)]);
                     }
                   }
@@ -5421,7 +5429,7 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                   if (af->Assemble_Jacobian) {
                     for (v = V_FIRST; v < V_LAST; v++) {
                       pv = upd->vp[pg->imtrx][v];
-                      if (pv != -1 && (Inter_Mask[pg->imtrx][e][v])) {
+                      if (pv != -1 && (goma_ctx->problem.inter_mask[pg->imtrx][e][v])) {
                         ei_ptr = ei[pg->imtrx];
                         if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
                           if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
@@ -5448,7 +5456,8 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                                  *        dofs, je_new will be wrong here. je
                                  *        is correct.
                                  */
-                                if (Nodes[ei_ptr->gnn_list[v][j]]->Mat_List.Length < 2) {
+                                if (goma_ctx->fem.nodes[ei_ptr->gnn_list[v][j]]->Mat_List.Length <
+                                    2) {
                                 }
                               }
                               GOMA_EH(je, "Bad var index.");
@@ -5529,7 +5538,7 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                 if (af->Assemble_Jacobian) {
                   for (v = V_FIRST; v < V_LAST; v++) {
                     pv = upd->vp[pg->imtrx][v];
-                    if (pv != -1 && (Inter_Mask[pg->imtrx][e][v])) {
+                    if (pv != -1 && (goma_ctx->problem.inter_mask[pg->imtrx][e][v])) {
                       if (v == MASS_FRACTION) {
 
                         ei_ptr = ei[pg->imtrx];
@@ -5557,7 +5566,8 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                                *        dofs, je_new will be wrong here. je
                                *        is correct.
                                */
-                              if (Nodes[ei[pg->imtrx]->gnn_list[v][j]]->Mat_List.Length < 2) {
+                              if (goma_ctx->fem.nodes[ei[pg->imtrx]->gnn_list[v][j]]
+                                      ->Mat_List.Length < 2) {
                               }
                             }
                             GOMA_EH(je, "Bad var index.");
@@ -5659,7 +5669,7 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                     if (af->Assemble_Jacobian) {
                       for (v = V_FIRST; v < V_LAST; v++) {
                         pv = upd->vp[pg->imtrx][v];
-                        if ((pv != -1) && (Inter_Mask[pg->imtrx][e][v])) {
+                        if ((pv != -1) && (goma_ctx->problem.inter_mask[pg->imtrx][e][v])) {
                           // NEW
                           ei_ptr = ei[pg->imtrx];
                           if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
@@ -5717,7 +5727,7 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                   if (af->Assemble_Jacobian) {
                     for (v = V_FIRST; v < V_LAST; v++) {
                       pv = upd->vp[pg->imtrx][v];
-                      if ((pv != -1) && (Inter_Mask[pg->imtrx][e][v])) {
+                      if ((pv != -1) && (goma_ctx->problem.inter_mask[pg->imtrx][e][v])) {
                         // NEW
                         ei_ptr = ei[pg->imtrx];
                         if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {

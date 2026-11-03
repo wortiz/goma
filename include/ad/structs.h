@@ -80,7 +80,6 @@ struct AD_Field_Variables {
   int offset[V_LAST];
 };
 
-extern AD_Field_Variables *ad_fv;
 #endif
 
 #endif // GOMA_ENABLE_SACADO

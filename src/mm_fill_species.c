@@ -3295,7 +3295,7 @@ void raoults_law(double func[],
         phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
         if (goma_ctx->fem.pd->Num_Species_Eqn == 1) {
-          if (Current_EB_ptr->Elem_Blk_Id == eb_mat_liq) {
+          if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_liq) {
             d_func[0][MAX_VARIABLE_TYPES + 0][j_id] +=
                 phi_j * A * M3 * ((M1 * (1. - C[0]) + M3 * C[0]) - C[0] * (-M1 + M3)) /
                 SQUARE(M1 * (1. - C[0]) + M3 * C[0]);
@@ -3305,7 +3305,7 @@ void raoults_law(double func[],
                 SQUARE(M1 * (1. - C[0]) + M4 * C[0]);
           }
         } else if (goma_ctx->fem.pd->Num_Species_Eqn == 2) {
-          if (Current_EB_ptr->Elem_Blk_Id == eb_mat_liq) {
+          if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_liq) {
             if (wspec == 0) {
               d_func[0][MAX_VARIABLE_TYPES + 0][j_id] +=
                   phi_j * A * (a * b * (1. - C[1]) + a * c * C[1]) / B_L;
@@ -3349,7 +3349,7 @@ void raoults_law(double func[],
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         phi_j = goma_ctx->fem.bf[var]->phi[j_id];
 
-        if (Current_EB_ptr->Elem_Blk_Id == eb_mat_liq) {
+        if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_liq) {
           if (goma_ctx->fem.pd->Num_Species_Eqn == 1) {
             d_func[0][var][j_id] +=
                 phi_j * dpsatdt[wspec] * M3 * C[0] / (M1 * (1. - C[0]) + M3 * C[0]) / amb_pres;
@@ -3369,17 +3369,17 @@ void raoults_law(double func[],
   }
 
   if (goma_ctx->fem.pd->Num_Species_Eqn == 1) {
-    if (Current_EB_ptr->Elem_Blk_Id == eb_mat_liq) {
+    if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_liq) {
       /*	*func += (mp->vapor_pressure[wspec]/amb_pres)*fv->c[wspec]; */
       *func += A * M3 * C[0] / (M1 * (1. - C[0]) + M3 * C[0]);
-    } else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_gas) {
+    } else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_gas) {
       /* *func += -fv->c[wspec]; */
       *func += -M4 * C[0] / (M1 * (1. - C[0]) + M4 * C[0]);
     } else {
       GOMA_EH(GOMA_ERROR, "Something screwy in your material block specs on the VL_EQUIL card");
     }
   } else if (goma_ctx->fem.pd->Num_Species_Eqn == 2) {
-    if (Current_EB_ptr->Elem_Blk_Id == eb_mat_liq) {
+    if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_liq) {
       if (wspec == 0) {
         *func = A * a * C[0] / (b * (1. - C[0] - C[1]) + c * C[1] + a * C[0]);
       }
@@ -3443,7 +3443,7 @@ void raoults_law_new(double func[],
   int j_id, var, k;
   int wspec = bc->BC_Data_Int[0];
   int eb_mat_liq = bc->BC_Data_Int[1];
-  int liquidSide = (Current_EB_ptr->Elem_Blk_Id == eb_mat_liq);
+  int liquidSide = (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_liq);
   double phi_j, psat_w, dpsatdT_w = 0.0, Mbar, A, amb_pres, Xk_wspec;
   double tmp1, tmp2, tmp3;
   double *mw = goma_ctx->fem.mp->molecular_weight;
@@ -3617,7 +3617,7 @@ void flory_huggins(double func[],
 
   A = goma_ctx->fem.mp->vapor_pressure[wspec] / amb_pres;
 
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat_liq) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_liq) {
     /* calculate liquid activities of solvent components in a polymeric
        solution and their derivatives
        use generalized activity expression for multicomponents  */
@@ -3780,7 +3780,7 @@ void flory_huggins(double func[],
     }
   }
 
-  else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_gas) {
+  else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_gas) {
     /* from the activity, vapor phase composition is determined,
    we write the vapor mole fraction in terms of mass fraction */
 
@@ -4073,7 +4073,7 @@ void mass_flux_surf_bc(double func[],
       goma_ctx->fem.pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
   }
 
@@ -4265,7 +4265,7 @@ void yflux_disc_rxn_bc(double func[],
       goma_ctx->fem.pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
   }
 
@@ -4782,7 +4782,7 @@ void mass_flux_BV_surf_bc(double func[],
       goma_ctx->fem.pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
   }
   if (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS) {
@@ -5380,7 +5380,7 @@ void mass_flux_SULFIDATION_surf_bc(double func[],
       goma_ctx->fem.pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
   }
   if (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS) {
@@ -5566,7 +5566,7 @@ void mass_flux_BV2_surf_bc(double func[],
   if (goma_ctx->fem.pd->MeshMotion == LAGRANGIAN && goma_ctx->fem.pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
   }
 
@@ -5736,7 +5736,7 @@ void mass_flux_NI_surf_bc(double func[],
   if (goma_ctx->fem.pd->MeshMotion == LAGRANGIAN && goma_ctx->fem.pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
   }
 
@@ -6094,7 +6094,7 @@ void const_mass_flux_surf_bc(double func[],
   if (goma_ctx->fem.pd->MeshMotion == LAGRANGIAN && goma_ctx->fem.pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
   }
 
@@ -7093,7 +7093,7 @@ void get_equil_surf_bc(double func[],
       goma_ctx->fem.pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
   }
 
@@ -8518,7 +8518,7 @@ void kin_bc_leak(double func[],
       goma_ctx->fem.pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
   }
   err = get_convection_velocity(vconv, vconv_old, d_vconv, dt, tt);
@@ -9523,7 +9523,7 @@ void lat_heat_internal_bc(double func[],
       goma_ctx->fem.pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
   }
   err = get_convection_velocity(vconv, vconv_old, d_vconv, dt, tt);
@@ -10079,7 +10079,7 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
       pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return (err);
   }
   err = get_convection_velocity(vconv, vconv_old, d_vconv, dt, tt);

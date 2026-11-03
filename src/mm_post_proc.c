@@ -4682,7 +4682,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
     for (iel = e_start; iel < e_end; iel++) {
       ielem = iel;
 
-      PRS_mat_ielem = ielem - e_start; /*added for hysteretic saturation func*/
+      goma_ctx->fem.prs_mat_ielem = ielem - e_start; /*added for hysteretic saturation func*/
 
       /*
        * For each variable there are generally different degrees of
@@ -4784,7 +4784,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
       for (ip = 0; ip < ip_total; ip++) {
 
-        MMH_ip = ip; /*Added for hysteretic saturation func.*/
+        goma_ctx->fem.mmh_ip = ip; /*Added for hysteretic saturation func.*/
 
         find_stu(ip, ielem_type, &s, &t, &u);
         xi[0] = s;
@@ -5136,7 +5136,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 #endif
 
   for (ii = 0; ii < rd->TotalNVPostOutput; ii++) {
-    exchange_node(cx[0], dpi, post_proc_vect[ii]);
+    exchange_node(goma_ctx->cx[0], dpi, post_proc_vect[ii]);
   }
 
   /******************************************************************************/
@@ -5467,7 +5467,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
                          *time_ptr);
     for (int ii = 0; ii < goma_ctx->post.nn_average; ii++) {
       if (post_process_variable_is_active(goma_ctx->post.pp_average[ii], goma_ctx->fem.pg->imtrx)) {
-        exchange_node(cx[0], dpi, post_proc_vect[goma_ctx->post.pp_average[ii]->index_post]);
+        exchange_node(goma_ctx->cx[0], dpi,
+                      post_proc_vect[goma_ctx->post.pp_average[ii]->index_post]);
       }
     }
   }
@@ -6023,7 +6024,7 @@ void post_process_elem(double x[],     /* soln vector */
         ev_indx = ev_indx_tmp;
         mn = goma_ctx->problem.matilda[eb_indx];
         goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
-        eb_ptr = Element_Blocks + eb_indx;
+        eb_ptr = goma_ctx->fem.element_blocks + eb_indx;
         ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
         if ((goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
              goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
@@ -9640,7 +9641,7 @@ static int look_for_post_proc(FILE *ifp,           /* pointer to file           
  */
 
 int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
-  int i = -1, k, index, index_post, index_post_export, status = 0, check, w;
+  int i = -1, index, index_post, index_post_export, status = 0, check, w;
   int v_s[MAX_MODES][DIM][DIM];
   int a, b, mode;
   MATRL_PROP_STRUCT *matrl = goma_ctx->fem.mp_glob[0];
@@ -9860,12 +9861,6 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       }
       goma_ctx->post.stream = index_post;
       index_post++;
-      /* Put the index also in the table.  We should condense STREAM
-         and the corresponding entry in Post_Var_Name struct to be the same */
-      for (k = 0; k < Num_Post_Var_Names; k++) {
-        if (!strcmp("STREAM", Post_Var_Name[k].name1))
-          Post_Var_Name[k].Index = index_post;
-      }
     }
   }
 
@@ -12794,7 +12789,7 @@ int load_elem_tkn(struct Results_Description *rd, const Exo_DB *exo, int tev, in
         continue;
       }
       goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
-      eb_ptr = Element_Blocks + eb_index;
+      eb_ptr = goma_ctx->fem.element_blocks + eb_index;
       ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
       if ((goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
            goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||

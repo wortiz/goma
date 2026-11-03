@@ -64,8 +64,6 @@
 /*
  *  Variable Definitions
  */
-int **local_ROT_list = NULL;
-int rotation_allocated = FALSE;
 
 #define GOMA_BC_ROTATE_C
 
@@ -171,8 +169,8 @@ int apply_rotated_bc(double resid_vector[], /* Residual vector for the current p
                 goma_ctx->bc.dup_blks_list[j] = goma_ctx->bc.ss_to_blks[j + 1][ss_index];
               }
             }
-            if ((blk_index = in_list(Current_EB_ptr->Elem_Blk_Id, 0, MAX_MAT_PER_SS + 1,
-                                     goma_ctx->bc.dup_blks_list)) == -1) {
+            if ((blk_index = in_list(goma_ctx->fem.current_eb_ptr->Elem_Blk_Id, 0,
+                                     MAX_MAT_PER_SS + 1, goma_ctx->bc.dup_blks_list)) == -1) {
               GOMA_EH(GOMA_ERROR,
                       "Cannot match current element block with that in ss_to_blks array");
             }
@@ -206,10 +204,10 @@ int apply_rotated_bc(double resid_vector[], /* Residual vector for the current p
                 goma_ctx->bc.dup_blks_list[j] = goma_ctx->bc.ss_to_blks[j + 1][ss_index];
               }
             }
-            if ((blk_index = in_list(Current_EB_ptr->Elem_Blk_Id, 0, MAX_MAT_PER_SS + 1,
-                                     goma_ctx->bc.dup_blks_list)) == -1) {
+            if ((blk_index = in_list(goma_ctx->fem.current_eb_ptr->Elem_Blk_Id, 0,
+                                     MAX_MAT_PER_SS + 1, goma_ctx->bc.dup_blks_list)) == -1) {
               sprintf(err_msg, "Could not find EB %d in dup_blks_list",
-                      Current_EB_ptr->Elem_Blk_Id);
+                      goma_ctx->fem.current_eb_ptr->Elem_Blk_Id);
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             blk_index++;
@@ -294,7 +292,7 @@ int apply_rotated_bc(double resid_vector[], /* Residual vector for the current p
                              sign_rot_mom[i]);
         } else if (rot_mom[i] &&
                    goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[VELOCITY1][id] != -1) {
-          if (((Current_EB_ptr->Elem_Blk_Id + 1) % 2) == 0) {
+          if (((goma_ctx->fem.current_eb_ptr->Elem_Blk_Id + 1) % 2) == 0) {
             rotate_res_jac_mom(
                 goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[VELOCITY1][id] - 1, I,
                 iconnect_ptr, num_local_nodes, ielem_dim - 1, goma_ctx->fem.fv->snormal,
@@ -683,7 +681,7 @@ void rotate_mesh_eqn(int id,           /* Elemental stiffness matrix row index *
   double rotated_resid[MAX_PDIM];
   double rotated_jacobian_scalar[MAX_PDIM][MDE];
   double rotated_jacobian_vector[MAX_PDIM][MAX_PDIM][MDE];
-  NODAL_VARS_STRUCT *nv = Nodes[I]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+  NODAL_VARS_STRUCT *nv = goma_ctx->fem.nodes[I]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
   ROTATION_VECTORS_STRUCT *rot, *rot_n = goma_ctx->fem.rotation[I][eq][0];
   ROTATION_VECTORS_STRUCT *rot_t1 = goma_ctx->fem.rotation[I][eq][1];
   ROTATION_VECTORS_STRUCT *rot_t2 = 0;
@@ -782,7 +780,7 @@ void rotate_mesh_eqn(int id,           /* Elemental stiffness matrix row index *
             bindx = ams->bindx;
             indx = ams->indx;
             a = ams->val;
-            nv = Nodes[I]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+            nv = goma_ctx->fem.nodes[I]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
             blk_row = get_nv_offset_idof(nv, eqn, 0, 0, NULL);
             row_dofs = rpntr[I + 1] - rpntr[I];
             for (j = 0; j < rot->d_vector_n; j++) {
@@ -790,7 +788,7 @@ void rotate_mesh_eqn(int id,           /* Elemental stiffness matrix row index *
               if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
                   goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
                 K = in_list(J, bpntr[I], bpntr[I + 1], bindx);
-                nv = Nodes[J]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+                nv = goma_ctx->fem.nodes[J]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
                 blk_col = get_nv_offset_idof(nv, var, 0, 0, NULL);
                 /*
                  * Calculate the index into the matrix:
@@ -805,7 +803,7 @@ void rotate_mesh_eqn(int id,           /* Elemental stiffness matrix row index *
             }
           } else if (ams->GomaMatrixData != NULL) {
             GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
-            if (I < (DPI_ptr->num_internal_nodes + DPI_ptr->num_boundary_nodes)) {
+            if (I < (goma_ctx->dpi->num_internal_nodes + goma_ctx->dpi->num_boundary_nodes)) {
               /*
                * Find the global equation number
                */
@@ -1142,7 +1140,7 @@ void rotate_momentum_eqn(int id,           /* Elemental stiffness matrix row ind
 
             int K, blk_col;
             NODAL_VARS_STRUCT *nv;
-            nv = Nodes[I]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+            nv = goma_ctx->fem.nodes[I]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
             blk_row = get_nv_offset_idof(nv, eqn, 0, 0, NULL);
             row_dofs = rpntr[I + 1] - rpntr[I];
 
@@ -1153,7 +1151,7 @@ void rotate_momentum_eqn(int id,           /* Elemental stiffness matrix row ind
                   goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
 
                 K = in_list(J, bpntr[I], bpntr[I + 1], bindx); /* K is the block index */
-                nv = Nodes[J]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+                nv = goma_ctx->fem.nodes[J]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
                 blk_col = get_nv_offset_idof(nv, var, 0, 0, NULL);
 
                 index = indx[K] + row_dofs * blk_col +
@@ -1170,7 +1168,7 @@ void rotate_momentum_eqn(int id,           /* Elemental stiffness matrix row ind
 
           } else if (ams->GomaMatrixData != NULL) {
             GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
-            if (I < (DPI_ptr->num_internal_nodes + DPI_ptr->num_boundary_nodes)) {
+            if (I < (goma_ctx->dpi->num_internal_nodes + goma_ctx->dpi->num_boundary_nodes)) {
               // Direct translation from MSR
               for (j = 0; j < goma_ctx->fem.rotation[I][eq][kdir]->d_vector_n; j++) {
                 double sum_val;
@@ -2047,7 +2045,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
                     goma_ctx->mesh.num_external_nodes;
   dim = goma_ctx->fem.pd_glob[0]->Num_Dim;
 
-  if (!rotation_allocated) {
+  if (!goma_ctx->fem.rotation_allocated) {
     goma_ctx->fem.rotation = (struct Rotation_Vectors ****)smalloc(
         num_total_nodes * sizeof(struct Rotation_Vectors ***));
 
@@ -2067,7 +2065,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
         }
       }
     }
-    rotation_allocated = TRUE;
+    goma_ctx->fem.rotation_allocated = TRUE;
   }
 
   /* INITIALIZE */
@@ -2116,10 +2114,10 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
       for (i = 0; i < goma_ctx->bc.rot_types[irc].num_elem; i++) {
         ielem = goma_ctx->bc.rot_types[irc].elems[i];
 
-        if (x == x_static) /* be the least disruptive possible */
+        if (x == goma_ctx->fem.x_static) /* be the least disruptive possible */
         {
-          err =
-              load_elem_dofptr(ielem, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
+          err = load_elem_dofptr(ielem, exo, goma_ctx->fem.x_static, goma_ctx->fem.x_old_static,
+                                 goma_ctx->fem.xdot_static, goma_ctx->fem.xdot_old_static, 0);
         } else {
           err = load_elem_dofptr(ielem, exo, x, x, x, x, 0);
         }
@@ -2428,22 +2426,22 @@ void calculate_2D_rotation_vectors(Exo_DB *exo, /* the mesh */
                     goma_ctx->mesh.num_external_nodes;
   dim = goma_ctx->fem.pd_glob[0]->Num_Dim;
 
-  if (!rotation_allocated) {
+  if (!goma_ctx->fem.rotation_allocated) {
     goma_ctx->fem.rotation = (struct Rotation_Vectors ****)smalloc(
         num_total_nodes * sizeof(struct Rotation_Vectors ***));
-    local_ROT_list = (int **)alloc_ptr_1(num_total_nodes);
+    goma_ctx->fem.local_rot_list = (int **)alloc_ptr_1(num_total_nodes);
 
     for (i = 0; i < num_total_nodes; i++) {
       goma_ctx->fem.rotation[i] = (struct Rotation_Vectors ***)smalloc(
           NUM_VECTOR_EQUATIONS * sizeof(struct Rotation_Vectors **));
 
-      local_ROT_list[i] = alloc_int_1(NUM_VECTOR_EQUATIONS, -1);
+      goma_ctx->fem.local_rot_list[i] = alloc_int_1(NUM_VECTOR_EQUATIONS, -1);
 
       for (j = 0; j < NUM_VECTOR_EQUATIONS; j++) {
         goma_ctx->fem.rotation[i][j] = NULL;
       }
     }
-    rotation_allocated = TRUE;
+    goma_ctx->fem.rotation_allocated = TRUE;
   }
 
   while (mesh_count < goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx] ||
@@ -2451,12 +2449,14 @@ void calculate_2D_rotation_vectors(Exo_DB *exo, /* the mesh */
 
     if (mom_count < goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx]) {
       inode = goma_ctx->bc.mom_rotate_node[goma_ctx->fem.pg->imtrx][mom_count];
-      local_ROT_list[inode][0] = goma_ctx->bc.mom_rotate_ss[goma_ctx->fem.pg->imtrx][mom_count];
+      goma_ctx->fem.local_rot_list[inode][0] =
+          goma_ctx->bc.mom_rotate_ss[goma_ctx->fem.pg->imtrx][mom_count];
     }
 
     if (mesh_count < goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx]) {
       inode = goma_ctx->bc.mesh_rotate_node[goma_ctx->fem.pg->imtrx][mesh_count];
-      local_ROT_list[inode][1] = goma_ctx->bc.mesh_rotate_ss[goma_ctx->fem.pg->imtrx][mesh_count];
+      goma_ctx->fem.local_rot_list[inode][1] =
+          goma_ctx->bc.mesh_rotate_ss[goma_ctx->fem.pg->imtrx][mesh_count];
     }
 
     mesh_count++;
@@ -2483,7 +2483,7 @@ void calculate_2D_rotation_vectors(Exo_DB *exo, /* the mesh */
         }
       }
 
-      if ((ssid = local_ROT_list[inode][jvar]) != -1) {
+      if ((ssid = goma_ctx->fem.local_rot_list[inode][jvar]) != -1) {
         if ((iss = in_list(ssid, 0, exo->num_side_sets, exo->ss_id)) == -1)
           GOMA_EH(-1, "Error trap out");
 
@@ -2501,15 +2501,15 @@ void calculate_2D_rotation_vectors(Exo_DB *exo, /* the mesh */
 
             elem = exo->ss_elem_list[exo->ss_elem_index[iss] + i];
 
-            if (x == x_static)
-              err = load_elem_dofptr(elem, exo, x_static, x_old_static, xdot_static,
-                                     xdot_old_static, 0);
+            if (x == goma_ctx->fem.x_static)
+              err = load_elem_dofptr(elem, exo, goma_ctx->fem.x_static, goma_ctx->fem.x_old_static,
+                                     goma_ctx->fem.xdot_static, goma_ctx->fem.xdot_old_static, 0);
             else
 
               err = load_elem_dofptr(elem, exo, x, x, x, x, 0);
 
             if (goma_ctx->bc.ss_internal_boundary[iss] != -1) {
-              int curr_eb = Current_EB_ptr->Elem_Blk_Id;
+              int curr_eb = goma_ctx->fem.current_eb_ptr->Elem_Blk_Id;
               int index = 0;
 
               while (goma_ctx->bc.ss_to_blks[index + 1][iss] != curr_eb &&

@@ -135,9 +135,6 @@ static char rcsid[] = "$Id: mm_shell_util.c,v 5.17 2010-07-21 16:39:27 hkmoffa E
  * 7 May 2002 - Patrick Notz - Creation
  *
  ******************************************************************************/
-int **elem_friends = NULL;
-int *num_elem_friends = NULL;
-int num_shell_blocks = 0;
 
 void init_shell_element_blocks(const Exo_DB *exo) {
   int i, elem, n, nbr;
@@ -159,11 +156,11 @@ void init_shell_element_blocks(const Exo_DB *exo) {
   DSPRINTF("Initializing shell-element handling: ");
 
   /* Loop over the element blocks and look for shell blocks */
-  num_shell_blocks = 0;
+  goma_ctx->fem.num_shell_blocks = 0;
   for (i = 0; i < exo->num_elem_blocks; ++i) {
-    num_shell_blocks += is_shell_element_type(exo->eb_elem_itype[i]);
+    goma_ctx->fem.num_shell_blocks += is_shell_element_type(exo->eb_elem_itype[i]);
   }
-  DSPRINTF("%d shell blocks found.\n", num_shell_blocks);
+  DSPRINTF("%d shell blocks found.\n", goma_ctx->fem.num_shell_blocks);
 
   int *eb_ProcessingOrder = alloc_int_1(exo->num_elem_blocks, -1);
   int *eb_Used = alloc_int_1(exo->num_elem_blocks, 0);
@@ -197,7 +194,7 @@ void init_shell_element_blocks(const Exo_DB *exo) {
   }
 
   /* No shells? Do nothing */
-  if (num_shell_blocks == 0) {
+  if (goma_ctx->fem.num_shell_blocks == 0) {
     safe_free(mnList);
     safe_free(eb_Used);
     safe_free(eb_ProcessingOrder);
@@ -207,7 +204,7 @@ void init_shell_element_blocks(const Exo_DB *exo) {
   /* Allocate some space for the list of Shell_Block structures. */
   /* Also do some basic initialization. */
   goma_ctx->fem.shell_blocks =
-      (struct Shell_Block **)smalloc(num_shell_blocks * sizeof(struct Shell_Block *));
+      (struct Shell_Block **)smalloc(goma_ctx->fem.num_shell_blocks * sizeof(struct Shell_Block *));
   for (bindex = 0, si = -1; bindex < exo->num_elem_blocks; ++bindex) {
     if (is_shell_element_type(exo->eb_elem_itype[bindex])) {
       ++si;
@@ -231,7 +228,7 @@ void init_shell_element_blocks(const Exo_DB *exo) {
    * For each shell element Es with nodes Ns find the list of
    * elements Eb which contain ALL of Ns.
    */
-  for (si = 0; si < num_shell_blocks; ++si) {
+  for (si = 0; si < goma_ctx->fem.num_shell_blocks; ++si) {
     sb = goma_ctx->fem.shell_blocks[si]; /* A pointer to the current shell block */
     sindex = sb->elemblock_index;
     sid = sb->elemblock_id;
@@ -380,13 +377,13 @@ void init_shell_element_blocks(const Exo_DB *exo) {
   DSPRINTF("\n ***** CONSTRUCTING THE ELEMENT FRIENDS LIST ***** \n");
 
   /* Allocate some space for the elem_friends arrays. */
-  num_elem_friends = alloc_int_1(num_elems, 0);
+  goma_ctx->fem.num_elem_friends = alloc_int_1(num_elems, 0);
   friends_count = alloc_int_1(num_elems, 0);
-  elem_friends = (int **)alloc_ptr_1(num_elems);
+  goma_ctx->fem.elem_friends = (int **)alloc_ptr_1(num_elems);
 
   /* Populate the num_elem_friends[elem] array. */
   DSPRINTF(" -> Generting the num_elem_friends[elem] array...\n");
-  for (si = 0; si < num_shell_blocks; ++si) {
+  for (si = 0; si < goma_ctx->fem.num_shell_blocks; ++si) {
     sb = goma_ctx->fem.shell_blocks[si]; /* A pointer to the current shell block */
     sindex = sb->elemblock_index;
     sid = sb->elemblock_id;
@@ -403,12 +400,12 @@ void init_shell_element_blocks(const Exo_DB *exo) {
         DSPRINTF("     + elem=%d, nbr=%d\n", elem + 1, nbr + 1);
 
         /* This element's neighbor counts as a friend */
-        num_elem_friends[elem]++;
+        goma_ctx->fem.num_elem_friends[elem]++;
 
         /* Likewise, this element is a friend of its neighbor. */
         /* However, if the neighbor is a shell, we must not double count. */
         if (!is_shell_element(nbr, exo))
-          num_elem_friends[nbr]++;
+          goma_ctx->fem.num_elem_friends[nbr]++;
       }
     }
   }
@@ -416,22 +413,22 @@ void init_shell_element_blocks(const Exo_DB *exo) {
   /* Now we know how many neighbors each element has so we can alloc */
   for (elem = 0; elem < num_elems; ++elem) {
     /* Only worry about elems with neighbors */
-    if (num_elem_friends[elem] == 0)
+    if (goma_ctx->fem.num_elem_friends[elem] == 0)
       continue;
 
-    n = num_elem_friends[elem];
+    n = goma_ctx->fem.num_elem_friends[elem];
 
     /* Alloc the space */
-    elem_friends[elem] = (int *)smalloc(n * sizeof(int));
+    goma_ctx->fem.elem_friends[elem] = (int *)smalloc(n * sizeof(int));
 
     /* Initialize the space */
     for (i = 0; i < n; ++i)
-      elem_friends[elem][i] = -1;
+      goma_ctx->fem.elem_friends[elem][i] = -1;
   }
 
   /* Populate the elem_friends[elem][friend] array. */
   DSPRINTF(" -> Generting the elem_frieds[elem][nbr] array...\n");
-  for (si = 0; si < num_shell_blocks; ++si) {
+  for (si = 0; si < goma_ctx->fem.num_shell_blocks; ++si) {
     sb = goma_ctx->fem.shell_blocks[si]; /* A pointer to the current shell block */
     sindex = sb->elemblock_index;
     sid = sb->elemblock_id;
@@ -448,9 +445,9 @@ void init_shell_element_blocks(const Exo_DB *exo) {
 
         /* This shell's neighbor */
         n = friends_count[elem];
-        if (n >= num_elem_friends[elem])
+        if (n >= goma_ctx->fem.num_elem_friends[elem])
           GOMA_EH(GOMA_ERROR, "Ack. I have more neighbors than I thought!\n");
-        elem_friends[elem][n] = nbr;
+        goma_ctx->fem.elem_friends[elem][n] = nbr;
         friends_count[elem]++;
         DSPRINTF(" (elem updated)");
 
@@ -458,9 +455,9 @@ void init_shell_element_blocks(const Exo_DB *exo) {
         if (!is_shell_element(nbr, exo)) {
           DSPRINTF(" (nbr updated too)");
           n = friends_count[nbr];
-          if (n >= num_elem_friends[nbr])
+          if (n >= goma_ctx->fem.num_elem_friends[nbr])
             GOMA_EH(GOMA_ERROR, "Ack. I have more neighbors than I thought!\n");
-          elem_friends[nbr][n] = elem;
+          goma_ctx->fem.elem_friends[nbr][n] = elem;
           friends_count[nbr]++;
         }
         DSPRINTF("\n");
@@ -473,9 +470,9 @@ void init_shell_element_blocks(const Exo_DB *exo) {
 #if DEBUG_SHELL
   DSPRINTF("\n ***** THE ELEMENT-FRIENDS RELATIONSHIPS ***** \n");
   for (elem = 0; elem < exo->num_elems; ++elem) {
-    DSPRINTF("\tElement %5d has %d friends: ", elem + 1, num_elem_friends[elem]);
-    for (n = 0; n < num_elem_friends[elem]; ++n)
-      DSPRINTF("%5d ", elem_friends[elem][n] + 1);
+    DSPRINTF("\tElement %5d has %d friends: ", elem + 1, goma_ctx->fem.num_elem_friends[elem]);
+    for (n = 0; n < goma_ctx->fem.num_elem_friends[elem]; ++n)
+      DSPRINTF("%5d ", goma_ctx->fem.elem_friends[elem][n] + 1);
     DSPRINTF("\n");
   }
 
@@ -484,7 +481,7 @@ void init_shell_element_blocks(const Exo_DB *exo) {
   /*
    *  SECTION TO HANDLE Shell Element Block on Parent Element Block Logic
    */
-  for (si = 0; si < num_shell_blocks; ++si) {
+  for (si = 0; si < goma_ctx->fem.num_shell_blocks; ++si) {
     sb = goma_ctx->fem.shell_blocks[si]; /* A pointer to the current shell block */
     sindex = sb->elemblock_index;
     sid = sb->elemblock_id;
@@ -1439,16 +1436,17 @@ int load_neighbor_var_data(int el1,    // Element number of the local element
 
   /* This call will repopulate the local element fv/bf structures */
   if (ddim == -1) {
-    InShellElementWithParentElementCoverage = 1;
-    (void)copy_int_1(ShellElementParentElementCoverageForVariable, goma_ctx->fem.pd->v,
-                     MAX_VARIABLE_TYPES);
+    goma_ctx->fem.in_shell_element_with_parent_element_coverage = 1;
+    (void)copy_int_1(goma_ctx->fem.shell_element_parent_element_coverage_for_variable,
+                     goma_ctx->fem.pd->v, MAX_VARIABLE_TYPES);
   }
   /* Go back to the current element (i.e., the shell element) */
   setup_shop_at_point(el1, xi, exo);
 
   if (ddim == -1) {
-    InShellElementWithParentElementCoverage = 0;
-    zero_int_1(ShellElementParentElementCoverageForVariable, MAX_VARIABLE_TYPES);
+    goma_ctx->fem.in_shell_element_with_parent_element_coverage = 0;
+    zero_int_1(goma_ctx->fem.shell_element_parent_element_coverage_for_variable,
+               MAX_VARIABLE_TYPES);
   }
 
   svar1 = goma_ctx->fem.pd->ShapeVar;
@@ -3171,7 +3169,7 @@ void lubrication_shell_initialize(int *n_dof,        // Degrees of freedom
 
   /* Find friends */
   el1 = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
-  nf = num_elem_friends[el1];
+  nf = goma_ctx->fem.num_elem_friends[el1];
 
   /* Deal with number of friends */
   switch (nf) {
@@ -3183,7 +3181,7 @@ void lubrication_shell_initialize(int *n_dof,        // Degrees of freedom
     FSIModel = goma_ctx->fem.mp->FSIModel;
     break;
   case 1:
-    el2 = elem_friends[el1][0];
+    el2 = goma_ctx->fem.elem_friends[el1][0];
     if (goma_ctx->fem.mp->FSIModel == 0) {
       a = find_elemblock_index(el2, exo);
       b = goma_ctx->problem.matilda[a];

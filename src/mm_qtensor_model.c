@@ -129,12 +129,6 @@ static double gauss_weight[MAX_GAUSS_POINTS][MAX_GAUSS_POINTS] = {
      0.249147045813403, 0.249147045813403, 0.233492536538355, 0.203167426723066, 0.160078328543346,
      0.106939325995318, 0.047175336386512}};
 
-int MMH_ip = 0;
-
-dbl vort_dir[MDE][DIM];     /* vorticity direction */
-dbl qtensor[MDE][DIM][DIM]; /* I - 1/2 v^t v for each gauss point */
-dbl div_qtensor[MDE][DIM];  /* div(I - v^t v) for each gauss point */
-
 /* This routine populates div(V^tQV) = div(I-v^tv) for each gauss
  * point used for the particle species equation.
  */
@@ -198,7 +192,8 @@ void assemble_qtensor(dbl *el_length) /* 2 x approximate element length scales *
     for (i = 0; i < DIM; i++) {
       memset(d_vort_dir_d_x[i], 0, DIM * sizeof(dbl));
       for (j = 0; j < DIM; j++)
-        qtensor[ip][i][j] = (dbl)delta(i, j) - 0.5 * vort_dir_local[i] * vort_dir_local[j];
+        goma_ctx->fem.qtensor[ip][i][j] =
+            (dbl)delta(i, j) - 0.5 * vort_dir_local[i] * vort_dir_local[j];
     }
 
     /*
@@ -261,19 +256,22 @@ void assemble_qtensor(dbl *el_length) /* 2 x approximate element length scales *
     }
 
     /* Now comptue div_qtensor[a] for this gauss point */
-    div_qtensor[ip][0] = div_qtensor[ip][1] = div_qtensor[ip][2] = 0.0;
+    goma_ctx->fem.div_qtensor[ip][0] = goma_ctx->fem.div_qtensor[ip][1] =
+        goma_ctx->fem.div_qtensor[ip][2] = 0.0;
     for (a = 0; a < DIM; a++) {
       for (i = 0; i < DIM; i++) {
-        div_qtensor[ip][a] += (hq[a][i] * vort_dir_local[a] * vort_dir_local[i] / h[a] -
-                               hq[i][a] * vort_dir_local[i] * vort_dir_local[i] / h[a] -
-                               hq[i][i] * vort_dir_local[i] * vort_dir_local[a] / h[i]) /
-                              h[i];
+        goma_ctx->fem.div_qtensor[ip][a] +=
+            (hq[a][i] * vort_dir_local[a] * vort_dir_local[i] / h[a] -
+             hq[i][a] * vort_dir_local[i] * vort_dir_local[i] / h[a] -
+             hq[i][i] * vort_dir_local[i] * vort_dir_local[a] / h[i]) /
+            h[i];
         for (j = 0; j < DIM; j++)
-          div_qtensor[ip][a] += hq[i][j] * vort_dir_local[j] * vort_dir_local[a] / h[i] / h[j];
-        div_qtensor[ip][a] += vort_dir_local[i] * d_vort_dir_d_x[a][i] / h[i];
-        div_qtensor[ip][a] += vort_dir_local[a] * d_vort_dir_d_x[i][i] / h[i];
+          goma_ctx->fem.div_qtensor[ip][a] +=
+              hq[i][j] * vort_dir_local[j] * vort_dir_local[a] / h[i] / h[j];
+        goma_ctx->fem.div_qtensor[ip][a] += vort_dir_local[i] * d_vort_dir_d_x[a][i] / h[i];
+        goma_ctx->fem.div_qtensor[ip][a] += vort_dir_local[a] * d_vort_dir_d_x[i][i] / h[i];
       }
-      div_qtensor[ip][a] *= -0.5;
+      goma_ctx->fem.div_qtensor[ip][a] *= -0.5;
     }
 
     /*
@@ -292,8 +290,8 @@ void assemble_qtensor(dbl *el_length) /* 2 x approximate element length scales *
              d_vort_dir_d_x[1][1], d_vort_dir_d_x[2][1]);
       printf("    d/dq[2] = [% 10.4g % 10.4g % 10.4g]\n", d_vort_dir_d_x[0][2],
              d_vort_dir_d_x[1][2], d_vort_dir_d_x[2][2]);
-      printf("div_qtensor = [% 10.4g % 10.4g % 10.4g]\n", div_qtensor[ip][0], div_qtensor[ip][1],
-             div_qtensor[ip][2]);
+      printf("div_qtensor = [% 10.4g % 10.4g % 10.4g]\n", goma_ctx->fem.div_qtensor[ip][0],
+             goma_ctx->fem.div_qtensor[ip][1], goma_ctx->fem.div_qtensor[ip][2]);
       /*
       printf("    grad_gd = [% 10.4g % 10.4g % 10.4g]\n",
              grad_gd[ip][0], grad_gd[ip][1], grad_gd[ip][2]);
@@ -366,7 +364,8 @@ void assemble_qtensor_vort(dbl *el_length) /* 2 x approximate element length sca
     for (i = 0; i < DIM; i++) {
       memset(d_vort_dir_d_x[i], 0, DIM * sizeof(dbl));
       for (j = 0; j < DIM; j++)
-        qtensor[ip][i][j] = (dbl)delta(i, j) - 0.5 * vort_dir_local[i] * vort_dir_local[j];
+        goma_ctx->fem.qtensor[ip][i][j] =
+            (dbl)delta(i, j) - 0.5 * vort_dir_local[i] * vort_dir_local[j];
     }
 
     /*
@@ -429,19 +428,22 @@ void assemble_qtensor_vort(dbl *el_length) /* 2 x approximate element length sca
     }
 
     /* Now comptue div_qtensor[a] for this gauss point */
-    div_qtensor[ip][0] = div_qtensor[ip][1] = div_qtensor[ip][2] = 0.0;
+    goma_ctx->fem.div_qtensor[ip][0] = goma_ctx->fem.div_qtensor[ip][1] =
+        goma_ctx->fem.div_qtensor[ip][2] = 0.0;
     for (a = 0; a < DIM; a++) {
       for (i = 0; i < DIM; i++) {
-        div_qtensor[ip][a] += (hq[a][i] * vort_dir_local[a] * vort_dir_local[i] / h[a] -
-                               hq[i][a] * vort_dir_local[i] * vort_dir_local[i] / h[a] -
-                               hq[i][i] * vort_dir_local[i] * vort_dir_local[a] / h[i]) /
-                              h[i];
+        goma_ctx->fem.div_qtensor[ip][a] +=
+            (hq[a][i] * vort_dir_local[a] * vort_dir_local[i] / h[a] -
+             hq[i][a] * vort_dir_local[i] * vort_dir_local[i] / h[a] -
+             hq[i][i] * vort_dir_local[i] * vort_dir_local[a] / h[i]) /
+            h[i];
         for (j = 0; j < DIM; j++)
-          div_qtensor[ip][a] += hq[i][j] * vort_dir_local[j] * vort_dir_local[a] / h[i] / h[j];
-        div_qtensor[ip][a] += vort_dir_local[i] * d_vort_dir_d_x[a][i] / h[i];
-        div_qtensor[ip][a] += vort_dir_local[a] * d_vort_dir_d_x[i][i] / h[i];
+          goma_ctx->fem.div_qtensor[ip][a] +=
+              hq[i][j] * vort_dir_local[j] * vort_dir_local[a] / h[i] / h[j];
+        goma_ctx->fem.div_qtensor[ip][a] += vort_dir_local[i] * d_vort_dir_d_x[a][i] / h[i];
+        goma_ctx->fem.div_qtensor[ip][a] += vort_dir_local[a] * d_vort_dir_d_x[i][i] / h[i];
       }
-      div_qtensor[ip][a] *= -0.5;
+      goma_ctx->fem.div_qtensor[ip][a] *= -0.5;
     }
 
     /*
@@ -460,8 +462,8 @@ void assemble_qtensor_vort(dbl *el_length) /* 2 x approximate element length sca
              d_vort_dir_d_x[1][1], d_vort_dir_d_x[2][1]);
       printf("    d/dq[2] = [% 10.4g % 10.4g % 10.4g]\n", d_vort_dir_d_x[0][2],
              d_vort_dir_d_x[1][2], d_vort_dir_d_x[2][2]);
-      printf("div_qtensor = [% 10.4g % 10.4g % 10.4g]\n", div_qtensor[ip][0], div_qtensor[ip][1],
-             div_qtensor[ip][2]);
+      printf("div_qtensor = [% 10.4g % 10.4g % 10.4g]\n", goma_ctx->fem.div_qtensor[ip][0],
+             goma_ctx->fem.div_qtensor[ip][1], goma_ctx->fem.div_qtensor[ip][2]);
       /*
       printf("    grad_gd = [% 10.4g % 10.4g % 10.4g]\n",
              grad_gd[ip][0], grad_gd[ip][1], grad_gd[ip][2]);
@@ -501,8 +503,8 @@ void assemble_new_qtensor(dbl *el_length) /* 2 x approximate element length scal
     GOMA_EH(GOMA_ERROR, "Qtensor requires CARTESIAN coordinates for now!");
 
   /* Do some initializations */
-  memset(qtensor, 0, MDE * DIM * DIM * sizeof(double));
-  memset(div_qtensor, 0, MDE * DIM * sizeof(double));
+  memset(goma_ctx->fem.qtensor, 0, MDE * DIM * DIM * sizeof(double));
+  memset(goma_ctx->fem.div_qtensor, 0, MDE * DIM * sizeof(double));
   ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type; /* element type */
   ip_total = elem_info(NQUAD, ielem_type); /* number of quadrature points */
 
@@ -528,7 +530,7 @@ void assemble_new_qtensor(dbl *el_length) /* 2 x approximate element length scal
     /* Fill these values into local array */
     for (i = 0; i < DIM; i++) {
       for (j = 0; j < DIM; j++) {
-        qtensor[ip][i][j] = local_q[i][j];
+        goma_ctx->fem.qtensor[ip][i][j] = local_q[i][j];
       }
     }
 
@@ -572,7 +574,7 @@ void assemble_new_qtensor(dbl *el_length) /* 2 x approximate element length scal
 
           /* Also sum up terms for div_qtensor */
           if (i == p) {
-            div_qtensor[ip][j] += d_qtensor[i][j][p];
+            goma_ctx->fem.div_qtensor[ip][j] += d_qtensor[i][j][p];
           }
         }
       }
@@ -1159,9 +1161,9 @@ int hydro_qtensor_flux(struct Species_Conservation_Terms *st, int w) /* species 
     exit(-1);
   }
 
-  if (MMH_ip < 0) {
+  if (goma_ctx->fem.mmh_ip < 0) {
     printf("Entered with bad MMH_ip\n");
-    MMH_ip = 1;
+    goma_ctx->fem.mmh_ip = 1;
   }
 
   /* Set up some convenient local variables and pointers */
@@ -1313,10 +1315,10 @@ int hydro_qtensor_flux(struct Species_Conservation_Terms *st, int w) /* species 
   memset(VQVt_grad_Y, 0, DIM * sizeof(dbl));
   for (a = 0; a < DIM; a++)
     for (i = 0; i < DIM; i++) {
-      grad_Y_VQVt[a] += grad_Y[w][i] * qtensor[MMH_ip][i][a];
-      grad_gd_VQVt[a] += grad_gammadot[i] * qtensor[MMH_ip][i][a];
-      VQVt_grad_mu[a] += qtensor[MMH_ip][a][i] * grad_mu[i];
-      VQVt_grad_Y[a] += qtensor[MMH_ip][a][i] * grad_Y[w][i];
+      grad_Y_VQVt[a] += grad_Y[w][i] * goma_ctx->fem.qtensor[goma_ctx->fem.mmh_ip][i][a];
+      grad_gd_VQVt[a] += grad_gammadot[i] * goma_ctx->fem.qtensor[goma_ctx->fem.mmh_ip][i][a];
+      VQVt_grad_mu[a] += goma_ctx->fem.qtensor[goma_ctx->fem.mmh_ip][a][i] * grad_mu[i];
+      VQVt_grad_Y[a] += goma_ctx->fem.qtensor[goma_ctx->fem.mmh_ip][a][i] * grad_Y[w][i];
     }
 
   /* Compute div(gammadot * Y * (V Q V^t)) */
@@ -1324,7 +1326,7 @@ int hydro_qtensor_flux(struct Species_Conservation_Terms *st, int w) /* species 
   for (a = 0; a < DIM; a++) {
     div_gdYVQVt[a] += Y[w] * grad_gd_VQVt[a];
     div_gdYVQVt[a] += gammadot * grad_Y_VQVt[a];
-    div_gdYVQVt[a] += gammadot * Y[w] * div_qtensor[MMH_ip][a];
+    div_gdYVQVt[a] += gammadot * Y[w] * goma_ctx->fem.div_qtensor[goma_ctx->fem.mmh_ip][a];
   }
 
   /* Assemble residual */
@@ -1354,13 +1356,14 @@ int hydro_qtensor_flux(struct Species_Conservation_Terms *st, int w) /* species 
         memset(grad_phi_j_VQVt, 0, DIM * sizeof(dbl));
         for (b = 0; b < DIM; b++)
           for (i = 0; i < DIM; i++) {
-            VQVt_grad_phi_j[b] += qtensor[MMH_ip][b][i] * grad_phi_j[i];
-            grad_phi_j_VQVt[b] += grad_phi_j[i] * qtensor[MMH_ip][i][b];
+            VQVt_grad_phi_j[b] += goma_ctx->fem.qtensor[goma_ctx->fem.mmh_ip][b][i] * grad_phi_j[i];
+            grad_phi_j_VQVt[b] += grad_phi_j[i] * goma_ctx->fem.qtensor[goma_ctx->fem.mmh_ip][i][b];
           }
 
         c_term += phi_j * div_gdYVQVt[a];
         c_term += Y[w] * gammadot * grad_phi_j_VQVt[a];
-        c_term += Y[w] * phi_j * (grad_gd_VQVt[a] + gammadot * div_qtensor[MMH_ip][a]);
+        c_term += Y[w] * phi_j *
+                  (grad_gd_VQVt[a] + gammadot * goma_ctx->fem.div_qtensor[goma_ctx->fem.mmh_ip][a]);
         c_term *= -Dc;
 
         mu_term += 2.0 * phi_j * dmu_dY[w] * VQVt_grad_Y[a];
@@ -1392,10 +1395,11 @@ int hydro_qtensor_flux(struct Species_Conservation_Terms *st, int w) /* species 
         memset(grad_phi_j_VQVt, 0, DIM * sizeof(dbl));
         for (b = 0; b < DIM; b++)
           for (i = 0; i < DIM; i++)
-            grad_phi_j_VQVt[b] += grad_phi_j[i] * qtensor[MMH_ip][i][b];
+            grad_phi_j_VQVt[b] += grad_phi_j[i] * goma_ctx->fem.qtensor[goma_ctx->fem.mmh_ip][i][b];
 
         c_term += Y[w] * grad_phi_j_VQVt[a];
-        c_term += phi_j * (grad_Y_VQVt[a] + Y[w] * div_qtensor[MMH_ip][a]);
+        c_term +=
+            phi_j * (grad_Y_VQVt[a] + Y[w] * goma_ctx->fem.div_qtensor[goma_ctx->fem.mmh_ip][a]);
         c_term *= -Dc * Y[w];
 
         mu_term = -Dmu * Y[w] * Y[w] * VQVt_grad_mu[a] / mu * phi_j;

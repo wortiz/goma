@@ -62,13 +62,6 @@ struct elem_side_bc_struct;
 #define LSA_MATRIX_OUTPUT_TOLERANCE 1e-15
 #define LSA_COMPARE                 0
 
-int Linear_Stability = LSA_NONE;
-int LSA_3D_of_2D_pass = 0;
-dbl LSA_3D_of_2D_wave_number = -1.0;
-int LSA_number_wave_numbers = 0;
-dbl *LSA_wave_numbers = NULL;
-int LSA_current_wave_number = 0;
-
 /* Calculate matrices needed for stability analysis
  * and solve for spectrum is required.
  *
@@ -129,7 +122,8 @@ int solve_stability_problem(struct GomaLinearSolverData *ams,
   dcopy1(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], x, x_old);
   dcopy1(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], x, x_older);
 
-  if (!(Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE))
+  if (!(goma_ctx->problem.linear_stability == LSA_3D_OF_2D ||
+        goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE))
     res = solve_full_stability_problem(ams, x, delta_t, theta, resid_vector, x_old, x_older, xdot,
                                        xdot_old, x_update, converged, nprint, tnv, tnv_post, tev,
                                        tev_post, rd, gindex, p_gsize, gvec, gvec_elem, time_value,
@@ -198,8 +192,8 @@ int solve_full_stability_problem(struct GomaLinearSolverData *ams,
 
   /* Used to let the output routines know that we're not doing normal
    * mode analysis and just create one set of output files... */
-  LSA_3D_of_2D_wave_number = -1.0;
-  LSA_current_wave_number = 0;
+  goma_ctx->problem.lsa_3d_of_2d_wave_number = -1.0;
+  goma_ctx->problem.lsa_current_wave_number = 0;
 
   /* Allocate mass matrix */
   mass_matrix = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
@@ -344,12 +338,12 @@ for(i = 0; i < NZeros+1; i++)
   }
 
   /* Print jacobian and mass matrices */
-  if (Linear_Stability == LSA_SAVE || goma_ctx->fem.eigen->Eigen_Matrix_Output)
+  if (goma_ctx->problem.linear_stability == LSA_SAVE || goma_ctx->fem.eigen->Eigen_Matrix_Output)
     output_stability_matrices(mass_matrix, jacobian_matrix, ija, num_total_nodes,
                               goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
                               goma_ctx->solver.nzeros);
 
-  if (Linear_Stability != LSA_SAVE) {
+  if (goma_ctx->problem.linear_stability != LSA_SAVE) {
     /* Call eggroll initiator */
     for (i = 0; i < PARAMETER_ARRAY_LENGTH; i++) {
       istuff[i] = -1;
@@ -466,11 +460,11 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
 
   num_total_nodes = dpi->num_universe_nodes;
 
-  for (wn = 0; wn < LSA_number_wave_numbers; wn++) {
-    LSA_current_wave_number = wn;
-    LSA_3D_of_2D_wave_number = LSA_wave_numbers[wn];
+  for (wn = 0; wn < goma_ctx->problem.lsa_number_wave_numbers; wn++) {
+    goma_ctx->problem.lsa_current_wave_number = wn;
+    goma_ctx->problem.lsa_3d_of_2d_wave_number = goma_ctx->problem.lsa_wave_numbers[wn];
     printf("Solving for wave number %d out of %d.  WAVE NUMBER = %g\n", wn + 1,
-           LSA_number_wave_numbers, LSA_3D_of_2D_wave_number);
+           goma_ctx->problem.lsa_number_wave_numbers, goma_ctx->problem.lsa_3d_of_2d_wave_number);
 
     /* Get the original pd_glob[mn]->e[pg->imtrx][i] and pd_glob[mn]->etm[pg->imtrx][i][*]
      * values back. */
@@ -486,7 +480,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
 
     /* Jacobian matrix, pass 1 */
     printf("Assembling J (pass 1)...\n");
-    LSA_3D_of_2D_pass = 1;
+    goma_ctx->problem.lsa_3d_of_2d_pass = 1;
     ams->val = jacobian_matrix_1;
     init_vec_value(&jacobian_matrix_1[0], 0.0, (goma_ctx->solver.nzeros + 1));
     goma_ctx->fem.af->Assemble_Residual = TRUE;
@@ -500,7 +494,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
 
     /* Jacobian matrix, pass 2 */
     printf("Assembling J (pass 2)...\n");
-    LSA_3D_of_2D_pass = 2;
+    goma_ctx->problem.lsa_3d_of_2d_pass = 2;
     ams->val = jacobian_matrix_2;
     init_vec_value(&jacobian_matrix_2[0], 0.0, (goma_ctx->solver.nzeros + 1));
     goma_ctx->fem.af->Assemble_Residual = TRUE;
@@ -572,7 +566,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
       goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
 
       printf("Assembling B_tmpA (pass 1)...\n");
-      LSA_3D_of_2D_pass = 1;
+      goma_ctx->problem.lsa_3d_of_2d_pass = 1;
       ams->val = mass_matrix_1_tmpA;
       delta_t = 1.0;                     /* To get the phi_i*phi_j terms
                                           * (transient soln.) */
@@ -582,7 +576,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
                        &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
       printf("Assembling B_tmpB (pass 1)...\n");
-      LSA_3D_of_2D_pass = 1;
+      goma_ctx->problem.lsa_3d_of_2d_pass = 1;
       ams->val = mass_matrix_1_tmpB;
       delta_t = 1.0e+72;                     /* To simulate steady-state soln. */
       goma_ctx->fem.tran->delta_t = 1.0e+72; /*for Newmark-Beta terms in Lagrangian Solid*/
@@ -591,7 +585,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
                        &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
       printf("Assembling B_tmpA (pass 2)...\n");
-      LSA_3D_of_2D_pass = 2;
+      goma_ctx->problem.lsa_3d_of_2d_pass = 2;
       ams->val = mass_matrix_2_tmpA;
       delta_t = 1.0;                     /* To get the phi_i*phi_j terms
                                           * (transient soln.) */
@@ -601,7 +595,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
                        &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
       printf("Assembling B_tmpB (pass 2)...\n");
-      LSA_3D_of_2D_pass = 2;
+      goma_ctx->problem.lsa_3d_of_2d_pass = 2;
       ams->val = mass_matrix_2_tmpB;
       delta_t = 1.0e+72;                     /* To simulate steady-state soln. */
       goma_ctx->fem.tran->delta_t = 1.0e+72; /*for Newmark-Beta terms in Lagrangian Solid*/
@@ -647,14 +641,14 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
     goma_ctx->fem.tran->delta_t = 1.0; /*for Newmark-Beta terms in Lagrangian Solid*/
 
     printf("Assembling B (pass 1)...\n");
-    LSA_3D_of_2D_pass = 1;
+    goma_ctx->problem.lsa_3d_of_2d_pass = 1;
     ams->val = mass_matrix_1;
     matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
                      &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
                      &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
     printf("Assembling B (pass 2)...\n");
-    LSA_3D_of_2D_pass = 2;
+    goma_ctx->problem.lsa_3d_of_2d_pass = 2;
     ams->val = mass_matrix_2;
     matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
                      &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
@@ -709,12 +703,13 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
       }
 
     /* Print Jacobian and mass matrices */
-    if (Linear_Stability == LSA_3D_OF_2D_SAVE || goma_ctx->fem.eigen->Eigen_Matrix_Output)
+    if (goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE ||
+        goma_ctx->fem.eigen->Eigen_Matrix_Output)
       output_stability_matrices(mass_matrix, jacobian_matrix, ija, num_total_nodes,
                                 goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
                                 goma_ctx->solver.nzeros);
 
-    if (Linear_Stability != LSA_3D_OF_2D_SAVE) {
+    if (goma_ctx->problem.linear_stability != LSA_3D_OF_2D_SAVE) {
       /* Call eggroll initiator */
       for (i = 0; i < PARAMETER_ARRAY_LENGTH; i++) {
         istuff[i] = -1;
@@ -771,7 +766,7 @@ void output_stability_matrices(double *mass_matrix,
 
   /* Get the filenames.  These will be different if we're doing a
    * normal mode analysis for 3D stability of a 2D flow. */
-  if (LSA_3D_of_2D_wave_number == -1.0) {
+  if (goma_ctx->problem.lsa_3d_of_2d_wave_number == -1.0) {
     sprintf(LSA_mass_output_filename, "LSA_mass_coo.out");
     sprintf(LSA_jacobian_output_filename, "LSA_jac_coo.out");
     sprintf(LSA_vars_output_filename, "LSA_vars.out");

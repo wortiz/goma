@@ -1237,7 +1237,7 @@ int apply_embedded_bc(int ielem,    /* element number */
 #endif
 
   old_elem_sign = goma_ctx->fem.ls->Elem_Sign;
-  if (xfem != NULL) {
+  if (goma_ctx->fem.xfem != NULL) {
     num_elem_passes = 2;
   }
 
@@ -1504,7 +1504,7 @@ int assemble_embedded_bc(int ielem,    /* element number */
   while (bcref) {
     bc = goma_ctx->bc.bc_types + bcref->bc_input_id;
 
-    if (xfem != NULL && bc->BC_ID != 0 && goma_ctx->fem.ls->Elem_Sign != bc->BC_ID) {
+    if (goma_ctx->fem.xfem != NULL && bc->BC_ID != 0 && goma_ctx->fem.ls->Elem_Sign != bc->BC_ID) {
       bcref = bcref->next;
       continue;
     }
@@ -1905,8 +1905,8 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
 
   /* Bail out fast if there's nothing to do */
 
-  if ((goma_ctx->fem.ls == NULL) || (goma_ctx->fem.ls->embedded_bc == NULL) || (xfem == NULL) ||
-      (xfem->elem_state == 0))
+  if ((goma_ctx->fem.ls == NULL) || (goma_ctx->fem.ls->embedded_bc == NULL) ||
+      (goma_ctx->fem.xfem == NULL) || (goma_ctx->fem.xfem->elem_state == 0))
     return (0);
 
   bc = goma_ctx->bc.bc_types + goma_ctx->fem.ls->embedded_bc->bc_input_id;
@@ -1970,7 +1970,7 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
           if (goma_ctx->fem.af->Assemble_Jacobian) {
             for (var = V_FIRST; var < V_LAST; var++) {
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-              if (pvar != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][eqn][var])) {
+              if (pvar != -1 && (goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][eqn][var])) {
                 for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, idof_to, j)] +=
                       bc->BC_ID * goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, idof_from, j)];
@@ -1996,7 +1996,7 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
 
       for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i += 2) {
         ln = i / 2;
-        if (xfem->node_var_state[ln] == 1) {
+        if (goma_ctx->fem.xfem->node_var_state[ln] == 1) {
           is_neg = lnn_distance(ln) < 0.;
           if ((is_neg && bc->BC_ID == -1) || (!is_neg && bc->BC_ID == 1)) {
             idof_from = i + 1;
@@ -2013,7 +2013,7 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
           if (goma_ctx->fem.af->Assemble_Jacobian) {
             for (var = V_FIRST; var < V_LAST; var++) {
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-              if (pvar != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][eqn][var])) {
+              if (pvar != -1 && (goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][eqn][var])) {
                 for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, idof_to, j)] +=
                       goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, idof_from, j)];
@@ -2042,7 +2042,7 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
 
         for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i += 2) {
           ln = i / 2;
-          if (xfem->node_var_state[ln] == 1) {
+          if (goma_ctx->fem.xfem->node_var_state[ln] == 1) {
             is_neg = lnn_distance(ln) < 0.;
             if ((is_neg && bc->BC_ID == -1) || (!is_neg && bc->BC_ID == 1)) {
               idof_from = i + 1;
@@ -2059,7 +2059,8 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
             if (goma_ctx->fem.af->Assemble_Jacobian) {
               for (var = V_FIRST; var < V_LAST; var++) {
                 pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-                if (pvar != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][eqn][var])) {
+                if (pvar != -1 &&
+                    (goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][eqn][var])) {
                   for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, idof_to, j)] +=
                         goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, idof_from, j)];
@@ -2095,7 +2096,7 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
                 for ( i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i+=2 )
                   {
                     ln = i/2;
-                    if ( xfem->active_node[ln] )
+                    if ( goma_ctx->fem.xfem->active_node[ln] )
                       {
                         is_neg = lnn_distance( ln ) < 0.;
                         if ( (is_neg && bc->BC_ID == -1) ||
@@ -2120,7 +2121,7 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
                             for (var=V_FIRST; var<V_LAST; var++)
                               {
                                 pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-                                if (pvar != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][eqn][var]))
+                                if (pvar != -1 && (goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][eqn][var]))
                                   {
                                     for ( j = 0; j< goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++ )
                                       {
@@ -2327,7 +2328,7 @@ void gnn_distance(const int I,
 
   if (ie == -1) {
     /* assume we are dealing with a discontinuous variable (like P0) */
-    Exo_DB *exo = EXO_ptr;
+    Exo_DB *exo = goma_ctx->exo;
     int elem = exo->centroid_list[I];
 
     if (elem != -1) {
@@ -2451,7 +2452,7 @@ int lookup_active_dof(int var, int j, int eptr)
    * If there is an active Dirichlet on this var at this node,
    * set nu to -2 to signal this.
    */
-  nn = Nodes[index];
+  nn = goma_ctx->fem.nodes[index];
   nv = nn->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
   noffset = get_nodal_unknown_offset(nv, var, -2, 0, NULL);
   if (nn->DBC[goma_ctx->fem.pg->imtrx] != NULL) {
@@ -2508,7 +2509,8 @@ void setup_shop_at_point(int ielem, double *xi, const Exo_DB *exo)
    * If this is not a new element, don't redo dofptrs
    */
   if (ielem != goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem) {
-    err = load_elem_dofptr(ielem, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
+    err = load_elem_dofptr(ielem, exo, goma_ctx->fem.x_static, goma_ctx->fem.x_old_static,
+                           goma_ctx->fem.xdot_static, goma_ctx->fem.xdot_old_static, 0);
     GOMA_EH(err, "load_elem_dofptr");
 
     err = bf_mp_init(goma_ctx->fem.pd);
@@ -2604,7 +2606,7 @@ double fv_at_point(double *xi, int var) {
                      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[var][i],
                      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
                      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var], i);
-    esp = x_static +
+    esp = goma_ctx->fem.x_static +
           goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
               ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][i]];
     val += phi_i * *esp;
@@ -2621,7 +2623,7 @@ double fv_old_at_point(double *xi, int var) {
                      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[var][i],
                      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
                      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var], i);
-    esp = x_old_static +
+    esp = goma_ctx->fem.x_old_static +
           goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
               ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][i]];
     val += phi_i * *esp;
@@ -2640,7 +2642,7 @@ double fv_and_phi_at_point(double *xi, int var, double *phi, int sign) {
                       goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_list[var][i],
                       goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape,
                       goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][var], i);
-    esp = x_static +
+    esp = goma_ctx->fem.x_static +
           goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
               ->ieqn_ledof[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var][i]];
     val += phi[i] * *esp;

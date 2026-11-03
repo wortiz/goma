@@ -31,8 +31,6 @@
 #include "cpc_defs.h"
 #endif
 
-extern int Chemkin_Needed;
-
 #ifdef USE_CHEMKIN
 extern int ck_decide_vol_chem(CPC_VOLDOMAIN_STRUCT *);
 extern int chemkin_mat_prop_init(MATRL_PROP_STRUCT *, int, PROBLEM_DESCRIPTION_STRUCT *);

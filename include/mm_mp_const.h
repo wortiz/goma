@@ -23,9 +23,6 @@
 #define MAX_MODES 8 /* maximum number of viscoelastic modes allowed */
 #endif
 
-extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwrite with
-                                          material-specific initialization */
-
 #define DB_GOMA_MAT 1 /* Default location to obtain physical parameters */
 #define DB_CHEMKIN_MAT                                      \
   4 /* Obtain physical parameters from the chemkin database \

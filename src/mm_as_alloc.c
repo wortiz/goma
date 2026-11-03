@@ -61,8 +61,6 @@ static int shape_list(Exo_DB *);
  * pointers need to be assigned to point to something harmless.
  */
 
-dbl *p0;
-
 dbl zero = 0.0;
 
 /*
@@ -1075,7 +1073,7 @@ int assembly_alloc(Exo_DB *exo)
   /*
    * These are critical for the element dof pointers...
    */
-  p0 = &zero;
+  goma_ctx->fem.p0 = &zero;
 
   if (goma_ctx->debug_flag) {
     DPRINTF(stderr, "%s...\n", yo);

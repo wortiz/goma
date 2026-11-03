@@ -423,7 +423,7 @@ void initialize_particles(const Exo_DB *exo,
     num_els = el_index_end - el_index_begin;
     for (elem_id = el_index_begin; elem_id < el_index_end; elem_id++) {
 #ifdef PARALLEL
-      if (DPI_ptr->elem_owner[elem_id] != goma_ctx->proc_id)
+      if (goma_ctx->dpi->elem_owner[elem_id] != goma_ctx->proc_id)
         continue;
 #endif
 
@@ -1208,7 +1208,7 @@ static void find_exit_wound(const int elem_id,
 
     if (p->owning_elem_id == -1) {
       fprintf(stderr, "\nelem_id = %d, global_elem_id = %d\n", elem_id,
-              DPI_ptr->elem_index_global[elem_id]);
+              goma_ctx->dpi->elem_index_global[elem_id]);
       fprintf(stderr, "elem_elem_list for this element is: %d %d %d %d %d %d\n",
               static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + 0],
               static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + 1],
@@ -1366,7 +1366,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
 #ifdef PARALLEL
     /* This shouldn't affect anything unless I was holding on to
      * ghosted particles somehow... */
-    if (DPI_ptr->elem_owner[el_index] != goma_ctx->proc_id)
+    if (goma_ctx->dpi->elem_owner[el_index] != goma_ctx->proc_id)
       continue;
 #endif
 
@@ -1699,7 +1699,7 @@ static dbl fill_element_volumes(const int e_begin, const int e_end) {
   /* First get total element "volume" */
   for (i = e_begin; i < e_end; i++) {
 #ifdef PARALLEL
-    if (DPI_ptr->elem_owner[i] != goma_ctx->proc_id) {
+    if (goma_ctx->dpi->elem_owner[i] != goma_ctx->proc_id) {
       el_volume[i] = 0.0;
       continue;
     }
@@ -2040,10 +2040,10 @@ static particle_t *create_a_particle(particle_t *seed_p, const int elem_id) {
   particle_t *p, *p_last_keep, *p_next_keep;
   int i;
 
-  if (DPI_ptr->elem_owner[elem_id] != goma_ctx->proc_id && seed_p->state != GHOST)
+  if (goma_ctx->dpi->elem_owner[elem_id] != goma_ctx->proc_id && seed_p->state != GHOST)
     dump4(EXIT, seed_p,
           "Proc %d tried to create a particle on element %d(%d), which it doesn't own.\n",
-          goma_ctx->proc_id, elem_id, DPI_ptr->elem_index_global[elem_id]);
+          goma_ctx->proc_id, elem_id, goma_ctx->dpi->elem_index_global[elem_id]);
 
   p = obtain_particle_space(elem_id);
   p_last_keep = p->last;
@@ -2257,11 +2257,11 @@ static void create_element_particle_info_maps(void) {
       }
 
       for (elem_id = 0; elem_id < static_exo->num_elems; elem_id++) {
-        global_elem_id = DPI_ptr->elem_index_global[elem_id];
+        global_elem_id = goma_ctx->dpi->elem_index_global[elem_id];
 
         /* If we're a ghosted element, broadcast so someone
          * knows they should send us ghost information. */
-        if (DPI_ptr->elem_owner[elem_id] != proc_id) {
+        if (goma_ctx->dpi->elem_owner[elem_id] != proc_id) {
           msg[0] = -1;
           msg[1] = global_elem_id;
           msg[2] = elem_id;
@@ -2281,7 +2281,7 @@ static void create_element_particle_info_maps(void) {
                 static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + side_id];
             if (goma_ctx->particles.element_info[elem_id].PBC_side_id[side_id] == -1 &&
                 (neighbor_elem_id == -1 ||
-                 DPI_ptr->elem_owner[neighbor_elem_id] != goma_ctx->proc_id)) {
+                 goma_ctx->dpi->elem_owner[neighbor_elem_id] != goma_ctx->proc_id)) {
               msg[0] = global_elem_id;
               if (mdim == 2) {
                 indices[0] = side_id;
@@ -2293,7 +2293,7 @@ static void create_element_particle_info_maps(void) {
               elem_ptr_start = goma_ctx->mesh.proc_connect_ptr[elem_id];
               for (node_id = 0; node_id < nodes_per_side; node_id++) {
                 local_node_id = goma_ctx->mesh.proc_elem_connect[elem_ptr_start + indices[node_id]];
-                global_node_id = DPI_ptr->node_index_global[local_node_id];
+                global_node_id = goma_ctx->dpi->node_index_global[local_node_id];
                 msg[node_id + 1] = global_node_id;
               }
 
@@ -2369,8 +2369,9 @@ static void create_element_particle_info_maps(void) {
             fprintf(fp2, "\tLooking for ghosting elem %4d ... ", global_elem_id);
             fflush(fp2);
           }
-          elem_id = in_list(global_elem_id, 0, static_exo->num_elems, DPI_ptr->elem_index_global);
-          if (elem_id > -1 && DPI_ptr->elem_owner[elem_id] == goma_ctx->proc_id) {
+          elem_id =
+              in_list(global_elem_id, 0, static_exo->num_elems, goma_ctx->dpi->elem_index_global);
+          if (elem_id > -1 && goma_ctx->dpi->elem_owner[elem_id] == goma_ctx->proc_id) {
             ghost_id = goma_ctx->particles.element_info[elem_id].num_ghost_target_elems++;
             goma_ctx->particles.element_info[elem_id].ghost_proc = (int *)realloc(
                 goma_ctx->particles.element_info[elem_id].ghost_proc, (ghost_id + 1) * sizeof(int));
@@ -2401,14 +2402,14 @@ static void create_element_particle_info_maps(void) {
           }
           match_found = 0;
           for (elem_id = 0; elem_id < static_exo->num_elems && !match_found; elem_id++) {
-            if (DPI_ptr->elem_owner[elem_id] != goma_ctx->proc_id)
+            if (goma_ctx->dpi->elem_owner[elem_id] != goma_ctx->proc_id)
               continue;
             elem_ptr_start = goma_ctx->mesh.proc_connect_ptr[elem_id];
             for (side_id = 0; side_id < sides_per_element && !match_found; side_id++) {
               /* If the element on the other side is owned by us, skip this side. */
               neighbor_elem_id =
                   static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + side_id];
-              if (DPI_ptr->elem_owner[neighbor_elem_id] == goma_ctx->proc_id)
+              if (goma_ctx->dpi->elem_owner[neighbor_elem_id] == goma_ctx->proc_id)
                 continue;
 
               if (mdim == 2) {
@@ -2419,7 +2420,7 @@ static void create_element_particle_info_maps(void) {
 
               for (node_id = 0; node_id < nodes_per_side; node_id++) {
                 local_node_id = goma_ctx->mesh.proc_elem_connect[elem_ptr_start + indices[node_id]];
-                global_node_id = DPI_ptr->node_index_global[local_node_id];
+                global_node_id = goma_ctx->dpi->node_index_global[local_node_id];
                 node_compares[node_id] = global_node_id;
               }
 
@@ -2460,7 +2461,7 @@ static void create_element_particle_info_maps(void) {
             if (output) {
               fprintf(fp2, "matching elem_id = %d\n", elem_id);
               fflush(fp2);
-              fprintf(fp2, " found at elem %4d(%3d)\n", DPI_ptr->elem_index_global[elem_id],
+              fprintf(fp2, " found at elem %4d(%3d)\n", goma_ctx->dpi->elem_index_global[elem_id],
                       elem_id);
               fflush(fp2);
             }
@@ -2557,7 +2558,7 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
 #ifdef PARALLEL
             /* Don't try to create particles for elements that
              * don't belong on this processor!. */
-            if (DPI_ptr->elem_owner[elem_id] != goma_ctx->proc_id)
+            if (goma_ctx->dpi->elem_owner[elem_id] != goma_ctx->proc_id)
               continue;
 #endif
 
@@ -4986,13 +4987,13 @@ static void test_map_integrity(void) {
       else
         fp = fopen("map.txt", "a");
       for (elem_id = 0; elem_id < static_exo->num_elems; elem_id++) {
-        if (DPI_ptr->elem_owner[elem_id] != goma_ctx->proc_id) {
+        if (goma_ctx->dpi->elem_owner[elem_id] != goma_ctx->proc_id) {
           fprintf(fp, "Proc %2d Elem %4d(%3d) <not owned>\n", goma_ctx->proc_id,
-                  DPI_ptr->elem_index_global[elem_id], elem_id);
+                  goma_ctx->dpi->elem_index_global[elem_id], elem_id);
           continue;
         } else
           fprintf(fp, "Proc %2d Elem %4d(%3d)\n", goma_ctx->proc_id,
-                  DPI_ptr->elem_index_global[elem_id], elem_id);
+                  goma_ctx->dpi->elem_index_global[elem_id], elem_id);
         for (face_id = 0; face_id < sides_per_element; face_id++) {
           PBC_id = goma_ctx->particles.element_info[elem_id].PBC_side_id[face_id];
           fprintf(fp, "\t\tFace %d PBC=%2d ", face_id, PBC_id);
@@ -5006,9 +5007,10 @@ static void test_map_integrity(void) {
                 fprintf(fp, "missing local neighbor            FAIL\n");
               else
                 fprintf(fp, "local neighbor=%4d(%3d) (%5s)   OK\n",
-                        DPI_ptr->elem_index_global[neighbor_elem_id], neighbor_elem_id,
-                        (DPI_ptr->elem_owner[neighbor_elem_id] == goma_ctx->proc_id ? "owned"
-                                                                                    : "ghost"));
+                        goma_ctx->dpi->elem_index_global[neighbor_elem_id], neighbor_elem_id,
+                        (goma_ctx->dpi->elem_owner[neighbor_elem_id] == goma_ctx->proc_id
+                             ? "owned"
+                             : "ghost"));
             } else {
               neighbor_elem_proc_id = -(PBC_id + 2);
               neighbor_elem_id =

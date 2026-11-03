@@ -218,15 +218,15 @@ void apply_SES(double func[MAX_PDIM],
    * above or below the surface */
 
   /* Determine if sh_tens is active on neighboring shell block */
-  if (num_shell_blocks != 0)
-    nf = num_elem_friends[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem];
+  if (goma_ctx->fem.num_shell_blocks != 0)
+    nf = goma_ctx->fem.num_elem_friends[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem];
   else
     nf = 0;
 
   /* If so, set up assembly to include variable shell tension */
   if (nf == 1 && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_TENSION]) {
     ie = Index_Solution(inode, SHELL_TENSION, 0, 0, -1, goma_ctx->fem.pg->imtrx);
-    sheet_tension = x_static[ie];
+    sheet_tension = goma_ctx->fem.x_static[ie];
   }
 
   if (XN > XR) {
@@ -656,11 +656,11 @@ void fvelo_normal_lub_bc(double func[DIM],
   /* Basic data for local element */
   el1 = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
 
-  nf = num_elem_friends[el1];
+  nf = goma_ctx->fem.num_elem_friends[el1];
   if (nf == 0) {
     GOMA_EH(GOMA_ERROR, "Where is my bulk element neighbor?");
   } else if (nf == 1) {
-    el2 = elem_friends[el1][0];
+    el2 = goma_ctx->fem.elem_friends[el1][0];
 
     /* Determine if this element is bulk with shell friend(s) */
     nbr_type = Elem_Type(exo, el2);
@@ -2236,17 +2236,17 @@ void fvelo_tangential_bc(double func[],
       int n_dofptr[MAX_VARIABLE_TYPES][MDE];
       double *n_esp, shell_var[MDE];
       /* See if there is a friend for this element */
-      nf = num_elem_friends[el1];
+      nf = goma_ctx->fem.num_elem_friends[el1];
       if (nf == 0)
         GOMA_EH(GOMA_ERROR, "no element friends");
-      el2 = elem_friends[el1][0];
+      el2 = goma_ctx->fem.elem_friends[el1][0];
       if (nf != 1)
         GOMA_WH(-1, "WARNING: Not set up for more than one element friend!");
       n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
       load_neighbor_var_data(el1, el2, n_dof, dof_map, n_dofptr, id_side, xi, exo);
       for (kdir = 0; kdir < n_dof[SHELL_BDYVELO]; kdir++) {
         d_phi_dxi[kdir] = goma_ctx->fem.bf[SHELL_BDYVELO]->dphidxi[kdir][0];
-        n_esp = x_static + n_dofptr[SHELL_BDYVELO][kdir];
+        n_esp = goma_ctx->fem.x_static + n_dofptr[SHELL_BDYVELO][kdir];
         shell_var[kdir] = *n_esp;
       }
       dx_dxi[0] = dx_dxi[1] = 0.;
@@ -2599,7 +2599,7 @@ void fvelo_tangential_solid_bc(double func[],
     GOMA_EH(GOMA_ERROR, "VELO_TANGENT_SOLID not implemented in 3D yet");
 
   if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
-    if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid)
+    if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid)
       if (goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED ||
           goma_ctx->fem.mp->PorousMediaType == CONTINUOUS)
         for (jvar = 0; jvar < dim; jvar++) {
@@ -2619,7 +2619,7 @@ void fvelo_tangential_solid_bc(double func[],
     return;
   }
 
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_fluid) {
     if (type == VELO_TANGENT_SOLID_BC) {
       for (kdir = 0; kdir < goma_ctx->fem.pd->Num_Dim; kdir++) {
         *func += goma_ctx->fem.fv->v[kdir] * goma_ctx->fem.fv->stangent[0][kdir] * betainv;
@@ -2664,7 +2664,7 @@ void fvelo_tangential_solid_bc(double func[],
         }
       }
     } /* end of if Assemble_Jacobian */
-  } else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
+  } else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid) {
     /*first load up the correct reference velocity and do this in the
      solid phase because you may not have it in the liquid phase, as in
      TALE */
@@ -2939,7 +2939,7 @@ void fvelo_normal_solid_bc(double func[],
     GOMA_EH(GOMA_ERROR, "VELO_NORMAL_SOLID not implemented in 3D yet");
 
   if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
-    if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid)
+    if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid)
       if (goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED ||
           goma_ctx->fem.mp->PorousMediaType == CONTINUOUS)
         for (jvar = 0; jvar < dim; jvar++) {
@@ -2959,7 +2959,7 @@ void fvelo_normal_solid_bc(double func[],
     return;
   }
 
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_fluid) {
     for (kdir = 0; kdir < goma_ctx->fem.pd->Num_Dim; kdir++) {
       *func += goma_ctx->fem.fv->v[kdir] * goma_ctx->fem.fv->snormal[kdir];
     }
@@ -2986,7 +2986,7 @@ void fvelo_normal_solid_bc(double func[],
         }
       }
     } /* end of if Assemble_Jacobian */
-  } else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
+  } else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid) {
     /*first load up the correct reference velocity and do this in the
      solid phase because you may not have it in the liquid phase, as in
      TALE */
@@ -4370,7 +4370,7 @@ void load_surface_tension(double dsigma_dx[][MDE]) /* dimensions [DIM][MDE] */
     usr_surface_tension(goma_ctx->fem.mp->u_surface_tension);
   } else if (goma_ctx->fem.mp->SurfaceTensionModel == DILATION) {
     belly_flop(goma_ctx->fem.elc->lame_mu);
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
     /* calculate the surface dilation  tt..F */
     dil = 1.;
@@ -4728,15 +4728,15 @@ void sheet_tension(double cfunc[MDE][DIM],
   double dphidxi_shell[MDE], phi_shell[MDE];
 
   /* Determine if sh_tens is active on neighboring shell block */
-  if (num_shell_blocks != 0)
-    nf = num_elem_friends[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem];
+  if (goma_ctx->fem.num_shell_blocks != 0)
+    nf = goma_ctx->fem.num_elem_friends[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem];
   else
     nf = 0;
 
   /* If so, set up assembly to include variable shell tension */
   if (nf == 1 && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_TENSION]) {
     var_sh_tens = TRUE;
-    el1 = elem_friends[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem][0];
+    el1 = goma_ctx->fem.elem_friends[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem][0];
     n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
     load_neighbor_var_data(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, el1, n_dof, dof_map,
                            n_dofptr, id_side, xi, exo);
@@ -4799,7 +4799,7 @@ void sheet_tension(double cfunc[MDE][DIM],
       T_dof[i] = Index_Solution(I, SHELL_TENSION, 0, 0, -1, goma_ctx->fem.pg->imtrx);
 
       if (T_dof[i] != -1) {
-        T[i] = x_static[T_dof[i]];
+        T[i] = goma_ctx->fem.x_static[T_dof[i]];
         dT_dxi += T[i] * dphidxi_shell[i];
       }
     }
@@ -5103,7 +5103,8 @@ void fn_dot_T(double cfunc[MDE][DIM],
 
   /* EDW: For 3D of 2D LSA; all three components are needed */
   dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
-  if (Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE)
+  if (goma_ctx->problem.linear_stability == LSA_3D_OF_2D ||
+      goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE)
     dim = goma_ctx->problem.vim;
 
   eqn = VELOCITY1;
@@ -14155,7 +14156,7 @@ void discontinuous_velocity(double func[DIM],
     GOMA_EH(GOMA_ERROR, "Don't recognize your mode on the DISCONTINUOUS_VELO BC");
 
   /* only apply if within gas phase */
-  if (Current_EB_ptr->Elem_Blk_Id == idblock) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == idblock) {
     vnormal = 0.;
     for (kdir = 0; kdir < goma_ctx->fem.pd->Num_Dim; kdir++) {
       vnormal += goma_ctx->fem.mp->density * (goma_ctx->fem.fv->v[kdir] - x_dot[kdir]) *
@@ -14206,7 +14207,7 @@ void discontinuous_velocity(double func[DIM],
   }
 
   if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
-    if (Current_EB_ptr->Elem_Blk_Id == idblock)
+    if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == idblock)
       for (kdir = 0; kdir < goma_ctx->fem.pd->Num_Dim; kdir++) {
         var = MESH_DISPLACEMENT1 + kdir;
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var])
@@ -14220,7 +14221,7 @@ void discontinuous_velocity(double func[DIM],
   }
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    if (Current_EB_ptr->Elem_Blk_Id == idblock) {
+    if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == idblock) {
       for (kdir = 0; kdir < goma_ctx->fem.pd->Num_Dim; kdir++) {
         for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++)
           for (p = 0; p < goma_ctx->fem.pd->Num_Dim; p++)
@@ -15701,9 +15702,9 @@ void qside_contact_resis(double func[DIM],
 
   if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
-  if (Current_EB_ptr->Elem_Blk_Id == ID_mat_1) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == ID_mat_1) {
     sign_int = -1.0;
-  } else if (Current_EB_ptr->Elem_Blk_Id == ID_mat_2) {
+  } else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == ID_mat_2) {
     sign_int = 1.0;
   } else {
     GOMA_EH(GOMA_ERROR, "T_CONTACT_RESIS has incorrect material ids");
@@ -15860,9 +15861,9 @@ void qside_ls(double func[DIM],
   int j;
   int var = LS;
 
-  if (Current_EB_ptr->Elem_Blk_Id == LS_block_id) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == LS_block_id) {
     /* do nothing */
-  } else if (Current_EB_ptr->Elem_Blk_Id == no_LS_block_id) {
+  } else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == no_LS_block_id) {
     /* Add contributions from level set side of boundary to flux */
 
     load_lsi_adjmatr(goma_ctx->fem.ls->Length_Scale);
@@ -15905,22 +15906,22 @@ void shear_to_shell(double cfunc[MDE][DIM],
   double dTL_dP[MDE];
 
   /* Determine if sh_tens is active on neighboring shell block */
-  if (num_shell_blocks != 0)
-    nf = num_elem_friends[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem];
+  if (goma_ctx->fem.num_shell_blocks != 0)
+    nf = goma_ctx->fem.num_elem_friends[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem];
   else
     nf = 0;
 
   eqn = SHELL_TENSION;
 
   /* Determine if sh_tens is active on neighboring shell block */
-  if (num_shell_blocks != 0)
-    nf = num_elem_friends[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem];
+  if (goma_ctx->fem.num_shell_blocks != 0)
+    nf = goma_ctx->fem.num_elem_friends[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem];
   else
     nf = 0;
 
   /* If so, set up assembly to include variable shell tension */
   if (nf == 1 && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_TENSION]) {
-    el1 = elem_friends[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem][0];
+    el1 = goma_ctx->fem.elem_friends[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem][0];
     n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
     load_neighbor_var_data(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, el1, n_dof, dof_map,
                            n_dofptr, id_side, xi, exo);
@@ -16437,15 +16438,15 @@ void qside_light_jump(double func[DIM],
   dim = goma_ctx->fem.pd->Num_Dim;
   if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
     return;
-  if (Current_EB_ptr->Elem_Blk_Id == ID_mat_1) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == ID_mat_1) {
     sign_int = -1;
-  } else if (Current_EB_ptr->Elem_Blk_Id == ID_mat_2) {
+  } else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == ID_mat_2) {
     sign_int = 1;
   } else {
     GOMA_EH(GOMA_ERROR, "LIGHT_JUMP has incorrect material ids");
   }
 
-  mp_1 = goma_ctx->fem.mp_glob[Current_EB_ptr->Elem_Blk_Id - 1];
+  mp_1 = goma_ctx->fem.mp_glob[goma_ctx->fem.current_eb_ptr->Elem_Blk_Id - 1];
   goma_ctx->fem.mp = mp_1;
   load_matrl_statevector(mp_1);
   load_properties(mp_1, time);

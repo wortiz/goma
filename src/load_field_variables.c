@@ -266,7 +266,9 @@ int load_fv(void)
         //        pg->matrices[upd->matrix_index[v]].xdot +
         //                                  esp_dot->F[i]) * bf[v]->phi[i];
       } else {
-        fv_dot_old->F += *(xdot_old_static - xdot_static + esp_dot->F[i]) * bf[v]->phi[i];
+        fv_dot_old->F +=
+            *(goma_ctx->fem.xdot_old_static - goma_ctx->fem.xdot_static + esp_dot->F[i]) *
+            bf[v]->phi[i];
       }
     }
   } /*else if (upd->vp[pg->imtrx][v] == -1) {
@@ -1032,12 +1034,17 @@ int load_fv(void)
                                   pg->matrices[upd->matrix_index[v]].xdot + esp_dot->d[p][i]) *
                                 bfv->phi[i];
           } else {
-            fv_dot_old->x[p] += *(xdot_old_static - xdot_static + esp_dot->d[p][i]) * bfv->phi[i];
-            fv_dot_old->d[p] += *(xdot_old_static - xdot_static + esp_dot->d[p][i]) * bfv->phi[i];
+            fv_dot_old->x[p] +=
+                *(goma_ctx->fem.xdot_old_static - goma_ctx->fem.xdot_static + esp_dot->d[p][i]) *
+                bfv->phi[i];
+            fv_dot_old->d[p] +=
+                *(goma_ctx->fem.xdot_old_static - goma_ctx->fem.xdot_static + esp_dot->d[p][i]) *
+                bfv->phi[i];
           }
           if (tran->solid_inertia) {
             goma_ctx->fem.fv_dot_dot_old->d[p] +=
-                *(x_dbl_dot_old_static - x_dbl_dot_static + goma_ctx->fem.esp_dbl_dot->d[p][i]) *
+                *(goma_ctx->fem.x_dbl_dot_old_static - goma_ctx->fem.x_dbl_dot_static +
+                  goma_ctx->fem.esp_dbl_dot->d[p][i]) *
                 bfv->phi[i];
           }
         } else {
@@ -1116,12 +1123,14 @@ int load_fv(void)
                 bf[v]->phi[i];
           } else {
             fv_dot_old->d_rs[p] +=
-                *(xdot_old_static - xdot_static + esp_dot->d_rs[p][i]) * bf[v]->phi[i];
+                *(goma_ctx->fem.xdot_old_static - goma_ctx->fem.xdot_static + esp_dot->d_rs[p][i]) *
+                bf[v]->phi[i];
           }
 
           if (tran->solid_inertia) {
             goma_ctx->fem.fv_dot_dot_old->d_rs[p] +=
-                *(x_dbl_dot_old_static - x_dbl_dot_static + goma_ctx->fem.esp_dbl_dot->d_rs[p][i]) *
+                *(goma_ctx->fem.x_dbl_dot_old_static - goma_ctx->fem.x_dbl_dot_static +
+                  goma_ctx->fem.esp_dbl_dot->d_rs[p][i]) *
                 bf[v]->phi[i];
           }
         } else {
@@ -1490,7 +1499,9 @@ int load_fv(void)
                                  pg->matrices[upd->matrix_index[v]].xdot + esp_dot->p_liq[i]) *
                                bf[v]->phi[i];
         } else {
-          fv_dot_old->p_liq += *(xdot_old_static - xdot_static + esp_dot->p_liq[i]) * bf[v]->phi[i];
+          fv_dot_old->p_liq +=
+              *(goma_ctx->fem.xdot_old_static - goma_ctx->fem.xdot_static + esp_dot->p_liq[i]) *
+              bf[v]->phi[i];
         }
       }
     }
@@ -1521,7 +1532,9 @@ int load_fv(void)
                                  pg->matrices[upd->matrix_index[v]].xdot + esp_dot->p_gas[i]) *
                                bf[v]->phi[i];
         } else {
-          fv_dot_old->p_gas += *(xdot_old_static - xdot_static + esp_dot->p_gas[i]) * bf[v]->phi[i];
+          fv_dot_old->p_gas +=
+              *(goma_ctx->fem.xdot_old_static - goma_ctx->fem.xdot_static + esp_dot->p_gas[i]) *
+              bf[v]->phi[i];
         }
       }
     }
@@ -1555,7 +1568,8 @@ int load_fv(void)
               bf[v]->phi[i];
         } else {
           fv_dot_old->porosity +=
-              *(xdot_old_static - xdot_static + esp_dot->porosity[i]) * bf[v]->phi[i];
+              *(goma_ctx->fem.xdot_old_static - goma_ctx->fem.xdot_static + esp_dot->porosity[i]) *
+              bf[v]->phi[i];
         }
       }
     }
@@ -1580,7 +1594,9 @@ int load_fv(void)
                              pg->matrices[upd->matrix_index[v]].xdot + esp_dot->T[i]) *
                            bf[v]->phi[i];
         } else {
-          fv_dot_old->T += *(xdot_old_static - xdot_static + esp_dot->T[i]) * bf[v]->phi[i];
+          fv_dot_old->T +=
+              *(goma_ctx->fem.xdot_old_static - goma_ctx->fem.xdot_static + esp_dot->T[i]) *
+              bf[v]->phi[i];
         }
       }
     }
@@ -1656,7 +1672,8 @@ int load_fv(void)
               bf[v]->phi[i];
         } else {
           fv_dot_old->moment[p] +=
-              *(xdot_old_static - xdot_static + esp_dot->moment[p][i]) * bf[v]->phi[i];
+              *(goma_ctx->fem.xdot_old_static - goma_ctx->fem.xdot_static + esp_dot->moment[p][i]) *
+              bf[v]->phi[i];
         }
       }
     }
@@ -2410,7 +2427,7 @@ int load_fv_grads(void)
    */
 
   if (pd->gv[MESH_DISPLACEMENT1] &&
-      !ShellElementParentElementCoverageForVariable[MESH_DISPLACEMENT1]) {
+      !goma_ctx->fem.shell_element_parent_element_coverage_for_variable[MESH_DISPLACEMENT1]) {
     v = MESH_DISPLACEMENT1;
     dofs = ei[upd->matrix_index[v]]->dof[v];
     for (p = 0; p < VIM; p++) {
@@ -2439,7 +2456,7 @@ int load_fv_grads(void)
    * grad(d_dot)
    */
   if (pd->gv[MESH_DISPLACEMENT1] &&
-      !ShellElementParentElementCoverageForVariable[MESH_DISPLACEMENT1]) {
+      !goma_ctx->fem.shell_element_parent_element_coverage_for_variable[MESH_DISPLACEMENT1]) {
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
         v = MESH_DISPLACEMENT1 + p;
@@ -2488,7 +2505,7 @@ int load_fv_grads(void)
    */
 
   if (pd->gv[MESH_DISPLACEMENT1] &&
-      !ShellElementParentElementCoverageForVariable[MESH_DISPLACEMENT1]) {
+      !goma_ctx->fem.shell_element_parent_element_coverage_for_variable[MESH_DISPLACEMENT1]) {
     v = MESH_DISPLACEMENT1;
     fv->div_d_dot = 0.0;
     fv->div_d = 0.0;
@@ -2724,7 +2741,7 @@ int load_fv_grads(void)
   /*
    * curl(v)
    */
-  if (goma_ctx->post.curl_v != -1 && !InShellElementWithParentElementCoverage) {
+  if (goma_ctx->post.curl_v != -1 && !goma_ctx->fem.in_shell_element_with_parent_element_coverage) {
     v = VELOCITY1;
     bfn = bf[v];
 

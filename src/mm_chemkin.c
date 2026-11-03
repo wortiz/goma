@@ -54,13 +54,6 @@
  *
  */
 
-int Chemkin_Needed = FALSE; /*
-                             * If Goma needs the chemkin libraries for
-                             * any functionality this flag will be tripped.
-                             * It is present whether or not USE_CHEMKIN
-                             * ifdef has been activated
-                             */
-
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
@@ -207,7 +200,7 @@ int chemkin_mat_prop_init(MATRL_PROP_STRUCT *mat_ptr, int mn, PROBLEM_DESCRIPTIO
   /*
    *  Flip the global flag indicating that chemkin is being used
    */
-  Chemkin_Needed = TRUE;
+  goma_ctx->problem.chemkin_needed = TRUE;
 
   /*
    *  Read in the cpc data files. These include the chemkin-III data

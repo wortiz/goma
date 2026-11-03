@@ -79,8 +79,6 @@ static int has_been_called = 0;
 
 #define GOMA_WR_EXO_C
 
-extern char **Argv; /* global shadow of argv, def'd in main.c */
-
 static Spfrtn sr; /* sprintf() return type, whatever it is. */
 
 /***********************************************************************/
@@ -974,7 +972,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
        */
       mat_num = goma_ctx->problem.matilda[eb_indx];
       goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mat_num];
-      eb_ptr = Element_Blocks + eb_indx;
+      eb_ptr = goma_ctx->fem.element_blocks + eb_indx;
       ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
       if ((goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
            goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
@@ -1166,7 +1164,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
       /*Now finally the saturation hysteresis variables */
       if (goma_ctx->post.sat_curve_type != -1 || goma_ctx->post.cap_press_switch != -1 ||
           goma_ctx->post.sat_qp_switch != -1) {
-        eb_ptr = Element_Blocks + eb_indx;
+        eb_ptr = goma_ctx->fem.element_blocks + eb_indx;
         ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
         for (j = 0; j < ip_total; j++) {
           /*Note that we will set these for all 3 var types because you
@@ -1324,7 +1322,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
      */
     mat_num = goma_ctx->problem.matilda[eb_indx];
     goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mat_num];
-    eb_ptr = Element_Blocks + eb_indx;
+    eb_ptr = goma_ctx->fem.element_blocks + eb_indx;
     ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
     if ((goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
          goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
@@ -1527,7 +1525,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
     /*Now finally the saturation hysteresis variables */
     if (goma_ctx->post.sat_curve_type != -1 || goma_ctx->post.cap_press_switch != -1 ||
         goma_ctx->post.sat_qp_switch != -1) {
-      eb_ptr = Element_Blocks + eb_indx;
+      eb_ptr = goma_ctx->fem.element_blocks + eb_indx;
       ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
       for (j = 0; j < ip_total; j++) {
         /*Note that we will set these for all 3 var types because you
@@ -1754,7 +1752,7 @@ void add_info_stamp(Exo_DB *exo) {
     buf[i] = '\0';
   }
 
-  a = Argv;
+  a = goma_ctx->argv;
 
   if (a != NULL) {
     i = 0;

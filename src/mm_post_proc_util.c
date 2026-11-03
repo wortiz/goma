@@ -159,10 +159,10 @@ int invert_isoparametric_map(int *current_ielem, /* initial element of search */
 
   dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
 
-  if (xv == x_static) /* be the least disruptive possible */
+  if (xv == goma_ctx->fem.x_static) /* be the least disruptive possible */
   {
-    err = load_elem_dofptr(*current_ielem, exo, x_static, x_old_static, xdot_static,
-                           xdot_old_static, 0);
+    err = load_elem_dofptr(*current_ielem, exo, goma_ctx->fem.x_static, goma_ctx->fem.x_old_static,
+                           goma_ctx->fem.xdot_static, goma_ctx->fem.xdot_old_static, 0);
   } else {
     err = load_elem_dofptr(*current_ielem, exo, xv, xv, xv, xv, 0);
   }
@@ -188,7 +188,7 @@ int invert_isoparametric_map(int *current_ielem, /* initial element of search */
 
     err = beer_belly();
     GOMA_EH(err, "beer_belly");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return -1;
 
     /* form residual equations */
@@ -310,10 +310,11 @@ int invert_isoparametric_map(int *current_ielem, /* initial element of search */
 
         load_ei(*current_ielem, exo, 0, goma_ctx->fem.pg->imtrx);
 
-        if (xv == x_static) /* be the least disruptive possible */
+        if (xv == goma_ctx->fem.x_static) /* be the least disruptive possible */
         {
-          err = load_elem_dofptr(*current_ielem, exo, x_static, x_old_static, xdot_static,
-                                 xdot_old_static, 0);
+          err = load_elem_dofptr(*current_ielem, exo, goma_ctx->fem.x_static,
+                                 goma_ctx->fem.x_old_static, goma_ctx->fem.xdot_static,
+                                 goma_ctx->fem.xdot_old_static, 0);
         } else {
           err = load_elem_dofptr(*current_ielem, exo, xv, xv, xv, xv, 0);
         }

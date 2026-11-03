@@ -351,7 +351,7 @@ int beer_belly(void) {
     }
 
     if (fabs(MapBf->detJ) < 1.e-10) {
-      zero_detJ = TRUE;
+      goma_ctx->solver.zero_detj = TRUE;
 #ifdef PARALLEL
       fprintf(stderr, "\nP_%d: Uh-oh, detJ =  %e\n", goma_ctx->proc_id, fabs(MapBf->detJ));
 #else
@@ -2721,9 +2721,9 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
             ledof = ei[imtrx]->lvdof_to_ledof[v][i];
             if (ei[imtrx]->active_interp_ledof[ledof]) {
 
-              vector_shape_function(DPI_ptr, ei[imtrx], xi, PSI, bf_ptr->element_shape,
+              vector_shape_function(goma_ctx->dpi, ei[imtrx], xi, PSI, bf_ptr->element_shape,
                                     bf_ptr->interpolation, jdof, bf_ptr->ref_phi_e[i], NULL);
-              vector_shape_function(DPI_ptr, ei[imtrx], xi, CURL_PSI, bf_ptr->element_shape,
+              vector_shape_function(goma_ctx->dpi, ei[imtrx], xi, CURL_PSI, bf_ptr->element_shape,
                                     bf_ptr->interpolation, jdof, NULL, bf_ptr->curl_e[i]);
 
               jdof++;
@@ -2739,9 +2739,9 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
             ledof = ei[imtrx]->lvdof_to_ledof[v][i];
             if (ei[imtrx]->active_interp_ledof[ledof]) {
 
-              vector_shape_function(DPI_ptr, ei[imtrx], xi, PSI, bf_ptr->element_shape,
+              vector_shape_function(goma_ctx->dpi, ei[imtrx], xi, PSI, bf_ptr->element_shape,
                                     bf_ptr->interpolation, jdof, bf_ptr->ref_phi_e[i], NULL);
-              vector_shape_function(DPI_ptr, ei[imtrx], xi, CURL_PSI, bf_ptr->element_shape,
+              vector_shape_function(goma_ctx->dpi, ei[imtrx], xi, CURL_PSI, bf_ptr->element_shape,
                                     bf_ptr->interpolation, jdof, NULL, bf_ptr->curl_e[i]);
 
               jdof++;
@@ -3373,7 +3373,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
    * loop over all of the nodes on this processor
    */
   for (inode = 0; inode < itotal_nodes; inode++) {
-    nv = Nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+    nv = goma_ctx->fem.nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     /*
      * Fill the vector list which points to the unknowns defined at this
      * node...
@@ -3411,7 +3411,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
        */
       for (j = exo->node_node_pntr[inode]; j < exo->node_node_pntr[inode + 1]; j++) {
         inter_node = exo->node_node_list[j];
-        nodeCol = Nodes[inter_node];
+        nodeCol = goma_ctx->fem.nodes[inter_node];
         nvCol = nodeCol->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
         /*
@@ -3444,7 +3444,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
            * Query the Interaction mask to determine if a jacobian entry
            * should be created
            */
-          add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
+          add_var = goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
 
           /* The following code should be activated when solving DG viscoelastic
            * problems with full Jacobian treatment of upwind element stress
@@ -3465,7 +3465,8 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
                   (i2 == I_P0 || i2 == I_P1 || i2 == I_PQ1 || i2 == I_PQ2) &&
                   (rowVarType != PRESSURE) &&
                   (rowVarType > VELOCITY_GRADIENT33 || rowVarType < VELOCITY_GRADIENT11)) {
-                add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
+                add_var =
+                    goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
               } else {
                 add_var = 0;
               }
@@ -3562,10 +3563,10 @@ static int find_VBR_problem_graph(int *indx[],
   }
 
   for (i = 0; i < row_nodes; i++) {
-    nvRow = Nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+    nvRow = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     for (k = (*bpntr)[i]; k < (*bpntr)[i + 1]; k++) {
       j = (*bindx)[k];
-      nvCol = Nodes[j]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+      nvCol = goma_ctx->fem.nodes[j]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
       (*indx)[k] = nnz;
       nnz += nvRow->Num_Unknowns * nvCol->Num_Unknowns;
     }
@@ -3574,14 +3575,14 @@ static int find_VBR_problem_graph(int *indx[],
   (*indx)[nnz_blocs] = nnz;
 
   for (i = 0; i < row_nodes; i++) {
-    nvRow = Nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+    nvRow = goma_ctx->fem.nodes[i]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     (*rpntr)[i] = row_ptr;
     row_ptr += nvRow->Num_Unknowns;
   }
   (*rpntr)[row_nodes] = row_ptr;
 
   for (j = 0; j < col_nodes; j++) {
-    nvCol = Nodes[j]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+    nvCol = goma_ctx->fem.nodes[j]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     (*cpntr)[j] = col_ptr;
     col_ptr += nvCol->Num_Unknowns;
   }
@@ -3608,7 +3609,7 @@ int fill_variable_vector(int inode, int ivec_varType[], int ivec_matID[])
   NODE_INFO_STRUCT *node;
   NODAL_VARS_STRUCT *nvs;
   VARIABLE_DESCRIPTION_STRUCT *vd;
-  node = Nodes[inode];
+  node = goma_ctx->fem.nodes[inode];
   nvs = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
   for (l = 0; l < nvs->Num_Var_Desc; l++) {
     vd = nvs->Var_Desc_List[l];
@@ -3973,88 +3974,104 @@ double newshape(const double xi[],       /* local coordinates    */
       case PSI:          /* shape function */
         switch (Inode) { /* select specific shape function */
         case 0:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+          if (goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                       ->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+              goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                       ->EDGE != 1) {
             value = 0.25 * (1. - s) * (1. - t);
           } else {
             value = 0.25 * ((1. - s) * s * (1. - t) * t + (1 - s * s) * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (t - 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (s - 1.) * s;
             }
           }
           break;
         case 1:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+          if (goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                       ->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+              goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                       ->EDGE != 1) {
             value = 0.25 * (1. + s) * (1. - t);
           } else {
             value = 0.25 * ((1. + s) * s * (t - 1) * t + (1 - s * s) * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (t - 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (s + 1.) * s;
             }
           }
           break;
         case 2:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+          if (goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                       ->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+              goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                       ->EDGE != 1) {
             value = 0.25 * (1. + s) * (1. + t);
           } else {
             value = 0.25 * ((1. + s) * s * (t + 1) * t + (1 - s * s) * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (t + 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (s + 1.) * s;
             }
           }
           break;
         case 3:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+          if (goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                       ->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+              goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                       ->EDGE != 1) {
             value = 0.25 * (1. - s) * (1. + t);
           } else {
             value = 0.25 * ((s - 1) * s * (t + 1) * t + (1 - s * s) * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (t + 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (s - 1.) * s;
             }
@@ -4062,29 +4079,33 @@ double newshape(const double xi[],       /* local coordinates    */
           break;
           /* can only get to these cases on external boundaries */
         case 4:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+          if (goma_ctx->fem
+                  .nodes[goma_ctx->mesh.proc_elem_connect
+                             [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                   ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - s * s) * (t - 1.) * t;
           break;
         case 5:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+          if (goma_ctx->fem
+                  .nodes[goma_ctx->mesh.proc_elem_connect
+                             [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                   ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - t * t) * (s + 1.) * s;
           break;
         case 6:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+          if (goma_ctx->fem
+                  .nodes[goma_ctx->mesh.proc_elem_connect
+                             [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                   ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - s * s) * (t + 1.) * t;
           break;
         case 7:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+          if (goma_ctx->fem
+                  .nodes[goma_ctx->mesh.proc_elem_connect
+                             [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                   ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - t * t) * (s - 1.) * s;
@@ -4095,88 +4116,104 @@ double newshape(const double xi[],       /* local coordinates    */
       case DPSI_S:       /* partial of shape fn w.r.t. s */
         switch (Inode) { /* select specific shape function */
         case 0:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+          if (goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                       ->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+              goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                       ->EDGE != 1) {
             value = -0.25 * (1. - t);
           } else {
             value = 0.25 * ((1. - 2 * s) * (1. - t) * t - 2 * s * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                     ->EDGE != 1) {
               value -= 0.5 * s * (t - 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (2. * s - 1.);
             }
           }
           break;
         case 1:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+          if (goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                       ->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+              goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                       ->EDGE != 1) {
             value = 0.25 * (1. - t);
           } else {
             value = 0.25 * ((1. + 2 * s) * (t - 1) * t - 2 * s * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                     ->EDGE != 1) {
               value -= 0.5 * s * (t - 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (2 * s + 1.);
             }
           }
           break;
         case 2:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+          if (goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                       ->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+              goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                       ->EDGE != 1) {
             value = 0.25 * (1. + t);
           } else {
             value = 0.25 * ((1. + 2 * s) * (t + 1) * t - 2 * s * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                     ->EDGE != 1) {
               value -= 0.5 * s * (t + 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (2 * s + 1.);
             }
           }
           break;
         case 3:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+          if (goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                       ->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+              goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                       ->EDGE != 1) {
             value = -0.25 * (1. + t);
           } else {
             value = 0.25 * ((2 * s - 1) * (t + 1) * t - 2 * s * (1 - t * t));
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                     ->EDGE != 1) {
               value -= 0.5 * s * (t + 1.) * t;
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - t * t) * (2 * s - 1.);
             }
@@ -4184,29 +4221,33 @@ double newshape(const double xi[],       /* local coordinates    */
           break;
           /* can only get to these cases on external boundaries */
         case 4:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+          if (goma_ctx->fem
+                  .nodes[goma_ctx->mesh.proc_elem_connect
+                             [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                   ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = -s * (t - 1.) * t;
           break;
         case 5:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+          if (goma_ctx->fem
+                  .nodes[goma_ctx->mesh.proc_elem_connect
+                             [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                   ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - t * t) * (2 * s + 1.);
           break;
         case 6:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+          if (goma_ctx->fem
+                  .nodes[goma_ctx->mesh.proc_elem_connect
+                             [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                   ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = -s * (t + 1.) * t;
           break;
         case 7:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+          if (goma_ctx->fem
+                  .nodes[goma_ctx->mesh.proc_elem_connect
+                             [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                   ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - t * t) * (2 * s - 1.);
@@ -4217,88 +4258,104 @@ double newshape(const double xi[],       /* local coordinates    */
       case DPSI_T:       /* partial of shape fn w.r.t. t */
         switch (Inode) { /* select specific shape function */
         case 0:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+          if (goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                       ->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+              goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                       ->EDGE != 1) {
             value = -0.25 * (1. - s);
           } else {
             value = 0.25 * ((1. - s) * s * (1. - 2 * t) - (1 - s * s) * 2 * t);
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (2 * t - 1.);
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                     ->EDGE != 1) {
               value -= 0.5 * t * (s - 1.) * s;
             }
           }
           break;
         case 1:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+          if (goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                       ->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+              goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                       ->EDGE != 1) {
             value = -0.25 * (1. + s);
           } else {
             value = 0.25 * ((1. + s) * s * (2 * t - 1) - (1 - s * s) * 2 * t);
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (2 * t - 1.);
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                     ->EDGE != 1) {
               value -= 0.5 * t * (s + 1.) * s;
             }
           }
           break;
         case 2:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+          if (goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                       ->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+              goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                       ->EDGE != 1) {
             value = 0.25 * (1. + s);
           } else {
             value = 0.25 * ((1. + s) * s * (2 * t + 1) - (1 - s * s) * 2 * t);
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (2 * t + 1.);
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                     ->EDGE != 1) {
               value -= 0.5 * t * (s + 1.) * s;
             }
           }
           break;
         case 3:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+          if (goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                       ->EDGE != 1 &&
-              Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+              goma_ctx->fem
+                      .nodes[goma_ctx->mesh.proc_elem_connect
+                                 [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                       ->EDGE != 1) {
             value = 0.25 * (1. - s);
           } else {
             value = 0.25 * ((s - 1) * s * (2 * t + 1) - (1 - s * s) * 2 * t);
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                     ->EDGE != 1) {
               value += 0.25 * (1. - s * s) * (2 * t + 1.);
             }
-            if (Nodes[goma_ctx->mesh.proc_elem_connect
-                          [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+            if (goma_ctx->fem
+                    .nodes[goma_ctx->mesh.proc_elem_connect
+                               [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                     ->EDGE != 1) {
               value -= 0.5 * t * (s - 1.) * s;
             }
@@ -4306,29 +4363,33 @@ double newshape(const double xi[],       /* local coordinates    */
           break;
           /* can only get to these cases on external boundaries */
         case 4:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
+          if (goma_ctx->fem
+                  .nodes[goma_ctx->mesh.proc_elem_connect
+                             [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 4]]
                   ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - s * s) * (2 * t - 1.);
           break;
         case 5:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
+          if (goma_ctx->fem
+                  .nodes[goma_ctx->mesh.proc_elem_connect
+                             [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 5]]
                   ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = -t * (s + 1.) * s;
           break;
         case 6:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
+          if (goma_ctx->fem
+                  .nodes[goma_ctx->mesh.proc_elem_connect
+                             [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 6]]
                   ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - s * s) * (2 * t + 1.);
           break;
         case 7:
-          if (Nodes[goma_ctx->mesh.proc_elem_connect
-                        [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
+          if (goma_ctx->fem
+                  .nodes[goma_ctx->mesh.proc_elem_connect
+                             [goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + 7]]
                   ->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = -t * (s - 1.) * s;
@@ -4528,8 +4589,8 @@ double extended_shape(const double xi[],       /* local coordinates    */
                  &base_dof);
 
   if (xfem_active) {
-    double H = xfem->H;
-    double delta = xfem->delta;
+    double H = goma_ctx->fem.xfem->H;
+    double delta = goma_ctx->fem.xfem->delta;
 
     if (goma_ctx->fem.ls->Elem_Sign == -1) {
       H = 0.;
@@ -4552,22 +4613,22 @@ double extended_shape(const double xi[],       /* local coordinates    */
         if (delta != 0. && (Iquant == DPSI_S || Iquant == DPSI_T || Iquant == DPSI_U)) {
           double psi = newshape(xi, Ielem_type, PSI, Inode, eshape, base_interp, base_dof);
           if (Iquant == DPSI_S)
-            value += psi * delta * xfem->dF_xi[0];
+            value += psi * delta * goma_ctx->fem.xfem->dF_xi[0];
           if (Iquant == DPSI_T)
-            value += psi * delta * xfem->dF_xi[1];
+            value += psi * delta * goma_ctx->fem.xfem->dF_xi[1];
           if (Iquant == DPSI_U)
-            value += psi * delta * xfem->dF_xi[2];
+            value += psi * delta * goma_ctx->fem.xfem->dF_xi[2];
         }
       } else {
         value *= H;
         if (delta != 0. && (Iquant == DPSI_S || Iquant == DPSI_T || Iquant == DPSI_U)) {
           double psi = newshape(xi, Ielem_type, PSI, Inode, eshape, base_interp, base_dof);
           if (Iquant == DPSI_S)
-            value -= psi * delta * xfem->dF_xi[0];
+            value -= psi * delta * goma_ctx->fem.xfem->dF_xi[0];
           if (Iquant == DPSI_T)
-            value -= psi * delta * xfem->dF_xi[1];
+            value -= psi * delta * goma_ctx->fem.xfem->dF_xi[1];
           if (Iquant == DPSI_U)
-            value -= psi * delta * xfem->dF_xi[2];
+            value -= psi * delta * goma_ctx->fem.xfem->dF_xi[2];
         }
       }
       break;
@@ -4580,11 +4641,11 @@ double extended_shape(const double xi[],       /* local coordinates    */
       if (delta != 0. && (Iquant == DPSI_S || Iquant == DPSI_T || Iquant == DPSI_U)) {
         double psi = newshape(xi, Ielem_type, PSI, Inode, eshape, base_interp, base_dof);
         if (Iquant == DPSI_S)
-          value -= psi * delta * xfem->dF_xi[0];
+          value -= psi * delta * goma_ctx->fem.xfem->dF_xi[0];
         if (Iquant == DPSI_T)
-          value -= psi * delta * xfem->dF_xi[1];
+          value -= psi * delta * goma_ctx->fem.xfem->dF_xi[1];
         if (Iquant == DPSI_U)
-          value -= psi * delta * xfem->dF_xi[2];
+          value -= psi * delta * goma_ctx->fem.xfem->dF_xi[2];
       }
       break;
     case I_P0_GN:
@@ -4596,11 +4657,11 @@ double extended_shape(const double xi[],       /* local coordinates    */
       if (delta != 0. && (Iquant == DPSI_S || Iquant == DPSI_T || Iquant == DPSI_U)) {
         double psi = newshape(xi, Ielem_type, PSI, Inode, eshape, base_interp, base_dof);
         if (Iquant == DPSI_S)
-          value -= psi * delta * xfem->dF_xi[0];
+          value -= psi * delta * goma_ctx->fem.xfem->dF_xi[0];
         if (Iquant == DPSI_T)
-          value -= psi * delta * xfem->dF_xi[1];
+          value -= psi * delta * goma_ctx->fem.xfem->dF_xi[1];
         if (Iquant == DPSI_U)
-          value -= psi * delta * xfem->dF_xi[2];
+          value -= psi * delta * goma_ctx->fem.xfem->dF_xi[2];
       }
       break;
 
@@ -4618,14 +4679,14 @@ double extended_shape(const double xi[],       /* local coordinates    */
 
                 /*F_i = dof_distance( Ielem_type, base_interp, Inode );*/
 	        F_i = lnn_distance( Inode );
-                value *=  S * xfem->F - fabs( F_i );
+                value *=  S * goma_ctx->fem.xfem->F - fabs( F_i );
 
                 if (Iquant == DPSI_S || Iquant == DPSI_T || Iquant == DPSI_U)
                   {
                     double psi = newshape( xi, Ielem_type, PSI, Inode, eshape, base_interp, base_dof );
-                    if ( Iquant == DPSI_S ) value += psi * (2.*xfem->F*delta + S) * xfem->dF_xi[0];
-                    if ( Iquant == DPSI_T ) value += psi * (2.*xfem->F*delta + S) * xfem->dF_xi[1];
-                    if ( Iquant == DPSI_U ) value += psi * (2.*xfem->F*delta + S) * xfem->dF_xi[2];
+                    if ( Iquant == DPSI_S ) value += psi * (2.*goma_ctx->fem.xfem->F*delta + S) * goma_ctx->fem.xfem->dF_xi[0];
+                    if ( Iquant == DPSI_T ) value += psi * (2.*goma_ctx->fem.xfem->F*delta + S) * goma_ctx->fem.xfem->dF_xi[1];
+                    if ( Iquant == DPSI_U ) value += psi * (2.*goma_ctx->fem.xfem->F*delta + S) * goma_ctx->fem.xfem->dF_xi[2];
                   }
               }
           }
@@ -4639,16 +4700,22 @@ double extended_shape(const double xi[],       /* local coordinates    */
       value = newshape(xi, Ielem_type, Iquant, Inode, eshape, base_interp, base_dof);
 
       if (extended_dof) {
-        value *= 2. * (xfem->F_plus - H * xfem->F);
+        value *= 2. * (goma_ctx->fem.xfem->F_plus - H * goma_ctx->fem.xfem->F);
 
         if (Iquant == DPSI_S || Iquant == DPSI_T || Iquant == DPSI_U) {
           double psi = newshape(xi, Ielem_type, PSI, Inode, eshape, base_interp, base_dof);
           if (Iquant == DPSI_S)
-            value += psi * 2. * (xfem->grad_F_plus[0] - (xfem->F * delta + H) * xfem->dF_xi[0]);
+            value += psi * 2. *
+                     (goma_ctx->fem.xfem->grad_F_plus[0] -
+                      (goma_ctx->fem.xfem->F * delta + H) * goma_ctx->fem.xfem->dF_xi[0]);
           if (Iquant == DPSI_T)
-            value += psi * 2. * (xfem->grad_F_plus[1] - (xfem->F * delta + H) * xfem->dF_xi[1]);
+            value += psi * 2. *
+                     (goma_ctx->fem.xfem->grad_F_plus[1] -
+                      (goma_ctx->fem.xfem->F * delta + H) * goma_ctx->fem.xfem->dF_xi[1]);
           if (Iquant == DPSI_U)
-            value += psi * 2. * (xfem->grad_F_plus[2] - (xfem->F * delta + H) * xfem->dF_xi[2]);
+            value += psi * 2. *
+                     (goma_ctx->fem.xfem->grad_F_plus[2] -
+                      (goma_ctx->fem.xfem->F * delta + H) * goma_ctx->fem.xfem->dF_xi[2]);
         }
       }
     } break;
@@ -4658,13 +4725,13 @@ double extended_shape(const double xi[],       /* local coordinates    */
     case I_Q2_HV: {
       if (extended_dof) {
         if (Iquant == PSI)
-          value = H - xfem->bf_plus;
+          value = H - goma_ctx->fem.xfem->bf_plus;
         else if (Iquant == DPSI_S)
-          value = delta * xfem->dF_xi[0] - xfem->grad_bf_plus[0];
+          value = delta * goma_ctx->fem.xfem->dF_xi[0] - goma_ctx->fem.xfem->grad_bf_plus[0];
         else if (Iquant == DPSI_T)
-          value = delta * xfem->dF_xi[1] - xfem->grad_bf_plus[1];
+          value = delta * goma_ctx->fem.xfem->dF_xi[1] - goma_ctx->fem.xfem->grad_bf_plus[1];
         else if (Iquant == DPSI_U)
-          value = delta * xfem->dF_xi[2] - xfem->grad_bf_plus[2];
+          value = delta * goma_ctx->fem.xfem->dF_xi[2] - goma_ctx->fem.xfem->grad_bf_plus[2];
       } else {
         value = newshape(xi, Ielem_type, Iquant, Inode, eshape, base_interp, base_dof);
       }
@@ -4674,13 +4741,16 @@ double extended_shape(const double xi[],       /* local coordinates    */
     case I_Q2_HG: {
       if (extended_dof) {
         if (Iquant == PSI)
-          value = xfem->F * H - xfem->F_plus;
+          value = goma_ctx->fem.xfem->F * H - goma_ctx->fem.xfem->F_plus;
         else if (Iquant == DPSI_S)
-          value = (H + xfem->F * delta) * xfem->dF_xi[0] - xfem->grad_F_plus[0];
+          value = (H + goma_ctx->fem.xfem->F * delta) * goma_ctx->fem.xfem->dF_xi[0] -
+                  goma_ctx->fem.xfem->grad_F_plus[0];
         else if (Iquant == DPSI_T)
-          value = (H + xfem->F * delta) * xfem->dF_xi[1] - xfem->grad_F_plus[1];
+          value = (H + goma_ctx->fem.xfem->F * delta) * goma_ctx->fem.xfem->dF_xi[1] -
+                  goma_ctx->fem.xfem->grad_F_plus[1];
         else if (Iquant == DPSI_U)
-          value = (H + xfem->F * delta) * xfem->dF_xi[2] - xfem->grad_F_plus[2];
+          value = (H + goma_ctx->fem.xfem->F * delta) * goma_ctx->fem.xfem->dF_xi[2] -
+                  goma_ctx->fem.xfem->grad_F_plus[2];
       } else {
         value = newshape(xi, Ielem_type, Iquant, Inode, eshape, base_interp, base_dof);
       }
@@ -4691,22 +4761,25 @@ double extended_shape(const double xi[],       /* local coordinates    */
       if (extended_dof) {
         if (base_dof == 0) {
           if (Iquant == PSI)
-            value = H - xfem->bf_plus;
+            value = H - goma_ctx->fem.xfem->bf_plus;
           else if (Iquant == DPSI_S)
-            value = delta * xfem->dF_xi[0] - xfem->grad_bf_plus[0];
+            value = delta * goma_ctx->fem.xfem->dF_xi[0] - goma_ctx->fem.xfem->grad_bf_plus[0];
           else if (Iquant == DPSI_T)
-            value = delta * xfem->dF_xi[1] - xfem->grad_bf_plus[1];
+            value = delta * goma_ctx->fem.xfem->dF_xi[1] - goma_ctx->fem.xfem->grad_bf_plus[1];
           else if (Iquant == DPSI_U)
-            value = delta * xfem->dF_xi[2] - xfem->grad_bf_plus[2];
+            value = delta * goma_ctx->fem.xfem->dF_xi[2] - goma_ctx->fem.xfem->grad_bf_plus[2];
         } else {
           if (Iquant == PSI)
-            value = xfem->F * H - xfem->F_plus;
+            value = goma_ctx->fem.xfem->F * H - goma_ctx->fem.xfem->F_plus;
           else if (Iquant == DPSI_S)
-            value = (H + xfem->F * delta) * xfem->dF_xi[0] - xfem->grad_F_plus[0];
+            value = (H + goma_ctx->fem.xfem->F * delta) * goma_ctx->fem.xfem->dF_xi[0] -
+                    goma_ctx->fem.xfem->grad_F_plus[0];
           else if (Iquant == DPSI_T)
-            value = (H + xfem->F * delta) * xfem->dF_xi[1] - xfem->grad_F_plus[1];
+            value = (H + goma_ctx->fem.xfem->F * delta) * goma_ctx->fem.xfem->dF_xi[1] -
+                    goma_ctx->fem.xfem->grad_F_plus[1];
           else if (Iquant == DPSI_U)
-            value = (H + xfem->F * delta) * xfem->dF_xi[2] - xfem->grad_F_plus[2];
+            value = (H + goma_ctx->fem.xfem->F * delta) * goma_ctx->fem.xfem->dF_xi[2] -
+                    goma_ctx->fem.xfem->grad_F_plus[2];
         }
       } else {
         value = newshape(xi, Ielem_type, Iquant, Inode, eshape, base_interp, base_dof);
@@ -4731,11 +4804,11 @@ double extended_shape(const double xi[],       /* local coordinates    */
         if (delta != 0. && (Iquant == DPSI_S || Iquant == DPSI_T || Iquant == DPSI_U)) {
           double psi = newshape(xi, Ielem_type, PSI, Inode, eshape, base_interp, base_dof);
           if (Iquant == DPSI_S)
-            value += psi * delta * xfem->dF_xi[0];
+            value += psi * delta * goma_ctx->fem.xfem->dF_xi[0];
           if (Iquant == DPSI_T)
-            value += psi * delta * xfem->dF_xi[1];
+            value += psi * delta * goma_ctx->fem.xfem->dF_xi[1];
           if (Iquant == DPSI_U)
-            value += psi * delta * xfem->dF_xi[2];
+            value += psi * delta * goma_ctx->fem.xfem->dF_xi[2];
         }
       }
     } break;

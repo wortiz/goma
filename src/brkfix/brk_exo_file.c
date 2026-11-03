@@ -575,7 +575,7 @@ int brk_exo_file(int num_pieces, char *Brk_File, char *Exo_File) {
   dbl eigtol;
   long seed;
 
-  ELEM_BLK_STRUCT *element_blocks_save = Element_Blocks;
+  ELEM_BLK_STRUCT *element_blocks_save = goma_ctx->fem.element_blocks;
 
 #endif /* CHACO */
 
@@ -4391,7 +4391,7 @@ int brk_exo_file(int num_pieces, char *Brk_File, char *Exo_File) {
     exit(2);
 
   /* restore Element_Blocks */
-  Element_Blocks = element_blocks_save;
+  goma_ctx->fem.element_blocks = element_blocks_save;
 
   return (0);
 } /* end of main */

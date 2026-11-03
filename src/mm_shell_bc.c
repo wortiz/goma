@@ -1723,7 +1723,7 @@ void match_lubrication_film_pressure(double func[DIM],
    *  If current material is the confined lubrication region (lubp the variable)
    *  simply grab the lubrication pressue from the element and add it to the residual.
    */
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat_lubp) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_lubp) {
     func[0] += goma_ctx->fem.fv->lubp;
 
     if (goma_ctx->fem.af->Assemble_Jacobian) {
@@ -1744,7 +1744,7 @@ void match_lubrication_film_pressure(double func[DIM],
    *  If current material is the open film phase, grab the film pressure and
    * add it to the residual.
    */
-  else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_filmp) {
+  else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_filmp) {
     func[0] -= goma_ctx->fem.fv->sh_fp;
 
     if (goma_ctx->fem.af->Assemble_Jacobian) {
@@ -1806,8 +1806,8 @@ void put_lub_flux_in_film(int id,                   /* local element node number
   id_doflubp = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[R_LUBP][id];
   id_doffilmp = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[R_SHELL_FILMP][id];
 
-  if (Current_EB_ptr->Elem_Blk_Id != i_mat_lubp) {
-    if (Current_EB_ptr->Elem_Blk_Id != i_mat_filmp) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id != i_mat_lubp) {
+    if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id != i_mat_filmp) {
       GOMA_EH(GOMA_ERROR, "put_lub_flux_in_film: Improper lubp and filmp block ids");
     }
     /* note, this may not account for all situations - we may not want

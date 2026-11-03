@@ -332,7 +332,7 @@ int assemble_emwave(double time, /* present time value */
     for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
       /* this is an optimization for xfem */
-      if (xfem != NULL) {
+      if (goma_ctx->fem.xfem != NULL) {
         int xfem_active, extended_dof, base_interp, base_dof;
         xfem_dof_state(i, goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn],
                        goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape, &xfem_active,
@@ -384,7 +384,7 @@ int assemble_emwave(double time, /* present time value */
     for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
       // this is an optimization for xfem
-      if (xfem != NULL) {
+      if (goma_ctx->fem.xfem != NULL) {
         int xfem_active, extended_dof, base_interp, base_dof;
         xfem_dof_state(i, goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn],
                        goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape, &xfem_active,

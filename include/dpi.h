@@ -159,7 +159,6 @@ struct Distributed_Processing_Information {
 };
 typedef struct Distributed_Processing_Information Dpi;
 
-extern Dpi *DPI_ptr;
 #endif
 
 // NETCDF definitions

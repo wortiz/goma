@@ -30,8 +30,8 @@
 #include "std.h"
 
 ADType sst_viscosity(const ADType &Omega, const ADType &F2) {
-  ADType omega = std::max(1e-20, ad_fv->turb_omega);
-  ADType k = std::max(1e-20, ad_fv->turb_k);
+  ADType omega = std::max(1e-20, goma_ctx->fem.ad_fv->turb_omega);
+  ADType k = std::max(1e-20, goma_ctx->fem.ad_fv->turb_k);
   dbl rho = density(NULL, goma_ctx->fem.tran->time_value);
   dbl a1 = 0.31;
   ADType mu_turb = goma_ctx->fem.mp->viscosity + rho * a1 * k / (std::max(a1 * omega, Omega * F2));
@@ -55,7 +55,7 @@ ADType ad_sa_viscosity(struct Generalized_Newtonian *gn_local) {
     mu = mu_newt;
   } else {
 
-    ADType mu_e = ad_fv->eddy_nu;
+    ADType mu_e = goma_ctx->fem.ad_fv->eddy_nu;
     ADType cv1 = 7.1;
     ADType chi = mu_e / mu_newt;
     ADType fv1 = pow(chi, 3) / (pow(chi, 3) + pow(cv1, 3));
@@ -87,7 +87,7 @@ extern "C" dbl ad_sa_viscosity(struct Generalized_Newtonian *gn_local,
     mu = mu_newt;
   } else {
 
-    ADType mu_e = ad_fv->eddy_nu;
+    ADType mu_e = goma_ctx->fem.ad_fv->eddy_nu;
     ADType cv1 = 7.1;
     ADType chi = mu_e / mu_newt;
     ADType fv1 = pow(chi, 3) / (pow(chi, 3) + pow(cv1, 3));
@@ -99,7 +99,7 @@ extern "C" dbl ad_sa_viscosity(struct Generalized_Newtonian *gn_local,
 
     if (d_mu != NULL) {
       for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EDDY_NU]; j++) {
-        d_mu->eddy_nu[j] = mu.dx(ad_fv->offset[EDDY_NU] + j);
+        d_mu->eddy_nu[j] = mu.dx(goma_ctx->fem.ad_fv->offset[EDDY_NU] + j);
       }
     }
   }
@@ -263,7 +263,7 @@ extern "C" dbl ad_viscosity_wrap(struct Generalized_Newtonian *gn_local) {
   ADType gamma[DIM][DIM];
   for (int i = 0; i < DIM; i++) {
     for (int j = 0; j < DIM; j++) {
-      gamma[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
+      gamma[i][j] = goma_ctx->fem.ad_fv->grad_v[i][j] + goma_ctx->fem.ad_fv->grad_v[j][i];
     }
   }
 
@@ -295,7 +295,7 @@ ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM
     ADType W[DIM][DIM];
     for (int i = 0; i < DIM; i++) {
       for (int j = 0; j < DIM; j++) {
-        W[i][j] = 0.5 * (ad_fv->grad_v[i][j] - ad_fv->grad_v[j][i]);
+        W[i][j] = 0.5 * (goma_ctx->fem.ad_fv->grad_v[i][j] - goma_ctx->fem.ad_fv->grad_v[j][i]);
       }
     }
 

@@ -86,17 +86,9 @@ extern void handle_ieee(void);
  * Global variables defined here.
  */
 
-Dpi *DPI_ptr = NULL;
-
-Exo_DB *EXO_ptr = NULL;
-
 #define LAST_LEGAL_STRING "Last Legal String"
 
 #ifdef MATRIX_DUMP
-int Number_Jac_Dump = 0; /* Number of jacobians to dump out
-                          * If the value is negative, then the one
-                          * jacobian, the -n'th jacobian, is dumped
-                          * out */
 #endif
 
 const char anneal_file[] = ANNEAL_FILE_NAME;
@@ -114,9 +106,6 @@ static int CVS_Extraction_Date_Stamp[] = { 2002, 9, 20, 21, 17, 15};
  * Variables defined here but everywhere else are extern via "rf_mp.h".
  */
 
-int parallel_err = FALSE;
-int parallel_err_global = FALSE;
-
 int unlerr;
 
 MPI_Aint type_extent;
@@ -129,25 +118,10 @@ DDD Noahs_Raven; /* Stage 1 - preliminary sizing information */
 DDD Noahs_Ark;   /* Stage 2 - big boatload - main body*/
 DDD Noahs_Dove;  /* Stage 3 - doubly dynamic sized stuff */
 
-Comm_Ex **cx = NULL; /* communications info for ea neighbor proc */
-
-double time_goma_started; /* Save it here... */
-
 /*
  * Declare these copies so that other routines may access them as global
  * external variables instead of passing them through the argument lists.
  */
-
-char **Argv;
-
-int Argc;
-
-ELEM_BLK_STRUCT *Element_Blocks = NULL; /* Pointer to array of global
-                                           element block information. */
-
-ELEM_BLK_STRUCT *Current_EB_ptr = NULL; /* Pointer to the current element block
-                                           structure. This is calculated in the
-                                           fill */
 
 static void print_usage(void) {
   DPRINTF(stdout, "usage: fix <exodus_output>.<numproc>.<single>\n\nexample: fix out.exoII.24.00");

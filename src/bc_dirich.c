@@ -79,7 +79,7 @@ int put_dirichlet_in_matrix(double x[], const int num_total_nodes)
   for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
     I = goma_ctx->mesh
             .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
-    node = Nodes[I];
+    node = goma_ctx->fem.nodes[I];
     if (node->DBC[goma_ctx->fem.pg->imtrx] && I < num_total_nodes) {
       nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
       offset = 0;

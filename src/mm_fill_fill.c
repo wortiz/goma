@@ -2787,7 +2787,7 @@ int assemble_surface(Exo_DB *exo,    /* ptr to basic exodus ii mesh information 
           for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
             I = goma_ctx->mesh
                     .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
-            node = Nodes[I];
+            node = goma_ctx->fem.nodes[I];
             nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
             nvdofi = get_nv_ndofs(nv, eqn);
             offseti = get_nodal_unknown_offset(nv, eqn, -2, 0, &vd);
@@ -2816,7 +2816,7 @@ int assemble_surface(Exo_DB *exo,    /* ptr to basic exodus ii mesh information 
           for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
             I = goma_ctx->mesh
                     .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
-            node = Nodes[I];
+            node = goma_ctx->fem.nodes[I];
             nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
             nvdofi = get_nv_ndofs(nv, eqn);
             offseti = get_nodal_unknown_offset(nv, eqn, -2, 0, &vd);
@@ -3809,7 +3809,7 @@ static int neighbor_species(Exo_DB *exo, /* ptr to basic exodus ii mesh informat
     for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
       for (i = 0; i < num_local_nodes; i++) {
         gnn = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
-        node = Nodes[gnn];
+        node = goma_ctx->fem.nodes[gnn];
         nvdof = get_nv_ndofs_modMF(node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx], v);
         for (j = 0; j < nvdof; j++) {
           ie = Index_Solution(gnn, v, w, 0, -2, goma_ctx->fem.pg->imtrx) + j;
@@ -4697,9 +4697,9 @@ void assemble_ls_mass_lumped_penalty(struct LS_Mass_Lumped_Penalty *mass_lumped_
 
     err = beer_belly();
     GOMA_EH(err, "beer_belly");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
-    if (zero_detJ)
+    if (goma_ctx->solver.zero_detj)
       return;
 
     err = load_fv();

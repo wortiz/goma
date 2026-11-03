@@ -95,7 +95,7 @@ int fix_exo_file(int num_procs, const char *exo_mono_name) {
 
   Spfrtn sr = 0;
 
-  ELEM_BLK_STRUCT *element_blocks_save = Element_Blocks;
+  ELEM_BLK_STRUCT *element_blocks_save = goma_ctx->fem.element_blocks;
   /*
    * Defaults
    */
@@ -531,7 +531,7 @@ int fix_exo_file(int num_procs, const char *exo_mono_name) {
 
   /* Restore Element_Blocks */
 
-  Element_Blocks = element_blocks_save;
+  goma_ctx->fem.element_blocks = element_blocks_save;
 
   return (0);
 }

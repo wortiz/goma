@@ -89,7 +89,7 @@ double raoults_law_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
   int i, have_T, pos, speciesVT, index_is, index_lvdesc;
   int wspec = bc->BC_Data_Int[0];
   int ebID_mat_liq = bc->BC_Data_Int[1], ebIndex_liq, ebIndex_gas;
-  int liquidSide = (Current_EB_ptr->Elem_Blk_Id == ebID_mat_liq);
+  int liquidSide = (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == ebID_mat_liq);
   double func_value, massflux;
   double Y_wspec;
   MATRL_PROP_STRUCT *mp_liq, *mp_gas;
@@ -457,7 +457,7 @@ double is_equil_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
   int i, have_T, pos, speciesVT, index_is, index_lvdesc;
   int wspec_a = bc->BC_Data_Int[0], wspec_b;
   int ebID_mat_a = bc->BC_Data_Int[1], ebIndex_a, ebIndex_b;
-  int a_Side = (Current_EB_ptr->Elem_Blk_Id == ebID_mat_a);
+  int a_Side = (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == ebID_mat_a);
   double func_value = 0.0, volflux = 0.0, C_wspec = 0.0;
   MATRL_PROP_STRUCT *mp_a = 0, *mp_b = 0;
   INTERFACE_SOURCE_STRUCT *is, **is_hdl;

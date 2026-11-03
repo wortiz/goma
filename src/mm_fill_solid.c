@@ -668,11 +668,11 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
                   deform_grad[i][1], ei[pg->imtrx]->ielem, fv->x[0], fv->x[1]);
 #endif
         }
-        neg_elem_volume = TRUE;
+        goma_ctx->solver.neg_elem_volume = TRUE;
         return (2);
       }
       if (det_defgrad_2d <= 0.) {
-        neg_elem_volume = TRUE;
+        goma_ctx->solver.neg_elem_volume = TRUE;
         return (2);
       }
 
@@ -822,11 +822,11 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
                   deform_grad[i][1], deform_grad[i][2], ei[pg->imtrx]->ielem);
 #endif
         }
-        neg_elem_volume = TRUE;
+        goma_ctx->solver.neg_elem_volume = TRUE;
         return (2);
       }
       if (fv->volume_change <= 0.) {
-        neg_elem_volume = TRUE;
+        goma_ctx->solver.neg_elem_volume = TRUE;
         return (2);
       }
 
@@ -2314,7 +2314,7 @@ void put_liquid_stress_in_solid(int id,                /* local element node num
   int v_s[MAX_MODES][DIM][DIM];
   int v_g[DIM][DIM];
 
-  NODE_INFO_STRUCT *node = Nodes[I];
+  NODE_INFO_STRUCT *node = goma_ctx->fem.nodes[I];
   NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
   dim = goma_ctx->fem.pd->Num_Dim;
@@ -2341,8 +2341,8 @@ void put_liquid_stress_in_solid(int id,                /* local element node num
   id_dofmom = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[R_MOMENTUM1][id];
   id_dofmesh = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[R_MESH1][id];
 
-  if (Current_EB_ptr->Elem_Blk_Id != i_mat_fluid) {
-    if (Current_EB_ptr->Elem_Blk_Id != i_mat_solid) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id != i_mat_fluid) {
+    if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id != i_mat_solid) {
       GOMA_EH(GOMA_ERROR, "Improper solid-fluid block ids");
     }
     /* note, this may not account for all situations - we may not want
@@ -2619,7 +2619,7 @@ void put_liquid_stress_in_solid_ALE(int id,        /* local element node number 
   int peqn_mom, peqn_solid, pvar;
   int ieqn_mom, ieqn_solid;
   int xfixed[DIM];
-  NODE_INFO_STRUCT *node = Nodes[I];
+  NODE_INFO_STRUCT *node = goma_ctx->fem.nodes[I];
   NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
   dim = goma_ctx->fem.pd->Num_Dim;
@@ -2643,8 +2643,8 @@ void put_liquid_stress_in_solid_ALE(int id,        /* local element node number 
    */
   if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1])
     return;
-  if (Current_EB_ptr->Elem_Blk_Id != i_mat_fluid) {
-    if (Current_EB_ptr->Elem_Blk_Id != i_mat_solid)
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id != i_mat_fluid) {
+    if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id != i_mat_solid)
       GOMA_EH(GOMA_ERROR, "Improper solid-fluid block ids");
     /* note, this may not account for all situations - we may not want
        to quit here, but we'll do it for now */
@@ -2851,7 +2851,7 @@ void penetration(double func[],
    *  in solid phase  - this is equal to the normal flux of the solid material
    *  plus the diffusive or porous flux of the solvents
    */
-  if (Current_EB_ptr->Elem_Blk_Id == i_mat_solid) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == i_mat_solid) {
     /* get convection velocity in this phase */
     if (goma_ctx->fem.pd->MeshMotion == LAGRANGIAN ||
         goma_ctx->fem.pd->MeshMotion == DYNAMIC_LAGRANGIAN) {
@@ -2932,7 +2932,7 @@ void penetration(double func[],
    *  If current material is the fluid phase, calculate normal fluid velocity
    *  in liquid at the interface
    */
-  else if (Current_EB_ptr->Elem_Blk_Id == i_mat_fluid) {
+  else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == i_mat_fluid) {
     /* Calculate the residual contribution from the normal component of velocity */
     for (kdir = 0; kdir < dim; kdir++) {
       *func += goma_ctx->fem.fv->v[kdir] * goma_ctx->fem.fv->snormal[kdir];
@@ -3018,7 +3018,7 @@ void no_slip(double func[],
 
   /***************************** SOLID SIDE *******************************/
   if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
-    if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
+    if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid) {
       if (goma_ctx->fem.pd->MeshMotion != LAGRANGIAN &&
           goma_ctx->fem.pd->MeshMotion != DYNAMIC_LAGRANGIAN &&
           goma_ctx->fem.pd->MeshMotion != TOTAL_ALE)
@@ -3047,7 +3047,7 @@ void no_slip(double func[],
    *  in solid phase  - this is equal to the normal flux of the solid material
    *  plus the diffusive or porous flux of the solvents
    */
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid) {
     /*first load up the correct reference velocity and do this in the
      solid phase because you may not have it in the liquid phase, as in
      TALE */
@@ -3171,7 +3171,7 @@ void no_slip(double func[],
    *  If current material is the fluid phase, calculate normal fluid velocity
    *  in liquid at the interface
    */
-  else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
+  else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_fluid) {
 
     /* Calculate the residual contribution from the velocity */
     for (a = 0; a < goma_ctx->problem.vim; a++) {
@@ -3259,7 +3259,7 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
   dbl orient[DIM];
 
   dim = ei[pg->imtrx]->ielem_dim;
-  mat_ielem = PRS_mat_ielem;
+  mat_ielem = goma_ctx->fem.prs_mat_ielem;
 
   memset(d_mu_dx, 0, sizeof(double) * DIM * MDE);
   memset(d_lambda_dx, 0, sizeof(double) * DIM * MDE);
@@ -3315,7 +3315,7 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
     /* add shrinkage stress, if called for */
     if (goma_ctx->fem.elc->thermal_expansion_model == SHRINKAGE) {
       if ((fv->external_field[0] >= 1.63 && fv->external_field[0] <= 1.7) ||
-          (int)Element_Blocks[ei[pg->imtrx]->elem_blk_index]
+          (int)goma_ctx->fem.element_blocks[ei[pg->imtrx]->elem_blk_index]
               .ElemStorage[mat_ielem]
               .solidified[ip]) {
         for (p = 0; p < VIM; p++) {
@@ -3323,7 +3323,9 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
             TT[p][q] -= (2. * mu + 3. * lambda) * (-0.04) * delta(p, q);
           }
         }
-        Element_Blocks[ei[pg->imtrx]->elem_blk_index].ElemStorage[mat_ielem].solidified[ip] = 1.0;
+        goma_ctx->fem.element_blocks[ei[pg->imtrx]->elem_blk_index]
+            .ElemStorage[mat_ielem]
+            .solidified[ip] = 1.0;
       }
     }
 
@@ -5587,7 +5589,7 @@ int check_for_neg_elem_volume(int eb,
   e_end = exo->eb_ptr[ib + 1];
 
   /* now populate augc with elem number */
-  for (e = e_start; e < e_end && !neg_elem_volume; e++) {
+  for (e = e_start; e < e_end && !goma_ctx->solver.neg_elem_volume; e++) {
     err = load_elem_dofptr(e, exo, x, x_old, xdot, xdot_old, 0);
 
     ip_total = elem_info(NQUAD, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type);
@@ -5626,11 +5628,11 @@ int check_for_neg_elem_volume(int eb,
       err = belly_flop(goma_ctx->fem.elc->lame_mu);
       GOMA_EH(err, "error in belly flop");
 
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         break;
     }
   }
-  return neg_elem_volume;
+  return goma_ctx->solver.neg_elem_volume;
 }
 
 /*****************************************************************************/

@@ -26,10 +26,6 @@
 #include "mm_mp_structs.h"
 #include "util/goma_context.h" /* material pointers live in goma_ctx->fem */
 
-extern struct Variable_Initialization Var_init[MAX_VARIABLE_TYPES + MAX_CONC];
-
-extern struct Variable_Initialization Var_init_mat[MAX_NUMBER_MATLS][MAX_VARIABLE_TYPES + MAX_CONC];
-
 /*
  *  Some Prototypes
  *

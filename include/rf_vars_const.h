@@ -123,8 +123,6 @@ typedef struct Variable_Description VARIABLE_DESCRIPTION_STRUCT;
 /*
  * Declarations for global definitions in rf_vars_defn.h
  */
-extern VARIABLE_DESCRIPTION_STRUCT **Var_Info;
-extern int Num_Var_Info_Records;
 
 /*
  * Nodal_Vars Structure;
@@ -178,9 +176,6 @@ typedef struct Nodal_Vars NODAL_VARS_STRUCT;
  *   Processor list of unique Nodal_Vars structures
  *   Proc_Nodal_Vars_List[i] points to the ith unique Nodal_Vars_List
  */
-
-extern NODAL_VARS_STRUCT **Nodal_Vars_List;
-extern int Nodal_Vars_List_Length;
 
 /*
  * vd_packed and nv_packed structures:

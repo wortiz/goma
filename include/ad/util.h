@@ -25,9 +25,10 @@ int ad_calc_shearrate(ADType &gammadot,            /* strain rate invariant */
 
 inline ADType set_ad_or_dbl(dbl val, int eqn, int dof) {
   ADType tmp;
-  if (ad_fv->total_ad_variables > 0 && goma_ctx->fem.af->Assemble_Jacobian == TRUE) {
+  if (goma_ctx->fem.ad_fv->total_ad_variables > 0 && goma_ctx->fem.af->Assemble_Jacobian == TRUE) {
     if (goma_ctx->fem.pd->gv[eqn]) {
-      tmp = ADType(ad_fv->total_ad_variables, ad_fv->offset[eqn] + dof, val);
+      tmp = ADType(goma_ctx->fem.ad_fv->total_ad_variables, goma_ctx->fem.ad_fv->offset[eqn] + dof,
+                   val);
     } else {
       tmp = val;
     }

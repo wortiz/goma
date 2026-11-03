@@ -685,12 +685,12 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   passdown.num_linear_its = 0;
   passdown.num_eigen_its = 0;
   passdown.sv_flag = TRUE;
-  passdown.nvd = Num_Var_Info_Records;
+  passdown.nvd = goma_ctx->problem.num_var_info_records;
   passdown.sv_index = NULL;
   passdown.sv_count = NULL;
 
   /* Initialize mass matrix and shifted matrix as needed */
-  if (goma_ctx->fem.loca_in->Cont_Alg == HP_CONTINUATION || Linear_Stability) {
+  if (goma_ctx->fem.loca_in->Cont_Alg == HP_CONTINUATION || goma_ctx->problem.linear_stability) {
     passdown.mass_matrix = (double *)array_alloc(1, goma_ctx->solver.nzeros + 5, sizeof(double));
     init_vec_value(passdown.mass_matrix, 0.0, goma_ctx->solver.nzeros + 5);
 
@@ -777,24 +777,25 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   /* Determine number of LSA passes to perform */
   /* Open eigenvector ExodusII output files for writing */
   passdown.do_3D_of_2D = FALSE;
-  if (Linear_Stability) {
+  if (goma_ctx->problem.linear_stability) {
 
     /* Check for ARPACK and/or PARPACK */
 #ifndef HAVE_PARPACK
     if (goma_ctx->num_proc > 1) {
       GOMA_WH(-1, "PARPACK was not compiled in -- cannot do eigensolves!");
-      Linear_Stability = LSA_NONE;
+      goma_ctx->problem.linear_stability = LSA_NONE;
     }
 #endif
 #ifndef GOMA_ENABLE_ARPACK
     GOMA_WH(-1, "ARPACK was not compiled in -- cannot do eigensolves!");
-    Linear_Stability = LSA_NONE;
+    goma_ctx->problem.linear_stability = LSA_NONE;
 #endif
 
-    if (Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE) {
+    if (goma_ctx->problem.linear_stability == LSA_3D_OF_2D ||
+        goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE) {
       /* Temporary error message - EDW */
       passdown.do_3D_of_2D = TRUE;
-      n = LSA_number_wave_numbers;
+      n = goma_ctx->problem.lsa_number_wave_numbers;
     } else
       n = 1;
     err = create_eigen_outfiles(passdown.exo, passdown.dpi, passdown.rd, passdown.gvec_elem);
@@ -1001,7 +1002,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   /* Set variables in the con.eigen_info structure for eigenvalue calcs */
 
   con.eigen_info.Num_Eigenvalues = 0;
-  if (Linear_Stability) {
+  if (goma_ctx->problem.linear_stability) {
     con.eigen_info.Num_Eigenvalues = goma_ctx->fem.eigen->Eigen_NEV_WANT;
     con.eigen_info.Num_Eigenvectors = goma_ctx->fem.eigen->Eigen_Record_Modes;
     if (con.eigen_info.Num_Eigenvalues > 0) {
@@ -2053,8 +2054,8 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
   for (i = 0; i < passes; i++) {
 
     /* On first 3D of 2D pass, route matrix fill to tmp_matrix */
-    LSA_3D_of_2D_pass = ((passes == 2) ? i + 1 : 0);
-    if (LSA_3D_of_2D_pass == 1)
+    goma_ctx->problem.lsa_3d_of_2d_pass = ((passes == 2) ? i + 1 : 0);
+    if (goma_ctx->problem.lsa_3d_of_2d_pass == 1)
       ams->val = tmp_matrix;
     else
       ams->val = jacobian_matrix;
@@ -2113,8 +2114,8 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
   for (i = 0; i < passes; i++) {
 
     /* On first 3D of 2D pass, route matrix fill to tmp_matrix */
-    LSA_3D_of_2D_pass = ((passes == 2) ? i + 1 : 0);
-    if (LSA_3D_of_2D_pass == 1)
+    goma_ctx->problem.lsa_3d_of_2d_pass = ((passes == 2) ? i + 1 : 0);
+    if (goma_ctx->problem.lsa_3d_of_2d_pass == 1)
       ams->val = tmp_matrix;
     else
       ams->val = passdown.mass_matrix;
@@ -2171,7 +2172,7 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
   /* Print matrices -- Careful, these can be big disk space hogs!! */
   if (goma_ctx->fem.eigen->Eigen_Matrix_Output) {
     if (!passdown.do_3D_of_2D)
-      LSA_3D_of_2D_wave_number = -1.0;
+      goma_ctx->problem.lsa_3d_of_2d_wave_number = -1.0;
     output_stability_matrices(passdown.mass_matrix, jacobian_matrix, ija, nnodes,
                               goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
                               goma_ctx->solver.nzeros);
@@ -3160,7 +3161,7 @@ void solution_output_conwrap(int num_soln_flag,
 
     /* Set LSA_flag and number of ARPACK calls (one unless doing 3D of 2D) */
     passdown.LSA_flag = TRUE;
-    n = (passdown.do_3D_of_2D ? LSA_number_wave_numbers : 1);
+    n = (passdown.do_3D_of_2D ? goma_ctx->problem.lsa_number_wave_numbers : 1);
 
     /* Anneal mesh if mesh displacement is solved */
     if (displacement_somewhere) {
@@ -3173,16 +3174,18 @@ void solution_output_conwrap(int num_soln_flag,
       /* Set current wave number if applicable */
 
       if (n == 1) {
-        if (Linear_Stability == LSA_3D_OF_2D) {
+        if (goma_ctx->problem.linear_stability == LSA_3D_OF_2D) {
           GOMA_EH(GOMA_ERROR, "With LOCA, you need to have more than one 3D wave number specified");
         }
 
-        LSA_3D_of_2D_wave_number = 0.0;
+        goma_ctx->problem.lsa_3d_of_2d_wave_number = 0.0;
       } else {
-        LSA_current_wave_number = i;
-        LSA_3D_of_2D_wave_number = LSA_wave_numbers[i];
+        goma_ctx->problem.lsa_current_wave_number = i;
+        goma_ctx->problem.lsa_3d_of_2d_wave_number = goma_ctx->problem.lsa_wave_numbers[i];
         DPRINTF(stdout, "\n\t3D of 2D LSA -- Wavenumber %d of %d:   %g\n",
-                LSA_current_wave_number + 1, LSA_number_wave_numbers, LSA_3D_of_2D_wave_number);
+                goma_ctx->problem.lsa_current_wave_number + 1,
+                goma_ctx->problem.lsa_number_wave_numbers,
+                goma_ctx->problem.lsa_3d_of_2d_wave_number);
       }
 
       /* Call eigensolver */
@@ -3263,7 +3266,7 @@ void eigenvector_output_conwrap(int j,
 
   /* Get the eigenvector file name */
   strcpy(efile, goma_ctx->fem.eigen->Eigen_Output_File);
-  get_eigen_outfile_name(efile, j, LSA_current_wave_number);
+  get_eigen_outfile_name(efile, j, goma_ctx->problem.lsa_current_wave_number);
 
   /* determine whether to add steady state mesh displacement
      if there is a mesh displacement field */
@@ -3300,7 +3303,7 @@ void eigenvector_output_conwrap(int j,
       }
 
       strcpy(efile, goma_ctx->fem.eigen->Eigen_Output_File);
-      get_eigen_outfile_name(efile, j + 1, LSA_current_wave_number);
+      get_eigen_outfile_name(efile, j + 1, goma_ctx->problem.lsa_current_wave_number);
       write_solution(efile, passdown.resid_vector, xi, passdown.x_sens_p, passdown.x_old,
                      passdown.xdot, passdown.xdot_old, passdown.tev, passdown.tev_post, passdown.gv,
                      passdown.rd, passdown.gvec, passdown.gvec_elem, &nprint, 0.0, passdown.theta,

@@ -524,28 +524,17 @@ typedef struct Material_Properties MATRL_PROP_STRUCT;
  * trigger. It gets checked several places...
  */
 
-extern int parallel_err;
-extern int parallel_err_global;
-
 /*
  * This particular error is triggered by moving mesh problems that get
  * too enthusiastic and require spending the night in the drunk tank -
  * let the whole town know.
  */
 
-extern int neg_elem_volume;
-extern int neg_elem_volume_global;
-
 /*
  * This particular error is triggered by moving mesh problems in shell that get
  * too enthusiastic and require spending the night in the drunk tank -
  * let the whole town know.
  */
-
-extern int neg_lub_height;
-extern int neg_lub_height_global;
-extern int zero_detJ;
-extern int zero_detJ_global;
 
 #ifndef UNUSED
 #if defined(__GNUC__)

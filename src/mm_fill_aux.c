@@ -45,8 +45,6 @@
 #include "rf_vars_const.h"
 #include "std.h"
 
-extern dbl *p0; /* Defined in mm_as_alloc.c */
-
 #include "mm_eh.h"
 
 #define GOMA_MM_FILL_AUX_C
@@ -651,7 +649,7 @@ double global_velocity_norm(const dbl x[],     /* solution vector */
   for (eqn = R_MOMENTUM1; eqn <= R_MOMENTUM3; eqn++) {
     if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][eqn]) {
       for (i = 0; i < (dpi->num_internal_nodes + dpi->num_boundary_nodes); i++) {
-        node = Nodes[i];
+        node = goma_ctx->fem.nodes[i];
         if (get_nv_ndofs(node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx], eqn)) {
           ie = Index_Solution(i, eqn, 0, 0, -2, goma_ctx->fem.pg->imtrx);
           if (ie != -1) {

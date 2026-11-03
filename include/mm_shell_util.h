@@ -26,10 +26,6 @@
 
 struct Generalized_Newtonian;
 
-extern int **elem_friends;
-extern int *num_elem_friends;
-extern int num_shell_blocks;
-
 GOMA_EXTERN void
 init_shell_element_blocks(const Exo_DB *exo); /* ExodusII database struct pointer */
 

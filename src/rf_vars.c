@@ -49,14 +49,7 @@
  * the existence, type, size and ordering of variable information at nodes.
  */
 
-VARIABLE_DESCRIPTION_STRUCT **Var_Info = NULL;
-
 /* Global number of different Var_Info entries */
-
-int Num_Var_Info_Records = 0;
-
-NODAL_VARS_STRUCT **Nodal_Vars_List = NULL;
-int Nodal_Vars_List_Length = 0;
 
 /************************************************************************/
 /************************************************************************/
@@ -360,25 +353,26 @@ VARIABLE_DESCRIPTION_STRUCT *find_or_create_vd(
    * variable description structure and return the address of
    * the existing structure.
    */
-  for (i = 0; i < Num_Var_Info_Records; i++) {
-    if (variable_description_comparison(Var_Info[i], vd)) {
+  for (i = 0; i < goma_ctx->problem.num_var_info_records; i++) {
+    if (variable_description_comparison(goma_ctx->problem.var_info[i], vd)) {
       variable_description_destroy(&vd);
-      return Var_Info[i];
+      return goma_ctx->problem.var_info[i];
     }
   }
 
   /*
    * Then, attach the new unique vd struct to the end of the global list
    */
-  realloc_ptr_1((void ***)&Var_Info, Num_Var_Info_Records + 1, Num_Var_Info_Records);
-  Var_Info[Num_Var_Info_Records] = vd;
-  Num_Var_Info_Records++;
+  realloc_ptr_1((void ***)&goma_ctx->problem.var_info, goma_ctx->problem.num_var_info_records + 1,
+                goma_ctx->problem.num_var_info_records);
+  goma_ctx->problem.var_info[goma_ctx->problem.num_var_info_records] = vd;
+  goma_ctx->problem.num_var_info_records++;
 
   /*
    * Fill in the list index field here -> use the index in the
    * processor list of variable types.
    */
-  vd->List_Index = Num_Var_Info_Records - 1;
+  vd->List_Index = goma_ctx->problem.num_var_info_records - 1;
 
   /*
    * Perhaps do a better job with the specifying the variable name here
@@ -417,18 +411,18 @@ VARIABLE_DESCRIPTION_STRUCT *Variable_Description_Match(VARIABLE_DESCRIPTION_STR
   int i, mat_save;
   if (!vd_match)
     return NULL;
-  for (i = 0; i < Num_Var_Info_Records; i++) {
-    if (variable_description_comparison(Var_Info[i], vd_match)) {
-      return Var_Info[i];
+  for (i = 0; i < goma_ctx->problem.num_var_info_records; i++) {
+    if (variable_description_comparison(goma_ctx->problem.var_info[i], vd_match)) {
+      return goma_ctx->problem.var_info[i];
     }
   }
   if (vd_match->MatID != -1) {
     mat_save = vd_match->MatID;
     vd_match->MatID = -1;
-    for (i = 0; i < Num_Var_Info_Records; i++) {
-      if (variable_description_comparison(Var_Info[i], vd_match)) {
+    for (i = 0; i < goma_ctx->problem.num_var_info_records; i++) {
+      if (variable_description_comparison(goma_ctx->problem.var_info[i], vd_match)) {
         vd_match->MatID = mat_save;
-        return Var_Info[i];
+        return goma_ctx->problem.var_info[i];
       }
     }
     vd_match->MatID = mat_save;
@@ -453,8 +447,8 @@ VARIABLE_DESCRIPTION_STRUCT *get_vd_ptr(int var_type, int matID, int idof)
 {
   int i;
   VARIABLE_DESCRIPTION_STRUCT *possible = NULL, *vd;
-  for (i = 0; i < Num_Var_Info_Records; i++) {
-    vd = Var_Info[i];
+  for (i = 0; i < goma_ctx->problem.num_var_info_records; i++) {
+    vd = goma_ctx->problem.var_info[i];
     if (vd->Variable_Type != var_type)
       continue;
     if (vd->MatID == matID) {

@@ -99,7 +99,8 @@ static void msr_to_triplet(struct GomaLinearSolverData *data) {
         mumps_data->N_global - mumps_data->row_offsets[goma_ctx->num_proc - 1];
   }
 
-  exchange_dof_int(cx[goma_ctx->fem.pg->imtrx], DPI_ptr, colgids, goma_ctx->fem.pg->imtrx);
+  exchange_dof_int(goma_ctx->cx[goma_ctx->fem.pg->imtrx], goma_ctx->dpi, colgids,
+                   goma_ctx->fem.pg->imtrx);
   mumps_data->colgids = colgids;
 
   mumps_data->irhs_loc = (int *)malloc(N * sizeof(int));

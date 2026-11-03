@@ -562,9 +562,10 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     err = GomaSparseMatrix_SetProblemGraph(
         goma_matrix, goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx],
         goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx],
-        goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes, Nodes,
-        goma_ctx->problem.max_var_per_node, goma_ctx->problem.matilda, Inter_Mask, exo, dpi, cx,
-        goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
+        goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes,
+        goma_ctx->fem.nodes, goma_ctx->problem.max_var_per_node, goma_ctx->problem.matilda,
+        goma_ctx->problem.inter_mask, exo, dpi, cx, goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag,
+        ams[JAC]);
     GOMA_EH(err, "GomaSparseMatrix_SetProblemGraph");
 
     ams[JAC]->GomaMatrixData = goma_matrix;

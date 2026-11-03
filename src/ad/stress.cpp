@@ -332,9 +332,9 @@ void ad_load_modal_pointers(
 
   for (a = 0; a < sdim; a++) {
     for (b = 0; b < sdim; b++) {
-      s[a][b] = ad_fv->S[ve_mode][a][b];
+      s[a][b] = goma_ctx->fem.ad_fv->S[ve_mode][a][b];
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-        s_dot[a][b] = ad_fv->S_dot[ve_mode][a][b];
+        s_dot[a][b] = goma_ctx->fem.ad_fv->S_dot[ve_mode][a][b];
       } else {
         s_dot[a][b] = 0.;
       }
@@ -344,7 +344,7 @@ void ad_load_modal_pointers(
   for (p = 0; p < sdim; p++) {
     for (a = 0; a < sdim; a++) {
       for (b = 0; b < sdim; b++) {
-        grad_s[p][a][b] = ad_fv->grad_S[ve_mode][p][a][b];
+        grad_s[p][a][b] = goma_ctx->fem.ad_fv->grad_S[ve_mode][p][a][b];
       }
     }
   }
@@ -459,7 +459,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
   wt = goma_ctx->fem.fv->wt;
 
-  det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
+  det_J = goma_ctx->fem.ad_fv->detJ; /* Really, ought to be mesh eqn. */
 
   h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
 
@@ -471,13 +471,13 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
    * Field variables...
    */
   for (int a = 0; a < goma_ctx->problem.wim; a++) {
-    v[a] = ad_fv->v[a];
+    v[a] = goma_ctx->fem.ad_fv->v[a];
 
     /* note, these are zero for steady calculations */
     x_dot[a] = 0.0;
     if (goma_ctx->fem.pd->TimeIntegration != STEADY &&
         goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1 + a]) {
-      x_dot[a] = ad_fv->x_dot[a];
+      x_dot[a] = goma_ctx->fem.ad_fv->x_dot[a];
     }
   }
 
@@ -492,7 +492,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
-      grad_v[a][b] = ad_fv->grad_v[a][b];
+      grad_v[a][b] = goma_ctx->fem.ad_fv->grad_v[a][b];
     }
   }
   ADType gamma[DIM][DIM];
@@ -501,7 +501,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   /* load up shearrate tensor based on velocity */
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
-      gamma[a][b] = ad_fv->grad_v[a][b] + ad_fv->grad_v[b][a];
+      gamma[a][b] = goma_ctx->fem.ad_fv->grad_v[a][b] + goma_ctx->fem.ad_fv->grad_v[b][a];
       dgamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
@@ -509,10 +509,10 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
       if (evss_gradv) {
-        g[a][b] = ad_fv->grad_v[a][b];
-        gt[a][b] = ad_fv->grad_v[b][a];
+        g[a][b] = goma_ctx->fem.ad_fv->grad_v[a][b];
+        gt[a][b] = goma_ctx->fem.ad_fv->grad_v[b][a];
       } else {
-        g[a][b] = ad_fv->G[a][b];
+        g[a][b] = goma_ctx->fem.ad_fv->G[a][b];
         gt[b][a] = g[a][b];
       }
     }
@@ -674,7 +674,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
               if (supg != 0.) {
                 for (w = 0; w < dim; w++) {
                   // wt_func += supg * supg_tau * ad_fv->v[w];// * ad_fv->basis[eqn].grad_phi[i][w];
-                  wt_func += supg * supg_tau * ad_fv->v[w] * ad_fv->basis[eqn].grad_phi[i][w];
+                  wt_func += supg * supg_tau * goma_ctx->fem.ad_fv->v[w] *
+                             goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][w];
                 }
               }
 
@@ -717,7 +718,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   ADType js = 0;
                   for (int k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; k++) {
                     for (int p = 0; p < goma_ctx->problem.vim; p++) {
-                      js += fabs(grad_b[p][ii][jj] * ad_fv->basis[eqn].grad_phi[k][p]);
+                      js +=
+                          fabs(grad_b[p][ii][jj] * goma_ctx->fem.ad_fv->basis[eqn].grad_phi[k][p]);
                     }
                   }
                   hdc = 1 / (js + 1e-16);
@@ -739,7 +741,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   }
                   kdc *= 0.5;
                   for (int r = 0; r < goma_ctx->problem.vim; r++) {
-                    diffusion += kdc * grad_b[r][ii][jj] * ad_fv->basis[eqn].grad_phi[i][r];
+                    diffusion +=
+                        kdc * grad_b[r][ii][jj] * goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][r];
                   }
 
                   diffusion *= yzbeta_factor * det_J * wt * h3;
@@ -770,7 +773,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   for (int q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; q++) {
                     ADType tmp = 0;
                     for (int w = 0; w < dim; w++) {
-                      tmp += ad_fv->basis[eqn].grad_phi[q][w] * ad_fv->basis[eqn].grad_phi[q][w];
+                      tmp += goma_ctx->fem.ad_fv->basis[eqn].grad_phi[q][w] *
+                             goma_ctx->fem.ad_fv->basis[eqn].grad_phi[q][w];
                     }
                     he += 1.0 / sqrt(tmp);
                   }
@@ -778,7 +782,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   tmp = 0;
                   for (int q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; q++) {
                     for (int w = 0; w < dim; w++) {
-                      tmp += fabs(r[w] * ad_fv->basis[eqn].grad_phi[q][w]);
+                      tmp += fabs(r[w] * goma_ctx->fem.ad_fv->basis[eqn].grad_phi[q][w]);
                     }
                   }
                   ADType hrgn = 1.0 / (tmp + 1e-14);
@@ -826,7 +830,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
                   for (int w = 0; w < dim; w++) {
                     // diffusion += tau_dcdd * grad_b[w][ii][jj] * ad_fv->basis[eqn].grad_phi[i][w];
-                    diffusion += tau_dcdd * gs_inner_dot[w] * ad_fv->basis[eqn].grad_phi[i][w];
+                    diffusion +=
+                        tau_dcdd * gs_inner_dot[w] * goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][w];
                   }
                   diffusion *= dcdd_factor * det_J * wt * h3;
                 }
@@ -878,7 +883,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                   for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                        resid[ii][jj][i].dx(ad_fv->offset[var] + j);
+                        resid[ii][jj][i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
                   }
                 }
               }
@@ -1002,7 +1007,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
 
   wt = goma_ctx->fem.fv->wt;
 
-  det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
+  det_J = goma_ctx->fem.ad_fv->detJ; /* Really, ought to be mesh eqn. */
 
   h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
 
@@ -1014,13 +1019,13 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
    * Field variables...
    */
   for (int a = 0; a < goma_ctx->problem.wim; a++) {
-    v[a] = ad_fv->v[a];
+    v[a] = goma_ctx->fem.ad_fv->v[a];
 
     /* note, these are zero for steady calculations */
     x_dot[a] = 0.0;
     if (goma_ctx->fem.pd->TimeIntegration != STEADY &&
         goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1 + a]) {
-      x_dot[a] = ad_fv->x_dot[a];
+      x_dot[a] = goma_ctx->fem.ad_fv->x_dot[a];
     }
   }
 
@@ -1036,7 +1041,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
   for (int a = 0; a < 3; a++) {
     for (int b = 0; b < 3; b++) {
       if (a < 2 || b < 2) {
-        grad_v[a][b] = ad_fv->grad_v[a][b];
+        grad_v[a][b] = goma_ctx->fem.ad_fv->grad_v[a][b];
       } else {
         grad_v[a][b] = 0.;
       }
@@ -1207,8 +1212,9 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
               if (supg != 0.) {
                 for (w = 0; w < dim; w++) {
                   // wt_func += supg * supg_tau * ad_fv->v[w];// * ad_fv->basis[eqn].grad_phi[i][w];
-                  wt_func += supg * supg_tau * (ad_fv->v[w] - ad_fv->x_dot[w]) *
-                             ad_fv->basis[eqn].grad_phi[i][w];
+                  wt_func += supg * supg_tau *
+                             (goma_ctx->fem.ad_fv->v[w] - goma_ctx->fem.ad_fv->x_dot[w]) *
+                             goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][w];
                 }
               }
 
@@ -1243,7 +1249,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
               if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
                 if (goma_ctx->fem.vn->shockcaptureModel == SC_CONSTANT) {
                   for (int w = 0; w < dim; w++) {
-                    diffusion += grad_S[w][ii][jj] * ad_fv->basis[eqn].grad_phi[i][w];
+                    diffusion += grad_S[w][ii][jj] * goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][w];
                   }
                   diffusion *= goma_ctx->fem.vn->shockcapture * det_J * wt * h3;
                   diffusion *=
@@ -1299,7 +1305,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
                   pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                   for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                        resid[ii][jj][i].dx(ad_fv->offset[var] + j);
+                        resid[ii][jj][i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
                   }
                 }
               }
@@ -1424,7 +1430,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
 
   wt = goma_ctx->fem.fv->wt;
 
-  det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
+  det_J = goma_ctx->fem.ad_fv->detJ; /* Really, ought to be mesh eqn. */
 
   h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
 
@@ -1436,13 +1442,13 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
    * Field variables...
    */
   for (int a = 0; a < goma_ctx->problem.wim; a++) {
-    v[a] = ad_fv->v[a];
+    v[a] = goma_ctx->fem.ad_fv->v[a];
 
     /* note, these are zero for steady calculations */
     x_dot[a] = 0.0;
     if (goma_ctx->fem.pd->TimeIntegration != STEADY &&
         goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1 + a]) {
-      x_dot[a] = ad_fv->x_dot[a];
+      x_dot[a] = goma_ctx->fem.ad_fv->x_dot[a];
     }
   }
 
@@ -1457,7 +1463,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
 
   for (int a = 0; a < 3; a++) {
     for (int b = 0; b < 3; b++) {
-      grad_v[a][b] = ad_fv->grad_v[a][b];
+      grad_v[a][b] = goma_ctx->fem.ad_fv->grad_v[a][b];
     }
   }
   grad_v[2][2] = -(grad_v[0][0] + grad_v[1][1]);
@@ -1478,7 +1484,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
         g[a][b] = grad_v[a][b];
         gt[a][b] = grad_v[b][a];
       } else {
-        g[a][b] = ad_fv->G[a][b];
+        g[a][b] = goma_ctx->fem.ad_fv->G[a][b];
         gt[b][a] = g[a][b];
       }
     }
@@ -1641,7 +1647,8 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
               if (supg != 0.) {
                 for (w = 0; w < dim; w++) {
                   // wt_func += supg * supg_tau * ad_fv->v[w];// * ad_fv->basis[eqn].grad_phi[i][w];
-                  wt_func += supg * supg_tau * ad_fv->v[w] * ad_fv->basis[eqn].grad_phi[i][w];
+                  wt_func += supg * supg_tau * goma_ctx->fem.ad_fv->v[w] *
+                             goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][w];
                 }
               }
 
@@ -1684,7 +1691,8 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                   ADType js = 0;
                   for (int k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; k++) {
                     for (int p = 0; p < 3; p++) {
-                      js += fabs(grad_b[p][ii][jj] * ad_fv->basis[eqn].grad_phi[k][p]);
+                      js +=
+                          fabs(grad_b[p][ii][jj] * goma_ctx->fem.ad_fv->basis[eqn].grad_phi[k][p]);
                     }
                   }
                   hdc = 1 / (js + 1e-16);
@@ -1706,7 +1714,8 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                   }
                   kdc *= 0.5;
                   for (int r = 0; r < 3; r++) {
-                    diffusion += kdc * grad_b[r][ii][jj] * ad_fv->basis[eqn].grad_phi[i][r];
+                    diffusion +=
+                        kdc * grad_b[r][ii][jj] * goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][r];
                   }
 
                   diffusion *= yzbeta_factor * det_J * wt * h3;
@@ -1737,7 +1746,8 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                   for (int q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; q++) {
                     ADType tmp = 0;
                     for (int w = 0; w < dim; w++) {
-                      tmp += ad_fv->basis[eqn].grad_phi[q][w] * ad_fv->basis[eqn].grad_phi[q][w];
+                      tmp += goma_ctx->fem.ad_fv->basis[eqn].grad_phi[q][w] *
+                             goma_ctx->fem.ad_fv->basis[eqn].grad_phi[q][w];
                     }
                     he += 1.0 / sqrt(tmp);
                   }
@@ -1745,7 +1755,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                   tmp = 0;
                   for (int q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; q++) {
                     for (int w = 0; w < dim; w++) {
-                      tmp += fabs(r[w] * ad_fv->basis[eqn].grad_phi[q][w]);
+                      tmp += fabs(r[w] * goma_ctx->fem.ad_fv->basis[eqn].grad_phi[q][w]);
                     }
                   }
                   ADType hrgn = 1.0 / (tmp + 1e-14);
@@ -1792,13 +1802,15 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                   }
 
                   for (int w = 0; w < dim; w++) {
-                    diffusion += tau_dcdd * grad_b[w][ii][jj] * ad_fv->basis[eqn].grad_phi[i][w];
-                    diffusion += tau_dcdd * gs_inner_dot[w] * ad_fv->basis[eqn].grad_phi[i][w];
+                    diffusion += tau_dcdd * grad_b[w][ii][jj] *
+                                 goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][w];
+                    diffusion +=
+                        tau_dcdd * gs_inner_dot[w] * goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][w];
                   }
                   diffusion *= dcdd_factor * det_J * wt * h3;
                 } else if (goma_ctx->fem.vn->shockcaptureModel == SC_CONSTANT) {
                   for (int w = 0; w < dim; w++) {
-                    diffusion += grad_b[w][ii][jj] * ad_fv->basis[eqn].grad_phi[i][w];
+                    diffusion += grad_b[w][ii][jj] * goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][w];
                   }
                   diffusion *= goma_ctx->fem.vn->shockcapture * det_J * wt * h3;
                   diffusion *=
@@ -1852,7 +1864,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
                   pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                   for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                        resid[ii][jj][i].dx(ad_fv->offset[var] + j);
+                        resid[ii][jj][i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
                   }
                 }
               }

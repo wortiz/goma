@@ -77,7 +77,8 @@
 void do_LSA_mods(int mod_type) {
 
   /* Proceed only if this is a 3D of 2D stability problem */
-  if (Linear_Stability != LSA_3D_OF_2D && Linear_Stability != LSA_3D_OF_2D_SAVE)
+  if (goma_ctx->problem.linear_stability != LSA_3D_OF_2D &&
+      goma_ctx->problem.linear_stability != LSA_3D_OF_2D_SAVE)
     return;
 
   /* All cases: modify all basis and weight functions */
@@ -153,9 +154,9 @@ void modify_basis_and_weight_functions_for_LSA_3D_of_2D(void) {
     return;
 
   mn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn;
-  N = LSA_3D_of_2D_wave_number;
+  N = goma_ctx->problem.lsa_3d_of_2d_wave_number;
 
-  if (LSA_3D_of_2D_pass == 1) {
+  if (goma_ctx->problem.lsa_3d_of_2d_pass == 1) {
     cosine_value = 1.0;
     sine_value = 0.0;
   } else {
@@ -784,7 +785,8 @@ void modify_normal_vector_for_LSA_3D_of_2D(void)
    *  they are needed.  NOTE: Binormal (stangent[0]) is not affected.
    */
 
-  if (LSA_3D_of_2D_pass == 0 || !(goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]))
+  if (goma_ctx->problem.lsa_3d_of_2d_pass == 0 ||
+      !(goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]))
     return;
 
   for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
@@ -814,14 +816,15 @@ int create_eigen_outfiles(Exo_DB *exo,
  */
 {
   int m = goma_ctx->fem.eigen->Eigen_Record_Modes;
-  int n = LSA_number_wave_numbers;
+  int n = goma_ctx->problem.lsa_number_wave_numbers;
 
   char fname[MAX_FNL];
 
   int i, j, k, n1;
 
   /* Determine if doing 3D of 2D LSA */
-  if (Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE) {
+  if (goma_ctx->problem.linear_stability == LSA_3D_OF_2D ||
+      goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE) {
     n1 = n;
   } else {
     n1 = 1;
@@ -886,7 +889,8 @@ void get_eigen_outfile_name(char *in_name, int j, int k) {
   prefix_length = get_prefix(prefix, in_name);
 
   /* Determine if doing 3D of 2D LSA; set k = -1 if not */
-  if (!(Linear_Stability == LSA_3D_OF_2D) && !(Linear_Stability == LSA_3D_OF_2D_SAVE))
+  if (!(goma_ctx->problem.linear_stability == LSA_3D_OF_2D) &&
+      !(goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE))
     k = -1;
 
   /* Always construct mode string */
@@ -894,7 +898,7 @@ void get_eigen_outfile_name(char *in_name, int j, int k) {
 
   /* Construct wave string for 3D of 2D LSA only */
   if (k != -1)
-    sprintf(wave_string, "_wn=%g", LSA_wave_numbers[k]);
+    sprintf(wave_string, "_wn=%g", goma_ctx->problem.lsa_wave_numbers[k]);
 
   /* Assemble the pieces of the name string */
   if (prefix_length > 0)

@@ -191,7 +191,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
     zero_base(exo);
 
     if (goma_ctx->num_proc > 1)
-      wr_dpi(DPI_ptr, exooutfilename);
+      wr_dpi(goma_ctx->dpi, exooutfilename);
 
     exoout = ex_open(exooutfilename, EX_WRITE, &CPU_word_size, &IO_word_size, &exoversion);
     GOMA_EH(exoout, "ex_open in rd_pixel_image2.c");
@@ -394,7 +394,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   nmiss = 0;
   // Loop over elements to assign pixel values to Gauss points
   for (ielem = e_start; ielem < e_end; ielem++) {
-    if (DPI_ptr->elem_owner[ielem] != goma_ctx->proc_id) {
+    if (goma_ctx->dpi->elem_owner[ielem] != goma_ctx->proc_id) {
       continue; // Skip elements not owned by this processor
     }
     load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
@@ -458,7 +458,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
 
   for (ielem = e_start; ielem < e_end; ielem++) // Loop over elements
   {
-    if (DPI_ptr->elem_owner[ielem] != goma_ctx->proc_id) {
+    if (goma_ctx->dpi->elem_owner[ielem] != goma_ctx->proc_id) {
       continue; // Skip elements not owned by this processor
     }
     load_ei(ielem, exo, 0, goma_ctx->fem.pg->imtrx);
@@ -502,8 +502,8 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   /* Output to map_pix exoII file      */
   /* and fill in ext_fld_ndl_val array */
   /*************************************/
-  exchange_node(cx[0], DPI_ptr, lumped_mass);
-  exchange_node(cx[0], DPI_ptr, bvec);
+  exchange_node(goma_ctx->cx[0], goma_ctx->dpi, lumped_mass);
+  exchange_node(goma_ctx->cx[0], goma_ctx->dpi, bvec);
 
   nodal_var_vals_err = (dbl *)calloc(exo->num_nodes, sizeof(dbl));
   nodal_var_vals = (dbl *)calloc(exo->num_nodes, sizeof(dbl));

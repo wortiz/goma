@@ -61,8 +61,6 @@
 #include "std.h"
 #include "wr_side_data.h"
 
-extern double time_goma_started; /* def'd and set in main.c */
-
 char err_msg[MAX_CHAR_IN_INPUT];
 
 FILE *uf; /* file pointer for this user data */
@@ -396,12 +394,12 @@ int ns_data_print(pp_Data *p,
           /* Get these from extern via main...*/
 #ifdef PARALLEL
           some_time = MPI_Wtime();
-          ordinate = some_time - time_goma_started;
+          ordinate = some_time - goma_ctx->time_goma_started;
 #endif
 #ifndef PARALLEL
           time_t now = 0;
           (void)time(&now);
-          ordinate = (double)(now)-time_goma_started;
+          ordinate = (double)(now)-goma_ctx->time_goma_started;
 #endif
           iprint = 1;
         } else if (strncasecmp(qtity_str, "speed", 5) == 0) {

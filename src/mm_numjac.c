@@ -545,9 +545,9 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
     goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix = FALSE;
     goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
     goma_ctx->fem.af->Assemble_Jacobian = FALSE;
-    neg_elem_volume = FALSE;
-    neg_lub_height = FALSE;
-    zero_detJ = FALSE;
+    goma_ctx->solver.neg_elem_volume = FALSE;
+    goma_ctx->solver.neg_lub_height = FALSE;
+    goma_ctx->solver.zero_detj = FALSE;
 
     IntLinkedList *elptr;
     for (elptr = elem_list; elptr != NULL; elptr = elptr->next) {
@@ -563,7 +563,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
       }
 
       /*needed for saturation hyst. func. */
-      PRS_mat_ielem = ielem - exo->eb_ptr[ebn];
+      goma_ctx->fem.prs_mat_ielem = ielem - exo->eb_ptr[ebn];
 
       int err =
           matrix_fill_stress(ams, x_1, resid_vector_1, x_old, x_older, xdot, xdot_old, x_update,
@@ -596,7 +596,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
           Index_Solution_Inv(i, &gnode, &ivd, &i_offset, &idof, goma_ctx->fem.pg->imtrx);
 
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
-            if (Inter_Mask[goma_ctx->fem.pg->imtrx][var_i][var_j]) {
+            if (goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][var_i][var_j]) {
               int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i + 1], ams->bindx);
               if (ja == -1) {
                 sprintf(errstring, "Index not found (%d, %d) for interaction (%d, %d)", i, j,
@@ -604,11 +604,12 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
                         goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][0]);
                 GOMA_EH(ja, errstring);
               }
-              if (Nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx] &&
-                  Nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx][i_offset] != -1 && i == j) {
+              if (goma_ctx->fem.nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx] &&
+                  goma_ctx->fem.nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx][i_offset] != -1 &&
+                  i == j) {
                 nj[ja] = 1.0;
-              } else if (Nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx] &&
-                         Nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx][i_offset] != -1) {
+              } else if (goma_ctx->fem.nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx] &&
+                         goma_ctx->fem.nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx][i_offset] != -1) {
                 nj[ja] = 0.0;
               } else {
                 nj[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx_col[j]);
@@ -623,7 +624,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
             if ((goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0] >= v_s[mode][0][0] &&
                  goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0] <= v_s[mode][2][2])) {
               //
-              if (Inter_Mask[goma_ctx->fem.pg->imtrx][var_i][var_j]) {
+              if (goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][var_i][var_j]) {
 
                 int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i + 1], ams->bindx);
                 if (ja == -1) {
@@ -632,11 +633,13 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
                           goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][0]);
                   GOMA_EH(ja, errstring);
                 }
-                if (Nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx] &&
-                    Nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx][i_offset] != -1 && i == j) {
+                if (goma_ctx->fem.nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx] &&
+                    goma_ctx->fem.nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx][i_offset] != -1 &&
+                    i == j) {
                   nj[ja] = 1.0;
-                } else if (Nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx] &&
-                           Nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx][i_offset] != -1) {
+                } else if (goma_ctx->fem.nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx] &&
+                           goma_ctx->fem.nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx][i_offset] !=
+                               -1) {
                   nj[ja] = 0.0;
                 } else {
                   nj[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx_col[j]);
@@ -668,28 +671,31 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
   } /* End of for (j=0; j<numProcUnknowns; j++) */
 
 #ifdef PARALLEL
-  neg_elem_volume_global = FALSE;
-  MPI_Allreduce(&neg_elem_volume, &neg_elem_volume_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
-  neg_elem_volume = neg_elem_volume_global;
+  goma_ctx->solver.neg_elem_volume_global = FALSE;
+  MPI_Allreduce(&goma_ctx->solver.neg_elem_volume, &goma_ctx->solver.neg_elem_volume_global, 1,
+                MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+  goma_ctx->solver.neg_elem_volume = goma_ctx->solver.neg_elem_volume_global;
 
-  neg_lub_height_global = FALSE;
-  MPI_Allreduce(&neg_lub_height, &neg_lub_height_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
-  neg_lub_height = neg_lub_height_global;
+  goma_ctx->solver.neg_lub_height_global = FALSE;
+  MPI_Allreduce(&goma_ctx->solver.neg_lub_height, &goma_ctx->solver.neg_lub_height_global, 1,
+                MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+  goma_ctx->solver.neg_lub_height = goma_ctx->solver.neg_lub_height_global;
 
-  zero_detJ_global = FALSE;
-  MPI_Allreduce(&zero_detJ, &zero_detJ_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
-  zero_detJ = zero_detJ_global;
+  goma_ctx->solver.zero_detj_global = FALSE;
+  MPI_Allreduce(&goma_ctx->solver.zero_detj, &goma_ctx->solver.zero_detj_global, 1, MPI_INT,
+                MPI_LOR, MPI_COMM_WORLD);
+  goma_ctx->solver.zero_detj = goma_ctx->solver.zero_detj_global;
 #endif
 
-  if (neg_elem_volume) {
+  if (goma_ctx->solver.neg_elem_volume) {
     DPRINTF(stderr, "neg_elem_volume triggered \n");
     exit(-1);
   }
-  if (neg_lub_height) {
+  if (goma_ctx->solver.neg_lub_height) {
     DPRINTF(stderr, "neg_lub_height triggered \n");
     exit(-1);
   }
-  if (zero_detJ) {
+  if (goma_ctx->solver.zero_detj) {
     DPRINTF(stderr, "zero_detJ triggered \n");
     exit(-1);
   }
@@ -865,8 +871,8 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
    */
   for (j = 0; j < MAX_VARIABLE_TYPES; j++) {
     for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
-      Inter_Mask_save[j][i] = Inter_Mask[goma_ctx->fem.pg->imtrx][j][i];
-      Inter_Mask[goma_ctx->fem.pg->imtrx][j][i] = 1;
+      Inter_Mask_save[j][i] = goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][j][i];
+      goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][j][i] = 1;
     }
   }
 
@@ -1037,9 +1043,9 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
 #else
     goma_ctx->fem.af->Assemble_Jacobian = TRUE;
 #endif
-    neg_elem_volume = FALSE;
-    neg_lub_height = FALSE;
-    zero_detJ = FALSE;
+    goma_ctx->solver.neg_elem_volume = FALSE;
+    goma_ctx->solver.neg_lub_height = FALSE;
+    goma_ctx->solver.zero_detj = FALSE;
 
     my_node_num = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][2];
 
@@ -1094,7 +1100,7 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
       load_ei(my_elem_num, exo, 0, goma_ctx->fem.pg->imtrx);
       for (k = exo->elem_node_pntr[my_elem_num]; k < exo->elem_node_pntr[my_elem_num + 1]; k++) {
         node_num = exo->elem_node_list[k];
-        node = Nodes[node_num];
+        node = goma_ctx->fem.nodes[node_num];
         nvs = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
         for (l = 0; l < nvs->Num_Var_Desc; l++) {
           vd = nvs->Var_Desc_List[l];
@@ -1124,7 +1130,7 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
       xdot[j] += (x_1[j] - x[j]) * (1.0 + 2 * theta) / delta_t;
     }
 
-    if (xfem != NULL)
+    if (goma_ctx->fem.xfem != NULL)
       clear_xfem_contribution(ams->npu);
 
     for (i = 0; i < num_elems; i++) {
@@ -1133,15 +1139,15 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
                   &theta, first_elem_side_BC_array, &time_value, exo, dpi, &elem_list[i],
                   &num_total_nodes, h_elem_avg, U_norm, NULL, zeroCA);
       zeroCA = 0;
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         break;
-      if (neg_lub_height)
+      if (goma_ctx->solver.neg_lub_height)
         break;
-      if (zero_detJ)
+      if (goma_ctx->solver.zero_detj)
         break;
     }
 
-    if (xfem != NULL)
+    if (goma_ctx->fem.xfem != NULL)
       check_xfem_contribution(ams->npu, ams, resid_vector_1, x_1, exo);
 
     /*
@@ -1150,28 +1156,31 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
     global_qp_storage_destroy();
 
 #ifdef PARALLEL
-    neg_elem_volume_global = FALSE;
-    MPI_Allreduce(&neg_elem_volume, &neg_elem_volume_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
-    neg_elem_volume = neg_elem_volume_global;
+    goma_ctx->solver.neg_elem_volume_global = FALSE;
+    MPI_Allreduce(&goma_ctx->solver.neg_elem_volume, &goma_ctx->solver.neg_elem_volume_global, 1,
+                  MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+    goma_ctx->solver.neg_elem_volume = goma_ctx->solver.neg_elem_volume_global;
 
-    neg_lub_height_global = FALSE;
-    MPI_Allreduce(&neg_lub_height, &neg_lub_height_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
-    neg_lub_height = neg_lub_height_global;
+    goma_ctx->solver.neg_lub_height_global = FALSE;
+    MPI_Allreduce(&goma_ctx->solver.neg_lub_height, &goma_ctx->solver.neg_lub_height_global, 1,
+                  MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+    goma_ctx->solver.neg_lub_height = goma_ctx->solver.neg_lub_height_global;
 
-    zero_detJ_global = FALSE;
-    MPI_Allreduce(&zero_detJ, &zero_detJ_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
-    zero_detJ = zero_detJ_global;
+    goma_ctx->solver.zero_detj_global = FALSE;
+    MPI_Allreduce(&goma_ctx->solver.zero_detj, &goma_ctx->solver.zero_detj_global, 1, MPI_INT,
+                  MPI_LOR, MPI_COMM_WORLD);
+    goma_ctx->solver.zero_detj = goma_ctx->solver.zero_detj_global;
 #endif
 
-    if (neg_elem_volume) {
+    if (goma_ctx->solver.neg_elem_volume) {
       DPRINTF(stderr, "neg_elem_volume triggered \n");
       exit(-1);
     }
-    if (neg_lub_height) {
+    if (goma_ctx->solver.neg_lub_height) {
       DPRINTF(stderr, "neg_lub_height triggered \n");
       exit(-1);
     }
-    if (zero_detJ) {
+    if (goma_ctx->solver.zero_detj) {
       DPRINTF(stderr, "zero_detJ triggered \n");
       exit(-1);
     }

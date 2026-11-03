@@ -60,7 +60,7 @@ int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * setup communications patterns between ghost and owned
    * nodes.
    */
-  setup_nodal_comm_map(exo, dpi, cx);
+  setup_nodal_comm_map(exo, dpi, goma_ctx->cx);
 
   /*
    * Find the global maximum number of unknowns located at any one
@@ -72,7 +72,7 @@ int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * Exchange my idea of what materials I have at each node with
    * my surrounding processors. Make sure we are all in sync
    */
-  setup_external_nodal_matrls(exo, dpi, cx[0]);
+  setup_external_nodal_matrls(exo, dpi, goma_ctx->cx[0]);
 
   /*
    * Exchange my idea of what degrees of freedom I have with my
@@ -80,7 +80,7 @@ int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * Owned nodes tell ghost nodes what variables are active
    * at that node.
    */
-  setup_external_nodal_vars(exo, dpi, cx);
+  setup_external_nodal_vars(exo, dpi, goma_ctx->cx);
 
   /*
    * Finish setting the unknown map on this processor
@@ -93,13 +93,13 @@ int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * possible
    */
   // log_msg("setup_dof_comm_map...");
-  setup_dof_comm_map(exo, dpi, cx);
+  setup_dof_comm_map(exo, dpi, goma_ctx->cx);
 
   /*
    * Output some statistics concerning the communications pattern
    */
   if (goma_ctx->num_proc > 1)
-    output_comm_stats(dpi, cx);
+    output_comm_stats(dpi, goma_ctx->cx);
 
   /*
    * I extracted this from setup_fill_comm_map because some of the
@@ -205,9 +205,10 @@ int resetup_matrix(struct GomaLinearSolverData **ams, Exo_DB *exo, Dpi *dpi) {
       GomaSparseMatrix_SetProblemGraph(
           goma_matrix, goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx],
           goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx],
-          goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes, Nodes,
-          goma_ctx->problem.max_var_per_node, goma_ctx->problem.matilda, Inter_Mask, exo, dpi,
-          cx[goma_ctx->fem.pg->imtrx], goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
+          goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes,
+          goma_ctx->fem.nodes, goma_ctx->problem.max_var_per_node, goma_ctx->problem.matilda,
+          goma_ctx->problem.inter_mask, exo, dpi, goma_ctx->cx[goma_ctx->fem.pg->imtrx],
+          goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
     }
     goma_ctx->fem.pg->imtrx = 0;
     ams[goma_ctx->fem.pg->imtrx]->solveSetup = 0;

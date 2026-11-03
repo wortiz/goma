@@ -1427,23 +1427,7 @@ struct Viscoplastic_Constitutive {
   dbl ******dTT_dc_old_glob;
 };
 
-/*
- * This is where this belongs.
- */
-
-struct Variable_Initialization {
-  int var;
-  int ktype;
-  double init_val;
-  double init_val_min;
-  double init_val_max;
-  double init_val_minus; /* Value in negative LS phase */
-  double init_val_plus;  /* Value in positive LS phase */
-  int slave_block;       /* this is set TRUE in order that this initialization value
-                           is not applied to nodes that are shared with adjacent blocks */
-  int len_u_pars;
-  double *u_pars;
-};
+#include "mm_variable_initialization.h"
 
 struct Second_LS_Phase_Properties {
   int ViscosityModel;

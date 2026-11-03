@@ -992,8 +992,8 @@ int ebID_to_ebIndex(const int ebid)
  *********************************************************************/
 {
   int eb;
-  for (eb = 0; eb < EXO_ptr->num_elem_blocks; eb++) {
-    if (ebid == EXO_ptr->eb_id[eb]) {
+  for (eb = 0; eb < goma_ctx->exo->num_elem_blocks; eb++) {
+    if (ebid == goma_ctx->exo->eb_id[eb]) {
       return eb;
     }
   }
@@ -1031,7 +1031,7 @@ void setup_matilda(Exo_DB *e, int *matilda)
   int eb;   /* element block index */
   int ebid; /* element block identifier */
   int m, found;
-  ELEM_BLK_STRUCT *eb_ptr = Element_Blocks;
+  ELEM_BLK_STRUCT *eb_ptr = goma_ctx->fem.element_blocks;
 
   for (eb = 0; eb < e->num_elem_blocks; eb++) {
     ebid = e->eb_id[eb];

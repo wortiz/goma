@@ -313,7 +313,7 @@ extern "C" goma_error GomaSparseMatrix_LoadLec(GomaSparseMatrix matrix,
               if (goma_ctx->fem.af->Assemble_Jacobian) {
                 for (v = V_FIRST; v < V_LAST; v++) {
                   pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
-                  if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
+                  if (pv != -1 && (goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][e][v])) {
                     ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
                     if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
                         ielem) {
@@ -387,7 +387,7 @@ extern "C" goma_error GomaSparseMatrix_LoadLec(GomaSparseMatrix matrix,
             if (goma_ctx->fem.af->Assemble_Jacobian) {
               for (v = V_FIRST; v < V_LAST; v++) {
                 pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
-                if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
+                if (pv != -1 && (goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][e][v])) {
                   if (v == MASS_FRACTION) {
 
                     ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
@@ -417,7 +417,8 @@ extern "C" goma_error GomaSparseMatrix_LoadLec(GomaSparseMatrix matrix,
                            *        dofs, je_new will be wrong here. je
                            *        is correct.
                            */
-                          if (Nodes[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j]]
+                          if (goma_ctx->fem
+                                  .nodes[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j]]
                                   ->Mat_List.Length < 2) {
                           }
                         }

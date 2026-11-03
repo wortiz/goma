@@ -8,9 +8,7 @@ extern "C" {
 #include "util/goma_context.h"
 }
 
-extern "C" {
-int parallel_err = 0;
-}
+extern "C" {}
 
 int main(int argc, char *argv[]) {
   // global setup...

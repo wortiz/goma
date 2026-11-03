@@ -961,7 +961,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
    */
   for (int i = 0; i < exo->num_elem_blocks; i++) {
     ELEM_BLK_STRUCT *eb_ptr = NULL;
-    eb_ptr = Element_Blocks + i;
+    eb_ptr = goma_ctx->fem.element_blocks + i;
     eb_ptr->Elem_Blk_Num = i;
     eb_ptr->Elem_Blk_Id = exo->eb_id[i];
     if (exo->eb_num_elems[i] > 0) {

@@ -203,9 +203,6 @@ struct Extended_Shape_Fcn_Basics {
   double *tot_vol;
 };
 
-extern struct Extended_Shape_Fcn_Basics
-    *xfem; /* This is a global structure for the basic pieces needed for XFEM */
-
 GOMA_EXTERN void load_xfem_for_elem(double[], const Exo_DB *);
 
 GOMA_EXTERN void load_xfem_for_stu(const double[]);
@@ -299,8 +296,6 @@ GOMA_EXTERN void assemble_boundary_extension_velocity(double[], Exo_DB *, Dpi *)
 
 GOMA_EXTERN int assemble_extension_velocity(dbl[DIM], dbl[DIM][DIM], dbl[DIM][MDE]);
 
-extern NTREE
-    *Subgrid_Tree; /* This is a global pointer to the subgrid integration shape function tree */
 extern NTREE_INT Subgrid_Int; /* This is a global structure for the subgrid integration points and
                                  weights specific to element */
 

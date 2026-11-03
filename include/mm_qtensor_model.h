@@ -120,11 +120,8 @@ EXTERN void assemble_qtensor(dbl *);
 EXTERN void assemble_new_qtensor /* Ryan's qtensor */
     (dbl *);
 
-extern int MMH_ip;
-
 /*don't ask about this skeleton. I need the local material-referenced element number deep in the
  * bowels of the assembly routines, and passing exo struct down there is brutal. */
-extern int PRS_mat_ielem;
 
 #define QTENSOR_SMALL_DBL 1.0e-14
 
@@ -134,9 +131,5 @@ extern int PRS_mat_ielem;
 #define BAD_MAGIC_VECTOR_RELATIVE_TOLERANCE 0.01
 
 #define FINITE_DELTA 0.05
-
-extern dbl vort_dir[MDE][DIM];     /* vorticity direction for each gauss point */
-extern dbl qtensor[MDE][DIM][DIM]; /* I - 1/2 v^t v for each gauss point*/
-extern dbl div_qtensor[MDE][DIM];  /* div(I-1/2 v^tv) for each gauss point */
 
 #endif /* GOMA_MM_QTENSOR_MODEL_H */

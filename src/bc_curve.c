@@ -204,7 +204,7 @@ int apply_integrated_curve_bc(
 
     if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
       load_surface_tension(dsigma_dx);
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         return (status);
     }
 
@@ -668,7 +668,7 @@ int apply_point_colloc_edge_bc(
      * Check to see if the current local node number is owned by the
      * processor - this is done by checking I < num_total_nodes
      */
-    if (I < DPI_ptr->num_owned_nodes) {
+    if (I < goma_ctx->dpi->num_owned_nodes) {
 
       /*
        * Load the field variable values at this node point
@@ -694,7 +694,7 @@ int apply_point_colloc_edge_bc(
 
       if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
         load_surface_tension(dsigma_dx);
-        if (neg_elem_volume)
+        if (goma_ctx->solver.neg_elem_volume)
           return (status);
       }
 

@@ -143,7 +143,7 @@ void goma_eh(const int error_flag, const char *file, const int line, const char 
     } else {
       MPI_Abort(MPI_COMM_WORLD, -1);
     }
-    parallel_err = TRUE;
+    goma_ctx->solver.parallel_err = TRUE;
 #endif
   }
 }

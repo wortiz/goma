@@ -448,7 +448,8 @@ int rd_exo(Exo_DB *x, /* def'd in exo_struct.h */
      * Allocate storage for element block structures and then zero
      * the storage space.
      */
-    Element_Blocks = (ELEM_BLK_STRUCT *)alloc_struct_1(ELEM_BLK_STRUCT, x->num_elem_blocks);
+    goma_ctx->fem.element_blocks =
+        (ELEM_BLK_STRUCT *)alloc_struct_1(ELEM_BLK_STRUCT, x->num_elem_blocks);
 
     if (x->num_elem_blocks > 0) {
       x->eb_id = (int *)smalloc(x->num_elem_blocks * si);
@@ -490,7 +491,7 @@ int rd_exo(Exo_DB *x, /* def'd in exo_struct.h */
          *  Fill in the information in the current
          *  element block structure
          */
-        eb_ptr = Element_Blocks + i;
+        eb_ptr = goma_ctx->fem.element_blocks + i;
         eb_ptr->Elem_Blk_Num = i;
         eb_ptr->Elem_Blk_Id = x->eb_id[i];
         if (x->eb_num_elems[i] > 0) {

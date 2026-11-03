@@ -18,6 +18,9 @@
 #include <mpi.h>
 
 #include "ac_particles_types.h"
+#include "el_elm.h"      /* DIM */
+#include "mm_mp_const.h" /* MAX_NUMBER_MATLS */
+#include "mm_variable_initialization.h"
 #include "rf_bc_limits.h" /* MAX_MAT_PER_SS, MAX_*_TABLES */
 #include "rf_fem_const.h" /* MAX_NUM_MATRICES, MAX_VARIABLE_TYPES */
 #include "rf_io_const.h"  /* MAX_CHAR_IN_INPUT */
@@ -207,6 +210,19 @@ typedef struct GomaSolver {
   double c_min;
   double c_max;
 
+  int nnz_own;   /* nonzeroes in the matrix that belong to this processor */
+  int nnz_total; /* nonzeroes this processor sees, including external unknowns */
+
+  /* error and element-quality status flags, local and reduced over processors */
+  int parallel_err;
+  int parallel_err_global;
+  int neg_elem_volume;
+  int neg_elem_volume_global;
+  int neg_lub_height;
+  int neg_lub_height_global;
+  int zero_detj;
+  int zero_detj_global;
+
   int include_visc_sens; /* include viscosity sensitivities in the jacobian */
   int visc_sens_copy;
   int visc_sens_factor;
@@ -214,6 +230,16 @@ typedef struct GomaSolver {
 
 /* FEM data structures referenced from GomaFem; defined in mm_as_structs.h / mm_mp_structs.h */
 struct AC_Information;
+struct AD_Field_Variables;
+struct Communication_Exchange;
+struct Distributed_Processing_Information;
+struct Element_Block_Struct;
+struct Exodus_Database;
+struct Extended_Shape_Fcn_Basics;
+struct Nodal_Vars;
+struct Node_Info;
+struct Shape_Fcn_Tree;
+struct Variable_Description;
 struct Action_Flags;
 struct Basis_Functions;
 struct Constitutive_Relations;
@@ -319,6 +345,44 @@ typedef struct GomaFem {
 
   /* Rotated boundary condition vectors */
   struct Rotation_Vectors ****rotation;
+  int **local_rot_list;
+  int rotation_allocated;
+
+  /* Element blocks and nodes */
+  struct Element_Block_Struct *element_blocks; /* all element blocks */
+  struct Element_Block_Struct *current_eb_ptr; /* block being processed in the fill */
+  struct Node_Info **nodes;
+
+  /* Solution vectors being assembled (set by the fill routines) */
+  double *x_static;
+  double *x_old_static;
+  double *xdot_static;
+  double *xdot_old_static;
+  double *x_dbl_dot_static;
+  double *x_dbl_dot_old_static;
+  double *x_pred_static;
+  double *p0; /* points at a harmless zero for unused dof pointers */
+
+  /* XFEM and subgrid integration */
+  struct Extended_Shape_Fcn_Basics *xfem;
+  struct Shape_Fcn_Tree *subgrid_tree;
+
+  /* Shells */
+  int in_shell_element_with_parent_element_coverage;
+  int shell_element_parent_element_coverage_for_variable[MAX_VARIABLE_TYPES];
+  int **elem_friends;
+  int *num_elem_friends;
+  int num_shell_blocks;
+
+  /* Q-tensor model scratch at the quadrature points of the current element */
+  int mmh_ip;
+  int prs_mat_ielem;
+  double vort_dir[MDE][DIM];
+  double qtensor[MDE][DIM][DIM];
+  double div_qtensor[MDE][DIM];
+
+  struct AD_Field_Variables *ad_fv; /* automatic differentiation field variables */
+  double mm_fill_total;             /* time spent in matrix_fill */
 
   /*
    * Frees the structures above. Installed by the library that allocates them
@@ -447,6 +511,32 @@ typedef struct GomaProblem {
   int ***idv;          /* [matrix][dof][0..2]: variable, nodal dof, global node */
   char ***dofname;     /* variable names for each dof */
   char ***resname;     /* residual equation names for each dof */
+  int **first_unknown; /* [matrix][node] index of the node's first unknown */
+  int inter_mask[MAX_NUM_MATRICES][MAX_VARIABLE_TYPES][MAX_VARIABLE_TYPES];
+  int ignore_deps[MAX_NUM_MATRICES][MAX_VARIABLE_TYPES][MAX_VARIABLE_TYPES];
+  int *node_index_fill;
+  int *fill_node_list;
+
+  /* variable descriptions and nodal variable layouts (rf_vars.c) */
+  struct Variable_Description **var_info;
+  int num_var_info_records;
+  struct Nodal_Vars **nodal_vars_list;
+  int nodal_vars_list_length;
+
+  /* global and per-material variable initialization */
+  struct Variable_Initialization var_init[MAX_VARIABLE_TYPES + MAX_CONC];
+  struct Variable_Initialization var_init_mat[MAX_NUMBER_MATLS][MAX_VARIABLE_TYPES + MAX_CONC];
+  int num_var_init_mat[MAX_NUMBER_MATLS];
+
+  /* linear stability analysis */
+  int linear_stability;  /* kind of linear stability, if any (LSA_* in ac_stability.h) */
+  int lsa_3d_of_2d_pass; /* pass # when constructing the jacobian/mass matrices */
+  double lsa_3d_of_2d_wave_number;
+  double *lsa_wave_numbers;    /* wave numbers to compute (not necessarily integers) */
+  int lsa_number_wave_numbers; /* length of lsa_wave_numbers */
+  int lsa_current_wave_number; /* index of the current wave number */
+
+  int chemkin_needed; /* some functionality needs the chemkin libraries */
 } GomaProblem;
 
 struct BC_descriptions;
@@ -708,13 +798,24 @@ typedef struct GomaPost {
  */
 typedef struct GomaContext {
   /* Parallel machine description and MPI communication bookkeeping */
-  int num_proc;         /* Total number of processors */
-  int proc_id;          /* This processor's number */
-  int dim;              /* Dimension of logical hypercube */
-  MPI_Request *request; /* Nonblocking send/recv requests */
-  MPI_Status *status;   /* Nonblocking send/recv statuses */
-  int num_requests;     /* Number of entries in request/status */
-  int unlimited_output; /* flag to unlimit multiprocessor output */
+  int num_proc;                       /* Total number of processors */
+  int proc_id;                        /* This processor's number */
+  int dim;                            /* Dimension of logical hypercube */
+  MPI_Request *request;               /* Nonblocking send/recv requests */
+  MPI_Status *status;                 /* Nonblocking send/recv statuses */
+  int num_requests;                   /* Number of entries in request/status */
+  int unlimited_output;               /* flag to unlimit multiprocessor output */
+  struct Communication_Exchange **cx; /* communications info for each neighbor processor */
+
+  /* Mesh database and distributed processing information */
+  struct Exodus_Database *exo;
+  struct Distributed_Processing_Information *dpi;
+
+  /* Program invocation */
+  int argc;
+  char **argv;
+  double time_goma_started;
+  int number_jac_dump; /* number of jacobians to dump (MATRIX_DUMP builds) */
 
   /* Input / output files */
   char input_file[MAX_FNL];          /* input EXODUS II database w/ problem defn */

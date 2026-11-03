@@ -56,7 +56,7 @@ void elem_qp_storage_free(ELEM_SIDE_BC_STRUCT *elem_side_bc)
   do {
     qps = elem_side_bc->Side_QP_Storage;
     if (qps) {
-      ielem_type = Elem_Type(EXO_ptr, elem_side_bc->ielem);
+      ielem_type = Elem_Type(goma_ctx->exo, elem_side_bc->ielem);
       num_qp = elem_info(NQUAD_SURF, ielem_type);
       for (i = 0; i < num_qp; i++) {
         qp_storage_list_destroy(qps + i);
@@ -137,7 +137,7 @@ side_qp_storage_findalloc(const int storageType, const int iquad, ELEM_SIDE_BC_S
    * element side that will base the linked lists on
    */
   if (!qpsv) {
-    ielem_type = Elem_Type(EXO_ptr, elem_side_bc->ielem);
+    ielem_type = Elem_Type(goma_ctx->exo, elem_side_bc->ielem);
     nqp = elem_info(NQUAD_SURF, ielem_type);
     elem_side_bc->Side_QP_Storage = qpsv = (QP_STORAGE_STRUCT **)alloc_ptr_1(nqp);
   }
@@ -197,8 +197,8 @@ void global_qp_storage_destroy(void)
  **************************************************************************/
 {
   int ielem, e_start, e_end;
-  e_start = EXO_ptr->eb_ptr[0];
-  e_end = EXO_ptr->eb_ptr[EXO_ptr->num_elem_blocks];
+  e_start = goma_ctx->exo->eb_ptr[0];
+  e_end = goma_ctx->exo->eb_ptr[goma_ctx->exo->num_elem_blocks];
   for (ielem = e_start; ielem < e_end; ielem++) {
     if (goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx][ielem]) {
       elem_qp_storage_free(goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx][ielem]);

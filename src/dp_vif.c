@@ -134,8 +134,8 @@ void noahs_raven(void) {
   ddd_add_member(n, &goma_ctx->problem.n_uc, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.n_utc, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.n_eqm, 1, MPI_INT);
-  ddd_add_member(n, &Linear_Stability, 1, MPI_INT);
-  ddd_add_member(n, &LSA_number_wave_numbers, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.linear_stability, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.lsa_number_wave_numbers, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->post.nn_post_fluxes, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->post.nn_post_fluxes_sens, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->post.nn_error_metrics, 1, MPI_INT);
@@ -144,7 +144,7 @@ void noahs_raven(void) {
   ddd_add_member(n, &goma_ctx->post.nn_volume, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->post.nn_global, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->post.nn_average, 1, MPI_INT);
-  ddd_add_member(n, &Chemkin_Needed, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.chemkin_needed, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->fem.efv->ev, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->solver.loca_umf_id, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.use_level_set, 1, MPI_INT);
@@ -216,11 +216,13 @@ void raven_landing(void) {
   }
 
   /* Broadcast input wave number array for 3D of 2D LSA */
-  if (LSA_number_wave_numbers > 0 &&
-      (Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE)) {
-    LSA_wave_numbers = (double *)array_alloc(1, LSA_number_wave_numbers, sizeof(double));
+  if (goma_ctx->problem.lsa_number_wave_numbers > 0 &&
+      (goma_ctx->problem.linear_stability == LSA_3D_OF_2D ||
+       goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE)) {
+    goma_ctx->problem.lsa_wave_numbers =
+        (double *)array_alloc(1, goma_ctx->problem.lsa_number_wave_numbers, sizeof(double));
   } else {
-    LSA_wave_numbers = NULL;
+    goma_ctx->problem.lsa_wave_numbers = NULL;
   }
 
   if (goma_ctx->petsc_options_str_len > 0) {
@@ -571,7 +573,7 @@ void noahs_ark(void) {
   ddd_add_member(n, &goma_ctx->iout, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->debug_flag, 1, MPI_INT);
 #ifdef MATRIX_DUMP
-  ddd_add_member(n, &Number_Jac_Dump, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->number_jac_dump, 1, MPI_INT);
 #endif
   ddd_add_member(n, &goma_ctx->solver.guess_flag, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->solver.conformation_flag, 1, MPI_INT);
@@ -585,21 +587,21 @@ void noahs_ark(void) {
 
   if (goma_ctx->num_var_init > 0 || goma_ctx->num_var_bound > 0) {
     for (i = 0; i < (goma_ctx->num_var_init + goma_ctx->num_var_bound); i++) {
-      ddd_add_member(n, &Var_init[i].var, 1, MPI_INT);
-      ddd_add_member(n, &Var_init[i].ktype, 1, MPI_INT);
-      ddd_add_member(n, &Var_init[i].init_val, 1, MPI_DOUBLE);
-      ddd_add_member(n, &Var_init[i].init_val_min, 1, MPI_DOUBLE);
-      ddd_add_member(n, &Var_init[i].init_val_max, 1, MPI_DOUBLE);
+      ddd_add_member(n, &goma_ctx->problem.var_init[i].var, 1, MPI_INT);
+      ddd_add_member(n, &goma_ctx->problem.var_init[i].ktype, 1, MPI_INT);
+      ddd_add_member(n, &goma_ctx->problem.var_init[i].init_val, 1, MPI_DOUBLE);
+      ddd_add_member(n, &goma_ctx->problem.var_init[i].init_val_min, 1, MPI_DOUBLE);
+      ddd_add_member(n, &goma_ctx->problem.var_init[i].init_val_max, 1, MPI_DOUBLE);
     }
   }
 
   if (goma_ctx->num_var_ls_init > 0) {
     for (i = goma_ctx->num_var_init + goma_ctx->num_var_bound;
          i < goma_ctx->num_var_init + goma_ctx->num_var_bound + goma_ctx->num_var_ls_init; i++) {
-      ddd_add_member(n, &Var_init[i].var, 1, MPI_INT);
-      ddd_add_member(n, &Var_init[i].ktype, 1, MPI_INT);
-      ddd_add_member(n, &Var_init[i].init_val_minus, 1, MPI_DOUBLE);
-      ddd_add_member(n, &Var_init[i].init_val_plus, 1, MPI_DOUBLE);
+      ddd_add_member(n, &goma_ctx->problem.var_init[i].var, 1, MPI_INT);
+      ddd_add_member(n, &goma_ctx->problem.var_init[i].ktype, 1, MPI_INT);
+      ddd_add_member(n, &goma_ctx->problem.var_init[i].init_val_minus, 1, MPI_DOUBLE);
+      ddd_add_member(n, &goma_ctx->problem.var_init[i].init_val_plus, 1, MPI_DOUBLE);
     }
   }
 
@@ -758,11 +760,11 @@ void noahs_ark(void) {
   /*
    * LSA 3D of 2D inputs.
    */
-  ddd_add_member(n, &LSA_3D_of_2D_pass, 1, MPI_INT);
-  ddd_add_member(n, &LSA_3D_of_2D_wave_number, 1, MPI_DOUBLE);
-  ddd_add_member(n, &LSA_current_wave_number, 1, MPI_INT);
-  for (i = 0; i < LSA_number_wave_numbers; i++) {
-    ddd_add_member(n, &(LSA_wave_numbers[i]), 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->problem.lsa_3d_of_2d_pass, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.lsa_3d_of_2d_wave_number, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->problem.lsa_current_wave_number, 1, MPI_INT);
+  for (i = 0; i < goma_ctx->problem.lsa_number_wave_numbers; i++) {
+    ddd_add_member(n, &(goma_ctx->problem.lsa_wave_numbers[i]), 1, MPI_DOUBLE);
   }
 
   /*
@@ -1109,14 +1111,14 @@ void noahs_ark(void) {
    * material block Initialization info
    */
 
-  ddd_add_member(n, Num_Var_Init_Mat, MAX_NUMBER_MATLS, MPI_INT);
+  ddd_add_member(n, goma_ctx->problem.num_var_init_mat, MAX_NUMBER_MATLS, MPI_INT);
   for (i = 0; i < MAX_NUMBER_MATLS; i++) {
     for (j = 0; j < MAX_VARIABLE_TYPES + MAX_CONC; j++) {
-      ddd_add_member(n, &Var_init_mat[i][j].var, 1, MPI_INT);
-      ddd_add_member(n, &Var_init_mat[i][j].ktype, 1, MPI_INT);
-      ddd_add_member(n, &Var_init_mat[i][j].init_val, 1, MPI_DOUBLE);
-      ddd_add_member(n, &Var_init_mat[i][j].slave_block, 1, MPI_INT);
-      ddd_add_member(n, &Var_init_mat[i][j].len_u_pars, 1, MPI_INT);
+      ddd_add_member(n, &goma_ctx->problem.var_init_mat[i][j].var, 1, MPI_INT);
+      ddd_add_member(n, &goma_ctx->problem.var_init_mat[i][j].ktype, 1, MPI_INT);
+      ddd_add_member(n, &goma_ctx->problem.var_init_mat[i][j].init_val, 1, MPI_DOUBLE);
+      ddd_add_member(n, &goma_ctx->problem.var_init_mat[i][j].slave_block, 1, MPI_INT);
+      ddd_add_member(n, &goma_ctx->problem.var_init_mat[i][j].len_u_pars, 1, MPI_INT);
     }
   }
 
@@ -3390,8 +3392,9 @@ void ark_landing(void) {
     dalloc(v->len_dg_J_model_wt, v->dg_J_model_wt);
     dalloc(v->len_shift, v->shift);
 
-    for (j = 0; j < Num_Var_Init_Mat[i]; j++) {
-      dalloc(Var_init_mat[i][j].len_u_pars, Var_init_mat[i][j].u_pars);
+    for (j = 0; j < goma_ctx->problem.num_var_init_mat[i]; j++) {
+      dalloc(goma_ctx->problem.var_init_mat[i][j].len_u_pars,
+             goma_ctx->problem.var_init_mat[i][j].u_pars);
     }
   }
 
@@ -3710,8 +3713,9 @@ void noahs_dove(void) {
 
     crdv(v->len_shift, v->shift);
 
-    for (j = 0; j < Num_Var_Init_Mat[i]; j++) {
-      crdv(Var_init_mat[i][j].len_u_pars, Var_init_mat[i][j].u_pars);
+    for (j = 0; j < goma_ctx->problem.num_var_init_mat[i]; j++) {
+      crdv(goma_ctx->problem.var_init_mat[i][j].len_u_pars,
+           goma_ctx->problem.var_init_mat[i][j].u_pars);
     }
   }
 

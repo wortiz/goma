@@ -247,8 +247,8 @@ void print_vbr_matrix(struct GomaLinearSolverData *ams, /* matrix info */
           col_dof += unknowns_per_node[ii];
         }
 
-        row = Nodes[i]->First_Unknown[goma_ctx->fem.pg->imtrx];
-        col = Nodes[col_node]->First_Unknown[goma_ctx->fem.pg->imtrx];
+        row = goma_ctx->fem.nodes[i]->First_Unknown[goma_ctx->fem.pg->imtrx];
+        col = goma_ctx->fem.nodes[col_node]->First_Unknown[goma_ctx->fem.pg->imtrx];
       } else {
         row = ams->rpntr[i];
         col = ams->cpntr[block];

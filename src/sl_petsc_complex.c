@@ -107,7 +107,7 @@ static void create_complex_mapping(struct GomaLinearSolverData *ams,
    */
   for (int inode = 0; inode < (goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes);
        inode++) {
-    NODAL_VARS_STRUCT *nv = Nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+    NODAL_VARS_STRUCT *nv = goma_ctx->fem.nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     /*
      * Fill the vector list which points to the unknowns defined at this
      * node...
@@ -170,7 +170,7 @@ static void create_complex_mapping(struct GomaLinearSolverData *ams,
       dblColGIDs[i] = -1;
     }
   }
-  exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, dblColGIDs, goma_ctx->fem.pg->imtrx);
+  exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, dblColGIDs, goma_ctx->fem.pg->imtrx);
   matrix_data->local_to_global_complex =
       malloc(sizeof(PetscInt) * goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx]);
   // convert back to Int
@@ -213,7 +213,7 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
    * loop over all of the nodes on this processor
    */
   for (int inode = 0; inode < total_nodes; inode++) {
-    NODAL_VARS_STRUCT *nv = Nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+    NODAL_VARS_STRUCT *nv = goma_ctx->fem.nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     /*
      * Fill the vector list which points to the unknowns defined at this
      * node...
@@ -248,7 +248,7 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
          */
         for (int j = exo->node_node_pntr[inode]; j < exo->node_node_pntr[inode + 1]; j++) {
           int inter_node = exo->node_node_list[j];
-          NODE_INFO_STRUCT *nodeCol = Nodes[inter_node];
+          NODE_INFO_STRUCT *nodeCol = goma_ctx->fem.nodes[inter_node];
           NODAL_VARS_STRUCT *nvCol = nodeCol->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
           /*
@@ -286,7 +286,8 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
                * Query the Interaction mask to determine if a jacobian entry
                * should be created
                */
-              int add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
+              int add_var =
+                  goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
 
               /* The following code should be activated when solving DG viscoelastic problems
                * with full Jacobian treatment of upwind element stress terms
@@ -306,7 +307,8 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
                       (i2 == I_P0 || i2 == I_P1 || i2 == I_PQ1 || i2 == I_PQ2) &&
                       (rowVarType != PRESSURE) &&
                       (rowVarType > VELOCITY_GRADIENT33 || rowVarType < VELOCITY_GRADIENT11)) {
-                    add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
+                    add_var = goma_ctx->problem
+                                  .inter_mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
                   } else {
                     add_var = 0;
                   }
@@ -529,7 +531,7 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
               if (goma_ctx->fem.af->Assemble_Jacobian) {
                 for (v = V_FIRST; v < V_LAST; v++) {
                   pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
-                  if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
+                  if (pv != -1 && (goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][e][v])) {
                     ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
                     if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
                         ielem) {
@@ -613,7 +615,7 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
                 // We don't add these as they are already in the matrix from imag(e)
                 if (goma_is_imag_eqn(v))
                   continue;
-                if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
+                if (pv != -1 && (goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][e][v])) {
                   if (v == MASS_FRACTION) {
 
                     if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
@@ -642,7 +644,8 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
                            *        dofs, je_new will be wrong here. je
                            *        is correct.
                            */
-                          if (Nodes[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j]]
+                          if (goma_ctx->fem
+                                  .nodes[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j]]
                                   ->Mat_List.Length < 2) {
                           }
                         }

@@ -182,14 +182,6 @@ static int soln_sens                /* mm_sol_nonlinear.c                       
  * Declared frequently via std.h, etc. every where else.
  */
 
-int neg_elem_volume = FALSE;
-int neg_elem_volume_global = FALSE;
-
-int neg_lub_height = FALSE;
-int neg_lub_height_global = FALSE;
-
-int zero_detJ = FALSE;
-int zero_detJ_global = FALSE;
 static goma_error
 assemble_prefill(struct GomaLinearSolverData *ams, double x[], Exo_DB *exo, Dpi *dpi) {
 
@@ -1180,7 +1172,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         check_for_neg_elem_volume(goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].solid_eb + 1, x,
                                   resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
                                   &theta, &time_value, exo);
-        if (neg_elem_volume) {
+        if (goma_ctx->solver.neg_elem_volume) {
           return_value = -1;
           goto free_and_clear;
         } else {
@@ -2638,7 +2630,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         beta = goma_ctx->fem.tran->newmark_beta;
         gamma = goma_ctx->fem.tran->newmark_gamma;
         for (i = 0; i < num_total_nodes; i++) {
-          node_ptr = Nodes[i];
+          node_ptr = goma_ctx->fem.nodes[i];
           curr_mat_list = &(node_ptr->Mat_List);
           num_mat = curr_mat_list->Length;
 
@@ -2664,7 +2656,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
 
       /* Now go back and correct all those dofs that use XFEM */
-      if (xfem != NULL) {
+      if (goma_ctx->fem.xfem != NULL) {
         if (goma_ctx->fem.upd->Total_Num_Matrices > 0) {
           if (goma_ctx->fem.pg->imtrx == goma_ctx->fem.ls->MatrixNum) {
             xfem_correct(num_total_nodes, x, xdot, x_old, xdot_old, delta_x, theta, delta_t);

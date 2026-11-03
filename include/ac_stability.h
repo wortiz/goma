@@ -50,13 +50,6 @@ struct Results_Description;
 #define LSA_SI      20
 #define LSA_CAYLEY  30
 
-EXTERN int Linear_Stability;  /* what kind of linear stability, if any (see #defines above) */
-EXTERN int LSA_3D_of_2D_pass; /* pass # when constructing the jacobian/mass matrices */
-EXTERN dbl LSA_3D_of_2D_wave_number; /* value of the wave number */
-EXTERN dbl *LSA_wave_numbers;        /* the wave numbers (not necessarily integers!) to compute */
-EXTERN int LSA_number_wave_numbers;  /* length of LSA_wave_numbers */
-EXTERN int LSA_current_wave_number;  /* index of current LSA_wave_number */
-
 EXTERN int solve_stability_problem /* ac_solve.c */
     (struct GomaLinearSolverData *,
      double[],                     /* x - Value of the solution vector */

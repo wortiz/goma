@@ -20,16 +20,3 @@
 #include "rf_solver.h"
 
 /* Problem setup globals formerly defined here now live in goma_ctx->problem. */
-
-int nnz_own; /* number of nonzeroes in the matrix that
-              * belong to this processor
-              */
-
-int nnz_total; /* total number of nonzeroes in the matrix
-                * that this processor sees, including the
-                * entries for external unknowns that will
-                * not be updated by this processor  */
-
-int PRS_mat_ielem;
-
-NODE_INFO_STRUCT **Nodes = NULL;

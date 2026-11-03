@@ -60,9 +60,6 @@
  * are declared extern for global use in rf_fem.h
  */
 
-int *node_index_fill = NULL;
-int *fill_node_list = NULL;
-
 static void build_node_recv_indeces /* dp_map_comm_vec.c */
     (Exo_DB *,                      /* exo */
      Dpi *);                        /* dpi */
@@ -339,7 +336,7 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
       local_node_number = dpi->num_internal_nodes + dpi->num_boundary_nodes + i;
       owner = dpi->node_owner[local_node_number];
       index_owner = in_list(owner, 0, dpi->num_neighbors, dpi->neighbor);
-      dofs_i_want = Nodes[local_node_number]->Nodal_Vars_Info[imtrx]->Num_Unknowns;
+      dofs_i_want = goma_ctx->fem.nodes[local_node_number]->Nodal_Vars_Info[imtrx]->Num_Unknowns;
       cx[imtrx][index_owner].num_dofs_recv += dofs_i_want;
     }
   }
@@ -356,7 +353,7 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
            i++) {
         local_node_number = goma_ctx->problem.list_node_send[i];
         cx[imtrx][p].num_dofs_send +=
-            Nodes[local_node_number]->Nodal_Vars_Info[imtrx]->Num_Unknowns;
+            goma_ctx->fem.nodes[local_node_number]->Nodal_Vars_Info[imtrx]->Num_Unknowns;
       }
     }
   }
@@ -397,8 +394,9 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
     index = 0;
     for (i = 0; i < goma_ctx->problem.ptr_node_send[dpi->num_neighbors]; i++) {
       local_node_number = goma_ctx->problem.list_node_send[i];
-      base = Nodes[local_node_number]->First_Unknown[imtrx];
-      for (p = 0; p < Nodes[local_node_number]->Nodal_Vars_Info[imtrx]->Num_Unknowns; p++) {
+      base = goma_ctx->fem.nodes[local_node_number]->First_Unknown[imtrx];
+      for (p = 0; p < goma_ctx->fem.nodes[local_node_number]->Nodal_Vars_Info[imtrx]->Num_Unknowns;
+           p++) {
         goma_ctx->problem.list_dof_send[imtrx][index] = base + p;
         index++;
       }
@@ -442,7 +440,7 @@ static void build_node_recv_indeces(Exo_DB *exo, Dpi *dpi)
   num_owner_changes = 0;
   for (i = 0; i < dpi->num_external_nodes; i++) {
     local_node_number = dpi->num_internal_nodes + dpi->num_boundary_nodes + i;
-    node_ptr = Nodes[local_node_number];
+    node_ptr = goma_ctx->fem.nodes[local_node_number];
     owner = dpi->node_owner[local_node_number];
     node_ptr->Proc = owner;
     index_owner = in_list(owner, 0, dpi->num_neighbors, dpi->neighbor);

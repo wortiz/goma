@@ -37,13 +37,6 @@ struct Element_Indices;
  * current and old times. These are filled in every time an element
  * dofptrs are set up.
  */
-extern double *x_static;
-extern double *x_old_static;
-extern double *xdot_static;
-extern double *xdot_old_static;
-extern double *x_dbl_dot_static;
-extern double *x_dbl_dot_old_static;
-extern double *x_pred_static;
 
 EXTERN int load_ei   /* mm_fill_ptrs.c                            */
     (const int,      /* element index                             */

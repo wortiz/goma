@@ -34,6 +34,7 @@
       .particles = {.xi_boundary_tolerances = {XI_BOUNDARY_TOLERANCE0, XI_BOUNDARY_TOLERANCE1, \
                                                XI_BOUNDARY_TOLERANCE2}},                       \
       .post = {GOMA_POST_DEFAULTS},                                                            \
+      .problem = {.lsa_3d_of_2d_wave_number = -1.0},                                           \
   }
 
 /* Post-processing variable flags are off (-1) by default. */

@@ -324,7 +324,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
     if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
       load_surface_tension(dsigma_dx);
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         return (status);
     }
 
@@ -613,7 +613,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
             sat_darcy_continuous_bc(func, d_func, theta, delta_t, time_value, bc->BC_Data_Int[0],
                                     bc->BC_Data_Int[1], bc->BC_Data_Float[0], v_attach);
-            if (neg_elem_volume)
+            if (goma_ctx->solver.neg_elem_volume)
               return (status);
           }
 
@@ -686,14 +686,14 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                               bc->BC_Data_Float[1], bc->BC_Data_Float[2], bc->BC_Data_Float[3],
                               xsurf, x_dot, theta, delta_t, (int)bc->BC_Name, elem_side_bc->id_side,
                               xi, exo, time_intermediate, bc->u_BC, bc->len_u_BC);
-          if (neg_elem_volume)
+          if (goma_ctx->solver.neg_elem_volume)
             return (status);
           break;
 
         case VELO_TANGENT_3D_BC:
           fvelo_tangent_3d(func, d_func, x_dot, bc->BC_Data_Float[0], bc->BC_Data_Float[1],
                            bc->BC_Data_Float[2], bc->BC_Data_Float[3], theta, delta_t);
-          if (neg_elem_volume)
+          if (goma_ctx->solver.neg_elem_volume)
             return (status);
           break;
         case ZERO_VELO_TANGENT_3D_BC:
@@ -744,7 +744,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           fvelo_electrokinetic_3d(func, d_func, x_dot, bc->BC_Data_Float[0], bc->BC_Data_Float[1],
                                   bc->BC_Data_Float[2], bc->BC_Data_Float[3], bc->BC_Data_Float[4],
                                   theta, delta_t);
-          if (neg_elem_volume)
+          if (goma_ctx->solver.neg_elem_volume)
             return (status);
           break;
 
@@ -1485,13 +1485,13 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           porous_mass_flux_surf_bc(func, d_func, bc->BC_Data_Int[0], bc->BC_Data_Float[0],
                                    bc->BC_Data_Float[1], bc->BC_Data_Float[2], bc->BC_Data_Float[3],
                                    delta_t, theta);
-          if (neg_elem_volume)
+          if (goma_ctx->solver.neg_elem_volume)
             return (status);
           break;
 
         case POROUS_CONV_BC:
           porous_convection_bc(func, d_func, bc->BC_Data_Int[0], delta_t, theta);
-          if (neg_elem_volume)
+          if (goma_ctx->solver.neg_elem_volume)
             return (status);
           break;
 
@@ -1677,7 +1677,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
         case LATENT_HEAT_BC:
           if (iapply) {
             lat_heat_bc(func, d_func, x_dot, theta, delta_t, bc_input_id, goma_ctx->bc.bc_types);
-            if (neg_elem_volume)
+            if (goma_ctx->solver.neg_elem_volume)
               return (status);
           }
           break;
@@ -2141,10 +2141,10 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                     mn_first = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
 
                     if ((goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1] &&
-                         Current_EB_ptr->Elem_Blk_Id ==
+                         goma_ctx->fem.current_eb_ptr->Elem_Blk_Id ==
                              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1]) ||
                         (!goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1] &&
-                         ((Current_EB_ptr->Elem_Blk_Id + 1) % 2) == 0)) {
+                         ((goma_ctx->fem.current_eb_ptr->Elem_Blk_Id + 1) % 2) == 0)) {
 
                       phi_i = goma_ctx->fem.bf[eqn]->phi[ldof_eqn];
                       weight *= phi_i;

@@ -61,12 +61,10 @@ typedef struct Element_Block_Struct ELEM_BLK_STRUCT;
 /*
  *  This is the global list of element blocks defined for this problem
  */
-extern ELEM_BLK_STRUCT *Element_Blocks;
 
 /*
  *  This is a pointer to the current element block structure that pertains
  *  to the current element being processed
  */
-extern ELEM_BLK_STRUCT *Current_EB_ptr;
 
 #endif

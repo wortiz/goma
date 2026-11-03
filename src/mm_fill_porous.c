@@ -199,21 +199,21 @@ int assemble_porous_transport(double time, /* present time valuel; KSC          
   if (goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED) {
     err = get_porous_fully_sat_terms(&pm_terms, tt, dt);
     GOMA_EH(err, "problem in getting the saturated porous darcy  terms");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return (err);
   } else if ((goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
               goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) &&
              !goma_ctx->fem.efv->ev_porous_decouple) {
     err = get_porous_part_sat_terms(&pm_terms, tt, dt);
     GOMA_EH(err, "problem in getting the partially-saturated porous  terms");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return (err);
   } else if ((goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
               goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) &&
              goma_ctx->fem.efv->ev_porous_decouple) {
     err = get_porous_part_sat_terms_decoupled(&pm_terms, tt, dt);
     GOMA_EH(err, "problem in getting the partially-saturated porous  terms, decoupled");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return (err);
   }
 
@@ -1682,7 +1682,7 @@ static void load_porous_properties_nodes(int lnn)
     /* Calculate saturation and it's sensitivity to liquid presssure, gas
      * pressure, and porosity.
      */
-    MMH_ip = lnn; /*This is necessary for hysteresis, and we are arbitrarily
+    goma_ctx->fem.mmh_ip = lnn; /*This is necessary for hysteresis, and we are arbitrarily
                     connecting the local node number to the gauss point number.
                     Gauss-points better be equal to nodes per element, or there
                     are no guarantees what will happen... */
@@ -2293,7 +2293,7 @@ int get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
        goma_ctx->fem.cr->MeshMotion == DYNAMIC_LAGRANGIAN)) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return (err);
   }
 
@@ -3546,7 +3546,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
          goma_ctx->fem.cr->MeshMotion == DYNAMIC_LAGRANGIAN)) {
       err = belly_flop(goma_ctx->fem.elc->lame_mu);
       GOMA_EH(err, "error in belly flop");
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         return (err);
     }
 
@@ -4143,7 +4143,7 @@ void porous_mass_flux_surf_bc(double func[DIM],
        goma_ctx->fem.cr->MeshMotion == DYNAMIC_LAGRANGIAN)) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
     err = get_convection_velocity(vconv, vconv_old, d_vconv, dt, tt);
     GOMA_EH(err, "Error in calculating effective convection velocity");
@@ -4268,7 +4268,7 @@ void porous_convection_bc(double func[DIM],
   if (goma_ctx->fem.pd->MeshMotion == LAGRANGIAN && goma_ctx->fem.pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
     err = get_convection_velocity(vconv, vconv_old, d_vconv, dt, tt);
     GOMA_EH(err, "Error in calculating effective convection velocity");
@@ -4413,7 +4413,7 @@ void porous_normal_velocity_bc(double func[],
    *  If current material is the solid phase, calculate normal flux
    *  of solvent through the porous medium
    */
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid) {
     /* add convection fluxes into the total diffusion flux term
      * here vconv is the velocity of the solid phase */
     for (a = 0; a < goma_ctx->problem.vim; a++) {
@@ -4474,7 +4474,7 @@ void porous_normal_velocity_bc(double func[],
    *  If current material is the fluid phase, calculate normal fluid velocity
    *  in liquid at the interface
    */
-  else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
+  else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_fluid) {
     /* Calculate the residual contribution from the velocity */
     *func = 0;
     for (a = 0; a < goma_ctx->problem.vim; a++) {
@@ -4549,7 +4549,7 @@ void put_gas_flux_in_pores(double func[],
    *  If current material is the solid phase, calculate normal flux
    *  of solvent through the porous medium
    */
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid) {
     /* add convection fluxes into the total diffusion flux term
      * here vconv is the velocity of the solid phase */
     for (a = 0; a < goma_ctx->problem.vim; a++) {
@@ -4595,7 +4595,7 @@ void put_gas_flux_in_pores(double func[],
    *  If current material is the fluid phase, calculate normal fluid velocity
    *  in liquid at the interface
    */
-  else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
+  else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_fluid) {
     /* Calculate the residual contribution from the velocity */
     *func = 0;
     for (a = 0; a < goma_ctx->problem.vim; a++) {
@@ -4672,7 +4672,7 @@ void porous_vapor_equil_bc(double func[],
     return;
 
   /***************************** SOLID SIDE *******************************/
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid) {
     /*
      *  calculate volume fraction of solvent in the vapor phase on
      *  porous side of interface
@@ -4695,7 +4695,7 @@ void porous_vapor_equil_bc(double func[],
     }
   }
   /***************************** FLUID SIDE *******************************/
-  else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
+  else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_fluid) {
     /*
      * HKM-> I believe this should be the mole fraction of air in the
      *       the continuous phase. However, don't have time to fix
@@ -5340,7 +5340,6 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
   double alpha_drain = 0.0, beta_drain = 0.0, s_min, sat_switch, pc_switch, pc_switch_clip;
   double alpha_wet = 0.0, beta_wet = 0.0, s_max;
   int ip, mat_ielem;
-  extern int PRS_mat_ielem;
 
   /*
    *  Find which model is used for saturation and calculate:
@@ -6178,11 +6177,11 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
      *  and re-adjust the appropriate curve parameters accordingly.
      */
 
-    ip = MMH_ip; /*someone should go change the name of this now oft-used
-                  *expedient for gauss point datastructures. Does Matt
-                  *really want his name attached to this?
-                  */
-    mat_ielem = PRS_mat_ielem;
+    ip = goma_ctx->fem.mmh_ip; /*someone should go change the name of this now oft-used
+                                *expedient for gauss point datastructures. Does Matt
+                                *really want his name attached to this?
+                                */
+    mat_ielem = goma_ctx->fem.prs_mat_ielem;
     /*Hmm.  Now I am going to attached my name to another gem.
      *This is necessitated by the fact that I am too lazy to
      *bring Exo_DB struct all the way down here in the
@@ -6196,19 +6195,21 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
 
     /*Load up con_a and con_b from element storage array */
 
-    if (Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+    if (goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
             .ElemStorage[mat_ielem]
             .sat_curve_type[ip] == 1.0) {
       alpha_drain = goma_ctx->fem.mp->u_saturation[7];
       beta_drain = goma_ctx->fem.mp->u_saturation[6];
       s_min = goma_ctx->fem.mp->u_saturation[4];
 
-      sat_switch = Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
-                       .ElemStorage[mat_ielem]
-                       .Sat_QP_tn[ip];
-      pc_switch = Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
-                      .ElemStorage[mat_ielem]
-                      .p_cap_QP[ip];
+      sat_switch =
+          goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+              .ElemStorage[mat_ielem]
+              .Sat_QP_tn[ip];
+      pc_switch =
+          goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+              .ElemStorage[mat_ielem]
+              .p_cap_QP[ip];
 
       if (pc_switch <= 0.0) {
         pc_switch_clip = 1e-5;
@@ -6238,12 +6239,14 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
       beta_wet = goma_ctx->fem.mp->u_saturation[2];
       s_max = goma_ctx->fem.mp->u_saturation[0];
 
-      sat_switch = Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
-                       .ElemStorage[mat_ielem]
-                       .Sat_QP_tn[ip];
-      pc_switch = Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
-                      .ElemStorage[mat_ielem]
-                      .p_cap_QP[ip];
+      sat_switch =
+          goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+              .ElemStorage[mat_ielem]
+              .Sat_QP_tn[ip];
+      pc_switch =
+          goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+              .ElemStorage[mat_ielem]
+              .p_cap_QP[ip];
 
       if (pc_switch <= 0.0) {
         pc_switch_clip = 1e-5;
@@ -6277,7 +6280,7 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
      *
      */
 
-    if (Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+    if (goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
             .ElemStorage[mat_ielem]
             .sat_curve_type[ip] == 1.0) {
       goma_ctx->fem.mp->d_saturation[POR_LIQ_PRES] =
@@ -6298,7 +6301,7 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
     }
 
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN]) {
-      if (Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+      if (goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
               .ElemStorage[mat_ielem]
               .sat_curve_type[ip] == 1.0) {
         goma_ctx->fem.mp->d_saturation[SHELL_PRESS_OPEN] =
@@ -6312,7 +6315,7 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
     }
 
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) {
-      if (Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+      if (goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
               .ElemStorage[mat_ielem]
               .sat_curve_type[ip] == 1.0) {
         goma_ctx->fem.mp->d_saturation[SHELL_PRESS_OPEN_2] =
@@ -6332,7 +6335,7 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
        */
       /*n.g. this negative sign here is in question. Check out
         as I think it should be positive due to double derivative..*/
-      if (Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+      if (goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
               .ElemStorage[mat_ielem]
               .sat_curve_type[ip] == 1.0) {
         goma_ctx->fem.mp->d_d_saturation[POR_LIQ_PRES][POR_LIQ_PRES] =
@@ -6359,7 +6362,7 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
       }
 
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN]) {
-        if (Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+        if (goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
                 .ElemStorage[mat_ielem]
                 .sat_curve_type[ip] == 1.0) {
           goma_ctx->fem.mp->d_d_saturation[SHELL_PRESS_OPEN][SHELL_PRESS_OPEN] =
@@ -6379,7 +6382,7 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
       }
 
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) {
-        if (Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+        if (goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
                 .ElemStorage[mat_ielem]
                 .sat_curve_type[ip] == 1.0) {
           goma_ctx->fem.mp->d_d_saturation[SHELL_PRESS_OPEN_2][SHELL_PRESS_OPEN_2] =
@@ -6410,7 +6413,7 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
         cap_pres_clip = goma_ctx->fem.pmv_old->cap_pres;
       }
 
-      if (Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+      if (goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
               .ElemStorage[mat_ielem]
               .sat_curve_type[ip] == 1.0) {
         goma_ctx->fem.mp_old->saturation =
@@ -11323,7 +11326,7 @@ void porous_pressure(double *func, double d_func[], int eb_mat_solid, int eb_mat
   /*
    *  If current material is the porous solid phase, add on the pressure
    */
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid) {
     if (goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED ||
         goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
         goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) {
@@ -11338,7 +11341,7 @@ void porous_pressure(double *func, double d_func[], int eb_mat_solid, int eb_mat
   /*
    *  If current material is the fluid phase, add on the fluid pressure
    */
-  else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
+  else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_fluid) {
     *func = goma_ctx->fem.fv->P;
     if (goma_ctx->fem.af->Assemble_Jacobian) {
       d_func[PRESSURE] = 1.0;
@@ -11480,7 +11483,7 @@ void sat_darcy_continuous_bc(double func[],
    *  If current material is the solid phase, calculate normal flux
    *  of solvent through the porous medium
    */
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid) {
     /* add convection fluxes into the total diffusion flux term
      * here vconv is the velocity of the solid phase */
 
@@ -11517,7 +11520,7 @@ void sat_darcy_continuous_bc(double func[],
         goma_ctx->fem.pd->MeshInertia == 1) {
       err = belly_flop(goma_ctx->fem.elc->lame_mu);
       GOMA_EH(err, "error in belly flop");
-      if (neg_elem_volume)
+      if (goma_ctx->solver.neg_elem_volume)
         return;
     }
     err = get_convection_velocity(vconv, vconv_old, d_vconv, dt, tt);
@@ -11678,7 +11681,7 @@ void sat_darcy_continuous_bc(double func[],
    *  If current material is the fluid phase, calculate normal fluid velocity
    *  in liquid at the interface
    */
-  else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
+  else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_fluid) {
 
     double rho_liq, d_rho_dF[MDE];
     DENSITY_DEPENDENCE_STRUCT d_rho;
@@ -11793,7 +11796,7 @@ void por_liq_flux_fill(double *func,
   /*
    *  If current material is the solid phase, set pliq
    */
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid) {
 
     if (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS)
       GOMA_EH(GOMA_ERROR, "POR_LIQ_FLUX_FILL requires a porous phase");
@@ -11828,7 +11831,7 @@ void por_liq_flux_fill(double *func,
    *  If current material is the fluid phase, calculate level set and set
    *   p_liq value at the interface
    */
-  else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
+  else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_fluid) {
 
     if (FALSE) {
       load_lsi(lsls);
@@ -11872,7 +11875,7 @@ void porous_liq_fill(double *func,
   /*
    *  If current material is the solid phase, set pliq
    */
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_solid) {
 
     if (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS)
       GOMA_EH(GOMA_ERROR, "POROUS_LIQ_PRESSURE requires a porous phase");
@@ -11903,7 +11906,7 @@ void porous_liq_fill(double *func,
    *  If current material is the fluid phase, calculate level set and set
    *   p_liq value at the interface
    */
-  else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
+  else if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat_fluid) {
 
     /* Fetch the level set interfacial functions. */
     load_lsi(lsls);
@@ -12078,17 +12081,19 @@ int evaluate_sat_hyst_criterion(int ip, int ielem, struct Porous_Media_Terms *pm
      */
 
     if (liq_inv_dot > 0.0 &&
-        Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+        goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
                 .ElemStorage[ielem]
                 .sat_curve_type[ip] == 0.0) {
       /* We were on a wetting curve, and will remain so */
     } else if (liq_inv_dot <= 0.0 &&
-               Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+               goma_ctx->fem
+                       .element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
                        .ElemStorage[ielem]
                        .sat_curve_type[ip] == 1.0) {
       /* We were on a drying/draining curve, and will remain so */
     } else if (liq_inv_dot > 0.0 &&
-               Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+               goma_ctx->fem
+                       .element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
                        .ElemStorage[ielem]
                        .sat_curve_type[ip] == 1.0) {
       /* We were on a drying/draining curve but now may potentially switch to a wetting curve */
@@ -12097,19 +12102,20 @@ int evaluate_sat_hyst_criterion(int ip, int ielem, struct Porous_Media_Terms *pm
           (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_PRESS_OPEN])) {
         if (fabs(liq_inv_dot) > goma_ctx->fem.mp->u_saturation[9] &&
             goma_ctx->fem.mp->saturation <= 0.9999) {
-          Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+          goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
               .ElemStorage[ielem]
               .sat_curve_type[ip] = 0.0;
-          Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+          goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
               .ElemStorage[ielem]
               .Sat_QP_tn[ip] = goma_ctx->fem.mp->saturation;
-          Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+          goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
               .ElemStorage[ielem]
               .p_cap_QP[ip] = cap_press;
         }
       }
     } else if (liq_inv_dot <= 0.0 &&
-               Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+               goma_ctx->fem
+                       .element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
                        .ElemStorage[ielem]
                        .sat_curve_type[ip] == 0.0) {
       /* We were on a wetting curve but now may potentially switch to a drying curve */
@@ -12118,13 +12124,13 @@ int evaluate_sat_hyst_criterion(int ip, int ielem, struct Porous_Media_Terms *pm
           (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_PRESS_OPEN])) {
 
         if (fabs(liq_inv_dot) > goma_ctx->fem.mp->u_saturation[9]) {
-          Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+          goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
               .ElemStorage[ielem]
               .sat_curve_type[ip] = 1.0;
-          Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+          goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
               .ElemStorage[ielem]
               .Sat_QP_tn[ip] = goma_ctx->fem.mp->saturation;
-          Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
+          goma_ctx->fem.element_blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
               .ElemStorage[ielem]
               .p_cap_QP[ip] = cap_press;
         }

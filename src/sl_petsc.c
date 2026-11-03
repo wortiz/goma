@@ -307,7 +307,7 @@ goma_error count_pressure_nodes(PetscMatrixData *matrix_data,
     dblColGIDs[i] = (double)nz[i];
   }
   matrix_data->schur_s_local_to_global = (PetscInt *)malloc(sizeof(PetscInt) * num_cols);
-  exchange_node(cx[0], dpi, dblColGIDs);
+  exchange_node(goma_ctx->cx[0], dpi, dblColGIDs);
   for (int i = 0; i < num_cols; i++) {
     matrix_data->schur_s_local_to_global[i] = (PetscInt)dblColGIDs[i];
   }
@@ -834,7 +834,7 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
   }
   matrix_data->local_to_global = (PetscInt *)malloc(sizeof(PetscInt) * num_cols);
 
-  exchange_node(cx[0], dpi, dblColGIDs);
+  exchange_node(goma_ctx->cx[0], dpi, dblColGIDs);
   // convert back to Int
   for (int i = 0; i < num_cols; i++) {
     matrix_data->local_to_global[i] = (PetscInt)dblColGIDs[i];
@@ -1161,7 +1161,7 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
   for (int i = 0; i < num_cols; i++) {
     dblColGIDs[i] = (double)global_offset + i;
   }
-  exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, dblColGIDs, goma_ctx->fem.pg->imtrx);
+  exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, dblColGIDs, goma_ctx->fem.pg->imtrx);
   // convert back to Int
   for (int i = 0; i < num_cols; i++) {
     matrix_data->local_to_global[i] = (PetscInt)dblColGIDs[i];
@@ -1177,7 +1177,7 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
    * loop over all of the nodes on this processor
    */
   for (int inode = 0; inode < total_nodes; inode++) {
-    NODAL_VARS_STRUCT *nv = Nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
+    NODAL_VARS_STRUCT *nv = goma_ctx->fem.nodes[inode]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
     /*
      * Fill the vector list which points to the unknowns defined at this
      * node...
@@ -1210,7 +1210,7 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
        */
       for (int j = exo->node_node_pntr[inode]; j < exo->node_node_pntr[inode + 1]; j++) {
         int inter_node = exo->node_node_list[j];
-        NODE_INFO_STRUCT *nodeCol = Nodes[inter_node];
+        NODE_INFO_STRUCT *nodeCol = goma_ctx->fem.nodes[inter_node];
         NODAL_VARS_STRUCT *nvCol = nodeCol->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
         /*
@@ -1246,7 +1246,8 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
            * Query the Interaction mask to determine if a jacobian entry
            * should be created
            */
-          int add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
+          int add_var =
+              goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
 
           /* The following code should be activated when solving DG viscoelastic problems
            * with full Jacobian treatment of upwind element stress terms
@@ -1266,7 +1267,8 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
                   (i2 == I_P0 || i2 == I_P1 || i2 == I_PQ1 || i2 == I_PQ2) &&
                   (rowVarType != PRESSURE) &&
                   (rowVarType > VELOCITY_GRADIENT33 || rowVarType < VELOCITY_GRADIENT11)) {
-                add_var = Inter_Mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
+                add_var =
+                    goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][rowVarType][colVarType];
               } else {
                 add_var = 0;
               }
@@ -1592,7 +1594,7 @@ void petsc_load_lec(int ielem, struct GomaLinearSolverData *ams, double resid_ve
               if (goma_ctx->fem.af->Assemble_Jacobian) {
                 for (v = V_FIRST; v < V_LAST; v++) {
                   pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
-                  if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
+                  if (pv != -1 && (goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][e][v])) {
                     ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
                     if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
                         ielem) {
@@ -1667,7 +1669,7 @@ void petsc_load_lec(int ielem, struct GomaLinearSolverData *ams, double resid_ve
             if (goma_ctx->fem.af->Assemble_Jacobian) {
               for (v = V_FIRST; v < V_LAST; v++) {
                 pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
-                if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
+                if (pv != -1 && (goma_ctx->problem.inter_mask[goma_ctx->fem.pg->imtrx][e][v])) {
                   if (v == MASS_FRACTION) {
 
                     ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
@@ -1697,7 +1699,8 @@ void petsc_load_lec(int ielem, struct GomaLinearSolverData *ams, double resid_ve
                            *        dofs, je_new will be wrong here. je
                            *        is correct.
                            */
-                          if (Nodes[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j]]
+                          if (goma_ctx->fem
+                                  .nodes[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j]]
                                   ->Mat_List.Length < 2) {
                           }
                         }
@@ -1784,8 +1787,9 @@ goma_error petsc_scale_matrix(struct GomaLinearSolverData *ams, double *b_, doub
     b_[i] *= scale[i];
     scale[i] = 1.0 / scale[i];
   }
-  exchange_dof(cx[goma_ctx->fem.pg->imtrx], DPI_ptr, b_, goma_ctx->fem.pg->imtrx);
-  exchange_dof(cx[goma_ctx->fem.pg->imtrx], DPI_ptr, scale, goma_ctx->fem.pg->imtrx);
+  exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], goma_ctx->dpi, b_, goma_ctx->fem.pg->imtrx);
+  exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], goma_ctx->dpi, scale,
+               goma_ctx->fem.pg->imtrx);
   CHKERRQ(VecDestroy(&row_sums));
   return GOMA_SUCCESS;
 }
@@ -1809,7 +1813,7 @@ int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *i
   matrix_data->mat_entries_set = PETSC_FALSE;
   if (matrix_data->user_schur) {
     MatZeroEntries(matrix_data->SchurS);
-    set_petsc_pressure_matrix(matrix_data, EXO_ptr, DPI_ptr,
+    set_petsc_pressure_matrix(matrix_data, goma_ctx->exo, goma_ctx->dpi,
                               goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x,
                               goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old,
                               goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot,
@@ -1823,7 +1827,7 @@ int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *i
       PC pc;
       int err = KSPGetPC(matrix_data->ksp, &pc);
       CHKERRQ(err);
-      petsc_PCD_setup(pc, matrix_data, EXO_ptr, DPI_ptr,
+      petsc_PCD_setup(pc, matrix_data, goma_ctx->exo, goma_ctx->dpi,
                       goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x,
                       goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old,
                       goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot,
@@ -1833,7 +1837,7 @@ int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *i
     MatZeroEntries(matrix_data->pcd_data->Mp);
     MatZeroEntries(matrix_data->pcd_data->Mp_mu);
     MatZeroEntries(matrix_data->pcd_data->Ap);
-    set_pcd_matrices(matrix_data, EXO_ptr, DPI_ptr,
+    set_pcd_matrices(matrix_data, goma_ctx->exo, goma_ctx->dpi,
                      goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x,
                      goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old,
                      goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot,
@@ -1880,7 +1884,7 @@ void petsc_solve_post_proc(double **post_proc_vect, RESULTS_DESCRIPTION_STRUCT *
   double start = MPI_Wtime();
   for (int pp = 0; pp < rd->TotalNVPostOutput; pp++) {
     double pp_start = MPI_Wtime();
-    exchange_node(cx[0], dpi, post_proc_vect[pp]);
+    exchange_node(goma_ctx->cx[0], dpi, post_proc_vect[pp]);
     for (PetscInt i = 0; i < dpi->num_internal_nodes + dpi->num_boundary_nodes; i++) {
       VecSetValue(matrix_data->residual, matrix_data->local_to_global[i], post_proc_vect[pp][i],
                   INSERT_VALUES);

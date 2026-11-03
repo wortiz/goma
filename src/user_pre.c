@@ -183,7 +183,7 @@ int user_initialize(const int var,
 
   if (var > -1) {
     if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var] > -1) {
-      for (i = 0; i < DPI_ptr->num_owned_nodes; i++) {
+      for (i = 0; i < goma_ctx->dpi->num_owned_nodes; i++) {
         var_somewhere = FALSE;
         for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
           idv = Index_Solution(i, var, 0, 0, mn, goma_ctx->fem.pg->imtrx);

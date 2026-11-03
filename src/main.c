@@ -88,17 +88,9 @@ extern void handle_ieee(void);
  * Global variables defined here.
  */
 
-Dpi *DPI_ptr = NULL;
-
-Exo_DB *EXO_ptr = NULL;
-
 #define LAST_LEGAL_STRING "Last Legal String"
 
 #ifdef MATRIX_DUMP
-int Number_Jac_Dump = 0; /* Number of jacobians to dump out
-                          * If the value is negative, then the one
-                          * jacobian, the -n'th jacobian, is dumped
-                          * out */
 #endif
 
 const char anneal_file[] = ANNEAL_FILE_NAME;
@@ -137,9 +129,6 @@ static char *legal_notice[] = {
  * Variables defined here but everywhere else are extern via "rf_mp.h".
  */
 
-int parallel_err = FALSE;
-int parallel_err_global = FALSE;
-
 int unlerr;
 
 MPI_Aint type_extent;
@@ -152,25 +141,10 @@ DDD Noahs_Raven; /* Stage 1 - preliminary sizing information */
 DDD Noahs_Ark;   /* Stage 2 - big boatload - main body*/
 DDD Noahs_Dove;  /* Stage 3 - doubly dynamic sized stuff */
 
-Comm_Ex **cx = NULL; /* communications info for ea neighbor proc */
-
-double time_goma_started; /* Save it here... */
-
 /*
  * Declare these copies so that other routines may access them as global
  * external variables instead of passing them through the argument lists.
  */
-
-char **Argv;
-
-int Argc;
-
-ELEM_BLK_STRUCT *Element_Blocks = NULL; /* Pointer to array of global
-                                           element block information. */
-
-ELEM_BLK_STRUCT *Current_EB_ptr = NULL; /* Pointer to the current element block
-                                           structure. This is calculated in the
-                                           fill */
 
 int main(int argc, char **argv)
 
@@ -242,11 +216,11 @@ int main(int argc, char **argv)
   time_start = (double)now;
 #endif /* PARALLEL */
 
-  time_goma_started = time_start;
+  goma_ctx->time_goma_started = time_start;
 
-  Argv = argv;
+  goma_ctx->argv = argv;
 
-  Argc = argc;
+  goma_ctx->argc = argc;
 
 #ifdef PARALLEL
   /*
@@ -452,7 +426,7 @@ int main(int argc, char **argv)
    * process. Now, distribute it to all processors
    */
 #ifdef USE_CHEMKIN
-  if (Chemkin_Needed) {
+  if (goma_ctx->problem.chemkin_needed) {
     chemkin_initialize_mp();
   }
 #endif
@@ -529,13 +503,13 @@ int main(int argc, char **argv)
    * before freeing the major pointers.
    */
 
-  EXO_ptr = alloc_struct_1(Exo_DB, 1);
-  init_exo_struct(EXO_ptr);
-  DPI_ptr = alloc_struct_1(Dpi, 1);
-  init_dpi_struct(DPI_ptr);
+  goma_ctx->exo = alloc_struct_1(Exo_DB, 1);
+  init_exo_struct(goma_ctx->exo);
+  goma_ctx->dpi = alloc_struct_1(Dpi, 1);
+  init_dpi_struct(goma_ctx->dpi);
 
   log_msg("Reading mesh from EXODUS II file...");
-  error = read_mesh_exoII(EXO_ptr, DPI_ptr);
+  error = read_mesh_exoII(goma_ctx->exo, goma_ctx->dpi);
 
   /*
    *   Missing files on any processor are detected at a lower level
@@ -576,7 +550,7 @@ int main(int argc, char **argv)
    * Let's check to see if we need the large elasto-plastic global tensors
    * and allocate them if so
    */
-  error = evp_tensor_alloc(EXO_ptr);
+  error = evp_tensor_alloc(goma_ctx->exo);
   GOMA_EH(error, "Problems setting up evp tensors");
 
   /*
@@ -586,7 +560,7 @@ int main(int argc, char **argv)
    */
   log_msg("Assembly allocation...");
 
-  error = assembly_alloc(EXO_ptr);
+  error = assembly_alloc(goma_ctx->exo);
   GOMA_EH(error, "Problem from assembly_alloc");
 
   if (goma_ctx->debug_flag) {
@@ -598,9 +572,9 @@ int main(int argc, char **argv)
    * your db with too much of this - they're capped verbiage compliant routines.
    */
 
-  add_qa_stamp(EXO_ptr);
+  add_qa_stamp(goma_ctx->exo);
 
-  add_info_stamp(EXO_ptr);
+  add_info_stamp(goma_ctx->exo);
 
   /*
    * If the output EXODUS II database file is different from the input
@@ -641,7 +615,7 @@ int main(int argc, char **argv)
 #ifdef PARALLEL
   error = MPI_Barrier(MPI_COMM_WORLD);
 #endif
-  pre_process(EXO_ptr);
+  pre_process(goma_ctx->exo);
 
   /***********************************************************************/
   /***********************************************************************/
@@ -654,7 +628,7 @@ int main(int argc, char **argv)
    */
 
   log_msg("Basis function initialization...");
-  error = bf_init(EXO_ptr);
+  error = bf_init(goma_ctx->exo);
   GOMA_EH(error, "Problem from bf_init");
 
   /*
@@ -669,16 +643,16 @@ int main(int argc, char **argv)
    * Allocate space for each communication exchange description.
    */
 #ifdef PARALLEL
-  cx = malloc(sizeof(Comm_Ex *) * goma_ctx->fem.upd->Total_Num_Matrices);
-  if (DPI_ptr->num_neighbors > 0) {
+  goma_ctx->cx = malloc(sizeof(Comm_Ex *) * goma_ctx->fem.upd->Total_Num_Matrices);
+  if (goma_ctx->dpi->num_neighbors > 0) {
 
     int imtrx;
     for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-      cx[imtrx] = alloc_struct_1(Comm_Ex, DPI_ptr->num_neighbors);
+      goma_ctx->cx[imtrx] = alloc_struct_1(Comm_Ex, goma_ctx->dpi->num_neighbors);
       goma_ctx->request =
-          alloc_struct_1(MPI_Request, goma_ctx->num_requests * DPI_ptr->num_neighbors);
+          alloc_struct_1(MPI_Request, goma_ctx->num_requests * goma_ctx->dpi->num_neighbors);
       goma_ctx->status =
-          alloc_struct_1(MPI_Status, goma_ctx->num_requests * DPI_ptr->num_neighbors);
+          alloc_struct_1(MPI_Status, goma_ctx->num_requests * goma_ctx->dpi->num_neighbors);
     }
   }
 #endif
@@ -696,7 +670,7 @@ int main(int argc, char **argv)
    * Set up communications pattern for fast unknown updates between
    *  processors.
    */
-  (void)setup_problem(EXO_ptr, DPI_ptr);
+  (void)setup_problem(goma_ctx->exo, goma_ctx->dpi);
 
   /*
    * check for parallel errors before continuing
@@ -719,9 +693,9 @@ int main(int argc, char **argv)
      * mesh to be 1-based. After writing, return to the 0 based indexing
      * that is more convenient in C.
      */
-    one_base(EXO_ptr, goma_ctx->num_proc);
-    wr_mesh_exo(EXO_ptr, goma_ctx->exo_file_out, 0);
-    zero_base(EXO_ptr);
+    one_base(goma_ctx->exo, goma_ctx->num_proc);
+    wr_mesh_exo(goma_ctx->exo, goma_ctx->exo_file_out, 0);
+    zero_base(goma_ctx->exo);
 
     /*
      * If running on a distributed computer, augment the plain finite
@@ -729,7 +703,7 @@ int main(int argc, char **argv)
      * piece fits into the global problem.
      */
     if (goma_ctx->num_proc > 1) {
-      wr_dpi(DPI_ptr, goma_ctx->exo_file_out);
+      wr_dpi(goma_ctx->dpi, goma_ctx->exo_file_out);
     }
   }
 #ifdef FP_EXCEPT
@@ -774,35 +748,35 @@ int main(int argc, char **argv)
       if (goma_ctx->debug_flag) {
         P0PRINTF("%s: solve_problem...TRANSIENT superceded Continuation...\n", yo);
       }
-      solve_problem(EXO_ptr, DPI_ptr, NULL);
+      solve_problem(goma_ctx->exo, goma_ctx->dpi, NULL);
     }
 
     switch (goma_ctx->problem.continuation) {
     case ALC_ZEROTH:
     case ALC_FIRST:
       log_msg("Solving continuation problem");
-      continue_problem(cx[0], EXO_ptr, DPI_ptr);
+      continue_problem(goma_ctx->cx[0], goma_ctx->exo, goma_ctx->dpi);
       break;
     case HUN_ZEROTH:
     case HUN_FIRST:
       log_msg("Solving hunt problem");
-      hunt_problem(cx[0], EXO_ptr, DPI_ptr);
+      hunt_problem(goma_ctx->cx[0], goma_ctx->exo, goma_ctx->dpi);
       break;
     case LOCA:
       log_msg("Solving continuation problem with LOCA");
-      error = do_loca(cx[0], EXO_ptr, DPI_ptr);
+      error = do_loca(goma_ctx->cx[0], goma_ctx->exo, goma_ctx->dpi);
       break;
     default:
       log_msg("Solving problem");
       if (goma_ctx->fem.loca_in->Cont_Alg == LOCA_LSA_ONLY) {
-        error = do_loca(cx[0], EXO_ptr, DPI_ptr);
+        error = do_loca(goma_ctx->cx[0], goma_ctx->exo, goma_ctx->dpi);
       } else if (goma_ctx->problem.time_integration != TRANSIENT) {
-        solve_problem(EXO_ptr, DPI_ptr, NULL);
+        solve_problem(goma_ctx->exo, goma_ctx->dpi, NULL);
       }
       break;
     }
   } else { /* End of if upd->Total_Num_Matrices === 1 */
-    solve_problem_segregated(EXO_ptr, DPI_ptr, NULL);
+    solve_problem_segregated(goma_ctx->exo, goma_ctx->dpi, NULL);
   }
 
 #ifdef PARALLEL
@@ -828,14 +802,14 @@ int main(int argc, char **argv)
   /*
    * free the element block / element based structures
    */
-  free_element_blocks(EXO_ptr);
+  free_element_blocks(goma_ctx->exo);
 
   /*
    * free nodal based structures
    */
   free_nodes();
 #ifdef FREE_PROBLEM
-  free_problem(EXO_ptr, DPI_ptr);
+  free_problem(goma_ctx->exo, goma_ctx->dpi);
 #endif
 
   /*
@@ -854,16 +828,16 @@ int main(int argc, char **argv)
   /*
    * Free exodus database structures
    */
-  free_exo(EXO_ptr);
-  safer_free((void **)&EXO_ptr);
+  free_exo(goma_ctx->exo);
+  safer_free((void **)&goma_ctx->exo);
 
   if (goma_ctx->num_proc > 1) {
-    free_dpi(DPI_ptr);
+    free_dpi(goma_ctx->dpi);
   } else {
-    free_dpi_uni(DPI_ptr);
+    free_dpi_uni(goma_ctx->dpi);
   }
 
-  safer_free((void **)&DPI_ptr);
+  safer_free((void **)&goma_ctx->dpi);
 
   /*
    * Remove front scratch file [/tmp/lu.'pid'.0]

@@ -1063,7 +1063,7 @@ void current_BV_surf(double func[DIM],
   if (goma_ctx->fem.pd->MeshMotion == LAGRANGIAN && goma_ctx->fem.pd->MeshInertia == 1) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return;
   }
 

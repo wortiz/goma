@@ -271,7 +271,7 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * setup communications patterns between ghost and owned
    * nodes.
    */
-  setup_nodal_comm_map(exo, dpi, cx);
+  setup_nodal_comm_map(exo, dpi, goma_ctx->cx);
 
   /*
    * Find the global maximum number of unknowns located at any one
@@ -283,7 +283,7 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * Exchange my idea of what materials I have at each node with
    * my surrounding processors. Make sure we are all in sync
    */
-  setup_external_nodal_matrls(exo, dpi, cx[0]);
+  setup_external_nodal_matrls(exo, dpi, goma_ctx->cx[0]);
 
   /*
    * Exchange my idea of what degrees of freedom I have with my
@@ -291,7 +291,7 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * Owned nodes tell ghost nodes what variables are active
    * at that node.
    */
-  setup_external_nodal_vars(exo, dpi, cx);
+  setup_external_nodal_vars(exo, dpi, goma_ctx->cx);
 
   /*
    * Finish setting the unknown map on this processor
@@ -304,13 +304,13 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * possible
    */
   log_msg("setup_dof_comm_map...");
-  setup_dof_comm_map(exo, dpi, cx);
+  setup_dof_comm_map(exo, dpi, goma_ctx->cx);
 
   /*
    * Output some statistics concerning the communications pattern
    */
   if (goma_ctx->num_proc > 1)
-    output_comm_stats(dpi, cx);
+    output_comm_stats(dpi, goma_ctx->cx);
 
   /*
    * I extracted this from setup_fill_comm_map because some of the
@@ -382,10 +382,11 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
   for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
        goma_ctx->fem.pg->imtrx++) {
     goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->VDindex_to_Lvdesc =
-        alloc_int_1(Num_Var_Info_Records, -1);
+        alloc_int_1(goma_ctx->problem.num_var_info_records, -1);
   }
   for (i = 0; i < MAX_ELEMENT_INDICES_RELATED; i++) {
-    goma_ctx->fem.ei_related[i]->VDindex_to_Lvdesc = alloc_int_1(Num_Var_Info_Records, -1);
+    goma_ctx->fem.ei_related[i]->VDindex_to_Lvdesc =
+        alloc_int_1(goma_ctx->problem.num_var_info_records, -1);
   }
 
   /*
@@ -575,7 +576,7 @@ int coordinate_discontinuous_variables(Exo_DB *exo, Dpi *dpi)
             for (k = exo->ss_node_side_index[ss_index][side_index];
                  k < exo->ss_node_side_index[ss_index][side_index + 1]; k++) {
               node_num = exo->ss_node_list[ss_index][k];
-              node_ptr = Nodes[node_num];
+              node_ptr = goma_ctx->fem.nodes[node_num];
               curr_mat_list = &(node_ptr->Mat_List);
               num_mat = curr_mat_list->Length;
 
@@ -721,7 +722,7 @@ static void bc_matrl_index_print(struct Boundary_Condition *bc_ptr,
   }
   printf("\t===================================================\n");
   if (max_node_matrl >= 0) {
-    node_ptr = Nodes[max_node_matrl];
+    node_ptr = goma_ctx->fem.nodes[max_node_matrl];
     matrlLP = &(node_ptr->Mat_List);
     printf("max materials at a node (%d) = %d,", max_node_matrl, matrlLP->Length);
     printf("  their id's = ");
@@ -729,7 +730,7 @@ static void bc_matrl_index_print(struct Boundary_Condition *bc_ptr,
       printf("%d ", matrlLP->List[i]);
     printf("\n");
 
-    node_ptr = Nodes[min_node_matrl];
+    node_ptr = goma_ctx->fem.nodes[min_node_matrl];
     matrlLP = &(node_ptr->Mat_List);
     printf("min materials at a node (%d) = %d,", min_node_matrl, matrlLP->Length);
     printf("  their id's = ");
@@ -1012,7 +1013,7 @@ void bc_matrl_index(Exo_DB *exo)
               if (!node_flag_1ss[node_num]) {
                 node_flag_1ss[node_num] = 1;
                 n_flagged_nodes++;
-                node_ptr = Nodes[node_num];
+                node_ptr = goma_ctx->fem.nodes[node_num];
                 matrlLP = &(node_ptr->Mat_List);
                 /*
                  * Bin the materials at this node for later usage.
@@ -1078,7 +1079,7 @@ void bc_matrl_index(Exo_DB *exo)
             if (!node_flag_1ss[node_num]) {
               node_flag_1ss[node_num] = 1;
               n_flagged_nodes++;
-              node_ptr = Nodes[node_num];
+              node_ptr = goma_ctx->fem.nodes[node_num];
               matrlLP = &(node_ptr->Mat_List);
               /*
                * Bin the materials at this node for later usage.
@@ -1368,7 +1369,7 @@ void setup_external_nodal_matrls(Exo_DB *exo, Dpi *dpi, Comm_Ex *cx)
 
     for (i = 0; i < goma_ctx->problem.ptr_node_send[dpi->num_neighbors]; i++) {
       node_num = goma_ctx->problem.list_node_send[i];
-      node = Nodes[node_num];
+      node = goma_ctx->fem.nodes[node_num];
       istart = mesg_send + i * max_Matrl;
       for (k = 0; k < node->Mat_List.Length; k++) {
         istart[k] = node->Mat_List.List[k];
@@ -1390,7 +1391,7 @@ void setup_external_nodal_matrls(Exo_DB *exo, Dpi *dpi, Comm_Ex *cx)
 
   for (i = 0; i < dpi->num_external_nodes; i++) {
     node_num = dpi->num_internal_nodes + dpi->num_boundary_nodes + i;
-    node = Nodes[node_num];
+    node = goma_ctx->fem.nodes[node_num];
     istart = mesg_recv + i * max_Matrl;
 
     /*
@@ -1432,10 +1433,10 @@ int find_MaxMatrlPerNode(void)
  * at any one node in the domain.
  ***************************************************************/
 {
-  int number_proc_nodes = EXO_ptr->num_nodes;
+  int number_proc_nodes = goma_ctx->exo->num_nodes;
   int I, lmax = 0;
   for (I = 0; I < number_proc_nodes; I++) {
-    lmax = MAX(lmax, Nodes[I]->Mat_List.Length);
+    lmax = MAX(lmax, goma_ctx->fem.nodes[I]->Mat_List.Length);
   }
   lmax = gmax_int(lmax);
   return lmax;

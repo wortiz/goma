@@ -34,9 +34,6 @@ struct elem_side_bc_struct;
 #define EXTERN extern
 #endif
 
-extern int **local_ROT_list;
-extern int rotation_allocated;
-
 EXTERN int apply_rotated_bc(double[], /* resid_vector                              */
                             struct elem_side_bc_struct *[], /* first_elem_side_BC_array
                                                              * An array of pointers to the first

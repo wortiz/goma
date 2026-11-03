@@ -562,6 +562,5 @@ typedef struct Exodus_Database Exo_DB;
 /*
  *  Globally scoped pointer to the current Exodus_Database structure
  */
-extern Exo_DB *EXO_ptr;
 
 #endif /* GOMA_EXO_STRUCT_H */

@@ -2194,7 +2194,8 @@ void overlap_aug_cond(int ija[],
 
       /* Check for level set going through element (fill unknown sign change) */
       if (elem_overlaps_interface(ielem, x, exo, goma_ctx->fem.ls->Length_Scale)) {
-        load_elem_dofptr(ielem, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
+        load_elem_dofptr(ielem, exo, goma_ctx->fem.x_static, goma_ctx->fem.x_old_static,
+                         goma_ctx->fem.xdot_static, goma_ctx->fem.xdot_old_static, 0);
 
         /* Assemble embedded BC's into gAC, bAC, and cAC */
         if (goma_ctx->fem.ls->Length_Scale == 0.) {
@@ -2228,7 +2229,8 @@ void overlap_aug_cond(int ija[],
           /* This is the next element side that needs to be processed */
           /* If this is a new element, get pointers */
           if (ielem != jelem) {
-            load_elem_dofptr(ielem, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
+            load_elem_dofptr(ielem, exo, goma_ctx->fem.x_static, goma_ctx->fem.x_old_static,
+                             goma_ctx->fem.xdot_static, goma_ctx->fem.xdot_old_static, 0);
           }
 
           /* Find the appropriate side and point elem_side_bc to it */
@@ -2272,7 +2274,8 @@ void overlap_aug_cond(int ija[],
           /* This is the next element side that needs to be processed */
           /* If this is a new element, get pointers */
           if (ielem >= 0 && ielem != jelem) {
-            load_elem_dofptr(ielem, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
+            load_elem_dofptr(ielem, exo, goma_ctx->fem.x_static, goma_ctx->fem.x_old_static,
+                             goma_ctx->fem.xdot_static, goma_ctx->fem.xdot_old_static, 0);
           }
           if (ielem >= 0 && current_elem_overlaps_interface(goma_ctx->fem.ls->Length_Scale)) {
             if (goma_ctx->fem.ls->Length_Scale == 0.) {
@@ -2306,7 +2309,8 @@ void overlap_aug_cond(int ija[],
         int ibc, bc_input_id, bct;
         elem_side_bc = goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx][ielem];
 
-        load_elem_dofptr(ielem, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
+        load_elem_dofptr(ielem, exo, goma_ctx->fem.x_static, goma_ctx->fem.x_old_static,
+                         goma_ctx->fem.xdot_static, goma_ctx->fem.xdot_old_static, 0);
         /*****************************************************************************/
         do { /* begining of do while construct */
           /* which loops over the sides of this element that have boundary
@@ -2834,8 +2838,8 @@ int std_lgr_cond(int iAC,
 
         var = vd->Variable_Type;
 
-        if (Nodes[inode]->DBC[goma_ctx->fem.pg->imtrx])
-          isDBC = Nodes[inode]->DBC[goma_ctx->fem.pg->imtrx][i_offset];
+        if (goma_ctx->fem.nodes[inode]->DBC[goma_ctx->fem.pg->imtrx])
+          isDBC = goma_ctx->fem.nodes[inode]->DBC[goma_ctx->fem.pg->imtrx][i_offset];
 
         if ((var >= VELOCITY1 &&
              var <= VELOCITY3) && /* this stuff only gets added to velocity dofs */
@@ -3465,7 +3469,7 @@ double getPositionAC(struct AC_Information *augc, double *cAC_iAC, double *x, Ex
       }
       /* Get the 0th local node in the current node set */
       inode = exo->ns_node_list[exo->ns_node_index[ins] + 0];
-      node_ptr = Nodes[inode];
+      node_ptr = goma_ctx->fem.nodes[inode];
       globalNodeNum = node_ptr->Global_Node_Num;
     }
   }
@@ -3473,7 +3477,7 @@ double getPositionAC(struct AC_Information *augc, double *cAC_iAC, double *x, Ex
   // Decide whether this processor owns that node and get local node number
   int node = -1;
   for (i = 0; i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes; i++) {
-    node_ptr = Nodes[i];
+    node_ptr = goma_ctx->fem.nodes[i];
     if (globalNodeNum == node_ptr->Global_Node_Num) {
       node = i;
       break;
@@ -3572,7 +3576,7 @@ double getAngleAC(struct AC_Information *augc, double *cAC_iAC, double *x, Exo_D
       }
       /* Get the 0th local node in the current node set */
       inode = exo->ns_node_list[exo->ns_node_index[ins] + 0];
-      node_ptr = Nodes[inode];
+      node_ptr = goma_ctx->fem.nodes[inode];
       globalNodeNum = node_ptr->Global_Node_Num;
     }
   }
@@ -3580,7 +3584,7 @@ double getAngleAC(struct AC_Information *augc, double *cAC_iAC, double *x, Exo_D
   // Decide whether this processor owns that node and get local node number
   int node = -1;
   for (i = 0; i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes; i++) {
-    node_ptr = Nodes[i];
+    node_ptr = goma_ctx->fem.nodes[i];
     if (globalNodeNum == node_ptr->Global_Node_Num) {
       node = i;
       break;

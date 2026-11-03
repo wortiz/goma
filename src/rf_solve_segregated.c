@@ -618,10 +618,10 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
       err = GomaSparseMatrix_SetProblemGraph(
           goma_matrix, goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx],
           goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx],
-          goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes, Nodes,
-          goma_ctx->problem.max_var_per_node, goma_ctx->problem.matilda, Inter_Mask, exo, dpi,
-          cx[goma_ctx->fem.pg->imtrx], goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag,
-          ams[goma_ctx->fem.pg->imtrx]);
+          goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes,
+          goma_ctx->fem.nodes, goma_ctx->problem.max_var_per_node, goma_ctx->problem.matilda,
+          goma_ctx->problem.inter_mask, exo, dpi, goma_ctx->cx[goma_ctx->fem.pg->imtrx],
+          goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[goma_ctx->fem.pg->imtrx]);
       GOMA_EH(err, "GomaSparseMatrix_SetProblemGraph");
       ams[goma_ctx->fem.pg->imtrx]->GomaMatrixData = goma_matrix;
       ams[goma_ctx->fem.pg->imtrx]->npu =
@@ -767,8 +767,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   /* Read initial values from exodus file */
   for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
        goma_ctx->fem.pg->imtrx++) {
-    init_vec(x[goma_ctx->fem.pg->imtrx], cx[goma_ctx->fem.pg->imtrx], exo, dpi, global_x_AC,
-             goma_ctx->problem.n_ac, &timeValueRead[goma_ctx->fem.pg->imtrx]);
+    init_vec(x[goma_ctx->fem.pg->imtrx], goma_ctx->cx[goma_ctx->fem.pg->imtrx], exo, dpi,
+             global_x_AC, goma_ctx->problem.n_ac, &timeValueRead[goma_ctx->fem.pg->imtrx]);
 
     if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11] >= 0 &&
         goma_ctx->solver.conformation_flag == 1) {
@@ -943,7 +943,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
        * they can be. That is, ask the processors that are supposed to
        * know...
        */
-      exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
+      exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
                    goma_ctx->fem.pg->imtrx);
 
       /*
@@ -964,7 +964,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
     for (goma_ctx->fem.pg->imtrx = 0;
          goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
          goma_ctx->fem.pg->imtrx++) {
-      sl_init(matrix_systems_mask, ams, exo, dpi, cx[goma_ctx->fem.pg->imtrx]);
+      sl_init(matrix_systems_mask, ams, exo, dpi, goma_ctx->cx[goma_ctx->fem.pg->imtrx]);
     }
 
     /*
@@ -1010,7 +1010,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             scale[goma_ctx->fem.pg->imtrx], &converged, &nprint, tev[goma_ctx->fem.pg->imtrx],
             tev_post[goma_ctx->fem.pg->imtrx], gv, rd[goma_ctx->fem.pg->imtrx], NULL, NULL,
             gvec[goma_ctx->fem.pg->imtrx], gvec_elem[goma_ctx->fem.pg->imtrx], time1, exo, dpi,
-            cx[goma_ctx->fem.pg->imtrx], 0, &time_step_reform, is_steady_state,
+            goma_ctx->cx[goma_ctx->fem.pg->imtrx], 0, &time_step_reform, is_steady_state,
             x_AC[goma_ctx->fem.pg->imtrx], x_AC_dot[goma_ctx->fem.pg->imtrx], time1, NULL, NULL,
             NULL, NULL);
 
@@ -1224,7 +1224,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
       find_and_set_Dirichlet(x[goma_ctx->fem.pg->imtrx], xdot[goma_ctx->fem.pg->imtrx], exo, dpi);
 
       if (nt == 0 && goma_ctx->fem.pg->imtrx == 0) {
-        xfem = NULL;
+        goma_ctx->fem.xfem = NULL;
         if (goma_ctx->fem.upd->XFEM) {
           matrix_xfem = calloc(goma_ctx->fem.upd->Total_Num_Matrices,
                                sizeof(struct Extended_Shape_Fcn_Basics *));
@@ -1242,7 +1242,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
       }
 
       if (goma_ctx->fem.upd->XFEM) {
-        xfem = matrix_xfem[goma_ctx->fem.pg->imtrx];
+        goma_ctx->fem.xfem = matrix_xfem[goma_ctx->fem.pg->imtrx];
       }
 
       if (goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][FILL] > -1 &&
@@ -1287,7 +1287,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               if (first_elem != -1) {
                 load_ei(first_elem, exo, 0, goma_ctx->fem.pg->imtrx);
 
-                Subgrid_Tree = create_shape_fcn_tree(goma_ctx->fem.ls->Integration_Depth);
+                goma_ctx->fem.subgrid_tree =
+                    create_shape_fcn_tree(goma_ctx->fem.ls->Integration_Depth);
                 DPRINTF(stdout, "\n\tSubgrid Integration of level set "
                                 "interface active.\n");
               }
@@ -1342,7 +1343,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             GOMA_WH(-1, "Level Set Initialization method not found \n");
           } /* end of switch( eqntype )  */
 
-          exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
+          exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
                        goma_ctx->fem.pg->imtrx);
 
           if (converged) {
@@ -1358,7 +1359,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
               did_renorm = huygens_renormalization(
                   x[goma_ctx->fem.pg->imtrx], xdot[goma_ctx->fem.pg->imtrx], num_total_nodes, exo,
-                  cx[goma_ctx->fem.pg->imtrx], dpi, goma_ctx->problem.num_fill_unknowns,
+                  goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, goma_ctx->problem.num_fill_unknowns,
                   numProcUnknowns[goma_ctx->fem.pg->imtrx], time1, Renorm_Now);
 
               break;
@@ -1379,7 +1380,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
            * species concentration and temperature.
            */
           if (goma_ctx->fem.ls->Num_Var_Init > 0)
-            ls_var_initialization(x, exo, dpi, cx);
+            ls_var_initialization(x, exo, dpi, goma_ctx->cx);
 
           /* 	  DPRINTF(stderr, "Done with ls_var_initialization.\n"); */
 
@@ -1424,20 +1425,20 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
         dcopy1(numProcUnknowns[goma_ctx->fem.pg->imtrx], x[goma_ctx->fem.pg->imtrx],
                x_oldest[goma_ctx->fem.pg->imtrx]);
 
-        exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
+        exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
                      goma_ctx->fem.pg->imtrx);
-        exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, x_old[goma_ctx->fem.pg->imtrx],
+        exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x_old[goma_ctx->fem.pg->imtrx],
                      goma_ctx->fem.pg->imtrx);
-        exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, x_oldest[goma_ctx->fem.pg->imtrx],
+        exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x_oldest[goma_ctx->fem.pg->imtrx],
                      goma_ctx->fem.pg->imtrx);
 
         if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->last_surf_list != NULL) {
           /* Find the interface surf at the last full time step (x_old =
            * tmp_x) for use during this explicit step */
-          x_static = x[goma_ctx->fem.pg->imtrx];
-          x_old_static = x_old[goma_ctx->fem.pg->imtrx];
-          xdot_static = xdot[goma_ctx->fem.pg->imtrx];
-          xdot_old_static = xdot_old[goma_ctx->fem.pg->imtrx];
+          goma_ctx->fem.x_static = x[goma_ctx->fem.pg->imtrx];
+          goma_ctx->fem.x_old_static = x_old[goma_ctx->fem.pg->imtrx];
+          goma_ctx->fem.xdot_static = xdot[goma_ctx->fem.pg->imtrx];
+          goma_ctx->fem.xdot_old_static = xdot_old[goma_ctx->fem.pg->imtrx];
 
           create_subsurfs(goma_ctx->fem.ls->last_surf_list, x_old[goma_ctx->fem.pg->imtrx], exo);
         }
@@ -1448,7 +1449,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
        * they can be. That is, ask the processors that are supposed to
        * know...
        */
-      exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
+      exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
                    goma_ctx->fem.pg->imtrx);
 
       /*
@@ -1482,7 +1483,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
       for (goma_ctx->fem.pg->imtrx = 0;
            goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
            goma_ctx->fem.pg->imtrx++) {
-        sl_init(matrix_systems_mask, ams, exo, dpi, cx[goma_ctx->fem.pg->imtrx]);
+        sl_init(matrix_systems_mask, ams, exo, dpi, goma_ctx->cx[goma_ctx->fem.pg->imtrx]);
       }
 
     nt = 0;
@@ -1507,7 +1508,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
     // Save x into older saves
     for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-      exchange_dof(cx[imtrx], dpi, x[imtrx], imtrx);
+      exchange_dof(goma_ctx->cx[imtrx], dpi, x[imtrx], imtrx);
       dcopy1(numProcUnknowns[imtrx], x[imtrx], x_old[imtrx]);
       dcopy1(numProcUnknowns[imtrx], x[imtrx], x_older[imtrx]);
       dcopy1(numProcUnknowns[imtrx], x[imtrx], x_oldest[imtrx]);
@@ -1550,7 +1551,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
           goma_ctx->fem.tran->time_value = time1;
 
           if (goma_ctx->fem.upd->XFEM) {
-            xfem = matrix_xfem[goma_ctx->fem.pg->imtrx];
+            goma_ctx->fem.xfem = matrix_xfem[goma_ctx->fem.pg->imtrx];
           }
 
 #ifdef GOMA_ENABLE_OMEGA_H
@@ -1579,11 +1580,11 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             if (nt == 0) {
               if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->Num_Var_Init > 0) {
                 goma_ctx->fem.pg->imtrx = Fill_Matrix;
-                ls_var_initialization(x, exo, dpi, cx);
+                ls_var_initialization(x, exo, dpi, goma_ctx->cx);
               }
             }
             for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-              exchange_dof(cx[imtrx], dpi, x[imtrx], imtrx);
+              exchange_dof(goma_ctx->cx[imtrx], dpi, x[imtrx], imtrx);
               numProcUnknowns[imtrx] =
                   goma_ctx->problem.num_unknowns[imtrx] + goma_ctx->problem.num_ext_unknowns[imtrx];
               dcopy1(numProcUnknowns[imtrx], x[imtrx], x_old[imtrx]);
@@ -1609,10 +1610,10 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             nullify_dirichlet_bcs();
             find_and_set_Dirichlet(x[goma_ctx->fem.pg->imtrx], xdot[goma_ctx->fem.pg->imtrx], exo,
                                    dpi);
-            x_static = x[goma_ctx->fem.pg->imtrx];
-            x_old_static = x_old[goma_ctx->fem.pg->imtrx];
-            xdot_static = xdot[goma_ctx->fem.pg->imtrx];
-            xdot_old_static = xdot_old[goma_ctx->fem.pg->imtrx];
+            goma_ctx->fem.x_static = x[goma_ctx->fem.pg->imtrx];
+            goma_ctx->fem.x_old_static = x_old[goma_ctx->fem.pg->imtrx];
+            goma_ctx->fem.xdot_static = xdot[goma_ctx->fem.pg->imtrx];
+            goma_ctx->fem.xdot_old_static = xdot_old[goma_ctx->fem.pg->imtrx];
             goma_ctx->fem.pg->imtrx = 0;
           }
 #endif
@@ -1667,23 +1668,23 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                      goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].xdot);
               dcopy1(numProcUnknowns[goma_ctx->fem.pg->imtrx], xdot_old[goma_ctx->fem.pg->imtrx],
                      goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].xdot_old);
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x,
                            goma_ctx->fem.pg->imtrx);
 
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x_old,
                            goma_ctx->fem.pg->imtrx);
 
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x_older,
                            goma_ctx->fem.pg->imtrx);
 
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].xdot,
                            goma_ctx->fem.pg->imtrx);
 
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].xdot_old,
                            goma_ctx->fem.pg->imtrx);
             }
@@ -1711,7 +1712,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                     err = rd_trans_vectors_from_exoII(
                         goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x_old,
                         goma_ctx->fem.efv->file_nm[w], w, n, &timeValueReadTrans, exo,
-                        cx[goma_ctx->fem.pg->imtrx], dpi);
+                        goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi);
                     if (err != 0) {
                       DPRINTF(stderr, "%s: err from rd_trans_vectors_from_exoII\n", yo);
                     }
@@ -1729,11 +1730,11 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                   goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x,
                   goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].xdot, exo, dpi);
 
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x,
                            goma_ctx->fem.pg->imtrx);
 
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].xdot,
                            goma_ctx->fem.pg->imtrx);
 
@@ -1786,10 +1787,10 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                * time, x[], exchange the degrees of freedom to update the
                * ghost node information.
                */
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x,
                            goma_ctx->fem.pg->imtrx);
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].xdot,
                            goma_ctx->fem.pg->imtrx);
 
@@ -1805,10 +1806,10 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                   goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x,
                   goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].xdot, exo, dpi);
 
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x,
                            goma_ctx->fem.pg->imtrx);
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].xdot,
                            goma_ctx->fem.pg->imtrx);
               /*
@@ -1843,7 +1844,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                   scale[goma_ctx->fem.pg->imtrx], &converged, &nprint, tev[goma_ctx->fem.pg->imtrx],
                   tev_post[goma_ctx->fem.pg->imtrx], gv, rd[goma_ctx->fem.pg->imtrx], NULL, NULL,
                   gvec[goma_ctx->fem.pg->imtrx], gvec_elem[goma_ctx->fem.pg->imtrx], time1, exo,
-                  dpi, cx[goma_ctx->fem.pg->imtrx], 0, &time_step_reform, 0,
+                  dpi, goma_ctx->cx[goma_ctx->fem.pg->imtrx], 0, &time_step_reform, 0,
                   x_AC[goma_ctx->fem.pg->imtrx], x_AC_dot[goma_ctx->fem.pg->imtrx], time1, NULL,
                   NULL, NULL, NULL);
 
@@ -1941,23 +1942,23 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                      goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x,
                      goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x_old);
 
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x,
                            goma_ctx->fem.pg->imtrx);
 
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x_old,
                            goma_ctx->fem.pg->imtrx);
 
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].x_older,
                            goma_ctx->fem.pg->imtrx);
 
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].xdot,
                            goma_ctx->fem.pg->imtrx);
 
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi,
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi,
                            goma_ctx->fem.pg->sub_step_solutions[goma_ctx->fem.pg->imtrx].xdot_old,
                            goma_ctx->fem.pg->imtrx);
             }
@@ -2012,7 +2013,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                 if (strcmp(goma_ctx->fem.efv->field_type[w], "transient") == 0) {
                   err = rd_trans_vectors_from_exoII(
                       x_old[goma_ctx->fem.pg->imtrx], goma_ctx->fem.efv->file_nm[w], w, n,
-                      &timeValueReadTrans, exo, cx[goma_ctx->fem.pg->imtrx], dpi);
+                      &timeValueReadTrans, exo, goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi);
                   if (err != 0) {
                     DPRINTF(stderr, "%s: err from rd_trans_vectors_from_exoII\n", yo);
                   }
@@ -2075,9 +2076,9 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
              * time, x[], exchange the degrees of freedom to update the
              * ghost node information.
              */
-            exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
+            exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
                          goma_ctx->fem.pg->imtrx);
-            exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, xdot[goma_ctx->fem.pg->imtrx],
+            exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, xdot[goma_ctx->fem.pg->imtrx],
                          goma_ctx->fem.pg->imtrx);
 
             if (matrix_nAC[goma_ctx->fem.pg->imtrx] > 0 && subcycle == 0) {
@@ -2091,8 +2092,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
               for (iAC = 0; iAC < matrix_nAC[goma_ctx->fem.pg->imtrx]; iAC++) {
                 update_parameterAC(iAC, x[goma_ctx->fem.pg->imtrx], xdot[goma_ctx->fem.pg->imtrx],
-                                   x_AC[goma_ctx->fem.pg->imtrx], cx[goma_ctx->fem.pg->imtrx], exo,
-                                   dpi);
+                                   x_AC[goma_ctx->fem.pg->imtrx],
+                                   goma_ctx->cx[goma_ctx->fem.pg->imtrx], exo, dpi);
                 goma_ctx->fem.augc[iAC].tmp2 = x_AC_dot[goma_ctx->fem.pg->imtrx][iAC];
                 goma_ctx->fem.augc[iAC].tmp3 = x_AC_old[goma_ctx->fem.pg->imtrx][iAC];
               }
@@ -2117,9 +2118,9 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
              *            be exchanged as well.
              */
 
-            exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
+            exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
                          goma_ctx->fem.pg->imtrx);
-            exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, xdot[goma_ctx->fem.pg->imtrx],
+            exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, xdot[goma_ctx->fem.pg->imtrx],
                          goma_ctx->fem.pg->imtrx);
 
             /*
@@ -2164,8 +2165,9 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                 scale[goma_ctx->fem.pg->imtrx], &converged, &nprint, tev[goma_ctx->fem.pg->imtrx],
                 tev_post[goma_ctx->fem.pg->imtrx], gv, rd[goma_ctx->fem.pg->imtrx], NULL, NULL,
                 gvec[goma_ctx->fem.pg->imtrx], gvec_elem[goma_ctx->fem.pg->imtrx], time1, exo, dpi,
-                cx[goma_ctx->fem.pg->imtrx], 0, &time_step_reform, 0, x_AC[goma_ctx->fem.pg->imtrx],
-                x_AC_dot[goma_ctx->fem.pg->imtrx], time1, NULL, NULL, NULL, NULL);
+                goma_ctx->cx[goma_ctx->fem.pg->imtrx], 0, &time_step_reform, 0,
+                x_AC[goma_ctx->fem.pg->imtrx], x_AC_dot[goma_ctx->fem.pg->imtrx], time1, NULL, NULL,
+                NULL, NULL);
 
             if (goma_ctx->fem.upd->SegregatedSubcycles > 1) {
               // Relax the solution
@@ -2382,9 +2384,9 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
            *        then xdot needs to be exchanged as well.
            */
 
-          exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
+          exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
                        goma_ctx->fem.pg->imtrx);
-          exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, xdot[goma_ctx->fem.pg->imtrx],
+          exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, xdot[goma_ctx->fem.pg->imtrx],
                        goma_ctx->fem.pg->imtrx);
 
           if (!converged)
@@ -2684,7 +2686,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             }
 #ifdef PARALLEL
             if (ls_adc_event) {
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx], 0);
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
+                           0);
             }
 #endif
             if (ls_adc_event && goma_ctx->fem.tran->Restart_Time_Integ_After_Renorm) {
@@ -2723,10 +2726,10 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             goma_ctx->fem.pg->imtrx = Fill_Matrix;
             did_renorm = huygens_renormalization(
                 x[goma_ctx->fem.pg->imtrx], xdot[goma_ctx->fem.pg->imtrx], num_total_nodes, exo,
-                cx[goma_ctx->fem.pg->imtrx], dpi, goma_ctx->problem.num_fill_unknowns,
+                goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, goma_ctx->problem.num_fill_unknowns,
                 numProcUnknowns[goma_ctx->fem.pg->imtrx], time2, Renorm_Now);
             if (did_renorm) {
-              exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
+              exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
                            goma_ctx->fem.pg->imtrx);
 
               renorm_subcycle_count = goma_ctx->fem.ls->SubcyclesAfterRenorm;
@@ -2746,7 +2749,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               if (delta_t_new > fabs(delta_t0))
                 delta_t_new *= goma_ctx->fem.tran->time_step_decelerator;
             }
-            exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
+            exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
                          goma_ctx->fem.pg->imtrx);
             goma_ctx->fem.pg->imtrx = 0;
             break;

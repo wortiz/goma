@@ -268,7 +268,6 @@ static char rcsid[] = "$Id: mm_fill_shell.c,v 5.62 2010-07-30 21:14:52 prschun E
  *
  */
 
-int InShellElementWithParentElementCoverage = 0;
 int ShellElementParentElementCoverageForVariable[MAX_VARIABLE_TYPES] = {MAX_VARIABLE_TYPES * 0};
 
 /*****************************************************************************
@@ -506,7 +505,7 @@ int assemble_surface_charge(double time_value, /* Time */
   peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
   /* See if there are friends for this element (maximum 2) */
-  nf = num_elem_friends[el0];
+  nf = goma_ctx->fem.num_elem_friends[el0];
   if (nf == 0)
     return 0;
 
@@ -869,7 +868,7 @@ int assemble_shell_structure(double time_value, /* Time */
   pd0 = goma_ctx->fem.pd; /*set prob description to current shell material */
 
   /* See if there are friends for this element (maximum 2) */
-  nf = num_elem_friends[el0];
+  nf = goma_ctx->fem.num_elem_friends[el0];
 
   /* Initialize temporary arrays */
   memset(res, 0, sizeof(double) * MDE);
@@ -888,7 +887,7 @@ int assemble_shell_structure(double time_value, /* Time */
   n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
 
   /* Get neighbor element number(s). */
-  if (&elem_friends[el0][0] != NULL) /*Unwetted shells don't have friends*/
+  if (&goma_ctx->fem.elem_friends[el0][0] != NULL) /*Unwetted shells don't have friends*/
   {
     if (nf > 2)
       GOMA_EH(GOMA_ERROR, "Not set up for more than two element friends!");
@@ -1502,7 +1501,7 @@ int assemble_shell_tension(double time_value, /* Time */
   int el0 = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
   int nf;
   /* See if there are friends for this element (maximum 2) */
-  nf = num_elem_friends[el0];
+  nf = goma_ctx->fem.num_elem_friends[el0];
 #endif
 
   /* These are needed to get convection velocity and mesh derivatives */
@@ -1536,9 +1535,9 @@ int assemble_shell_tension(double time_value, /* Time */
 
 #if 0 /* if setting 1 uncomment el1 declaration */
   /* Get neighbor element number(s). */
-  if(&elem_friends[el0][0] != NULL) /*Unwetted shells don't have friends*/
+  if(&goma_ctx->fem.elem_friends[el0][0] != NULL) /*Unwetted shells don't have friends*/
     {
-      el1 = elem_friends[el0][0];
+      el1 = goma_ctx->fem.elem_friends[el0][0];
       if (nf > 2) GOMA_EH(GOMA_ERROR, "Not set up for more than two element friends!");
     }
 	
@@ -1684,7 +1683,7 @@ int assemble_shell_coordinates(double time_value, /* Time */
    * and don't need an arclength equation, so don't apply below! For structural
    * shells a mesh equation in the bulk is a sure bet!
    */
-  nf = num_elem_friends[el0];
+  nf = goma_ctx->fem.num_elem_friends[el0];
 
   /*
    * Please see comments for assemble_shell_structure for editorial comments.
@@ -2207,7 +2206,7 @@ int assemble_shell_diffusion(double time_value, /* Time */
   pd0 = goma_ctx->fem.pd; /*set prob description to current shell material */
 
   /* See if there are friends for this element (maximum 2) */
-  nf = num_elem_friends[el0];
+  nf = goma_ctx->fem.num_elem_friends[el0];
 
   /* Initialize temporary arrays */
   memset(res, 0, sizeof(double) * MDE);
@@ -2226,9 +2225,9 @@ int assemble_shell_diffusion(double time_value, /* Time */
   n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
 
   /* Get neighbor element number(s). */
-  if (&elem_friends[el0][0] != NULL) /*Unwetted shells don't have friends*/
+  if (&goma_ctx->fem.elem_friends[el0][0] != NULL) /*Unwetted shells don't have friends*/
   {
-    el1 = elem_friends[el0][0];
+    el1 = goma_ctx->fem.elem_friends[el0][0];
     if (nf > 2)
       GOMA_EH(GOMA_ERROR, "Not set up for more than two element friends!");
   }
@@ -2429,7 +2428,7 @@ int assemble_shell_geometry(double time_value, /* Time */
   p_div_s_nv = &div_s_nv; /* Surface divergence pointer */
 
   /* See if there are friends for this element (maximum 2) */
-  nf = num_elem_friends[el0];
+  nf = goma_ctx->fem.num_elem_friends[el0];
 
   /* Initialize temporary arrays */
   dof_map = (int *)array_alloc(1, MDE, sizeof(int));
@@ -2452,9 +2451,9 @@ int assemble_shell_geometry(double time_value, /* Time */
   n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
 
   /* Get neighbor element number(s). */
-  if (&elem_friends[el0][0] != NULL) /*Unwetted shells don't have friends*/
+  if (&goma_ctx->fem.elem_friends[el0][0] != NULL) /*Unwetted shells don't have friends*/
   {
-    el1 = elem_friends[el0][0];
+    el1 = goma_ctx->fem.elem_friends[el0][0];
     if (nf > 2)
       GOMA_EH(GOMA_ERROR, "Not set up for more than two element friends!");
   }
@@ -2755,7 +2754,7 @@ void shell_surface_charge_bc(double func[DIM],
   double grad_phi_j, shell_qs;
 
   /* See if there is a friend for this element */
-  nf = num_elem_friends[el1];
+  nf = goma_ctx->fem.num_elem_friends[el1];
   if (nf == 0)
     return;
 
@@ -2765,7 +2764,7 @@ void shell_surface_charge_bc(double func[DIM],
    *       more than one, the first one will be used. This
    *       will be fixed at a later date.
    */
-  el2 = elem_friends[el1][0];
+  el2 = goma_ctx->fem.elem_friends[el1][0];
   if (nf != 1)
     GOMA_WH(GOMA_ERROR, "WARNING: Not set up for more than one element friend!");
 
@@ -2807,7 +2806,7 @@ void shell_surface_charge_bc(double func[DIM],
 
   shell_qs = 0;
   for (j = 0; j < n_dof[SURF_CHARGE]; j++) {
-    n_esp = x_static + n_dofptr[SURF_CHARGE][j];
+    n_esp = goma_ctx->fem.x_static + n_dofptr[SURF_CHARGE][j];
     shell_qs += *n_esp * goma_ctx->fem.bf[SURF_CHARGE]->phi[j];
   }
 
@@ -3239,7 +3238,7 @@ void apply_surface_viscosity(double cfunc[MDE][DIM],
   /***************************** EXECUTION BEGINS ******************************/
 
   /* See if there is a friend for this element */
-  nf = num_elem_friends[el1];
+  nf = goma_ctx->fem.num_elem_friends[el1];
   if (nf == 0)
     return;
 
@@ -3249,7 +3248,7 @@ void apply_surface_viscosity(double cfunc[MDE][DIM],
    *       more than one, the first one will be used. This
    *       will be fixed at a later date.
    */
-  el2 = elem_friends[el1][0];
+  el2 = goma_ctx->fem.elem_friends[el1][0];
   if (nf != 1)
     GOMA_WH(GOMA_ERROR, "WARNING: Not set up for more than one element friend!");
 
@@ -3964,7 +3963,7 @@ void put_fluid_stress_on_shell(
   int peqn_mom1, peqn_mom2, peqn_shell;
   int ieqn_mom1, ieqn_mom2, ieqn_shell;
   int curvature_fixed, tension_fixed;
-  NODE_INFO_STRUCT *node = Nodes[I];
+  NODE_INFO_STRUCT *node = goma_ctx->fem.nodes[I];
   NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
   dim = goma_ctx->fem.pd->Num_Dim;
@@ -4237,7 +4236,7 @@ void put_shear_stress_on_shell(
   int peqn_mom1, peqn_mom2, peqn_shell;
   int ieqn_mom1, ieqn_mom2, ieqn_shell;
   int tension_fixed;
-  NODE_INFO_STRUCT *node = Nodes[I];
+  NODE_INFO_STRUCT *node = goma_ctx->fem.nodes[I];
   NODAL_VARS_STRUCT *nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
   dim = goma_ctx->fem.pd->Num_Dim;
@@ -4430,7 +4429,7 @@ int assemble_shell_angle(double time_value, /* Time */
   double d_sn_ang_dsn[DIM - 1][DIM];
 
   /* See if there is a friend for this element */
-  nf = num_elem_friends[el1];
+  nf = goma_ctx->fem.num_elem_friends[el1];
   if (nf == 0)
     return (err);
 
@@ -4440,7 +4439,7 @@ int assemble_shell_angle(double time_value, /* Time */
    *       more than one, the first one will be used. This
    *       will be fixed at a later date.
    */
-  el2 = elem_friends[el1][0];
+  el2 = goma_ctx->fem.elem_friends[el1][0];
   if (nf != 1)
     GOMA_WH(GOMA_ERROR, "WARNING: Not set up for more than one element friend!");
 
@@ -4631,7 +4630,7 @@ int assemble_shell_surface_rheo_pieces(double time_value, /* Time */
   }
 
   /* See if there is a friend for this element */
-  nf = num_elem_friends[el1];
+  nf = goma_ctx->fem.num_elem_friends[el1];
   if (nf == 0)
     return (err);
 
@@ -4641,7 +4640,7 @@ int assemble_shell_surface_rheo_pieces(double time_value, /* Time */
    *       more than one, the first one will be used. This
    *       will be fixed at a later date.
    */
-  el2 = elem_friends[el1][0];
+  el2 = goma_ctx->fem.elem_friends[el1][0];
   if (nf != 1)
     GOMA_WH(GOMA_ERROR, "WARNING: Not set up for more than one element friend!");
   memset(d_grad_n_dn, 0, sizeof(double) * DIM * DIM * DIM * MDE);
@@ -5796,7 +5795,7 @@ void shell_diff_kinematic_bc(double func[DIM],
   pd0 = goma_ctx->fem.pd;
 
   /* See if there is a friend for this element */
-  nf = num_elem_friends[el1];
+  nf = goma_ctx->fem.num_elem_friends[el1];
   if (nf == 0)
     return;
 
@@ -5806,7 +5805,7 @@ void shell_diff_kinematic_bc(double func[DIM],
    *       more than one, the first one will be used. This
    *       will be fixed at a later date.
    */
-  el2 = elem_friends[el1][0];
+  el2 = goma_ctx->fem.elem_friends[el1][0];
   if (nf != 1)
     GOMA_WH(GOMA_ERROR, "WARNING: Not set up for more than one element friend!");
 
@@ -5985,14 +5984,14 @@ void rep_force_shell_n_dot_f_bc(double func[DIM],
     return;
 
   /* See if there is a friend for this element */
-  nf = num_elem_friends[el1];
+  nf = goma_ctx->fem.num_elem_friends[el1];
   if (nf == 0)
     return;
 
   /*
    * Get neighbor element number.
    */
-  el2 = elem_friends[el1][0];
+  el2 = goma_ctx->fem.elem_friends[el1][0];
   if (nf != 1)
     GOMA_WH(GOMA_ERROR, "WARNING: Not set up for more than one element friend!");
 
@@ -6158,7 +6157,7 @@ void rep_force_shell_n_dot_f_bc(double func[DIM],
   shell_p = 0;
   // shell_pgrad = 0;
   for (j = 0; j < n_dof[SHELL_LUBP]; j++) {
-    n_esp = x_static + n_dofptr[SHELL_LUBP][j];
+    n_esp = goma_ctx->fem.x_static + n_dofptr[SHELL_LUBP][j];
     shell_p += *n_esp * goma_ctx->fem.bf[SHELL_LUBP]->phi[j];
     // shell_pgrad += *n_esp * bf[SHELL_LUBP]->dphidxi[j][0];
   }
@@ -6529,7 +6528,7 @@ void surface_lubrication_shell_bc(
 
   shell_pgrad = 0;
   for (j = 0; j < n_dof[SHELL_LUBP]; j++) {
-    n_esp = x_static + n_dofptr[SHELL_LUBP][j];
+    n_esp = goma_ctx->fem.x_static + n_dofptr[SHELL_LUBP][j];
     shell_pgrad += *n_esp * goma_ctx->fem.bf[SHELL_LUBP]->dphidxi[j][0];
   }
   shell_pgrad /= (goma_ctx->fem.fv->stangent[0][0] * goma_ctx->fem.fv->sdet);
@@ -6705,7 +6704,7 @@ int assemble_lubrication(const int EQN,  /* equation type: either R_LUBP or R_LU
   if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
     double dsigma_dx[DIM][MDE];
     load_surface_tension(dsigma_dx);
-    if (neg_elem_volume)
+    if (goma_ctx->solver.neg_elem_volume)
       return (status);
   }
 
@@ -6772,7 +6771,7 @@ int assemble_lubrication(const int EQN,  /* equation type: either R_LUBP or R_LU
 
   /* Check for negative lubrication height, if so, get out */
   if (H <= 0.0) {
-    neg_lub_height = TRUE;
+    goma_ctx->solver.neg_lub_height = TRUE;
 
 #ifdef PARALLEL
     fprintf(stderr, "\nP_%d: Lubrication height =  %e\n", goma_ctx->proc_id, H);
@@ -6886,7 +6885,7 @@ int assemble_lubrication(const int EQN,  /* equation type: either R_LUBP or R_LU
     for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
       /* this is an optimization for xfem */
-      if (xfem != NULL) {
+      if (goma_ctx->fem.xfem != NULL) {
         int xfem_active, extended_dof, base_interp, base_dof;
         xfem_dof_state(i, goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn],
                        goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape, &xfem_active,
@@ -6934,7 +6933,7 @@ int assemble_lubrication(const int EQN,  /* equation type: either R_LUBP or R_LU
     for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
       /* this is an optimization for xfem */
-      if (xfem != NULL) {
+      if (goma_ctx->fem.xfem != NULL) {
         int xfem_active, extended_dof, base_interp, base_dof;
         xfem_dof_state(i, goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn],
                        goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape, &xfem_active,
@@ -9101,7 +9100,7 @@ int assemble_film(double time,    /* present time value */
 
   /* Check for negative lubrication height, if so, get out */
   if (H <= 0.0) {
-    neg_lub_height = TRUE;
+    goma_ctx->solver.neg_lub_height = TRUE;
 
 #ifdef PARALLEL
     fprintf(stderr, "\nP_%d: Lubrication height =  %e\n", goma_ctx->proc_id, H);
@@ -10146,7 +10145,7 @@ int assemble_film_1D(double time,    /* present time value */
 
   /* Check for negative lubrication height, if so, get out */
   if (H <= 0.0) {
-    neg_lub_height = TRUE;
+    goma_ctx->solver.neg_lub_height = TRUE;
 
 #ifdef PARALLEL
     fprintf(stderr, "\nP_%d: Lubrication height =  %e\n", goma_ctx->proc_id, H);
@@ -17762,7 +17761,7 @@ int assemble_shell_tfmp(double time,      /* Time */
 
   if (h < 0.0) { // bug out
     // GOMA_EH(GOMA_ERROR, "Cannot have negative gap thicknesses!");
-    neg_lub_height = TRUE;
+    goma_ctx->solver.neg_lub_height = TRUE;
     return 2;
   }
 
@@ -19063,7 +19062,7 @@ int assemble_shell_lubrication(double time,    /* Time */
   double d_gradIIh_dmesh[DIM][DIM][MDE];
   double d_gradIIh_dnormal[DIM][DIM][MDE];
   if (h < 0.0) { // bug out if negative gap thickness
-    neg_lub_height = TRUE;
+    goma_ctx->solver.neg_lub_height = TRUE;
     return 2;
   }
   for (int k = 0; k < DIM; k++) {

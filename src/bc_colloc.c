@@ -168,7 +168,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
      * Check to see if the current local node number is owned by the
      *  processor - this is done by checking I < num_owned_nodes
      */
-    if (I < DPI_ptr->num_owned_nodes) {
+    if (I < goma_ctx->dpi->num_owned_nodes) {
 
       /*
        * Load the field variable values at this node point
@@ -224,7 +224,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
       if (goma_ctx->problem.time_integration != STEADY) {
         if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
           load_surface_tension(dsigma_dx);
-          if (neg_elem_volume)
+          if (goma_ctx->solver.neg_elem_volume)
             return (status);
         }
       }
@@ -724,7 +724,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               break;
             case TABLE_BC:
               apply_table_bc(&func, d_func, &goma_ctx->bc.bc_types[bc_input_id], time_value);
-              if (neg_elem_volume)
+              if (goma_ctx->solver.neg_elem_volume)
                 return (status);
               break;
 
@@ -735,11 +735,11 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               func = kfunc[0];
               doFullJac = 1;
               el1 = ei[pg->imtrx]->ielem;
-              nf = num_elem_friends[el1];
+              nf = goma_ctx->fem.num_elem_friends[el1];
               if (nf == 0) {
                 GOMA_EH(GOMA_ERROR, "no friends");
               };
-              el2 = elem_friends[el1][0];
+              el2 = goma_ctx->fem.elem_friends[el1][0];
               err = load_neighbor_var_data(el1, el2, n_dof, dof_map, n_dofptr, -1, xi, exo);
               doMeshMapping = 1;
               break;
@@ -751,11 +751,11 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               func = kfunc[0];
               doFullJac = 1;
               el1 = ei[pg->imtrx]->ielem;
-              nf = num_elem_friends[el1];
+              nf = goma_ctx->fem.num_elem_friends[el1];
               if (nf == 0) {
                 GOMA_EH(GOMA_ERROR, "no friends");
               };
-              el2 = elem_friends[el1][0];
+              el2 = goma_ctx->fem.elem_friends[el1][0];
               err = load_neighbor_var_data(el1, el2, n_dof, dof_map, n_dofptr, -1, xi, exo);
               doMeshMapping = 1;
 
@@ -3865,7 +3865,7 @@ int bc_eqn_index(int id,          /* local node number                 */
   NODAL_VARS_STRUCT *nv;
   struct Boundary_Condition *bc = goma_ctx->bc.bc_types + bc_input_id;
   struct BC_descriptions *bc_desc = bc->desc;
-  NODE_INFO_STRUCT *node = Nodes[I];
+  NODE_INFO_STRUCT *node = goma_ctx->fem.nodes[I];
   VARIABLE_DESCRIPTION_STRUCT *vd, *vd2 = NULL;
   nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 
@@ -4205,7 +4205,7 @@ int bc_eqn_index_stress(int id,          /* local node number                 */
   NODAL_VARS_STRUCT *nv;
   struct Boundary_Condition *bc = goma_ctx->bc.bc_types + bc_input_id;
   struct BC_descriptions *bc_desc = bc->desc;
-  NODE_INFO_STRUCT *node = Nodes[I];
+  NODE_INFO_STRUCT *node = goma_ctx->fem.nodes[I];
   VARIABLE_DESCRIPTION_STRUCT *vd;
   nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
 

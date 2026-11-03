@@ -93,9 +93,6 @@ extern "C" {
 #include "wr_dpi.h"
 #include "wr_exo.h"
 
-extern int **local_ROT_list;
-extern int rotation_allocated;
-extern Comm_Ex **cx;
 #include "bc/rotate_coordinates.h"
 
 #undef DISABLE_CPP
@@ -1123,19 +1120,19 @@ void convert_omega_h_to_goma(
   init_exo_struct(exo);
   init_dpi_struct(dpi);
 
-  if (rotation_allocated) {
+  if (goma_ctx->fem.rotation_allocated) {
     for (int i = 0; i < exo->num_nodes; i++) {
       for (int j = 0; j < NUM_VECTOR_EQUATIONS; j++) {
         free(goma_ctx->fem.rotation[i][j]);
       }
       free(goma_ctx->fem.rotation[i]);
-      free(local_ROT_list[i]);
+      free(goma_ctx->fem.local_rot_list[i]);
     }
     free(goma_ctx->fem.rotation);
     goma_ctx->fem.rotation = NULL;
-    free(local_ROT_list);
-    local_ROT_list = NULL;
-    rotation_allocated = FALSE;
+    free(goma_ctx->fem.local_rot_list);
+    goma_ctx->fem.local_rot_list = NULL;
+    goma_ctx->fem.rotation_allocated = FALSE;
   }
 
   if (goma_automatic_rotations.rotation_nodes != NULL) {
@@ -1188,14 +1185,14 @@ void convert_omega_h_to_goma(
   }
   if (dpi->num_neighbors > 0) {
     for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-      free(cx[imtrx]);
+      free(goma_ctx->cx[imtrx]);
       free(goma_ctx->request);
       free(goma_ctx->status);
-      cx[imtrx] = alloc_struct_1(Comm_Ex, DPI_ptr->num_neighbors);
+      goma_ctx->cx[imtrx] = alloc_struct_1(Comm_Ex, goma_ctx->dpi->num_neighbors);
       goma_ctx->request =
-          alloc_struct_1(MPI_Request, goma_ctx->num_requests * DPI_ptr->num_neighbors);
+          alloc_struct_1(MPI_Request, goma_ctx->num_requests * goma_ctx->dpi->num_neighbors);
       goma_ctx->status =
-          alloc_struct_1(MPI_Status, goma_ctx->num_requests * DPI_ptr->num_neighbors);
+          alloc_struct_1(MPI_Status, goma_ctx->num_requests * goma_ctx->dpi->num_neighbors);
     }
   }
 

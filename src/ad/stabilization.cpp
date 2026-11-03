@@ -35,12 +35,13 @@
 void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, ADType diffusivity, int interp_eqn) {
   ADType G[DIM][DIM];
 
-  ad_get_metric_tensor(ad_fv->B, dim, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, G);
+  ad_get_metric_tensor(goma_ctx->fem.ad_fv->B, dim,
+                       goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, G);
 
   ADType v_d_gv = 0;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      v_d_gv += fabs(ad_fv->v[i] * G[i][j] * ad_fv->v[j]);
+      v_d_gv += fabs(goma_ctx->fem.ad_fv->v[i] * G[i][j] * goma_ctx->fem.ad_fv->v[j]);
     }
   }
 
@@ -110,7 +111,7 @@ void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale) {
   ADType gamma[DIM][DIM];
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      gamma[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
+      gamma[i][j] = goma_ctx->fem.ad_fv->grad_v[i][j] + goma_ctx->fem.ad_fv->grad_v[j][i];
     }
   }
 
@@ -121,12 +122,14 @@ void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale) {
     }
   }
 
-  ad_get_metric_tensor(ad_fv->B, dim, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, G);
+  ad_get_metric_tensor(goma_ctx->fem.ad_fv->B, dim,
+                       goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, G);
 
   ADType v_d_gv = 0;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      v_d_gv += fabs((ad_fv->v[i] - ad_fv->x_dot[i]) * G[i][j] * (ad_fv->v[j] - ad_fv->x_dot[j]));
+      v_d_gv += fabs((goma_ctx->fem.ad_fv->v[i] - goma_ctx->fem.ad_fv->x_dot[i]) * G[i][j] *
+                     (goma_ctx->fem.ad_fv->v[j] - goma_ctx->fem.ad_fv->x_dot[j]));
     }
   }
 

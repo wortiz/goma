@@ -63,14 +63,14 @@ void setup_element_storage(void)
   int eb_index, do_malloc, mn;
   ELEM_BLK_STRUCT *eb_ptr;
   goma_ctx->fem.pg->imtrx = 0; // TODO: UCK
-  for (eb_index = 0; eb_index < EXO_ptr->num_elem_blocks; eb_index++) {
+  for (eb_index = 0; eb_index < goma_ctx->exo->num_elem_blocks; eb_index++) {
     do_malloc = FALSE;
     mn = goma_ctx->problem.matilda[eb_index];
     if (mn < 0) {
       continue;
     }
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
-    eb_ptr = Element_Blocks + eb_index;
+    eb_ptr = goma_ctx->fem.element_blocks + eb_index;
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES]) {
       if (goma_ctx->fem.pd->TimeIntegration == TRANSIENT) {
         do_malloc = TRUE;
@@ -420,7 +420,7 @@ void free_element_blocks(Exo_DB *exo)
  *****************************************************************/
 {
   free_element_storage(exo);
-  safer_free((void **)&Element_Blocks);
+  safer_free((void **)&goma_ctx->fem.element_blocks);
 }
 /************************************************************************/
 /************************************************************************/
@@ -440,7 +440,7 @@ void free_element_storage(Exo_DB *exo)
   int eb_index;
   ELEM_BLK_STRUCT *eb_ptr;
   for (eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-    eb_ptr = Element_Blocks + eb_index;
+    eb_ptr = goma_ctx->fem.element_blocks + eb_index;
     if (eb_ptr) {
       free_elemStorage(eb_ptr);
     }
@@ -486,8 +486,8 @@ double get_nodalSat_tnm1_FromES(int lnn)
  *****************************************************************/
 {
   int ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
-  int ip_total = Current_EB_ptr->IP_total;
-  ELEMENT_STORAGE_STRUCT *es = Current_EB_ptr->ElemStorage + ielem;
+  int ip_total = goma_ctx->fem.current_eb_ptr->IP_total;
+  ELEMENT_STORAGE_STRUCT *es = goma_ctx->fem.current_eb_ptr->ElemStorage + ielem;
   return (es->Sat_QP_tn[ip_total + lnn]);
 }
 /************************************************************************/
@@ -506,7 +506,7 @@ double get_Sat_tnm1_FromES(int ip)
  *****************************************************************/
 {
   int ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
-  ELEMENT_STORAGE_STRUCT *es = Current_EB_ptr->ElemStorage + ielem;
+  ELEMENT_STORAGE_STRUCT *es = goma_ctx->fem.current_eb_ptr->ElemStorage + ielem;
   return (es->Sat_QP_tn[ip]);
 }
 /************************************************************************/
@@ -525,8 +525,8 @@ void put_nodalSat_tn_IntoES(int lnn, double sat)
  *****************************************************************/
 {
   int ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
-  int ip_total = Current_EB_ptr->IP_total;
-  ELEMENT_STORAGE_STRUCT *es = Current_EB_ptr->ElemStorage + ielem;
+  int ip_total = goma_ctx->fem.current_eb_ptr->IP_total;
+  ELEMENT_STORAGE_STRUCT *es = goma_ctx->fem.current_eb_ptr->ElemStorage + ielem;
   es->Sat_QP_tn[ip_total + lnn] = sat;
 }
 /************************************************************************/
@@ -546,7 +546,7 @@ void put_Sat_tn_IntoES(int ip, double sat)
  *****************************************************************/
 {
   int ielem = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
-  ELEMENT_STORAGE_STRUCT *es = Current_EB_ptr->ElemStorage + ielem;
+  ELEMENT_STORAGE_STRUCT *es = goma_ctx->fem.current_eb_ptr->ElemStorage + ielem;
   es->Sat_QP_tn[ip] = sat;
 }
 /************************************************************************/

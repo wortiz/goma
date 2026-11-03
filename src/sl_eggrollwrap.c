@@ -255,8 +255,8 @@ void eggrollwrap(int *istuff, /* info for eigenvalue extraction */
   /* Display results
    */
   printf("\n-------------------------------------------------------------------------------\n");
-  if (Linear_Stability == LSA_3D_OF_2D)
-    printf("NORMAL MODE WAVE NUMBER = %g\n", LSA_3D_of_2D_wave_number);
+  if (goma_ctx->problem.linear_stability == LSA_3D_OF_2D)
+    printf("NORMAL MODE WAVE NUMBER = %g\n", goma_ctx->problem.lsa_3d_of_2d_wave_number);
   printf(" Eigensolver required %d iterations.\n", ic);
   printf(" Found %d converged eigenvalues.\n", nev_found);
   printf(" Leading Eigenvalue  = % 10.6e%+10.6e i RES = % 10.6e\n", ev_r[lead], ev_i[lead],
@@ -286,11 +286,11 @@ void eggrollwrap(int *istuff, /* info for eigenvalue extraction */
      */
     for (i = 0; i < push_mode; i++) {
       printf("\t\t Mode %4d ...", i);
-      if (LSA_3D_of_2D_wave_number == -1.0)
+      if (goma_ctx->problem.lsa_3d_of_2d_wave_number == -1.0)
         sprintf(ExoFileOut, "LSA_%d_of_%d_%s", i + 1, push_mode, save_ExoFileOut);
       else
-        sprintf(ExoFileOut, "LSA_%d_of_%d_wn=%g_%s", i + 1, push_mode, LSA_3D_of_2D_wave_number,
-                save_ExoFileOut);
+        sprintf(ExoFileOut, "LSA_%d_of_%d_wn=%g_%s", i + 1, push_mode,
+                goma_ctx->problem.lsa_3d_of_2d_wave_number, save_ExoFileOut);
 
       /* Replicate basic mesh info */
       one_base(exo, Num_Proc);

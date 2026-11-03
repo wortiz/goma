@@ -507,8 +507,9 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               goma_ctx->fem.ls->Integration_Depth > 0) {
             Subgrid_Int.active = TRUE;
 
-            get_subgrid_integration_pts(Subgrid_Tree, &element_search_grid, &Subgrid_Int.s,
-                                        &Subgrid_Int.wt, goma_ctx->fem.ls->Length_Scale);
+            get_subgrid_integration_pts(goma_ctx->fem.subgrid_tree, &element_search_grid,
+                                        &Subgrid_Int.s, &Subgrid_Int.wt,
+                                        goma_ctx->fem.ls->Length_Scale);
 
             find_surf_center_st(ielem_type, id_side, ielem_dim, surface_centroid, &s, &t);
 
@@ -4468,7 +4469,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
       goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem = elem;
 
       /*needed for saturation hyst. func. */
-      PRS_mat_ielem =
+      goma_ctx->fem.prs_mat_ielem =
           goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem -
           exo->eb_ptr[find_elemblock_index(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, exo)];
 
@@ -4588,7 +4589,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
 
       for (ip = 0; ip < ip_total; ip++) {
 
-        MMH_ip = ip;
+        goma_ctx->fem.mmh_ip = ip;
 
         if (Use_Subgrid_Integration || Use_Subelement_Integration) {
           /* 		  DPRINTF(stderr, "Subgrid integration on element : \t%d\n", elem ); */
@@ -6430,8 +6431,9 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               goma_ctx->fem.ls->Integration_Depth > 0) {
             Subgrid_Int.active = TRUE;
 
-            get_subgrid_integration_pts(Subgrid_Tree, &element_search_grid, &Subgrid_Int.s,
-                                        &Subgrid_Int.wt, goma_ctx->fem.ls->Length_Scale);
+            get_subgrid_integration_pts(goma_ctx->fem.subgrid_tree, &element_search_grid,
+                                        &Subgrid_Int.s, &Subgrid_Int.wt,
+                                        goma_ctx->fem.ls->Length_Scale);
 
             find_surf_center_st(ielem_type, id_side, ielem_dim, surface_centroid, &s, &t);
             ip_total = gather_surface_subgrid_integration_pts(

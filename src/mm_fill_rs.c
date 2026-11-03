@@ -1601,12 +1601,12 @@ int belly_flop_rs(dbl mu) /* elastic modulus - (for plane stress case) */
                   deform_grad[i][1]);
 #endif
         }
-        neg_elem_volume = TRUE;
+        goma_ctx->solver.neg_elem_volume = TRUE;
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1])
           return (2);
       }
       if (det2d <= 0.) {
-        neg_elem_volume = TRUE;
+        goma_ctx->solver.neg_elem_volume = TRUE;
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1])
           return (2);
       }
@@ -1958,7 +1958,7 @@ void f_kinematic_displacement_bc(double func[DIM],
    * Only want to apply this from a mat that HAS the rs displacement field.
    * In a fluid-solid problem, the fluid may not have such a field defined.
    */
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat) {
     mn = map_mat_index(eb_mat);
     if (goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs_model == ROTATIONAL ||
         goma_ctx->fem.elc_rs_glob[mn]->v_mesh_sfs_model == ROTATIONAL_3D) {
@@ -2143,7 +2143,7 @@ void f_kinematic_displacement_rs_bc(double func[DIM],
    * Only want to apply this from a mat that HAS the rs displacement field.
    * In a fluid-solid problem, the fluid may not have such a field defined.
    */
-  if (Current_EB_ptr->Elem_Blk_Id == eb_mat) {
+  if (goma_ctx->fem.current_eb_ptr->Elem_Blk_Id == eb_mat) {
     if (goma_ctx->fem.af->Assemble_Jacobian) {
       for (kdir = 0; kdir < goma_ctx->fem.pd->Num_Dim; kdir++) {
         for (p = 0; p < goma_ctx->fem.pd->Num_Dim; p++) {

@@ -28,9 +28,6 @@
 
 struct elem_side_bc_struct;
 
-extern int InShellElementWithParentElementCoverage;
-extern int ShellElementParentElementCoverageForVariable[MAX_VARIABLE_TYPES];
-
 EXTERN int assemble_surface_charge(double time_value, /* Time */
                                    double theta,      /* Time stepping parameter */
                                    double delta_t,    /* Time step size */

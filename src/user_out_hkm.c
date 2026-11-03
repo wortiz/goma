@@ -391,7 +391,7 @@ static void SOLN_VALUES(int var_type,
   int e_start, e_end, ielem, ielem_type, num_local_nodes, ndof = 0;
   int *i_been_there;
 
-  int num_owned_nodes = DPI_ptr->num_internal_nodes + DPI_ptr->num_boundary_nodes;
+  int num_owned_nodes = goma_ctx->dpi->num_internal_nodes + goma_ctx->dpi->num_boundary_nodes;
 
   *i_max = *i_min = 0;
 
@@ -401,17 +401,17 @@ static void SOLN_VALUES(int var_type,
    */
   i_been_there = alloc_int_1(num_owned_nodes, 0);
 
-  for (ebi = 0; ebi < EXO_ptr->num_elem_blocks; ebi++) {
+  for (ebi = 0; ebi < goma_ctx->exo->num_elem_blocks; ebi++) {
     if (goma_ctx->problem.matilda[ebi] == mn) {
-      e_start = EXO_ptr->eb_ptr[ebi];
-      e_end = EXO_ptr->eb_ptr[ebi + 1];
+      e_start = goma_ctx->exo->eb_ptr[ebi];
+      e_end = goma_ctx->exo->eb_ptr[ebi + 1];
       for (ielem = e_start; ielem < e_end; ielem++) {
-        ielem_type = Elem_Type(EXO_ptr, ielem);
+        ielem_type = Elem_Type(goma_ctx->exo, ielem);
         num_local_nodes = elem_info(NNODES, ielem_type);
         index = goma_ctx->mesh.proc_connect_ptr[ielem];
         for (n = 0; n < num_local_nodes; n++) {
           i = goma_ctx->mesh.proc_elem_connect[index++];
-          if (Nodes[i]->Type.Owned) {
+          if (goma_ctx->fem.nodes[i]->Type.Owned) {
             if (!i_been_there[i]) {
               i_been_there[i] = 1;
 
@@ -513,7 +513,7 @@ static void SOLN_TO_MOLES(double soln[],
   int i_eqn, j_eqn, k, var, mn;
   double sumwt;
   int node, ndof = 0;
-  int num_owned_nodes = (DPI_ptr->num_internal_nodes + DPI_ptr->num_boundary_nodes);
+  int num_owned_nodes = (goma_ctx->dpi->num_internal_nodes + goma_ctx->dpi->num_boundary_nodes);
   mn = matID_prop->MatID;
   for (node = 0; node < num_owned_nodes; node++) {
     if ((i_eqn = Index_Solution(node, MASS_FRACTION, 0, ndof, mn, goma_ctx->fem.pg->imtrx)) >= 0) {
@@ -574,7 +574,7 @@ GET_SOLN_LASTSPECIES(double soln[], double soln_lastSpecies[], MATRL_PROP_STRUCT
 {
   int i_eqn, k;
   int node, ndof = 0;
-  int num_owned_nodes = (DPI_ptr->num_internal_nodes + DPI_ptr->num_boundary_nodes);
+  int num_owned_nodes = (goma_ctx->dpi->num_internal_nodes + goma_ctx->dpi->num_boundary_nodes);
   int mn = matID_prop->MatID;
   ndof = mn;
   if (soln_lastSpecies == NULL)

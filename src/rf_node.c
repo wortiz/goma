@@ -203,7 +203,7 @@ void init_nodes(Exo_DB *exo, Dpi *dpi)
    *  We initialize in two steps here fore compatibility with MPSalsa
    *  where nodes structs are actually moved around dynamically.
    */
-  Nodes = (NODE_INFO_STRUCT **)alloc_ptr_1(number_proc_nodes);
+  goma_ctx->fem.nodes = (NODE_INFO_STRUCT **)alloc_ptr_1(number_proc_nodes);
   tptr = alloc_struct_1(NODE_INFO_STRUCT, number_proc_nodes);
 
   for (i = 0; i < number_proc_nodes; i++) {
@@ -211,35 +211,37 @@ void init_nodes(Exo_DB *exo, Dpi *dpi)
      *  Point to one Node_Info structure
      *  for the current node.
      */
-    Nodes[i] = tptr + i;
+    goma_ctx->fem.nodes[i] = tptr + i;
     /*
      *  None of this has been made compatible with parallel processing
      */
-    Nodes[i]->Proc_Node_Num = i;
-    Nodes[i]->First_Unknown = (int *)malloc((goma_ctx->fem.upd->Total_Num_Matrices) * sizeof(int));
-    Nodes[i]->Global_Node_Num = dpi->node_index_global[i];
-    Nodes[i]->Type.Internal = FALSE;
-    Nodes[i]->Type.Border = FALSE;
-    Nodes[i]->Type.External = FALSE;
-    Nodes[i]->Proc = goma_ctx->proc_id;
-    Nodes[i]->Nodal_Vars_Info =
+    goma_ctx->fem.nodes[i]->Proc_Node_Num = i;
+    goma_ctx->fem.nodes[i]->First_Unknown =
+        (int *)malloc((goma_ctx->fem.upd->Total_Num_Matrices) * sizeof(int));
+    goma_ctx->fem.nodes[i]->Global_Node_Num = dpi->node_index_global[i];
+    goma_ctx->fem.nodes[i]->Type.Internal = FALSE;
+    goma_ctx->fem.nodes[i]->Type.Border = FALSE;
+    goma_ctx->fem.nodes[i]->Type.External = FALSE;
+    goma_ctx->fem.nodes[i]->Proc = goma_ctx->proc_id;
+    goma_ctx->fem.nodes[i]->Nodal_Vars_Info =
         (NODAL_VARS_STRUCT **)alloc_ptr_1(goma_ctx->fem.upd->Total_Num_Matrices);
-    Nodes[i]->DBC = malloc(sizeof(short int *) * goma_ctx->fem.upd->Total_Num_Matrices);
+    goma_ctx->fem.nodes[i]->DBC =
+        malloc(sizeof(short int *) * goma_ctx->fem.upd->Total_Num_Matrices);
 
     for (k = 0; k < goma_ctx->fem.upd->Total_Num_Matrices; k++) {
-      Nodes[i]->DBC[k] = NULL;
+      goma_ctx->fem.nodes[i]->DBC[k] = NULL;
     }
 
     if (i < goma_ctx->mesh.num_internal_nodes) {
-      Nodes[i]->Type.Internal = TRUE;
-      Nodes[i]->Type.Owned = TRUE;
+      goma_ctx->fem.nodes[i]->Type.Internal = TRUE;
+      goma_ctx->fem.nodes[i]->Type.Owned = TRUE;
     } else if (i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes) {
-      Nodes[i]->Type.Border = TRUE;
-      Nodes[i]->Type.Owned = TRUE;
+      goma_ctx->fem.nodes[i]->Type.Border = TRUE;
+      goma_ctx->fem.nodes[i]->Type.Owned = TRUE;
     } else {
-      Nodes[i]->Type.External = TRUE;
-      Nodes[i]->Type.Owned = FALSE;
-      Nodes[i]->Proc = dpi->node_owner[i];
+      goma_ctx->fem.nodes[i]->Type.External = TRUE;
+      goma_ctx->fem.nodes[i]->Type.Owned = FALSE;
+      goma_ctx->fem.nodes[i]->Proc = dpi->node_owner[i];
     }
   }
 
@@ -262,7 +264,7 @@ void init_nodes(Exo_DB *exo, Dpi *dpi)
         /*
          *  Flag nodes with side sets using the EDGE bit field
          */
-        Nodes[node_num]->EDGE = 1;
+        goma_ctx->fem.nodes[node_num]->EDGE = 1;
 
         /*
          * Search for nodes that have multivalued, Discontinuous BCs
@@ -272,7 +274,7 @@ void init_nodes(Exo_DB *exo, Dpi *dpi)
           if (goma_ctx->bc.bc_types[ibc].BC_ID == exo->ss_id[ss_index]) {
             bc_desc = goma_ctx->bc.bc_types[ibc].desc;
             if (bc_desc->i_apply == CROSS_PHASE_DISCONTINUOUS) {
-              Nodes[node_num]->DISC_BNDRY = 1;
+              goma_ctx->fem.nodes[node_num]->DISC_BNDRY = 1;
             }
           }
         }
@@ -298,7 +300,7 @@ void free_nodes(void)
   int i, k;
   NODE_INFO_STRUCT *node_ptr;
   for (i = 0; i < goma_ctx->mesh.num_node; i++) {
-    node_ptr = Nodes[i];
+    node_ptr = goma_ctx->fem.nodes[i];
     free_umi_list(&(node_ptr->Mat_List));
     for (k = 0; k < goma_ctx->fem.upd->Total_Num_Matrices; k++) {
       safer_free((void **)&(node_ptr->DBC[k]));
@@ -310,8 +312,8 @@ void free_nodes(void)
   /*
    *  free_umi_list(&(node_ptr->Element_List));
    */
-  safer_free((void **)&(Nodes[0]));
-  safer_free((void **)&(Nodes));
+  safer_free((void **)&(goma_ctx->fem.nodes[0]));
+  safer_free((void **)&(goma_ctx->fem.nodes));
 }
 /************************************************************************/
 /************************************************************************/
@@ -377,7 +379,7 @@ void make_node_to_elem_matrl_map(Exo_DB *exo)
 
         for (i = 0; i < num_local_nodes; i++) {
           I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
-          add_to_umi_int_list(&(Nodes[I]->Mat_List), mn);
+          add_to_umi_int_list(&(goma_ctx->fem.nodes[I]->Mat_List), mn);
           /*
             add_to_umi_int_list(&(Nodes[I]->Element_List), ielem);
           */
@@ -389,7 +391,7 @@ void make_node_to_elem_matrl_map(Exo_DB *exo)
   print_sync_start(TRUE);
   printf("Processor %d: Num nodes = %d\n", goma_ctx->proc_id, exo->num_nodes);
   for (I = 0; I < exo->num_nodes; I++) {
-    matrlLP = &(Nodes[I]->Mat_List);
+    matrlLP = &(goma_ctx->fem.nodes[I]->Mat_List);
     printf(" %5d  %5d : ", I, matrlLP->Length);
     for (i = 0; i < matrlLP->Length; i++) {
       printf(" %d ", matrlLP->List[i]);
@@ -457,7 +459,7 @@ int node_matrl_index(const int nodeNum, const int mn)
  *  mn      = Index id of the material
  *********************************************************************/
 {
-  UMI_LIST_STRUCT *umi_ptr = &(Nodes[nodeNum]->Mat_List);
+  UMI_LIST_STRUCT *umi_ptr = &(goma_ctx->fem.nodes[nodeNum]->Mat_List);
   int index = index_umi_list(umi_ptr, mn);
   return index;
 }
@@ -480,7 +482,7 @@ int first_matID_at_node(const int nodeNum)
  *  nodeNum =  node number on this processor
  *********************************************************************/
 {
-  UMI_LIST_STRUCT *umi_ptr = &(Nodes[nodeNum]->Mat_List);
+  UMI_LIST_STRUCT *umi_ptr = &(goma_ctx->fem.nodes[nodeNum]->Mat_List);
   if (umi_ptr == NULL || umi_ptr->Length <= 0) {
     fprintf(stderr, "first_matID_at_node ERROR P_%d: mat list is empty at node %d\n",
             goma_ctx->proc_id, nodeNum);
@@ -531,8 +533,8 @@ void node_info_tmp_free(void)
    *  Loop over all of the nodes, whether owned or not, calling
    *  a function to destroy the memory
    */
-  for (I = 0; I < EXO_ptr->num_nodes; I++) {
-    node = Nodes[I];
+  for (I = 0; I < goma_ctx->exo->num_nodes; I++) {
+    node = goma_ctx->fem.nodes[I];
     if (node->Resid_Wksp) {
       nodal_resid_wksp_destroy(&(node->Resid_Wksp));
     }
@@ -723,7 +725,7 @@ void nullify_dirichlet_bcs(void)
   total_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
                 goma_ctx->mesh.num_external_nodes;
   for (i = 0; i < total_nodes; i++) {
-    node = Nodes[i];
+    node = goma_ctx->fem.nodes[i];
     if (node->DBC[goma_ctx->fem.pg->imtrx]) {
       nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
       for (v = 0; v < nv->Num_Unknowns; v++) {

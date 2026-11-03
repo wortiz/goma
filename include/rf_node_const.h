@@ -216,7 +216,6 @@ typedef struct Node_Info NODE_INFO_STRUCT;
  *  unique to each node.
  *
  */
-extern NODE_INFO_STRUCT **Nodes;
 
 /*
  * Prototypes for functions defined in rf_node.c

@@ -51,8 +51,6 @@
 #include "std.h"
 #include "stdbool.h"
 
-extern dbl *p0; /* Defined in mm_as_alloc.c */
-
 #include "mm_eh.h"
 
 #define GOMA_MM_FILL_PTRS_C
@@ -69,13 +67,6 @@ static void print_ei_index_desc(void);
  * current and old times. These are filled in every time an element
  * dofptrs are set up.
  */
-double *x_static = NULL;
-double *x_old_static = NULL;
-double *xdot_static = NULL;
-double *xdot_old_static = NULL;
-double *x_dbl_dot_static = NULL;
-double *x_dbl_dot_old_static = NULL;
-double *x_pred_static = NULL;
 
 /***********************************************************************/
 /***********************************************************************/
@@ -154,7 +145,8 @@ linkParent_ei(const int elem, const int relatedElem, const int v, const Exo_DB *
     load_ei(relatedElem, exo, goma_ctx->fem.ei[imtrx]->owningElement_ei_ptr[v], imtrx);
 
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
-    Current_EB_ptr = Element_Blocks + goma_ctx->fem.ei[imtrx]->elem_blk_index;
+    goma_ctx->fem.current_eb_ptr =
+        goma_ctx->fem.element_blocks + goma_ctx->fem.ei[imtrx]->elem_blk_index;
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];         /* Problem Description */
     goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];         /* Material Properties */
     goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];         /* Constitutive Relations */
@@ -239,7 +231,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
    * Store the  variable, current_EB_ptr, which points to the
    * current element block structure
    */
-  ei_ptr->current_EB_ptr = Element_Blocks + ei_ptr->elem_blk_index;
+  ei_ptr->current_EB_ptr = goma_ctx->fem.element_blocks + ei_ptr->elem_blk_index;
 
   /*
    * Obtain the material index from the previously calculated
@@ -257,7 +249,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
    *  the current element
    */
   if (mode == 0) {
-    Current_EB_ptr = Element_Blocks + ei_ptr->elem_blk_index;
+    goma_ctx->fem.current_eb_ptr = goma_ctx->fem.element_blocks + ei_ptr->elem_blk_index;
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];         /* Problem Description */
     goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];         /* Material Properties */
     goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];         /* Constitutive Relations */
@@ -269,7 +261,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
   } else {
     // set to zero so that it will core dump and we can see what's going on
     goma_ctx->fem.pd = 0;
-    Current_EB_ptr = 0;
+    goma_ctx->fem.current_eb_ptr = 0;
     goma_ctx->fem.mp = 0;
     goma_ctx->fem.cr = 0;
     goma_ctx->fem.elc = 0;
@@ -306,8 +298,8 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
   if (pd_ptr->e[imtrx][R_MESH1]) {
     ei_ptr->deforming_mesh = TRUE;
   } else if (is_shell_element(ei_ptr->ielem, exo)) {
-    for (i = 0; i < num_elem_friends[ei_ptr->ielem]; i++) {
-      n_eb = find_elemblock_index(elem_friends[ei_ptr->ielem][i], exo);
+    for (i = 0; i < goma_ctx->fem.num_elem_friends[ei_ptr->ielem]; i++) {
+      n_eb = find_elemblock_index(goma_ctx->fem.elem_friends[ei_ptr->ielem][i], exo);
       n_mn = goma_ctx->problem.matilda[n_eb];
       if (goma_ctx->fem.pd_glob[n_mn]->e[imtrx][R_MESH1]) {
         ei_ptr->deforming_mesh = TRUE;
@@ -355,7 +347,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
     }
   }
 
-  for (v = 0; v < Num_Var_Info_Records; v++) {
+  for (v = 0; v < goma_ctx->problem.num_var_info_records; v++) {
     ei_ptr->VDindex_to_Lvdesc[v] = -1;
   }
 
@@ -384,7 +376,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
       iLv_found = 0;
       for (ln = 0; ln < nnodes; ln++) {
         gnn = goma_ctx->mesh.proc_elem_connect[ei_ptr->iconnect_ptr + ln];
-        ni = Nodes[gnn];
+        ni = goma_ctx->fem.nodes[gnn];
         nv = ni->Nodal_Vars_Info[imtrx];
         for (i_vd = 0; i_vd < nv->Num_Var_Desc_Per_Type[v]; i_vd++) {
           index = nv->Var_Type_Index[v][i_vd];
@@ -480,7 +472,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
          */
         for (ln = 0; ln < nnodes; ln++) {
           gnn = goma_ctx->mesh.proc_elem_connect[ei_ptr->iconnect_ptr + ln];
-          ni = Nodes[gnn];
+          ni = goma_ctx->fem.nodes[gnn];
           nv = ni->Nodal_Vars_Info[imtrx];
           ei_ptr->Lvdesc_Lnn_to_Offset[i][ln] =
               get_nodal_unknown_offset(nv, v, vd->MatID, vd->Subvar_Index, NULL);
@@ -523,13 +515,13 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
          * store pointers to the Node Info structure and the Node_Vars
          * Info structure for the current global node.
          */
-        ni = Nodes[gnn];
+        ni = goma_ctx->fem.nodes[gnn];
         nv = ni->Nodal_Vars_Info[imtrx];
 
         /*
          *  Is this global node number owned by the processor?
          */
-        owned = (gnn < DPI_ptr->num_owned_nodes);
+        owned = (gnn < goma_ctx->dpi->num_owned_nodes);
 
         /*
          * For this variable at this local node, how many dofs are
@@ -879,14 +871,14 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
     }
   }
 
-  if (num_elem_friends) {
+  if (goma_ctx->fem.num_elem_friends) {
     ImAChild = is_shell_element(elem, exo);
-    if (num_elem_friends[elem] == 0) {
+    if (goma_ctx->fem.num_elem_friends[elem] == 0) {
       ImAChild = 0;
     }
     ImAParent = 0;
     if (!ImAChild) {
-      if (num_elem_friends[elem] > 0) {
+      if (goma_ctx->fem.num_elem_friends[elem] > 0) {
         ImAParent = 1;
       }
     }
@@ -896,9 +888,9 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
      */
     if (ImAChild) {
       // for (i = 0; i < num_elem_friends[elem]; i++)
-      for (i = 0; i < MIN(num_elem_friends[elem], 1); i++) {
+      for (i = 0; i < MIN(goma_ctx->fem.num_elem_friends[elem], 1); i++) {
         /* Get the element number of the parent */
-        elem_Parent = elem_friends[elem][i];
+        elem_Parent = goma_ctx->fem.elem_friends[elem][i];
         /* Get the element block number of the parent */
         n_eb_Parent = find_elemblock_index(elem_Parent, exo);
         /* Get the material number of the parent element */
@@ -924,7 +916,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
                */
               gnn_Parent = goma_ctx->mesh.proc_elem_connect[iconnect_ptr_Parent + ln];
 
-              ni = Nodes[gnn_Parent];
+              ni = goma_ctx->fem.nodes[gnn_Parent];
               nv = ni->Nodal_Vars_Info[imtrx];
 
               /*
@@ -975,10 +967,10 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
      * such as shells that have parents.
      */
     if (ImAParent) {
-      for (i = 0; i < num_elem_friends[elem]; i++) {
+      for (i = 0; i < goma_ctx->fem.num_elem_friends[elem]; i++) {
         /* Everything below here that says Parent really means Child */
         /* Get the elment number of the parent */
-        elem_Parent = elem_friends[elem][i];
+        elem_Parent = goma_ctx->fem.elem_friends[elem][i];
         /* Get the element block number of the parent */
         n_eb_Parent = find_elemblock_index(elem_Parent, exo);
         /* Get the material number of the parent element */
@@ -1006,7 +998,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
                */
               gnn = goma_ctx->mesh.proc_elem_connect[iconnect_ptr_Parent + ln];
 
-              ni = Nodes[gnn];
+              ni = goma_ctx->fem.nodes[gnn];
               nv = ni->Nodal_Vars_Info[imtrx];
 
               nunks = get_nv_ndofs_modMF(nv, v);
@@ -1037,8 +1029,8 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
     }
 
     if (is_shell_element(elem, exo)) {
-      for (i = 0; i < num_elem_friends[elem]; i++) {
-        n_eb = find_elemblock_index(elem_friends[elem][i], exo);
+      for (i = 0; i < goma_ctx->fem.num_elem_friends[elem]; i++) {
+        n_eb = find_elemblock_index(goma_ctx->fem.elem_friends[elem][i], exo);
         n_mn = goma_ctx->problem.matilda[n_eb];
         if (goma_ctx->fem.pd_glob[n_mn]->e[imtrx][R_MESH1]) {
           ei_ptr->deforming_mesh = TRUE;
@@ -1070,9 +1062,9 @@ static void load_varType_Interpolation_ptrs(const int varType,
   for (i = 0; i < dofs; i++) {
     ledof = lvdof_to_ledof_tmp[i];
     ie = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ieqn_ledof[ledof];
-    esp_ptr[i] = x_static + ie;
-    esp_old_ptr[i] = x_old_static + ie;
-    esp_dot_ptr[i] = xdot_static + ie;
+    esp_ptr[i] = goma_ctx->fem.x_static + ie;
+    esp_old_ptr[i] = goma_ctx->fem.x_old_static + ie;
+    esp_dot_ptr[i] = goma_ctx->fem.xdot_static + ie;
   }
 }
 
@@ -1094,9 +1086,9 @@ static void load_varType_Interpolation_ptrs_mat(
   for (i = 0; i < dofs; i++) {
     ledof = lvdof_to_ledof_tmp[i];
     ie = goma_ctx->fem.ei[imtrx]->ieqn_ledof[ledof];
-    esp_ptr[i] = x_static + ie;
-    esp_old_ptr[i] = x_old_static + ie;
-    esp_dot_ptr[i] = xdot_static + ie;
+    esp_ptr[i] = goma_ctx->fem.x_static + ie;
+    esp_old_ptr[i] = goma_ctx->fem.x_old_static + ie;
+    esp_dot_ptr[i] = goma_ctx->fem.xdot_static + ie;
   }
 }
 /***************************************************************************/
@@ -1162,12 +1154,12 @@ int load_elem_dofptr(const int ielem,
   int err;
   struct Level_Set_Data *ls_old;
 
-  x_static = x;
-  x_old_static = x_old;
-  xdot_static = xdot;
-  xdot_old_static = xdot_old;
-  x_dbl_dot_static = goma_ctx->fem.tran->xdbl_dot;
-  x_dbl_dot_old_static = goma_ctx->fem.tran->xdbl_dot_old;
+  goma_ctx->fem.x_static = x;
+  goma_ctx->fem.x_old_static = x_old;
+  goma_ctx->fem.xdot_static = xdot;
+  goma_ctx->fem.xdot_old_static = xdot_old;
+  goma_ctx->fem.x_dbl_dot_static = goma_ctx->fem.tran->xdbl_dot;
+  goma_ctx->fem.x_dbl_dot_old_static = goma_ctx->fem.tran->xdbl_dot_old;
 
   /* load eqn and variable number in tensor form */
   (void)stress_eqn_pointer(R_s);
@@ -1261,10 +1253,10 @@ int load_elem_dofptr(const int ielem,
              goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1] >= 0) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.esp->d[2][i] = p0;
-      goma_ctx->fem.esp_old->d[2][i] = p0;
-      goma_ctx->fem.esp_dot->d[2][i] = p0;
-      goma_ctx->fem.esp_dbl_dot->d[2][i] = p0;
+      goma_ctx->fem.esp->d[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_old->d[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_dot->d[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_dbl_dot->d[2][i] = goma_ctx->fem.p0;
     }
   }
 
@@ -1320,10 +1312,10 @@ int load_elem_dofptr(const int ielem,
              goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_SOLID1] >= 0) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_SOLID1];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.esp->d_rs[2][i] = p0;
-      goma_ctx->fem.esp_old->d_rs[2][i] = p0;
-      goma_ctx->fem.esp_dot->d_rs[2][i] = p0;
-      goma_ctx->fem.esp_dbl_dot->d_rs[2][i] = p0;
+      goma_ctx->fem.esp->d_rs[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_old->d_rs[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_dot->d_rs[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_dbl_dot->d_rs[2][i] = goma_ctx->fem.p0;
     }
   }
 
@@ -1380,9 +1372,9 @@ int load_elem_dofptr(const int ielem,
              goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_NORMAL1] >= 0) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_NORMAL1];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.esp->n[2][i] = p0;
-      goma_ctx->fem.esp_old->n[2][i] = p0;
-      goma_ctx->fem.esp_dot->n[2][i] = p0;
+      goma_ctx->fem.esp->n[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_old->n[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_dot->n[2][i] = goma_ctx->fem.p0;
     }
   }
 
@@ -1443,7 +1435,7 @@ int load_elem_dofptr(const int ielem,
                                     goma_ctx->fem.esp_dot->v[1]);
   }
 
-  if (*p0 != 0.) {
+  if (*goma_ctx->fem.p0 != 0.) {
     GOMA_EH(GOMA_ERROR, "Hey, this zero is not zero!");
   }
 
@@ -1455,9 +1447,9 @@ int load_elem_dofptr(const int ielem,
              goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] >= 0) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MOMENTUM1];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.esp->v[2][i] = p0;
-      goma_ctx->fem.esp_old->v[2][i] = p0;
-      goma_ctx->fem.esp_dot->v[2][i] = p0;
+      goma_ctx->fem.esp->v[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_old->v[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_dot->v[2][i] = goma_ctx->fem.p0;
     }
   }
 
@@ -1475,7 +1467,7 @@ int load_elem_dofptr(const int ielem,
                                     goma_ctx->fem.esp_dot->v_star[1]);
   }
 
-  if (*p0 != 0.) {
+  if (*goma_ctx->fem.p0 != 0.) {
     GOMA_EH(-1, "Hey, this zero is not zero!");
   }
 
@@ -1488,9 +1480,9 @@ int load_elem_dofptr(const int ielem,
              goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][USTAR] >= 0) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[USTAR];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.esp->v_star[2][i] = p0;
-      goma_ctx->fem.esp_old->v_star[2][i] = p0;
-      goma_ctx->fem.esp_dot->v_star[2][i] = p0;
+      goma_ctx->fem.esp->v_star[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_old->v_star[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_dot->v_star[2][i] = goma_ctx->fem.p0;
     }
   }
 
@@ -1529,9 +1521,9 @@ int load_elem_dofptr(const int ielem,
              goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_EFIELD1] >= 0) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_EFIELD1];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.esp->E_field[2][i] = p0;
-      goma_ctx->fem.esp_old->E_field[2][i] = p0;
-      goma_ctx->fem.esp_dot->E_field[2][i] = p0;
+      goma_ctx->fem.esp->E_field[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_old->E_field[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_dot->E_field[2][i] = goma_ctx->fem.p0;
     }
   }
 
@@ -1558,9 +1550,9 @@ int load_elem_dofptr(const int ielem,
              goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1] >= 0) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_PMOMENTUM1];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.esp->pv[2][i] = p0;
-      goma_ctx->fem.esp_old->pv[2][i] = p0;
-      goma_ctx->fem.esp_dot->pv[2][i] = p0;
+      goma_ctx->fem.esp->pv[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_old->pv[2][i] = goma_ctx->fem.p0;
+      goma_ctx->fem.esp_dot->pv[2][i] = goma_ctx->fem.p0;
     }
   }
 
@@ -2039,9 +2031,9 @@ int load_elem_dofptr(const int ielem,
             } else {
               dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_STRESS11];
               for (i = 0; i < dofs; i++) {
-                goma_ctx->fem.esp->S[mode][b][c][i] = p0;
-                goma_ctx->fem.esp_old->S[mode][b][c][i] = p0;
-                goma_ctx->fem.esp_dot->S[mode][b][c][i] = p0;
+                goma_ctx->fem.esp->S[mode][b][c][i] = goma_ctx->fem.p0;
+                goma_ctx->fem.esp_old->S[mode][b][c][i] = goma_ctx->fem.p0;
+                goma_ctx->fem.esp_dot->S[mode][b][c][i] = goma_ctx->fem.p0;
               }
             }
           }
@@ -2075,9 +2067,9 @@ int load_elem_dofptr(const int ielem,
         } else {
           dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_GRADIENT11];
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.esp->G[b][c][i] = p0;
-            goma_ctx->fem.esp_old->G[b][c][i] = p0;
-            goma_ctx->fem.esp_dot->G[b][c][i] = p0;
+            goma_ctx->fem.esp->G[b][c][i] = goma_ctx->fem.p0;
+            goma_ctx->fem.esp_old->G[b][c][i] = goma_ctx->fem.p0;
+            goma_ctx->fem.esp_dot->G[b][c][i] = goma_ctx->fem.p0;
           }
         }
       }
@@ -2220,7 +2212,7 @@ int load_elem_dofptr(const int ielem,
   goma_ctx->fem.ls = ls_old;
 
   /* extra setup needed for XFEM */
-  if (xfem != NULL)
+  if (goma_ctx->fem.xfem != NULL)
     load_xfem_for_elem(x, exo);
 
   return (status);
@@ -2307,16 +2299,16 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
     if (goma_ctx->fem.pg->imtrx == imtrx)
       continue;
     load_ei(ielem, exo, 0, imtrx);
-    x_static = goma_ctx->fem.pg->matrices[imtrx].x;
-    x_old_static = goma_ctx->fem.pg->matrices[imtrx].x_old;
-    xdot_static = goma_ctx->fem.pg->matrices[imtrx].xdot;
-    xdot_old_static = goma_ctx->fem.pg->matrices[imtrx].xdot_old;
-    x_dbl_dot_static = NULL;
-    x_dbl_dot_old_static = NULL;
+    goma_ctx->fem.x_static = goma_ctx->fem.pg->matrices[imtrx].x;
+    goma_ctx->fem.x_old_static = goma_ctx->fem.pg->matrices[imtrx].x_old;
+    goma_ctx->fem.xdot_static = goma_ctx->fem.pg->matrices[imtrx].xdot;
+    goma_ctx->fem.xdot_old_static = goma_ctx->fem.pg->matrices[imtrx].xdot_old;
+    goma_ctx->fem.x_dbl_dot_static = NULL;
+    goma_ctx->fem.x_dbl_dot_old_static = NULL;
 
-    double *x = x_static;
-    double *x_old = x_old_static;
-    double *xdot = xdot_static;
+    double *x = goma_ctx->fem.x_static;
+    double *x_old = goma_ctx->fem.x_old_static;
+    double *xdot = goma_ctx->fem.xdot_static;
 
     /*
      * Load up pointers into ...
@@ -2380,10 +2372,10 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
                goma_ctx->fem.upd->ep[imtrx][R_MESH1] >= 0) {
       dofs = goma_ctx->fem.ei[imtrx]->dof[R_MESH1];
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.esp->d[2][i] = p0;
-        goma_ctx->fem.esp_old->d[2][i] = p0;
-        goma_ctx->fem.esp_dot->d[2][i] = p0;
-        goma_ctx->fem.esp_dbl_dot->d[2][i] = p0;
+        goma_ctx->fem.esp->d[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_old->d[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_dot->d[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_dbl_dot->d[2][i] = goma_ctx->fem.p0;
       }
     }
 
@@ -2436,10 +2428,10 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
                goma_ctx->fem.upd->ep[imtrx][R_SOLID1] >= 0) {
       dofs = goma_ctx->fem.ei[imtrx]->dof[R_SOLID1];
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.esp->d_rs[2][i] = p0;
-        goma_ctx->fem.esp_old->d_rs[2][i] = p0;
-        goma_ctx->fem.esp_dot->d_rs[2][i] = p0;
-        goma_ctx->fem.esp_dbl_dot->d_rs[2][i] = p0;
+        goma_ctx->fem.esp->d_rs[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_old->d_rs[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_dot->d_rs[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_dbl_dot->d_rs[2][i] = goma_ctx->fem.p0;
       }
     }
 
@@ -2495,9 +2487,9 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
                goma_ctx->fem.upd->ep[imtrx][R_NORMAL1] >= 0) {
       dofs = goma_ctx->fem.ei[imtrx]->dof[R_NORMAL1];
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.esp->n[2][i] = p0;
-        goma_ctx->fem.esp_old->n[2][i] = p0;
-        goma_ctx->fem.esp_dot->n[2][i] = p0;
+        goma_ctx->fem.esp->n[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_old->n[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_dot->n[2][i] = goma_ctx->fem.p0;
       }
     }
 
@@ -2558,7 +2550,7 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
                                           goma_ctx->fem.esp_old->v[1], goma_ctx->fem.esp_dot->v[1]);
     }
 
-    if (*p0 != 0.) {
+    if (*goma_ctx->fem.p0 != 0.) {
       GOMA_EH(GOMA_ERROR, "Hey, this zero is not zero!");
     }
 
@@ -2570,9 +2562,9 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
                goma_ctx->fem.upd->ep[imtrx][R_MOMENTUM1] >= 0) {
       dofs = goma_ctx->fem.ei[imtrx]->dof[R_MOMENTUM1];
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.esp->v[2][i] = p0;
-        goma_ctx->fem.esp_old->v[2][i] = p0;
-        goma_ctx->fem.esp_dot->v[2][i] = p0;
+        goma_ctx->fem.esp->v[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_old->v[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_dot->v[2][i] = goma_ctx->fem.p0;
       }
     }
 
@@ -2590,7 +2582,7 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
                                           goma_ctx->fem.esp_dot->v_star[1]);
     }
 
-    if (*p0 != 0.) {
+    if (*goma_ctx->fem.p0 != 0.) {
       GOMA_EH(-1, "Hey, this zero is not zero!");
     }
 
@@ -2603,9 +2595,9 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
                goma_ctx->fem.upd->ep[imtrx][R_USTAR] >= 0) {
       dofs = goma_ctx->fem.ei[imtrx]->dof[R_USTAR];
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.esp->v_star[2][i] = p0;
-        goma_ctx->fem.esp_old->v_star[2][i] = p0;
-        goma_ctx->fem.esp_dot->v_star[2][i] = p0;
+        goma_ctx->fem.esp->v_star[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_old->v_star[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_dot->v_star[2][i] = goma_ctx->fem.p0;
       }
     }
 
@@ -2646,9 +2638,9 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
                goma_ctx->fem.upd->ep[imtrx][R_EFIELD1] >= 0) {
       dofs = goma_ctx->fem.ei[imtrx]->dof[R_EFIELD1];
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.esp->E_field[2][i] = p0;
-        goma_ctx->fem.esp_old->E_field[2][i] = p0;
-        goma_ctx->fem.esp_dot->E_field[2][i] = p0;
+        goma_ctx->fem.esp->E_field[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_old->E_field[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_dot->E_field[2][i] = goma_ctx->fem.p0;
       }
     }
 
@@ -2677,9 +2669,9 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
                goma_ctx->fem.upd->ep[imtrx][R_PMOMENTUM1] >= 0) {
       dofs = goma_ctx->fem.ei[imtrx]->dof[R_PMOMENTUM1];
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.esp->pv[2][i] = p0;
-        goma_ctx->fem.esp_old->pv[2][i] = p0;
-        goma_ctx->fem.esp_dot->pv[2][i] = p0;
+        goma_ctx->fem.esp->pv[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_old->pv[2][i] = goma_ctx->fem.p0;
+        goma_ctx->fem.esp_dot->pv[2][i] = goma_ctx->fem.p0;
       }
     }
 
@@ -3082,9 +3074,9 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
               } else {
                 dofs = goma_ctx->fem.ei[imtrx]->dof[R_STRESS11];
                 for (i = 0; i < dofs; i++) {
-                  goma_ctx->fem.esp->S[mode][b][c][i] = p0;
-                  goma_ctx->fem.esp_old->S[mode][b][c][i] = p0;
-                  goma_ctx->fem.esp_dot->S[mode][b][c][i] = p0;
+                  goma_ctx->fem.esp->S[mode][b][c][i] = goma_ctx->fem.p0;
+                  goma_ctx->fem.esp_old->S[mode][b][c][i] = goma_ctx->fem.p0;
+                  goma_ctx->fem.esp_dot->S[mode][b][c][i] = goma_ctx->fem.p0;
                 }
               }
             }
@@ -3114,9 +3106,9 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
           } else {
             dofs = goma_ctx->fem.ei[imtrx]->dof[R_GRADIENT11];
             for (i = 0; i < dofs; i++) {
-              goma_ctx->fem.esp->G[b][c][i] = p0;
-              goma_ctx->fem.esp_old->G[b][c][i] = p0;
-              goma_ctx->fem.esp_dot->G[b][c][i] = p0;
+              goma_ctx->fem.esp->G[b][c][i] = goma_ctx->fem.p0;
+              goma_ctx->fem.esp_old->G[b][c][i] = goma_ctx->fem.p0;
+              goma_ctx->fem.esp_dot->G[b][c][i] = goma_ctx->fem.p0;
             }
           }
         }
@@ -3187,12 +3179,12 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
     }
   }
 
-  x_static = goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x;
-  x_old_static = goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old;
-  xdot_static = goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot;
-  xdot_old_static = goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot_old;
-  x_dbl_dot_static = NULL;
-  x_dbl_dot_old_static = NULL;
+  goma_ctx->fem.x_static = goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x;
+  goma_ctx->fem.x_old_static = goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].x_old;
+  goma_ctx->fem.xdot_static = goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot;
+  goma_ctx->fem.xdot_old_static = goma_ctx->fem.pg->matrices[goma_ctx->fem.pg->imtrx].xdot_old;
+  goma_ctx->fem.x_dbl_dot_static = NULL;
+  goma_ctx->fem.x_dbl_dot_old_static = NULL;
 
   return (status);
 }

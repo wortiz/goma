@@ -748,9 +748,10 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     err = GomaSparseMatrix_SetProblemGraph(
         goma_matrix, goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx],
         goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx],
-        goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes, Nodes,
-        goma_ctx->problem.max_var_per_node, goma_ctx->problem.matilda, Inter_Mask, exo, dpi,
-        cx[goma_ctx->fem.pg->imtrx], goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
+        goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes,
+        goma_ctx->fem.nodes, goma_ctx->problem.max_var_per_node, goma_ctx->problem.matilda,
+        goma_ctx->problem.inter_mask, exo, dpi, goma_ctx->cx[goma_ctx->fem.pg->imtrx],
+        goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
     GOMA_EH(err, "GomaSparseMatrix_SetProblemGraph");
     ams[JAC]->GomaMatrixData = goma_matrix;
 #ifdef GOMA_ENABLE_PETSC
@@ -891,7 +892,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
   /* Set initial guess from an input exodus file or other method on the first call only */
   if (callnum == 1) {
-    init_vec(x, cx[0], exo, dpi, x_AC, goma_ctx->problem.n_ac, &timeValueRead);
+    init_vec(x, goma_ctx->cx[0], exo, dpi, x_AC, goma_ctx->problem.n_ac, &timeValueRead);
 
     /*
      *  Determine if we should use this time as the initial time in the simulation
@@ -964,7 +965,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     matrix_systems_mask = 1;
 
     log_msg("sl_init()...");
-    sl_init(matrix_systems_mask, ams, exo, dpi, cx[0]);
+    sl_init(matrix_systems_mask, ams, exo, dpi, goma_ctx->cx[0]);
 #ifdef GOMA_ENABLE_AZTEC
     if (goma_ctx->problem.n_ac > 0 || goma_ctx->post.nn_post_fluxes_sens > 0 ||
         goma_ctx->post.nn_post_data_sens > 0)
@@ -992,14 +993,14 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
     err = solve_nonlinear_problem(ams[JAC], x, delta_t, theta, x_old, x_older, xdot, xdot_old,
                                   resid_vector, x_update, scale, &converged, &nprint, tev, tev_post,
-                                  gv, rd, gindex, p_gsize, gvec, gvec_elem, time1, exo, dpi, cx[0],
-                                  0, &time_step_reform, is_steady_state, x_AC, x_AC_dot, time1,
-                                  resid_vector_sens, x_sens, x_sens_p, NULL);
+                                  gv, rd, gindex, p_gsize, gvec, gvec_elem, time1, exo, dpi,
+                                  goma_ctx->cx[0], 0, &time_step_reform, is_steady_state, x_AC,
+                                  x_AC_dot, time1, resid_vector_sens, x_sens, x_sens_p, NULL);
 
     if (!converged) {
       DPRINTF(stderr, "\n\tFailure: could not converge on the steady state solution.\n");
       DPRINTF(stderr, "\tSorry, I really tried...\n");
-      if (Linear_Stability) {
+      if (goma_ctx->problem.linear_stability) {
         DPRINTF(stderr, "\tThere's no point in solving the eigensystem (but I'll do it anyway).\n");
       }
     }
@@ -1147,7 +1148,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       GOMA_EH(err, "anneal_mesh() bad return.");
     }
 
-    if (Linear_Stability) {
+    if (goma_ctx->problem.linear_stability) {
       err =
           solve_stability_problem(ams[JAC], x, delta_t, theta, resid_vector, x_old, x_older, xdot,
                                   xdot_old, x_update, &converged, &nprint, tnv, tnv_post, tev,
@@ -1237,7 +1238,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
      *  since it is only used locally
      */
     x_pred = alloc_dbl_1(numProcUnknowns, 0.0);
-    x_pred_static = x_pred;
+    goma_ctx->fem.x_pred_static = x_pred;
 
     /*
      * set boundary conditions on the initial conditions to the
@@ -1257,7 +1258,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
      * they can be. That is, ask the processors that are supposed to
      * know...
      */
-    exchange_dof(cx[0], dpi, x, 0);
+    exchange_dof(goma_ctx->cx[0], dpi, x, 0);
 
     /*
      * Now copy the initial solution, x[], into the history solutions
@@ -1292,7 +1293,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
      * Do this only once if in library mode.
      */
     if (callnum == 1)
-      sl_init(matrix_systems_mask, ams, exo, dpi, cx[0]);
+      sl_init(matrix_systems_mask, ams, exo, dpi, goma_ctx->cx[0]);
 
     /*
      * make sure the Aztec was properly initialized
@@ -1407,7 +1408,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         for (w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
           if (strcmp(goma_ctx->fem.efv->field_type[w], "transient") == 0) {
             err = rd_trans_vectors_from_exoII(x_old, goma_ctx->fem.efv->file_nm[w], w, n,
-                                              &timeValueReadTrans, exo, cx[0], dpi);
+                                              &timeValueReadTrans, exo, goma_ctx->cx[0], dpi);
             if (err != 0) {
               DPRINTF(stderr, "%s: err from rd_trans_vectors_from_exoII\n", yo);
             }
@@ -1451,12 +1452,12 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       find_and_set_Dirichlet(x, xdot, exo, dpi);
 
       if (nt == 0) {
-        xfem = NULL;
+        goma_ctx->fem.xfem = NULL;
         if (goma_ctx->fem.upd->XFEM) {
-          xfem = alloc_struct_1(struct Extended_Shape_Fcn_Basics, 1);
-          xfem->ielem = -1;
-          xfem->tot_vol = alloc_dbl_1(numProcUnknowns, 0.0);
-          xfem->active_vol = alloc_dbl_1(numProcUnknowns, 0.0);
+          goma_ctx->fem.xfem = alloc_struct_1(struct Extended_Shape_Fcn_Basics, 1);
+          goma_ctx->fem.xfem->ielem = -1;
+          goma_ctx->fem.xfem->tot_vol = alloc_dbl_1(numProcUnknowns, 0.0);
+          goma_ctx->fem.xfem->active_vol = alloc_dbl_1(numProcUnknowns, 0.0);
           if (goma_ctx->fem.ls == NULL) {
             GOMA_EH(GOMA_ERROR, "Currently, XFEM requires traditional level set (not pf)");
           }
@@ -1506,7 +1507,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
               if (first_elem != -1) {
                 load_ei(first_elem, exo, 0, goma_ctx->fem.pg->imtrx);
 
-                Subgrid_Tree = create_shape_fcn_tree(goma_ctx->fem.ls->Integration_Depth);
+                goma_ctx->fem.subgrid_tree =
+                    create_shape_fcn_tree(goma_ctx->fem.ls->Integration_Depth);
                 DPRINTF(stdout, "\n\tSubgrid Integration of level set interface active.\n");
               }
             } else if (goma_ctx->fem.ls->SubElemIntegration) {
@@ -1586,7 +1588,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             GOMA_WH(-1, "Level Set Initialization method not found \n");
           } /* end of switch( eqntype )  */
 
-          exchange_dof(cx[0], dpi, x, 0);
+          exchange_dof(goma_ctx->cx[0], dpi, x, 0);
 
           if (converged) {
             switch (goma_ctx->fem.ls->Renorm_Method) {
@@ -1599,8 +1601,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
                   (goma_ctx->fem.ls->Force_Initial_Renorm ||
                    (goma_ctx->fem.ls->Renorm_Freq != 0 && goma_ctx->fem.ls->Renorm_Countdown == 0));
 
-              did_renorm = huygens_renormalization(x, xdot, num_total_nodes, exo, cx[0], dpi,
-                                                   goma_ctx->problem.num_fill_unknowns,
+              did_renorm = huygens_renormalization(x, xdot, num_total_nodes, exo, goma_ctx->cx[0],
+                                                   dpi, goma_ctx->problem.num_fill_unknowns,
                                                    numProcUnknowns, time1, Renorm_Now);
 
 #ifndef PHASE_COUPLED_FILL
@@ -1625,7 +1627,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
            * indexed by level set function.  For example, species  concentration and temperature.
            */
           if (goma_ctx->fem.ls->Num_Var_Init > 0)
-            ls_var_initialization(&x, exo, dpi, cx);
+            ls_var_initialization(&x, exo, dpi, goma_ctx->cx);
 
           /* 	  DPRINTF(stderr, "Done with ls_var_initialization.\n"); */
 
@@ -1671,9 +1673,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
           dcopy1(numProcUnknowns, x, x_oldest);
         }
 
-        exchange_dof(cx[0], dpi, x, 0);
-        exchange_dof(cx[0], dpi, x_old, 0);
-        exchange_dof(cx[0], dpi, x_oldest, 0);
+        exchange_dof(goma_ctx->cx[0], dpi, x, 0);
+        exchange_dof(goma_ctx->cx[0], dpi, x_old, 0);
+        exchange_dof(goma_ctx->cx[0], dpi, x_oldest, 0);
       }
 
       ls_old = goma_ctx->fem.ls;
@@ -1754,9 +1756,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         dcopy1(numProcUnknowns, x, x_old);
         dcopy1(numProcUnknowns, x, x_older);
         dcopy1(numProcUnknowns, x, x_oldest);
-        exchange_dof(cx[0], dpi, x, 0);
-        exchange_dof(cx[0], dpi, x_old, 0);
-        exchange_dof(cx[0], dpi, x_oldest, 0);
+        exchange_dof(goma_ctx->cx[0], dpi, x, 0);
+        exchange_dof(goma_ctx->cx[0], dpi, x_old, 0);
+        exchange_dof(goma_ctx->cx[0], dpi, x_oldest, 0);
 
       } /* end of phase function initialization */
 
@@ -1794,7 +1796,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
         if (goma_ctx->fem.tran->solid_inertia) {
           predict_solution_newmark(num_total_nodes, delta_t, x, x_old, xdot, xdot_old);
-          exchange_dof(cx[0], dpi, goma_ctx->fem.tran->xdbl_dot, 0);
+          exchange_dof(goma_ctx->cx[0], dpi, goma_ctx->fem.tran->xdbl_dot, 0);
         }
       } else {
         DPRINTF(stderr, "skipping predict_solution at time: %g %d\n", time1, nonconv_roll);
@@ -1832,7 +1834,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       }
 
       /* Now go back and correct all those dofs using XFEM */
-      if (xfem != NULL) {
+      if (goma_ctx->fem.xfem != NULL) {
         xfem_predict(num_total_nodes, numProcUnknowns, delta_t, delta_t_old, delta_t_older, theta,
                      x, x_old, x_older, x_oldest, xdot, xdot_old, xdot_older);
       }
@@ -1842,8 +1844,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
        * time, x[], exchange the degrees of freedom to update the
        * ghost node information.
        */
-      exchange_dof(cx[0], dpi, x, 0);
-      exchange_dof(cx[0], dpi, xdot, 0);
+      exchange_dof(goma_ctx->cx[0], dpi, x, 0);
+      exchange_dof(goma_ctx->cx[0], dpi, xdot, 0);
 
       if (goma_ctx->problem.n_ac > 0) {
 
@@ -1854,7 +1856,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         }
 
         for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
-          update_parameterAC(iAC, x, xdot, x_AC, cx[0], exo, dpi);
+          update_parameterAC(iAC, x, xdot, x_AC, goma_ctx->cx[0], exo, dpi);
           goma_ctx->fem.augc[iAC].tmp2 = x_AC_dot[iAC];
           goma_ctx->fem.augc[iAC].tmp3 = x_AC_old[iAC];
         }
@@ -1878,10 +1880,10 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
        *            be exchanged as well.
        */
 
-      exchange_dof(cx[0], dpi, x, 0);
-      exchange_dof(cx[0], dpi, xdot, 0);
+      exchange_dof(goma_ctx->cx[0], dpi, x, 0);
+      exchange_dof(goma_ctx->cx[0], dpi, xdot, 0);
       if (goma_ctx->fem.tran->solid_inertia)
-        exchange_dof(cx[0], dpi, goma_ctx->fem.tran->xdbl_dot, 0);
+        exchange_dof(goma_ctx->cx[0], dpi, goma_ctx->fem.tran->xdbl_dot, 0);
 
       /*
        * Save the predicted solution for the time step
@@ -1918,11 +1920,11 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
                           goma_ctx->problem.num_ext_unknowns[goma_ctx->fem.pg->imtrx];
         if (nt == 0) {
           if (goma_ctx->fem.ls->Num_Var_Init > 0)
-            ls_var_initialization(&x, exo, dpi, cx);
+            ls_var_initialization(&x, exo, dpi, goma_ctx->cx);
         }
         x_save = realloc(x_save, sizeof(double) * numProcUnknowns);
         xdot_save = realloc(xdot_save, sizeof(double) * numProcUnknowns);
-        exchange_dof(cx[0], dpi, x, 0);
+        exchange_dof(goma_ctx->cx[0], dpi, x, 0);
         dcopy1(numProcUnknowns, x, x_old);
         dcopy1(numProcUnknowns, x, x_save);
         dcopy1(numProcUnknowns, x_old, x_older);
@@ -1931,7 +1933,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         realloc_dbl_1(&x_pred, numProcUnknowns, 0);
         realloc_dbl_1(&gvec, goma_ctx->mesh.num_node, 0);
         realloc_dbl_1(&xdot_older, numProcUnknowns, 0);
-        x_pred_static = x_pred;
+        goma_ctx->fem.x_pred_static = x_pred;
         memset(xdot, 0, sizeof(double) * numProcUnknowns);
         memset(xdot_older, 0, sizeof(double) * numProcUnknowns);
         memset(x_pred, 0, sizeof(double) * numProcUnknowns);
@@ -1962,11 +1964,11 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       dcopy1(numProcUnknowns, x, x_save);
       dcopy1(numProcUnknowns, xdot, xdot_save);
       goma_ctx->fem.tran->current_theta = theta;
-      err = solve_nonlinear_problem(ams[JAC], x, delta_t, theta, x_old, x_older, xdot, xdot_old,
-                                    resid_vector, x_update, scale, &converged, &nprint, tev,
-                                    tev_post, gv, rd, gindex, p_gsize, gvec, gvec_elem, time1, exo,
-                                    dpi, cx[0], n, &time_step_reform, is_steady_state, x_AC,
-                                    x_AC_dot, time1, resid_vector_sens, x_sens, x_sens_p, NULL);
+      err = solve_nonlinear_problem(
+          ams[JAC], x, delta_t, theta, x_old, x_older, xdot, xdot_old, resid_vector, x_update,
+          scale, &converged, &nprint, tev, tev_post, gv, rd, gindex, p_gsize, gvec, gvec_elem,
+          time1, exo, dpi, goma_ctx->cx[0], n, &time_step_reform, is_steady_state, x_AC, x_AC_dot,
+          time1, resid_vector_sens, x_sens, x_sens_p, NULL);
       if (err == -1)
         converged = FALSE;
       inewton = err;
@@ -1992,8 +1994,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
        *        then xdot needs to be exchanged as well.
        */
 
-      exchange_dof(cx[0], dpi, x, 0);
-      exchange_dof(cx[0], dpi, xdot, 0);
+      exchange_dof(goma_ctx->cx[0], dpi, x, 0);
+      exchange_dof(goma_ctx->cx[0], dpi, xdot, 0);
 
       if (!converged) {
         if (inewton < goma_ctx->solver.max_newton_steps) {
@@ -2332,7 +2334,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             }
 #ifdef PARALLEL
             if (ls_adc_event) {
-              exchange_dof(cx[0], dpi, x, 0);
+              exchange_dof(goma_ctx->cx[0], dpi, x, 0);
             }
 #endif
             if (ls_adc_event && goma_ctx->fem.tran->Restart_Time_Integ_After_Renorm) {
@@ -2359,11 +2361,11 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
                 (goma_ctx->fem.ls->Renorm_Freq != 0 && goma_ctx->fem.ls->Renorm_Countdown == 0) ||
                 ls_adc_event == TRUE;
 
-            did_renorm = huygens_renormalization(x, xdot, num_total_nodes, exo, cx[0], dpi,
-                                                 goma_ctx->problem.num_fill_unknowns,
+            did_renorm = huygens_renormalization(x, xdot, num_total_nodes, exo, goma_ctx->cx[0],
+                                                 dpi, goma_ctx->problem.num_fill_unknowns,
                                                  numProcUnknowns, time2, Renorm_Now);
             if (did_renorm) {
-              exchange_dof(cx[0], dpi, x, 0);
+              exchange_dof(goma_ctx->cx[0], dpi, x, 0);
             }
             if (did_renorm && goma_ctx->fem.tran->Restart_Time_Integ_After_Renorm) {
               /* like a restart */
@@ -2405,11 +2407,11 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
               Renorm_Now =
                   (goma_ctx->fem.ls->Renorm_Freq != 0 && goma_ctx->fem.ls->Renorm_Countdown == 0);
 
-              did_renorm = huygens_renormalization(x, xdot, num_total_nodes, exo, cx[0], dpi,
-                                                   goma_ctx->problem.num_fill_unknowns,
+              did_renorm = huygens_renormalization(x, xdot, num_total_nodes, exo, goma_ctx->cx[0],
+                                                   dpi, goma_ctx->problem.num_fill_unknowns,
                                                    numProcUnknowns, time2, Renorm_Now);
               if (did_renorm) {
-                exchange_dof(cx[0], dpi, x, 0);
+                exchange_dof(goma_ctx->cx[0], dpi, x, 0);
               }
               if (did_renorm && goma_ctx->fem.tran->Restart_Time_Integ_After_Renorm) {
                 /* like a restart */
@@ -2845,7 +2847,7 @@ free_and_clear:
       free_surf_list(&(goma_ctx->fem.ls->init_surf_list));
   }
 
-  free_shape_fcn_tree(Subgrid_Tree);
+  free_shape_fcn_tree(goma_ctx->fem.subgrid_tree);
 
   if (file != NULL)
     fclose(file);
@@ -2978,7 +2980,7 @@ static void predict_solution_newmark(
   c3 = delta_t * (1. - goma_ctx->fem.tran->newmark_gamma);
   for (i = 0; i < N; i++) {
 
-    node_ptr = Nodes[i];
+    node_ptr = goma_ctx->fem.nodes[i];
     curr_mat_list = &(node_ptr->Mat_List);
     num_mat = curr_mat_list->Length;
 
@@ -3550,7 +3552,7 @@ int variable_stats(double *x, const double time, const int coord_linear) {
   DPRINTF(stdout, "=============================================================\n");
   for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
     if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var] > -1) {
-      for (i = 0; i < DPI_ptr->num_owned_nodes; i++) {
+      for (i = 0; i < goma_ctx->dpi->num_owned_nodes; i++) {
         var_somewhere = FALSE;
         for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
           idv = Index_Solution(i, var, 0, 0, mn, goma_ctx->fem.pg->imtrx);
@@ -3575,7 +3577,7 @@ int variable_stats(double *x, const double time, const int coord_linear) {
     int dir, dirj, dvar, idx;
     double coord, coordj;
     /*  Coordinate stuff first  */
-    for (i = 0; i < DPI_ptr->num_owned_nodes; i++) {
+    for (i = 0; i < goma_ctx->dpi->num_owned_nodes; i++) {
       for (dir = 0; dir < pdim; dir++) {
         var = MESH_DISPLACEMENT1 + dir;
         if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var] > -1) {
@@ -3602,7 +3604,7 @@ int variable_stats(double *x, const double time, const int coord_linear) {
       }
     }
 
-    for (i = 0; i < DPI_ptr->num_owned_nodes; i++) {
+    for (i = 0; i < goma_ctx->dpi->num_owned_nodes; i++) {
       for (dir = 0; dir < pdim; dir++) {
         dvar = MESH_DISPLACEMENT1 + dir;
         if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][dvar] > -1) {

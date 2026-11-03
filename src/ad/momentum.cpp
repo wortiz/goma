@@ -178,7 +178,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
 
   h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
 
-  d_area = ad_fv->detJ * wt * h3;
+  d_area = goma_ctx->fem.ad_fv->detJ * wt * h3;
 
   dbl supg = 0.;
 
@@ -276,19 +276,19 @@ int ad_assemble_momentum(dbl time,       /* current time */
           ADType wt_func_supg = phi_i;
           if (supg != 0.) {
             for (p = 0; p < dim; p++) {
-              wt_func += supg * tau * ad_fv->v[p] * bfm->grad_phi[i][p];
+              wt_func += supg * tau * goma_ctx->fem.ad_fv->v[p] * bfm->grad_phi[i][p];
             }
           }
 
           /* this is an optimization for xfem */
-          if (xfem != NULL) {
+          if (goma_ctx->fem.xfem != NULL) {
             GOMA_EH(GOMA_ERROR, "xfem not configured for AD Momentum");
           }
 
           ADType mass = 0.;
           if (transient_run) {
             if (mass_on) {
-              mass = ad_fv->v_dot[a] * rho;
+              mass = goma_ctx->fem.ad_fv->v_dot[a] * rho;
               mass *= -wt_func * d_area;
               mass *= mass_etm;
             }
@@ -301,10 +301,13 @@ int ad_assemble_momentum(dbl time,       /* current time */
               advection += (v[p] - x_dot[p]) * grad_v[p][a];
             }
 #else
-            advection += (ad_fv->v[0] - ad_fv->x_dot[0]) * ad_fv->grad_v[0][a];
-            advection += (ad_fv->v[1] - ad_fv->x_dot[1]) * ad_fv->grad_v[1][a];
+            advection += (goma_ctx->fem.ad_fv->v[0] - goma_ctx->fem.ad_fv->x_dot[0]) *
+                         goma_ctx->fem.ad_fv->grad_v[0][a];
+            advection += (goma_ctx->fem.ad_fv->v[1] - goma_ctx->fem.ad_fv->x_dot[1]) *
+                         goma_ctx->fem.ad_fv->grad_v[1][a];
             if (goma_ctx->problem.wim == 3)
-              advection += (ad_fv->v[2] - ad_fv->x_dot[2]) * ad_fv->grad_v[2][a];
+              advection += (goma_ctx->fem.ad_fv->v[2] - goma_ctx->fem.ad_fv->x_dot[2]) *
+                           goma_ctx->fem.ad_fv->grad_v[2][a];
 #endif
 
             advection *= rho;
@@ -316,7 +319,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
           if (diffusion_on) {
             for (p = 0; p < goma_ctx->problem.vim; p++) {
               for (q = 0; q < goma_ctx->problem.vim; q++) {
-                diffusion += ad_fv->basis[eqn].grad_phi_e[i][a][p][q] * Pi[q][p];
+                diffusion += goma_ctx->fem.ad_fv->basis[eqn].grad_phi_e[i][a][p][q] * Pi[q][p];
               }
             }
             diffusion *= -d_area;
@@ -328,16 +331,16 @@ int ad_assemble_momentum(dbl time,       /* current time */
             ADType gamma[DIM][DIM];
             for (int i = 0; i < DIM; i++) {
               for (int j = 0; j < DIM; j++) {
-                gamma[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
+                gamma[i][j] = goma_ctx->fem.ad_fv->grad_v[i][j] + goma_ctx->fem.ad_fv->grad_v[j][i];
               }
             }
             ADType mu = ad_viscosity(goma_ctx->fem.gn, gamma);
             ADType div_grad_phi = 0;
             ADType div_v = 0;
             for (int w = 0; w < dim; w++) {
-              div_grad_phi += ad_fv->basis[eqn].grad_phi_e[i][a][w][w] *
-                              ad_fv->basis[eqn].grad_phi_e[i][a][w][w];
-              div_v += ad_fv->grad_v[w][w] * ad_fv->grad_v[w][w];
+              div_grad_phi += goma_ctx->fem.ad_fv->basis[eqn].grad_phi_e[i][a][w][w] *
+                              goma_ctx->fem.ad_fv->basis[eqn].grad_phi_e[i][a][w][w];
+              div_v += goma_ctx->fem.ad_fv->grad_v[w][w] * goma_ctx->fem.ad_fv->grad_v[w][w];
             }
             graddiv = (2.0 / 3.0) * mu * div_grad_phi * mu * div_v;
             graddiv *= -d_area * h3 * wt;
@@ -394,7 +397,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
               for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
                 goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] +=
-                    resid[a][ii].dx(ad_fv->offset[var] + j);
+                    resid[a][ii].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
               } /* End of loop over j */
             } /* End of if the variale is active */
@@ -435,7 +438,7 @@ void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
       for (int ii = 0; ii < sdim; ii++) {
         for (int jj = 0; jj < sdim; jj++) {
           if (ii <= jj) {
-            b[ii][jj] = ad_fv->S[mode][ii][jj];
+            b[ii][jj] = goma_ctx->fem.ad_fv->S[mode][ii][jj];
             b[jj][ii] = b[ii][jj];
           }
         }
@@ -456,7 +459,7 @@ void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
     for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       for (int i = 0; i < sdim; i++) {
         for (int j = 0; j < sdim; j++) {
-          stress[i][j] += ad_fv->S[mode][i][j];
+          stress[i][j] += goma_ctx->fem.ad_fv->S[mode][i][j];
         }
       }
     }
@@ -530,7 +533,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   if (evss_f) {
     for (int a = 0; a < goma_ctx->problem.vim; a++) {
       for (int b = 0; b < goma_ctx->problem.vim; b++) {
-        gamma_cont[a][b] = ad_fv->G[a][b] + ad_fv->G[b][a];
+        gamma_cont[a][b] = goma_ctx->fem.ad_fv->G[a][b] + goma_ctx->fem.ad_fv->G[b][a];
       }
     }
   } else {
@@ -544,7 +547,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   /* load up shear rate tensor based on velocity */
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
-      gamma[a][b] = ad_fv->grad_v[a][b] + ad_fv->grad_v[b][a];
+      gamma[a][b] = goma_ctx->fem.ad_fv->grad_v[a][b] + goma_ctx->fem.ad_fv->grad_v[b][a];
     }
   }
 
@@ -603,7 +606,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
 
   for (int a = 0; a < goma_ctx->problem.vim; a++) {
     for (int b = 0; b < goma_ctx->problem.vim; b++) {
-      Pi[a][b] = -ad_fv->P * (double)delta(a, b) + mu * gamma[a][b];
+      Pi[a][b] = -goma_ctx->fem.ad_fv->P * (double)delta(a, b) + mu * gamma[a][b];
     }
   }
 
@@ -706,7 +709,7 @@ int ad_calc_pspg(ADType pspg[DIM],
   int pspg_local;
 
   dbl *v = goma_ctx->fem.fv->v; /* Velocity field. */
-  ADType *grad_P = ad_fv->grad_P;
+  ADType *grad_P = goma_ctx->fem.ad_fv->grad_P;
 
   /*
    * Variables for vicosity and derivative
@@ -814,7 +817,7 @@ int ad_calc_pspg(ADType pspg[DIM],
   }
 
   for (a = 0; a < goma_ctx->problem.vim; a++)
-    grad_v[a] = ad_fv->grad_v[a];
+    grad_v[a] = goma_ctx->fem.ad_fv->grad_v[a];
 
   /* load up shearrate tensor based on velocity */
   for (a = 0; a < goma_ctx->problem.vim; a++) {
@@ -835,13 +838,13 @@ int ad_calc_pspg(ADType pspg[DIM],
   for (a = 0; a < goma_ctx->problem.wim; a++) {
     if (goma_ctx->fem.pd->TimeIntegration != STEADY &&
         goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1 + a]) {
-      x_dot[a] = ad_fv->x_dot[a];
+      x_dot[a] = goma_ctx->fem.ad_fv->x_dot[a];
     } else {
       x_dot[a] = 0.;
     }
 
     if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-      v_dot[a] = ad_fv->v_dot[a];
+      v_dot[a] = goma_ctx->fem.ad_fv->v_dot[a];
     } else {
       v_dot[a] = 0.;
     }
@@ -932,10 +935,12 @@ int ad_calc_pspg(ADType pspg[DIM],
 
             for (int k = 0; k < dofs; k++) {
               if (j >= i) {
-                b[k][i][j] = ADType(ad_fv->total_ad_variables, ad_fv->offset[v_s[mode][i][j]] + k,
+                b[k][i][j] = ADType(goma_ctx->fem.ad_fv->total_ad_variables,
+                                    goma_ctx->fem.ad_fv->offset[v_s[mode][i][j]] + k,
                                     *goma_ctx->fem.esp->S[mode][i][j][k]);
               } else {
-                b[k][i][j] = ADType(ad_fv->total_ad_variables, ad_fv->offset[v_s[mode][i][j]] + k,
+                b[k][i][j] = ADType(goma_ctx->fem.ad_fv->total_ad_variables,
+                                    goma_ctx->fem.ad_fv->offset[v_s[mode][i][j]] + k,
                                     *goma_ctx->fem.esp->S[mode][j][i][k]);
               }
             }
@@ -953,9 +958,11 @@ int ad_calc_pspg(ADType pspg[DIM],
               for (int i = 0; i < dofs; i++) {
 
                 if (p <= q) {
-                  grad_S[r][p][q] += bdotb[i][p][q] * ad_fv->basis[v_s[mode][p][q]].grad_phi[i][r];
+                  grad_S[r][p][q] +=
+                      bdotb[i][p][q] * goma_ctx->fem.ad_fv->basis[v_s[mode][p][q]].grad_phi[i][r];
                 } else {
-                  grad_S[r][p][q] += bdotb[i][q][p] * ad_fv->basis[v_s[mode][q][p]].grad_phi[i][r];
+                  grad_S[r][p][q] +=
+                      bdotb[i][q][p] * goma_ctx->fem.ad_fv->basis[v_s[mode][q][p]].grad_phi[i][r];
                 }
               }
             }
@@ -1020,7 +1027,7 @@ int ad_calc_pspg(ADType pspg[DIM],
 
   if (goma_ctx->fem.pd->gv[VELOCITY_GRADIENT11]) {
     for (p = 0; p < goma_ctx->problem.wim; p++) {
-      div_G[p] = ad_fv->div_G[p];
+      div_G[p] = goma_ctx->fem.ad_fv->div_G[p];
     }
   } else {
     for (p = 0; p < goma_ctx->problem.wim; p++) {
@@ -1163,7 +1170,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
   ADType div_v = 0;
 
   for (a = 0; a < goma_ctx->problem.vim; a++) {
-    div_v += ad_fv->grad_v[a][a];
+    div_v += goma_ctx->fem.ad_fv->grad_v[a][a];
   }
 
   /*
@@ -1179,8 +1186,8 @@ int ad_assemble_continuity(dbl time_value, /* current time */
   }
 
   wt = goma_ctx->fem.fv->wt;
-  det_J = ad_fv->detJ;       /* Really, ought to be mesh eqn. */
-  h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
+  det_J = goma_ctx->fem.ad_fv->detJ; /* Really, ought to be mesh eqn. */
+  h3 = goma_ctx->fem.fv->h3;         /* Differential volume element (scales). */
 
   d_area = wt * det_J * h3;
 
@@ -1294,7 +1301,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
         for (a = 0; a < goma_ctx->problem.wim; a++) {
           meqn = R_MOMENTUM1 + a;
           if (goma_ctx->fem.pd->gv[meqn]) {
-            pressure_stabilization += ad_fv->basis[eqn].grad_phi[i][a] * pspg[a];
+            pressure_stabilization += goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][a] * pspg[a];
           }
         }
         pressure_stabilization *= d_area * ls_disable_pspg;
@@ -1320,7 +1327,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
           pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                resid[i].dx(ad_fv->offset[var] + j);
+                resid[i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
           } /* End of loop over j */
         } /* End of if the variale is active */
       }
@@ -1351,7 +1358,7 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
     }
   }
   dbl rho = density(NULL, time);
-  ADType d_area = ad_fv->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
+  ADType d_area = goma_ctx->fem.ad_fv->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
 
   ADType f[DIM];
   ad_momentum_source_term(f, time);
@@ -1359,7 +1366,7 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
   for (int a = 0; a < 3; a++) {
     for (int b = 0; b < 3; b++) {
       if (a < 2 || b < 2) {
-        grad_v[a][b] = ad_fv->grad_v[a][b];
+        grad_v[a][b] = goma_ctx->fem.ad_fv->grad_v[a][b];
       } else {
         grad_v[a][b] = 0.;
       }
@@ -1380,7 +1387,7 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
 
   for (int a = 0; a < 3; a++) {
     for (int b = 0; b < 3; b++) {
-      gamma_cont[a][b] = ad_fv->G[a][b] + ad_fv->G[b][a];
+      gamma_cont[a][b] = goma_ctx->fem.ad_fv->G[a][b] + goma_ctx->fem.ad_fv->G[b][a];
       stress[a][b] = 0.;
     }
   }
@@ -1403,7 +1410,8 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
     }
   }
 
-  ADType p = -2 * mu * (ad_fv->grad_v[0][0] + ad_fv->grad_v[1][1]) + stress[2][2];
+  ADType p = -2 * mu * (goma_ctx->fem.ad_fv->grad_v[0][0] + goma_ctx->fem.ad_fv->grad_v[1][1]) +
+             stress[2][2];
 
   for (int a = 0; a < 2; a++) {
     for (int b = 0; b < 2; b++) {
@@ -1453,7 +1461,7 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
 
           ADType mass = 0.;
           if (mass_on) {
-            mass = rho * ad_fv->film_height * ad_fv->v_dot[a];
+            mass = rho * goma_ctx->fem.ad_fv->film_height * goma_ctx->fem.ad_fv->v_dot[a];
             //  rho * ad_fv->film_height_dot * ad_fv->v[a];
             mass *= -wt_func * d_area;
             mass *= mass_etm;
@@ -1462,9 +1470,10 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
           ADType advection = 0.;
           if (advection_on) {
             for (int p = 0; p < goma_ctx->problem.wim; p++) {
-              advection += (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_v[p][a];
+              advection += (goma_ctx->fem.ad_fv->v[p] - goma_ctx->fem.ad_fv->x_dot[p]) *
+                           goma_ctx->fem.ad_fv->grad_v[p][a];
             }
-            advection *= rho * ad_fv->film_height;
+            advection *= rho * goma_ctx->fem.ad_fv->film_height;
             advection *= -wt_func * d_area;
             advection *= advection_etm;
           }
@@ -1473,10 +1482,10 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
           if (diffusion_on) {
             for (int p = 0; p < goma_ctx->problem.vim; p++) {
               for (int q = 0; q < goma_ctx->problem.vim; q++) {
-                diffusion += ad_fv->basis[eqn].grad_phi_e[i][a][p][q] * Pi[q][p];
+                diffusion += goma_ctx->fem.ad_fv->basis[eqn].grad_phi_e[i][a][p][q] * Pi[q][p];
               }
             }
-            diffusion *= -d_area * ad_fv->film_height;
+            diffusion *= -d_area * goma_ctx->fem.ad_fv->film_height;
             diffusion *= diffusion_etm;
           }
 
@@ -1485,7 +1494,7 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
            */
           ADType source = 0.0;
           if (source_on) {
-            source += ad_fv->film_height * f[a];
+            source += goma_ctx->fem.ad_fv->film_height * f[a];
             source *= wt_func * d_area;
             source *= source_etm;
           }
@@ -1529,7 +1538,7 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
               for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
                 goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] +=
-                    resid[a][ii].dx(ad_fv->offset[var] + j);
+                    resid[a][ii].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
               } /* End of loop over j */
             } /* End of if the variale is active */
@@ -1578,7 +1587,7 @@ int ad_assemble_film_height(dbl time, /* current time */
   ADType div_v = 0;
 
   for (a = 0; a < 2; a++) {
-    div_v += ad_fv->grad_v[a][a];
+    div_v += goma_ctx->fem.ad_fv->grad_v[a][a];
   }
   // div_v -= (ad_fv->grad_v[0][0] + ad_fv->grad_v[1][1]);
 
@@ -1594,8 +1603,8 @@ int ad_assemble_film_height(dbl time, /* current time */
   ad_supg_tau_shakib(supg_tau, 2, dt, 1e-9, eqn);
 
   wt = goma_ctx->fem.fv->wt;
-  det_J = ad_fv->detJ;       /* Really, ought to be mesh eqn. */
-  h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
+  det_J = goma_ctx->fem.ad_fv->detJ; /* Really, ought to be mesh eqn. */
+  h3 = goma_ctx->fem.fv->h3;         /* Differential volume element (scales). */
 
   d_area = wt * det_J * h3;
   std::vector<ADType> resid(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]);
@@ -1615,7 +1624,8 @@ int ad_assemble_film_height(dbl time, /* current time */
       phi_i = goma_ctx->fem.bf[eqn]->phi[i];
       ADType wt_func = phi_i;
       for (int a = 0; a < 2; a++) {
-        wt_func += supg_tau * (ad_fv->v[a] - ad_fv->x_dot[a]) * ad_fv->basis[eqn].grad_phi[i][a];
+        wt_func += supg_tau * (goma_ctx->fem.ad_fv->v[a] - goma_ctx->fem.ad_fv->x_dot[a]) *
+                   goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][a];
       }
 
       /*
@@ -1623,7 +1633,7 @@ int ad_assemble_film_height(dbl time, /* current time */
        */
 
       ADType mass = 0.0;
-      mass = ad_fv->film_height_dot * wt_func * d_area;
+      mass = goma_ctx->fem.ad_fv->film_height_dot * wt_func * d_area;
       mass *= mass_etm;
 
       /*
@@ -1645,16 +1655,18 @@ int ad_assemble_film_height(dbl time, /* current time */
          */
 
         for (int a = 0; a < 2; a++) {
-          advection += (ad_fv->v[a] - ad_fv->x_dot[a]) * ad_fv->grad_film_height[a];
+          advection += (goma_ctx->fem.ad_fv->v[a] - goma_ctx->fem.ad_fv->x_dot[a]) *
+                       goma_ctx->fem.ad_fv->grad_film_height[a];
         }
-        advection += div_v * ad_fv->film_height;
+        advection += div_v * goma_ctx->fem.ad_fv->film_height;
         advection *= wt_func * d_area;
         advection *= advection_etm;
       }
 
       ADType diffusion = 0.0;
       for (int a = 0; a < 2; a++) {
-        diffusion += ad_fv->basis[eqn].grad_phi[i][a] * ad_fv->grad_film_height[a];
+        diffusion += goma_ctx->fem.ad_fv->basis[eqn].grad_phi[i][a] *
+                     goma_ctx->fem.ad_fv->grad_film_height[a];
       }
       diffusion *= diffusivity * d_area;
       diffusion *= diffusion_etm;
@@ -1679,7 +1691,7 @@ int ad_assemble_film_height(dbl time, /* current time */
           pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                resid[i].dx(ad_fv->offset[var] + j);
+                resid[i].dx(goma_ctx->fem.ad_fv->offset[var] + j);
           } /* End of loop over j */
         } /* End of if the variale is active */
       }
@@ -1711,7 +1723,7 @@ ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
 
   ADType T;
   if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
-    T = ad_fv->T;
+    T = goma_ctx->fem.ad_fv->T;
   } else {
     T = goma_ctx->fem.upd->Process_Temperature;
   }
@@ -1759,7 +1771,7 @@ ADType ad_arrhenius_viscosity(struct Generalized_Newtonian *gn_local, ADType gam
 
   ADType T;
   if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
-    T = ad_fv->T;
+    T = goma_ctx->fem.ad_fv->T;
   } else {
     T = goma_ctx->fem.upd->Process_Temperature;
   }
@@ -1783,7 +1795,7 @@ ADType ad_arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
 
   ADType T;
   if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
-    T = ad_fv->T;
+    T = goma_ctx->fem.ad_fv->T;
   } else {
     T = goma_ctx->fem.upd->Process_Temperature;
   }
@@ -1829,7 +1841,7 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
   for (int a = 0; a < 3; a++) {
     for (int b = 0; b < 3; b++) {
       if (a < 2 || b < 2) {
-        grad_v[a][b] = ad_fv->grad_v[a][b];
+        grad_v[a][b] = goma_ctx->fem.ad_fv->grad_v[a][b];
       } else {
         grad_v[a][b] = 0.;
       }
@@ -1878,23 +1890,27 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
             ADType advection = 0.;
             if (advection_on) {
               advection -= grad_v[a][b];
-              advection *= -wt_func * ad_fv->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
+              advection *= -wt_func * goma_ctx->fem.ad_fv->detJ * goma_ctx->fem.fv->wt *
+                           goma_ctx->fem.fv->h3;
               advection *= advection_etm;
             }
 
             ADType diffusion = 0.;
             for (int p = 0; p < goma_ctx->problem.vim; p++) {
-              diffusion += ad_fv->basis[eqn].grad_phi_e[i][p][a][b] * ad_fv->grad_G[p][a][b];
+              diffusion += goma_ctx->fem.ad_fv->basis[eqn].grad_phi_e[i][p][a][b] *
+                           goma_ctx->fem.ad_fv->grad_G[p][a][b];
             }
-            diffusion *= 1e-7 * -ad_fv->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
+            diffusion *=
+                1e-7 * -goma_ctx->fem.ad_fv->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
 
             /*
              * Source term...
              */
             ADType source = 0.0;
             if (source_on) {
-              source += ad_fv->G[a][b];
-              source *= -wt_func * ad_fv->detJ * goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3;
+              source += goma_ctx->fem.ad_fv->G[a][b];
+              source *= -wt_func * goma_ctx->fem.ad_fv->detJ * goma_ctx->fem.fv->wt *
+                        goma_ctx->fem.fv->h3;
               source *= source_etm;
             }
 
@@ -1939,7 +1955,7 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
                 for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
                   goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] +=
-                      resid[a][b][ii].dx(ad_fv->offset[var] + j);
+                      resid[a][b][ii].dx(goma_ctx->fem.ad_fv->offset[var] + j);
 
                 } /* End of loop over j */
               } /* End of if the variale is active */
