@@ -1750,26 +1750,27 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case REPULSIVE_FORCE:
               for (a = 0; a < goma_ctx->problem.num_bc; a++) {
-                if (BC_Types[a].BC_ID != side_set_id || BC_Types[a].BC_Name < CAP_REPULSE_BC ||
-                    BC_Types[a].BC_Name > CAP_REPULSE_TABLE_BC) {
+                if (goma_ctx->bc.bc_types[a].BC_ID != side_set_id ||
+                    goma_ctx->bc.bc_types[a].BC_Name < CAP_REPULSE_BC ||
+                    goma_ctx->bc.bc_types[a].BC_Name > CAP_REPULSE_TABLE_BC) {
                   continue;
-                } else if (BC_Types[a].BC_Name == CAP_REPULSE_ROLL_BC) {
+                } else if (goma_ctx->bc.bc_types[a].BC_Name == CAP_REPULSE_ROLL_BC) {
                   double roll_rad, origin[3], dir_angle[3];
                   double hscale, repexp, P_rep, betainv;
                   double factor, t, axis_pt[3], R, kernel, tangent, dist;
                   double coord[3] = {0, 0, 0};
 
-                  roll_rad = BC_Types[a].BC_Data_Float[1];
-                  origin[0] = BC_Types[a].BC_Data_Float[2];
-                  origin[1] = BC_Types[a].BC_Data_Float[3];
-                  origin[2] = BC_Types[a].BC_Data_Float[4];
-                  dir_angle[0] = BC_Types[a].BC_Data_Float[5];
-                  dir_angle[1] = BC_Types[a].BC_Data_Float[6];
-                  dir_angle[2] = BC_Types[a].BC_Data_Float[7];
-                  hscale = BC_Types[a].BC_Data_Float[8];
-                  repexp = BC_Types[a].BC_Data_Float[9];
-                  P_rep = BC_Types[a].BC_Data_Float[10];
-                  betainv = BC_Types[a].BC_Data_Float[11];
+                  roll_rad = goma_ctx->bc.bc_types[a].BC_Data_Float[1];
+                  origin[0] = goma_ctx->bc.bc_types[a].BC_Data_Float[2];
+                  origin[1] = goma_ctx->bc.bc_types[a].BC_Data_Float[3];
+                  origin[2] = goma_ctx->bc.bc_types[a].BC_Data_Float[4];
+                  dir_angle[0] = goma_ctx->bc.bc_types[a].BC_Data_Float[5];
+                  dir_angle[1] = goma_ctx->bc.bc_types[a].BC_Data_Float[6];
+                  dir_angle[2] = goma_ctx->bc.bc_types[a].BC_Data_Float[7];
+                  hscale = goma_ctx->bc.bc_types[a].BC_Data_Float[8];
+                  repexp = goma_ctx->bc.bc_types[a].BC_Data_Float[9];
+                  P_rep = goma_ctx->bc.bc_types[a].BC_Data_Float[10];
+                  betainv = goma_ctx->bc.bc_types[a].BC_Data_Float[11];
                   /*  initialize variables */
 
                   for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
@@ -1801,7 +1802,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
                     local_Torque[b] = goma_ctx->fem.fv->x[b] * kernel;
                   }
-                } else if (BC_Types[a].BC_Name == CAP_REPULSE_TABLE_BC) {
+                } else if (goma_ctx->bc.bc_types[a].BC_Name == CAP_REPULSE_TABLE_BC) {
                   double hscale, repexp, P_rep, betainv, exp_scale;
                   double mod_factor, kernel, dist = 0, tangent;
                   double dcl_dist, slope, d_tfcn[3];
@@ -1809,12 +1810,12 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   double point[3] = {0, 0, 0};
                   double coord[3] = {0, 0, 0};
 
-                  hscale = BC_Types[a].BC_Data_Float[0];
-                  repexp = BC_Types[a].BC_Data_Float[1];
-                  P_rep = BC_Types[a].BC_Data_Float[2];
-                  betainv = BC_Types[a].BC_Data_Float[3];
-                  exp_scale = BC_Types[a].BC_Data_Float[4];
-                  dcl_node = BC_Types[a].BC_Data_Int[2];
+                  hscale = goma_ctx->bc.bc_types[a].BC_Data_Float[0];
+                  repexp = goma_ctx->bc.bc_types[a].BC_Data_Float[1];
+                  P_rep = goma_ctx->bc.bc_types[a].BC_Data_Float[2];
+                  betainv = goma_ctx->bc.bc_types[a].BC_Data_Float[3];
+                  exp_scale = goma_ctx->bc.bc_types[a].BC_Data_Float[4];
+                  dcl_node = goma_ctx->bc.bc_types[a].BC_Data_Int[2];
                   /*  initialize variables */
 
                   for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
@@ -1822,13 +1823,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   }
 
                   for (b = 0; b < goma_ctx->problem.num_bc; b++) {
-                    if (BC_Types[b].BC_Name == GD_TABLE_BC) {
+                    if (goma_ctx->bc.bc_types[b].BC_Name == GD_TABLE_BC) {
                       bc_table_id = b;
                     }
                   }
                   if (bc_table_id != -1)
-                    dist =
-                        table_distance_search(BC_Types[bc_table_id].table, coord, &slope, d_tfcn);
+                    dist = table_distance_search(goma_ctx->bc.bc_types[bc_table_id].table, coord,
+                                                 &slope, d_tfcn);
                   if (dcl_node != -1) {
                     nsp = match_nsid(dcl_node);
                     k = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp]];
@@ -1859,17 +1860,17 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   if (goma_ctx->fem.pd->Num_Dim < DIM) {
                     local_Torque[goma_ctx->fem.pd->Num_Dim] = dist * kernel;
                   }
-                } else if (BC_Types[a].BC_Name == CAP_REPULSE_BC) {
+                } else if (goma_ctx->bc.bc_types[a].BC_Name == CAP_REPULSE_BC) {
                   double repexp, P_rep, factor, denom;
                   double kernel, dist = 0;
                   double ap, bp, cp, dp;
 
                   repexp = 4.;
-                  P_rep = BC_Types[a].BC_Data_Float[0];
-                  ap = BC_Types[a].BC_Data_Float[1];
-                  bp = BC_Types[a].BC_Data_Float[2];
-                  cp = BC_Types[a].BC_Data_Float[3];
-                  dp = BC_Types[a].BC_Data_Float[4];
+                  P_rep = goma_ctx->bc.bc_types[a].BC_Data_Float[0];
+                  ap = goma_ctx->bc.bc_types[a].BC_Data_Float[1];
+                  bp = goma_ctx->bc.bc_types[a].BC_Data_Float[2];
+                  cp = goma_ctx->bc.bc_types[a].BC_Data_Float[3];
+                  dp = goma_ctx->bc.bc_types[a].BC_Data_Float[4];
                   denom = sqrt(ap * ap + bp * bp + cp * cp);
                   factor = ap * goma_ctx->fem.fv->x[0] + bp * goma_ctx->fem.fv->x[1] +
                            cp * goma_ctx->fem.fv->x[2] + dp;

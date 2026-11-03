@@ -5279,17 +5279,17 @@ int assemble_surface_stress(Exo_DB *exo, /* ptr to basic exodus ii mesh informat
   }
 
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-    if (BC_Types[ibc].BC_Name == TABLE_BC) {
+    if (goma_ctx->bc.bc_types[ibc].BC_Name == TABLE_BC) {
       /*Loop over all side sets to find a match */
       for (ins = 0; ins < exo->num_side_sets; ins++) {
-        if (goma_ctx->mesh.proc_ss_ids[ins] == BC_Types[ibc].BC_ID) {
+        if (goma_ctx->mesh.proc_ss_ids[ins] == goma_ctx->bc.bc_types[ibc].BC_ID) {
 
           /* Does it contain the element? */
           for (side_index = 0; side_index < exo->ss_num_sides[ins]; side_index++) {
 
             if (ielem == exo->ss_elem_list[exo->ss_elem_index[ins] + side_index]) {
               /* which variable is the table for? */
-              switch (BC_Types[ibc].table->f_index) {
+              switch (goma_ctx->bc.bc_types[ibc].table->f_index) {
               case POLYMER_STRESS11: {
                 table_ibc[0][0][0] = ibc;
                 break;
@@ -6007,11 +6007,11 @@ int neighbor_stress_table(Exo_DB *exo, /* ptr to basic exodus ii mesh informatio
                * \n",BC_Types[table_ibc[mode][a][b]].table->t_index[0],x_ip[0],x_ip[1]); */
 
               /*set first coordinate of x_ip to interpolation abscissa (assumes only one) */
-              if (BC_Types[table_ibc[mode][a][b]].table->t_index[0] == 1) {
+              if (goma_ctx->bc.bc_types[table_ibc[mode][a][b]].table->t_index[0] == 1) {
                 x_ip[0] = x_ip[1];
               }
-              interp_val =
-                  interpolate_table(BC_Types[table_ibc[mode][a][b]].table, x_ip, &slope, NULL);
+              interp_val = interpolate_table(goma_ctx->bc.bc_types[table_ibc[mode][a][b]].table,
+                                             x_ip, &slope, NULL);
               stress_neighbor[ip][mode][a][b] = interp_val;
 
               /* printf("mode %d a %d b %d: x %f interp_val %f \n",mode,a,b,x_ip[0],interp_val); */

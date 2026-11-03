@@ -1727,7 +1727,7 @@ int look_for_species_proptable(FILE *imp,
     /*
      * Fall through for all unimplemented cases
      */
-    if (num_MP_Tables == MAX_MP_TABLES) {
+    if (goma_ctx->bc.num_mp_tables == MAX_MP_TABLES) {
       fprintf(stderr, " Maximum MP TABLEs Exceeded");
       exit(-1);
     }
@@ -1746,9 +1746,10 @@ int look_for_species_proptable(FILE *imp,
     }
 
     table_local = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
-    MP_Tables[num_MP_Tables] = setup_table_MP(imp, table_local, search_string);
-    species_ID = MP_Tables[num_MP_Tables]->species_eq;
-    *tableindex = num_MP_Tables++;
+    goma_ctx->bc.mp_tables[goma_ctx->bc.num_mp_tables] =
+        setup_table_MP(imp, table_local, search_string);
+    species_ID = goma_ctx->bc.mp_tables[goma_ctx->bc.num_mp_tables]->species_eq;
+    *tableindex = goma_ctx->bc.num_mp_tables++;
     materialModel[species_ID] = TABLE;
 
   } else {

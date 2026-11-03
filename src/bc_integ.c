@@ -366,13 +366,14 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
        *  Create a couple of pointers to cut down on the
        *  amount of indirect addressing
        */
-      bc = BC_Types + bc_input_id;
+      bc = goma_ctx->bc.bc_types + bc_input_id;
       bc_desc = bc->desc;
 
-      ss_index = in_list(bc->BC_ID, 0, exo->num_side_sets, &(ss_to_blks[0][0]));
-      is_ns = strcmp(BC_Types[bc_input_id].Set_Type, "NS");
+      ss_index = in_list(bc->BC_ID, 0, exo->num_side_sets, &(goma_ctx->bc.ss_to_blks[0][0]));
+      is_ns = strcmp(goma_ctx->bc.bc_types[bc_input_id].Set_Type, "NS");
       if (ss_index == -1 && is_ns != 0) {
-        sprintf(Err_Msg, "Could not find BC_ID %d in ss_to_blks", BC_Types[bc_input_id].BC_ID);
+        sprintf(Err_Msg, "Could not find BC_ID %d in ss_to_blks",
+                goma_ctx->bc.bc_types[bc_input_id].BC_ID);
         GOMA_EH(GOMA_ERROR, Err_Msg);
       }
 
@@ -400,7 +401,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
       iapply = 0;
       skip_other_side = FALSE;
       if (is_ns != 0) {
-        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id == ss_to_blks[1][ss_index]) {
+        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id ==
+            goma_ctx->bc.ss_to_blks[1][ss_index]) {
           iapply = 1;
         }
       }
@@ -410,8 +412,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
        *  other words, if the side set is an external side set, we will
        *  apply the boundary condition no matter what.
        */
-      if (SS_Internal_Boundary != NULL) {
-        if (SS_Internal_Boundary[ss_index] == -1) {
+      if (goma_ctx->bc.ss_internal_boundary != NULL) {
+        if (goma_ctx->bc.ss_internal_boundary[ss_index] == -1) {
           iapply = 1;
         }
       }
@@ -509,11 +511,12 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
               second - internal boundaries with an explicit block id
               third  - internal boundaries with implicit iapply logic
           */
-          if ((SS_Internal_Boundary[ss_index] == -1 && goma_ctx->fem.pd->gv[VELOCITY1]) ||
-              (SS_Internal_Boundary[ss_index] != -1 &&
+          if ((goma_ctx->bc.ss_internal_boundary[ss_index] == -1 &&
+               goma_ctx->fem.pd->gv[VELOCITY1]) ||
+              (goma_ctx->bc.ss_internal_boundary[ss_index] != -1 &&
                bc->BC_Data_Int[0] == goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id) ||
-              (SS_Internal_Boundary[ss_index] != -1 && bc->BC_Data_Int[0] == -1 && iapply &&
-               goma_ctx->fem.pd->gv[VELOCITY1])) {
+              (goma_ctx->bc.ss_internal_boundary[ss_index] != -1 && bc->BC_Data_Int[0] == -1 &&
+               iapply && goma_ctx->fem.pd->gv[VELOCITY1])) {
             fvelo_normal_bc(func, d_func, bc->BC_Data_Float[0], contact_flag, x_dot, theta, delta_t,
                             (int)bc->BC_Name, bc->BC_Data_Float[1], bc->BC_Data_Float[2],
                             bc->BC_Data_Float[3]);
@@ -544,12 +547,12 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
               third  - internal boundaries with implicit iapply logic
           */
           if (goma_ctx->fem.ls != NULL) {
-            if ((SS_Internal_Boundary[ss_index] == -1 &&
+            if ((goma_ctx->bc.ss_internal_boundary[ss_index] == -1 &&
                  goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1]) ||
-                (SS_Internal_Boundary[ss_index] != -1 &&
+                (goma_ctx->bc.ss_internal_boundary[ss_index] != -1 &&
                  bc->BC_Data_Int[0] == goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id) ||
-                (SS_Internal_Boundary[ss_index] != -1 && bc->BC_Data_Int[0] == -1 && iapply &&
-                 goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1])) {
+                (goma_ctx->bc.ss_internal_boundary[ss_index] != -1 && bc->BC_Data_Int[0] == -1 &&
+                 iapply && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1])) {
               fvelo_tangential_ls_bc(func, d_func, bc->BC_Data_Float[0], x_dot, theta, delta_t,
                                      bc->BC_Data_Float[1], bc->BC_Data_Float[2],
                                      bc->BC_Data_Float[3]);
@@ -627,13 +630,13 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
         case VNORM_LEAK_BC:
         case KIN_CHEM_BC:
           if (iapply) {
-            kin_bc_leak(func, d_func, x_dot, theta, delta_t, bc_input_id, BC_Types);
+            kin_bc_leak(func, d_func, x_dot, theta, delta_t, bc_input_id, goma_ctx->bc.bc_types);
           }
           break;
 
         case KIN_ANTOINE_BC:
           if (iapply) {
-            kin_bc_antoine(func, d_func, x_dot, theta, delta_t, bc_input_id, BC_Types);
+            kin_bc_antoine(func, d_func, x_dot, theta, delta_t, bc_input_id, goma_ctx->bc.bc_types);
           }
           break;
 
@@ -665,14 +668,14 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
         case KIN_ELECTRODEPOSITION_BC: /*  RSL 5/28/02  */
           if (iapply) {
             kin_bc_electrodeposition(func, d_func, time_value, theta, delta_t, bc_input_id,
-                                     BC_Types);
+                                     goma_ctx->bc.bc_types);
           }
           break;
 
         case VNORM_ELECTRODEPOSITION_BC:
           if (iapply) {
             vnorm_bc_electrodeposition(func, d_func, theta, time_value, delta_t, bc_input_id,
-                                       BC_Types);
+                                       goma_ctx->bc.bc_types);
           }
           break;
 
@@ -767,21 +770,22 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           break;
 
         case Q_VELO_SLIP_BC:
-          q_velo_slip_bc(func, d_func, (int)BC_Types[bc_input_id].BC_Data_Int[0], x, xsurf, theta,
-                         delta_t);
+          q_velo_slip_bc(func, d_func, (int)goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0], x,
+                         xsurf, theta, delta_t);
           break;
 
         case NO_SLIP_BC:
         case NO_SLIP_RS_BC: /*for backward compatibility even though
                               NO_SLIP_RS was removed on 12/17/98 */
-          no_slip(func, d_func, x_dot, x_rs_dot, theta, delta_t, bc_input_id, BC_Types,
+          no_slip(func, d_func, x_dot, x_rs_dot, theta, delta_t, bc_input_id, goma_ctx->bc.bc_types,
                   (int)bc->BC_Data_Int[0], (int)bc->BC_Data_Int[1]);
           break;
 
         case VN_POROUS_BC:
-          porous_normal_velocity_bc(func, d_func, x_dot, theta, delta_t, bc_input_id, BC_Types,
-                                    (int)bc->BC_Data_Int[0], (int)bc->BC_Data_Int[1],
-                                    (int)bc->BC_Data_Int[2], bc->BC_Data_Float[0]);
+          porous_normal_velocity_bc(func, d_func, x_dot, theta, delta_t, bc_input_id,
+                                    goma_ctx->bc.bc_types, (int)bc->BC_Data_Int[0],
+                                    (int)bc->BC_Data_Int[1], (int)bc->BC_Data_Int[2],
+                                    bc->BC_Data_Float[0]);
           break;
 
         case UUSER_BC:
@@ -940,15 +944,15 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
              * because then force is calculated
              * later */
             for (dir = 0; dir < ielem_dim; dir++) {
-              pb[dir] = BC_Types[bc_input_id].BC_Data_Float[dir + 1];
+              pb[dir] = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[dir + 1];
             }
             if (ielem_dim == DIM) {
               pb[DIM - 1] = 0.0;
               /*GOMA_WH(-1,"3rd Direction bulk stress not connected to CAPILLARY BC yet...\n");*/
             }
             /*  BC_Data_Float[1]&[2] are now used for external pressure and shear stress  */
-            if (BC_Types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC) {
-              apply_table_wic_bc(func, d_func, &BC_Types[bc_input_id], time_value);
+            if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC) {
+              apply_table_wic_bc(func, d_func, &goma_ctx->bc.bc_types[bc_input_id], time_value);
               pb[0] += func[0];
             }
 
@@ -981,14 +985,15 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                                     bc->BC_Data_Float[7], &(bc->BC_Data_Float[8]),
                                     bc->BC_Data_Int[2], elem_side_bc, iconnect_ptr);
             }
-            if (BC_Types[bc_input_id].BC_Name == CAP_RECOIL_PRESS_BC) {
+            if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_RECOIL_PRESS_BC) {
               apply_vapor_recoil(
-                  cfunc, d_cfunc, BC_Types[bc_input_id].BC_Data_Float[3],
-                  BC_Types[bc_input_id].BC_Data_Float[4], BC_Types[bc_input_id].BC_Data_Float[5],
-                  BC_Types[bc_input_id].BC_Data_Float[6], BC_Types[bc_input_id].BC_Data_Float[7],
-                  elem_side_bc, iconnect_ptr);
+                  cfunc, d_cfunc, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5],
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6],
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[7], elem_side_bc, iconnect_ptr);
             }
-            if (BC_Types[bc_input_id].BC_Name == CAPILLARY_SHEAR_VISC_BC) {
+            if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAPILLARY_SHEAR_VISC_BC) {
               apply_surface_viscosity(cfunc, d_cfunc, bc->BC_Data_Float[0], bc->BC_Data_Float[1],
                                       bc->BC_Data_Float[2], bc->BC_Data_Float[3], time_value,
                                       elem_side_bc, wt, xi, exo, iconnect_ptr);
@@ -1074,7 +1079,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           break;
 
         case SHELL_CONC_LS_BC:
-          if (goma_ctx->fem.ls != NULL && SS_Internal_Boundary[ss_index] == -1) {
+          if (goma_ctx->fem.ls != NULL && goma_ctx->bc.ss_internal_boundary[ss_index] == -1) {
             shell_conc_ls_bc(func, d_func, bc->BC_Data_Int[0], bc->BC_Data_Float[0],
                              bc->BC_Data_Float[1], (int)bc->BC_Name, time_value, delta_t, xi, exo);
             surface_determinant_and_normal(
@@ -1307,80 +1312,103 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
         case YFLUX_ANTOINE_BC:
           if (iapply) {
-            mass_flux_surf_antoine_bc(func, d_func, x_dot, theta, delta_t, bc_input_id, BC_Types);
+            mass_flux_surf_antoine_bc(func, d_func, x_dot, theta, delta_t, bc_input_id,
+                                      goma_ctx->bc.bc_types);
           }
           break;
 
         case YFLUX_BV_BC:
           if (iapply) {
-            mass_flux_BV_surf_bc(
-                func, d_func, BC_Types[bc_input_id].BC_Data_Int[0],
-                BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[1],
-                BC_Types[bc_input_id].BC_Data_Float[2], BC_Types[bc_input_id].BC_Data_Float[3],
-                BC_Types[bc_input_id].BC_Data_Float[4], BC_Types[bc_input_id].BC_Data_Float[5],
-                BC_Types[bc_input_id].BC_Data_Float[6], delta_t, theta);
+            mass_flux_BV_surf_bc(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5],
+                                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6], delta_t,
+                                 theta);
           }
           break;
 
         case YFLUX_HOR_BC:
           if (iapply) {
-            mass_flux_HOR_surf_bc(
-                func, d_func, BC_Types[bc_input_id].BC_Data_Int[0],
-                BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[1],
-                BC_Types[bc_input_id].BC_Data_Float[2], BC_Types[bc_input_id].BC_Data_Float[3],
-                BC_Types[bc_input_id].BC_Data_Float[4], BC_Types[bc_input_id].BC_Data_Float[5],
-                BC_Types[bc_input_id].BC_Data_Float[6], BC_Types[bc_input_id].BC_Data_Float[7],
-                BC_Types[bc_input_id].BC_Data_Float[8], BC_Types[bc_input_id].BC_Data_Float[9],
-                delta_t, theta);
+            mass_flux_HOR_surf_bc(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[7],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[8],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[9], delta_t,
+                                  theta);
           }
           break;
 
         case YFLUX_ORR_BC:
           if (iapply) {
-            mass_flux_ORR_surf_bc(
-                func, d_func, BC_Types[bc_input_id].BC_Data_Int[0],
-                BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[1],
-                BC_Types[bc_input_id].BC_Data_Float[2], BC_Types[bc_input_id].BC_Data_Float[3],
-                BC_Types[bc_input_id].BC_Data_Float[4], BC_Types[bc_input_id].BC_Data_Float[5],
-                BC_Types[bc_input_id].BC_Data_Float[6], BC_Types[bc_input_id].BC_Data_Float[7],
-                BC_Types[bc_input_id].BC_Data_Float[8], delta_t, theta);
+            mass_flux_ORR_surf_bc(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[7],
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[8], delta_t,
+                                  theta);
           }
           break;
 
         case YFLUX_H2O_ANODE_BC:
           if (iapply) {
             mass_flux_H2O_ANODE_surf_bc(
-                func, d_func, BC_Types[bc_input_id].BC_Data_Int[0],
-                BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[1],
-                BC_Types[bc_input_id].BC_Data_Float[2], BC_Types[bc_input_id].BC_Data_Float[3],
-                BC_Types[bc_input_id].BC_Data_Float[4], BC_Types[bc_input_id].BC_Data_Float[5],
-                BC_Types[bc_input_id].BC_Data_Float[6], BC_Types[bc_input_id].BC_Data_Float[7],
-                delta_t, theta);
+                func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[7], delta_t, theta);
           }
           break;
 
         case YFLUX_H2O_CATHODE_BC:
           if (iapply) {
             mass_flux_H2O_CATHODE_surf_bc(
-                func, d_func, BC_Types[bc_input_id].BC_Data_Int[0],
-                BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[1],
-                BC_Types[bc_input_id].BC_Data_Float[2], BC_Types[bc_input_id].BC_Data_Float[3],
-                BC_Types[bc_input_id].BC_Data_Float[4], BC_Types[bc_input_id].BC_Data_Float[5],
-                BC_Types[bc_input_id].BC_Data_Float[6], BC_Types[bc_input_id].BC_Data_Float[7],
-                delta_t, theta);
+                func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[7], delta_t, theta);
           }
           break;
 
         case YFLUX_SULFIDATION_BC:
           if (iapply) {
             mass_flux_SULFIDATION_surf_bc(
-                func, d_func, BC_Types[bc_input_id].BC_Data_Int[2],
-                BC_Types[bc_input_id].BC_Data_Int[0], BC_Types[bc_input_id].BC_Data_Float[0],
-                BC_Types[bc_input_id].BC_Data_Float[1], BC_Types[bc_input_id].BC_Data_Float[2],
-                BC_Types[bc_input_id].BC_Data_Float[3], BC_Types[bc_input_id].BC_Data_Float[4],
-                BC_Types[bc_input_id].BC_Data_Float[5], BC_Types[bc_input_id].BC_Data_Float[6],
-                BC_Types[bc_input_id].BC_Data_Float[7], BC_Types[bc_input_id].BC_Data_Float[8],
-                BC_Types[bc_input_id].BC_Data_Float[9], delta_t, theta);
+                func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[2],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[7],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[8],
+                goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[9], delta_t, theta);
           }
           break;
 
@@ -1437,13 +1465,13 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           break;
 
         case YUSER_BC:
-          yuser_surf(func, d_func, BC_Types[bc_input_id].BC_Data_Int[0], BC_Types[bc_input_id].u_BC,
-                     time_intermediate);
+          yuser_surf(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                     goma_ctx->bc.bc_types[bc_input_id].u_BC, time_intermediate);
           break;
 
         case YFLUX_ALLOY_BC:
-          mass_flux_alloy_surf(func, d_func, BC_Types[bc_input_id].BC_Data_Int[0],
-                               BC_Types[bc_input_id].u_BC, time_intermediate);
+          mass_flux_alloy_surf(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                               goma_ctx->bc.bc_types[bc_input_id].u_BC, time_intermediate);
           break;
 
         case SURFACE_CHARGE_BC:
@@ -1468,16 +1496,17 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           break;
 
         case VP_EQUIL_BC:
-          porous_vapor_equil_bc(func, d_func, x_dot, theta, delta_t, bc_input_id, BC_Types,
-                                (int)bc->BC_Data_Int[0], (int)bc->BC_Data_Int[1],
-                                (int)bc->BC_Data_Int[2], bc->BC_Data_Float[0]);
+          porous_vapor_equil_bc(func, d_func, x_dot, theta, delta_t, bc_input_id,
+                                goma_ctx->bc.bc_types, (int)bc->BC_Data_Int[0],
+                                (int)bc->BC_Data_Int[1], (int)bc->BC_Data_Int[2],
+                                bc->BC_Data_Float[0]);
           break;
 
         case POROUS_GAS_BC:
-          put_gas_flux_in_pores(func, d_func, x_dot, theta, delta_t, bc_input_id, BC_Types,
-                                (int)bc->BC_Data_Int[0], (int)bc->BC_Data_Int[1],
-                                (int)bc->BC_Data_Int[2], bc->BC_Data_Float[0],
-                                bc->BC_Data_Float[1]);
+          put_gas_flux_in_pores(func, d_func, x_dot, theta, delta_t, bc_input_id,
+                                goma_ctx->bc.bc_types, (int)bc->BC_Data_Int[0],
+                                (int)bc->BC_Data_Int[1], (int)bc->BC_Data_Int[2],
+                                bc->BC_Data_Float[0], bc->BC_Data_Float[1]);
           break;
         case POR_LIQ_FLUX_FILL_BC:
           por_liq_flux_fill(func, d_func, theta, delta_t, (int)bc->BC_Data_Int[0],
@@ -1487,44 +1516,51 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
           break;
         case POROUS_LIQ_FLUX_CONST_BC: /* no need to call function - this is too easy */
-          *func = BC_Types[bc_input_id].BC_Data_Float[0];
+          *func = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0];
           break;
 
         case POROUS_GAS_FLUX_CONST_BC: /* no need to call function - this is too easy */
-          *func = BC_Types[bc_input_id].BC_Data_Float[0];
+          *func = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0];
           break;
 
         case QRAD_BC:
-          qrad_surf(func, d_func, BC_Types[bc_input_id].BC_Data_Float[0],
-                    BC_Types[bc_input_id].BC_Data_Float[1], BC_Types[bc_input_id].BC_Data_Float[2],
-                    BC_Types[bc_input_id].BC_Data_Float[3], BC_Types[bc_input_id].BC_Data_Float[4],
-                    BC_Types[bc_input_id].BC_Data_Int[2], bc_input_id, time_value);
+          qrad_surf(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[2], bc_input_id, time_value);
           break;
 
         case QCONV_BC:
-          qrad_surf(func, d_func, BC_Types[bc_input_id].BC_Data_Float[0],
-                    BC_Types[bc_input_id].BC_Data_Float[1], 0., 0., 0., 0, bc_input_id, time_value);
+          qrad_surf(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1], 0., 0., 0., 0, bc_input_id,
+                    time_value);
           break;
 
         case QRAD_REPULSE_ROLL_BC:
-          qrad_surf_repulse(
-              func, d_func, BC_Types[bc_input_id].BC_Data_Float[0],
-              BC_Types[bc_input_id].BC_Data_Float[1], BC_Types[bc_input_id].BC_Data_Float[2],
-              BC_Types[bc_input_id].BC_Data_Float[3], BC_Types[bc_input_id].BC_Data_Float[4],
-              &(BC_Types[bc_input_id].BC_Data_Float[5]), &(BC_Types[bc_input_id].BC_Data_Float[8]),
-              BC_Types[bc_input_id].BC_Data_Float[11], BC_Types[bc_input_id].BC_Data_Float[12],
-              BC_Types[bc_input_id].BC_Data_Float[13], BC_Types[bc_input_id].BC_Data_Float[14]);
+          qrad_surf_repulse(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                            &(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5]),
+                            &(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[8]),
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[11],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[12],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[13],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[14]);
           break;
 
         case QUSER_BC:
-          quser_surf(func, d_func, BC_Types[bc_input_id].u_BC, time_intermediate);
+          quser_surf(func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC, time_intermediate);
           break;
         case Q_LASER_WELD_BC:
-          qlaser_surf(func, d_func, BC_Types[bc_input_id].u_BC, x, time_intermediate);
+          qlaser_surf(func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC, x, time_intermediate);
           break;
 
         case Q_VAPOR_BC:
-          q_vapor(func, d_func, BC_Types[bc_input_id].u_BC, x, time_intermediate);
+          q_vapor(func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC, x, time_intermediate);
           break;
 
         case QSIDE_BC: /* no need to call function - this is too easy */
@@ -1640,7 +1676,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
         case LATENT_HEAT_BC:
           if (iapply) {
-            lat_heat_bc(func, d_func, x_dot, theta, delta_t, bc_input_id, BC_Types);
+            lat_heat_bc(func, d_func, x_dot, theta, delta_t, bc_input_id, goma_ctx->bc.bc_types);
             if (neg_elem_volume)
               return (status);
           }
@@ -1648,7 +1684,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
         case LATENT_HEAT_INTERNAL_BC:
           if (iapply) {
-            lat_heat_internal_bc(func, d_func, theta, delta_t, bc_input_id, BC_Types);
+            lat_heat_internal_bc(func, d_func, theta, delta_t, bc_input_id, goma_ctx->bc.bc_types);
           }
           break;
 
@@ -1673,36 +1709,41 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           break;
 
         case FILL_CA_BC:
-          apply_CA_FILL(func, d_func, BC_Types[bc_input_id].BC_Data_Float[0]);
+          apply_CA_FILL(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
           break;
 
         case WETTING_TENSION_BC:
-          apply_wetting_tension(func, d_func, BC_Types[bc_input_id].BC_Data_Float[0]);
+          apply_wetting_tension(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
           break;
 
         case WETTING_SPEED_LIN_BC:
-          apply_wetting_velocity(
-              func, d_func, elem_side_bc->id_side, ielem_type,
-              BC_Types[bc_input_id].BC_Data_Float[3], &(BC_Types[bc_input_id].BC_Data_Float[4]),
-              BC_Types[bc_input_id].BC_Data_Float[2], BC_Types[bc_input_id].BC_Data_Float[0],
-              BC_Types[bc_input_id].BC_Data_Float[1]);
+          apply_wetting_velocity(func, d_func, elem_side_bc->id_side, ielem_type,
+                                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                                 &(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4]),
+                                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1]);
           break;
         case LINEAR_WETTING_SIC_BC:
-          apply_linear_wetting_sic(
-              func, d_func, delta_t, theta, elem_side_bc->id_side, ielem_type,
-              BC_Types[bc_input_id].BC_Data_Float[3], &(BC_Types[bc_input_id].BC_Data_Float[4]),
-              BC_Types[bc_input_id].BC_Data_Float[2], BC_Types[bc_input_id].BC_Data_Float[0],
-              BC_Types[bc_input_id].BC_Data_Float[1], BC_Types[bc_input_id].BC_Data_Float[7]);
+          apply_linear_wetting_sic(func, d_func, delta_t, theta, elem_side_bc->id_side, ielem_type,
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                                   &(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4]),
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[7]);
           break;
         case WETTING_SPEED_BLAKE_BC:
         case WETTING_SPEED_HOFFMAN_BC:
         case WETTING_SPEED_COX_BC:
         case WETTING_SPEED_SHIK_BC:
-          apply_blake_wetting_velocity(
-              func, d_func, (int)bc->BC_Name, elem_side_bc->id_side, ielem_type,
-              BC_Types[bc_input_id].BC_Data_Float[4], BC_Types[bc_input_id].BC_Data_Float[3],
-              BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[1],
-              BC_Types[bc_input_id].BC_Data_Float[2]);
+          apply_blake_wetting_velocity(func, d_func, (int)bc->BC_Name, elem_side_bc->id_side,
+                                       ielem_type,
+                                       goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                                       goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                                       goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                                       goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                                       goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2]);
 
           break;
         case BLAKE_DIRICH_ROLL_BC:
@@ -1713,41 +1754,45 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
         case COX_DIRICHLET_BC: { /* trying to find wall velocity, assume velo_normal=0 */
           double wall_velo[DIM], theta_max = 180.0;
           int i1;
-          wall_velo[0] = BC_Types[bc_input_id].BC_Data_Float[5];
-          wall_velo[1] = BC_Types[bc_input_id].BC_Data_Float[6];
-          wall_velo[2] = BC_Types[bc_input_id].BC_Data_Float[7];
+          wall_velo[0] = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5];
+          wall_velo[1] = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6];
+          wall_velo[2] = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[7];
           for (i1 = 0; i1 < goma_ctx->problem.num_bc; i1++) {
-            if (BC_Types[i1].BC_ID == bc->BC_ID) {
-              switch (BC_Types[i1].BC_Name) {
+            if (goma_ctx->bc.bc_types[i1].BC_ID == bc->BC_ID) {
+              switch (goma_ctx->bc.bc_types[i1].BC_Name) {
               case VELO_TANGENT_BC:
               case VELO_STREAMING_BC:
-                wall_velo[0] = goma_ctx->fem.fv->snormal[1] * BC_Types[i1].BC_Data_Float[0];
-                wall_velo[1] = -goma_ctx->fem.fv->snormal[0] * BC_Types[i1].BC_Data_Float[0];
+                wall_velo[0] =
+                    goma_ctx->fem.fv->snormal[1] * goma_ctx->bc.bc_types[i1].BC_Data_Float[0];
+                wall_velo[1] =
+                    -goma_ctx->fem.fv->snormal[0] * goma_ctx->bc.bc_types[i1].BC_Data_Float[0];
                 break;
               case VELO_SLIP_BC:
               case VELO_SLIP_FLUID_BC:
               case AIR_FILM_BC:
-                wall_velo[0] = BC_Types[i1].BC_Data_Float[1];
-                wall_velo[1] = BC_Types[i1].BC_Data_Float[2];
+                wall_velo[0] = goma_ctx->bc.bc_types[i1].BC_Data_Float[1];
+                wall_velo[1] = goma_ctx->bc.bc_types[i1].BC_Data_Float[2];
                 break;
               case VELO_SLIP_ROT_BC:
               case VELO_SLIP_ROT_FLUID_BC:
               case AIR_FILM_ROT_BC:
-                wall_velo[0] = BC_Types[i1].BC_Data_Float[1] *
-                               (goma_ctx->fem.fv->x[1] - BC_Types[i1].BC_Data_Float[3]);
-                wall_velo[1] = BC_Types[i1].BC_Data_Float[1] *
-                               (goma_ctx->fem.fv->x[0] - BC_Types[i1].BC_Data_Float[2]);
+                wall_velo[0] =
+                    goma_ctx->bc.bc_types[i1].BC_Data_Float[1] *
+                    (goma_ctx->fem.fv->x[1] - goma_ctx->bc.bc_types[i1].BC_Data_Float[3]);
+                wall_velo[1] =
+                    goma_ctx->bc.bc_types[i1].BC_Data_Float[1] *
+                    (goma_ctx->fem.fv->x[0] - goma_ctx->bc.bc_types[i1].BC_Data_Float[2]);
                 break;
               case VELO_TANGENT_USER_BC:
-                wall_velo[0] =
-                    velo_vary_fnc(UVARY_BC, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
-                                  goma_ctx->fem.fv->x[2], BC_Types[i1].u_BC, time_value);
-                wall_velo[1] =
-                    velo_vary_fnc(VVARY_BC, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
-                                  goma_ctx->fem.fv->x[2], BC_Types[i1].u_BC, time_value);
-                wall_velo[2] =
-                    velo_vary_fnc(WVARY_BC, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
-                                  goma_ctx->fem.fv->x[2], BC_Types[i1].u_BC, time_value);
+                wall_velo[0] = velo_vary_fnc(UVARY_BC, goma_ctx->fem.fv->x[0],
+                                             goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2],
+                                             goma_ctx->bc.bc_types[i1].u_BC, time_value);
+                wall_velo[1] = velo_vary_fnc(VVARY_BC, goma_ctx->fem.fv->x[0],
+                                             goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2],
+                                             goma_ctx->bc.bc_types[i1].u_BC, time_value);
+                wall_velo[2] = velo_vary_fnc(WVARY_BC, goma_ctx->fem.fv->x[0],
+                                             goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2],
+                                             goma_ctx->bc.bc_types[i1].u_BC, time_value);
                 break;
               default:
                 if (goma_ctx->debug_flag > 1)
@@ -1757,28 +1802,37 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           } /*  Num_BC loop  */
           apply_blake_wetting_velocity_sic(
               func, d_func, delta_t, theta, (int)bc->BC_Name, elem_side_bc->id_side, ielem_type,
-              BC_Types[bc_input_id].BC_Data_Float[3], BC_Types[bc_input_id].BC_Data_Float[0],
-              BC_Types[bc_input_id].BC_Data_Float[1], BC_Types[bc_input_id].BC_Data_Float[2],
-              BC_Types[bc_input_id].BC_Data_Float[4], wall_velo, theta_max,
-              BC_Types[bc_input_id].BC_Data_Int[3], BC_Types[bc_input_id].BC_Data_Float[9],
-              BC_Types[bc_input_id].BC_Data_Float[10], BC_Types[bc_input_id].BC_Data_Float[11]);
+              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4], wall_velo, theta_max,
+              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[3],
+              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[9],
+              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[10],
+              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[11]);
         } break;
 
         case SHIK_DIRICH_ROLL_BC:
         case SHIK_DIRICHLET_BC:
-          apply_blake_wetting_velocity_sic(
-              func, d_func, delta_t, theta, (int)bc->BC_Name, elem_side_bc->id_side, ielem_type,
-              BC_Types[bc_input_id].BC_Data_Float[3], BC_Types[bc_input_id].BC_Data_Float[0],
-              BC_Types[bc_input_id].BC_Data_Float[1], BC_Types[bc_input_id].BC_Data_Float[2],
-              BC_Types[bc_input_id].BC_Data_Float[4], &(BC_Types[bc_input_id].BC_Data_Float[5]),
-              BC_Types[bc_input_id].BC_Data_Float[8], BC_Types[bc_input_id].BC_Data_Int[3],
-              BC_Types[bc_input_id].BC_Data_Float[9], BC_Types[bc_input_id].BC_Data_Float[10],
-              BC_Types[bc_input_id].BC_Data_Float[11]);
+          apply_blake_wetting_velocity_sic(func, d_func, delta_t, theta, (int)bc->BC_Name,
+                                           elem_side_bc->id_side, ielem_type,
+                                           goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                                           goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                                           goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                                           goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                                           goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                                           &(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5]),
+                                           goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[8],
+                                           goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[3],
+                                           goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[9],
+                                           goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[10],
+                                           goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[11]);
           break;
 
         case HYSTERESIS_WETTING_BC:
           apply_hysteresis_wetting_sic(func, d_func, delta_t, theta,
-                                       &(BC_Types[bc_input_id].BC_Data_Float[0]));
+                                       &(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]));
           break;
 
         case STRONG_FILL_CA_BC:
@@ -1787,7 +1841,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
         case TABLE_WICV_BC:
         case TABLE_WICS_BC:
-          apply_table_wic_bc(func, d_func, &BC_Types[bc_input_id], time_value);
+          apply_table_wic_bc(func, d_func, &goma_ctx->bc.bc_types[bc_input_id], time_value);
           break;
 
         case H_FREE_BC:
@@ -1795,7 +1849,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           break;
 
         case LS_CA_H_BC:
-          boundary_curvature(func, d_func, &(BC_Types[bc_input_id].BC_Data_Float[0]));
+          boundary_curvature(func, d_func, &(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]));
           break;
 
         case CURRENT_BC: /* no need to call function - this is too easy */
@@ -1803,55 +1857,66 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           break;
 
         case CURRENT_SIC_BC: /* strong integrated bc on potential eqn  */
-          apply_potential_grad_bc(func, d_func, &BC_Types[bc_input_id], time_intermediate, delta_t);
+          apply_potential_grad_bc(func, d_func, &goma_ctx->bc.bc_types[bc_input_id],
+                                  time_intermediate, delta_t);
           break;
 
         case CURRENT_USER_BC:
-          current_user_surf(func, d_func, BC_Types[bc_input_id].u_BC, time_intermediate);
+          current_user_surf(func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                            time_intermediate);
           break;
 
         case CURRENT_USER_SIC_BC:
-          current_user_surf(func, d_func, BC_Types[bc_input_id].u_BC, time_intermediate);
-          apply_potential_grad_bc(func, d_func, &BC_Types[bc_input_id], time_intermediate, delta_t);
+          current_user_surf(func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                            time_intermediate);
+          apply_potential_grad_bc(func, d_func, &goma_ctx->bc.bc_types[bc_input_id],
+                                  time_intermediate, delta_t);
           break;
 
         case VOLT_USER_BC:
-          volt_user_surf(func, d_func, BC_Types[bc_input_id].u_BC, time_intermediate);
+          volt_user_surf(func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC, time_intermediate);
 
           break;
 
         case CURRENT_BV_BC:
           if (iapply) {
-            current_BV_surf(
-                func, d_func, BC_Types[bc_input_id].BC_Data_Int[0],
-                BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[1],
-                BC_Types[bc_input_id].BC_Data_Float[2], BC_Types[bc_input_id].BC_Data_Float[3],
-                BC_Types[bc_input_id].BC_Data_Float[4], BC_Types[bc_input_id].BC_Data_Float[5],
-                BC_Types[bc_input_id].BC_Data_Float[6], delta_t, theta);
+            current_BV_surf(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5],
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6], delta_t, theta);
           }
           break;
 
         case CURRENT_ORR_BC:
           if (iapply) {
-            current_ORR_surf(
-                func, d_func, BC_Types[bc_input_id].BC_Data_Int[0],
-                BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[1],
-                BC_Types[bc_input_id].BC_Data_Float[2], BC_Types[bc_input_id].BC_Data_Float[3],
-                BC_Types[bc_input_id].BC_Data_Float[4], BC_Types[bc_input_id].BC_Data_Float[5],
-                BC_Types[bc_input_id].BC_Data_Float[6], BC_Types[bc_input_id].BC_Data_Float[7],
-                delta_t, theta);
+            current_ORR_surf(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[7], delta_t, theta);
           }
           break;
 
         case CURRENT_HOR_BC:
           if (iapply) {
-            current_HOR_surf(
-                func, d_func, BC_Types[bc_input_id].BC_Data_Int[0],
-                BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[1],
-                BC_Types[bc_input_id].BC_Data_Float[2], BC_Types[bc_input_id].BC_Data_Float[3],
-                BC_Types[bc_input_id].BC_Data_Float[4], BC_Types[bc_input_id].BC_Data_Float[5],
-                BC_Types[bc_input_id].BC_Data_Float[6], BC_Types[bc_input_id].BC_Data_Float[7],
-                BC_Types[bc_input_id].BC_Data_Float[8], delta_t, theta);
+            current_HOR_surf(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[7],
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[8], delta_t, theta);
           }
           break;
 
@@ -1860,7 +1925,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
           break;
         case SH_MESH2_WEAK_BC:
-          apply_sh_weak(func, d_func, xi, exo, BC_Types[bc_input_id].BC_Data_Float[0]);
+          apply_sh_weak(func, d_func, xi, exo, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
 
           break;
 
@@ -1905,15 +1970,15 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
            * If BC is capillarity, convert the node-based cfunc to func
            */
 
-          if ((BC_Types[bc_input_id].BC_Name == CAPILLARY_BC ||
-               BC_Types[bc_input_id].BC_Name == CAP_REPULSE_BC ||
-               BC_Types[bc_input_id].BC_Name == CAP_REPULSE_ROLL_BC ||
-               BC_Types[bc_input_id].BC_Name == CAP_REPULSE_USER_BC ||
-               BC_Types[bc_input_id].BC_Name == CAP_REPULSE_TABLE_BC ||
-               BC_Types[bc_input_id].BC_Name == CAP_RECOIL_PRESS_BC ||
-               BC_Types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC ||
-               BC_Types[bc_input_id].BC_Name == ELEC_TRACTION_BC ||
-               BC_Types[bc_input_id].BC_Name == CAPILLARY_SHEAR_VISC_BC) &&
+          if ((goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAPILLARY_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_ROLL_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_USER_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_TABLE_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_RECOIL_PRESS_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == ELEC_TRACTION_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAPILLARY_SHEAR_VISC_BC) &&
               (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][VELOCITY1] >
                0)) { /* DRN: getting segfault for Q1P0 on Q2 mesh, does this fix it? */
             for (p = 0; p < bc_desc->vector; p++) {
@@ -1965,7 +2030,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           //            }
           //          }
 
-          if ((BC_Types[bc_input_id].BC_Name == TENSION_SHEET_BC) &&
+          if ((goma_ctx->bc.bc_types[bc_input_id].BC_Name == TENSION_SHEET_BC) &&
               (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0)) {
             func[0] =
                 cfunc[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[R_MESH1][id]][0];
@@ -1978,7 +2043,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
             }
           }
 
-          if ((BC_Types[bc_input_id].BC_Name == SHEAR_TO_SHELL_BC) &&
+          if ((goma_ctx->bc.bc_types[bc_input_id].BC_Name == SHEAR_TO_SHELL_BC) &&
               (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][R_SHELL_TENSION] > 0)) {
             func[0] = cfunc[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
                                 ->ln_to_first_dof[R_SHELL_TENSION][id]][0];
@@ -2037,17 +2102,17 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                  * Weight the function by the weighting function unless it is
                  * integrated by parts twice
                  */
-                if (BC_Types[bc_input_id].BC_Name != CAPILLARY_BC &&
-                    BC_Types[bc_input_id].BC_Name != CAPILLARY_SHEAR_VISC_BC &&
-                    BC_Types[bc_input_id].BC_Name != ELEC_TRACTION_BC &&
-                    BC_Types[bc_input_id].BC_Name != CAP_REPULSE_BC &&
-                    BC_Types[bc_input_id].BC_Name != CAP_REPULSE_ROLL_BC &&
-                    BC_Types[bc_input_id].BC_Name != CAP_REPULSE_USER_BC &&
-                    BC_Types[bc_input_id].BC_Name != CAP_REPULSE_TABLE_BC &&
-                    BC_Types[bc_input_id].BC_Name != CAP_RECOIL_PRESS_BC &&
-                    BC_Types[bc_input_id].BC_Name != CAPILLARY_TABLE_BC &&
-                    BC_Types[bc_input_id].BC_Name != TENSION_SHEET_BC &&
-                    BC_Types[bc_input_id].BC_Name != SHEAR_TO_SHELL_BC) {
+                if (goma_ctx->bc.bc_types[bc_input_id].BC_Name != CAPILLARY_BC &&
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Name != CAPILLARY_SHEAR_VISC_BC &&
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Name != ELEC_TRACTION_BC &&
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Name != CAP_REPULSE_BC &&
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Name != CAP_REPULSE_ROLL_BC &&
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Name != CAP_REPULSE_USER_BC &&
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Name != CAP_REPULSE_TABLE_BC &&
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Name != CAP_RECOIL_PRESS_BC &&
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Name != CAPILLARY_TABLE_BC &&
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Name != TENSION_SHEET_BC &&
+                    goma_ctx->bc.bc_types[bc_input_id].BC_Name != SHEAR_TO_SHELL_BC) {
                   /*
                    * Do processing specific to CROSS_PHASE_DISCONTINUOUS
                    * boundary conditions.
@@ -2075,9 +2140,10 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                         goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][ldof_eqn];
                     mn_first = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
 
-                    if ((BC_Types[bc_input_id].BC_Data_Int[1] &&
-                         Current_EB_ptr->Elem_Blk_Id == BC_Types[bc_input_id].BC_Data_Int[1]) ||
-                        (!BC_Types[bc_input_id].BC_Data_Int[1] &&
+                    if ((goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1] &&
+                         Current_EB_ptr->Elem_Blk_Id ==
+                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1]) ||
+                        (!goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1] &&
                          ((Current_EB_ptr->Elem_Blk_Id + 1) % 2) == 0)) {
 
                       phi_i = goma_ctx->fem.bf[eqn]->phi[ldof_eqn];
@@ -2155,8 +2221,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
                     for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
                       if (goma_ctx->fem.pd_glob[mn]->e[goma_ctx->fem.pg->imtrx][eqn] &&
-                          (eb_in_matrl(BC_Types[bc_input_id].BC_Data_Int[0], mn) ||
-                           eb_in_matrl(BC_Types[bc_input_id].BC_Data_Int[1], mn))) {
+                          (eb_in_matrl(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0], mn) ||
+                           eb_in_matrl(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1], mn))) {
                         // type = pd_glob[mn]->w[eqn];
                         // if (bfi[type] == NULL) GOMA_EH(GOMA_ERROR,"Illegal cross basis func");
 
@@ -2350,7 +2416,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                        */
                       for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
                         pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-                        if (pvar != -1 && (BC_Types[bc_input_id].desc->sens[var] || 1)) {
+                        if (pvar != -1 &&
+                            (goma_ctx->bc.bc_types[bc_input_id].desc->sens[var] || 1)) {
                           if (var != MASS_FRACTION) {
                             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
                                  j++) {
@@ -2749,13 +2816,14 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
        *  Create a couple of pointers to cut down on the
        *  amount of indirect addressing
        */
-      bc = BC_Types + bc_input_id;
+      bc = goma_ctx->bc.bc_types + bc_input_id;
       bc_desc = bc->desc;
 
-      ss_index = in_list(bc->BC_ID, 0, exo->num_side_sets, &(ss_to_blks[0][0]));
-      is_ns = strcmp(BC_Types[bc_input_id].Set_Type, "NS");
+      ss_index = in_list(bc->BC_ID, 0, exo->num_side_sets, &(goma_ctx->bc.ss_to_blks[0][0]));
+      is_ns = strcmp(goma_ctx->bc.bc_types[bc_input_id].Set_Type, "NS");
       if (ss_index == -1 && is_ns != 0) {
-        sprintf(Err_Msg, "Could not find BC_ID %d in ss_to_blks", BC_Types[bc_input_id].BC_ID);
+        sprintf(Err_Msg, "Could not find BC_ID %d in ss_to_blks",
+                goma_ctx->bc.bc_types[bc_input_id].BC_ID);
         GOMA_EH(GOMA_ERROR, Err_Msg);
       }
 
@@ -2911,7 +2979,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
                  */
                 for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
                   pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-                  if (pvar != -1 && (BC_Types[bc_input_id].desc->sens[var] || 1)) {
+                  if (pvar != -1 && (goma_ctx->bc.bc_types[bc_input_id].desc->sens[var] || 1)) {
                     if (var != MASS_FRACTION) {
                       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=

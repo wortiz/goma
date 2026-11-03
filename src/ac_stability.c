@@ -221,8 +221,8 @@ int solve_full_stability_problem(struct GomaLinearSolverData *ams,
   goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
 
   matrix_fill_full(ams, &x[0], &resid_vector[0], x_old, x_older, xdot, xdot_old, x_update, &delta_t,
-                   &theta, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo, dpi,
-                   &num_total_nodes, &zero[0], &zero[0], NULL);
+                   &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                   &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
   /* This call will fill in scale[] with the proper row scales.  I
    * need to get this in terms of the Jacobian, and the apply it to
@@ -263,8 +263,8 @@ int solve_full_stability_problem(struct GomaLinearSolverData *ams,
     goma_ctx->fem.tran->delta_t = 1.0; /*for Newmark-Beta terms in Lagrangian Solid*/
 
     matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
-                     &theta, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo,
-                     dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
+                     &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                     &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
     printf("Assembling B_tmpB...\n");
     goma_ctx->fem.af->Assemble_Residual = TRUE;
@@ -275,8 +275,8 @@ int solve_full_stability_problem(struct GomaLinearSolverData *ams,
     delta_t = 1.0e+72;                     /* To simulate steady-state soln. */
     goma_ctx->fem.tran->delta_t = 1.0e+72; /*for Newmark-Beta terms in Lagrangian Solid*/
     matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
-                     &theta, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo,
-                     dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
+                     &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                     &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
     for (i = 0; i < goma_ctx->solver.nzeros + 1; i++) {
       double_temp = mass_matrix_tmpB[i] - mass_matrix_tmpA[i];
@@ -320,8 +320,8 @@ int solve_full_stability_problem(struct GomaLinearSolverData *ams,
   delta_t = 1.0;
   goma_ctx->fem.tran->delta_t = 1.0; /*for Newmark-Beta terms in Lagrangian Solid*/
   matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t, &theta,
-                   First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo, dpi,
-                   &num_total_nodes, &zero[0], &zero[0], NULL);
+                   goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx], &time_value, exo,
+                   dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
   /* MMH: Curious... Why NZeros + 1 ??? */
   /*
@@ -495,8 +495,8 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
     goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
 
     matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
-                     &theta, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo,
-                     dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
+                     &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                     &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
     /* Jacobian matrix, pass 2 */
     printf("Assembling J (pass 2)...\n");
@@ -509,8 +509,8 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
     goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
 
     matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
-                     &theta, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo,
-                     dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
+                     &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                     &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
     /* Add the two passes together to get the "real" Jacobian
      * matrix. */
@@ -578,8 +578,8 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
                                           * (transient soln.) */
       goma_ctx->fem.tran->delta_t = 1.0; /*for Newmark-Beta terms in Lagrangian Solid*/
       matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
-                       &theta, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo,
-                       dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
+                       &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                       &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
       printf("Assembling B_tmpB (pass 1)...\n");
       LSA_3D_of_2D_pass = 1;
@@ -587,8 +587,8 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
       delta_t = 1.0e+72;                     /* To simulate steady-state soln. */
       goma_ctx->fem.tran->delta_t = 1.0e+72; /*for Newmark-Beta terms in Lagrangian Solid*/
       matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
-                       &theta, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo,
-                       dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
+                       &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                       &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
       printf("Assembling B_tmpA (pass 2)...\n");
       LSA_3D_of_2D_pass = 2;
@@ -597,8 +597,8 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
                                           * (transient soln.) */
       goma_ctx->fem.tran->delta_t = 1.0; /*for Newmark-Beta terms in Lagrangian Solid*/
       matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
-                       &theta, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo,
-                       dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
+                       &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                       &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
       printf("Assembling B_tmpB (pass 2)...\n");
       LSA_3D_of_2D_pass = 2;
@@ -606,8 +606,9 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
       delta_t = 1.0e+72;                     /* To simulate steady-state soln. */
       goma_ctx->fem.tran->delta_t = 1.0e+72; /*for Newmark-Beta terms in Lagrangian Solid*/
       matrix_fill_full(ams, &x[0], &resid_vector[0], x_old, x_older, xdot, xdot_old, x_update,
-                       &delta_t, &theta, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx],
-                       &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
+                       &delta_t, &theta,
+                       goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx], &time_value,
+                       exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
       /* Now construct the actual Subtractionism versions of each
        * pass.  These are stored in mass_matrix_[1,2]_tmpA. */
@@ -649,15 +650,15 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
     LSA_3D_of_2D_pass = 1;
     ams->val = mass_matrix_1;
     matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
-                     &theta, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo,
-                     dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
+                     &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                     &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
     printf("Assembling B (pass 2)...\n");
     LSA_3D_of_2D_pass = 2;
     ams->val = mass_matrix_2;
     matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
-                     &theta, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo,
-                     dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
+                     &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                     &time_value, exo, dpi, &num_total_nodes, &zero[0], &zero[0], NULL);
 
     /* Get my mass matrix by adding the two passes together (don't
      * forget the -! */

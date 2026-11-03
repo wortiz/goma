@@ -1954,8 +1954,8 @@ void init_vec(
     int map_pix_fast_called = 0;
     for (w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
       if (goma_ctx->fem.efv->i[w] == I_TABLE) {
-        ext_Tables[k] = setup_table_external(goma_ctx->fem.efv->file_nm[w], ext_table,
-                                             goma_ctx->fem.efv->name[w]);
+        goma_ctx->bc.ext_tables[k] = setup_table_external(goma_ctx->fem.efv->file_nm[w], ext_table,
+                                                          goma_ctx->fem.efv->name[w]);
         k++;
       }
 

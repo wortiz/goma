@@ -133,13 +133,13 @@ int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    *  surface integrals
    */
   //  log_msg("set_up_Surf_BC...");
-  set_up_Surf_BC(First_Elem_Side_BC_Array, exo, dpi);
+  set_up_Surf_BC(goma_ctx->bc.first_elem_side_bc_array, exo, dpi);
 
   /*
    *  Set up the Edge boundary condition structures
    */
   //  log_msg("set_up_Edge_BC...");
-  set_up_Edge_BC(First_Elem_Edge_BC_Array, exo, dpi);
+  set_up_Edge_BC(goma_ctx->bc.first_elem_edge_bc_array, exo, dpi);
 
   /*
    * Set up "boundary" conditions on level set surfaces

@@ -281,7 +281,7 @@ void reconcile_bc_to_matrl(void)
      *  Create a couple of pointers to cut down on the
      *  amount of indirect addressing
      */
-    bc = BC_Types + ibc;
+    bc = goma_ctx->bc.bc_types + ibc;
 
     switch (bc->BC_Name) {
 

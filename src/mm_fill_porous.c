@@ -6460,7 +6460,7 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
   else if (goma_ctx->fem.mp->SaturationModel == TABLE) {
     struct Data_Table *table_local;
     /* next section is essentially apply_table_mp */
-    table_local = MP_Tables[goma_ctx->fem.mp->saturation_tableid];
+    table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->saturation_tableid];
     for (i = 0; i < table_local->columns - 1; i++) {
       if (strcmp(table_local->t_name[i], "CAP_PRES") == 0) {
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES]) {

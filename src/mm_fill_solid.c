@@ -4986,7 +4986,7 @@ int load_elastic_properties(struct Elastic_Constitutive *elcp,
   } else if (elc_ptr->lame_mu_model == TABLE) {
     /* Shear modulus is a table lookup with linear interpolation */
     struct Data_Table *table_local;
-    table_local = MP_Tables[elc_ptr->lame_mu_tableid];
+    table_local = goma_ctx->bc.mp_tables[elc_ptr->lame_mu_tableid];
 
     if (!strcmp(table_local->t_name[0], "FAUX_PLASTIC")) {
       double nu, MP, slope, var1[1], Enew, Emin;
@@ -5200,7 +5200,7 @@ int load_elastic_properties(struct Elastic_Constitutive *elcp,
 
   } else if (elc_ptr->lameTempShiftModel == TABLE) {
     struct Data_Table *table_local;
-    table_local = MP_Tables[elc_ptr->lame_TempShift_tableid];
+    table_local = goma_ctx->bc.mp_tables[elc_ptr->lame_TempShift_tableid];
     apply_table_mp(&elc_ptr->lame_TempShift, table_local);
 
     *mu *= elc_ptr->lame_TempShift;
@@ -5376,7 +5376,7 @@ int load_elastic_properties(struct Elastic_Constitutive *elcp,
       /*  Currently the table would have to be for the exponential
           argument, i.e. integral(alpha_V*dT) from Tref to T  */
       struct Data_Table *table_local;
-      table_local = MP_Tables[elc_ptr->thermal_expansion_tableid];
+      table_local = goma_ctx->bc.mp_tables[elc_ptr->thermal_expansion_tableid];
       apply_table_mp(&elc_ptr->thermal_expansion, table_local);
       exp_arg = elc_ptr->thermal_expansion * table_local->yscale;
       for (i = 0; i < table_local->columns - 1; i++) {

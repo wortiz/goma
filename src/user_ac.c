@@ -214,8 +214,8 @@ void user_aug_cond_residuals(int iAC,
 
   if (goma_ctx->fem.augc[iAC].Type == AC_USERBC) /* BC augmenting condition */
   {
-    AC[iAC] = BC_Types[4].BC_Data_Float[0] - 2.0;        /* Goma Test Suite */
-  } else if (goma_ctx->fem.augc[iAC].Type == AC_USERMAT) /* MT augmenting condition */
+    AC[iAC] = goma_ctx->bc.bc_types[4].BC_Data_Float[0] - 2.0; /* Goma Test Suite */
+  } else if (goma_ctx->fem.augc[iAC].Type == AC_USERMAT)       /* MT augmenting condition */
   {
   }
 

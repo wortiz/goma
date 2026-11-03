@@ -812,7 +812,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
     if (goma_ctx->fem.augc[iAC].Type == AC_USERBC) {
       int ibc = goma_ctx->fem.augc[iAC].BCID;
-      int eqn = BC_Types[ibc].equation;
+      int eqn = goma_ctx->bc.bc_types[ibc].equation;
 
       if (!(eqn >= V_FIRST && eqn < V_LAST)) {
         GOMA_EH(GOMA_ERROR, "AC BC not associated with an equation, not supported in "
@@ -1389,8 +1389,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             int build = FALSE, ibc = 0;
 
             while (!build && ibc < goma_ctx->problem.num_bc) {
-              build = (BC_Types[ibc].BC_Name == LS_INLET_BC);
-              build = build || (BC_Types[ibc].BC_Name == LS_ADC_BC);
+              build = (goma_ctx->bc.bc_types[ibc].BC_Name == LS_INLET_BC);
+              build = build || (goma_ctx->bc.bc_types[ibc].BC_Name == LS_ADC_BC);
               ibc++;
             }
 
@@ -2323,9 +2323,9 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 #if 0
 		    if( (int)goma_ctx->fem.augc[iAC].DataFlt[1] == 6)
 		      {
-			DPRINTF(stderr, "\tBC[%4d] DF[%4d]=% 10.6e\n", goma_ctx->fem.augc[iAC].DFID, 0, BC_Types[goma_ctx->fem.augc[iAC].DFID].BC_Data_Float[0]);
-			DPRINTF(stderr, "\tBC[%4d] DF[%4d]=% 10.6e\n", goma_ctx->fem.augc[iAC].DFID, 2, BC_Types[goma_ctx->fem.augc[iAC].DFID].BC_Data_Float[2]);
-			DPRINTF(stderr, "\tBC[%4d] DF[%4d]=% 10.6e\n", goma_ctx->fem.augc[iAC].DFID, 3, BC_Types[goma_ctx->fem.augc[iAC].DFID].BC_Data_Float[3]);
+			DPRINTF(stderr, "\tBC[%4d] DF[%4d]=% 10.6e\n", goma_ctx->fem.augc[iAC].DFID, 0, goma_ctx->bc.bc_types[goma_ctx->fem.augc[iAC].DFID].BC_Data_Float[0]);
+			DPRINTF(stderr, "\tBC[%4d] DF[%4d]=% 10.6e\n", goma_ctx->fem.augc[iAC].DFID, 2, goma_ctx->bc.bc_types[goma_ctx->fem.augc[iAC].DFID].BC_Data_Float[2]);
+			DPRINTF(stderr, "\tBC[%4d] DF[%4d]=% 10.6e\n", goma_ctx->fem.augc[iAC].DFID, 3, goma_ctx->bc.bc_types[goma_ctx->fem.augc[iAC].DFID].BC_Data_Float[3]);
 			goma_ctx->fem.augc[iAC].DataFlt[5] += goma_ctx->fem.augc[iAC].DataFlt[6];
 			DPRINTF(stderr, "\tAC[%4d] DF[%4d]=% 10.6e\n", iAC, 5, goma_ctx->fem.augc[iAC].DataFlt[5]);
 
@@ -2664,15 +2664,15 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
           /* Resolve LS_ADC boundaries ( Attach/Dewet/Coalesce ) */
           for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
             ls_adc_event = FALSE;
-            switch (BC_Types[ibc].BC_Name) {
+            switch (goma_ctx->bc.bc_types[ibc].BC_Name) {
             case LS_ADC_OLD_BC:
-              resolve_ls_adc_old(&(BC_Types[ibc]), exo, x[goma_ctx->fem.pg->imtrx], delta_t,
-                                 &ls_adc_event, nt);
+              resolve_ls_adc_old(&(goma_ctx->bc.bc_types[ibc]), exo, x[goma_ctx->fem.pg->imtrx],
+                                 delta_t, &ls_adc_event, nt);
               break;
             case LS_ADC_BC:
               resolve_ls_adc(goma_ctx->fem.ls->last_surf_list->start->subsurf_list,
-                             &(BC_Types[ibc]), exo, x[goma_ctx->fem.pg->imtrx], delta_t,
-                             &ls_adc_event, nt);
+                             &(goma_ctx->bc.bc_types[ibc]), exo, x[goma_ctx->fem.pg->imtrx],
+                             delta_t, &ls_adc_event, nt);
 
               break;
             default:

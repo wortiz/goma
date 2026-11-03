@@ -1867,7 +1867,8 @@ int load_fv(void)
         }
       } else {
         double slope;
-        fv->external_field[w] = interpolate_table(ext_Tables[table_id], fv->x, &slope, NULL);
+        fv->external_field[w] =
+            interpolate_table(goma_ctx->bc.ext_tables[table_id], fv->x, &slope, NULL);
         table_id++;
       }
 

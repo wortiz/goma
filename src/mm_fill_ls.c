@@ -3711,8 +3711,9 @@ static int point_on_ca_boundary(int I, Exo_DB *exo)
   if (num_ss_on_ca_boundary == -1) {
     num_ss_on_ca_boundary = 0;
     for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-      if (BC_Types[ibc].BC_Name == FILL_CA_BC) {
-        if ((iss = in_list(BC_Types[ibc].BC_ID, 0, exo->num_side_sets, exo->ss_id)) == -1) {
+      if (goma_ctx->bc.bc_types[ibc].BC_Name == FILL_CA_BC) {
+        if ((iss = in_list(goma_ctx->bc.bc_types[ibc].BC_ID, 0, exo->num_side_sets, exo->ss_id)) ==
+            -1) {
           GOMA_EH(GOMA_ERROR, "Cannot locate SS index in point_on_ca_boundary");
         }
         if (num_ss_on_ca_boundary >= 20)

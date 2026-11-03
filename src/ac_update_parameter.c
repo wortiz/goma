@@ -371,7 +371,7 @@ void update_BC_parameter(double lambda, /* Parameter value */
 
   struct Boundary_Condition *BC_Type;
 
-  switch (BC_Types[ibc].BC_Name) {
+  switch (goma_ctx->bc.bc_types[ibc].BC_Name) {
   case SPLINE_BC:
   case SPLINEX_BC:
   case SPLINEY_BC:
@@ -408,31 +408,31 @@ void update_BC_parameter(double lambda, /* Parameter value */
   case CA_EDGE_OR_FIX_BC:
   case YFLUX_USER_BC:
   case YUSER_BC:
-    BC_Types[ibc].u_BC[idf] = lambda;
+    goma_ctx->bc.bc_types[ibc].u_BC[idf] = lambda;
     break;
   case TABLE_BC:
   case TABLE_WICV_BC:
   case TABLE_WICS_BC:
-    BC_Type = &BC_Types[ibc];
+    BC_Type = &goma_ctx->bc.bc_types[ibc];
     BC_Type->table->f[idf] = lambda;
     break;
   case CAPILLARY_TABLE_BC:
-    BC_Type = &BC_Types[ibc];
+    BC_Type = &goma_ctx->bc.bc_types[ibc];
     if (idf < 3) {
-      BC_Types[ibc].BC_Data_Float[idf] = lambda;
+      goma_ctx->bc.bc_types[ibc].BC_Data_Float[idf] = lambda;
     } else {
       BC_Type->table->yscale = lambda;
     }
     break;
   case FRICTION_ACOUSTIC_BC:
     if (idf > 1) {
-      BC_Types[ibc].u_BC[idf - 2] = lambda;
+      goma_ctx->bc.bc_types[ibc].u_BC[idf - 2] = lambda;
     } else {
-      BC_Types[ibc].BC_Data_Float[idf] = lambda;
+      goma_ctx->bc.bc_types[ibc].BC_Data_Float[idf] = lambda;
     }
     break;
   default:
-    BC_Types[ibc].BC_Data_Float[idf] = lambda;
+    goma_ctx->bc.bc_types[ibc].BC_Data_Float[idf] = lambda;
     break;
   }
 
@@ -1353,7 +1353,7 @@ void retrieve_BC_parameter(double *lambda, /* Parameter value */
 
   struct Boundary_Condition *BC_Type;
 
-  switch (BC_Types[ibc].BC_Name) {
+  switch (goma_ctx->bc.bc_types[ibc].BC_Name) {
   case SPLINE_BC:
   case SPLINEX_BC:
   case SPLINEY_BC:
@@ -1388,31 +1388,31 @@ void retrieve_BC_parameter(double *lambda, /* Parameter value */
   case CA_EDGE_OR_FIX_BC:
   case YFLUX_USER_BC:
   case YUSER_BC:
-    *lambda = BC_Types[ibc].u_BC[idf];
+    *lambda = goma_ctx->bc.bc_types[ibc].u_BC[idf];
     break;
   case TABLE_BC:
   case TABLE_WICV_BC:
   case TABLE_WICS_BC:
-    BC_Type = &BC_Types[ibc];
+    BC_Type = &goma_ctx->bc.bc_types[ibc];
     *lambda = BC_Type->table->f[idf];
     break;
   case CAPILLARY_TABLE_BC:
-    BC_Type = &BC_Types[ibc];
+    BC_Type = &goma_ctx->bc.bc_types[ibc];
     if (idf < 3) {
-      *lambda = BC_Types[ibc].BC_Data_Float[idf];
+      *lambda = goma_ctx->bc.bc_types[ibc].BC_Data_Float[idf];
     } else {
       *lambda = BC_Type->table->yscale;
     }
     break;
   case FRICTION_ACOUSTIC_BC:
     if (idf > 1) {
-      *lambda = BC_Types[ibc].u_BC[idf - 2];
+      *lambda = goma_ctx->bc.bc_types[ibc].u_BC[idf - 2];
     } else {
-      *lambda = BC_Types[ibc].BC_Data_Float[idf];
+      *lambda = goma_ctx->bc.bc_types[ibc].BC_Data_Float[idf];
     }
     break;
   default:
-    *lambda = BC_Types[ibc].BC_Data_Float[idf];
+    *lambda = goma_ctx->bc.bc_types[ibc].BC_Data_Float[idf];
     break;
   }
 

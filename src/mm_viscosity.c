@@ -283,7 +283,7 @@ double viscosity(struct Generalized_Newtonian *gn_local,
       /*Sensitivities were already set to zero */
     } else if (goma_ctx->fem.mp->ViscosityModel == TABLE) {
       struct Data_Table *table_local;
-      table_local = MP_Tables[goma_ctx->fem.mp->viscosity_tableid];
+      table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->viscosity_tableid];
       apply_table_mp(&goma_ctx->fem.mp->viscosity, table_local);
       mu = goma_ctx->fem.mp->viscosity;
 

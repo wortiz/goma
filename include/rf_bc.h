@@ -27,46 +27,6 @@
  *
  */
 
-/* BC_Types[]
- *
- *     This is a vector of pointers to type struct Boundary_Condition.
- *  The structure holds the boundary condition information entered from the
- *  input file.  It is dynamically allocated in rf_input.c.
- *     A description of struct Boundary_Condition is contained in rf_bc_const.h.
- *
- *
- */
-
-extern struct Boundary_Condition *BC_Types;
-extern struct Rotation_Specs *ROT_Types;
-extern int **ROT_list;
-extern int **SS_list;
-extern int Use_2D_Rotation_Vectors;
-
-/*
- *  First_Elem_Side_BC_Array:
- *
- *     This is an array of pointers to type (struct elem_side_bc_struct).  The
- *  length of the array is equal to the number of elements defined on the
- *  local processor.  A NULL pointer in this array indicates that the current
- *  element does not have an integral boundary condition applied on any of its sides.
- *
- *
- */
-
-extern struct elem_side_bc_struct ***First_Elem_Side_BC_Array;
-
-/*
- *  First_Elem_Edge_BC_Array:
- *
- *     This is an array of pointers to type (struct elem_edge_bc_struct).  The
- *  length of the array is equal to the number of elements defined on the
- *  local processor.  A NULL pointer in this array indicates that the current
- *  element does not have an integral boundary condition applied on any of its edges.
- *
- *
- */
-
-extern struct elem_edge_bc_struct ***First_Elem_Edge_BC_Array;
+#include "util/goma_context.h" /* boundary condition state lives in goma_ctx->bc */
 
 #endif

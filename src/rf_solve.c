@@ -103,9 +103,6 @@
  * Global variables defined in this file.
  */
 
-extern struct elem_side_bc_struct ***First_Elem_Side_BC_Array;
-extern struct elem_edge_bc_struct ***First_Elem_Edge_BC_Array;
-
 #define ROUND_TO_ONE 0.9999999
 
 /*
@@ -1632,8 +1629,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             int build = FALSE, ibc = 0;
 
             while (!build && ibc < goma_ctx->problem.num_bc) {
-              build = (BC_Types[ibc].BC_Name == LS_INLET_BC);
-              build = build || (BC_Types[ibc].BC_Name == LS_ADC_BC);
+              build = (goma_ctx->bc.bc_types[ibc].BC_Name == LS_INLET_BC);
+              build = build || (goma_ctx->bc.bc_types[ibc].BC_Name == LS_ADC_BC);
               ibc++;
             }
 
@@ -2313,13 +2310,13 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
           /* Resolve LS_ADC boundaries ( Attach/Dewet/Coalesce ) */
           for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
             ls_adc_event = FALSE;
-            switch (BC_Types[ibc].BC_Name) {
+            switch (goma_ctx->bc.bc_types[ibc].BC_Name) {
             case LS_ADC_OLD_BC:
-              resolve_ls_adc_old(&(BC_Types[ibc]), exo, x, delta_t, &ls_adc_event, nt);
+              resolve_ls_adc_old(&(goma_ctx->bc.bc_types[ibc]), exo, x, delta_t, &ls_adc_event, nt);
               break;
             case LS_ADC_BC:
               resolve_ls_adc(goma_ctx->fem.ls->last_surf_list->start->subsurf_list,
-                             &(BC_Types[ibc]), exo, x, delta_t, &ls_adc_event, nt);
+                             &(goma_ctx->bc.bc_types[ibc]), exo, x, delta_t, &ls_adc_event, nt);
 
               break;
             default:
@@ -2703,14 +2700,14 @@ free_and_clear:
   /* Free a bunch of variables that aren't needed anymore */
 
   for (i = 0; i < goma_ctx->problem.num_rot; i++) {
-    safer_free((void **)&(ROT_Types[i].elems));
+    safer_free((void **)&(goma_ctx->bc.rot_types[i].elems));
   }
 
   /*
    * Curiously, these bananas were allocated end to end - one free does it all.
    */
 
-  safer_free((void **)&ROT_Types);
+  safer_free((void **)&goma_ctx->bc.rot_types);
   safer_free((void **)&node_to_fill);
 
   safer_free((void **)&resid_vector);

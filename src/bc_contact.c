@@ -270,7 +270,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
 
       /* check to see if this bc is an integrated bc */
 
-      if (BC_Types[bc_input_id].desc->method == bc_application) {
+      if (goma_ctx->bc.bc_types[bc_input_id].desc->method == bc_application) {
 
         /* initialize the general function to zero may have more than one entry
          * for vector conditions like capillary */
@@ -317,7 +317,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
          *     the end of this file (see fplane)
          */
 
-        switch (BC_Types[bc_input_id].BC_Name) {
+        switch (goma_ctx->bc.bc_types[bc_input_id].BC_Name) {
 
         case SOLID_LAGRANGE_MULT_BC:
           /*
@@ -552,8 +552,8 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
         /**********************************************************************/
 
         num_dofs = (int)elem_side_bc->num_nodes_on_side;
-        if (BC_Types[bc_input_id].BC_Name == LAGRANGE_NO_SLIP_BC ||
-            BC_Types[bc_input_id].BC_Name == SOLID_LAGRANGE_MULT_BC)
+        if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == LAGRANGE_NO_SLIP_BC ||
+            goma_ctx->bc.bc_types[bc_input_id].BC_Name == SOLID_LAGRANGE_MULT_BC)
           num_dofs = 1;
 
         for (i = 0; i < num_dofs; i++) {
@@ -575,7 +575,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
            * Boundary condition may actually be a vector of
            * bc's. Loop over that vector here.
            */
-          for (p = 0; p < BC_Types[bc_input_id].desc->vector; p++) {
+          for (p = 0; p < goma_ctx->bc.bc_types[bc_input_id].desc->vector; p++) {
             /*
              *   Check to see if this BC on this node is
              *   applicable (i.e. no other overriding Dirichlet conditions),
@@ -586,8 +586,8 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                 bc_eqn_index(id, I, bc_input_id, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn, p,
                              &eqn, &matID_apply, &vd);
             if (index_eq >= 0 ||
-                (((BC_Types[bc_input_id].BC_Name == LAGRANGE_NO_SLIP_BC) ||
-                  (BC_Types[bc_input_id].BC_Name == SOLID_LAGRANGE_MULT_BC)) &&
+                (((goma_ctx->bc.bc_types[bc_input_id].BC_Name == LAGRANGE_NO_SLIP_BC) ||
+                  (goma_ctx->bc.bc_types[bc_input_id].BC_Name == SOLID_LAGRANGE_MULT_BC)) &&
                  ((ac_lm == 1) ||
                   (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][R_LAGR_MULT1] == I_P0)))) {
               /*
@@ -596,8 +596,8 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                * interpolating degree of freedom
                */
 
-              if ((BC_Types[bc_input_id].BC_Name == LAGRANGE_NO_SLIP_BC ||
-                   BC_Types[bc_input_id].BC_Name == SOLID_LAGRANGE_MULT_BC) &&
+              if ((goma_ctx->bc.bc_types[bc_input_id].BC_Name == LAGRANGE_NO_SLIP_BC ||
+                   goma_ctx->bc.bc_types[bc_input_id].BC_Name == SOLID_LAGRANGE_MULT_BC) &&
                   (ac_lm == 1 ||
                    goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][R_LAGR_MULT1] == I_P0)) {
                 /* Sorry, but this is special compensation for boundary
@@ -619,12 +619,12 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                * Do processing specific to CROSS_PHASE_DISCONTINUOUS
                * boundary conditions.
                */
-              if (BC_Types[bc_input_id].desc->method == CONTACT_SURF) {
+              if (goma_ctx->bc.bc_types[bc_input_id].desc->method == CONTACT_SURF) {
                 /* Sorry, but this is special compensation for boundary
                    integral conditions weigted by a piecewise constant
                    basis function.  bc_eqn_index above does not handle this */
-                if ((BC_Types[bc_input_id].BC_Name == LAGRANGE_NO_SLIP_BC ||
-                     BC_Types[bc_input_id].BC_Name == SOLID_LAGRANGE_MULT_BC) &&
+                if ((goma_ctx->bc.bc_types[bc_input_id].BC_Name == LAGRANGE_NO_SLIP_BC ||
+                     goma_ctx->bc.bc_types[bc_input_id].BC_Name == SOLID_LAGRANGE_MULT_BC) &&
                     (ac_lm == 1 ||
                      goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][R_LAGR_MULT1] == I_P0)) {
                   if (goma_ctx->fem.bf[R_LAGR_MULT1 + p] != NULL) {
@@ -649,7 +649,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                * For strong conditions weight the function by BIG_PENALTY
                */
 
-              if (BC_Types[bc_input_id].desc->method == STRONG_INT_SURF) {
+              if (goma_ctx->bc.bc_types[bc_input_id].desc->method == STRONG_INT_SURF) {
                 weight *= BIG_PENALTY;
               }
               /*
@@ -657,9 +657,9 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                *   all boundary conditions, except for certain special
                *   cases
                */
-              if (BC_Types[bc_input_id].desc->method == WEAK_INT_SURF &&
-                  BC_Types[bc_input_id].BC_Name != PSPG_BC &&
-                  BC_Types[bc_input_id].BC_Name != VELO_SLIP_SOLID_BC) {
+              if (goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_INT_SURF &&
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Name != PSPG_BC &&
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Name != VELO_SLIP_SOLID_BC) {
                 weight *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_BOUNDARY)];
               }
 
@@ -682,7 +682,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
               if (ac_lm == 1 && pass == 1 && p < 2) {
                 iAC = ioffset + p;
 
-                switch (BC_Types[bc_input_id].BC_Name) {
+                switch (goma_ctx->bc.bc_types[bc_input_id].BC_Name) {
 
                 case SOLID_LAGRANGE_MULT_BC:
                 case LAGRANGE_NO_SLIP_BC:
@@ -700,7 +700,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
               if (ac_lm && pass == 2 && p < 2) {
                 iAC = ioffset + p;
 
-                switch (BC_Types[bc_input_id].BC_Name) {
+                switch (goma_ctx->bc.bc_types[bc_input_id].BC_Name) {
 
                 case SOLID_LAGRANGE_MULT_BC:
                 case LAGRANGE_NO_SLIP_BC:
@@ -780,7 +780,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
                *    this vector.
                */
               if (eqn == R_MASS) {
-                ieqn = MAX_PROB_EQN + BC_Types[bc_input_id].species_eq;
+                ieqn = MAX_PROB_EQN + goma_ctx->bc.bc_types[bc_input_id].species_eq;
               } else {
                 ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
               }
@@ -891,7 +891,7 @@ int jump_down_to_fluid(const Exo_DB *exo, /* Ptr to Exodus database */
   for (eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
 
     /* Identify the materials index with the element block */
-    if (!ifound && exo->eb_id[eb_index] == BC_Types[bcid].BC_Data_Int[1]) {
+    if (!ifound && exo->eb_id[eb_index] == goma_ctx->bc.bc_types[bcid].BC_Data_Int[1]) {
       ifound = 1;
       e_start = exo->eb_ptr[eb_index];
       e_end = exo->eb_ptr[eb_index + 1];
@@ -1502,7 +1502,7 @@ int assemble_embedded_bc(int ielem,    /* element number */
   }
 
   while (bcref) {
-    bc = BC_Types + bcref->bc_input_id;
+    bc = goma_ctx->bc.bc_types + bcref->bc_input_id;
 
     if (xfem != NULL && bc->BC_ID != 0 && goma_ctx->fem.ls->Elem_Sign != bc->BC_ID) {
       bcref = bcref->next;
@@ -1534,11 +1534,11 @@ int assemble_embedded_bc(int ielem,    /* element number */
       break;
     case LS_LATENT_HEAT_BC:
       assemble_ls_latent_heat_source(bc->BC_Data_Float[0], bc->BC_Data_Float[1], dt, theta,
-                                     time_value, bcref->bc_input_id, BC_Types);
+                                     time_value, bcref->bc_input_id, goma_ctx->bc.bc_types);
       break;
     case LS_YFLUX_BC:
       assemble_ls_yflux_source(bc->BC_Data_Int[0], bc->BC_Data_Float[0], bc->BC_Data_Float[1], dt,
-                               theta, time_value, bcref->bc_input_id, BC_Types);
+                               theta, time_value, bcref->bc_input_id, goma_ctx->bc.bc_types);
       break;
     case LS_CONT_T_BC:
       assemble_cont_t_source(xi);
@@ -1582,11 +1582,11 @@ int assemble_embedded_bc(int ielem,    /* element number */
     case LS_EXTV_KINEMATIC_BC:
     case LS_EXTV_KIN_LEAK_BC:
     case LS_EXTV_LATENT_BC:
-      assemble_extv_kinematic(theta, dt, time_value, bcref->bc_input_id, BC_Types);
+      assemble_extv_kinematic(theta, dt, time_value, bcref->bc_input_id, goma_ctx->bc.bc_types);
       break;
     case LS_EIK_KINEMATIC_BC:
     case LS_EIK_KIN_LEAK_BC:
-      assemble_eik_kinematic(theta, dt, time_value, bcref->bc_input_id, BC_Types);
+      assemble_eik_kinematic(theta, dt, time_value, bcref->bc_input_id, goma_ctx->bc.bc_types);
       break;
     case LS_CAP_DIV_N_BC:
       assemble_div_n_source();
@@ -1909,7 +1909,7 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
       (xfem->elem_state == 0))
     return (0);
 
-  bc = BC_Types + goma_ctx->fem.ls->embedded_bc->bc_input_id;
+  bc = goma_ctx->bc.bc_types + goma_ctx->fem.ls->embedded_bc->bc_input_id;
 
   /* Bail out for the special case of LS_CAPILLARY the only embedded_bc.  Don't need to process
    * anything here....
@@ -1925,7 +1925,7 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
   bcref = goma_ctx->fem.ls->embedded_bc;
 
   while (bcref) {
-    bc = BC_Types + bcref->bc_input_id;
+    bc = goma_ctx->bc.bc_types + bcref->bc_input_id;
 
     switch (bc->BC_Name) {
     case LS_U_BC:

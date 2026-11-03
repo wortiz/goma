@@ -114,9 +114,6 @@
 
 #define GOMA_MM_FILL_C
 
-extern struct elem_side_bc_struct ***First_Elem_Side_BC_Array;
-extern struct elem_edge_bc_struct ***First_Elem_Edge_BC_Array;
-
 /*
  * Global variables defined here. Declared frequently via rf_bc.h
  */
@@ -550,14 +547,14 @@ Revised:         Summer 1998, SY Tam (UNM)
     memset(CA_id, -1, sizeof(int) * MAX_CA);
     memset(CA_proc, -1, sizeof(int) * MAX_CA);
     for (j = 0; j < goma_ctx->problem.num_bc; j++) {
-      switch (BC_Types[j].BC_Name) {
+      switch (goma_ctx->bc.bc_types[j].BC_Name) {
       case CA_BC:
       case CA_MOMENTUM_BC:
       case VELO_THETA_HOFFMAN_BC:
       case VELO_THETA_TPL_BC:
       case VELO_THETA_COX_BC:
       case VELO_THETA_SHIK_BC: {
-        nsp = match_nsid(BC_Types[j].BC_ID);
+        nsp = match_nsid(goma_ctx->bc.bc_types[j].BC_ID);
         if (nsp != -1) {
           int n_nodes = exo->ns_num_nodes[nsp];
           if (n_nodes > 0) {
@@ -3075,18 +3072,18 @@ Revised:         Summer 1998, SY Tam (UNM)
       int call_nedelec = 0;
 
       for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
-        if (BC_Types[bc_input_id].desc->method == WEAK_INT_SURF) {
+        if (goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_INT_SURF) {
           call_int = 1;
         }
-        if (BC_Types[bc_input_id].desc->method == WEAK_INT_NEDELEC) {
+        if (goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_INT_NEDELEC) {
           call_nedelec = 1;
         }
-        if ((BC_Types[bc_input_id].desc->method == WEAK_SHELL_GRAD ||
-             BC_Types[bc_input_id].desc->method == STRONG_SHELL_GRAD) &&
+        if ((goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_SHELL_GRAD ||
+             goma_ctx->bc.bc_types[bc_input_id].desc->method == STRONG_SHELL_GRAD) &&
             (num_elem_friends[ielem] > 0) && (ielem_dim > 1)) {
           call_shell_grad = TRUE;
         }
-        if (BC_Types[bc_input_id].desc->method == WEAK_SHARP_INT)
+        if (goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_SHARP_INT)
           call_sharp_int = TRUE;
       }
 
@@ -3159,8 +3156,8 @@ Revised:         Summer 1998, SY Tam (UNM)
    * be added back in (i.e. if transport equations is integrated by parts twice)
    * Do this before rotating mesh or momentum equations
    **************************************************************************/
-  if (First_Elem_Edge_BC_Array[pg->imtrx][ielem] != NULL) {
-    elem_edge_bc = First_Elem_Edge_BC_Array[pg->imtrx][ielem];
+  if (goma_ctx->bc.first_elem_edge_bc_array[pg->imtrx][ielem] != NULL) {
+    elem_edge_bc = goma_ctx->bc.first_elem_edge_bc_array[pg->imtrx][ielem];
 
     /******************************************************************************/
     do { /* begining of do while construct
@@ -3174,7 +3171,7 @@ Revised:         Summer 1998, SY Tam (UNM)
        */
       call_int = 0;
       for (ibc = 0; (bc_input_id = (int)elem_edge_bc->BC_input_id[ibc]) != -1; ibc++) {
-        bct = BC_Types[bc_input_id].desc->method;
+        bct = goma_ctx->bc.bc_types[bc_input_id].desc->method;
         if (bct == WEAK_INT_EDGE)
           call_int = 1;
       }
@@ -3232,7 +3229,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       /* Determine which types of bc's apply on this side */
       /*call_special = 0; */
       for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
-        bct = BC_Types[bc_input_id].desc->method;
+        bct = goma_ctx->bc.bc_types[bc_input_id].desc->method;
         /*if (bct == WEAK_SHIFT) call_special = 1; */
       } /* end of loop over boundary condition number */
 
@@ -3272,9 +3269,11 @@ Revised:         Summer 1998, SY Tam (UNM)
          */
         I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         if (I < (dpi->num_internal_nodes + dpi->num_boundary_nodes)) {
-          if (in_list(I, 0, num_mom_rotate[pg->imtrx], mom_rotate_node[pg->imtrx]) != -1)
+          if (in_list(I, 0, goma_ctx->bc.num_mom_rotate[pg->imtrx],
+                      goma_ctx->bc.mom_rotate_node[pg->imtrx]) != -1)
             call_rotate = 1;
-          if (in_list(I, 0, num_mesh_rotate[pg->imtrx], mesh_rotate_node[pg->imtrx]) != -1)
+          if (in_list(I, 0, goma_ctx->bc.num_mesh_rotate[pg->imtrx],
+                      goma_ctx->bc.mesh_rotate_node[pg->imtrx]) != -1)
             call_rotate = 1;
         }
       }
@@ -3283,7 +3282,7 @@ Revised:         Summer 1998, SY Tam (UNM)
        * and we supposedly have the correct contributions by now.
        */
       if (call_rotate) {
-        if (Use_2D_Rotation_Vectors == TRUE)
+        if (goma_ctx->bc.use_2d_rotation_vectors == TRUE)
           rotate_eqns_at_node_2D(iconnect_ptr, ielem_dim, num_local_nodes, ams);
         else if (first_elem_side_BC_array[ielem] != NULL) {
           err = apply_rotated_bc(resid_vector, first_elem_side_BC_array, ielem, ielem_type,
@@ -3320,14 +3319,14 @@ Revised:         Summer 1998, SY Tam (UNM)
          * work on MESH first
          */
         rotate_mesh = 0;
-        if (ROT_list[I] != NULL && (ROT_list[I][VECT_EQ_MESH] != -1) && pde[R_MESH1] &&
-            id_mesh > -1)
+        if (goma_ctx->bc.rot_list[I] != NULL && (goma_ctx->bc.rot_list[I][VECT_EQ_MESH] != -1) &&
+            pde[R_MESH1] && id_mesh > -1)
           rotate_mesh = 1;
 
         rotate_momentum = 0;
 
-        if (ROT_list[I] != NULL && (ROT_list[I][VECT_EQ_MOM] != -1) && pde[R_MOMENTUM1] &&
-            id_mom > -1)
+        if (goma_ctx->bc.rot_list[I] != NULL && (goma_ctx->bc.rot_list[I][VECT_EQ_MOM] != -1) &&
+            pde[R_MOMENTUM1] && id_mom > -1)
           rotate_momentum = 1;
 
         /* Now rotate the appropriate equations and sensitivities*/
@@ -3446,7 +3445,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         int call_col = 0;
         int call_nedelec = 0.;
         for (int ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
-          int bct = BC_Types[bc_input_id].desc->method;
+          int bct = goma_ctx->bc.bc_types[bc_input_id].desc->method;
           if (bct == STRONG_INT_SURF)
             call_int = 1;
           if (bct == STRONG_INT_NEDELEC)
@@ -3477,7 +3476,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       call_contact = 0.;
       int call_nedelec = 0.;
       for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
-        bct = BC_Types[bc_input_id].desc->method;
+        bct = goma_ctx->bc.bc_types[bc_input_id].desc->method;
         if (bct == STRONG_INT_SURF)
           call_int = 1;
         if (bct == STRONG_INT_NEDELEC)
@@ -3628,9 +3627,9 @@ Revised:         Summer 1998, SY Tam (UNM)
   /******************************************************************************/
 
   /******************************************************************************/
-  if (First_Elem_Edge_BC_Array[pg->imtrx][ielem] != NULL) {
+  if (goma_ctx->bc.first_elem_edge_bc_array[pg->imtrx][ielem] != NULL) {
     /******************************************************************************/
-    elem_edge_bc = First_Elem_Edge_BC_Array[pg->imtrx][ielem];
+    elem_edge_bc = goma_ctx->bc.first_elem_edge_bc_array[pg->imtrx][ielem];
 
     /****************************************************************************/
     do { /* begining of do while construct */
@@ -3645,7 +3644,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       call_int = 0;
       call_col = 0;
       for (ibc = 0; (bc_input_id = (int)elem_edge_bc->BC_input_id[ibc]) != -1; ibc++) {
-        bct = BC_Types[bc_input_id].desc->method;
+        bct = goma_ctx->bc.bc_types[bc_input_id].desc->method;
         if (bct == STRONG_INT_EDGE)
           call_int = 1;
         if (bct == COLLOCATE_EDGE)
@@ -3807,7 +3806,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 	for (ibc = 0; 
 	     (bc_input_id = (int) elem_side_bc->BC_input_id[ibc]) != -1; ibc++) 
 	  {
-	    if(BC_Types[bc_input_id].desc->method == STRONG_INT_SURF ) {
+	    if(goma_ctx->bc.bc_types[bc_input_id].desc->method == STRONG_INT_SURF ) {
 				
 	      printf("\nElement: %d, ID_side: %d\n", ei[pg->imtrx]->ielem,  elem_side_bc->id_side);
 				
@@ -4063,14 +4062,14 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
     memset(CA_id, -1, sizeof(int) * MAX_CA);
     memset(CA_proc, -1, sizeof(int) * MAX_CA);
     for (j = 0; j < goma_ctx->problem.num_bc; j++) {
-      switch (BC_Types[j].BC_Name) {
+      switch (goma_ctx->bc.bc_types[j].BC_Name) {
       case CA_BC:
       case CA_MOMENTUM_BC:
       case VELO_THETA_HOFFMAN_BC:
       case VELO_THETA_TPL_BC:
       case VELO_THETA_COX_BC:
       case VELO_THETA_SHIK_BC:
-        nsp = match_nsid(BC_Types[j].BC_ID);
+        nsp = match_nsid(goma_ctx->bc.bc_types[j].BC_ID);
         nspk = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp]];
         if (nsp != -1 && Nodes[nspk]->Proc == goma_ctx->proc_id) {
           count++;
@@ -4683,15 +4682,15 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
       call_sharp_int = FALSE;
 
       for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
-        if (BC_Types[bc_input_id].desc->method == WEAK_INT_SURF) {
+        if (goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_INT_SURF) {
           call_int = 1;
         }
-        if ((BC_Types[bc_input_id].desc->method == WEAK_SHELL_GRAD ||
-             BC_Types[bc_input_id].desc->method == STRONG_SHELL_GRAD) &&
+        if ((goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_SHELL_GRAD ||
+             goma_ctx->bc.bc_types[bc_input_id].desc->method == STRONG_SHELL_GRAD) &&
             (num_elem_friends[ielem] > 0) && (ielem_dim > 1)) {
           call_shell_grad = TRUE;
         }
-        if (BC_Types[bc_input_id].desc->method == WEAK_SHARP_INT)
+        if (goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_SHARP_INT)
           call_sharp_int = TRUE;
       }
 
@@ -4750,8 +4749,8 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
    * be added back in (i.e. if transport equations is integrated by parts twice)
    * Do this before rotating mesh or momentum equations
    **************************************************************************/
-  if (First_Elem_Edge_BC_Array[goma_ctx->fem.pg->imtrx][ielem] != NULL) {
-    elem_edge_bc = First_Elem_Edge_BC_Array[goma_ctx->fem.pg->imtrx][ielem];
+  if (goma_ctx->bc.first_elem_edge_bc_array[goma_ctx->fem.pg->imtrx][ielem] != NULL) {
+    elem_edge_bc = goma_ctx->bc.first_elem_edge_bc_array[goma_ctx->fem.pg->imtrx][ielem];
 
     /******************************************************************************/
     do { /* begining of do while construct
@@ -4765,7 +4764,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
        */
       call_int = 0;
       for (ibc = 0; (bc_input_id = (int)elem_edge_bc->BC_input_id[ibc]) != -1; ibc++) {
-        bct = BC_Types[bc_input_id].desc->method;
+        bct = goma_ctx->bc.bc_types[bc_input_id].desc->method;
         if (bct == WEAK_INT_EDGE)
           call_int = 1;
       }
@@ -4820,7 +4819,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
       /* Determine which types of bc's apply on this side */
       /*call_special = 0; */
       for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
-        bct = BC_Types[bc_input_id].desc->method;
+        bct = goma_ctx->bc.bc_types[bc_input_id].desc->method;
         /*if (bct == WEAK_SHIFT) call_special = 1; */
       } /* end of loop over boundary condition number */
 
@@ -4851,11 +4850,11 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
          */
         I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         if (I < (dpi->num_internal_nodes + dpi->num_boundary_nodes)) {
-          if (in_list(I, 0, num_mom_rotate[goma_ctx->fem.pg->imtrx],
-                      mom_rotate_node[goma_ctx->fem.pg->imtrx]) != -1)
+          if (in_list(I, 0, goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx],
+                      goma_ctx->bc.mom_rotate_node[goma_ctx->fem.pg->imtrx]) != -1)
             call_rotate = 1;
-          if (in_list(I, 0, num_mesh_rotate[goma_ctx->fem.pg->imtrx],
-                      mesh_rotate_node[goma_ctx->fem.pg->imtrx]) != -1)
+          if (in_list(I, 0, goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx],
+                      goma_ctx->bc.mesh_rotate_node[goma_ctx->fem.pg->imtrx]) != -1)
             call_rotate = 1;
         }
       }
@@ -4864,7 +4863,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
        * and we supposedly have the correct contributions by now.
        */
       if (call_rotate) {
-        if (Use_2D_Rotation_Vectors == TRUE)
+        if (goma_ctx->bc.use_2d_rotation_vectors == TRUE)
           rotate_eqns_at_node_2D(iconnect_ptr, ielem_dim, num_local_nodes, ams);
         else if (first_elem_side_BC_array[ielem] != NULL) {
           err = apply_rotated_bc(resid_vector, first_elem_side_BC_array, ielem, ielem_type,
@@ -4901,14 +4900,14 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
          * work on MESH first
          */
         rotate_mesh = 0;
-        if (ROT_list[I] != NULL && (ROT_list[I][VECT_EQ_MESH] != -1) && pde[R_MESH1] &&
-            id_mesh > -1)
+        if (goma_ctx->bc.rot_list[I] != NULL && (goma_ctx->bc.rot_list[I][VECT_EQ_MESH] != -1) &&
+            pde[R_MESH1] && id_mesh > -1)
           rotate_mesh = 1;
 
         rotate_momentum = 0;
 
-        if (ROT_list[I] != NULL && (ROT_list[I][VECT_EQ_MOM] != -1) && pde[R_MOMENTUM1] &&
-            id_mom > -1)
+        if (goma_ctx->bc.rot_list[I] != NULL && (goma_ctx->bc.rot_list[I][VECT_EQ_MOM] != -1) &&
+            pde[R_MOMENTUM1] && id_mom > -1)
           rotate_momentum = 1;
 
         /* Now rotate the appropriate equations and sensitivities*/
@@ -4996,7 +4995,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
       call_col = 0;
       call_contact = 0.;
       for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
-        bct = BC_Types[bc_input_id].desc->method;
+        bct = goma_ctx->bc.bc_types[bc_input_id].desc->method;
         if (bct == STRONG_INT_SURF)
           call_int = 1;
         if (bct == COLLOCATE_SURF)
@@ -5110,9 +5109,9 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
   /******************************************************************************/
 
   /******************************************************************************/
-  if (First_Elem_Edge_BC_Array[goma_ctx->fem.pg->imtrx][ielem] != NULL) {
+  if (goma_ctx->bc.first_elem_edge_bc_array[goma_ctx->fem.pg->imtrx][ielem] != NULL) {
     /******************************************************************************/
-    elem_edge_bc = First_Elem_Edge_BC_Array[goma_ctx->fem.pg->imtrx][ielem];
+    elem_edge_bc = goma_ctx->bc.first_elem_edge_bc_array[goma_ctx->fem.pg->imtrx][ielem];
 
     /****************************************************************************/
     do { /* begining of do while construct */
@@ -5127,7 +5126,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
       call_int = 0;
       call_col = 0;
       for (ibc = 0; (bc_input_id = (int)elem_edge_bc->BC_input_id[ibc]) != -1; ibc++) {
-        bct = BC_Types[bc_input_id].desc->method;
+        bct = goma_ctx->bc.bc_types[bc_input_id].desc->method;
         if (bct == STRONG_INT_EDGE)
           call_int = 1;
         if (bct == COLLOCATE_EDGE)

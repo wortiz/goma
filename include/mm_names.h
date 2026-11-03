@@ -8538,40 +8538,6 @@ struct Equation_Names Var_Units[] = {
 
 int Num_Var_Units = sizeof(Var_Units) / sizeof(struct Equation_Names);
 
-/*
- * Array of pointers is more convenient access to dynamically-allocated
- * BC Descriptions than otherwise requiring a search through BC_Types...
- */
-
-struct BC_descriptions **new_BC_Desc;
-
-/*
- * This variable counts up any dynamically allocated BC_Description structures
- * so that we can send them to other processors.
- */
-
-int num_new_BC_Desc;
-
-/*
- * This variable is similar in function num_new_BC_Desc in that it counts
- * up the dynamically allocated table structures associated with BCS
- * so they can be sent to other processors
- */
-
-int num_BC_Tables;
-
-struct Data_Table *BC_Tables[MAX_BC_TABLES];
-
-int num_MP_Tables;
-
-struct Data_Table *MP_Tables[MAX_MP_TABLES];
-
-int num_ext_Tables;
-
-struct Data_Table *ext_Tables[MAX_EXT_TABLES];
-
-int num_AC_Tables;
-
-struct Data_Table *AC_Tables[MAX_AC_TABLES];
+/* The dynamically allocated BC descriptions and data tables now live in goma_ctx->bc. */
 
 #endif

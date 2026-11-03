@@ -64,13 +64,6 @@
 
 #define GOMA_RD_MESH_C
 
-int *ss_to_blks[MAX_MAT_PER_SS + 1] = {NULL};
-
-/*
- * Definitions for rf_bc_const.h
- */
-int *SS_Internal_Boundary = NULL;
-
 #ifdef HAVE_BRK
 extern int _brk_(int, char **, char **);
 #endif
@@ -147,10 +140,10 @@ int read_mesh_exoII(Exo_DB *exo, Dpi *dpi) {
   }
 
   // SS_Internal_Boundary uses the dpi values
-  SS_Internal_Boundary = alloc_int_1(exo->num_side_sets, INT_NOINIT);
+  goma_ctx->bc.ss_internal_boundary = alloc_int_1(exo->num_side_sets, INT_NOINIT);
   for (int ss_index = 0; ss_index < exo->num_side_sets; ss_index++) {
     int global_ss_index = dpi->ss_index_global[ss_index];
-    SS_Internal_Boundary[ss_index] = dpi->ss_internal_global[global_ss_index];
+    goma_ctx->bc.ss_internal_boundary[ss_index] = dpi->ss_internal_global[global_ss_index];
   }
 
   setup_old_dpi(exo, dpi);
@@ -179,9 +172,9 @@ int read_mesh_exoII(Exo_DB *exo, Dpi *dpi) {
     log_err("Edit \"rf_fem_const.h\" to set MDE to %d; rebuld GOMA.", max);
   }
 
-  check_sidesets(exo, BC_Types, goma_ctx->problem.num_bc, dpi);
+  check_sidesets(exo, goma_ctx->bc.bc_types, goma_ctx->problem.num_bc, dpi);
 
-  check_nodesets(exo, BC_Types, goma_ctx->problem.num_bc, dpi);
+  check_nodesets(exo, goma_ctx->bc.bc_types, goma_ctx->problem.num_bc, dpi);
 
   check_elemblocks(exo, goma_ctx->fem.upd->Num_Mat, goma_ctx->fem.pd_glob, dpi);
 
@@ -602,32 +595,33 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
   }
 
   for (i = 0; i < MAX_MAT_PER_SS + 1; i++) {
-    ss_to_blks[i] = (int *)smalloc(e->num_side_sets * sizeof(int *));
+    goma_ctx->bc.ss_to_blks[i] = (int *)smalloc(e->num_side_sets * sizeof(int *));
     for (j = 0; j < e->num_side_sets; j++) {
-      ss_to_blks[i][j] = -1;
+      goma_ctx->bc.ss_to_blks[i][j] = -1;
     }
   }
 
   if (num_proc > 1) {
     for (ss_index = 0; ss_index < e->num_side_sets; ss_index++) {
-      ss_to_blks[0][ss_index] = e->ss_id[ss_index];
+      goma_ctx->bc.ss_to_blks[0][ss_index] = e->ss_id[ss_index];
       int global_ss_index = dpi->ss_index_global[ss_index];
       int start = dpi->ss_block_index_global[global_ss_index];
       int end = dpi->ss_block_index_global[global_ss_index + 1];
       for (int bidx = start; bidx < end; bidx++) {
         // expects 1-indexed blocks
-        ss_to_blks[bidx - start + 1][ss_index] = e->eb_id[dpi->ss_block_list_global[bidx]];
+        goma_ctx->bc.ss_to_blks[bidx - start + 1][ss_index] =
+            e->eb_id[dpi->ss_block_list_global[bidx]];
       }
     }
   } else {
 
     for (ss_index = 0; ss_index < e->num_side_sets; ss_index++) {
-      ss_to_blks[0][ss_index] = e->ss_id[ss_index];
+      goma_ctx->bc.ss_to_blks[0][ss_index] = e->ss_id[ss_index];
 
       lo = ssp[ss_index];
 
       for (j = ssp[ss_index]; j < ssp[ss_index + 1]; j++) {
-        ss_to_blks[j - lo + 1][ss_index] = e->eb_id[ebl[j]];
+        goma_ctx->bc.ss_to_blks[j - lo + 1][ss_index] = e->eb_id[ebl[j]];
       }
     }
   }

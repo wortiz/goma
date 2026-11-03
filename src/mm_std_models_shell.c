@@ -399,7 +399,7 @@ double height_function_model(double *H_U,
 
   else if (goma_ctx->fem.mp->HeightUFunctionModel == TABLE) {
     struct Data_Table *table_local;
-    table_local = MP_Tables[goma_ctx->fem.mp->heightU_function_constants_tableid];
+    table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->heightU_function_constants_tableid];
 
     if (!strcmp(table_local->t_name[0], "LINEAR_TIME")) {
       dbl time_local[1];
@@ -581,7 +581,7 @@ double height_function_model(double *H_U,
 
   else if (goma_ctx->fem.mp->HeightLFunctionModel == TABLE) {
     struct Data_Table *table_local;
-    table_local = MP_Tables[goma_ctx->fem.mp->heightL_function_constants_tableid];
+    table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->heightL_function_constants_tableid];
     if (!strcmp(table_local->t_name[0], "LOWER_DISTANCE")) {
       /*
        * The LOWER_DISTANCE model looks at the lower velocity function to determine

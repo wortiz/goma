@@ -1411,18 +1411,20 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
 
                 if (in_list(I, 0, elem_side_bc->num_nodes_on_side, elem_side_bc->local_node_id)) {
                   eqn = var_i;
-                  if (BC_Types[bc_input_id].desc->vector && (eqn == VELOCITY2 || eqn == VELOCITY3))
+                  if (goma_ctx->bc.bc_types[bc_input_id].desc->vector &&
+                      (eqn == VELOCITY2 || eqn == VELOCITY3))
                     eqn = VELOCITY1;
 #ifdef DEBUG_NUMJAC
-                  if (BC_Types[bc_input_id].desc->equation == eqn &&
-                      BC_Types[bc_input_id].desc->sens[var_j]) {
+                  if (goma_ctx->bc.bc_types[bc_input_id].desc->equation == eqn &&
+                      goma_ctx->bc.bc_types[bc_input_id].desc->sens[var_j]) {
                     DPRINTF(stderr, "  >>> ");
                   } else {
                     DPRINTF(stderr, "      ");
                   }
 
-                  DPRINTF(stderr, "%s on %sID=%d\n", BC_Types[bc_input_id].desc->name1,
-                          BC_Types[bc_input_id].Set_Type, BC_Types[bc_input_id].BC_ID);
+                  DPRINTF(stderr, "%s on %sID=%d\n", goma_ctx->bc.bc_types[bc_input_id].desc->name1,
+                          goma_ctx->bc.bc_types[bc_input_id].Set_Type,
+                          goma_ctx->bc.bc_types[bc_input_id].BC_ID);
 #endif
                 }
               }

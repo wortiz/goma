@@ -126,19 +126,19 @@ int put_dirichlet_in_matrix(double x[], const int num_total_nodes)
               // Add for F_DIODE_BC if((var_type != FILL) )
               // Add for F_DIOD_BC  {
 
-              if (BC_Types[ibc].BC_Name != DX_NOTHING_BC &&
-                  BC_Types[ibc].BC_Name != DY_NOTHING_BC &&
-                  BC_Types[ibc].BC_Name != DZ_NOTHING_BC) {
+              if (goma_ctx->bc.bc_types[ibc].BC_Name != DX_NOTHING_BC &&
+                  goma_ctx->bc.bc_types[ibc].BC_Name != DY_NOTHING_BC &&
+                  goma_ctx->bc.bc_types[ibc].BC_Name != DZ_NOTHING_BC) {
                 zero_lec_row(goma_ctx->fem.lec->J, eqn, ldof_eqn);
                 if (!(goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)) {
                   goma_ctx->fem.lec->J[LEC_J_INDEX(eqn, var, ldof_eqn, ldof_eqn)] =
                       DIRICHLET_PENALTY;
                 }
-                if (BC_Types[ibc].BC_relax == -1.0) {
+                if (goma_ctx->bc.bc_types[ibc].BC_relax == -1.0) {
                   goma_ctx->fem.lec->R[LEC_R_INDEX(eqn, ldof_eqn)] = 0.0;
                 } else {
                   ieqn = node->First_Unknown[goma_ctx->fem.pg->imtrx] + offset;
-                  V_set = BC_Types[ibc].BC_Data_Float[0];
+                  V_set = goma_ctx->bc.bc_types[ibc].BC_Data_Float[0];
                   goma_ctx->fem.lec->R[LEC_R_INDEX(eqn, ldof_eqn)] =
                       DIRICHLET_PENALTY * (x[ieqn] - V_set);
                 }

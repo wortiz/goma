@@ -146,7 +146,7 @@ void load_extra_unknownsAC(int iAC,     /* ID NUMBER OF AC'S */
       xa[iAC] = goma_ctx->fem.augc[iAC].DataFlt[0];
     } else {
 
-      switch (BC_Types[ibc].BC_Name) {
+      switch (goma_ctx->bc.bc_types[ibc].BC_Name) {
       case SPLINE_BC:
       case SPLINEX_BC:
       case SPLINEY_BC:
@@ -186,16 +186,16 @@ void load_extra_unknownsAC(int iAC,     /* ID NUMBER OF AC'S */
       case YUSER_BC:
       case FORCE_USER_BC:
       case FORCE_USER_RS_BC:
-        xa[iAC] = BC_Types[ibc].u_BC[idf];
+        xa[iAC] = goma_ctx->bc.bc_types[ibc].u_BC[idf];
         break;
       case TABLE_BC:
       case TABLE_WICV_BC:
       case TABLE_WICS_BC:
-        BC_Type = &BC_Types[ibc];
+        BC_Type = &goma_ctx->bc.bc_types[ibc];
         xa[iAC] = BC_Type->table->f[idf];
         break;
       default:
-        xa[iAC] = BC_Types[ibc].BC_Data_Float[idf];
+        xa[iAC] = goma_ctx->bc.bc_types[ibc].BC_Data_Float[idf];
         break;
       }
     }
@@ -925,7 +925,7 @@ void update_parameterAC(
           if (fscanf(jfp, "%d %lf %lf", &idf_user, &temp, &lambda_user) != 3) {
             GOMA_EH(GOMA_ERROR, "error reading bcdiff");
           }
-          switch (BC_Types[ibc_user].BC_Name) {
+          switch (goma_ctx->bc.bc_types[ibc_user].BC_Name) {
           case SPLINE_BC:
           case SPLINEX_BC:
           case SPLINEY_BC:
@@ -965,10 +965,10 @@ void update_parameterAC(
           case YUSER_BC:
           case FORCE_USER_BC:
           case FORCE_USER_RS_BC:
-            BC_Types[ibc_user].u_BC[idf_user] = lambda_user;
+            goma_ctx->bc.bc_types[ibc_user].u_BC[idf_user] = lambda_user;
             break;
           default:
-            BC_Types[ibc_user].BC_Data_Float[idf_user] = lambda_user;
+            goma_ctx->bc.bc_types[ibc_user].BC_Data_Float[idf_user] = lambda_user;
             break;
           } /*  switch loop */
         } /* if ibc_user  */
@@ -995,7 +995,7 @@ void update_parameterAC(
 #endif
     } else {
 
-      switch (BC_Types[ibc].BC_Name) {
+      switch (goma_ctx->bc.bc_types[ibc].BC_Name) {
       case SPLINE_BC:
       case SPLINEX_BC:
       case SPLINEY_BC:
@@ -1035,16 +1035,16 @@ void update_parameterAC(
       case YUSER_BC:
       case FORCE_USER_BC:
       case FORCE_USER_RS_BC:
-        BC_Types[ibc].u_BC[idf] = lambda;
+        goma_ctx->bc.bc_types[ibc].u_BC[idf] = lambda;
         break;
       case TABLE_BC:
       case TABLE_WICV_BC:
       case TABLE_WICS_BC:
-        BC_Type = &BC_Types[ibc];
+        BC_Type = &goma_ctx->bc.bc_types[ibc];
         BC_Type->table->f[idf] = lambda;
         break;
       default:
-        BC_Types[ibc].BC_Data_Float[idf] = lambda;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[idf] = lambda;
         break;
       }
     }
@@ -2232,7 +2232,7 @@ void overlap_aug_cond(int ija[],
           }
 
           /* Find the appropriate side and point elem_side_bc to it */
-          elem_side_bc = First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx][ielem];
+          elem_side_bc = goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx][ielem];
           jside = elem_side_bc->id_side;
           if (iside != jside) {
             do {
@@ -2242,14 +2242,15 @@ void overlap_aug_cond(int ija[],
           }
 
           /* Now fill in all gAC, bAC, and cAC terms for this side */
-          err = apply_contact_bc(
-              x, mf_args->resid, *mf_args->delta_t, *mf_args->theta_, *mf_args->h_elem_avg, h,
-              mu_avg, *mf_args->U_norm, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], ielem,
-              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type,
-              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
-              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim,
-              goma_ctx->mesh.proc_connect_ptr[ielem], elem_side_bc, *mf_args->num_total_nodes,
-              CONTACT_SURF, jAC, gAC, bAC, cAC, dAC, *mf_args->time, exo);
+          err = apply_contact_bc(x, mf_args->resid, *mf_args->delta_t, *mf_args->theta_,
+                                 *mf_args->h_elem_avg, h, mu_avg, *mf_args->U_norm,
+                                 goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                                 ielem, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type,
+                                 goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
+                                 goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim,
+                                 goma_ctx->mesh.proc_connect_ptr[ielem], elem_side_bc,
+                                 *mf_args->num_total_nodes, CONTACT_SURF, jAC, gAC, bAC, cAC, dAC,
+                                 *mf_args->time, exo);
           GOMA_EH(err, " apply_contact_bc");
         } /* END of "if (ielem != jelem || iside != jside)" */
 
@@ -2300,10 +2301,10 @@ void overlap_aug_cond(int ija[],
 
     for (ielem = e_start; ielem < e_end; ielem++) {
 
-      if (First_Elem_Side_BC_Array[ielem] != NULL) {
+      if (goma_ctx->bc.first_elem_side_bc_array[ielem] != NULL) {
         int call_contact;
         int ibc, bc_input_id, bct;
-        elem_side_bc = First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx][ielem];
+        elem_side_bc = goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx][ielem];
 
         load_elem_dofptr(ielem, exo, x_static, x_old_static, xdot_static, xdot_old_static, 0);
         /*****************************************************************************/
@@ -2313,20 +2314,21 @@ void overlap_aug_cond(int ija[],
 
           call_contact = 0;
           for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
-            bct = BC_Types[bc_input_id].desc->method;
+            bct = goma_ctx->bc.bc_types[bc_input_id].desc->method;
             if (bct == CONTACT_SURF)
               call_contact = 1;
           }
 
           if (call_contact) {
-            err = apply_contact_bc(
-                x, mf_args->resid, *mf_args->delta_t, *mf_args->theta_, *mf_args->h_elem_avg, h,
-                mu_avg, *mf_args->U_norm, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], ielem,
-                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type,
-                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
-                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim,
-                goma_ctx->mesh.proc_connect_ptr[ielem], elem_side_bc, *mf_args->num_total_nodes,
-                CONTACT_SURF, jAC, gAC, bAC, cAC, dAC, *mf_args->time, exo);
+            err = apply_contact_bc(x, mf_args->resid, *mf_args->delta_t, *mf_args->theta_,
+                                   *mf_args->h_elem_avg, h, mu_avg, *mf_args->U_norm,
+                                   goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                                   ielem, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type,
+                                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
+                                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim,
+                                   goma_ctx->mesh.proc_connect_ptr[ielem], elem_side_bc,
+                                   *mf_args->num_total_nodes, CONTACT_SURF, jAC, gAC, bAC, cAC, dAC,
+                                   *mf_args->time, exo);
           }
           /****************************************************************************/
         } while ((elem_side_bc = elem_side_bc->next_side_bc) != NULL);
@@ -2613,7 +2615,7 @@ static int estimate_dAC_ALC(
                                   goma_ctx->fem.augc[jAC].MFID, NULL, goma_ctx->fem.augc[jAC].MTID,
                                   goma_ctx->fem.augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
                                   *(mf_args->delta_t), *(mf_args->time), 0);
-        res_p[jAC] = inventory - (-BC_Types[ibc].BC_Data_Float[idf]);
+        res_p[jAC] = inventory - (-goma_ctx->bc.bc_types[ibc].BC_Data_Float[idf]);
       }
       break;
 
@@ -2724,7 +2726,7 @@ static int estimate_dAC_ALC(
                                   goma_ctx->fem.augc[jAC].MFID, NULL, goma_ctx->fem.augc[jAC].MTID,
                                   goma_ctx->fem.augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
                                   *(mf_args->delta_t), *(mf_args->time), 0);
-        res_m[jAC] = inventory - (-BC_Types[ibc].BC_Data_Float[idf]);
+        res_m[jAC] = inventory - (-goma_ctx->bc.bc_types[ibc].BC_Data_Float[idf]);
       }
       break;
     case AC_POSITION:
@@ -2824,7 +2826,7 @@ int std_lgr_cond(int iAC,
                                 goma_ctx->fem.augc[iAC].COMPID, NULL, FALSE, mf_args->x,
                                 mf_args->xdot, cAC[iAC], *(mf_args->delta_t), *(mf_args->time), 0);
 
-      gAC[iAC] = inventory - (-BC_Types[ibc].BC_Data_Float[idf]);
+      gAC[iAC] = inventory - (-goma_ctx->bc.bc_types[ibc].BC_Data_Float[idf]);
 
       for (inode = 0, i = 0; i < numProcUnknowns; i++) {
         int var, isDBC = -1;

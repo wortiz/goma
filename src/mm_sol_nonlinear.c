@@ -435,8 +435,8 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
 
   exchange_dof(cx, dpi, R, goma_ctx->fem.pg->imtrx);
   int err = matrix_fill_full(ams, x, R, x_old, x_older, xdot, xdot_old, x_update, delta_t, theta,
-                             First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], time_value, exo,
-                             dpi, num_total_nodes, h_elem_avg, U_norm, NULL);
+                             goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                             time_value, exo, dpi, num_total_nodes, h_elem_avg, U_norm, NULL);
 
   vector_scaling(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], R, scale);
   dbl g_check = L2_norm(R, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
@@ -514,8 +514,8 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
                                   goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
     }
     err = matrix_fill_full(ams, x, R, x_old, x_older, xdot, xdot_old, x_update, delta_t, theta,
-                           First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], time_value, exo, dpi,
-                           num_total_nodes, h_elem_avg, U_norm, NULL);
+                           goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                           time_value, exo, dpi, num_total_nodes, h_elem_avg, U_norm, NULL);
     exchange_dof(cx, dpi, R, goma_ctx->fem.pg->imtrx);
     vector_scaling(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], R, scale);
 
@@ -1113,7 +1113,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
   // 3D Automatic rotation setup
   if (goma_ctx->problem.num_rot == 0 /*&& inewton == 0*/ && exo->num_dim == 3) {
-    setup_rotated_bc_nodes(exo, dpi, BC_Types, goma_ctx->problem.num_bc, x);
+    setup_rotated_bc_nodes(exo, dpi, goma_ctx->bc.bc_types, goma_ctx->problem.num_bc, x);
   }
 
   /*********************************************************************************
@@ -1225,13 +1225,13 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
       if (goma_ctx->problem.num_rot > 0)
         calculate_all_rotation_vectors(exo, x);
-      else if (Use_2D_Rotation_Vectors == TRUE)
+      else if (goma_ctx->bc.use_2d_rotation_vectors == TRUE)
         calculate_2D_rotation_vectors(exo, x);
 
       numerical_jacobian(ams, x, resid_vector, delta_t, theta, x_old, x_older, xdot, xdot_old,
                          x_update, num_total_nodes,
-                         First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], goma_ctx->debug_flag,
-                         time_value, exo, dpi, &h_elem_avg, &U_norm);
+                         goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                         goma_ctx->debug_flag, time_value, exo, dpi, &h_elem_avg, &U_norm);
 
       DPRINTF(stdout, "%s: numerical Jacobian done....\n", yo);
       P0PRINTF("\n-done\n\n");
@@ -1273,7 +1273,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
        */
       if (goma_ctx->problem.num_rot > 0)
         calculate_all_rotation_vectors(exo, x);
-      else if (Use_2D_Rotation_Vectors == TRUE)
+      else if (goma_ctx->bc.use_2d_rotation_vectors == TRUE)
         calculate_2D_rotation_vectors(exo, x);
 
       /* Initialize volume constraint, not the most efficient way. */
@@ -1300,9 +1300,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       if (err == -1)
         return (err);
 
-      err = matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update,
-                             &delta_t, &theta, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx],
-                             &time_value, exo, dpi, &num_total_nodes, &h_elem_avg, &U_norm, NULL);
+      err =
+          matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
+                           &theta, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                           &time_value, exo, dpi, &num_total_nodes, &h_elem_avg, &U_norm, NULL);
 
       a_end = ut();
       if (err == -1) {
@@ -1325,7 +1326,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       if (enable_numerical_jacobian && goma_ctx->fem.af->Assemble_Jacobian == TRUE) {
         err = numerical_jacobian_compute_stress(
             ams, x, resid_vector, delta_t, theta, x_old, x_older, xdot, xdot_old, x_update,
-            num_total_nodes, First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx],
+            num_total_nodes, goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
             goma_ctx->debug_flag, time_value, exo, dpi, &h_elem_avg, &U_norm);
         a_end = ut();
       }
@@ -1375,7 +1376,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       mf_args.x_update = x_update;
       mf_args.delta_t = &delta_t;
       mf_args.theta_ = &theta;
-      mf_args.first_elem_side_bc = First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx];
+      mf_args.first_elem_side_bc = goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx];
       mf_args.time = &time_value;
       mf_args.exo = exo;
       mf_args.dpi = dpi;
@@ -3859,8 +3860,8 @@ static int soln_sens(double lambda,  /*  parameter */
     return (err);
 
   err = matrix_fill_full(ams, x, res_p, x_old, x_older, xdot, xdot_old, x_update, &delta_t, &theta,
-                         First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo, dpi,
-                         &num_total_nodes, &h_elem_avg, &U_norm, NULL);
+                         goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                         &time_value, exo, dpi, &num_total_nodes, &h_elem_avg, &U_norm, NULL);
   if (err == -1)
     return (err);
 
@@ -3905,8 +3906,8 @@ static int soln_sens(double lambda,  /*  parameter */
     return (err);
 
   err = matrix_fill_full(ams, x, res_m, x_old, x_older, xdot, xdot_old, x_update, &delta_t, &theta,
-                         First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], &time_value, exo, dpi,
-                         &num_total_nodes, &h_elem_avg, &U_norm, NULL);
+                         goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
+                         &time_value, exo, dpi, &num_total_nodes, &h_elem_avg, &U_norm, NULL);
 
   if (err == -1)
     return (err);

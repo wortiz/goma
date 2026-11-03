@@ -2985,7 +2985,7 @@ int Diffusivity(void)
 
     case TABLE: {
       struct Data_Table *table_local;
-      table_local = MP_Tables[goma_ctx->fem.mp->diffusivity_tableid[w]];
+      table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->diffusivity_tableid[w]];
       apply_table_mp(&goma_ctx->fem.mp->diffusivity[w], table_local);
       for (i = 0; i < table_local->columns - 1; i++) {
         var = table_local->t_index[i];

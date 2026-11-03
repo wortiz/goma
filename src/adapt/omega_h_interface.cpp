@@ -1111,8 +1111,8 @@ void convert_omega_h_to_goma(
   free(goma_ctx->problem.idv);
   goma_ctx->problem.idv = NULL;
 
-  free_Surf_BC(First_Elem_Side_BC_Array, exo);
-  free_Edge_BC(First_Elem_Edge_BC_Array, exo, dpi);
+  free_Surf_BC(goma_ctx->bc.first_elem_side_bc_array, exo);
+  free_Edge_BC(goma_ctx->bc.first_elem_edge_bc_array, exo, dpi);
   free_nodes();
   if (goma_ctx->num_proc == 1) {
     free_dpi_uni(dpi);

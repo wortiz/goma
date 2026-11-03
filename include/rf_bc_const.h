@@ -107,25 +107,8 @@
 #define MAX_SS_PER_NODE 50
 #endif
 
-#ifndef MAX_MAT_PER_SS
-#define MAX_MAT_PER_SS 20
-#endif
-
-#ifndef MAX_BC_TABLES
-#define MAX_BC_TABLES 30
-#endif
-
-#ifndef MAX_MP_TABLES
-#define MAX_MP_TABLES 20
-#endif
-
-#ifndef MAX_EXT_TABLES
-#define MAX_EXT_TABLES 2
-#endif
-
-#ifndef MAX_AC_TABLES
-#define MAX_AC_TABLES 2
-#endif
+#include "rf_bc_limits.h"      /* MAX_MAT_PER_SS, MAX_*_TABLES */
+#include "util/goma_context.h" /* boundary condition state lives in goma_ctx->bc */
 
 /*
  * The hyperbolic VOF fill equation keeps careful track of inlet boundaries.
@@ -1227,8 +1210,6 @@ extern int Num_BC_Names;
  *  num_new_BC_Desc: This is an array of BC_Descriptions read in
  *                   from the input deck.
  */
-extern int num_new_BC_Desc;
-extern struct BC_descriptions **new_BC_Desc;
 
 /*
  *  Equation_Names structure:
@@ -1276,15 +1257,6 @@ struct Data_Table {
   double yscale; /* Scaling value for the y axis */
   double Emin;   /* Minimum modulus value (for FAUX_PLASTICITY */
 };
-
-extern int num_BC_Tables;
-extern struct Data_Table *BC_Tables[];
-extern int num_MP_Tables;
-extern struct Data_Table *MP_Tables[];
-extern int num_ext_Tables;
-extern struct Data_Table *ext_Tables[];
-extern int num_AC_Tables;
-extern struct Data_Table *AC_Tables[];
 
 /* structure to hold b.c. information entered from the input file
  *-------------------------------------------------------------------------------
@@ -1495,24 +1467,6 @@ struct elem_edge_bc_struct {
  * new array to store list of nodes that exist on SS
  * - for geometrical purposes
  */
-extern int *boundary_node_list;
-extern int **ss_on_boundary_node_list;
-extern int num_boundary_nodes;
-extern int **BC_dup_nodes;
-extern int ****BC_dup_list;
-extern int *BC_dup_ptr;
-extern int *ss_to_blks[MAX_MAT_PER_SS + 1];
-extern int dup_blks_list[MAX_MAT_PER_SS + 1];
-extern int *SS_Internal_Boundary;
-extern int **mesh_rotate_node;
-extern int **mesh_rotate_ss;
-extern int *num_mesh_rotate;
-extern int **mom_rotate_node;
-extern int **mom_rotate_ss;
-extern int *num_mom_rotate;
-extern int PRESSURE_DATUM;          /* flag to determine if a pressure datum is set */
-extern int pressure_datum_element;  /* element in which the pressure datum is set */
-extern double pressure_datum_value; /* value of the pressure datum */
 
 #undef CDIM
 

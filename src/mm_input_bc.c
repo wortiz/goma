@@ -54,10 +54,6 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
                                                 * with material-specific            *
                                                 * initialization                    */
 
-extern struct Boundary_Condition *BC_Types;
-
-extern struct Rotation_Specs *ROT_Types;
-
 static Spfrtn sr;
 
 /*
@@ -134,7 +130,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
    * Initialize...
    */
 
-  num_new_BC_Desc = 0;
+  goma_ctx->bc.num_new_bc_desc = 0;
 
   /*
    * Read boundary condition specifications
@@ -157,7 +153,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
   /*
    *  Allocate space for the vector, BC_Types.
    */
-  BC_Types = alloc_struct_1(struct Boundary_Condition, goma_ctx->problem.num_bc);
+  goma_ctx->bc.bc_types = alloc_struct_1(struct Boundary_Condition, goma_ctx->problem.num_bc);
 
   if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
     printf("%s:\tallocated %d copies of the %lu sized\n", yo, goma_ctx->problem.num_bc,
@@ -178,7 +174,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
      *   Initialize the boundary condition to its
      *   default state.
      */
-    initialize_Boundary_Condition(BC_Types + ibc);
+    initialize_Boundary_Condition(goma_ctx->bc.bc_types + ibc);
 
     look_for(ifp, "BC", input, '=');
     if (fscanf(ifp, "%s", ts) != 1) {
@@ -192,16 +188,16 @@ void rd_bc_specs(FILE *ifp, char *input) {
      *  -> Also, assign the pointer to the BC_Description structure
      *     that matches the string, here.
      */
-    BC_Types[ibc].desc = NULL;
+    goma_ctx->bc.bc_types[ibc].desc = NULL;
     for (k = 0; k < Num_BC_Names; k++) {
       if (!strcmp(ts, BC_Desc[k].name1) || !strcmp(ts, BC_Desc[k].name2)) {
-        BC_Types[ibc].BC_Name = BC_Desc[k].BC_Name;
-        BC_Types[ibc].desc = &BC_Desc[k];
-        BC_Types[ibc].BC_Desc_index = k;
+        goma_ctx->bc.bc_types[ibc].BC_Name = BC_Desc[k].BC_Name;
+        goma_ctx->bc.bc_types[ibc].desc = &BC_Desc[k];
+        goma_ctx->bc.bc_types[ibc].BC_Desc_index = k;
       }
     }
 
-    if (BC_Types[ibc].desc == NULL) {
+    if (goma_ctx->bc.bc_types[ibc].desc == NULL) {
       fprintf(stderr, "%s:\tBC %s not recognized.\n", yo, ts);
       exit(-1);
     }
@@ -222,29 +218,29 @@ void rd_bc_specs(FILE *ifp, char *input) {
     }
 
     if (!strcmp(input, "NS")) {
-      (void)strncpy(BC_Types[ibc].Set_Type, "NS", 3);
+      (void)strncpy(goma_ctx->bc.bc_types[ibc].Set_Type, "NS", 3);
     } else if (!strcmp(input, "NC")) {
-      (void)strncpy(BC_Types[ibc].Set_Type, "NS", 3);
+      (void)strncpy(goma_ctx->bc.bc_types[ibc].Set_Type, "NS", 3);
       goma_ctx->fem.cont->upBCID = ibc;
       printf("BC Continuation: BCID = %4d\n", goma_ctx->fem.cont->upBCID);
     } else if (!strcmp(input, "SS")) {
-      (void)strncpy(BC_Types[ibc].Set_Type, "SS", 3);
+      (void)strncpy(goma_ctx->bc.bc_types[ibc].Set_Type, "SS", 3);
     } else if (!strcmp(input, "SC")) {
-      (void)strncpy(BC_Types[ibc].Set_Type, "SS", 3);
+      (void)strncpy(goma_ctx->bc.bc_types[ibc].Set_Type, "SS", 3);
       goma_ctx->fem.cont->upBCID = ibc;
       printf("BC Continuation: BCID = %4d\n", goma_ctx->fem.cont->upBCID);
     } else if (!strcmp(input, "LS")) {
-      (void)strncpy(BC_Types[ibc].Set_Type, "LS", 3);
+      (void)strncpy(goma_ctx->bc.bc_types[ibc].Set_Type, "LS", 3);
 
-      if (!strcmp(BC_Types[ibc].desc->name1, "BAAIJENS_FLUID_SOLID") ||
-          !strcmp(BC_Types[ibc].desc->name1, "LS_NO_SLIP")) {
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "BAAIJENS_FLUID_SOLID") ||
+          !strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "LS_NO_SLIP")) {
         /* bad noble hack
         GOMA_EH(GOMA_ERROR,"Cannot apply BAAIJENS_SOLID_FLUID or LS_NO_SLIP to set type LS. Use
         PF");
         */
       }
     } else if (!strcmp(input, "PF")) {
-      (void)strncpy(BC_Types[ibc].Set_Type, "PF", 3);
+      (void)strncpy(goma_ctx->bc.bc_types[ibc].Set_Type, "PF", 3);
     } else {
       fprintf(stderr, "%s:\tunrecognized Set_Type for current boundary condition %d - %s\n", yo,
               ibc, input);
@@ -257,7 +253,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
      * later...
      */
 
-    if (fscanf(ifp, "%d", &BC_Types[ibc].BC_ID) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_ID) != 1) {
       fprintf(stderr, "%s:\tError reading BC_Types[ibc].BC_ID\n", yo);
       exit(-1);
     }
@@ -269,26 +265,28 @@ void rd_bc_specs(FILE *ifp, char *input) {
     for (k = 0; k < Num_BC_Names; k++) {
       if (!strcmp(ts, BC_Desc[k].name1) || !strcmp(ts, BC_Desc[k].name2)) {
 
-        SPF(echo_string, "BC = %s %s %d", BC_Desc[k].name1, BC_Types[ibc].Set_Type,
-            BC_Types[ibc].BC_ID);
+        SPF(echo_string, "BC = %s %s %d", BC_Desc[k].name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+            goma_ctx->bc.bc_types[ibc].BC_ID);
       }
     }
 
     /* Check for fluid/solid interaction BC's (embedded or contact) */
-    if (BC_Types[ibc].desc->method == EMBEDDED_SURF || BC_Types[ibc].desc->method == CONTACT_SURF)
+    if (goma_ctx->bc.bc_types[ibc].desc->method == EMBEDDED_SURF ||
+        goma_ctx->bc.bc_types[ibc].desc->method == CONTACT_SURF)
       overlap_bc = TRUE;
 
     /*
      * Read in a second SS number for EDGE conditions
      */
-    if (BC_Types[ibc].desc->method == COLLOCATE_EDGE ||
-        BC_Types[ibc].desc->method == WEAK_INT_EDGE ||
-        BC_Types[ibc].desc->method == STRONG_INT_EDGE) {
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_ID2) != 1) {
-        sprintf(err_msg, "Expected 2nd int for SSID for EDGE on %s.", BC_Types[ibc].desc->name1);
+    if (goma_ctx->bc.bc_types[ibc].desc->method == COLLOCATE_EDGE ||
+        goma_ctx->bc.bc_types[ibc].desc->method == WEAK_INT_EDGE ||
+        goma_ctx->bc.bc_types[ibc].desc->method == STRONG_INT_EDGE) {
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_ID2) != 1) {
+        sprintf(err_msg, "Expected 2nd int for SSID for EDGE on %s.",
+                goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_ID2);
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_ID2);
     }
 
     /*
@@ -333,7 +331,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
      * Read in data depending on the type of boundary condition...
      */
 
-    switch (BC_Types[ibc].BC_Name) {
+    switch (goma_ctx->bc.bc_types[ibc].BC_Name) {
       /* Fall through for all cases which don't require any further
        * data input...
        */
@@ -401,11 +399,12 @@ void rd_bc_specs(FILE *ifp, char *input) {
        */
     case MOVING_PLANE_ETCH_BC:
 
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[0]) != 1) {
-        sr = sprintf(err_msg, "%s: Expected 1 int for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]) != 1) {
+        sr = sprintf(err_msg, "%s: Expected 1 int for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
 
       break;
 
@@ -489,63 +488,70 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case GRAD_LUBP_NOBC_BC:
     case LUB_CURV_NOBC_BC:
 
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[0]) != 1) {
-        sr = sprintf(err_msg, "%s: Expected 1 flt for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 1) {
+        sr = sprintf(err_msg, "%s: Expected 1 flt for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].max_DFlt = 1;
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 1;
 
-      SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[0]);
-      if (BC_Types[ibc].BC_Name == GRAD_LUB_PRESS_BC ||
-          BC_Types[ibc].BC_Name == GRAD_LUBP_NOBC_BC) {
-        BC_Types[ibc].BC_Data_Float[1] = 0.;
-        BC_Types[ibc].BC_Data_Float[2] = 1.;
-        if (fscanf(ifp, "%lf %lf", &BC_Types[ibc].BC_Data_Float[1],
-                   &BC_Types[ibc].BC_Data_Float[2]) != 2) {
-          sr = sprintf(err_msg, "%s: Expected 2 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]);
+      if (goma_ctx->bc.bc_types[ibc].BC_Name == GRAD_LUB_PRESS_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == GRAD_LUBP_NOBC_BC) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[1] = 0.;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[2] = 1.;
+        if (fscanf(ifp, "%lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2]) != 2) {
+          sr = sprintf(err_msg, "%s: Expected 2 flts for %s.", yo,
+                       goma_ctx->bc.bc_types[ibc].desc->name1);
         }
-        BC_Types[ibc].max_DFlt = 3;
-        SPF(endofstring(echo_string), " %.4g %.4g", BC_Types[ibc].BC_Data_Float[1],
-            BC_Types[ibc].BC_Data_Float[2]);
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 3;
+        SPF(endofstring(echo_string), " %.4g %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[2]);
       }
 
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[0]) != 1) {
-        BC_Types[ibc].BC_Data_Int[0] = -1;
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = -1;
         /* The default for this int now becomes an added sign needed to resolve unhandled issues
          * with determining the sign automagically. Put it in [1], because [0] gets overridden.
          */
-        if (BC_Types[ibc].BC_Name == CAP_ENDFORCE_SCALAR_BC ||
-            BC_Types[ibc].BC_Name == SURFTANG_SCALAR_BC) {
-          BC_Types[ibc].BC_Data_Int[1] = 1;
+        if (goma_ctx->bc.bc_types[ibc].BC_Name == CAP_ENDFORCE_SCALAR_BC ||
+            goma_ctx->bc.bc_types[ibc].BC_Name == SURFTANG_SCALAR_BC) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[1] = 1;
         }
       } else {
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
-        if (BC_Types[ibc].BC_Name == CAP_ENDFORCE_SCALAR_BC ||
-            BC_Types[ibc].BC_Name == SURFTANG_SCALAR_BC) {
-          if (BC_Types[ibc].BC_Data_Int[0] != 1 && BC_Types[ibc].BC_Data_Int[0] != -1) {
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
+        if (goma_ctx->bc.bc_types[ibc].BC_Name == CAP_ENDFORCE_SCALAR_BC ||
+            goma_ctx->bc.bc_types[ibc].BC_Name == SURFTANG_SCALAR_BC) {
+          if (goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] != 1 &&
+              goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] != -1) {
             sr = sprintf(err_msg, "%s: Optional int has to have a value of 1 or -1 (sign): %d", yo,
-                         BC_Types[ibc].BC_Data_Int[0]);
+                         goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
             GOMA_EH(GOMA_ERROR, err_msg);
           } else {
-            BC_Types[ibc].BC_Data_Int[1] = BC_Types[ibc].BC_Data_Int[0];
+            goma_ctx->bc.bc_types[ibc].BC_Data_Int[1] = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
           }
         }
       }
-      if (BC_Types[ibc].BC_Name == VELO_NORMAL_LS_BC ||
-          BC_Types[ibc].BC_Name == VELO_NORMAL_LS_PETROV_BC ||
-          BC_Types[ibc].BC_Name == VELO_NORMAL_LS_COLLOC_BC ||
-          BC_Types[ibc].BC_Name == VELO_TANGENT_LS_BC) {
-        BC_Types[ibc].BC_Data_Float[1] = 0.;
-        BC_Types[ibc].BC_Data_Float[2] = 0.;
-        BC_Types[ibc].BC_Data_Float[3] = 135.;
-        if (fscanf(ifp, "%lf %lf %lf", &BC_Types[ibc].BC_Data_Float[1],
-                   &BC_Types[ibc].BC_Data_Float[2], &BC_Types[ibc].BC_Data_Float[3]) != 3) {
-          sr = sprintf(err_msg, "%s: Expected 3 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (goma_ctx->bc.bc_types[ibc].BC_Name == VELO_NORMAL_LS_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == VELO_NORMAL_LS_PETROV_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == VELO_NORMAL_LS_COLLOC_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == VELO_TANGENT_LS_BC) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[1] = 0.;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[2] = 0.;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[3] = 135.;
+        if (fscanf(ifp, "%lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]) != 3) {
+          sr = sprintf(err_msg, "%s: Expected 3 flts for %s.", yo,
+                       goma_ctx->bc.bc_types[ibc].desc->name1);
           GOMA_EH(GOMA_ERROR, err_msg);
         }
-        BC_Types[ibc].max_DFlt = 4;
-        SPF(endofstring(echo_string), " %.4g %.4g %.4g", BC_Types[ibc].BC_Data_Float[1],
-            BC_Types[ibc].BC_Data_Float[2], BC_Types[ibc].BC_Data_Float[3]);
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 4;
+        SPF(endofstring(echo_string), " %.4g %.4g %.4g",
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]);
       }
 
       break;
@@ -719,24 +725,24 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case TURB_K_BC:
     case TURB_OMEGA_BC:
 
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[0]) != 1) {
-        sprintf(err_msg, "%s: Expected 1 flt for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 1) {
+        sprintf(err_msg, "%s: Expected 1 flt for %s.", yo, goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].max_DFlt = 2;
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 2;
 
-      SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[0]);
+      SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]);
 
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_relax) != 1) {
-        BC_Types[ibc].BC_relax = -1.0;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_relax) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_relax = -1.0;
       } else {
 
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_relax);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_relax);
 
-        if (fscanf(ifp, "%d", &BC_Types[ibc].BC_EBID_Apply) != 1) {
-          BC_Types[ibc].BC_EBID_Apply = -1;
+        if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_EBID_Apply) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_EBID_Apply = -1;
         } else
-          SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_EBID_Apply);
+          SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_EBID_Apply);
       }
       break;
 
@@ -754,62 +760,67 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case LS_LATENT_HEAT_BC:
     case LS_ACOUSTIC_SOURCE_BC:
 
-      if (fscanf(ifp, "%lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1]) != 2) {
-        sr = sprintf(err_msg, "%s: Expected 2 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]) != 2) {
+        sr = sprintf(err_msg, "%s: Expected 2 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].max_DFlt = 2;
-      SPF(endofstring(echo_string), " %.4g %.4g", BC_Types[ibc].BC_Data_Float[0],
-          BC_Types[ibc].BC_Data_Float[1]);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 2;
+      SPF(endofstring(echo_string), " %.4g %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]);
       break;
 
     case LS_STRESS_JUMP_BC:
-      if (fscanf(ifp, "%lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1]) != 2) {
-        sr = sprintf(err_msg, "%s: Expected 2 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]) != 2) {
+        sr = sprintf(err_msg, "%s: Expected 2 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].max_DFlt = 2;
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 2;
       /* Try reading optional int */
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[0]) != 1) {
-        BC_Types[ibc].BC_Data_Int[0] = 0;
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = 0;
       }
-      if ((BC_Types[ibc].BC_Data_Int[0] != 0) && (BC_Types[ibc].BC_Data_Int[0] != 1) &&
-          (BC_Types[ibc].BC_Data_Int[0] != -1)) {
-        GOMA_EH(GOMA_ERROR,
-                "Expected LS_STRESS_JUMP float float [-1,0,1] got LS_STRESS_JUMP %g %g %d",
-                BC_Types[ibc].BC_Data_Float[0], BC_Types[ibc].BC_Data_Float[1],
-                BC_Types[ibc].BC_Data_Int[0]);
+      if ((goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] != 0) &&
+          (goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] != 1) &&
+          (goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] != -1)) {
+        GOMA_EH(
+            GOMA_ERROR, "Expected LS_STRESS_JUMP float float [-1,0,1] got LS_STRESS_JUMP %g %g %d",
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[1], goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
       }
-      SPF(endofstring(echo_string), " %.4g %.4g %d", BC_Types[ibc].BC_Data_Float[0],
-          BC_Types[ibc].BC_Data_Float[1], BC_Types[ibc].BC_Data_Int[0]);
+      SPF(endofstring(echo_string), " %.4g %.4g %d", goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[1], goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
       break;
 
     case CAPILLARY_SHEAR_VISC_BC:
-      if (fscanf(ifp, "%lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1]) != 2) {
-        sr = sprintf(err_msg, "%s: Expected 2 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]) != 2) {
+        sr = sprintf(err_msg, "%s: Expected 2 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       /* Try reading two optional floats [2] is t_start_on , while [3] is t_fully_on */
-      if (fscanf(ifp, "%lf %lf", &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3]) != 2) {
+      if (fscanf(ifp, "%lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]) != 2) {
       }
-      BC_Types[ibc].max_DFlt = 4;
-      SPF(endofstring(echo_string), " %.4g %.4g %.4g %.4g", BC_Types[ibc].BC_Data_Float[0],
-          BC_Types[ibc].BC_Data_Float[1], BC_Types[ibc].BC_Data_Float[2],
-          BC_Types[ibc].BC_Data_Float[3]);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 4;
+      SPF(endofstring(echo_string), " %.4g %.4g %.4g %.4g",
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[0], goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[2], goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]);
 
       break;
 
     case FLUIDITY_EQUILIBRIUM_BC:
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[0]) != 1) {
-        sr = sprintf(err_msg, "%s: Expected 1 int for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]) != 1) {
+        sr = sprintf(err_msg, "%s: Expected 1 int for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
       break;
 
       /* Fall through for all cases which requires two integer values
@@ -817,13 +828,15 @@ void rd_bc_specs(FILE *ifp, char *input) {
        */
     case YFLUX_ETCH_BC:
 
-      if (fscanf(ifp, "%d %d", &BC_Types[ibc].BC_Data_Int[0], &BC_Types[ibc].BC_Data_Int[1]) != 2) {
-        sr = sprintf(err_msg, "%s: Expected 2 int for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%d %d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1]) != 2) {
+        sr = sprintf(err_msg, "%s: Expected 2 int for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      SPF(endofstring(echo_string), " %d %d", BC_Types[ibc].BC_Data_Int[0],
-          BC_Types[ibc].BC_Data_Int[1]);
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      SPF(endofstring(echo_string), " %d %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[1]);
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
       break;
 
       /*
@@ -850,14 +863,16 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case SH_S22_WEAK_BC:
     case VELO_NORMAL_LUB_BC:
 
-      if (fscanf(ifp, "%lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2]) != 3) {
-        sr = sprintf(err_msg, "%s: Expected 3 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2]) != 3) {
+        sr = sprintf(err_msg, "%s: Expected 3 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF_DBL_VEC(endofstring(echo_string), 3, BC_Types[ibc].BC_Data_Float);
-      BC_Types[ibc].max_DFlt = 3;
+      SPF_DBL_VEC(endofstring(echo_string), 3, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 3;
 
       break;
 
@@ -872,39 +887,45 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case LIGHTM_TRANS_BC:
     case LIGHTD_TRANS_BC:
 
-      if (fscanf(ifp, "%lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2]) != 3) {
-        sr = sprintf(err_msg, "%s: Expected 3 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2]) != 3) {
+        sr = sprintf(err_msg, "%s: Expected 3 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF_DBL_VEC(endofstring(echo_string), 3, BC_Types[ibc].BC_Data_Float);
-      BC_Types[ibc].max_DFlt = 3;
+      SPF_DBL_VEC(endofstring(echo_string), 3, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 3;
 
       /* Try reading the optional integer. */
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[0]) != 1) {
-        BC_Types[ibc].BC_Data_Int[0] = -1;
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = -1;
       } else {
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
       }
 
-      if (BC_Types[ibc].BC_Name == CAPILLARY_TABLE_BC) {
-        new_BC_Desc = ((struct BC_descriptions **)realloc(
-            new_BC_Desc, (num_new_BC_Desc + 1) * sizeof(struct BC_descriptions *)));
+      if (goma_ctx->bc.bc_types[ibc].BC_Name == CAPILLARY_TABLE_BC) {
+        goma_ctx->bc.new_bc_desc = ((struct BC_descriptions **)realloc(
+            goma_ctx->bc.new_bc_desc,
+            (goma_ctx->bc.num_new_bc_desc + 1) * sizeof(struct BC_descriptions *)));
 
-        new_BC_Desc[num_new_BC_Desc] = alloc_BC_description(BC_Types[ibc].desc);
+        goma_ctx->bc.new_bc_desc[goma_ctx->bc.num_new_bc_desc] =
+            alloc_BC_description(goma_ctx->bc.bc_types[ibc].desc);
 
-        BC_Types[ibc].desc = new_BC_Desc[num_new_BC_Desc];
+        goma_ctx->bc.bc_types[ibc].desc = goma_ctx->bc.new_bc_desc[goma_ctx->bc.num_new_bc_desc];
 
-        BC_Types[ibc].index_dad = num_new_BC_Desc++; /* This is important to Phil */
+        goma_ctx->bc.bc_types[ibc].index_dad =
+            goma_ctx->bc.num_new_bc_desc++; /* This is important to Phil */
 
-        if (num_BC_Tables == MAX_BC_TABLES) {
+        if (goma_ctx->bc.num_bc_tables == MAX_BC_TABLES) {
           GOMA_EH(GOMA_ERROR, "Maximum TABLE_BCs exceeded .");
         }
 
-        BC_Tables[num_BC_Tables] = setup_table_BC(ifp, input, &BC_Types[ibc], echo_string);
+        goma_ctx->bc.bc_tables[goma_ctx->bc.num_bc_tables] =
+            setup_table_BC(ifp, input, &goma_ctx->bc.bc_types[ibc], echo_string);
 
-        BC_Types[ibc].table_index = num_BC_Tables++;
+        goma_ctx->bc.bc_types[ibc].table_index = goma_ctx->bc.num_bc_tables++;
       }
       break;
 
@@ -933,84 +954,95 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case DX_USER_NODE_BC:
     case DY_USER_NODE_BC:
     case DZ_USER_NODE_BC:
-      if (fscanf(ifp, "%lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3]) != 4) {
-        sr = sprintf(err_msg, "%s: Expected 4 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]) != 4) {
+        sr = sprintf(err_msg, "%s: Expected 4 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].max_DFlt = 4;
-      SPF_DBL_VEC(endofstring(echo_string), 4, BC_Types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 4;
+      SPF_DBL_VEC(endofstring(echo_string), 4, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
       break;
       /*
        * Fall through for all cases which require four floating point
        * values as data input and an optional integer element block
        */
     case QRAD_BC:
-      if (fscanf(ifp, "%lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3]) != 4) {
-        sr = sprintf(err_msg, "%s: Expected 4 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]) != 4) {
+        sr = sprintf(err_msg, "%s: Expected 4 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       } else {
-        SPF_DBL_VEC(endofstring(echo_string), 4, BC_Types[ibc].BC_Data_Float);
+        SPF_DBL_VEC(endofstring(echo_string), 4, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
 
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[4]) != 1) {
-          BC_Types[ibc].BC_Data_Float[4] = 0.;
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[4] = 0.;
         } else
-          SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[4]);
-        BC_Types[ibc].max_DFlt = 5;
+          SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]);
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 5;
 
         /* Scan for the optional int. If not present, put a -1 in second data position */
         /* This is to ensure a nonzero entry in BC_Data_Int[2] for CA */
         /* note: optional int isn't listed in the manual. What's it for? */
-        if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[2]) != 1) {
-          BC_Types[ibc].BC_Data_Int[2] = 0;
+        if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = 0;
         } else {
-          SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[2]);
+          SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]);
         }
       }
-      if (BC_Types[ibc].BC_Data_Int[2] == 2 || BC_Types[ibc].BC_Data_Int[2] == 3) {
+      if (goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] == 2 ||
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] == 3) {
 
-        new_BC_Desc = ((struct BC_descriptions **)realloc(
-            new_BC_Desc, (num_new_BC_Desc + 1) * sizeof(struct BC_descriptions *)));
+        goma_ctx->bc.new_bc_desc = ((struct BC_descriptions **)realloc(
+            goma_ctx->bc.new_bc_desc,
+            (goma_ctx->bc.num_new_bc_desc + 1) * sizeof(struct BC_descriptions *)));
 
-        new_BC_Desc[num_new_BC_Desc] = alloc_BC_description(BC_Types[ibc].desc);
+        goma_ctx->bc.new_bc_desc[goma_ctx->bc.num_new_bc_desc] =
+            alloc_BC_description(goma_ctx->bc.bc_types[ibc].desc);
 
-        BC_Types[ibc].desc = new_BC_Desc[num_new_BC_Desc];
+        goma_ctx->bc.bc_types[ibc].desc = goma_ctx->bc.new_bc_desc[goma_ctx->bc.num_new_bc_desc];
 
-        BC_Types[ibc].index_dad = num_new_BC_Desc++; /* This is important to Phil */
+        goma_ctx->bc.bc_types[ibc].index_dad =
+            goma_ctx->bc.num_new_bc_desc++; /* This is important to Phil */
 
-        if (num_BC_Tables == MAX_BC_TABLES) {
+        if (goma_ctx->bc.num_bc_tables == MAX_BC_TABLES) {
           GOMA_EH(GOMA_ERROR, "Maximum TABLE_BCs exceeded .");
         }
 
-        BC_Tables[num_BC_Tables] = setup_table_BC(ifp, input, &BC_Types[ibc], echo_string);
+        goma_ctx->bc.bc_tables[goma_ctx->bc.num_bc_tables] =
+            setup_table_BC(ifp, input, &goma_ctx->bc.bc_types[ibc], echo_string);
 
-        BC_Types[ibc].table_index = num_BC_Tables++;
+        goma_ctx->bc.bc_types[ibc].table_index = goma_ctx->bc.num_bc_tables++;
       }
-      BC_Types[ibc].max_DFlt = 4;
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 4;
 
       break;
 
     case CA_BC:
     case CA_MOMENTUM_BC:
-      if (fscanf(ifp, "%lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3]) != 4) {
-        sr = sprintf(err_msg, "%s: Expected 4 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]) != 4) {
+        sr = sprintf(err_msg, "%s: Expected 4 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       } else {
-        SPF_DBL_VEC(endofstring(echo_string), 4, BC_Types[ibc].BC_Data_Float);
+        SPF_DBL_VEC(endofstring(echo_string), 4, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
         /* Scan for the optional int. If not present, put a -1 in second data position */
         /* This is to ensure a nonzero entry in BC_Data_Int[2] for CA */
         /* note: optional int isn't listed in the manual. What's it for? */
-        if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[2]) != 1) {
-          BC_Types[ibc].BC_Data_Int[2] = -1;
+        if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = -1;
         } else
-          SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[2]);
+          SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]);
       }
-      BC_Types[ibc].max_DFlt = 4;
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 4;
 
       break;
 
@@ -1034,109 +1066,120 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case VELO_SLIP_ROT_FILL_BC:
     case AIR_FILM_BC:
     case AIR_FILM_ROT_BC:
-      if (fscanf(ifp, "%lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3]) != 4) {
-        sr = sprintf(err_msg, "%s: Expected 4 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]) != 4) {
+        sr = sprintf(err_msg, "%s: Expected 4 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      BC_Types[ibc].max_DFlt = 4;
-      SPF_DBL_VEC(endofstring(echo_string), 4, BC_Types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 4;
+      SPF_DBL_VEC(endofstring(echo_string), 4, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
 
-      if (fscanf(ifp, "%d %lf", &BC_Types[ibc].BC_Data_Int[0], &BC_Types[ibc].BC_Data_Float[4]) !=
-          2) {
-        BC_Types[ibc].BC_Data_Int[0] = -1;
-        BC_Types[ibc].BC_Data_Float[4] = 0.;
+      if (fscanf(ifp, "%d %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]) != 2) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = -1;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[4] = 0.;
       } else
-        SPF(endofstring(echo_string), " %d %.4g", BC_Types[ibc].BC_Data_Int[0],
-            BC_Types[ibc].BC_Data_Float[4]);
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[5]) != 1) {
-        BC_Types[ibc].BC_Data_Float[5] = 0.;
+        SPF(endofstring(echo_string), " %d %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]);
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[5] = 0.;
       } else
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[5]);
-      BC_Types[ibc].max_DFlt = 5;
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[5]);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 5;
 
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[6]) != 1) {
-        BC_Types[ibc].BC_Data_Float[6] = 0.;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[6] = 0.;
       } else
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[6]);
-      BC_Types[ibc].max_DFlt = 6;
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[6]);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 6;
 
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[7]) != 1) {
-        BC_Types[ibc].BC_Data_Float[7] = 1;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[7] = 1;
       } else
-        SPF(endofstring(echo_string), " %g", BC_Types[ibc].BC_Data_Float[7]);
-      BC_Types[ibc].max_DFlt = 7;
+        SPF(endofstring(echo_string), " %g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[7]);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 7;
 
       break;
     case VELO_SLIP_POWER_CARD_BC:
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4]) != 5) {
-        sr = sprintf(err_msg, "%s: Expected 5 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]) != 5) {
+        sr = sprintf(err_msg, "%s: Expected 5 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].max_DFlt = 5;
-      SPF_DBL_VEC(endofstring(echo_string), 5, BC_Types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 5;
+      SPF_DBL_VEC(endofstring(echo_string), 5, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
       break;
     case VELO_SLIP_POWER_BC:
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4]) != 5) {
-        sr = sprintf(err_msg, "%s: Expected 5 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]) != 5) {
+        sr = sprintf(err_msg, "%s: Expected 5 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].max_DFlt = 5;
-      SPF_DBL_VEC(endofstring(echo_string), 5, BC_Types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 5;
+      SPF_DBL_VEC(endofstring(echo_string), 5, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
 
       // Read in 3 tangential vector components for 3D
 
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[5]) != 1) {
-        BC_Types[ibc].BC_Data_Float[5] = 0.0;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[5] = 0.0;
       } else {
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[5]);
-        BC_Types[ibc].max_DFlt = 6;
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[5]);
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 6;
       }
 
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[6]) != 1) {
-        BC_Types[ibc].BC_Data_Float[6] = 0.0;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[6] = 0.0;
       } else {
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[6]);
-        BC_Types[ibc].max_DFlt = 7;
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[6]);
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 7;
       }
 
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[7]) != 1) {
-        BC_Types[ibc].BC_Data_Float[7] = 0.0;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[7] = 0.0;
       } else {
-        SPF(endofstring(echo_string), " %g", BC_Types[ibc].BC_Data_Float[7]);
-        BC_Types[ibc].max_DFlt = 8;
+        SPF(endofstring(echo_string), " %g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[7]);
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 8;
       }
       break;
 
     case KIN_ANTOINE_BC:
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4]) != 5)
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]) != 5)
 
       {
-        sr = sprintf(err_msg, "%s: Expected 5 flts for %s.", yo, BC_Types[ibc].desc->name1);
+        sr = sprintf(err_msg, "%s: Expected 5 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      SPF_DBL_VEC(endofstring(echo_string), 5, BC_Types[ibc].BC_Data_Float);
-      BC_Types[ibc].max_DFlt = 5;
+      SPF_DBL_VEC(endofstring(echo_string), 5, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 5;
 
       /* Scan for the optional ints. If not present, put a -1 in its place */
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[0]) != 1) {
-        BC_Types[ibc].BC_Data_Int[0] = -1;
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = -1;
       } else {
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
       }
 
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[1]) != 1) {
-        BC_Types[ibc].BC_Data_Int[1] = -1;
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[1] = -1;
       } else {
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[1]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[1]);
       }
 
       break;
@@ -1150,69 +1193,74 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case VELO_SLIP_LEVEL_SIC_BC:
     case VELO_SLIP_LS_ROT_BC:
     case SHARP_HOFFMAN_VELOCITY_BC:
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4]) != 5) {
-        sr = sprintf(err_msg, "%s: Expected 5 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]) != 5) {
+        sr = sprintf(err_msg, "%s: Expected 5 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       /*   outside slip coeff, gas_factor,  contact_friction   */
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[5]) != 1) {
-        BC_Types[ibc].BC_Data_Float[5] = 1.0 / LITTLE_PENALTY;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[5] = 1.0 / LITTLE_PENALTY;
       }
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[6]) != 1) {
-        BC_Types[ibc].BC_Data_Float[6] = 8.0;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[6] = 8.0;
       }
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[7]) != 1) {
-        BC_Types[ibc].BC_Data_Float[7] = 1e-6;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[7] = 1e-6;
       }
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[8]) != 1) {
-        BC_Types[ibc].BC_Data_Float[8] = 0.0;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[8]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[8] = 0.0;
       }
 
-      BC_Types[ibc].max_DFlt = 9;
-      SPF_DBL_VEC(endofstring(echo_string), 9, BC_Types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 9;
+      SPF_DBL_VEC(endofstring(echo_string), 9, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
 
       break;
 
     case VELO_SLIP_LS_ORIENTED_BC:
       if (fscanf(ifp, "%lf %lf %lf %lf %lf",
-                 &BC_Types[ibc].BC_Data_Float[0],       // ls_width
-                 &BC_Types[ibc].BC_Data_Float[1],       // beta_negative
-                 &BC_Types[ibc].BC_Data_Float[2],       // beta_positive
-                 &BC_Types[ibc].BC_Data_Float[3],       // gamma_negative
-                 &BC_Types[ibc].BC_Data_Float[4]) != 5) // gamma_positive
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],       // ls_width
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],       // beta_negative
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],       // beta_positive
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],       // gamma_negative
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]) != 5) // gamma_positive
       {
-        GOMA_EH(GOMA_ERROR, "%s: Expected 5 flts for %s.", yo, BC_Types[ibc].desc->name1);
+        GOMA_EH(GOMA_ERROR, "%s: Expected 5 flts for %s.", yo,
+                goma_ctx->bc.bc_types[ibc].desc->name1);
       }
 
       if (fscanf(ifp, "%lf %lf %lf",
-                 &BC_Types[ibc].BC_Data_Float[5],       // v_x
-                 &BC_Types[ibc].BC_Data_Float[6],       // v_y
-                 &BC_Types[ibc].BC_Data_Float[7]) != 5) // v_z
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],       // v_x
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],       // v_y
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7]) != 5) // v_z
       {
-        BC_Types[ibc].BC_Data_Float[5] = 0.0;
-        BC_Types[ibc].BC_Data_Float[6] = 0.0;
-        BC_Types[ibc].BC_Data_Float[7] = 0.0;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[5] = 0.0;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[6] = 0.0;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[7] = 0.0;
       }
 
-      SPF_DBL_VEC(endofstring(echo_string), 8, BC_Types[ibc].BC_Data_Float);
+      SPF_DBL_VEC(endofstring(echo_string), 8, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
       break;
 
     case VELO_SLIP_LS_HEAVISIDE_BC:
       if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf",
-                 &BC_Types[ibc].BC_Data_Float[0],       // ls_width
-                 &BC_Types[ibc].BC_Data_Float[1],       // beta_negative
-                 &BC_Types[ibc].BC_Data_Float[2],       // beta_positive
-                 &BC_Types[ibc].BC_Data_Float[3],       // v_x
-                 &BC_Types[ibc].BC_Data_Float[4],       // v_y
-                 &BC_Types[ibc].BC_Data_Float[5]) != 6) // v_z
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],       // ls_width
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],       // beta_negative
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],       // beta_positive
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],       // v_x
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],       // v_y
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5]) != 6) // v_z
       {
-        sr = sprintf(err_msg, "%s: Expected 6 flts for %s.", yo, BC_Types[ibc].desc->name1);
+        sr = sprintf(err_msg, "%s: Expected 6 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF_DBL_VEC(endofstring(echo_string), 6, BC_Types[ibc].BC_Data_Float);
+      SPF_DBL_VEC(endofstring(echo_string), 6, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
       break;
       /*
        * Fall through for all cases which require five floating point
@@ -1223,23 +1271,26 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case REP_FORCE_RS_BC:
     case ATTR_FORCE_BC:
     case ATTR_FORCE_RS_BC:
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4]) != 5) {
-        sr = sprintf(err_msg, "%s: Expected 5 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]) != 5) {
+        sr = sprintf(err_msg, "%s: Expected 5 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       /*  optional repulsive force exponent   */
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[5]) != 1) {
-        BC_Types[ibc].BC_Data_Float[5] = 4.0;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[5] = 4.0;
       }
       /*  optional friction coefficient (static)   */
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[6]) != 1) {
-        BC_Types[ibc].BC_Data_Float[6] = 0.0;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[6] = 0.0;
       }
 
-      BC_Types[ibc].max_DFlt = 7;
-      SPF_DBL_VEC(endofstring(echo_string), 7, BC_Types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 7;
+      SPF_DBL_VEC(endofstring(echo_string), 7, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
 
       break;
       /*
@@ -1247,20 +1298,24 @@ void rd_bc_specs(FILE *ifp, char *input) {
        * five floating point values as data input
        */
     case VL_EQUIL_BC:
-      if (fscanf(ifp, "%d %d %d %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Int[1], &BC_Types[ibc].BC_Data_Int[2],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2], &BC_Types[ibc].BC_Data_Float[3],
-                 &BC_Types[ibc].BC_Data_Float[4]) != 8) {
-        sprintf(err_msg, "%s: Expected 3 ints and 5 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%d %d %d %lf %lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]) != 8) {
+        sprintf(err_msg, "%s: Expected 3 ints and 5 flts for %s.", yo,
+                goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
       assign_global_species_var_type(SPECIES_MASS_FRACTION, FALSE);
 
-      SPF_INT_VEC(endofstring(echo_string), 3, BC_Types[ibc].BC_Data_Int);
-      SPF_DBL_VEC(endofstring(echo_string), 5, BC_Types[ibc].BC_Data_Float);
-      BC_Types[ibc].max_DFlt = 5;
+      SPF_INT_VEC(endofstring(echo_string), 3, goma_ctx->bc.bc_types[ibc].BC_Data_Int);
+      SPF_DBL_VEC(endofstring(echo_string), 5, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 5;
 
       break;
 
@@ -1273,60 +1328,61 @@ void rd_bc_specs(FILE *ifp, char *input) {
 
       if (fscanf(ifp, "%80s", input) != 1) {
         sprintf(err_msg, "%s: Expected a keyword RAOULT or FLORY for %s.", yo,
-                BC_Types[ibc].desc->name1);
+                goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       } else {
         if (!strcmp(input, "RAOULT")) {
-          BC_Types[ibc].BC_Data_Int[2] = RAOULT;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = RAOULT;
         } else if (!strcmp(input, "FLORY")) {
-          BC_Types[ibc].BC_Data_Int[2] = FLORY;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = FLORY;
         } else if (!strcmp(input, "FLORY_CC")) {
-          BC_Types[ibc].BC_Data_Int[2] = FLORY_CC;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = FLORY_CC;
         } else if (!strcmp(input, "VLAR")) {
-          BC_Types[ibc].BC_Data_Int[2] = VLAR;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = VLAR;
         } else {
           GOMA_EH(GOMA_ERROR, "I don't recognize your YFLUX_EQUIL Keyword!");
         }
       }
-      if (fscanf(ifp, "%d %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2]) != 4) {
+      if (fscanf(ifp, "%d %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2]) != 4) {
         sr = sprintf(err_msg, "%s: Expected 1 int and 3 flt following %s for  %s.", yo, input,
-                     BC_Types[ibc].desc->name1);
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF(endofstring(echo_string), " %s %d", input, BC_Types[ibc].BC_Data_Int[0]);
-      SPF_DBL_VEC(endofstring(echo_string), 3, BC_Types[ibc].BC_Data_Float);
+      SPF(endofstring(echo_string), " %s %d", input, goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
+      SPF_DBL_VEC(endofstring(echo_string), 3, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
 
       /**	extra floats for Flory/Chilton-Coburn correlation	**/
 
-      if (BC_Types[ibc].BC_Data_Int[2] == FLORY_CC) {
-        if (fscanf(ifp, "%lf %lf", &BC_Types[ibc].BC_Data_Float[3],
-                   &BC_Types[ibc].BC_Data_Float[4]) != 2) {
+      if (goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] == FLORY_CC) {
+        if (fscanf(ifp, "%lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]) != 2) {
           sr = sprintf(err_msg, "%s: Expected 2 additional flts for  %s.", yo,
-                       BC_Types[ibc].desc->name1);
+                       goma_ctx->bc.bc_types[ibc].desc->name1);
           GOMA_EH(GOMA_ERROR, err_msg);
         }
 
-        SPF_DBL_VEC(endofstring(echo_string), 2, &(BC_Types[ibc].BC_Data_Float[3]));
+        SPF_DBL_VEC(endofstring(echo_string), 2, &(goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]));
 
-      } else if (BC_Types[ibc].BC_Data_Int[2] == VLAR) {
-        if (fscanf(ifp, "%lf %lf", &BC_Types[ibc].BC_Data_Float[3],
-                   &BC_Types[ibc].BC_Data_Float[4]) != 2) {
+      } else if (goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] == VLAR) {
+        if (fscanf(ifp, "%lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]) != 2) {
           sr = sprintf(err_msg, "%s: Expected 2 additional flts for  %s.", yo,
-                       BC_Types[ibc].desc->name1);
+                       goma_ctx->bc.bc_types[ibc].desc->name1);
           GOMA_EH(GOMA_ERROR, err_msg);
         }
 
-        SPF_DBL_VEC(endofstring(echo_string), 2, &(BC_Types[ibc].BC_Data_Float[3]));
+        SPF_DBL_VEC(endofstring(echo_string), 2, &(goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]));
       } else {
-        BC_Types[ibc].BC_Data_Float[3] = 0.;
-        BC_Types[ibc].BC_Data_Float[4] = 0.;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[3] = 0.;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[4] = 0.;
       }
 
-      BC_Types[ibc].max_DFlt = 5;
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 5;
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
 
       break;
 
@@ -1339,45 +1395,51 @@ void rd_bc_specs(FILE *ifp, char *input) {
 
       if (fscanf(ifp, "%80s", input) != 1) {
         sprintf(err_msg, "%s: Expected a keyword SOLID_DIFFUSION or GAS_DIFFUSION for %s.", yo,
-                BC_Types[ibc].desc->name1);
+                goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       } else {
         if (!strcmp(input, "SOLID_DIFFUSION_SIMPLIFIED")) {
-          BC_Types[ibc].BC_Data_Int[2] = SOLID_DIFFUSION_SIMPLIFIED;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = SOLID_DIFFUSION_SIMPLIFIED;
         } else if (!strcmp(input, "SOLID_DIFFUSION_ELECTRONEUTRALITY")) {
-          BC_Types[ibc].BC_Data_Int[2] = SOLID_DIFFUSION_ELECTRONEUTRALITY;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = SOLID_DIFFUSION_ELECTRONEUTRALITY;
         } else if (!strcmp(input, "SOLID_DIFFUSION_ELECTRONEUTRALITY_LINEAR")) {
-          BC_Types[ibc].BC_Data_Int[2] = SOLID_DIFFUSION_ELECTRONEUTRALITY_LINEAR;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = SOLID_DIFFUSION_ELECTRONEUTRALITY_LINEAR;
         } else if (!strcmp(input, "SOLID_DIFFUSION")) {
-          BC_Types[ibc].BC_Data_Int[2] = SOLID_DIFFUSION;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = SOLID_DIFFUSION;
         } else if (!strcmp(input, "GAS_DIFFUSION")) {
-          BC_Types[ibc].BC_Data_Int[2] = GAS_DIFFUSION;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = GAS_DIFFUSION;
         } else if (!strcmp(input, "FULL")) {
-          BC_Types[ibc].BC_Data_Int[2] = METAL_CORROSION_FULL;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = METAL_CORROSION_FULL;
         } else if (!strcmp(input, "ANNIHILATION_ELECTRONEUTRALITY")) {
-          BC_Types[ibc].BC_Data_Int[2] = ANNIHILATION_ELECTRONEUTRALITY;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = ANNIHILATION_ELECTRONEUTRALITY;
         } else if (!strcmp(input, "ANNIHILATION")) {
-          BC_Types[ibc].BC_Data_Int[2] = ANNIHILATION;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = ANNIHILATION;
         } else {
           GOMA_EH(GOMA_ERROR, "I don't recognize your YFLUX_SULFIDATION Keyword!");
         }
       }
-      if (fscanf(ifp, "%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2], &BC_Types[ibc].BC_Data_Float[3],
-                 &BC_Types[ibc].BC_Data_Float[4], &BC_Types[ibc].BC_Data_Float[5],
-                 &BC_Types[ibc].BC_Data_Float[6], &BC_Types[ibc].BC_Data_Float[7],
-                 &BC_Types[ibc].BC_Data_Float[8], &BC_Types[ibc].BC_Data_Float[9]) != 11) {
+      if (fscanf(ifp, "%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[8],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[9]) != 11) {
         sr = sprintf(err_msg, "%s: Expected 1 int and 10 flt following %s for  %s.", yo, input,
-                     BC_Types[ibc].desc->name1);
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
 
-      SPF(endofstring(echo_string), " %s %d", input, BC_Types[ibc].BC_Data_Int[0]);
-      SPF_DBL_VEC(endofstring(echo_string), 10, BC_Types[ibc].BC_Data_Float);
-      BC_Types[ibc].max_DFlt = 10;
+      SPF(endofstring(echo_string), " %s %d", input, goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
+      SPF_DBL_VEC(endofstring(echo_string), 10, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 10;
 
       break;
 
@@ -1390,31 +1452,33 @@ void rd_bc_specs(FILE *ifp, char *input) {
 
       if (fscanf(ifp, "%80s", input) != 1) {
         sr = sprintf(err_msg, "%s: Expected a keyword MASS or VOLUME for %s.", yo,
-                     BC_Types[ibc].desc->name1);
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       } else {
         if (!strcmp(input, "VOLUME")) {
-          BC_Types[ibc].BC_Data_Int[0] = VOLUME;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = VOLUME;
         } else if (!strcmp(input, "MASS")) {
-          BC_Types[ibc].BC_Data_Int[0] = MASS;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = MASS;
         } else {
           GOMA_EH(GOMA_ERROR, "I don't recognize your VL_POLY Keyword!");
         }
       }
 
-      if (fscanf(ifp, "%d %d %d %lf", &BC_Types[ibc].BC_Data_Int[1], &BC_Types[ibc].BC_Data_Int[2],
-                 &BC_Types[ibc].BC_Data_Int[3], &BC_Types[ibc].BC_Data_Float[0]) != 4) {
+      if (fscanf(ifp, "%d %d %d %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 4) {
         sr = sprintf(err_msg, "%s: Expected 3 ints and 1 flt for %s.", yo,
-                     BC_Types[ibc].desc->name1);
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[1];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[1];
 
       SPF(endofstring(echo_string), " %s", input);
       for (i = 0; i < 3; i++)
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[i]);
-      SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[0]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[i]);
+      SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]);
 
       break;
 
@@ -1426,16 +1490,19 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case SHARP_BLAKE_VELOCITY_BC:
     case SHARP_COX_VELOCITY_BC:
     case SHARP_SHIK_VELOCITY_BC:
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf ", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4],
-                 &BC_Types[ibc].BC_Data_Float[5]) != 6) {
-        sr = sprintf(err_msg, "%s: Expected 6 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf ", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5]) != 6) {
+        sr = sprintf(err_msg, "%s: Expected 6 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       for (i = 0; i < 6; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
       break;
 
       /*
@@ -1446,21 +1513,25 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case MOVING_PLANE_BC:
     case WETTING_SPEED_LIN_BC:
 
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4],
-                 &BC_Types[ibc].BC_Data_Float[5], &BC_Types[ibc].BC_Data_Float[6]) != 7) {
-        sr = sprintf(err_msg, "%s: Expected 7 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6]) != 7) {
+        sr = sprintf(err_msg, "%s: Expected 7 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       for (i = 0; i < 7; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
       /*initialize pinning flag to zero, which is BC_Data_Int[0]
         for each CA_OR_FIX Card */
-      if (!strcmp(BC_Types[ibc].desc->name1, "CA_OR_FIX")) {
-        BC_Types[ibc].BC_Data_Int[0] = 0;
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "CA_OR_FIX")) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = 0;
       }
 
       break;
@@ -1472,23 +1543,28 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case SHEAR_STRESS_APPLIED_BC:
     case CAP_REPULSE_BC:
 
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4],
-                 &BC_Types[ibc].BC_Data_Float[5], &BC_Types[ibc].BC_Data_Float[6],
-                 &BC_Types[ibc].BC_Data_Float[7]) != 8) {
-        sr = sprintf(err_msg, "%s: Expected 8 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf",
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7]) != 8) {
+        sr = sprintf(err_msg, "%s: Expected 8 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(-1, err_msg);
       }
 
       for (i = 0; i < 8; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
       /* Try reading the optional integer. */
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[0]) != 1) {
-        BC_Types[ibc].BC_Data_Int[0] = -1;
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = -1;
       } else
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
 
       break;
 
@@ -1499,22 +1575,26 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case LS_RECOIL_PRESSURE_BC:
     case CAP_RECOIL_PRESS_BC:
 
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4],
-                 &BC_Types[ibc].BC_Data_Float[5], &BC_Types[ibc].BC_Data_Float[6]) != 7) {
-        sr = sprintf(err_msg, "%s: Expected 7 flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6]) != 7) {
+        sr = sprintf(err_msg, "%s: Expected 7 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       for (i = 0; i < 7; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
       /* Try reading the optional integer. */
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[0]) != 1) {
-        BC_Types[ibc].BC_Data_Int[0] = -1;
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = -1;
       } else
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
 
       break;
 
@@ -1547,59 +1627,65 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case EM_FARFIELD_REAL_NED_BC:
     case EM_FARFIELD_IMAG_NED_BC:
 
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4],
-                 &BC_Types[ibc].BC_Data_Float[5], &BC_Types[ibc].BC_Data_Float[6],
-                 &BC_Types[ibc].BC_Data_Float[7]) != 8) {
-        sprintf(err_msg, "%s: Expected 8 flts for BC %s.\n", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf",
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7]) != 8) {
+        sprintf(err_msg, "%s: Expected 8 flts for BC %s.\n", yo,
+                goma_ctx->bc.bc_types[ibc].desc->name1);
         strcat(err_msg,
                "Be advised syntax to this boundary condition has changed. Consult GOMA manual.\n");
         GOMA_EH(GOMA_ERROR, err_msg);
       } else { /* 1*/
         for (i = 0; i < 8; i++)
-          SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+          SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
-        if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[2]) != 1) {
-          BC_Types[ibc].BC_Data_Int[2] = -1;
+        if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = -1;
         } else
-          SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[2]);
+          SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]);
 
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[8]) != 1) {
-          BC_Types[ibc].BC_Data_Float[8] = 1.0;
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[8]) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[8] = 1.0;
         } else
-          SPF(endofstring(echo_string), " %lf", BC_Types[ibc].BC_Data_Float[8]);
+          SPF(endofstring(echo_string), " %lf", goma_ctx->bc.bc_types[ibc].BC_Data_Float[8]);
         /*   outside slip coeff, gas_factor,  contact_friction   */
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[9]) != 1) {
-          if (!strcmp(BC_Types[ibc].desc->name1, "VELO_THETA_HOFFMAN")) {
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[9]) != 1) {
+          if (!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "VELO_THETA_HOFFMAN")) {
             /* Max DCA for Hoffman condition  */
-            BC_Types[ibc].BC_Data_Float[9] = 180.0;
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[9] = 180.0;
           } else {
-            BC_Types[ibc].BC_Data_Float[9] = 1.0 / sqrt(LITTLE_PENALTY * BIG_PENALTY);
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[9] = 1.0 / sqrt(LITTLE_PENALTY * BIG_PENALTY);
           }
         } else
-          SPF(endofstring(echo_string), " %lf", BC_Types[ibc].BC_Data_Float[9]);
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[10]) != 1) {
-          if (!strcmp(BC_Types[ibc].desc->name1, "VELO_THETA_HOFFMAN") ||
-              !strcmp(BC_Types[ibc].desc->name1, "VELO_THETA_COX")) {
+          SPF(endofstring(echo_string), " %lf", goma_ctx->bc.bc_types[ibc].BC_Data_Float[9]);
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[10]) != 1) {
+          if (!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "VELO_THETA_HOFFMAN") ||
+              !strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "VELO_THETA_COX")) {
             /* DCL shearrate for Hoffman/Cox condition  */
-            BC_Types[ibc].BC_Data_Float[10] = -1.0;
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[10] = -1.0;
           } else {
-            BC_Types[ibc].BC_Data_Float[10] = 8.0;
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[10] = 8.0;
           }
         } else
-          SPF(endofstring(echo_string), " %lf", BC_Types[ibc].BC_Data_Float[10]);
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[11]) != 1) {
-          BC_Types[ibc].BC_Data_Float[11] = 1e-6;
+          SPF(endofstring(echo_string), " %lf", goma_ctx->bc.bc_types[ibc].BC_Data_Float[10]);
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[11]) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[11] = 1e-6;
         } else
-          SPF(endofstring(echo_string), " %lf", BC_Types[ibc].BC_Data_Float[11]);
+          SPF(endofstring(echo_string), " %lf", goma_ctx->bc.bc_types[ibc].BC_Data_Float[11]);
       }
 
-      BC_Types[ibc].BC_Data_Int[3] = (BC_Types[ibc].BC_Name == BLAKE_DIRICH_ROLL_BC ||
-                                      BC_Types[ibc].BC_Name == HOFFMAN_DIRICH_ROLL_BC ||
-                                      BC_Types[ibc].BC_Name == COX_DIRICH_ROLL_BC)
-                                         ? TRUE
-                                         : FALSE;
+      goma_ctx->bc.bc_types[ibc].BC_Data_Int[3] =
+          (goma_ctx->bc.bc_types[ibc].BC_Name == BLAKE_DIRICH_ROLL_BC ||
+           goma_ctx->bc.bc_types[ibc].BC_Name == HOFFMAN_DIRICH_ROLL_BC ||
+           goma_ctx->bc.bc_types[ibc].BC_Name == COX_DIRICH_ROLL_BC)
+              ? TRUE
+              : FALSE;
 
       break;
       /*
@@ -1615,38 +1701,45 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case EM_EI_SOMMERFELD_BC:
     case EM_HR_SOMMERFELD_BC:
     case EM_HI_SOMMERFELD_BC:
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4],
-                 &BC_Types[ibc].BC_Data_Float[5], &BC_Types[ibc].BC_Data_Float[6],
-                 &BC_Types[ibc].BC_Data_Float[7], &BC_Types[ibc].BC_Data_Float[8]) != 9) {
-        sprintf(err_msg, "%s: Expected 9 flts for BC %s.\n", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[8]) != 9) {
+        sprintf(err_msg, "%s: Expected 9 flts for BC %s.\n", yo,
+                goma_ctx->bc.bc_types[ibc].desc->name1);
         strcat(err_msg,
                "Be advised syntax to this boundary condition has changed. Consult GOMA manual.\n");
         GOMA_EH(GOMA_ERROR, err_msg);
       } else { /* 1*/
         for (i = 0; i < 9; i++)
-          SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+          SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
-        if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[2]) != 1) {
-          BC_Types[ibc].BC_Data_Int[2] = -1;
+        if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = -1;
         } else
-          SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[2]);
+          SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]);
         /*   outside slip coeff, gas_factor,  contact_friction   */
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[9]) != 1) {
-          BC_Types[ibc].BC_Data_Float[9] = 1.0 / sqrt(LITTLE_PENALTY * BIG_PENALTY);
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[9]) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[9] = 1.0 / sqrt(LITTLE_PENALTY * BIG_PENALTY);
         } else
-          SPF(endofstring(echo_string), " %lf", BC_Types[ibc].BC_Data_Float[9]);
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[10]) != 1) {
-          BC_Types[ibc].BC_Data_Float[10] = 8.0;
+          SPF(endofstring(echo_string), " %lf", goma_ctx->bc.bc_types[ibc].BC_Data_Float[9]);
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[10]) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[10] = 8.0;
         } else
-          SPF(endofstring(echo_string), " %lf", BC_Types[ibc].BC_Data_Float[10]);
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[11]) != 1) {
-          BC_Types[ibc].BC_Data_Float[11] = 1e-6;
+          SPF(endofstring(echo_string), " %lf", goma_ctx->bc.bc_types[ibc].BC_Data_Float[10]);
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[11]) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[11] = 1e-6;
         } else
-          SPF(endofstring(echo_string), " %lf", BC_Types[ibc].BC_Data_Float[11]);
+          SPF(endofstring(echo_string), " %lf", goma_ctx->bc.bc_types[ibc].BC_Data_Float[11]);
       }
-      BC_Types[ibc].BC_Data_Int[3] = (BC_Types[ibc].BC_Name == SHIK_DIRICH_ROLL_BC) ? TRUE : FALSE;
+      goma_ctx->bc.bc_types[ibc].BC_Data_Int[3] =
+          (goma_ctx->bc.bc_types[ibc].BC_Name == SHIK_DIRICH_ROLL_BC) ? TRUE : FALSE;
 
       break;
 
@@ -1658,22 +1751,28 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case REP_FORCE_ROLL_BC:
     case REP_FORCE_ROLL_RS_BC:
     case CAP_REPULSE_TABLE_BC:
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4],
-                 &BC_Types[ibc].BC_Data_Float[5], &BC_Types[ibc].BC_Data_Float[6],
-                 &BC_Types[ibc].BC_Data_Float[7], &BC_Types[ibc].BC_Data_Float[8],
-                 &BC_Types[ibc].BC_Data_Float[9]) != 10) {
-        sr = sprintf(err_msg, "%s: Expected 10(!) flts for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[8],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[9]) != 10) {
+        sr = sprintf(err_msg, "%s: Expected 10(!) flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
       for (i = 0; i < 10; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[2]) != 1) {
-        BC_Types[ibc].BC_Data_Int[2] = -1;
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = -1;
       } else
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[2]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]);
 
       break;
       /*
@@ -1683,22 +1782,29 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case E_ER_PLANEWAVE_BC:
     case E_EI_PLANEWAVE_BC:
       if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2], &BC_Types[ibc].BC_Data_Float[3],
-                 &BC_Types[ibc].BC_Data_Float[4], &BC_Types[ibc].BC_Data_Float[5],
-                 &BC_Types[ibc].BC_Data_Float[6], &BC_Types[ibc].BC_Data_Float[7],
-                 &BC_Types[ibc].BC_Data_Float[8], &BC_Types[ibc].BC_Data_Float[9],
-                 &BC_Types[ibc].BC_Data_Float[10], &BC_Types[ibc].BC_Data_Float[11]) != 12) {
-        sr = sprintf(err_msg, "%s: Expected 12(!) flts for %s.", yo, BC_Types[ibc].desc->name1);
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[8],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[9],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[10],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[11]) != 12) {
+        sr = sprintf(err_msg, "%s: Expected 12(!) flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(-1, err_msg);
       }
       for (i = 0; i < 12; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[2]) != 1) {
-        BC_Types[ibc].BC_Data_Int[2] = -1;
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = -1;
       } else
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[2]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]);
 
       break;
 
@@ -1706,67 +1812,82 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case QRAD_REPULSE_ROLL_BC:
 
       if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2], &BC_Types[ibc].BC_Data_Float[3],
-                 &BC_Types[ibc].BC_Data_Float[4], &BC_Types[ibc].BC_Data_Float[5],
-                 &BC_Types[ibc].BC_Data_Float[6], &BC_Types[ibc].BC_Data_Float[7],
-                 &BC_Types[ibc].BC_Data_Float[8], &BC_Types[ibc].BC_Data_Float[9],
-                 &BC_Types[ibc].BC_Data_Float[10], &BC_Types[ibc].BC_Data_Float[11],
-                 &BC_Types[ibc].BC_Data_Float[12], &BC_Types[ibc].BC_Data_Float[13],
-                 &BC_Types[ibc].BC_Data_Float[14]) != 15) {
-        sr = sprintf(err_msg, "%s: Expected 15 flts for %s.", yo, BC_Types[ibc].desc->name1);
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[8],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[9],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[10],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[11],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[12],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[13],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[14]) != 15) {
+        sr = sprintf(err_msg, "%s: Expected 15 flts for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       for (i = 0; i < 15; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
       /* Try reading the optional integer. */
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[2]) != 1) {
-        BC_Types[ibc].BC_Data_Int[2] = -1;
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = -1;
       } else
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[2]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]);
 
       break;
     case CAP_REPULSE_ROLL_BC:
 
       if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2], &BC_Types[ibc].BC_Data_Float[3],
-                 &BC_Types[ibc].BC_Data_Float[4], &BC_Types[ibc].BC_Data_Float[5],
-                 &BC_Types[ibc].BC_Data_Float[6], &BC_Types[ibc].BC_Data_Float[7],
-                 &BC_Types[ibc].BC_Data_Float[8], &BC_Types[ibc].BC_Data_Float[9],
-                 &BC_Types[ibc].BC_Data_Float[10], &BC_Types[ibc].BC_Data_Float[11]) != 12) {
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[8],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[9],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[10],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[11]) != 12) {
         sr = sprintf(err_msg, "%s: Expected 12 required flts for %s.", yo,
-                     BC_Types[ibc].desc->name1);
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       for (i = 0; i < 12; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
       /* Try reading the optional integer. */
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[0]) != 1) {
-        BC_Types[ibc].BC_Data_Int[0] = -1;
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = -1;
       } else
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
 
-      if (fscanf(ifp, "%lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[12],
-                 &BC_Types[ibc].BC_Data_Float[13], &BC_Types[ibc].BC_Data_Float[14],
-                 &BC_Types[ibc].BC_Data_Float[15]) != 4) {
+      if (fscanf(ifp, "%lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[12],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[13],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[14],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[15]) != 4) {
         sr = sprintf(err_msg, "%s: Expected 12 required flts for %s.", yo,
-                     BC_Types[ibc].desc->name1);
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
-        BC_Types[ibc].BC_Data_Float[12] = 1.;
-        BC_Types[ibc].BC_Data_Float[13] = 2.;
-        BC_Types[ibc].BC_Data_Float[14] = 0.;
-        BC_Types[ibc].BC_Data_Float[15] = 1.;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[12] = 1.;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[13] = 2.;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[14] = 0.;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[15] = 1.;
       }
 
       /* Try reading the optional integer. */
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[2]) != 1) {
-        BC_Types[ibc].BC_Data_Int[2] = -1;
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = -1;
       } else
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[2]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]);
 
       break;
       /*
@@ -1869,73 +1990,79 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case U_VES13_7_PARABOLA_BC:
     case U_VES23_7_PARABOLA_BC:
     case U_VES33_7_PARABOLA_BC:
-      num_const = read_constants(ifp, &(BC_Types[ibc].u_BC), NO_SPECIES);
+      num_const = read_constants(ifp, &(goma_ctx->bc.bc_types[ibc].u_BC), NO_SPECIES);
 
       if (num_const < 0) {
-        sr = sprintf(err_msg, "? user BC consts for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-                     BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+        sr = sprintf(err_msg, "? user BC consts for %s on %sID=%d\n",
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].len_u_BC = num_const;
-      BC_Types[ibc].max_DFlt = num_const;
+      goma_ctx->bc.bc_types[ibc].len_u_BC = num_const;
+      goma_ctx->bc.bc_types[ibc].max_DFlt = num_const;
 
       for (i = 0; i < num_const; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].u_BC[i]);
-      if (BC_Types[ibc].BC_Name == ROLL_FLUID_BC)
-        BC_Types[ibc].BC_Data_Int[0] = (int)BC_Types[ibc].u_BC[9];
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].u_BC[i]);
+      if (goma_ctx->bc.bc_types[ibc].BC_Name == ROLL_FLUID_BC)
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = (int)goma_ctx->bc.bc_types[ibc].u_BC[9];
 
       break;
 
     case FRICTION_ACOUSTIC_BC:
     case FRICTION_ACOUSTIC_RS_BC:
 
-      if (fscanf(ifp, "%lf %d", &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Int[0]) !=
-          2) {
-        sr = sprintf(err_msg, "%s: Expected 1 flt, 1 int for %s.", yo, BC_Types[ibc].desc->name1);
+      if (fscanf(ifp, "%lf %d", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]) != 2) {
+        sr = sprintf(err_msg, "%s: Expected 1 flt, 1 int for %s.", yo,
+                     goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[0]);
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
+      SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]);
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
 
-      num_const = read_constants(ifp, &(BC_Types[ibc].u_BC), NO_SPECIES);
+      num_const = read_constants(ifp, &(goma_ctx->bc.bc_types[ibc].u_BC), NO_SPECIES);
       if (num_const < 0) {
-        sr = sprintf(err_msg, "? user BC consts for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-                     BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+        sr = sprintf(err_msg, "? user BC consts for %s on %sID=%d\n",
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].len_u_BC = num_const;
-      BC_Types[ibc].max_DFlt = num_const + 1;
+      goma_ctx->bc.bc_types[ibc].len_u_BC = num_const;
+      goma_ctx->bc.bc_types[ibc].max_DFlt = num_const + 1;
 
       for (i = 0; i < num_const; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].u_BC[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].u_BC[i]);
 
       break;
 
     case VELO_TANGENT_USER_BC:
-      if (fscanf(ifp, "%d %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2]) != 4) {
+      if (fscanf(ifp, "%d %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2]) != 4) {
         sr = sprintf(err_msg, "Expected 1 int, 3 flts for %s on %sID=%d\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
       for (i = 0; i < 3; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
-      num_const = read_constants(ifp, &(BC_Types[ibc].u_BC), NO_SPECIES);
+      num_const = read_constants(ifp, &(goma_ctx->bc.bc_types[ibc].u_BC), NO_SPECIES);
       if (num_const < 0) {
-        sr = sprintf(err_msg, "? user BC consts for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-                     BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+        sr = sprintf(err_msg, "? user BC consts for %s on %sID=%d\n",
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].len_u_BC = num_const;
-      BC_Types[ibc].max_DFlt = num_const + 3;
+      goma_ctx->bc.bc_types[ibc].len_u_BC = num_const;
+      goma_ctx->bc.bc_types[ibc].max_DFlt = num_const + 3;
 
       for (i = 0; i < num_const; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].u_BC[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].u_BC[i]);
 
       break;
       /*
@@ -1947,24 +2074,26 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case YUSER_BC:
     case YFLUX_ALLOY_BC:
     case FEATURE_ROLLON_BC:
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[0]) != 1) {
-        sr = sprintf(err_msg, "Expected 1 int for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-                     BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]) != 1) {
+        sr = sprintf(err_msg, "Expected 1 int for %s on %sID=%d\n",
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
-      num_const = read_constants(ifp, &(BC_Types[ibc].u_BC), NO_SPECIES);
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
+      num_const = read_constants(ifp, &(goma_ctx->bc.bc_types[ibc].u_BC), NO_SPECIES);
       if (num_const < 0) {
-        sr = sprintf(err_msg, "? user BC consts for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-                     BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+        sr = sprintf(err_msg, "? user BC consts for %s on %sID=%d\n",
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].len_u_BC = num_const;
-      BC_Types[ibc].max_DFlt = num_const;
+      goma_ctx->bc.bc_types[ibc].len_u_BC = num_const;
+      goma_ctx->bc.bc_types[ibc].max_DFlt = num_const;
 
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
       for (i = 0; i < num_const; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].u_BC[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].u_BC[i]);
 
       break;
 
@@ -1974,31 +2103,33 @@ void rd_bc_specs(FILE *ifp, char *input) {
        */
     case CA_EDGE_OR_FIX_BC:
       if (fscanf(ifp, "%80s", input) != 1) {
-        sprintf(err_msg, "%s: Expected Keyword for %s.", yo, BC_Types[ibc].desc->name1);
+        sprintf(err_msg, "%s: Expected Keyword for %s.", yo,
+                goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      if (!strcmp(BC_Types[ibc].desc->name1, "CA_EDGE_OR_FIX")) {
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "CA_EDGE_OR_FIX")) {
         if (!strcmp(input, "CIRCLE")) {
-          BC_Types[ibc].BC_Data_Int[0] = CIRCLE;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = CIRCLE;
         } else if (!strcmp(input, "USER")) {
-          BC_Types[ibc].BC_Data_Int[0] = B_USER;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = B_USER;
         } else {
           GOMA_EH(GOMA_ERROR, "I don't recognize your CA_EDGE_OR_FIX Keyword!");
         }
       }
-      num_const = read_constants(ifp, &(BC_Types[ibc].u_BC), NO_SPECIES);
+      num_const = read_constants(ifp, &(goma_ctx->bc.bc_types[ibc].u_BC), NO_SPECIES);
       if (num_const < 0) {
-        sprintf(err_msg, "? user BC consts for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-                BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+        sprintf(err_msg, "? user BC consts for %s on %sID=%d\n",
+                goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].len_u_BC = num_const;
-      BC_Types[ibc].max_DFlt = num_const;
+      goma_ctx->bc.bc_types[ibc].len_u_BC = num_const;
+      goma_ctx->bc.bc_types[ibc].max_DFlt = num_const;
 
       SPF(endofstring(echo_string), " %s", input);
       for (i = 0; i < num_const; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].u_BC[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].u_BC[i]);
 
       break;
 
@@ -2012,26 +2143,27 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case KIN_DISPLACEMENT_BC:
     case KIN_DISPLACEMENT_RS_BC:
     case PERIODIC_BC:
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[0]) != 1) {
-        sprintf(err_msg, "Expected 1 int for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-                BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]) != 1) {
+        sprintf(err_msg, "Expected 1 int for %s on %sID=%d\n",
+                goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
 
-      if (BC_Types[ibc].BC_Name == PERIODIC_BC)
+      if (goma_ctx->bc.bc_types[ibc].BC_Name == PERIODIC_BC)
         GOMA_EH(GOMA_ERROR, "Don't you wish ...there were PERIODIC_BC");
 
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
-      if (BC_Types[ibc].BC_Name == KIN_DISPLACEMENT_BC ||
-          BC_Types[ibc].BC_Name == KIN_DISPLACEMENT_COLLOC_BC ||
-          BC_Types[ibc].BC_Name == KIN_DISPLACEMENT_PETROV_BC) {
-        num_const = read_constants(ifp, &(BC_Types[ibc].u_BC), NO_SPECIES);
-        BC_Types[ibc].len_u_BC = num_const;
-        BC_Types[ibc].max_DFlt = num_const;
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
+      if (goma_ctx->bc.bc_types[ibc].BC_Name == KIN_DISPLACEMENT_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == KIN_DISPLACEMENT_COLLOC_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == KIN_DISPLACEMENT_PETROV_BC) {
+        num_const = read_constants(ifp, &(goma_ctx->bc.bc_types[ibc].u_BC), NO_SPECIES);
+        goma_ctx->bc.bc_types[ibc].len_u_BC = num_const;
+        goma_ctx->bc.bc_types[ibc].max_DFlt = num_const;
 
         for (i = 0; i < num_const; i++)
-          SPF(endofstring(echo_string), " %g", BC_Types[ibc].u_BC[i]);
+          SPF(endofstring(echo_string), " %g", goma_ctx->bc.bc_types[ibc].u_BC[i]);
       }
 
       break;
@@ -2045,22 +2177,23 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case SH_GAMMA1_DERIV_SYMM_BC:
     case SH_GAMMA2_DERIV_SYMM_BC:
     case DVZDR_ZERO_BC:
-      if (fscanf(ifp, "%d %lf", &BC_Types[ibc].BC_Data_Int[0], &BC_Types[ibc].BC_Data_Float[0]) !=
-          2) {
+      if (fscanf(ifp, "%d %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 2) {
         sprintf(err_msg, "Expected 1 int and 1 float for %s on %sID=%d\n",
-                BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      SPF(endofstring(echo_string), " %d %.4g", BC_Types[ibc].BC_Data_Int[0],
-          BC_Types[ibc].BC_Data_Float[0]);
-      BC_Types[ibc].max_DFlt = 1;
+      SPF(endofstring(echo_string), " %d %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 1;
 
-      if (BC_Types[ibc].BC_Name == DVZDR_ZERO_BC) {
+      if (goma_ctx->bc.bc_types[ibc].BC_Name == DVZDR_ZERO_BC) {
         // specify the radial direction as the wall
-        BC_Types[ibc].BC_Data_Float[1] = 0.0;
-        BC_Types[ibc].BC_Data_Float[2] = 1.0;
-        BC_Types[ibc].BC_Data_Float[3] = 0.0;
-        BC_Types[ibc].max_DFlt = 4;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[1] = 0.0;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[2] = 1.0;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[3] = 0.0;
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 4;
       }
       break;
 
@@ -2073,14 +2206,15 @@ void rd_bc_specs(FILE *ifp, char *input) {
        */
     case SDC_STEFANFLOW_BC:
     case SDC_KIN_SF_BC:
-      if (fscanf(ifp, "%d %s", &BC_Types[ibc].BC_Data_Int[0], ts) != 2) {
+      if (fscanf(ifp, "%d %s", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0], ts) != 2) {
         sprintf(err_msg, "Expected 1 int and a string for %s on %sID=%d\n",
-                BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].BC_Data_Int[1] = match_interface_source_string(ts);
-      BC_Types[ibc].Storage_ID = BC_Types[ibc].BC_Data_Int[1];
-      SPF(endofstring(echo_string), " %d %s", BC_Types[ibc].BC_Data_Int[0], ts);
+      goma_ctx->bc.bc_types[ibc].BC_Data_Int[1] = match_interface_source_string(ts);
+      goma_ctx->bc.bc_types[ibc].Storage_ID = goma_ctx->bc.bc_types[ibc].BC_Data_Int[1];
+      SPF(endofstring(echo_string), " %d %s", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0], ts);
       break;
 
       /*
@@ -2096,31 +2230,32 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case SURFACE_CHARGE_BC:
     case FICK_CHRGD_SURF_GRAD_BC:
 
-      if (fscanf(ifp, "%d %lf", &BC_Types[ibc].BC_Data_Int[0], &BC_Types[ibc].BC_Data_Float[0]) !=
-          2) {
-        sprintf(err_msg, "Expected 1 int, 1 flt for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-                BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+      if (fscanf(ifp, "%d %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 2) {
+        sprintf(err_msg, "Expected 1 int, 1 flt for %s on %sID=%d\n",
+                goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF(endofstring(echo_string), " %d %.4g", BC_Types[ibc].BC_Data_Int[0],
-          BC_Types[ibc].BC_Data_Float[0]);
-      BC_Types[ibc].max_DFlt = 1;
+      SPF(endofstring(echo_string), " %d %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 1;
 
-      if (!strcmp(BC_Types[ibc].Set_Type, "NS")) {
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_relax) != 1) {
-          BC_Types[ibc].BC_relax = -1.0;
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "NS")) {
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_relax) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_relax = -1.0;
         } else {
 
-          SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_relax);
+          SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_relax);
 
-          if (fscanf(ifp, "%d", &BC_Types[ibc].BC_EBID_Apply) != 1) {
-            BC_Types[ibc].BC_EBID_Apply = -1;
+          if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_EBID_Apply) != 1) {
+            goma_ctx->bc.bc_types[ibc].BC_EBID_Apply = -1;
           } else
-            SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_EBID_Apply);
+            SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_EBID_Apply);
         }
       }
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
       break;
 
       /*
@@ -2128,20 +2263,24 @@ void rd_bc_specs(FILE *ifp, char *input) {
        * floating point values as data input
        */
     case CURRENT_BV_BC:
-      if (fscanf(ifp, "%d %lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2], &BC_Types[ibc].BC_Data_Float[3],
-                 &BC_Types[ibc].BC_Data_Float[4], &BC_Types[ibc].BC_Data_Float[5],
-                 &BC_Types[ibc].BC_Data_Float[6]) != 8) {
+      if (fscanf(ifp, "%d %lf %lf %lf %lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6]) != 8) {
         sr = sprintf(err_msg, "Expected 1 int, 7 flts for %s on %sID=%d\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
 
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
-      SPF_DBL_VEC(endofstring(echo_string), 7, BC_Types[ibc].BC_Data_Float);
-      BC_Types[ibc].max_DFlt = 7;
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
+      SPF_DBL_VEC(endofstring(echo_string), 7, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 7;
       break;
 
       /*
@@ -2151,20 +2290,26 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case CURRENT_ORR_BC:
     case YFLUX_H2O_ANODE_BC:
     case YFLUX_H2O_CATHODE_BC:
-      if (fscanf(ifp, "%d %lf %lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2], &BC_Types[ibc].BC_Data_Float[3],
-                 &BC_Types[ibc].BC_Data_Float[4], &BC_Types[ibc].BC_Data_Float[5],
-                 &BC_Types[ibc].BC_Data_Float[6], &BC_Types[ibc].BC_Data_Float[7]) != 9) {
+      if (fscanf(ifp, "%d %lf %lf %lf %lf %lf %lf %lf %lf",
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7]) != 9) {
         sr = sprintf(err_msg, "Expected 1 int, 8 flts for %s on %sID=%d\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
 
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
-      SPF_DBL_VEC(endofstring(echo_string), 8, BC_Types[ibc].BC_Data_Float);
-      BC_Types[ibc].max_DFlt = 8;
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
+      SPF_DBL_VEC(endofstring(echo_string), 8, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 8;
       break;
 
       /*
@@ -2174,21 +2319,27 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case YFLUX_ORR_BC:
     case CURRENT_HOR_BC:
     case YFLUX_BV_BC:
-      if (fscanf(ifp, "%d %lf %lf %lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2], &BC_Types[ibc].BC_Data_Float[3],
-                 &BC_Types[ibc].BC_Data_Float[4], &BC_Types[ibc].BC_Data_Float[5],
-                 &BC_Types[ibc].BC_Data_Float[6], &BC_Types[ibc].BC_Data_Float[7],
-                 &BC_Types[ibc].BC_Data_Float[8]) != 10) {
+      if (fscanf(ifp, "%d %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[8]) != 10) {
         sr = sprintf(err_msg, "Expected 1 int, 9 flts for %s on %sID=%d\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
 
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
-      SPF_DBL_VEC(endofstring(echo_string), 9, BC_Types[ibc].BC_Data_Float);
-      BC_Types[ibc].max_DFlt = 9;
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
+      SPF_DBL_VEC(endofstring(echo_string), 9, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 9;
       break;
 
       /*
@@ -2196,39 +2347,52 @@ void rd_bc_specs(FILE *ifp, char *input) {
        * floating point values as data input
        */
     case YFLUX_HOR_BC:
-      if (fscanf(ifp, "%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2], &BC_Types[ibc].BC_Data_Float[3],
-                 &BC_Types[ibc].BC_Data_Float[4], &BC_Types[ibc].BC_Data_Float[5],
-                 &BC_Types[ibc].BC_Data_Float[6], &BC_Types[ibc].BC_Data_Float[7],
-                 &BC_Types[ibc].BC_Data_Float[8], &BC_Types[ibc].BC_Data_Float[9]) != 11) {
+      if (fscanf(ifp, "%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[8],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[9]) != 11) {
         sr = sprintf(err_msg, "Expected 1 int, 10 flts for %s on %sID=%d\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
 
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
-      SPF_DBL_VEC(endofstring(echo_string), 10, BC_Types[ibc].BC_Data_Float);
-      BC_Types[ibc].max_DFlt = 10;
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
+      SPF_DBL_VEC(endofstring(echo_string), 10, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 10;
       break;
 
     case YFLUX_BV2_BC:
     case CURRENT_BV2_BC: /* RSL 1/15/01 */
-      if (fscanf(ifp, "%d %lf %lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2], &BC_Types[ibc].BC_Data_Float[3],
-                 &BC_Types[ibc].BC_Data_Float[4], &BC_Types[ibc].BC_Data_Float[5],
-                 &BC_Types[ibc].BC_Data_Float[6], &BC_Types[ibc].BC_Data_Float[7]) != 9) {
+      if (fscanf(ifp, "%d %lf %lf %lf %lf %lf %lf %lf %lf",
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[7]) != 9) {
         sr = sprintf(err_msg, "Expected 1 int, 8 flts for %s on %sID=%d\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
 
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
-      SPF_DBL_VEC(endofstring(echo_string), 9, BC_Types[ibc].BC_Data_Float);
-      BC_Types[ibc].max_DFlt = 9;
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
+      SPF_DBL_VEC(endofstring(echo_string), 9, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 9;
 
       break;
 
@@ -2237,17 +2401,19 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case LS_YFLUX_BC:
     case CURRENT_NI_BC: /* RSL 3/9/01 */
     case SHELL_CONC_LS_BC:
-      if (fscanf(ifp, "%d %lf %lf", &BC_Types[ibc].BC_Data_Int[0], &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1]) != 3) {
-        sprintf(err_msg, "Expected 1 int, 2 flts for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-                BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+      if (fscanf(ifp, "%d %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]) != 3) {
+        sprintf(err_msg, "Expected 1 int, 2 flts for %s on %sID=%d\n",
+                goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
 
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
-      SPF_DBL_VEC(endofstring(echo_string), 2, BC_Types[ibc].BC_Data_Float);
-      BC_Types[ibc].max_DFlt = 2;
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
+      SPF_DBL_VEC(endofstring(echo_string), 2, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 2;
 
       break;
 
@@ -2257,19 +2423,23 @@ void rd_bc_specs(FILE *ifp, char *input) {
        */
     case YFLUX_ANTOINE_BC:
 
-      if (fscanf(ifp, "%d %d %lf %lf %lf %lf %lf ", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Int[1], &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4]) != 7) {
+      if (fscanf(ifp, "%d %d %lf %lf %lf %lf %lf ", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4]) != 7) {
         sr = sprintf(err_msg, "Expected 2 ints, 5 flts for %s on %sID=%d\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
 
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
-      SPF_DBL_VEC(endofstring(echo_string), 5, BC_Types[ibc].BC_Data_Float);
-      BC_Types[ibc].max_DFlt = 5;
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
+      SPF_DBL_VEC(endofstring(echo_string), 5, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 5;
 
       break;
 
@@ -2308,66 +2478,68 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case LIGHTP_JUMP_2_BC:
     case LIGHTM_JUMP_2_BC:
 
-      if (fscanf(ifp, "%d %d", &BC_Types[ibc].BC_Data_Int[0], &BC_Types[ibc].BC_Data_Int[1]) != 2) {
-        sr = sprintf(err_msg, "Expected 2 ints for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-                     BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+      if (fscanf(ifp, "%d %d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1]) != 2) {
+        sr = sprintf(err_msg, "Expected 2 ints for %s on %sID=%d\n",
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF(endofstring(echo_string), " %d %d", BC_Types[ibc].BC_Data_Int[0],
-          BC_Types[ibc].BC_Data_Int[1]);
+      SPF(endofstring(echo_string), " %d %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[1]);
       /* add optional scaling float for fluid-structure bcs */
 
-      if (!strcmp(BC_Types[ibc].desc->name1, "VELO_TANGENT_SOLID")) {
-        if (fscanf(ifp, "%d ", &BC_Types[ibc].BC_Data_Int[2]) != 1) {
-          BC_Types[ibc].BC_Data_Int[2] = 0;
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "VELO_TANGENT_SOLID")) {
+        if (fscanf(ifp, "%d ", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]) != 1) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = 0;
         } else
-          SPF(endofstring(echo_string), " %d ", BC_Types[ibc].BC_Data_Int[2]);
+          SPF(endofstring(echo_string), " %d ", goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]);
         /* these also need to be initialized */
-        BC_Types[ibc].BC_Data_Float[0] = 1.; /*beta*/
-        BC_Types[ibc].BC_Data_Float[1] = 0.;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[0] = 1.; /*beta*/
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[1] = 0.;
       }
 
-      if (!strcmp(BC_Types[ibc].desc->name1, "DARCY_CONTINUOUS")) {
-        if (fscanf(ifp, "%lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                   &BC_Types[ibc].BC_Data_Float[1]) != 2) {
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "DARCY_CONTINUOUS")) {
+        if (fscanf(ifp, "%lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]) != 2) {
           /* Default scaling factor to 0.0 */
           SPF(endofstring(echo_string), " %s", "(DARCY_CONTINUOUS length scale defaults to 0.0)");
 
-          BC_Types[ibc].BC_Data_Float[0] = 0.0; /*the length scale */
-          BC_Types[ibc].BC_Data_Float[1] = 0.0; /*the threshold time */
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[0] = 0.0; /*the length scale */
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[1] = 0.0; /*the threshold time */
         } else
-          SPF(endofstring(echo_string), " %.4g %.4g", BC_Types[ibc].BC_Data_Float[0],
-              BC_Types[ibc].BC_Data_Float[1]);
+          SPF(endofstring(echo_string), " %.4g %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+              goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]);
       }
-      if (!strcmp(BC_Types[ibc].desc->name1, "T_CONTACT_RESIS") ||
-          !strcmp(BC_Types[ibc].desc->name1, "T_CONTACT_RESIS_2")) {
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[0]) != 1) {
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "T_CONTACT_RESIS") ||
+          !strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "T_CONTACT_RESIS_2")) {
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 1) {
           /* Default scaling factor to 0.0 */
           SPF(endofstring(echo_string), " %s", "(Warning, no thermal contact resistance)");
 
-          BC_Types[ibc].BC_Data_Float[0] = 0.0;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[0] = 0.0;
         } else
-          SPF(endofstring(echo_string), " %.4g ", BC_Types[ibc].BC_Data_Float[0]);
+          SPF(endofstring(echo_string), " %.4g ", goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]);
       }
-      if (!strcmp(BC_Types[ibc].desc->name1, "SOLID_FLUID_RS") ||
-          !strcmp(BC_Types[ibc].desc->name1, "SOLID_FLUID") ||
-          !strcmp(BC_Types[ibc].desc->name1, "FLUID_SOLID") ||
-          !strcmp(BC_Types[ibc].desc->name1, "FLUID_SOLID_RS")) {
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[0]) != 1) {
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "SOLID_FLUID_RS") ||
+          !strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "SOLID_FLUID") ||
+          !strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "FLUID_SOLID") ||
+          !strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "FLUID_SOLID_RS")) {
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 1) {
           /* Default scaling factor to 1.0 */
           SPF(endofstring(echo_string), " %s", "(Solid-Fluid Scaling Factor defaults to 1.0)");
 
-          BC_Types[ibc].BC_Data_Float[0] = 1.0;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[0] = 1.0;
         } else
-          SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[0]);
+          SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]);
       }
-      if (!strcmp(BC_Types[ibc].desc->name1, "FLUID_SOLID") &&
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "FLUID_SOLID") &&
           goma_ctx->solver.linear_solver == FRONT)
         GOMA_EH(GOMA_ERROR,
                 "Mucho Problemo with FLUID_SOLID boundary condition and frontal solver. USE lu");
-      if ((!strcmp(BC_Types[ibc].desc->name1, "SOLID_FLUID") ||
-           !strcmp(BC_Types[ibc].desc->name1, "SOLID_FLUID_RS")) &&
+      if ((!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "SOLID_FLUID") ||
+           !strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "SOLID_FLUID_RS")) &&
           goma_ctx->solver.linear_solver == FRONT) {
         SPF(endofstring(echo_string), "\n  %s",
             "Warning: Poquito problemo con el SOLID_FLUID BC y frontal solver.");
@@ -2382,62 +2554,70 @@ void rd_bc_specs(FILE *ifp, char *input) {
        */
 
     case VELO_SLIP_SOLID_BC:
-      if (fscanf(ifp, "%d %d %lf", &BC_Types[ibc].BC_Data_Int[0], &BC_Types[ibc].BC_Data_Int[1],
-                 &BC_Types[ibc].BC_Data_Float[0]) != 3)
+      if (fscanf(ifp, "%d %d %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 3)
 
       {
         sr = sprintf(err_msg, "Expected 2 ints and 1 float for %s on %sID=%d\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF(endofstring(echo_string), " %d %d %.4g", BC_Types[ibc].BC_Data_Int[0],
-          BC_Types[ibc].BC_Data_Int[1], BC_Types[ibc].BC_Data_Float[0]);
+      SPF(endofstring(echo_string), " %d %d %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[1], goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]);
 
-      if (fscanf(ifp, "%d %lf", &BC_Types[ibc].BC_Data_Int[2], &BC_Types[ibc].BC_Data_Float[1]) !=
-          2) {
-        BC_Types[ibc].BC_Data_Int[2] = -1;
-        BC_Types[ibc].BC_Data_Float[1] = 0.;
+      if (fscanf(ifp, "%d %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]) != 2) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = -1;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[1] = 0.;
       } else
-        SPF(endofstring(echo_string), " %d %.4g", BC_Types[ibc].BC_Data_Int[2],
-            BC_Types[ibc].BC_Data_Float[1]);
+        SPF(endofstring(echo_string), " %d %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Int[2],
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]);
 
       break;
 
     case QSIDE_LS_BC:
 
-      if (fscanf(ifp, "%d %d %lf %lf", &BC_Types[ibc].BC_Data_Int[0], &BC_Types[ibc].BC_Data_Int[1],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1]) != 4)
+      if (fscanf(ifp, "%d %d %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]) != 4)
 
       {
         sr = sprintf(err_msg, "Expected 2 ints and 2 float for %s on %sID=%d\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF(endofstring(echo_string), " %d %d %.4g %.4g", BC_Types[ibc].BC_Data_Int[0],
-          BC_Types[ibc].BC_Data_Int[1], BC_Types[ibc].BC_Data_Float[0],
-          BC_Types[ibc].BC_Data_Float[1]);
+      SPF(endofstring(echo_string), " %d %d %.4g %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[1], goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]);
       break;
 
       /*
        * Fall through cases for 2 integers, then 3 floats
        */
     case POROUS_LIQ_PRESSURE_FILL_BC:
-      if (fscanf(ifp, "%d %d %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Int[1], &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2]) != 5)
+      if (fscanf(ifp, "%d %d %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2]) != 5)
 
       {
         sr = SPF(err_msg, "Expected 2 ints and 3 floats for %s on %sID=%d\n",
-                 BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                 goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                 goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF(endofstring(echo_string), " %d %d", BC_Types[ibc].BC_Data_Int[0],
-          BC_Types[ibc].BC_Data_Int[1]);
+      SPF(endofstring(echo_string), " %d %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[1]);
       for (i = 0; i < 3; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
       break;
 
@@ -2445,21 +2625,24 @@ void rd_bc_specs(FILE *ifp, char *input) {
        * Fall through cases for 2 integers, then 4 floats
        */
     case POR_LIQ_FLUX_FILL_BC:
-      if (fscanf(ifp, "%d %d %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Int[1], &BC_Types[ibc].BC_Data_Float[0],
-                 &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                 &BC_Types[ibc].BC_Data_Float[3]) != 6)
+      if (fscanf(ifp, "%d %d %lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]) != 6)
 
       {
         sr = SPF(err_msg, "Expected 2 ints and 4 floats for %s on %sID=%d\n",
-                 BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                 goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                 goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF(endofstring(echo_string), " %d %d", BC_Types[ibc].BC_Data_Int[0],
-          BC_Types[ibc].BC_Data_Int[1]);
+      SPF(endofstring(echo_string), " %d %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[1]);
       for (i = 0; i < 4; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
       break;
 
@@ -2468,15 +2651,16 @@ void rd_bc_specs(FILE *ifp, char *input) {
        * data input
        */
     case P_EQUIL_BC:
-      if (fscanf(ifp, "%d %d %d", &BC_Types[ibc].BC_Data_Int[0], &BC_Types[ibc].BC_Data_Int[1],
-                 &BC_Types[ibc].BC_Data_Int[2]) != 3) {
-        SPF(err_msg, "Expected 3 ints for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-            BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+      if (fscanf(ifp, "%d %d %d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]) != 3) {
+        SPF(err_msg, "Expected 3 ints for %s on %sID=%d\n", goma_ctx->bc.bc_types[ibc].desc->name1,
+            goma_ctx->bc.bc_types[ibc].Set_Type, goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       for (i = 0; i < 3; i++)
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[i]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[i]);
 
       break;
 
@@ -2488,28 +2672,33 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case VP_EQUIL_BC:
     case VL_EQUIL_PRXN_BC:
     case IS_EQUIL_PRXN_BC:
-      if (fscanf(ifp, "%d %d %d %lf", &BC_Types[ibc].BC_Data_Int[0], &BC_Types[ibc].BC_Data_Int[1],
-                 &BC_Types[ibc].BC_Data_Int[2], &BC_Types[ibc].BC_Data_Float[0]) != 4) {
-        SPF(err_msg, "Expected 3 ints, 1 flt for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-            BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+      if (fscanf(ifp, "%d %d %d %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 4) {
+        SPF(err_msg, "Expected 3 ints, 1 flt for %s on %sID=%d\n",
+            goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+            goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
-      if (BC_Types[ibc].BC_Name == VL_EQUIL_PRXN_BC) {
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
+      if (goma_ctx->bc.bc_types[ibc].BC_Name == VL_EQUIL_PRXN_BC) {
         assign_global_species_var_type(SPECIES_MASS_FRACTION, FALSE);
       }
-      if (BC_Types[ibc].BC_Name == IS_EQUIL_PRXN_BC) {
+      if (goma_ctx->bc.bc_types[ibc].BC_Name == IS_EQUIL_PRXN_BC) {
         assign_global_species_var_type(SPECIES_CONCENTRATION, FALSE);
       }
-      if (BC_Types[ibc].species_eq == 0 && (BC_Types[ibc].BC_Name == IS_EQUIL_PRXN_BC ||
-                                            BC_Types[ibc].BC_Name == VL_EQUIL_PRXN_BC)) {
-        goma_ctx->problem.int_src_bc_id[goma_ctx->problem.num_interface_srcs] = BC_Types[ibc].BC_ID;
+      if (goma_ctx->bc.bc_types[ibc].species_eq == 0 &&
+          (goma_ctx->bc.bc_types[ibc].BC_Name == IS_EQUIL_PRXN_BC ||
+           goma_ctx->bc.bc_types[ibc].BC_Name == VL_EQUIL_PRXN_BC)) {
+        goma_ctx->problem.int_src_bc_id[goma_ctx->problem.num_interface_srcs] =
+            goma_ctx->bc.bc_types[ibc].BC_ID;
         goma_ctx->problem.num_interface_srcs++;
       }
 
       for (i = 0; i < 3; i++)
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[i]);
-      SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[0]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[i]);
+      SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]);
       break;
 
       /*
@@ -2518,18 +2707,21 @@ void rd_bc_specs(FILE *ifp, char *input) {
        */
     case POROUS_GAS_BC:
     case YFLUX_DISC_RXN_BC:
-      if (fscanf(ifp, "%d %d %d %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Int[1], &BC_Types[ibc].BC_Data_Int[2],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1]) != 5) {
-        sprintf(err_msg, "Expected 3 ints, 2 flts for %s on %sID=%d\n", BC_Types[ibc].desc->name1,
-                BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+      if (fscanf(ifp, "%d %d %d %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]) != 5) {
+        sprintf(err_msg, "Expected 3 ints, 2 flts for %s on %sID=%d\n",
+                goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       for (i = 0; i < 3; i++)
-        SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[i]);
-      SPF(endofstring(echo_string), " %.4g %.4g", BC_Types[ibc].BC_Data_Float[0],
-          BC_Types[ibc].BC_Data_Float[1]);
+        SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[i]);
+      SPF(endofstring(echo_string), " %.4g %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+          goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]);
 
       break;
 
@@ -2541,11 +2733,13 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case VELO_TANGENT_BC:
     case VELO_STREAMING_BC:
     case LATENT_HEAT_BC:
-      if (fscanf(ifp, "%d %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2]) != 4) {
+      if (fscanf(ifp, "%d %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2]) != 4) {
         sr = sprintf(err_msg, "Expected 1 int, 3 flts for %s on %sID=%d\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -2553,34 +2747,37 @@ void rd_bc_specs(FILE *ifp, char *input) {
          is needed. */
       /* BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0]; */
 
-      BC_Types[ibc].max_DFlt = 3;
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
+      goma_ctx->bc.bc_types[ibc].max_DFlt = 3;
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
       for (i = 0; i < 3; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[3]) != 1) {
-        BC_Types[ibc].BC_Data_Float[3] = 0.0;
-        BC_Types[ibc].max_DFlt = 4;
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]) != 1) {
+        goma_ctx->bc.bc_types[ibc].BC_Data_Float[3] = 0.0;
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 4;
       } else
-        SPF(endofstring(echo_string), " %lf", BC_Types[ibc].BC_Data_Float[11]);
+        SPF(endofstring(echo_string), " %lf", goma_ctx->bc.bc_types[ibc].BC_Data_Float[11]);
 
       break;
 
       /* fall through case with one int and 4 floating points */
     case POROUS_FLUX_BC:
-      if (fscanf(ifp, "%d %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Int[0],
-                 &BC_Types[ibc].BC_Data_Float[0], &BC_Types[ibc].BC_Data_Float[1],
-                 &BC_Types[ibc].BC_Data_Float[2], &BC_Types[ibc].BC_Data_Float[3]) != 5) {
+      if (fscanf(ifp, "%d %lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                 &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]) != 5) {
         sr = sprintf(err_msg, "Expected 1 int, 4 flts for %s on %sID=%d\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
 
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[0]);
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
       for (i = 0; i < 4; i++)
-        SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+        SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
 
       break;
 
@@ -2602,27 +2799,29 @@ void rd_bc_specs(FILE *ifp, char *input) {
       for (k = 0; k < MAX_VARIABLE_TYPES + 1; k++) /* only check variables (including porosity) */
       {
         if (!strcmp(input, Var_Name[k].name1) || !strcmp(input, Var_Name[k].name2)) {
-          BC_Types[ibc].BC_Data_Int[0] = Var_Name[k].Index;
-          BC_Types[ibc].equation = EQ_Name[k].Index;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = Var_Name[k].Index;
+          goma_ctx->bc.bc_types[ibc].equation = EQ_Name[k].Index;
           eq_found = TRUE;
         }
       }
       if (!eq_found) {
         sr = SPF(err_msg, "? Variable name = \"%s\" for %s on %sID=%d\n", input,
-                 BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                 goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                 goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[1]) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1]) != 1) {
         sr = SPF(err_msg, "? 1 int species ID after %s (or %s) for %s on %sID=%d\n",
-                 Var_Name[BC_Types[ibc].BC_Data_Int[0]].name1,
-                 Var_Name[BC_Types[ibc].BC_Data_Int[0]].name2, BC_Types[ibc].desc->name1,
-                 BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                 Var_Name[goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]].name1,
+                 Var_Name[goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]].name2,
+                 goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                 goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[1];
-      BC_Types[ibc].BC_relax = -1.0;
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[1];
+      goma_ctx->bc.bc_types[ibc].BC_relax = -1.0;
 
       /*
        * Need to Allocate Space for the BC Description of this Condition.
@@ -2633,21 +2832,23 @@ void rd_bc_specs(FILE *ifp, char *input) {
        * into the motley place.
        */
 
-      new_BC_Desc = ((struct BC_descriptions **)realloc(
-          new_BC_Desc, (num_new_BC_Desc + 1) * sizeof(struct BC_descriptions *)));
+      goma_ctx->bc.new_bc_desc = ((struct BC_descriptions **)realloc(
+          goma_ctx->bc.new_bc_desc,
+          (goma_ctx->bc.num_new_bc_desc + 1) * sizeof(struct BC_descriptions *)));
 
-      new_BC_Desc[num_new_BC_Desc] = alloc_BC_description(BC_Types[ibc].desc);
+      goma_ctx->bc.new_bc_desc[goma_ctx->bc.num_new_bc_desc] =
+          alloc_BC_description(goma_ctx->bc.bc_types[ibc].desc);
 
-      BC_Types[ibc].desc = new_BC_Desc[num_new_BC_Desc];
+      goma_ctx->bc.bc_types[ibc].desc = goma_ctx->bc.new_bc_desc[goma_ctx->bc.num_new_bc_desc];
 
-      BC_Types[ibc].index_dad = num_new_BC_Desc;
+      goma_ctx->bc.bc_types[ibc].index_dad = goma_ctx->bc.num_new_bc_desc;
 
-      num_new_BC_Desc++;
+      goma_ctx->bc.num_new_bc_desc++;
 
-      BC_Types[ibc].desc->equation = BC_Types[ibc].BC_Data_Int[0];
-      BC_Types[ibc].desc->sens[BC_Types[ibc].BC_Data_Int[0]] = 1;
+      goma_ctx->bc.bc_types[ibc].desc->equation = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
+      goma_ctx->bc.bc_types[ibc].desc->sens[goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]] = 1;
 
-      SPF(endofstring(echo_string), " %s %d", input, BC_Types[ibc].BC_Data_Int[1]);
+      SPF(endofstring(echo_string), " %s %d", input, goma_ctx->bc.bc_types[ibc].BC_Data_Int[1]);
       break;
 
       /*
@@ -2659,51 +2860,52 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case LATENT_HEAT_INTERNAL_BC:
 
       if (fscanf(ifp, "%80s", input) != 1) {
-        sprintf(err_msg, "%s: Expected Keyword for %s.", yo, BC_Types[ibc].desc->name1);
+        sprintf(err_msg, "%s: Expected Keyword for %s.", yo,
+                goma_ctx->bc.bc_types[ibc].desc->name1);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       /* loop through variable names and compare to input */
 
-      if (!strcmp(BC_Types[ibc].desc->name1, "LATENT_HEAT_INTERNAL")) {
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "LATENT_HEAT_INTERNAL")) {
         if (!strcmp(input, "LIQUID_VAPOR")) {
-          BC_Types[ibc].BC_Data_Int[0] = LIQUID_VAPOR;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = LIQUID_VAPOR;
         } else if (!strcmp(input, "SOLID_LIQUID")) {
-          BC_Types[ibc].BC_Data_Int[0] = SOLID_LIQUID;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = SOLID_LIQUID;
         } else {
           GOMA_EH(GOMA_ERROR, "I don't recognize your LATENT_HEAT_INTERNAL Keyword!");
         }
 
-        if (fscanf(ifp, "%d %d", &BC_Types[ibc].BC_Data_Int[1], &BC_Types[ibc].BC_Data_Int[2]) !=
-            2) {
+        if (fscanf(ifp, "%d %d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]) != 2) {
           GOMA_EH(GOMA_ERROR, "The LATENT_HEAT_INTERNAL card requires 2 material block numbers");
         }
 
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[0]) != 1) {
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 1) {
           GOMA_EH(GOMA_ERROR,
                   "The LATENT_HEAT_INTERNAL card requires one float after the block numbers");
         }
         SPF(endofstring(echo_string), " %s", input);
-        SPF(endofstring(echo_string), " %d %d %.4g", BC_Types[ibc].BC_Data_Int[1],
-            BC_Types[ibc].BC_Data_Int[2], BC_Types[ibc].BC_Data_Float[0]);
+        SPF(endofstring(echo_string), " %d %d %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+            goma_ctx->bc.bc_types[ibc].BC_Data_Int[2], goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]);
       }
 
-      if (!strcmp(BC_Types[ibc].desc->name1, "DISCONTINUOUS_VELO")) {
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].desc->name1, "DISCONTINUOUS_VELO")) {
         if (!strcmp(input, "EVAPORATION")) {
-          BC_Types[ibc].BC_Data_Int[0] = EVAPORATION;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = EVAPORATION;
         } else if (!strcmp(input, "DISSOLUTION")) {
-          BC_Types[ibc].BC_Data_Int[0] = DISSOLUTION;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = DISSOLUTION;
         } else {
           GOMA_EH(GOMA_ERROR, "I don't recognize your DISCONTINUOUS Keyword!");
         }
 
-        if (fscanf(ifp, "%d %d", &BC_Types[ibc].BC_Data_Int[1], &BC_Types[ibc].BC_Data_Int[2]) !=
-            2) {
+        if (fscanf(ifp, "%d %d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]) != 2) {
           GOMA_EH(GOMA_ERROR, "The DISCONTINUOUS_VELO card requires 2 Element block numbers");
         }
         SPF(endofstring(echo_string), " %s", input);
-        SPF(endofstring(echo_string), " %d %d", BC_Types[ibc].BC_Data_Int[1],
-            BC_Types[ibc].BC_Data_Int[2]);
+        SPF(endofstring(echo_string), " %d %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[1],
+            goma_ctx->bc.bc_types[ibc].BC_Data_Int[2]);
       }
 
       break;
@@ -2734,14 +2936,15 @@ void rd_bc_specs(FILE *ifp, char *input) {
       eq_found = FALSE;
       for (k = 0; !eq_found && k < Num_EQ_Names; k++) {
         if (!strcmp(input, EQ_Name[k].name1) || !strcmp(input, EQ_Name[k].name2)) {
-          BC_Types[ibc].BC_Data_Int[0] = EQ_Name[k].Index;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = EQ_Name[k].Index;
           eq_found = TRUE;
-          BC_Types[ibc].equation = EQ_Name[k].Index;
+          goma_ctx->bc.bc_types[ibc].equation = EQ_Name[k].Index;
         }
       }
       if (!eq_found) {
         sr = SPF(err_msg, "Equation name = \"%s\" for %s on %sID=%d ???\n", input,
-                 BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                 goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                 goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
@@ -2749,16 +2952,18 @@ void rd_bc_specs(FILE *ifp, char *input) {
        * Read the species number
        */
 
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[1]) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[1]) != 1) {
         sr = SPF(err_msg, "Expected 1 int species ID after %s for %s on %sID=%d\n", input,
-                 BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                 goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                 goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      BC_Types[ibc].species_eq = BC_Types[ibc].BC_Data_Int[1];
+      goma_ctx->bc.bc_types[ibc].species_eq = goma_ctx->bc.bc_types[ibc].BC_Data_Int[1];
 
       k--;
-      SPF(endofstring(echo_string), " %s %d", EQ_Name[k].name1, BC_Types[ibc].BC_Data_Int[1]);
+      SPF(endofstring(echo_string), " %s %d", EQ_Name[k].name1,
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[1]);
 
       /*
        *  Read the variable name which this condition uses
@@ -2772,7 +2977,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
       eq_found = FALSE;
       for (k = 0; !eq_found && k < Num_Var_Names; k++) {
         if (!strcmp(input, Var_Name[k].name1) || !strcmp(input, Var_Name[k].name2)) {
-          BC_Types[ibc].BC_Data_Int[2] = Var_Name[k].Index;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = Var_Name[k].Index;
           eq_found = TRUE;
         }
       }
@@ -2783,16 +2988,16 @@ void rd_bc_specs(FILE *ifp, char *input) {
 
       if (!eq_found) {
         if (strcmp(input, "LINEAR") == 0) {
-          BC_Types[ibc].BC_Data_Int[2] = GD_TIME_LIN;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = GD_TIME_LIN;
           eq_found = TRUE;
         } else if (strcmp(input, "EXPONENTIAL") == 0) {
-          BC_Types[ibc].BC_Data_Int[2] = GD_TIME_EXP;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = GD_TIME_EXP;
           eq_found = TRUE;
         } else if (strcmp(input, "SINUSOIDAL") == 0) {
-          BC_Types[ibc].BC_Data_Int[2] = GD_TIME_SIN;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = GD_TIME_SIN;
           eq_found = TRUE;
         } else if (strcmp(input, "TABLE") == 0) {
-          BC_Types[ibc].BC_Data_Int[2] = GD_TIME_TABLE;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = GD_TIME_TABLE;
           eq_found = TRUE;
         }
       }
@@ -2801,128 +3006,143 @@ void rd_bc_specs(FILE *ifp, char *input) {
 
       if (!eq_found) {
         sr = SPF(err_msg, "Variable name = \"%s\" for %s on %sID=%d ???\n", input,
-                 BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                 goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                 goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       SPF(endofstring(echo_string), " %s", input);
 
-      if (fscanf(ifp, "%d", &BC_Types[ibc].BC_Data_Int[3]) != 1) {
-        sr = SPF(err_msg, "Expecting 1 int for %s on %sID=%d.\n", BC_Types[ibc].desc->name1,
-                 BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+      if (fscanf(ifp, "%d", &goma_ctx->bc.bc_types[ibc].BC_Data_Int[3]) != 1) {
+        sr = SPF(err_msg, "Expecting 1 int for %s on %sID=%d.\n",
+                 goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                 goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF(endofstring(echo_string), " %d", BC_Types[ibc].BC_Data_Int[3]);
+      SPF(endofstring(echo_string), " %d", goma_ctx->bc.bc_types[ibc].BC_Data_Int[3]);
 
       /*
        * read the floating point values that correspond to this
        * boundary condition type
        */
-      switch (BC_Types[ibc].BC_Name) {
+      switch (goma_ctx->bc.bc_types[ibc].BC_Name) {
       case GD_CONST_BC:
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[0]) != 1) {
-          sr = sprintf(err_msg, "Expected 1 flt for %s on %sID=%d.\n", BC_Types[ibc].desc->name1,
-                       BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 1) {
+          sr = sprintf(err_msg, "Expected 1 flt for %s on %sID=%d.\n",
+                       goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                       goma_ctx->bc.bc_types[ibc].BC_ID);
           GOMA_EH(GOMA_ERROR, err_msg);
         }
-        SPF_DBL_VEC(endofstring(echo_string), 1, BC_Types[ibc].BC_Data_Float);
-        BC_Types[ibc].max_DFlt = 1;
+        SPF_DBL_VEC(endofstring(echo_string), 1, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 1;
         break;
       case GD_LINEAR_BC:
       case GD_INVERSE_BC:
-        if (fscanf(ifp, "%lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                   &BC_Types[ibc].BC_Data_Float[1]) != 2) {
-          sr = sprintf(err_msg, "Expected 2 flts for %s on %sID=%d.\n", BC_Types[ibc].desc->name1,
-                       BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+        if (fscanf(ifp, "%lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]) != 2) {
+          sr = sprintf(err_msg, "Expected 2 flts for %s on %sID=%d.\n",
+                       goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                       goma_ctx->bc.bc_types[ibc].BC_ID);
           GOMA_EH(GOMA_ERROR, err_msg);
         }
 
-        BC_Types[ibc].max_DFlt = 2;
-        SPF_DBL_VEC(endofstring(echo_string), 2, BC_Types[ibc].BC_Data_Float);
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 2;
+        SPF_DBL_VEC(endofstring(echo_string), 2, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
         break;
       case GD_PARAB_BC:
       case GD_CIRC_BC:
-        if (fscanf(ifp, "%lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                   &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2]) != 3) {
-          sr = sprintf(err_msg, "Expected 3 flts for %s on %sID=%d.\n", BC_Types[ibc].desc->name1,
-                       BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+        if (fscanf(ifp, "%lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2]) != 3) {
+          sr = sprintf(err_msg, "Expected 3 flts for %s on %sID=%d.\n",
+                       goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                       goma_ctx->bc.bc_types[ibc].BC_ID);
           GOMA_EH(GOMA_ERROR, err_msg);
         }
 
-        BC_Types[ibc].max_DFlt = 3;
-        SPF_DBL_VEC(endofstring(echo_string), 3, BC_Types[ibc].BC_Data_Float);
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 3;
+        SPF_DBL_VEC(endofstring(echo_string), 3, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
 
         break;
       case GD_PARAB_OFFSET_BC:
-        if (fscanf(ifp, "%lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                   &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                   &BC_Types[ibc].BC_Data_Float[3]) != 4) {
-          sr = sprintf(err_msg, "Expected 4 flts for %s on %sID=%d.\n", BC_Types[ibc].desc->name1,
-                       BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+        if (fscanf(ifp, "%lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3]) != 4) {
+          sr = sprintf(err_msg, "Expected 4 flts for %s on %sID=%d.\n",
+                       goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                       goma_ctx->bc.bc_types[ibc].BC_ID);
           GOMA_EH(GOMA_ERROR, err_msg);
         }
 
-        BC_Types[ibc].max_DFlt = 4;
-        SPF_DBL_VEC(endofstring(echo_string), 4, BC_Types[ibc].BC_Data_Float);
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 4;
+        SPF_DBL_VEC(endofstring(echo_string), 4, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
 
         break;
 
       case GD_POLYN_BC:
-        if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
-                   &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
-                   &BC_Types[ibc].BC_Data_Float[3], &BC_Types[ibc].BC_Data_Float[4],
-                   &BC_Types[ibc].BC_Data_Float[5], &BC_Types[ibc].BC_Data_Float[6]) != 7) {
-          sr = sprintf(err_msg, "Expected 7 flts for %s on %sID=%d.\n", BC_Types[ibc].desc->name1,
-                       BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+        if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[1],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[2],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[3],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[4],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[5],
+                   &goma_ctx->bc.bc_types[ibc].BC_Data_Float[6]) != 7) {
+          sr = sprintf(err_msg, "Expected 7 flts for %s on %sID=%d.\n",
+                       goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                       goma_ctx->bc.bc_types[ibc].BC_ID);
           GOMA_EH(GOMA_ERROR, err_msg);
         }
 
-        BC_Types[ibc].max_DFlt = 7;
-        SPF_DBL_VEC(endofstring(echo_string), 7, BC_Types[ibc].BC_Data_Float);
+        goma_ctx->bc.bc_types[ibc].max_DFlt = 7;
+        SPF_DBL_VEC(endofstring(echo_string), 7, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
         break;
 
       case GD_TIME_BC:
-        BC_Types[ibc].BC_Data_Int[3] = GD_TIME_BC;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[3] = GD_TIME_BC;
 
-        if (BC_Types[ibc].BC_Data_Int[2] != GD_TIME_TABLE) {
+        if (goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] != GD_TIME_TABLE) {
 
           double *gd_time_values = NULL;
           int lfdcount = read_constants(ifp, &gd_time_values, 0);
 
           if (lfdcount < 2 || lfdcount > 3) {
             sr = sprintf(err_msg, "Expected 2 or 3 flts for %s on %sID=%d.\n",
-                         BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                         goma_ctx->bc.bc_types[ibc].desc->name1,
+                         goma_ctx->bc.bc_types[ibc].Set_Type, goma_ctx->bc.bc_types[ibc].BC_ID);
             GOMA_EH(GOMA_ERROR, err_msg);
           }
           SPF_DBL_VEC(endofstring(echo_string), lfdcount, gd_time_values);
 
           for (k = 0; k < lfdcount; k++) {
-            BC_Types[ibc].BC_Data_Float[k] = gd_time_values[k];
+            goma_ctx->bc.bc_types[ibc].BC_Data_Float[k] = gd_time_values[k];
           }
 
           free(gd_time_values);
 
-          BC_Types[ibc].BC_Data_Int[4] = 0;
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[4] = 0;
           if (lfdcount == 3) {
-            if (BC_Types[ibc].BC_Data_Float[2] < 0) {
+            if (goma_ctx->bc.bc_types[ibc].BC_Data_Float[2] < 0) {
               sr =
                   sprintf(err_msg, "Expected a positive value for maximum time on %s on %sID=%d.\n",
-                          BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                          goma_ctx->bc.bc_types[ibc].desc->name1,
+                          goma_ctx->bc.bc_types[ibc].Set_Type, goma_ctx->bc.bc_types[ibc].BC_ID);
               GOMA_EH(GOMA_ERROR, err_msg);
             }
-            BC_Types[ibc].BC_Data_Int[4] = GD_TIME_MAX;
+            goma_ctx->bc.bc_types[ibc].BC_Data_Int[4] = GD_TIME_MAX;
           }
 
-          BC_Types[ibc].max_DFlt = lfdcount;
-          SPF_DBL_VEC(endofstring(echo_string), lfdcount, BC_Types[ibc].BC_Data_Float);
+          goma_ctx->bc.bc_types[ibc].max_DFlt = lfdcount;
+          SPF_DBL_VEC(endofstring(echo_string), lfdcount, goma_ctx->bc.bc_types[ibc].BC_Data_Float);
         } else {
-          if (num_BC_Tables == MAX_BC_TABLES) {
+          if (goma_ctx->bc.num_bc_tables == MAX_BC_TABLES) {
             GOMA_EH(GOMA_ERROR, "Maximum TABLE_BCs exceeded .");
           }
 
-          BC_Tables[num_BC_Tables] = setup_gd_table_BC(ifp, input, &BC_Types[ibc], echo_string);
-          BC_Types[ibc].table_index = num_BC_Tables++;
+          goma_ctx->bc.bc_tables[goma_ctx->bc.num_bc_tables] =
+              setup_gd_table_BC(ifp, input, &goma_ctx->bc.bc_types[ibc], echo_string);
+          goma_ctx->bc.bc_types[ibc].table_index = goma_ctx->bc.num_bc_tables++;
         }
 
         break;
@@ -2931,21 +3151,23 @@ void rd_bc_specs(FILE *ifp, char *input) {
 
         /* Read scaling factor */
 
-        if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[0]) != 1) {
-          sr = sprintf(err_msg, "Expected 1 flts for %s on %sID=%d.\n", BC_Types[ibc].desc->name1,
-                       BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+        if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 1) {
+          sr = sprintf(err_msg, "Expected 1 flts for %s on %sID=%d.\n",
+                       goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                       goma_ctx->bc.bc_types[ibc].BC_ID);
           GOMA_EH(GOMA_ERROR, err_msg);
           for (i = 0; i < 1; i++)
-            SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[i]);
+            SPF(endofstring(echo_string), " %.4g", goma_ctx->bc.bc_types[ibc].BC_Data_Float[i]);
         }
 
-        if (num_BC_Tables == MAX_BC_TABLES) {
+        if (goma_ctx->bc.num_bc_tables == MAX_BC_TABLES) {
           GOMA_EH(GOMA_ERROR, "Maximum TABLE_BCs exceeded .");
         }
 
-        BC_Tables[num_BC_Tables] = setup_gd_table_BC(ifp, input, &BC_Types[ibc], echo_string);
+        goma_ctx->bc.bc_tables[goma_ctx->bc.num_bc_tables] =
+            setup_gd_table_BC(ifp, input, &goma_ctx->bc.bc_types[ibc], echo_string);
 
-        BC_Types[ibc].table_index = num_BC_Tables++;
+        goma_ctx->bc.bc_types[ibc].table_index = goma_ctx->bc.num_bc_tables++;
 
         break;
 
@@ -2963,19 +3185,21 @@ void rd_bc_specs(FILE *ifp, char *input) {
        *  we malloc and initialize a new BC description structure
        *  and add it to the end of the list.
        */
-      new_BC_Desc = (struct BC_descriptions **)realloc(
-          new_BC_Desc, (num_new_BC_Desc + 1) * sizeof(struct BC_descriptions *));
-      new_BC_Desc[num_new_BC_Desc] = alloc_BC_description(BC_Types[ibc].desc);
+      goma_ctx->bc.new_bc_desc = (struct BC_descriptions **)realloc(
+          goma_ctx->bc.new_bc_desc,
+          (goma_ctx->bc.num_new_bc_desc + 1) * sizeof(struct BC_descriptions *));
+      goma_ctx->bc.new_bc_desc[goma_ctx->bc.num_new_bc_desc] =
+          alloc_BC_description(goma_ctx->bc.bc_types[ibc].desc);
 
       /*
        *  Now fill in the new BC_Types condition and BC_description
        *  structure with information about the boundary condition
        */
-      BC_Types[ibc].desc = new_BC_Desc[num_new_BC_Desc];
-      BC_Types[ibc].index_dad = num_new_BC_Desc;
-      BC_Types[ibc].desc->equation = BC_Types[ibc].BC_Data_Int[0];
-      var = BC_Types[ibc].BC_Data_Int[2];
-      num_new_BC_Desc++;
+      goma_ctx->bc.bc_types[ibc].desc = goma_ctx->bc.new_bc_desc[goma_ctx->bc.num_new_bc_desc];
+      goma_ctx->bc.bc_types[ibc].index_dad = goma_ctx->bc.num_new_bc_desc;
+      goma_ctx->bc.bc_types[ibc].desc->equation = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
+      var = goma_ctx->bc.bc_types[ibc].BC_Data_Int[2];
+      goma_ctx->bc.num_new_bc_desc++;
 
       /*
        * Fill in an a default description of the sensitivity of this
@@ -2990,26 +3214,26 @@ void rd_bc_specs(FILE *ifp, char *input) {
        *    What if you need more ?
        */
       if (var >= V_FIRST && var < V_LAST) {
-        BC_Types[ibc].desc->sens[var] = 1;
+        goma_ctx->bc.bc_types[ibc].desc->sens[var] = 1;
       } else if (var >= MESH_POSITION1 && var <= MESH_POSITION3) {
-        BC_Types[ibc].desc->sens[var - MESH_POSITION1 + MESH_DISPLACEMENT1] = 1;
+        goma_ctx->bc.bc_types[ibc].desc->sens[var - MESH_POSITION1 + MESH_DISPLACEMENT1] = 1;
       } else if (var >= SOLID_POSITION1 && var <= SOLID_POSITION3) {
-        BC_Types[ibc].desc->sens[var - SOLID_POSITION1 + SOLID_DISPLACEMENT1] = 1;
+        goma_ctx->bc.bc_types[ibc].desc->sens[var - SOLID_POSITION1 + SOLID_DISPLACEMENT1] = 1;
       } else if (var >= D_VEL1_DT && var <= D_P_DT) {
-        BC_Types[ibc].desc->sens[var - D_VEL1_DT] = 1;
+        goma_ctx->bc.bc_types[ibc].desc->sens[var - D_VEL1_DT] = 1;
       }
 
       /* Check to see if this condition implies rotation of mesh or momentum equations */
 
-      eqn = BC_Types[ibc].BC_Data_Int[0];
+      eqn = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
       if ((eqn >= R_MESH_NORMAL) && (eqn <= R_MESH_TANG2)) {
-        BC_Types[ibc].desc->rotate = R_MESH1;
+        goma_ctx->bc.bc_types[ibc].desc->rotate = R_MESH1;
       }
       if ((eqn >= R_SOLID_NORMAL) && (eqn <= R_SOLID_TANG2)) {
-        BC_Types[ibc].desc->rotate = R_SOLID1;
+        goma_ctx->bc.bc_types[ibc].desc->rotate = R_SOLID1;
       }
       if ((eqn >= R_MOM_NORMAL) && (eqn <= R_MOM_TANG2)) {
-        BC_Types[ibc].desc->rotate = R_MOMENTUM1;
+        goma_ctx->bc.bc_types[ibc].desc->rotate = R_MOMENTUM1;
       }
 
       break;
@@ -3027,21 +3251,24 @@ void rd_bc_specs(FILE *ifp, char *input) {
        * into the parallel code.
        */
 
-      new_BC_Desc = ((struct BC_descriptions **)realloc(
-          new_BC_Desc, (num_new_BC_Desc + 1) * sizeof(struct BC_descriptions *)));
+      goma_ctx->bc.new_bc_desc = ((struct BC_descriptions **)realloc(
+          goma_ctx->bc.new_bc_desc,
+          (goma_ctx->bc.num_new_bc_desc + 1) * sizeof(struct BC_descriptions *)));
 
       /* Allocated  a new BC_desc for this Table BC and copy over the old info
        * that is listed in mm_names.h under TABLE_BC. Later this will be changed to reflect
        * the input deck card
        */
 
-      new_BC_Desc[num_new_BC_Desc] = alloc_BC_description(BC_Types[ibc].desc);
+      goma_ctx->bc.new_bc_desc[goma_ctx->bc.num_new_bc_desc] =
+          alloc_BC_description(goma_ctx->bc.bc_types[ibc].desc);
 
-      BC_Types[ibc].desc = new_BC_Desc[num_new_BC_Desc];
+      goma_ctx->bc.bc_types[ibc].desc = goma_ctx->bc.new_bc_desc[goma_ctx->bc.num_new_bc_desc];
 
-      BC_Types[ibc].index_dad = num_new_BC_Desc++; /* This is important to Phil */
+      goma_ctx->bc.bc_types[ibc].index_dad =
+          goma_ctx->bc.num_new_bc_desc++; /* This is important to Phil */
 
-      if (num_BC_Tables == MAX_BC_TABLES) {
+      if (goma_ctx->bc.num_bc_tables == MAX_BC_TABLES) {
         GOMA_EH(GOMA_ERROR, "Maximum TABLE_BCs exceeded .");
       }
 
@@ -3052,14 +3279,15 @@ void rd_bc_specs(FILE *ifp, char *input) {
        * Finally, read and sort the tabular data itself
        */
 
-      BC_Tables[num_BC_Tables] = setup_table_BC(ifp, input, &BC_Types[ibc], echo_string);
+      goma_ctx->bc.bc_tables[goma_ctx->bc.num_bc_tables] =
+          setup_table_BC(ifp, input, &goma_ctx->bc.bc_types[ibc], echo_string);
 
       /*
        * Record which table in BC_Tables is associate with this BC.  Important
        * when sending info to other processors
        */
 
-      BC_Types[ibc].table_index = num_BC_Tables++;
+      goma_ctx->bc.bc_types[ibc].table_index = goma_ctx->bc.num_bc_tables++;
 
       break;
 
@@ -3101,22 +3329,24 @@ void rd_bc_specs(FILE *ifp, char *input) {
        * as two float parameters on the BC = FLOWRATE line
        */
 
-      if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[0]) != 1) {
+      if (fscanf(ifp, "%lf", &goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]) != 1) {
 
         sr = sprintf(err_msg, "Expected flt to start for %s on %s ID=%d.\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
       if (fscanf(ifp, "%s", input) != 1) {
         sr = sprintf(err_msg, "Expected 2nd parameter for %s on %s ID=%d.\n",
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].Set_Type, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].Set_Type,
+                     goma_ctx->bc.bc_types[ibc].BC_ID);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
 
-      SPF(endofstring(echo_string), " %.4g %s", BC_Types[ibc].BC_Data_Float[0], input);
+      SPF(endofstring(echo_string), " %.4g %s", goma_ctx->bc.bc_types[ibc].BC_Data_Float[0], input);
 
-      BC_Types[ibc].BC_Data_Float[1] = (float)strtod(input, NULL);
+      goma_ctx->bc.bc_types[ibc].BC_Data_Float[1] = (float)strtod(input, NULL);
 
       /*
        * Next see if ACs have been defined above.  If so add space for one more, if not, allocate
@@ -3134,7 +3364,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
 
       /* Record the index of the attached AC in the BC_Types structure */
 
-      BC_Types[ibc].BC_Data_Int[0] = goma_ctx->problem.n_ac - 1;
+      goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = goma_ctx->problem.n_ac - 1;
 
       /*
        * Next up...fill in the pieces of the AC structure with the appropriate info.
@@ -3147,9 +3377,9 @@ void rd_bc_specs(FILE *ifp, char *input) {
           VOLUME_FLUX; /* This flux type used in evaluate_flux */
       goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].COMPID = 0.0;
       goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].SSID =
-          BC_Types[ibc].BC_ID; /* Sideset set id */
+          goma_ctx->bc.bc_types[ibc].BC_ID; /* Sideset set id */
       goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].CONSTV =
-          -BC_Types[ibc].BC_Data_Float[0]; /* Store the flow rate value */
+          -goma_ctx->bc.bc_types[ibc].BC_Data_Float[0]; /* Store the flow rate value */
       goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].BCID =
           ibc; /* record which boundary condition AC is attached to */
       goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].DFID =
@@ -3170,7 +3400,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
        */
 
       goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].DataFlt =
-          alloc_dbl_1(1, -BC_Types[ibc].BC_Data_Float[1]);
+          alloc_dbl_1(1, -goma_ctx->bc.bc_types[ibc].BC_Data_Float[1]);
       goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].len_AC = 1;
 
       /* Oh, one more thing..reset the nAC value in all the AC's */
@@ -3189,7 +3419,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
       break;
     }
 
-    BC_consistency(&BC_Types[ibc]);
+    BC_consistency(&goma_ctx->bc.bc_types[ibc]);
 
     ECHO(echo_string, echo_file);
 
@@ -3197,10 +3427,10 @@ void rd_bc_specs(FILE *ifp, char *input) {
     if (goma_ctx->problem.n_hc) {
       for (i = 0; i < goma_ctx->problem.n_hc; i++) {
         if (goma_ctx->fem.hunt[i].Type == 1 && goma_ctx->fem.hunt[i].BCID == ibc) {
-          if (goma_ctx->fem.hunt[i].DFID >= BC_Types[ibc].max_DFlt) {
+          if (goma_ctx->fem.hunt[i].DFID >= goma_ctx->bc.bc_types[ibc].max_DFlt) {
             GOMA_WH(-1, "Whoa.... hunting data float outside range\n");
             fprintf(stderr, " HC %d BC %d of %d\n", i, goma_ctx->fem.hunt[i].DFID,
-                    BC_Types[ibc].max_DFlt);
+                    goma_ctx->bc.bc_types[ibc].max_DFlt);
           }
         }
       }
@@ -3209,7 +3439,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
     if (goma_ctx->problem.n_cc) {
       for (i = 0; i < goma_ctx->problem.n_cc; i++) {
         if (goma_ctx->fem.cpcc[i].Type == 1 && goma_ctx->fem.cpcc[i].BCID == ibc) {
-          if (goma_ctx->fem.cpcc[i].DFID >= BC_Types[ibc].max_DFlt)
+          if (goma_ctx->fem.cpcc[i].DFID >= goma_ctx->bc.bc_types[ibc].max_DFlt)
             GOMA_WH(-1, "Whoa.... loca data float outside range\n");
         }
       }
@@ -3232,20 +3462,21 @@ void rd_bc_specs(FILE *ifp, char *input) {
    * Initialize, even if we don't use them.
    */
 
-  pressure_datum_element = -1;
-  pressure_datum_value = -1.0e12;
+  goma_ctx->bc.pressure_datum_element = -1;
+  goma_ctx->bc.pressure_datum_value = -1.0e12;
 
   if (iread == 1) {
-    PRESSURE_DATUM = 1;
-    if (fscanf(ifp, "%d %lf ", &pressure_datum_element, &pressure_datum_value) != 2) {
+    goma_ctx->bc.pressure_datum = 1;
+    if (fscanf(ifp, "%d %lf ", &goma_ctx->bc.pressure_datum_element,
+               &goma_ctx->bc.pressure_datum_value) != 2) {
       SPF(echo_string, "\t(%s)", "PRESSURE DATUM =  missing data");
     } else {
-      SPF(echo_string, "%s = %d %.4g", "PRESSURE DATUM", pressure_datum_element,
-          pressure_datum_value);
+      SPF(echo_string, "%s = %d %.4g", "PRESSURE DATUM", goma_ctx->bc.pressure_datum_element,
+          goma_ctx->bc.pressure_datum_value);
     }
     ECHO(echo_string, echo_file);
   } else {
-    PRESSURE_DATUM = 0;
+    goma_ctx->bc.pressure_datum = 0;
   }
 
   /*
@@ -3271,7 +3502,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
    *  Allocate space for the vector, ROT_Types.
    */
   if (goma_ctx->problem.num_rot != 0) {
-    ROT_Types =
+    goma_ctx->bc.rot_types =
         (struct Rotation_Specs *)smalloc(goma_ctx->problem.num_rot * sizeof(struct Rotation_Specs));
 
     /*
@@ -3287,7 +3518,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
 
     for (i = 0; i < goma_ctx->problem.num_rot; i++) {
       for (j = 0; j < CDIM; j++) {
-        ROT_Types[i].BC_desc_index[j] = -1;
+        goma_ctx->bc.rot_types[i].BC_desc_index[j] = -1;
       }
     }
 
@@ -3297,7 +3528,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
        * Handy quick pointer for *this* ROT_Type.
        */
 
-      rot = ROT_Types + irc;
+      rot = goma_ctx->bc.rot_types + irc;
 
       strcpy(rot_eq_string, "?");
 
@@ -3766,7 +3997,8 @@ static int detect_BC(int BC_name, int BC_ID)
   int k = 0, found = FALSE;
 
   while (k < goma_ctx->problem.num_bc && !found) {
-    found = (BC_Types[k].BC_Name == BC_name) && (BC_Types[k].BC_ID == BC_ID);
+    found =
+        (goma_ctx->bc.bc_types[k].BC_Name == BC_name) && (goma_ctx->bc.bc_types[k].BC_ID == BC_ID);
 
     k++;
   }

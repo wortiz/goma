@@ -32,10 +32,4 @@ int nnz_total; /* total number of nonzeroes in the matrix
 
 int PRS_mat_ielem;
 
-struct Boundary_Condition *BC_Types;
-struct Rotation_Specs *ROT_Types;
-
 NODE_INFO_STRUCT **Nodes = NULL;
-
-struct elem_side_bc_struct ***First_Elem_Side_BC_Array;
-struct elem_edge_bc_struct ***First_Elem_Edge_BC_Array;

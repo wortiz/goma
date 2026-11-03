@@ -862,7 +862,7 @@ set(GOMA_USER_SOURCES
 
 set(GOMA_UTIL_INCLUDES
     include/bc/rotate_util.h include/mm_eh.h include/util/goma_normal.h include/util/goma_context.h
-    include/ac_particles_types.h
+    include/ac_particles_types.h include/rf_bc_limits.h
     include/util/aprepro_helper.h
     include/util/distance_helpers.h)
 

@@ -7949,7 +7949,7 @@ void compute_leak_velocity(double *vnorm,
     if (fluxbc->BC_Data_Int[1] == -1)
       fluxbc = NULL;
     else
-      fluxbc = BC_Types + fluxbc->BC_Data_Int[1];
+      fluxbc = goma_ctx->bc.bc_types + fluxbc->BC_Data_Int[1];
 
   } /*while ( fluxbc != NULL ) */
 
@@ -8390,7 +8390,7 @@ void compute_leak_energy(double *enorm,
     if (fluxbc->BC_Data_Int[1] == -1)
       fluxbc = NULL;
     else
-      fluxbc = BC_Types + fluxbc->BC_Data_Int[1];
+      fluxbc = goma_ctx->bc.bc_types + fluxbc->BC_Data_Int[1];
 
   } /*while ( fluxbc != NULL ) */
 

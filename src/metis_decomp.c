@@ -1039,7 +1039,7 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
   free(Element_Blocks);
 
   for (int i = 0; i < MAX_MAT_PER_SS + 1; i++) {
-    free(ss_to_blks[i]);
+    free(goma_ctx->bc.ss_to_blks[i]);
   }
   free(goma_ctx->mesh.proc_ss_node_count);
   goma_ctx->mesh.proc_ss_node_count = NULL;

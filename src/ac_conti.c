@@ -1307,7 +1307,7 @@ free_and_clear:
   /*
    * Free a bunch of variables that aren't needed anymore
    */
-  safer_free((void **)&ROT_Types);
+  safer_free((void **)&goma_ctx->bc.rot_types);
   safer_free((void **)&node_to_fill);
 
   safer_free((void **)&resid_vector);

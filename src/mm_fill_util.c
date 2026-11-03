@@ -5783,7 +5783,7 @@ goma_error zero_strong_resid_side(struct Local_Element_Contributions *lec,
      *  Create a couple of pointers to cut down on the
      *  amount of indirect addressing
      */
-    BOUNDARY_CONDITION_STRUCT *bc = BC_Types + bc_input_id;
+    BOUNDARY_CONDITION_STRUCT *bc = goma_ctx->bc.bc_types + bc_input_id;
     struct BC_descriptions *bc_desc = bc->desc;
     int n_modes;
     int stress_bc = 0;

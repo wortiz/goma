@@ -1100,7 +1100,7 @@ double sdc_stefan_flow(JACOBIAN_VAR_DESC_STRUCT *func_jac,
    * Obtain the pointer to the boundary condition that contains
    * the reaction rate information for this boundary condition
    */
-  bc_rxn = BC_Types + bc->BC_Data_Int[2];
+  bc_rxn = goma_ctx->bc.bc_types + bc->BC_Data_Int[2];
 
   /*
    * We have two materials, mp and mp2. However, we need to find
@@ -3791,14 +3791,14 @@ int exchange_fvelo_slip_bc_info(int ibc /* Index into BC_Types for VELO_SLIP_BC 
   int float_offset;
   double node_coord[DIM]; /* temporary buffer for node coordinates */
 
-  float_offset = BC_Types[ibc].max_DFlt + 1;
+  float_offset = goma_ctx->bc.bc_types[ibc].max_DFlt + 1;
   /* Skip this if calculation is not needed */
-  if (BC_Types[ibc].BC_Data_Int[0] == -1) {
+  if (goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] == -1) {
     return 0;
   }
 
   /* find which processor has the right data */
-  if (BC_Types[ibc].BC_Data_Int[0] != -2) {
+  if (goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] != -2) {
     velo_slip_root = goma_ctx->proc_id;
   }
 
@@ -3811,7 +3811,7 @@ int exchange_fvelo_slip_bc_info(int ibc /* Index into BC_Types for VELO_SLIP_BC 
 #endif /* #ifdef PARALLEL */
 
   if (goma_ctx->proc_id == velo_slip_root) {
-    int node = abs(BC_Types[ibc].BC_Data_Int[0]);
+    int node = abs(goma_ctx->bc.bc_types[ibc].BC_Data_Int[0]);
     /* find coordinate position of reference node */
     for (i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
       node_coord[i] = goma_ctx->mesh.coor[i][node];
@@ -3830,13 +3830,13 @@ int exchange_fvelo_slip_bc_info(int ibc /* Index into BC_Types for VELO_SLIP_BC 
 #endif
 
   /* set BC_Data_Float values */
-  if (1 || BC_Types[ibc].BC_Name != ROLL_FLUID_BC) {
+  if (1 || goma_ctx->bc.bc_types[ibc].BC_Name != ROLL_FLUID_BC) {
     for (i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
-      BC_Types[ibc].BC_Data_Float[float_offset + i] = node_coord[i];
+      goma_ctx->bc.bc_types[ibc].BC_Data_Float[float_offset + i] = node_coord[i];
     }
   } else {
     for (i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
-      BC_Types[ibc].u_BC[float_offset + i] = node_coord[i];
+      goma_ctx->bc.bc_types[ibc].u_BC[float_offset + i] = node_coord[i];
     }
 
     fprintf(stderr, "exchange %d %g %g\n", ibc, node_coord[0], node_coord[1]);
@@ -5713,15 +5713,15 @@ void apply_repulsion_user(double cfunc[MDE][DIM],
           { coord[2] = 0.0;}*/
 
   dist = fnc(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2],
-             BC_Types[2].u_BC, time);
+             goma_ctx->bc.bc_types[2].u_BC, time);
   d_dist[0] = dfncd1(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2],
-                     BC_Types[2].u_BC, time);
+                     goma_ctx->bc.bc_types[2].u_BC, time);
   d_dist[1] = dfncd2(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2],
-                     BC_Types[2].u_BC, time);
+                     goma_ctx->bc.bc_types[2].u_BC, time);
 
   if (dim == 3)
     d_dist[2] = dfncd3(goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2],
-                       BC_Types[2].u_BC, time);
+                       goma_ctx->bc.bc_types[2].u_BC, time);
 
   /*  repulsion function  */
   force = -P_rep / pow(dist / hscale, repexp);
@@ -5909,14 +5909,14 @@ void apply_repulsion_table(double cfunc[MDE][DIM],
   }
 
   for (a = 0; a < goma_ctx->problem.num_bc; a++) {
-    if (BC_Types[a].BC_Name == GD_TABLE_BC) {
+    if (goma_ctx->bc.bc_types[a].BC_Name == GD_TABLE_BC) {
       bc_table_id = a;
     }
   }
   if (bc_table_id == -1) {
     GOMA_EH(GOMA_ERROR, "GD_TABLE id not found for CAP_REPULSE_TABLE\n");
   }
-  bc_tab = BC_Types + bc_table_id;
+  bc_tab = goma_ctx->bc.bc_types + bc_table_id;
   dist = table_distance_search(bc_tab->table, coord, &slope, d_tfcn);
   if (bc_tab->table->t_index[0] == MESH_POSITION1) {
     d_dist[0] = (coord[0] - bc_tab->table->slope[1]) / dist;
@@ -14556,16 +14556,16 @@ void q_velo_slip_bc(double func[MAX_PDIM],
 
   /* if based on VELO_SLIP_ROT, we need to compute surface velocity */
   /* Note: positive omega is CLOCKWISE */
-  if (BC_Types[ibc].BC_Name == VELO_SLIP_ROT_BC) {
-    omega = BC_Types[ibc].BC_Data_Float[1];
-    X_0[0] = BC_Types[ibc].BC_Data_Float[2];
-    X_0[1] = BC_Types[ibc].BC_Data_Float[3];
+  if (goma_ctx->bc.bc_types[ibc].BC_Name == VELO_SLIP_ROT_BC) {
+    omega = goma_ctx->bc.bc_types[ibc].BC_Data_Float[1];
+    X_0[0] = goma_ctx->bc.bc_types[ibc].BC_Data_Float[2];
+    X_0[1] = goma_ctx->bc.bc_types[ibc].BC_Data_Float[3];
     vs[0] = omega * (goma_ctx->fem.fv->x[1] - X_0[1]);
     vs[1] = -omega * (goma_ctx->fem.fv->x[0] - X_0[0]);
     vs[2] = 0.;
 #define THREADED_SLIP FALSE
 #if THREADED_SLIP
-    pitch = BC_Types[ibc].BC_Data_Float[4];
+    pitch = goma_ctx->bc.bc_types[ibc].BC_Data_Float[4];
     for (p = 0; p < 2; p++) {
       vslip[p] = (vs[p] - goma_ctx->fem.fv->v[p]);
     }
@@ -14575,9 +14575,9 @@ void q_velo_slip_bc(double func[MAX_PDIM],
     vs[2] = vmag / radius / (2. * M_PIE) * pitch;
 #endif
   } else {
-    vs[0] = BC_Types[ibc].BC_Data_Float[1];
-    vs[1] = BC_Types[ibc].BC_Data_Float[2];
-    vs[2] = BC_Types[ibc].BC_Data_Float[3];
+    vs[0] = goma_ctx->bc.bc_types[ibc].BC_Data_Float[1];
+    vs[1] = goma_ctx->bc.bc_types[ibc].BC_Data_Float[2];
+    vs[2] = goma_ctx->bc.bc_types[ibc].BC_Data_Float[3];
   }
 
   /* slip velocity */
@@ -14590,9 +14590,9 @@ void q_velo_slip_bc(double func[MAX_PDIM],
   memset(d_slip_stress, 0, sizeof(double) * MAX_PDIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE);
 
   /* use fvelo_slip to evaluate slip and derivatives */
-  fvelo_slip_bc(slip_stress, d_slip_stress, x, (int)BC_Types[ibc].BC_Name,
-                (int)BC_Types[ibc].max_DFlt, BC_Types[ibc].BC_Data_Float,
-                (int)BC_Types[ibc].BC_Data_Int[0], xsurf, tt, dt);
+  fvelo_slip_bc(slip_stress, d_slip_stress, x, (int)goma_ctx->bc.bc_types[ibc].BC_Name,
+                (int)goma_ctx->bc.bc_types[ibc].max_DFlt, goma_ctx->bc.bc_types[ibc].BC_Data_Float,
+                (int)goma_ctx->bc.bc_types[ibc].BC_Data_Int[0], xsurf, tt, dt);
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
     for (p = 0; p < goma_ctx->problem.vim; p++) {
@@ -15612,7 +15612,7 @@ void qrad_surf(double func[DIM],
     }
   }
   if (model_number == 2 || model_number == 3) {
-    apply_table_wic_bc(Ta, d_Tc, &BC_Types[bc_input_id], time);
+    apply_table_wic_bc(Ta, d_Tc, &goma_ctx->bc.bc_types[bc_input_id], time);
     T_c = Ta[0];
   }
   if (model_number == 3) {

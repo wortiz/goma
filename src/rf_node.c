@@ -269,8 +269,8 @@ void init_nodes(Exo_DB *exo, Dpi *dpi)
          * Flag these using the DISC_BNDRY bit field
          */
         for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-          if (BC_Types[ibc].BC_ID == exo->ss_id[ss_index]) {
-            bc_desc = BC_Types[ibc].desc;
+          if (goma_ctx->bc.bc_types[ibc].BC_ID == exo->ss_id[ss_index]) {
+            bc_desc = goma_ctx->bc.bc_types[ibc].desc;
             if (bc_desc->i_apply == CROSS_PHASE_DISCONTINUOUS) {
               Nodes[node_num]->DISC_BNDRY = 1;
             }

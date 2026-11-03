@@ -2556,7 +2556,7 @@ double acoustic_impedance(CONDUCTIVITY_DEPENDENCE_STRUCT *d_R, dbl time)
     R = goma_ctx->fem.mp->acoustic_impedance;
   } else if (goma_ctx->fem.mp->Acoustic_ImpedanceModel == TABLE) {
     struct Data_Table *table_local;
-    table_local = MP_Tables[goma_ctx->fem.mp->acoustic_impedance_tableid];
+    table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->acoustic_impedance_tableid];
     apply_table_mp(&goma_ctx->fem.mp->acoustic_impedance, table_local);
     R = goma_ctx->fem.mp->acoustic_impedance;
 
@@ -2640,7 +2640,7 @@ double wave_number(CONDUCTIVITY_DEPENDENCE_STRUCT *d_k, dbl time) {
     k = goma_ctx->fem.mp->wave_number;
   } else if (goma_ctx->fem.mp->wave_numberModel == TABLE) {
     struct Data_Table *table_local;
-    table_local = MP_Tables[goma_ctx->fem.mp->wave_number_tableid];
+    table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->wave_number_tableid];
     apply_table_mp(&goma_ctx->fem.mp->wave_number, table_local);
     k = goma_ctx->fem.mp->wave_number;
 
@@ -2791,7 +2791,7 @@ double acoustic_absorption(CONDUCTIVITY_DEPENDENCE_STRUCT *d_alpha, dbl time)
     alpha = goma_ctx->fem.mp->acoustic_absorption;
   } else if (goma_ctx->fem.mp->Acoustic_AbsorptionModel == TABLE) {
     struct Data_Table *table_local;
-    table_local = MP_Tables[goma_ctx->fem.mp->acoustic_absorption_tableid];
+    table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->acoustic_absorption_tableid];
     apply_table_mp(&goma_ctx->fem.mp->acoustic_absorption, table_local);
     alpha = goma_ctx->fem.mp->acoustic_absorption;
 
@@ -2946,7 +2946,7 @@ double light_absorption(CONDUCTIVITY_DEPENDENCE_STRUCT *d_alpha, dbl time)
     alpha = goma_ctx->fem.mp->light_absorption;
   } else if (goma_ctx->fem.mp->Light_AbsorptionModel == TABLE) {
     struct Data_Table *table_local;
-    table_local = MP_Tables[goma_ctx->fem.mp->light_absorption_tableid];
+    table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->light_absorption_tableid];
     apply_table_mp(&goma_ctx->fem.mp->light_absorption, table_local);
     alpha = goma_ctx->fem.mp->light_absorption;
 
@@ -3097,7 +3097,7 @@ double refractive_index(CONDUCTIVITY_DEPENDENCE_STRUCT *d_n, dbl time)
     n = goma_ctx->fem.mp->refractive_index;
   } else if (goma_ctx->fem.mp->Refractive_IndexModel == TABLE) {
     struct Data_Table *table_local;
-    table_local = MP_Tables[goma_ctx->fem.mp->refractive_index_tableid];
+    table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->refractive_index_tableid];
     apply_table_mp(&goma_ctx->fem.mp->refractive_index, table_local);
     n = goma_ctx->fem.mp->refractive_index;
 
@@ -3247,7 +3247,7 @@ double extinction_index(CONDUCTIVITY_DEPENDENCE_STRUCT *d_k, dbl time)
     k = goma_ctx->fem.mp->extinction_index;
   } else if (goma_ctx->fem.mp->Extinction_IndexModel == TABLE) {
     struct Data_Table *table_local;
-    table_local = MP_Tables[goma_ctx->fem.mp->extinction_index_tableid];
+    table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->extinction_index_tableid];
     apply_table_mp(&goma_ctx->fem.mp->extinction_index, table_local);
     k = goma_ctx->fem.mp->extinction_index;
 
@@ -4945,7 +4945,7 @@ int apply_distributed_sources(int elem,
       while (bcref != NULL) {
         BOUNDARY_CONDITION_STRUCT *bc;
 
-        bc = BC_Types + bcref->bc_input_id;
+        bc = goma_ctx->bc.bc_types + bcref->bc_input_id;
 
         if (num_elem_passes == 2) {
           if ((bc->BC_ID != 0 && goma_ctx->fem.ls->Elem_Sign != bc->BC_ID) ||
@@ -5002,11 +5002,11 @@ int apply_distributed_sources(int elem,
           break;
         case LS_LATENT_HEAT_BC:
           assemble_ls_latent_heat_source(bc->BC_Data_Float[0], bc->BC_Data_Float[1], dt, theta,
-                                         time, bcref->bc_input_id, BC_Types);
+                                         time, bcref->bc_input_id, goma_ctx->bc.bc_types);
           break;
         case LS_YFLUX_BC:
           assemble_ls_yflux_source(bc->BC_Data_Int[0], bc->BC_Data_Float[0], bc->BC_Data_Float[1],
-                                   dt, theta, time, bcref->bc_input_id, BC_Types);
+                                   dt, theta, time, bcref->bc_input_id, goma_ctx->bc.bc_types);
           break;
         case LS_CONT_T_BC:
           assemble_cont_t_source(xi);
@@ -5035,10 +5035,10 @@ int apply_distributed_sources(int elem,
           assemble_interface_extension_velocity_sic(bc->BC_Data_Int[0]);
           break;
         case LS_EXTV_KINEMATIC_BC:
-          assemble_extv_kinematic(theta, dt, time, bcref->bc_input_id, BC_Types);
+          assemble_extv_kinematic(theta, dt, time, bcref->bc_input_id, goma_ctx->bc.bc_types);
           break;
         case LS_EIK_KINEMATIC_BC:
-          assemble_eik_kinematic(theta, dt, time, bcref->bc_input_id, BC_Types);
+          assemble_eik_kinematic(theta, dt, time, bcref->bc_input_id, goma_ctx->bc.bc_types);
           break;
         case PF_CAPILLARY_BC:
           assemble_pf_capillary(&(bc->BC_Data_Float[0]));

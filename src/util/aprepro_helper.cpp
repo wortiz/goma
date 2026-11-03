@@ -87,7 +87,7 @@ extern "C" goma_error aprepro_parse_goma_augc(struct AC_Information *ac, double 
     int bcid, bcidx;
     double computed_value;
     if (ss >> bcid >> bcidx >> computed_value) {
-      switch (BC_Types[bcid].BC_Name) {
+      switch (goma_ctx->bc.bc_types[bcid].BC_Name) {
       case SPLINE_BC:
       case SPLINEX_BC:
       case SPLINEY_BC:
@@ -127,10 +127,10 @@ extern "C" goma_error aprepro_parse_goma_augc(struct AC_Information *ac, double 
       case YUSER_BC:
       case FORCE_USER_BC:
       case FORCE_USER_RS_BC:
-        BC_Types[bcid].u_BC[bcidx] = computed_value;
+        goma_ctx->bc.bc_types[bcid].u_BC[bcidx] = computed_value;
         break;
       default:
-        BC_Types[bcid].BC_Data_Float[bcidx] = computed_value;
+        goma_ctx->bc.bc_types[bcid].BC_Data_Float[bcidx] = computed_value;
         break;
       }
     } else {

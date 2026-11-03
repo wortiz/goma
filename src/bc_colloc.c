@@ -254,7 +254,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
          * This function only handles COLLOCATE_SURF boundary conditions.
          * All other boundary conditions are weeded out here
          */
-        if (BC_Types[bc_input_id].desc->method == COLLOCATE_SURF) {
+        if (goma_ctx->bc.bc_types[bc_input_id].desc->method == COLLOCATE_SURF) {
           /* Initialize time function to unity */
           f_time = 1.0;
 
@@ -312,72 +312,82 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
              */
             /* load in functional representation of this condition, and its sensitivity
              * to all nodal unknowns */
-            switch (BC_Types[bc_input_id].BC_Name) {
+            switch (goma_ctx->bc.bc_types[bc_input_id].BC_Name) {
 
               /* Section for surface terms involving the mesh equations  */
             case DXDISTNG_BC:
             case DYDISTNG_BC:
             case DZDISTNG_BC:
             case DISTNG_BC:
-              fTmelting(&func, d_func, BC_Types[bc_input_id].BC_Data_Float[0]);
+              fTmelting(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
               break;
 
             case SPLINEX_BC:
             case SPLINEY_BC:
             case SPLINEZ_BC:
             case SPLINE_BC:
-              fspline(ielem_dim, &func, d_func, BC_Types[bc_input_id].u_BC, time_intermediate);
+              fspline(ielem_dim, &func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                      time_intermediate);
               break;
 
             case SPLINEX_RS_BC:
             case SPLINEY_RS_BC:
             case SPLINEZ_RS_BC:
             case SPLINE_RS_BC:
-              fspline_rs(ielem_dim, &func, d_func, BC_Types[bc_input_id].u_BC, time_intermediate);
+              fspline_rs(ielem_dim, &func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                         time_intermediate);
               break;
 
             case UUSER_COLLOC_BC:
-              uuser_colloc_surf(&func, d_func, BC_Types[bc_input_id].u_BC, id, time_intermediate);
+              uuser_colloc_surf(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC, id,
+                                time_intermediate);
               break;
             case VUSER_COLLOC_BC:
-              vuser_colloc_surf(&func, d_func, BC_Types[bc_input_id].u_BC, id, time_intermediate);
+              vuser_colloc_surf(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC, id,
+                                time_intermediate);
               break;
             case WUSER_COLLOC_BC:
-              wuser_colloc_surf(&func, d_func, BC_Types[bc_input_id].u_BC, id, time_intermediate);
+              wuser_colloc_surf(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC, id,
+                                time_intermediate);
               break;
 
             case T_USER_BC:
-              tuser(&func, d_func, BC_Types[bc_input_id].u_BC, time_intermediate);
+              tuser(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC, time_intermediate);
               break;
 
             case DX_USER_BC:
-              dx_user_surf(&func, d_func, BC_Types[bc_input_id].u_BC, time_intermediate);
+              dx_user_surf(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                           time_intermediate);
               break;
 
             case DY_USER_BC:
-              dy_user_surf(&func, d_func, BC_Types[bc_input_id].u_BC, time_intermediate);
+              dy_user_surf(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                           time_intermediate);
               break;
 
             case DZ_USER_BC:
-              dz_user_surf(&func, d_func, BC_Types[bc_input_id].u_BC, time_intermediate);
+              dz_user_surf(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                           time_intermediate);
               break;
 
             case P_LIQ_USER_BC:
-              p_liq_user_surf(&func, d_func, BC_Types[bc_input_id].u_BC, time_intermediate);
+              p_liq_user_surf(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                              time_intermediate);
               break;
 
             case SH_P_OPEN_USER_BC:
-              shell_p_open_user_surf(&func, d_func, BC_Types[bc_input_id].u_BC, time_intermediate);
+              shell_p_open_user_surf(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                                     time_intermediate);
               break;
 
             case POROUS_LIQ_PRESSURE_FILL_BC: {
               MATRL_PROP_STRUCT *mp_2 = NULL;
 
-              porous_liq_fill(&func, d_func, BC_Types[bc_input_id].BC_Data_Int[0],
-                              BC_Types[bc_input_id].BC_Data_Int[1],
-                              BC_Types[bc_input_id].BC_Data_Float[0],
-                              BC_Types[bc_input_id].BC_Data_Float[1],
-                              BC_Types[bc_input_id].BC_Data_Float[2], mp_2);
+              porous_liq_fill(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1],
+                              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2], mp_2);
             } break;
 
             case SA_WALL_FUNC_BC:
@@ -406,33 +416,35 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             case PLANEY_BC:
             case PLANEZ_BC:
             case PLANE_BC:
-              fplane(ielem_dim, &func, d_func, BC_Types[bc_input_id].BC_Data_Float);
+              fplane(ielem_dim, &func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float);
               break;
 
             case FILLET_BC:
-              f_fillet(ielem_dim, &func, d_func, BC_Types[bc_input_id].u_BC,
-                       BC_Types[bc_input_id].len_u_BC);
+              f_fillet(ielem_dim, &func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                       goma_ctx->bc.bc_types[bc_input_id].len_u_BC);
               break;
 
             case DOUBLE_RAD_BC:
-              f_double_rad(ielem_dim, &func, d_func, BC_Types[bc_input_id].u_BC,
-                           BC_Types[bc_input_id].len_u_BC);
+              f_double_rad(ielem_dim, &func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                           goma_ctx->bc.bc_types[bc_input_id].len_u_BC);
               break;
 
             case DOUBLE_FILLET_BC:
-              f_double_fillet(ielem_dim, &func, d_func, BC_Types[bc_input_id].u_BC,
-                              BC_Types[bc_input_id].len_u_BC);
+              f_double_fillet(ielem_dim, &func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                              goma_ctx->bc.bc_types[bc_input_id].len_u_BC);
               break;
 
             case DOUBLE_FILLET_GEOM_BC:
-              f_double_fillet_geom(ielem_dim, &func, d_func, BC_Types[bc_input_id].u_BC,
-                                   BC_Types[bc_input_id].len_u_BC);
+              f_double_fillet_geom(ielem_dim, &func, d_func,
+                                   goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                                   goma_ctx->bc.bc_types[bc_input_id].len_u_BC);
               break;
 
             case FEATURE_ROLLON_BC:
 #ifdef FEATURE_ROLLON_PLEASE
-              f_feature_rollon(ielem_dim, &func, d_func, BC_Types[bc_input_id].u_BC,
-                               BC_Types[bc_input_id].len_u_BC, BC_Types[bc_input_id].BC_Data_Int[0],
+              f_feature_rollon(ielem_dim, &func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                               goma_ctx->bc.bc_types[bc_input_id].len_u_BC,
+                               goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
                                time_intermediate);
 #else
               GOMA_EH(-1, "FEATURE_ROLLON_PLEASE define needed and feature_rollon.h - talk to RBS");
@@ -440,28 +452,31 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               break;
 
             case ROLL_FLUID_BC:
-              icount = BC_Types[bc_input_id].BC_Data_Int[2];
-              xsurf[0] = BC_Types[icount].BC_Data_Float[BC_Types[icount].max_DFlt + 1];
-              xsurf[1] = BC_Types[icount].BC_Data_Float[BC_Types[icount].max_DFlt + 2];
-              xsurf[2] = BC_Types[icount].BC_Data_Float[BC_Types[icount].max_DFlt + 3];
-              f_roll_fluid(ielem_dim, &func, d_func, BC_Types[bc_input_id].u_BC,
-                           BC_Types[bc_input_id].len_u_BC, xsurf);
+              icount = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[2];
+              xsurf[0] = goma_ctx->bc.bc_types[icount]
+                             .BC_Data_Float[goma_ctx->bc.bc_types[icount].max_DFlt + 1];
+              xsurf[1] = goma_ctx->bc.bc_types[icount]
+                             .BC_Data_Float[goma_ctx->bc.bc_types[icount].max_DFlt + 2];
+              xsurf[2] = goma_ctx->bc.bc_types[icount]
+                             .BC_Data_Float[goma_ctx->bc.bc_types[icount].max_DFlt + 3];
+              f_roll_fluid(ielem_dim, &func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                           goma_ctx->bc.bc_types[bc_input_id].len_u_BC, xsurf);
               break;
             case MOVING_PLANE_BC: {
               double t = time_intermediate;
 
-              fplane(ielem_dim, &func, d_func, BC_Types[bc_input_id].BC_Data_Float);
+              fplane(ielem_dim, &func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float);
 
-              func += (BC_Types[bc_input_id].BC_Data_Float[4] * t +
-                       BC_Types[bc_input_id].BC_Data_Float[5] * t * t +
-                       BC_Types[bc_input_id].BC_Data_Float[6] * t * t * t);
+              func += (goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4] * t +
+                       goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5] * t * t +
+                       goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6] * t * t * t);
               if (af->Assemble_LSA_Mass_Matrix)
                 GOMA_EH(GOMA_ERROR, "LSA is not currently compatible with MOVING_PLANE_BC");
             } break;
 
             case MOVING_PLANE_ETCH_BC:
-              fmesh_etch_bc(&func, d_func, BC_Types[bc_input_id].BC_Data_Int[0], id, x_dot, theta,
-                            delta_t);
+              fmesh_etch_bc(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0], id,
+                            x_dot, theta, delta_t);
               break;
 
             case MESH_CONSTRAINT_BC:
@@ -471,18 +486,19 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             case UVARY_BC:
             case VVARY_BC:
             case WVARY_BC:
-              var_flag = BC_Types[bc_input_id].desc->equation;
-              fvelocity_profile(var_flag, ielem_dim, BC_Types[bc_input_id].BC_Name, &func, d_func,
-                                BC_Types[bc_input_id].u_BC, time_intermediate);
+              var_flag = goma_ctx->bc.bc_types[bc_input_id].desc->equation;
+              fvelocity_profile(var_flag, ielem_dim, goma_ctx->bc.bc_types[bc_input_id].BC_Name,
+                                &func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                                time_intermediate);
               break;
 
             case U_PARABOLA_BC:
             case V_PARABOLA_BC:
             case W_PARABOLA_BC:
-              var_flag = BC_Types[bc_input_id].desc->equation;
-              fvelocity_parabola(var_flag, ielem_dim, BC_Types[bc_input_id].BC_Name, &func, d_func,
-                                 BC_Types[bc_input_id].u_BC, time_intermediate,
-                                 BC_Types[bc_input_id].len_u_BC);
+              var_flag = goma_ctx->bc.bc_types[bc_input_id].desc->equation;
+              fvelocity_parabola(var_flag, ielem_dim, goma_ctx->bc.bc_types[bc_input_id].BC_Name,
+                                 &func, d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                                 time_intermediate, goma_ctx->bc.bc_types[bc_input_id].len_u_BC);
               break;
 
             case U_VES11_PARABOLA_BC:
@@ -533,10 +549,10 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             case U_VES13_7_PARABOLA_BC:
             case U_VES23_7_PARABOLA_BC:
             case U_VES33_7_PARABOLA_BC:
-              var_flag = BC_Types[bc_input_id].desc->equation;
+              var_flag = goma_ctx->bc.bc_types[bc_input_id].desc->equation;
               f_vestress_parabola(var_flag, ielem_dim, U_PARABOLA_BC, ei[pg->imtrx]->mn, &func,
-                                  d_func, BC_Types[bc_input_id].u_BC, time_intermediate,
-                                  BC_Types[bc_input_id].len_u_BC);
+                                  d_func, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                                  time_intermediate, goma_ctx->bc.bc_types[bc_input_id].len_u_BC);
               break;
 
             case GD_CONST_BC:
@@ -547,8 +563,9 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             case GD_CIRC_BC:
             case GD_POLYN_BC:
             case GD_TABLE_BC:
-              err = fgeneralized_dirichlet(&func, d_func, BC_Types[bc_input_id].BC_Name,
-                                           bc_input_id, theta, delta_t);
+              err =
+                  fgeneralized_dirichlet(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Name,
+                                         bc_input_id, theta, delta_t);
               GOMA_EH(err, "Illegal entry in Generalized Dirichlet Condition ");
               break;
 
@@ -560,43 +577,46 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               break;
 
             case POROUS_PRESSURE_BC:
-              porous_pressure(&func, d_func, (int)BC_Types[bc_input_id].BC_Data_Int[0],
-                              (int)BC_Types[bc_input_id].BC_Data_Int[1]);
+              porous_pressure(&func, d_func, (int)goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                              (int)goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1]);
               break;
             case POROUS_PRESSURE_LUB_BC:
               porous_pressure_lub(&func, d_func, elem_side_bc->id_side, xi, exo,
-                                  BC_Types[bc_input_id].BC_Data_Float[0]);
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
               break;
 
             case LUB_PRESS_HYDROSTATIC_BC:
-              lub_press_hydro(&func, d_func, BC_Types[bc_input_id].BC_Data_Float[0],
-                              BC_Types[bc_input_id].BC_Data_Float[1],
-                              BC_Types[bc_input_id].BC_Data_Float[2],
-                              BC_Types[bc_input_id].BC_Data_Float[3]);
+              lub_press_hydro(&func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3]);
               break;
 
             case LUBP_SH_FP_FLUX_BC:
               put_lub_flux_in_film(id, I, ielem_dim, resid_vector,
-                                   (int)BC_Types[bc_input_id].BC_Data_Int[0],
-                                   (int)BC_Types[bc_input_id].BC_Data_Int[1], local_node_list_fs);
+                                   (int)goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                                   (int)goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1],
+                                   local_node_list_fs);
               func = 0.;
               break;
 
             case FLUID_SOLID_BC:
             case SOLID_FLUID_BC:
-              put_liquid_stress_in_solid(
-                  id, I, ielem_dim, resid_vector, (int)BC_Types[bc_input_id].BC_Data_Int[0],
-                  (int)BC_Types[bc_input_id].BC_Data_Int[1], local_node_list_fs,
-                  BC_Types[bc_input_id].BC_Data_Float[0]);
+              put_liquid_stress_in_solid(id, I, ielem_dim, resid_vector,
+                                         (int)goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                                         (int)goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1],
+                                         local_node_list_fs,
+                                         goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
               func = 0.; /* this boundary condition rearranges values already in res and jac,
                                 and does not add anything into the residual */
               break;
 
             case SOLID_FLUID_RS_BC:
-              put_liquid_stress_in_solid_ALE(
-                  id, I, ielem_dim, resid_vector, (int)BC_Types[bc_input_id].BC_Data_Int[0],
-                  (int)BC_Types[bc_input_id].BC_Data_Int[1], local_node_list_fs,
-                  BC_Types[bc_input_id].BC_Data_Float[0]);
+              put_liquid_stress_in_solid_ALE(id, I, ielem_dim, resid_vector,
+                                             (int)goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                                             (int)goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1],
+                                             local_node_list_fs,
+                                             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
               func = 0.; /* this boundary condition rearranges values already in res and jac,
                           * and does not add anything into the residual */
               break;
@@ -626,7 +646,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               /*Note that we send both local node numbers for bulk and shell elements */
               put_fluid_stress_on_shell(id, dof_map_curv[id], dof_map_tens[id], I, ielem_dim,
                                         resid_vector, local_node_list_fs,
-                                        BC_Types[bc_input_id].BC_Data_Float[0]);
+                                        goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
 
               func = 0.; /* this boundary condition rearranges values already in res and jac,
                           * and does not add anything into the residual */
@@ -639,9 +659,9 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               memset(kfunc, 0, DIM * sizeof(double));
               memset(d_kfunc, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
               //              if (goma_automatic_rotations.rotation_nodes == NULL) {
-              fvelo_normal_bc(kfunc, d_kfunc, BC_Types[bc_input_id].BC_Data_Float[0],
+              fvelo_normal_bc(kfunc, d_kfunc, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
                               contact_flag = FALSE, x_dot, theta, delta_t,
-                              (int)BC_Types[bc_input_id].BC_Name, 0, 0, 135.0);
+                              (int)goma_ctx->bc.bc_types[bc_input_id].BC_Name, 0, 0, 135.0);
               //              } else {
               //              fvelo_normal_auto_bc(kfunc, d_kfunc,
               //                              BC_Types[bc_input_id].BC_Data_Float[0], contact_flag =
@@ -682,11 +702,12 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               memset(kfunc, 0, DIM * sizeof(double));
               memset(d_kfunc, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
               contact_flag = (goma_ctx->fem.ls != NULL);
-              fvelo_normal_bc(kfunc, d_kfunc, BC_Types[bc_input_id].BC_Data_Float[0], contact_flag,
-                              x_dot, theta, delta_t, (int)BC_Types[bc_input_id].BC_Name,
-                              BC_Types[bc_input_id].BC_Data_Float[1],
-                              BC_Types[bc_input_id].BC_Data_Float[2],
-                              BC_Types[bc_input_id].BC_Data_Float[3]);
+              fvelo_normal_bc(kfunc, d_kfunc, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                              contact_flag, x_dot, theta, delta_t,
+                              (int)goma_ctx->bc.bc_types[bc_input_id].BC_Name,
+                              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3]);
               doFullJac = 1;
               func = kfunc[0];
               break;
@@ -694,14 +715,15 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             case KIN_DISPLACEMENT_COLLOC_BC:
               memset(kfunc, 0, DIM * sizeof(double));
               memset(d_kfunc, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
-              f_kinematic_displacement_bc(kfunc, d_kfunc, BC_Types[bc_input_id].BC_Data_Int[0],
-                                          BC_Types[bc_input_id].BC_ID, BC_Types[bc_input_id].u_BC,
-                                          BC_Types[bc_input_id].len_u_BC);
+              f_kinematic_displacement_bc(
+                  kfunc, d_kfunc, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                  goma_ctx->bc.bc_types[bc_input_id].BC_ID, goma_ctx->bc.bc_types[bc_input_id].u_BC,
+                  goma_ctx->bc.bc_types[bc_input_id].len_u_BC);
               func = kfunc[0];
               doFullJac = 1;
               break;
             case TABLE_BC:
-              apply_table_bc(&func, d_func, &BC_Types[bc_input_id], time_value);
+              apply_table_bc(&func, d_func, &goma_ctx->bc.bc_types[bc_input_id], time_value);
               if (neg_elem_volume)
                 return (status);
               break;
@@ -709,7 +731,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             case SH_GAMMA1_DERIV_SYMM_BC:
               memset(kfunc, 0, DIM * sizeof(double));
               memset(d_kfunc, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
-              fgamma1_deriv_bc(kfunc, d_kfunc, BC_Types[bc_input_id].BC_Data_Float[0]);
+              fgamma1_deriv_bc(kfunc, d_kfunc, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
               func = kfunc[0];
               doFullJac = 1;
               el1 = ei[pg->imtrx]->ielem;
@@ -725,7 +747,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             case SH_GAMMA2_DERIV_SYMM_BC:
               memset(kfunc, 0, DIM * sizeof(double));
               memset(d_kfunc, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
-              fgamma2_deriv_bc(kfunc, d_kfunc, BC_Types[bc_input_id].BC_Data_Float[0]);
+              fgamma2_deriv_bc(kfunc, d_kfunc, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
               func = kfunc[0];
               doFullJac = 1;
               el1 = ei[pg->imtrx]->ielem;
@@ -743,10 +765,11 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               memset(kfunc, 0, DIM * sizeof(double));
               memset(d_kfunc, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
 
-              nwall[0] = BC_Types[bc_input_id].BC_Data_Float[1];
-              nwall[1] = BC_Types[bc_input_id].BC_Data_Float[2];
-              nwall[2] = BC_Types[bc_input_id].BC_Data_Float[3];
-              dvzdr_zero_deriv_bc(kfunc, d_kfunc, nwall, BC_Types[bc_input_id].BC_Data_Float[0]);
+              nwall[0] = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1];
+              nwall[1] = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2];
+              nwall[2] = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3];
+              dvzdr_zero_deriv_bc(kfunc, d_kfunc, nwall,
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
               func = kfunc[0];
               doFullJac = 1;
               break;
@@ -766,16 +789,17 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 
             if (eqn == R_MASS) {
-              ieqn = MAX_PROB_EQN + BC_Types[bc_input_id].species_eq;
+              ieqn = MAX_PROB_EQN + goma_ctx->bc.bc_types[bc_input_id].species_eq;
             } else {
               ieqn = upd->ep[pg->imtrx][eqn];
               if (goma_automatic_rotations.automatic_rotations &&
-                  (BC_Types[bc_input_id].desc->rotate != NO_ROT)) {
-                int offset = offset_from_rotated_equation(BC_Types[bc_input_id].desc->equation);
+                  (goma_ctx->bc.bc_types[bc_input_id].desc->rotate != NO_ROT)) {
+                int offset =
+                    offset_from_rotated_equation(goma_ctx->bc.bc_types[bc_input_id].desc->equation);
                 GOMA_EH(offset, "Error translating rotated equation to offset");
-                ieqn =
-                    equation_index_auto_rotate(elem_side_bc, I, BC_Types[bc_input_id].desc->rotate,
-                                               offset, &(BC_Types[bc_input_id]));
+                ieqn = equation_index_auto_rotate(elem_side_bc, I,
+                                                  goma_ctx->bc.bc_types[bc_input_id].desc->rotate,
+                                                  offset, &(goma_ctx->bc.bc_types[bc_input_id]));
                 GOMA_EH(ieqn, "Could not find index from auto rotate eqn");
               }
             }
@@ -795,7 +819,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
 
                 for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
                   pvar = upd->vp[pg->imtrx][var];
-                  if (pvar != -1 && (BC_Types[bc_input_id].desc->sens[var] || 1)) {
+                  if (pvar != -1 && (goma_ctx->bc.bc_types[bc_input_id].desc->sens[var] || 1)) {
                     /*
                      * Warning!!!!!!!!!!!!!!!!!!!!!!!
                      * This section of code will need to be revamped
@@ -2535,9 +2559,9 @@ fgeneralized_dirichlet(double *func,
 
   /* ---- Find variable number and species number */
 
-  jvar = BC_Types[bc_input_id].BC_Data_Int[2];
+  jvar = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[2];
 
-  wspec = BC_Types[bc_input_id].BC_Data_Int[3];
+  wspec = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[3];
 
   /* put value of variable in GD Condition into x_var and put it's sensitivity in d_x_var */
   index_var = load_variable(&x_var, &d_x_var, jvar, wspec, tt, dt, d_vect_var);
@@ -2552,7 +2576,7 @@ fgeneralized_dirichlet(double *func,
   switch (gd_condition) {
   case (GD_CONST_BC): /* x - c0 */
 
-    *func = (x_var - BC_Types[bc_input_id].BC_Data_Float[0]);
+    *func = (x_var - goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
 
     if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
@@ -2567,76 +2591,81 @@ fgeneralized_dirichlet(double *func,
 
   case (GD_LINEAR_BC): /* C1 x + c0 */
 
-    *func =
-        (x_var * BC_Types[bc_input_id].BC_Data_Float[1] + BC_Types[bc_input_id].BC_Data_Float[0]);
+    *func = (x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] +
+             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
 
     if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
-          d_func[index_var + b] = d_vect_var[b] * BC_Types[bc_input_id].BC_Data_Float[1];
+          d_func[index_var + b] =
+              d_vect_var[b] * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1];
         }
       } else {
-        d_func[index_var] = d_x_var * BC_Types[bc_input_id].BC_Data_Float[1];
+        d_func[index_var] = d_x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1];
       }
     }
     break;
 
   case (GD_INVERSE_BC): /* C1/x + c0 */
 
-    *func =
-        (BC_Types[bc_input_id].BC_Data_Float[1] / x_var + BC_Types[bc_input_id].BC_Data_Float[0]);
+    *func = (goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] / x_var +
+             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
 
     if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
-          d_func[index_var + b] =
-              -d_vect_var[b] * BC_Types[bc_input_id].BC_Data_Float[1] / (x_var * x_var);
+          d_func[index_var + b] = -d_vect_var[b] *
+                                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] /
+                                  (x_var * x_var);
         }
       } else {
-        d_func[index_var] = -d_x_var * BC_Types[bc_input_id].BC_Data_Float[1] / (x_var * x_var);
+        d_func[index_var] =
+            -d_x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] / (x_var * x_var);
       }
     }
     break;
 
   case (GD_PARAB_BC): /* C2 x^2 + C1 x + c0 */
 
-    *func =
-        (x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[2] +
-         x_var * BC_Types[bc_input_id].BC_Data_Float[1] + BC_Types[bc_input_id].BC_Data_Float[0]);
+    *func = (x_var * x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2] +
+             x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] +
+             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
 
     if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
           d_func[index_var + b] =
-              d_vect_var[b] * (BC_Types[bc_input_id].BC_Data_Float[1] +
-                               2. * x_var * BC_Types[bc_input_id].BC_Data_Float[2]);
+              d_vect_var[b] * (goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] +
+                               2. * x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2]);
         }
       } else {
-        d_func[index_var] = d_x_var * (BC_Types[bc_input_id].BC_Data_Float[1] +
-                                       2. * x_var * BC_Types[bc_input_id].BC_Data_Float[2]);
+        d_func[index_var] =
+            d_x_var * (goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] +
+                       2. * x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2]);
       }
     }
     break;
   case (GD_PARAB_OFFSET_BC): /* C2 (x - C3)^2 + C1 (x - C3) + c0 */
 
-    *func =
-        ((x_var - BC_Types[bc_input_id].BC_Data_Float[3]) *
-             (x_var - BC_Types[bc_input_id].BC_Data_Float[3]) *
-             BC_Types[bc_input_id].BC_Data_Float[2] +
-         (x_var - BC_Types[bc_input_id].BC_Data_Float[3]) * BC_Types[bc_input_id].BC_Data_Float[1] +
-         BC_Types[bc_input_id].BC_Data_Float[0]);
+    *func = ((x_var - goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3]) *
+                 (x_var - goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3]) *
+                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2] +
+             (x_var - goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3]) *
+                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] +
+             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
     if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
           d_func[index_var + b] =
-              d_vect_var[b] * (BC_Types[bc_input_id].BC_Data_Float[1] +
-                               2. * (x_var - BC_Types[bc_input_id].BC_Data_Float[3]) *
-                                   BC_Types[bc_input_id].BC_Data_Float[2]);
+              d_vect_var[b] * (goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] +
+                               2. * (x_var - goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3]) *
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2]);
         }
       } else {
-        d_func[index_var] = d_x_var * (BC_Types[bc_input_id].BC_Data_Float[1] +
-                                       2. * (x_var - BC_Types[bc_input_id].BC_Data_Float[3]) *
-                                           BC_Types[bc_input_id].BC_Data_Float[2]);
+        d_func[index_var] =
+            d_x_var * (goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] +
+                       2. * (x_var - goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3]) *
+                           goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2]);
       }
     }
     break;
@@ -2644,21 +2673,23 @@ fgeneralized_dirichlet(double *func,
     /* C2 represents ellipticity and C1 represents origin */
     /* C0 is radius and should enter only one of the BC's */
 
-    *func =
-        (BC_Types[bc_input_id].BC_Data_Float[2] * (x_var - BC_Types[bc_input_id].BC_Data_Float[1]) *
-             (x_var - BC_Types[bc_input_id].BC_Data_Float[1]) -
-         BC_Types[bc_input_id].BC_Data_Float[0] * BC_Types[bc_input_id].BC_Data_Float[0]);
+    *func = (goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2] *
+                 (x_var - goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1]) *
+                 (x_var - goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1]) -
+             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0] *
+                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
 
     if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
           d_func[index_var + b] =
-              d_vect_var[b] * (2. * BC_Types[bc_input_id].BC_Data_Float[2] *
-                               (x_var - BC_Types[bc_input_id].BC_Data_Float[1]));
+              d_vect_var[b] * (2. * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2] *
+                               (x_var - goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1]));
         }
       } else {
-        d_func[index_var] = d_x_var * (2. * BC_Types[bc_input_id].BC_Data_Float[2] *
-                                       (x_var - BC_Types[bc_input_id].BC_Data_Float[1]));
+        d_func[index_var] =
+            d_x_var * (2. * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2] *
+                       (x_var - goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1]));
       }
     }
     break;
@@ -2666,13 +2697,15 @@ fgeneralized_dirichlet(double *func,
   case (GD_POLYN_BC): /* up to 6th order polynomial */
                       /* C6 x^6 + C5 x^5 + C4 x^4 + C3 x^3 + C2 x^2 + C1 x + C0 */
 
-    *func =
-        (x_var * x_var * x_var * x_var * x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[6] +
-         x_var * x_var * x_var * x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[5] +
-         x_var * x_var * x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[4] +
-         x_var * x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[3] +
-         x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[2] +
-         x_var * BC_Types[bc_input_id].BC_Data_Float[1] + BC_Types[bc_input_id].BC_Data_Float[0]);
+    *func = (x_var * x_var * x_var * x_var * x_var * x_var *
+                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6] +
+             x_var * x_var * x_var * x_var * x_var *
+                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5] +
+             x_var * x_var * x_var * x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4] +
+             x_var * x_var * x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3] +
+             x_var * x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2] +
+             x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] +
+             goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
 
     /* printf("POLYN fit X,F = %f %f\n", x_var, *func); */
 
@@ -2681,40 +2714,45 @@ fgeneralized_dirichlet(double *func,
         for (b = 0; b < DIM; b++) {
           d_func[index_var + b] =
               d_vect_var[b] *
-              (BC_Types[bc_input_id].BC_Data_Float[1] +
-               2. * x_var * BC_Types[bc_input_id].BC_Data_Float[2] +
-               3. * x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[3] +
-               4. * x_var * x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[4] +
-               5. * x_var * x_var * x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[5] +
-               6. * x_var * x_var * x_var * x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[6]);
+              (goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] +
+               2. * x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2] +
+               3. * x_var * x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3] +
+               4. * x_var * x_var * x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4] +
+               5. * x_var * x_var * x_var * x_var *
+                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5] +
+               6. * x_var * x_var * x_var * x_var * x_var *
+                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6]);
         }
       } else {
         d_func[index_var] =
             d_x_var *
-            (BC_Types[bc_input_id].BC_Data_Float[1] +
-             2. * x_var * BC_Types[bc_input_id].BC_Data_Float[2] +
-             3. * x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[3] +
-             4. * x_var * x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[4] +
-             5. * x_var * x_var * x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[5] +
-             6. * x_var * x_var * x_var * x_var * x_var * BC_Types[bc_input_id].BC_Data_Float[6]);
+            (goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] +
+             2. * x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2] +
+             3. * x_var * x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3] +
+             4. * x_var * x_var * x_var * goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4] +
+             5. * x_var * x_var * x_var * x_var *
+                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5] +
+             6. * x_var * x_var * x_var * x_var * x_var *
+                 goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[6]);
       }
     }
     break;
 
   case (GD_TABLE_BC):
 
-    *func = BC_Types[bc_input_id].BC_Data_Float[0];
+    *func = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0];
 
     x_var_mp[0] = x_var;
-    *func *= interpolate_table(BC_Types[bc_input_id].table, x_var_mp, &slope, NULL);
+    *func *= interpolate_table(goma_ctx->bc.bc_types[bc_input_id].table, x_var_mp, &slope, NULL);
 
     if (goma_ctx->fem.af->Assemble_Jacobian) {
       if (vector_sens) {
         for (b = 0; b < DIM; b++) {
-          d_func[index_var + b] = BC_Types[bc_input_id].BC_Data_Float[0] * slope * d_vect_var[b];
+          d_func[index_var + b] =
+              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0] * slope * d_vect_var[b];
         }
       } else {
-        d_func[index_var] = BC_Types[bc_input_id].BC_Data_Float[0] * slope * d_x_var;
+        d_func[index_var] = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0] * slope * d_x_var;
       }
     }
 
@@ -3825,7 +3863,7 @@ int bc_eqn_index(int id,          /* local node number                 */
   int matID, index_eqn, num, node_offset;
   int i, index;
   NODAL_VARS_STRUCT *nv;
-  struct Boundary_Condition *bc = BC_Types + bc_input_id;
+  struct Boundary_Condition *bc = goma_ctx->bc.bc_types + bc_input_id;
   struct BC_descriptions *bc_desc = bc->desc;
   NODE_INFO_STRUCT *node = Nodes[I];
   VARIABLE_DESCRIPTION_STRUCT *vd, *vd2 = NULL;
@@ -3880,9 +3918,9 @@ int bc_eqn_index(int id,          /* local node number                 */
    *        results of this search (or just the need to do the
    *        search).
    */
-  if (BC_dup_ptr != NULL) {
-    bc_node = in_list(I, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx] + 1,
-                      BC_dup_nodes[goma_ctx->fem.pg->imtrx]);
+  if (goma_ctx->bc.bc_dup_ptr != NULL) {
+    bc_node = in_list(I, 0, goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx] + 1,
+                      goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx]);
     if (bc_node != -1) {
       /*
        * current node is in the BC_duplication list.
@@ -3893,8 +3931,8 @@ int bc_eqn_index(int id,          /* local node number                 */
        */
       i_calc = -1;
       if (ieqn <= LAST_REAL_EQ) {
-        i_calc = search_bc_dup_list(bc_input_id,
-                                    BC_dup_list[goma_ctx->fem.pg->imtrx][bc_node][node_offset]);
+        i_calc = search_bc_dup_list(
+            bc_input_id, goma_ctx->bc.bc_dup_list[goma_ctx->fem.pg->imtrx][bc_node][node_offset]);
 
       } else if ((ieqn >= R_MESH_NORMAL) && (ieqn <= R_MESH_TANG2)) {
         if (goma_automatic_rotations.automatic_rotations) {
@@ -3934,8 +3972,9 @@ int bc_eqn_index(int id,          /* local node number                 */
           for (jeqn = R_MESH1; jeqn <= R_MESH3; jeqn++) {
             offset_j = get_nodal_unknown_offset(nv, jeqn, matID, 0, &vd2);
             if (offset_j >= 0) {
-              i_calc = search_bc_dup_list(bc_input_id,
-                                          BC_dup_list[goma_ctx->fem.pg->imtrx][bc_node][offset_j]);
+              i_calc = search_bc_dup_list(
+                  bc_input_id,
+                  goma_ctx->bc.bc_dup_list[goma_ctx->fem.pg->imtrx][bc_node][offset_j]);
               if (i_calc != -1) {
                 node_offset = offset_j;
                 ieqn = jeqn;
@@ -3976,8 +4015,9 @@ int bc_eqn_index(int id,          /* local node number                 */
           for (jeqn = R_MOMENTUM1; jeqn <= R_MOMENTUM3; jeqn++) {
             offset_j = get_nodal_unknown_offset(nv, jeqn, matID, 0, &vd2);
             if (offset_j >= 0) {
-              i_calc = search_bc_dup_list(bc_input_id,
-                                          BC_dup_list[goma_ctx->fem.pg->imtrx][bc_node][offset_j]);
+              i_calc = search_bc_dup_list(
+                  bc_input_id,
+                  goma_ctx->bc.bc_dup_list[goma_ctx->fem.pg->imtrx][bc_node][offset_j]);
               if (i_calc != -1) {
                 node_offset = offset_j;
                 ieqn = jeqn;
@@ -3991,8 +4031,8 @@ int bc_eqn_index(int id,          /* local node number                 */
         for (jeqn = R_SOLID1; jeqn <= R_SOLID3; jeqn++) {
           offset_j = get_nodal_unknown_offset(nv, jeqn, matID, 0, &vd2);
           if (offset_j >= 0) {
-            i_calc = search_bc_dup_list(bc_input_id,
-                                        BC_dup_list[goma_ctx->fem.pg->imtrx][bc_node][offset_j]);
+            i_calc = search_bc_dup_list(
+                bc_input_id, goma_ctx->bc.bc_dup_list[goma_ctx->fem.pg->imtrx][bc_node][offset_j]);
             if (i_calc != -1) {
               node_offset = offset_j;
               ieqn = jeqn;
@@ -4163,7 +4203,7 @@ int bc_eqn_index_stress(int id,          /* local node number                 */
   int i, index;
   int ndofs_ieqn;
   NODAL_VARS_STRUCT *nv;
-  struct Boundary_Condition *bc = BC_Types + bc_input_id;
+  struct Boundary_Condition *bc = goma_ctx->bc.bc_types + bc_input_id;
   struct BC_descriptions *bc_desc = bc->desc;
   NODE_INFO_STRUCT *node = Nodes[I];
   VARIABLE_DESCRIPTION_STRUCT *vd;
@@ -4251,8 +4291,8 @@ int bc_eqn_index_stress(int id,          /* local node number                 */
    *        results of this search (or just the need to do the
    *        search).
    */
-  bc_node =
-      in_list(I, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx] + 1, BC_dup_nodes[goma_ctx->fem.pg->imtrx]);
+  bc_node = in_list(I, 0, goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx] + 1,
+                    goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx]);
   if (bc_node != -1) {
     /*
      * current node is in the BC_duplication list.
@@ -4263,8 +4303,8 @@ int bc_eqn_index_stress(int id,          /* local node number                 */
      */
     i_calc = -1;
     if (ieqn <= LAST_REAL_EQ) {
-      i_calc = search_bc_dup_list(bc_input_id,
-                                  BC_dup_list[goma_ctx->fem.pg->imtrx][bc_node][node_offset]);
+      i_calc = search_bc_dup_list(
+          bc_input_id, goma_ctx->bc.bc_dup_list[goma_ctx->fem.pg->imtrx][bc_node][node_offset]);
     } else {
       GOMA_EH(GOMA_ERROR, "Equation not in list ");
     }
@@ -4331,49 +4371,49 @@ int evaluate_time_func(const double current_time,
   double time = current_time;
   int time_function;
   /* Check if max time was specified and reset time if greater than max time */
-  if (BC_Types[bc_input_id].BC_Data_Int[4] == GD_TIME_MAX) {
-    if (time > BC_Types[bc_input_id].BC_Data_Float[2]) {
-      time = BC_Types[bc_input_id].BC_Data_Float[2];
+  if (goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[4] == GD_TIME_MAX) {
+    if (time > goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2]) {
+      time = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2];
     }
   }
 
   /* Check if max time was specified  and reset time if so */
-  if (BC_Types[bc_input_id].BC_Data_Int[3] == GD_TIME_MAX) {
-    if (time > BC_Types[bc_input_id].BC_Data_Float[2]) {
-      time = BC_Types[bc_input_id].BC_Data_Float[2];
+  if (goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[3] == GD_TIME_MAX) {
+    if (time > goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2]) {
+      time = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2];
     }
   }
 
   /* ---- Find variable number and species number */
-  time_function = BC_Types[bc_input_id].BC_Data_Int[2];
+  time_function = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[2];
 
   /* Now compute time function */
 
   switch (time_function) {
   case (GD_TIME_LIN): /* c0 +c1*t */
 
-    *f_time =
-        BC_Types[bc_input_id].BC_Data_Float[0] + BC_Types[bc_input_id].BC_Data_Float[1] * time;
+    *f_time = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0] +
+              goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] * time;
 
     break;
 
   case (GD_TIME_EXP): /* exp(c0 +c1*t) */
 
-    *f_time =
-        exp(BC_Types[bc_input_id].BC_Data_Float[0] + BC_Types[bc_input_id].BC_Data_Float[1] * time);
+    *f_time = exp(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0] +
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] * time);
 
     break;
 
   case (GD_TIME_SIN): /* sin(c0 +c1*t) */
 
-    *f_time =
-        sin(BC_Types[bc_input_id].BC_Data_Float[0] + BC_Types[bc_input_id].BC_Data_Float[1] * time);
+    *f_time = sin(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0] +
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1] * time);
 
     break;
   case (GD_TIME_TABLE): {
     double slope, _time[1];
     _time[0] = time;
-    *f_time = interpolate_table(BC_Types[bc_input_id].table, _time, &slope, NULL);
+    *f_time = interpolate_table(goma_ctx->bc.bc_types[bc_input_id].table, _time, &slope, NULL);
   } break;
   default:
     return (-1);

@@ -224,14 +224,15 @@ int apply_integrated_curve_bc(
 
     if ((bc_input_id = (int)elem_edge_bc->BC_input_id[0]) != -1) {
 
-      if ((ss_index = in_list(BC_Types[bc_input_id].BC_ID, 0, goma_ctx->mesh.proc_num_side_sets,
-                              ss_to_blks[0])) == -1) {
+      if ((ss_index = in_list(goma_ctx->bc.bc_types[bc_input_id].BC_ID, 0,
+                              goma_ctx->mesh.proc_num_side_sets, goma_ctx->bc.ss_to_blks[0])) ==
+          -1) {
         GOMA_EH(GOMA_ERROR, "Cannot match side set id with that in ss_to_blks array");
       }
 
       /* check to see if this bc is an integrated bc */
 
-      if (BC_Types[bc_input_id].desc->method == bc_application) {
+      if (goma_ctx->bc.bc_types[bc_input_id].desc->method == bc_application) {
 
         /* Get the initialization out of the way, for safty */
         memset(func, 0, DIM * sizeof(double));
@@ -281,16 +282,16 @@ int apply_integrated_curve_bc(
          *     the end of this file (see fplane)
          */
 
-        switch (BC_Name = BC_Types[bc_input_id].BC_Name) {
+        switch (BC_Name = goma_ctx->bc.bc_types[bc_input_id].BC_Name) {
 
         case SURFTANG_EDGE_BC:
           /* calculate the tension exerted through the edge in the
            * direction of the binormal  -  binormal is stangent[0]
            */
-          apply_ST_3D(func, d_func, BC_Types[bc_input_id].BC_Data_Float[0],
-                      BC_Types[bc_input_id].BC_Data_Float[1],
-                      BC_Types[bc_input_id].BC_Data_Float[2],
-                      BC_Types[bc_input_id].BC_Data_Float[3]);
+          apply_ST_3D(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                      goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                      goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                      goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3]);
           break;
 
         case SURFTANG_SCALAR_EDGE_BC:
@@ -298,7 +299,7 @@ int apply_integrated_curve_bc(
            *  direction of the binormal
            *  - binormal is stangent[0]
            */
-          apply_ST_scalar_3D(func, d_func, BC_Types[bc_input_id].BC_Data_Float[0]);
+          apply_ST_scalar_3D(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
           break;
 
         case CA_EDGE_CURVE_INT_BC:
@@ -311,7 +312,7 @@ int apply_integrated_curve_bc(
         case CA_EDGE_INT_BC:
           /* calculate contact angle boundary condition
            *     use first data entry as contact angle in degrees */
-          theta_r = BC_Types[bc_input_id].BC_Data_Float[0] * M_PIE / 180.;
+          theta_r = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0] * M_PIE / 180.;
 
           /* collect the normals */
           /* Free surface normal */
@@ -325,9 +326,9 @@ int apply_integrated_curve_bc(
             }
           }
           /* Wall surface normal */
-          if (BC_Types[bc_input_id].BC_Name == CA_EDGE_INT_BC) {
+          if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == CA_EDGE_INT_BC) {
             for (p = 0; p < ielem_dim; p++) {
-              ssnormal[p] = BC_Types[bc_input_id].BC_Data_Float[p + 1];
+              ssnormal[p] = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[p + 1];
               for (q = 0; q < ielem_dim; q++) {
                 for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
                      k++) {
@@ -335,7 +336,7 @@ int apply_integrated_curve_bc(
                 }
               }
             }
-          } else if (BC_Types[bc_input_id].BC_Name == CA_EDGE_CURVE_INT_BC) {
+          } else if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == CA_EDGE_CURVE_INT_BC) {
             /* recompute surface normal based upon secondary sideset. */
 
             surface_determinant_and_normal(ielem, iconnect_ptr, num_local_nodes, ielem_dim - 1,
@@ -362,14 +363,14 @@ int apply_integrated_curve_bc(
         case VELO_NORMAL_EDGE_INT_BC:
         case KINEMATIC_EDGE_BC:
 
-          fvelo_normal_edge_bc(func, d_func, BC_Types[bc_input_id].BC_Data_Float[0], x_dot, theta,
-                               delta_t);
+          fvelo_normal_edge_bc(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                               x_dot, theta, delta_t);
           break;
 
         case VELO_TANGENT_EDGE_INT_BC:
 
-          fvelo_tangent_edge_bc(func, d_func, BC_Types[bc_input_id].BC_Data_Float, x_dot, theta,
-                                delta_t);
+          fvelo_tangent_edge_bc(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float,
+                                x_dot, theta, delta_t);
           break;
 
         case VAR_CA_EDGE_BC:
@@ -394,9 +395,9 @@ int apply_integrated_curve_bc(
 
           for (p = 0; p < ielem_dim; p++) {
             if (BC_Name == VAR_CA_EDGE_BC) {
-              ssnormal[p] = BC_Types[bc_input_id].BC_Data_Float[p + 5];
+              ssnormal[p] = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[p + 5];
             } else {
-              ssnormal[p] = BC_Types[bc_input_id].u_BC[3 + p];
+              ssnormal[p] = goma_ctx->bc.bc_types[bc_input_id].u_BC[3 + p];
             }
           }
 
@@ -407,14 +408,15 @@ int apply_integrated_curve_bc(
                          elem_edge_bc->edge_elem_node_id, ielem_dim,
                          (int)elem_edge_bc->num_nodes_on_edge, clnormal, dclnormal_dx, exo);
 
-          if (BC_Types[bc_input_id].BC_Name == VAR_CA_EDGE_BC) {
+          if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == VAR_CA_EDGE_BC) {
             fapply_var_CA(func, d_func, d_func_ss, fsnormal, dfsnormal_dx, ssnormal, dssnormal_dx,
-                          clnormal, dclnormal_dx, BC_Types[bc_input_id].BC_Data_Float, x_dot, theta,
-                          delta_t);
-          } else if (BC_Types[bc_input_id].BC_Name == VAR_CA_USER_BC) {
+                          clnormal, dclnormal_dx, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float,
+                          x_dot, theta, delta_t);
+          } else if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == VAR_CA_USER_BC) {
             fapply_var_CA_user(func, d_func, d_func_ss, fsnormal, dfsnormal_dx, ssnormal,
-                               dssnormal_dx, clnormal, dclnormal_dx, BC_Types[bc_input_id].len_u_BC,
-                               BC_Types[bc_input_id].u_BC, x_dot, theta, delta_t);
+                               dssnormal_dx, clnormal, dclnormal_dx,
+                               goma_ctx->bc.bc_types[bc_input_id].len_u_BC,
+                               goma_ctx->bc.bc_types[bc_input_id].u_BC, x_dot, theta, delta_t);
           }
           break;
 
@@ -441,7 +443,7 @@ int apply_integrated_curve_bc(
 
           /* add function into residual equations here may a vector of functions */
 
-          for (p = 0; p < BC_Types[bc_input_id].desc->vector; p++) {
+          for (p = 0; p < goma_ctx->bc.bc_types[bc_input_id].desc->vector; p++) {
             /*
              * Check to see if this BC on this node is applicable
              * (i.e. no other overriding Dirichlet conditions,
@@ -461,11 +463,11 @@ int apply_integrated_curve_bc(
               ldof_eqn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[eqn][id];
               if (ldof_eqn >= 0) {
 
-                if (BC_Types[bc_input_id].desc->i_apply == SINGLE_PHASE ||
+                if (goma_ctx->bc.bc_types[bc_input_id].desc->i_apply == SINGLE_PHASE ||
                     goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
                   phi_i = goma_ctx->fem.bf[eqn]->phi[ldof_eqn];
                   weight *= phi_i;
-                } else if (BC_Types[bc_input_id].desc->i_apply == CROSS_PHASE) {
+                } else if (goma_ctx->bc.bc_types[bc_input_id].desc->i_apply == CROSS_PHASE) {
                   /* if the equation type doesn't exist in this material,
                    * then find the intepolation from the adjacent material
                    * using the local node number, id, as the dof number to
@@ -473,8 +475,8 @@ int apply_integrated_curve_bc(
                    */
                   for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
                     if (goma_ctx->fem.pd_glob[mn]->e[goma_ctx->fem.pg->imtrx][eqn] &&
-                        (eb_in_matrl(BC_Types[bc_input_id].BC_Data_Int[0], mn) ||
-                         eb_in_matrl(BC_Types[bc_input_id].BC_Data_Int[1], mn))) {
+                        (eb_in_matrl(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0], mn) ||
+                         eb_in_matrl(goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[1], mn))) {
                       type = goma_ctx->fem.pd_glob[mn]->w[goma_ctx->fem.pg->imtrx][eqn];
                       if (goma_ctx->fem.bfi[type] == NULL)
                         GOMA_EH(GOMA_ERROR, "Illegal cross basis func");
@@ -489,22 +491,22 @@ int apply_integrated_curve_bc(
                   GOMA_EH(GOMA_ERROR, "Illegal bc phase definition");
 
                 /* for strong conditions weight the function by BIG_PENALTY */
-                if (BC_Types[bc_input_id].desc->method == STRONG_INT_EDGE)
+                if (goma_ctx->bc.bc_types[bc_input_id].desc->method == STRONG_INT_EDGE)
                   weight *= BIG_PENALTY;
-                if (BC_Types[bc_input_id].desc->method == WEAK_INT_EDGE) {
+                if (goma_ctx->bc.bc_types[bc_input_id].desc->method == WEAK_INT_EDGE) {
                   weight *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_BOUNDARY)];
                 }
 
-                if (BC_Types[bc_input_id].BC_Name == KINEMATIC_EDGE_BC)
+                if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_EDGE_BC)
                   weight *= BIG_PENALTY;
 
                 /* if doing a weak BC - add into local element contribution also */
 
                 ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
                 if (eqn == R_MASS)
-                  ieqn = MAX_PROB_VAR + BC_Types[bc_input_id].species_eq;
+                  ieqn = MAX_PROB_VAR + goma_ctx->bc.bc_types[bc_input_id].species_eq;
                 if (goma_automatic_rotations.automatic_rotations &&
-                    (BC_Types[bc_input_id].desc->rotate != NO_ROT)) {
+                    (goma_ctx->bc.bc_types[bc_input_id].desc->rotate != NO_ROT)) {
                   ieqn = equation_index_auto_rotate(NULL, I, eqn, p, NULL);
                 }
                 goma_ctx->fem.lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] +=
@@ -540,7 +542,7 @@ int apply_integrated_curve_bc(
 
                   for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
                     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] &&
-                        BC_Types[bc_input_id].desc->sens[var]) {
+                        goma_ctx->bc.bc_types[bc_input_id].desc->sens[var]) {
                       pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                       if (var != MASS_FRACTION) {
                         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
@@ -717,7 +719,7 @@ int apply_point_colloc_edge_bc(
       /******************************************************************************/
 
       if ((bc_input_id = (int)elem_edge_bc->BC_input_id[0]) != -1) {
-        if (BC_Types[bc_input_id].desc->method == COLLOCATE_EDGE) {
+        if (goma_ctx->bc.bc_types[bc_input_id].desc->method == COLLOCATE_EDGE) {
 
           /*
            * Check to see if this BC on this node is applicable (i.e. no other overriding
@@ -773,7 +775,7 @@ int apply_point_colloc_edge_bc(
              */
             /* load in functional representation of this condition, and its sensitivity
              * to all nodal unknowns */
-            switch (BC_Types[bc_input_id].BC_Name) {
+            switch (goma_ctx->bc.bc_types[bc_input_id].BC_Name) {
 
             case GD_CONST_BC:
             case GD_LINEAR_BC:
@@ -793,8 +795,8 @@ int apply_point_colloc_edge_bc(
                */
 
               err = fgeneralized_dirichlet((double *)(&func), (double *)(d_func),
-                                           BC_Types[bc_input_id].BC_Name, bc_input_id, theta,
-                                           delta_t);
+                                           goma_ctx->bc.bc_types[bc_input_id].BC_Name, bc_input_id,
+                                           theta, delta_t);
 
               GOMA_EH(err, "Illegal entry in Generalized Dirichlet Condition ");
               break;
@@ -830,7 +832,7 @@ int apply_point_colloc_edge_bc(
 
               /* calculate contact angle boundary condition
                *     use first data entry as contact angle in degrees */
-              theta_r = BC_Types[bc_input_id].BC_Data_Float[0] * M_PIE / 180.;
+              theta_r = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0] * M_PIE / 180.;
 
               /* Free surface normal */
               for (p = 0; p < ielem_dim; p++) {
@@ -844,9 +846,9 @@ int apply_point_colloc_edge_bc(
               }
               /* Wall surface normal */
 
-              if (BC_Types[bc_input_id].BC_Name == CA_EDGE_BC) {
+              if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == CA_EDGE_BC) {
                 for (p = 0; p < ielem_dim; p++) {
-                  ssnormal[p] = BC_Types[bc_input_id].BC_Data_Float[p + 1];
+                  ssnormal[p] = goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[p + 1];
                   for (q = 0; q < ielem_dim; q++) {
                     for (k = 0;
                          k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
@@ -855,7 +857,7 @@ int apply_point_colloc_edge_bc(
                     }
                   }
                 }
-              } else if (BC_Types[bc_input_id].BC_Name == CA_EDGE_CURVE_BC) {
+              } else if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == CA_EDGE_CURVE_BC) {
                 /* recompute surface normal based upon secondary sideset. */
 
                 /* 			surface_determinant_and_normal(ielem,  */
@@ -919,7 +921,7 @@ int apply_point_colloc_edge_bc(
 
               /* calculate contact angle boundary condition
                *     use first data entry as contact angle in degrees */
-              theta_r = (double)BC_Types[bc_input_id].u_BC[0] * M_PIE / 180.;
+              theta_r = (double)goma_ctx->bc.bc_types[bc_input_id].u_BC[0] * M_PIE / 180.;
 
               /* Free surface normal */
               for (p = 0; p < ielem_dim; p++) {
@@ -935,7 +937,7 @@ int apply_point_colloc_edge_bc(
               /* for now assume that the contact angle condition is applied at a
                * fixed wall - where the wall surface normal is known */
               for (p = 0; p < ielem_dim; p++) {
-                ssnormal[p] = (double)BC_Types[bc_input_id].u_BC[p + 1];
+                ssnormal[p] = (double)goma_ctx->bc.bc_types[bc_input_id].u_BC[p + 1];
                 for (q = 0; q < ielem_dim; q++) {
                   for (k = 0;
                        k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
@@ -944,8 +946,9 @@ int apply_point_colloc_edge_bc(
                   }
                 }
               }
-              Gibbs = user_gibbs_criterion(fsnormal, ssnormal, BC_Types[bc_input_id].BC_Data_Int[0],
-                                           &(elem_edge_bc->ipin), BC_Types[bc_input_id].u_BC);
+              Gibbs = user_gibbs_criterion(
+                  fsnormal, ssnormal, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Int[0],
+                  &(elem_edge_bc->ipin), goma_ctx->bc.bc_types[bc_input_id].u_BC);
 
               if (Gibbs) {
 
@@ -1027,11 +1030,13 @@ int apply_point_colloc_edge_bc(
 
               do_LSA_mods(LSA_EDGE);
 
-              if (BC_Types[bc_input_id].BC_Name == VELO_NORMAL_EDGE_BC) {
-                fvelo_normal_edge_bc(func, d_func, BC_Types[bc_input_id].BC_Data_Float[0], x_dot,
+              if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == VELO_NORMAL_EDGE_BC) {
+                fvelo_normal_edge_bc(func, d_func,
+                                     goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0], x_dot,
                                      theta, delta_t);
               } else {
-                fvelo_tangent_edge_bc(func, d_func, BC_Types[bc_input_id].BC_Data_Float, x_dot,
+                fvelo_tangent_edge_bc(func, d_func,
+                                      goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float, x_dot,
                                       theta, delta_t);
               }
               break;
@@ -1051,12 +1056,12 @@ int apply_point_colloc_edge_bc(
             /*         vector and Jacobian Matrix                                         */
             /*		                         			            */
             /******************************************************************************/
-            for (p = 0; p < BC_Types[bc_input_id].desc->vector; p++) {
+            for (p = 0; p < goma_ctx->bc.bc_types[bc_input_id].desc->vector; p++) {
               ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
               if (eqn == R_MASS)
-                ieqn = MAX_PROB_VAR + BC_Types[bc_input_id].species_eq;
+                ieqn = MAX_PROB_VAR + goma_ctx->bc.bc_types[bc_input_id].species_eq;
               if (goma_automatic_rotations.automatic_rotations &&
-                  (BC_Types[bc_input_id].desc->rotate != NO_ROT)) {
+                  (goma_ctx->bc.bc_types[bc_input_id].desc->rotate != NO_ROT)) {
                 ieqn = equation_index_auto_rotate(NULL, I, eqn, p, NULL);
               }
               goma_ctx->fem.lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += BIG_PENALTY * func[p];
@@ -1071,7 +1076,7 @@ int apply_point_colloc_edge_bc(
               if (goma_ctx->fem.af->Assemble_Jacobian) {
                 for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
                   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] &&
-                      BC_Types[bc_input_id].desc->sens[var]) {
+                      goma_ctx->bc.bc_types[bc_input_id].desc->sens[var]) {
                     if (var != MASS_FRACTION) {
                       /* load sensitivity index at this node point
                        * this routine determines the entry in the jacobian matrix which

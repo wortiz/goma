@@ -179,19 +179,19 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
 
   for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
     // pass through for BC's that don't have side sets
-    if (BC_Types[bc_input_id].BC_Name == SH_GAMMA1_DERIV_SYMM_BC ||
-        BC_Types[bc_input_id].BC_Name == SH_GAMMA2_DERIV_SYMM_BC ||
-        BC_Types[bc_input_id].BC_Name == SHELL_TFMP_GRAD_S_BC) {
+    if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == SH_GAMMA1_DERIV_SYMM_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == SH_GAMMA2_DERIV_SYMM_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == SHELL_TFMP_GRAD_S_BC) {
       continue;
     }
-    if ((ss_index = in_list(BC_Types[bc_input_id].BC_ID, 0, exo->num_side_sets, ss_to_blks[0])) ==
-        -1) {
+    if ((ss_index = in_list(goma_ctx->bc.bc_types[bc_input_id].BC_ID, 0, exo->num_side_sets,
+                            goma_ctx->bc.ss_to_blks[0])) == -1) {
       GOMA_EH(GOMA_ERROR, "Cannot match side set id with that in ss_to_blks array");
     }
 
     /* Set flag to indicate if we're in the right material (only one) to apply*/
     iapply = 0;
-    if (exo->eb_id[find_elemblock_index(ielem, exo)] == ss_to_blks[1][ss_index]) {
+    if (exo->eb_id[find_elemblock_index(ielem, exo)] == goma_ctx->bc.ss_to_blks[1][ss_index]) {
       iapply = 1;
     }
 
@@ -200,8 +200,8 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
      *  other words, if the side set is an external side set, we will
      *  apply the boundary condition no matter what.
      */
-    if (SS_Internal_Boundary != NULL) {
-      if (SS_Internal_Boundary[ss_index] == -1) {
+    if (goma_ctx->bc.ss_internal_boundary != NULL) {
+      if (goma_ctx->bc.ss_internal_boundary[ss_index] == -1) {
         iapply = 1;
       }
     }
@@ -210,72 +210,74 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
        Anyway, if the current condition is one of geometry, increment
        GD_count to indicate that we've got the geometry here */
 
-    if (BC_Types[bc_input_id].BC_Name == PLANE_BC || BC_Types[bc_input_id].BC_Name == SPLINE_BC ||
-        BC_Types[bc_input_id].BC_Name == FILLET_BC ||
-        BC_Types[bc_input_id].BC_Name == DOUBLE_RAD_BC ||
-        BC_Types[bc_input_id].BC_Name == DOUBLE_FILLET_BC ||
-        BC_Types[bc_input_id].BC_Name == DOUBLE_FILLET_GEOM_BC ||
-        BC_Types[bc_input_id].BC_Name == FEATURE_ROLLON_BC ||
-        BC_Types[bc_input_id].BC_Name == ROLL_FLUID_BC ||
-        BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_BC ||
-        BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_RS_BC ||
-        BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_PETROV_BC ||
-        BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_COLLOC_BC ||
-        BC_Types[bc_input_id].BC_Name == TENSION_SHEET_BC ||
-        BC_Types[bc_input_id].BC_Name == SOLID_FLUID_BC ||
-        BC_Types[bc_input_id].BC_Name == SOLID_FLUID_RS_BC ||
-        (BC_Types[bc_input_id].BC_Name == GD_CONST_BC ||
-         BC_Types[bc_input_id].BC_Name == GD_LINEAR_BC ||
-         BC_Types[bc_input_id].BC_Name == GD_INVERSE_BC ||
-         BC_Types[bc_input_id].BC_Name == GD_PARAB_BC ||
-         BC_Types[bc_input_id].BC_Name == GD_PARAB_OFFSET_BC ||
-         BC_Types[bc_input_id].BC_Name == GD_CIRC_BC ||
-         BC_Types[bc_input_id].BC_Name == GD_TIME_BC ||
-         BC_Types[bc_input_id].BC_Name == GD_POLYN_BC ||
-         BC_Types[bc_input_id].BC_Name == GD_TABLE_BC ||
-         BC_Types[bc_input_id].BC_Name == MESH_CONSTRAINT_BC))
+    if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == PLANE_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == SPLINE_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == FILLET_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == DOUBLE_RAD_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == DOUBLE_FILLET_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == DOUBLE_FILLET_GEOM_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == FEATURE_ROLLON_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == ROLL_FLUID_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_RS_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_PETROV_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_COLLOC_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == TENSION_SHEET_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == SOLID_FLUID_BC ||
+        goma_ctx->bc.bc_types[bc_input_id].BC_Name == SOLID_FLUID_RS_BC ||
+        (goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_CONST_BC ||
+         goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_LINEAR_BC ||
+         goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_INVERSE_BC ||
+         goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_PARAB_BC ||
+         goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_PARAB_OFFSET_BC ||
+         goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_CIRC_BC ||
+         goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_TIME_BC ||
+         goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_POLYN_BC ||
+         goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_TABLE_BC ||
+         goma_ctx->bc.bc_types[bc_input_id].BC_Name == MESH_CONSTRAINT_BC))
       GD_count++;
 
-    if (((BC_Types[bc_input_id].BC_Name == KINEMATIC_BC ||
-          BC_Types[bc_input_id].BC_Name == KINEMATIC_COLLOC_BC ||
-          BC_Types[bc_input_id].BC_Name == KINEMATIC_PETROV_BC ||
-          BC_Types[bc_input_id].BC_Name == KINEMATIC_DISC_BC ||
-          BC_Types[bc_input_id].BC_Name == KIN_LEAK_BC ||
-          BC_Types[bc_input_id].BC_Name == KIN_ELECTRODEPOSITION_BC ||
-          BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_BC ||
-          BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_RS_BC ||
-          BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_PETROV_BC ||
-          BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_COLLOC_BC ||
-          BC_Types[bc_input_id].BC_Name == PLANE_BC || BC_Types[bc_input_id].BC_Name == SPLINE_BC ||
-          BC_Types[bc_input_id].BC_Name == FILLET_BC ||
-          BC_Types[bc_input_id].BC_Name == DOUBLE_RAD_BC ||
-          BC_Types[bc_input_id].BC_Name == DOUBLE_FILLET_BC ||
-          BC_Types[bc_input_id].BC_Name == DOUBLE_FILLET_GEOM_BC ||
-          BC_Types[bc_input_id].BC_Name == FEATURE_ROLLON_BC ||
-          BC_Types[bc_input_id].BC_Name == ROLL_FLUID_BC ||
-          BC_Types[bc_input_id].BC_Name == TENSION_SHEET_BC ||
-          BC_Types[bc_input_id].BC_Name == SOLID_FLUID_BC ||
-          BC_Types[bc_input_id].BC_Name == SOLID_FLUID_RS_BC ||
-          (BC_Types[bc_input_id].BC_Name == GD_CONST_BC ||
-           BC_Types[bc_input_id].BC_Name == GD_LINEAR_BC ||
-           BC_Types[bc_input_id].BC_Name == GD_INVERSE_BC ||
-           BC_Types[bc_input_id].BC_Name == GD_PARAB_BC ||
-           BC_Types[bc_input_id].BC_Name == GD_PARAB_OFFSET_BC ||
-           BC_Types[bc_input_id].BC_Name == GD_CIRC_BC ||
-           BC_Types[bc_input_id].BC_Name == GD_TIME_BC ||
-           BC_Types[bc_input_id].BC_Name == GD_POLYN_BC ||
-           BC_Types[bc_input_id].BC_Name == GD_TABLE_BC ||
-           BC_Types[bc_input_id].BC_Name == MESH_CONSTRAINT_BC)) &&
+    if (((goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_COLLOC_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_PETROV_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_DISC_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_LEAK_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_ELECTRODEPOSITION_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_RS_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_PETROV_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_COLLOC_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == PLANE_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == SPLINE_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == FILLET_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == DOUBLE_RAD_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == DOUBLE_FILLET_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == DOUBLE_FILLET_GEOM_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == FEATURE_ROLLON_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == ROLL_FLUID_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == TENSION_SHEET_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == SOLID_FLUID_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == SOLID_FLUID_RS_BC ||
+          (goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_CONST_BC ||
+           goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_LINEAR_BC ||
+           goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_INVERSE_BC ||
+           goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_PARAB_BC ||
+           goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_PARAB_OFFSET_BC ||
+           goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_CIRC_BC ||
+           goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_TIME_BC ||
+           goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_POLYN_BC ||
+           goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_TABLE_BC ||
+           goma_ctx->bc.bc_types[bc_input_id].BC_Name == MESH_CONSTRAINT_BC)) &&
          (bc_application == SPECIAL)) ||
 
-        ((BC_Types[bc_input_id].BC_Name == CAPILLARY_BC ||
-          BC_Types[bc_input_id].BC_Name == ELEC_TRACTION_BC ||
-          BC_Types[bc_input_id].BC_Name == CAP_REPULSE_BC ||
-          BC_Types[bc_input_id].BC_Name == CAP_REPULSE_ROLL_BC ||
-          BC_Types[bc_input_id].BC_Name == CAP_REPULSE_USER_BC ||
-          BC_Types[bc_input_id].BC_Name == CAP_REPULSE_TABLE_BC ||
-          BC_Types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC ||
-          BC_Types[bc_input_id].BC_Name == CAP_RECOIL_PRESS_BC) &&
+        ((goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAPILLARY_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == ELEC_TRACTION_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_ROLL_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_USER_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_TABLE_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC ||
+          goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_RECOIL_PRESS_BC) &&
          (bc_application == SPECIAL))) {
       /* Initialize jflag on a per-bc basis (untested)  */
       jflag = -1;
@@ -364,39 +366,40 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
          *
          */
         if (node->DBCA == 1 &&
-            (BC_Types[bc_input_id].BC_Name == KINEMATIC_BC ||
-             BC_Types[bc_input_id].BC_Name == KINEMATIC_COLLOC_BC ||
-             BC_Types[bc_input_id].BC_Name == KINEMATIC_PETROV_BC ||
-             BC_Types[bc_input_id].BC_Name == KINEMATIC_DISC_BC ||
-             BC_Types[bc_input_id].BC_Name == KIN_LEAK_BC ||
-             BC_Types[bc_input_id].BC_Name == KIN_ELECTRODEPOSITION_BC || /*  RSL 5/28/02  */
-             BC_Types[bc_input_id].BC_Name == PLANE_BC ||
-             BC_Types[bc_input_id].BC_Name == SPLINE_BC ||
-             BC_Types[bc_input_id].BC_Name == FILLET_BC ||
-             BC_Types[bc_input_id].BC_Name == DOUBLE_RAD_BC ||
-             BC_Types[bc_input_id].BC_Name == DOUBLE_FILLET_BC ||
-             BC_Types[bc_input_id].BC_Name == DOUBLE_FILLET_GEOM_BC ||
-             BC_Types[bc_input_id].BC_Name == FEATURE_ROLLON_BC ||
-             BC_Types[bc_input_id].BC_Name == ROLL_FLUID_BC ||
-             BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_BC ||
-             BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_RS_BC ||
-             BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_PETROV_BC ||
-             BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_COLLOC_BC ||
-             BC_Types[bc_input_id].BC_Name == MESH_CONSTRAINT_BC ||
-             BC_Types[bc_input_id].BC_Name == TENSION_SHEET_BC ||
-             BC_Types[bc_input_id].BC_Name == SOLID_FLUID_BC ||
-             BC_Types[bc_input_id].BC_Name == SOLID_FLUID_RS_BC ||
-             ((BC_Types[bc_input_id].BC_Name == GD_CONST_BC ||
-               BC_Types[bc_input_id].BC_Name == GD_LINEAR_BC ||
-               BC_Types[bc_input_id].BC_Name == GD_INVERSE_BC ||
-               BC_Types[bc_input_id].BC_Name == GD_PARAB_BC ||
-               BC_Types[bc_input_id].BC_Name == GD_PARAB_OFFSET_BC ||
-               BC_Types[bc_input_id].BC_Name == GD_CIRC_BC ||
-               BC_Types[bc_input_id].BC_Name == GD_TIME_BC ||
-               BC_Types[bc_input_id].BC_Name == GD_POLYN_BC ||
-               BC_Types[bc_input_id].BC_Name == GD_TABLE_BC) &&
-              (BC_Types[bc_input_id].desc->equation == R_MESH_NORMAL ||
-               BC_Types[bc_input_id].desc->equation ==
+            (goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_COLLOC_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_PETROV_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_DISC_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_LEAK_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name ==
+                 KIN_ELECTRODEPOSITION_BC || /*  RSL 5/28/02  */
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == PLANE_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == SPLINE_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == FILLET_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == DOUBLE_RAD_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == DOUBLE_FILLET_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == DOUBLE_FILLET_GEOM_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == FEATURE_ROLLON_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == ROLL_FLUID_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_RS_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_PETROV_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_COLLOC_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == MESH_CONSTRAINT_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == TENSION_SHEET_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == SOLID_FLUID_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == SOLID_FLUID_RS_BC ||
+             ((goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_CONST_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_LINEAR_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_INVERSE_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_PARAB_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_PARAB_OFFSET_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_CIRC_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_TIME_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_POLYN_BC ||
+               goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_TABLE_BC) &&
+              (goma_ctx->bc.bc_types[bc_input_id].desc->equation == R_MESH_NORMAL ||
+               goma_ctx->bc.bc_types[bc_input_id].desc->equation ==
                    R_MESH2))) /* This is for the infamous GD_LINEAR trick */
                               /* && iapply   */
         ) {
@@ -404,13 +407,13 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
           /* figure out which bc corresponds to this CA condition */
           j_bc_id = -1;
           for (j = 0; j < goma_ctx->problem.num_bc; j++) {
-            if (BC_Types[j].BC_Data_Int[0] == 1000000 * I + 1000000 &&
-                ((BC_Types[j].BC_Data_Int[2] == -1 && iapply) ||
-                 BC_Types[j].BC_Data_Int[2] ==
+            if (goma_ctx->bc.bc_types[j].BC_Data_Int[0] == 1000000 * I + 1000000 &&
+                ((goma_ctx->bc.bc_types[j].BC_Data_Int[2] == -1 && iapply) ||
+                 goma_ctx->bc.bc_types[j].BC_Data_Int[2] ==
                      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_id)) {
-              sum_normal = SQUARE(BC_Types[j].BC_Data_Float[1]) +
-                           SQUARE(BC_Types[j].BC_Data_Float[2]) +
-                           SQUARE(BC_Types[j].BC_Data_Float[3]);
+              sum_normal = SQUARE(goma_ctx->bc.bc_types[j].BC_Data_Float[1]) +
+                           SQUARE(goma_ctx->bc.bc_types[j].BC_Data_Float[2]) +
+                           SQUARE(goma_ctx->bc.bc_types[j].BC_Data_Float[3]);
               if (sum_normal) {
                 /* if wall normals are input, use them for CA condition */
                 variable_wall_normal = 0;
@@ -446,12 +449,13 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                 }
               }
 
-              if (BC_Types[bc_input_id].BC_Name == KINEMATIC_BC ||
-                  BC_Types[bc_input_id].BC_Name == KINEMATIC_COLLOC_BC ||
-                  BC_Types[bc_input_id].BC_Name == KINEMATIC_PETROV_BC ||
-                  BC_Types[bc_input_id].BC_Name == KINEMATIC_DISC_BC ||
-                  BC_Types[bc_input_id].BC_Name == KIN_ELECTRODEPOSITION_BC || /*  RSL 5/27/02  */
-                  BC_Types[bc_input_id].BC_Name == KIN_LEAK_BC) {
+              if (goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_BC ||
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_COLLOC_BC ||
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_PETROV_BC ||
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Name == KINEMATIC_DISC_BC ||
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Name ==
+                      KIN_ELECTRODEPOSITION_BC || /*  RSL 5/27/02  */
+                  goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_LEAK_BC) {
 
                 CA_fselem[jcnt] = ielem;
                 local_node_id = id;
@@ -473,7 +477,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                   CA_sselem[jcnt] = ielem;
                   local_node_id = id;
                   for (p = 0; p < ielem_dim; p++) {
-                    ssnormal[jcnt][p] = BC_Types[j].BC_Data_Float[p + 1];
+                    ssnormal[jcnt][p] = goma_ctx->bc.bc_types[j].BC_Data_Float[p + 1];
                     for (q = 0; q < ielem_dim; q++) {
                       for (k = 0;
                            k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
@@ -485,33 +489,35 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                 }
 
               } else if ((variable_wall_normal) &&
-                         (BC_Types[bc_input_id].BC_Name == PLANE_BC ||
-                          BC_Types[bc_input_id].BC_Name == SPLINE_BC ||
-                          BC_Types[bc_input_id].BC_Name == FILLET_BC ||
-                          BC_Types[bc_input_id].BC_Name == DOUBLE_RAD_BC ||
-                          BC_Types[bc_input_id].BC_Name == DOUBLE_FILLET_BC ||
-                          BC_Types[bc_input_id].BC_Name == DOUBLE_FILLET_GEOM_BC ||
-                          BC_Types[bc_input_id].BC_Name == FEATURE_ROLLON_BC ||
-                          BC_Types[bc_input_id].BC_Name == ROLL_FLUID_BC ||
-                          BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_BC ||
-                          BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_RS_BC ||
-                          BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_PETROV_BC ||
-                          BC_Types[bc_input_id].BC_Name == KIN_DISPLACEMENT_COLLOC_BC ||
-                          BC_Types[bc_input_id].BC_Name == MESH_CONSTRAINT_BC ||
-                          BC_Types[bc_input_id].BC_Name == TENSION_SHEET_BC ||
-                          BC_Types[bc_input_id].BC_Name == SOLID_FLUID_BC ||
-                          BC_Types[bc_input_id].BC_Name == SOLID_FLUID_RS_BC ||
-                          ((BC_Types[bc_input_id].BC_Name == GD_CONST_BC ||
-                            BC_Types[bc_input_id].BC_Name == GD_LINEAR_BC ||
-                            BC_Types[bc_input_id].BC_Name == GD_INVERSE_BC ||
-                            BC_Types[bc_input_id].BC_Name == GD_PARAB_BC ||
-                            BC_Types[bc_input_id].BC_Name == GD_PARAB_OFFSET_BC ||
-                            BC_Types[bc_input_id].BC_Name == GD_CIRC_BC ||
-                            BC_Types[bc_input_id].BC_Name == GD_TIME_BC ||
-                            BC_Types[bc_input_id].BC_Name == GD_POLYN_BC ||
-                            BC_Types[bc_input_id].BC_Name == GD_TABLE_BC) &&
-                           (BC_Types[bc_input_id].desc->equation == R_MESH_NORMAL ||
-                            BC_Types[bc_input_id].desc->equation == R_MESH2)))) {
+                         (goma_ctx->bc.bc_types[bc_input_id].BC_Name == PLANE_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == SPLINE_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == FILLET_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == DOUBLE_RAD_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == DOUBLE_FILLET_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == DOUBLE_FILLET_GEOM_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == FEATURE_ROLLON_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == ROLL_FLUID_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == KIN_DISPLACEMENT_RS_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name ==
+                              KIN_DISPLACEMENT_PETROV_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name ==
+                              KIN_DISPLACEMENT_COLLOC_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == MESH_CONSTRAINT_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == TENSION_SHEET_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == SOLID_FLUID_BC ||
+                          goma_ctx->bc.bc_types[bc_input_id].BC_Name == SOLID_FLUID_RS_BC ||
+                          ((goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_CONST_BC ||
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_LINEAR_BC ||
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_INVERSE_BC ||
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_PARAB_BC ||
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_PARAB_OFFSET_BC ||
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_CIRC_BC ||
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_TIME_BC ||
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_POLYN_BC ||
+                            goma_ctx->bc.bc_types[bc_input_id].BC_Name == GD_TABLE_BC) &&
+                           (goma_ctx->bc.bc_types[bc_input_id].desc->equation == R_MESH_NORMAL ||
+                            goma_ctx->bc.bc_types[bc_input_id].desc->equation == R_MESH2)))) {
 
                 /* However, we may have already gotten started, applied the
                    contact angle condition with say a KINEMATIC/GD_* combination,
@@ -610,13 +616,16 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                 /* evaluate Gibbs inequality here with surface
                  * normal and solid surface normal */
 
-                if (BC_Types[j_bc_id].BC_Name == CA_OR_FIX_BC) {
-                  Gibbs = evaluate_gibbs_criterion(
-                      &fsnormal[jflag][0], &ssnormal[jflag][0], &(BC_Types[j].BC_Data_Int[1]),
-                      BC_Types[j].BC_Data_Float[0], BC_Types[j].BC_Data_Float[4],
-                      BC_Types[j].BC_Data_Float[5], BC_Types[j].BC_Data_Float[6],
-                      BC_Types[j].BC_Data_Float[7], BC_Types[j].BC_Data_Float[8],
-                      BC_Types[j].BC_Data_Float[9]);
+                if (goma_ctx->bc.bc_types[j_bc_id].BC_Name == CA_OR_FIX_BC) {
+                  Gibbs = evaluate_gibbs_criterion(&fsnormal[jflag][0], &ssnormal[jflag][0],
+                                                   &(goma_ctx->bc.bc_types[j].BC_Data_Int[1]),
+                                                   goma_ctx->bc.bc_types[j].BC_Data_Float[0],
+                                                   goma_ctx->bc.bc_types[j].BC_Data_Float[4],
+                                                   goma_ctx->bc.bc_types[j].BC_Data_Float[5],
+                                                   goma_ctx->bc.bc_types[j].BC_Data_Float[6],
+                                                   goma_ctx->bc.bc_types[j].BC_Data_Float[7],
+                                                   goma_ctx->bc.bc_types[j].BC_Data_Float[8],
+                                                   goma_ctx->bc.bc_types[j].BC_Data_Float[9]);
 
                   if (Gibbs) {
                     for (i1 = 0; i1 < MAX_PDIM; i1++) {
@@ -630,7 +639,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                       }
                     }
                     fapply_CA(func, d_func, d_func_ss, fsnrml, dfsnrml_dx, ssnrml, dssnrml_dx,
-                              BC_Types[j].BC_Data_Float[0]);
+                              goma_ctx->bc.bc_types[j].BC_Data_Float[0]);
                   } else {
                     /* fix contact point where it sits right now */
                     for (p = 0; p < ielem_dim; p++) {
@@ -659,8 +668,8 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                   }
                 }
 
-                else if (BC_Types[j_bc_id].BC_Name == CA_BC ||
-                         BC_Types[j_bc_id].BC_Name == CA_MOMENTUM_BC) {
+                else if (goma_ctx->bc.bc_types[j_bc_id].BC_Name == CA_BC ||
+                         goma_ctx->bc.bc_types[j_bc_id].BC_Name == CA_MOMENTUM_BC) {
                   /* Loop over the vector dimension i1 */
                   for (i1 = 0; i1 < MAX_PDIM; i1++) {
                     fsnrml[i1] = fsnormal[jflag][i1];
@@ -673,8 +682,8 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                     }
                   }
                   fapply_CA(func, d_func, d_func_ss, fsnrml, dfsnrml_dx, ssnrml, dssnrml_dx,
-                            BC_Types[j].BC_Data_Float[0]);
-                } else if (BC_Types[j_bc_id].BC_Name == MOVING_CA_BC) {
+                            goma_ctx->bc.bc_types[j].BC_Data_Float[0]);
+                } else if (goma_ctx->bc.bc_types[j_bc_id].BC_Name == MOVING_CA_BC) {
                   for (i1 = 0; i1 < MAX_PDIM; i1++) {
                     fsnrml[i1] = fsnormal[jflag][i1];
                     ssnrml[i1] = ssnormal[jflag][i1];
@@ -686,14 +695,18 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                     }
                   }
                   fapply_moving_CA(func, d_func, d_func_ss, fsnrml, dfsnrml_dx, ssnrml, dssnrml_dx,
-                                   BC_Types[j].BC_Data_Float[0], BC_Types[j].BC_Data_Float[4],
-                                   BC_Types[j].BC_Data_Float[5], BC_Types[j].BC_Data_Float[6],
-                                   BC_Types[j].BC_Data_Float[7], BC_Types[j].BC_Data_Float[8],
-                                   BC_Types[j].BC_Data_Float[9], x_dot, delta_t, theta);
-                } else if (BC_Types[j_bc_id].BC_Name == VELO_THETA_TPL_BC ||
-                           BC_Types[j_bc_id].BC_Name == VELO_THETA_HOFFMAN_BC ||
-                           BC_Types[j_bc_id].BC_Name == VELO_THETA_COX_BC ||
-                           BC_Types[j_bc_id].BC_Name == VELO_THETA_SHIK_BC) {
+                                   goma_ctx->bc.bc_types[j].BC_Data_Float[0],
+                                   goma_ctx->bc.bc_types[j].BC_Data_Float[4],
+                                   goma_ctx->bc.bc_types[j].BC_Data_Float[5],
+                                   goma_ctx->bc.bc_types[j].BC_Data_Float[6],
+                                   goma_ctx->bc.bc_types[j].BC_Data_Float[7],
+                                   goma_ctx->bc.bc_types[j].BC_Data_Float[8],
+                                   goma_ctx->bc.bc_types[j].BC_Data_Float[9], x_dot, delta_t,
+                                   theta);
+                } else if (goma_ctx->bc.bc_types[j_bc_id].BC_Name == VELO_THETA_TPL_BC ||
+                           goma_ctx->bc.bc_types[j_bc_id].BC_Name == VELO_THETA_HOFFMAN_BC ||
+                           goma_ctx->bc.bc_types[j_bc_id].BC_Name == VELO_THETA_COX_BC ||
+                           goma_ctx->bc.bc_types[j_bc_id].BC_Name == VELO_THETA_SHIK_BC) {
                   double wall_velocity = 0, velo[MAX_PDIM];
                   double dwall_velo_dx[DIM][MDE], dvelo_dx[DIM][DIM];
                   double lag_pars[2 * DIM + 1] = {0.0};
@@ -716,32 +729,33 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                   /* try to find a VELO_TANGENT or similiar for wall velocity  */
                   for (i1 = 0; i1 < goma_ctx->problem.num_bc; i1++) {
 
-                    if ((BC_Types[i1].BC_Data_Int[0] == I &&
-                         (BC_Types[i1].BC_Name == VELO_TANGENT_BC ||
-                          BC_Types[i1].BC_Name == VELO_STREAMING_BC ||
-                          BC_Types[i1].BC_Name == VELO_TANGENT_USER_BC ||
-                          BC_Types[i1].BC_Name == VELO_SLIP_BC ||
-                          BC_Types[i1].BC_Name == VELO_SLIP_ROT_BC ||
-                          BC_Types[i1].BC_Name == VELO_SLIP_FLUID_BC ||
-                          BC_Types[i1].BC_Name == VELO_SLIP_ROT_FLUID_BC ||
-                          BC_Types[i1].BC_Name == AIR_FILM_BC ||
-                          BC_Types[i1].BC_Name == AIR_FILM_ROT_BC)) ||
-                        BC_Types[i1].BC_Name == VELO_TANGENT_SOLID_BC ||
-                        (BC_Types[i1].BC_Data_Int[2] == I &&
-                         BC_Types[i1].BC_Name == VELO_SLIP_SOLID_BC)) {
+                    if ((goma_ctx->bc.bc_types[i1].BC_Data_Int[0] == I &&
+                         (goma_ctx->bc.bc_types[i1].BC_Name == VELO_TANGENT_BC ||
+                          goma_ctx->bc.bc_types[i1].BC_Name == VELO_STREAMING_BC ||
+                          goma_ctx->bc.bc_types[i1].BC_Name == VELO_TANGENT_USER_BC ||
+                          goma_ctx->bc.bc_types[i1].BC_Name == VELO_SLIP_BC ||
+                          goma_ctx->bc.bc_types[i1].BC_Name == VELO_SLIP_ROT_BC ||
+                          goma_ctx->bc.bc_types[i1].BC_Name == VELO_SLIP_FLUID_BC ||
+                          goma_ctx->bc.bc_types[i1].BC_Name == VELO_SLIP_ROT_FLUID_BC ||
+                          goma_ctx->bc.bc_types[i1].BC_Name == AIR_FILM_BC ||
+                          goma_ctx->bc.bc_types[i1].BC_Name == AIR_FILM_ROT_BC)) ||
+                        goma_ctx->bc.bc_types[i1].BC_Name == VELO_TANGENT_SOLID_BC ||
+                        (goma_ctx->bc.bc_types[i1].BC_Data_Int[2] == I &&
+                         goma_ctx->bc.bc_types[i1].BC_Name == VELO_SLIP_SOLID_BC)) {
                       int mn;
-                      switch (BC_Types[i1].BC_Name) {
+                      switch (goma_ctx->bc.bc_types[i1].BC_Name) {
                       case VELO_TANGENT_BC:
                       case VELO_STREAMING_BC:
-                        wall_velocity = BC_Types[i1].BC_Data_Float[0] *
-                                        (1.0 + BC_Types[i1].BC_Data_Float[3] * time_value);
+                        wall_velocity =
+                            goma_ctx->bc.bc_types[i1].BC_Data_Float[0] *
+                            (1.0 + goma_ctx->bc.bc_types[i1].BC_Data_Float[3] * time_value);
                         found_wall_velocity = 1;
                         break;
                       case VELO_SLIP_BC:
                       case VELO_SLIP_FLUID_BC:
                       case AIR_FILM_BC:
-                        velo[0] = BC_Types[i1].BC_Data_Float[1];
-                        velo[1] = BC_Types[i1].BC_Data_Float[2];
+                        velo[0] = goma_ctx->bc.bc_types[i1].BC_Data_Float[1];
+                        velo[1] = goma_ctx->bc.bc_types[i1].BC_Data_Float[2];
                         wall_velocity = ssnrml[1] * velo[0] - ssnrml[0] * velo[1];
                         for (i2 = 0; i2 < ielem_dim; i2++) {
                           for (i3 = 0;
@@ -757,54 +771,59 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                       case VELO_SLIP_ROT_BC:
                       case VELO_SLIP_ROT_FLUID_BC:
                       case AIR_FILM_ROT_BC:
-                        wall_velocity =
-                            BC_Types[i1].BC_Data_Float[1] *
-                            (ssnrml[1] * (goma_ctx->fem.fv->x[1] - BC_Types[i1].BC_Data_Float[3]) -
-                             ssnrml[0] * (goma_ctx->fem.fv->x[0] - BC_Types[i1].BC_Data_Float[2]));
+                        wall_velocity = goma_ctx->bc.bc_types[i1].BC_Data_Float[1] *
+                                        (ssnrml[1] * (goma_ctx->fem.fv->x[1] -
+                                                      goma_ctx->bc.bc_types[i1].BC_Data_Float[3]) -
+                                         ssnrml[0] * (goma_ctx->fem.fv->x[0] -
+                                                      goma_ctx->bc.bc_types[i1].BC_Data_Float[2]));
                         for (i2 = 0; i2 < ielem_dim; i2++) {
                           for (i3 = 0;
                                i3 <
                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
                                i3++) {
                             dwall_velo_dx[i2][i3] +=
-                                BC_Types[i1].BC_Data_Float[1] *
+                                goma_ctx->bc.bc_types[i1].BC_Data_Float[1] *
                                 (dssnrml_dx[1][i2][i3] *
-                                     (goma_ctx->fem.fv->x[1] - BC_Types[i1].BC_Data_Float[3]) -
+                                     (goma_ctx->fem.fv->x[1] -
+                                      goma_ctx->bc.bc_types[i1].BC_Data_Float[3]) -
                                  dssnrml_dx[0][i2][i3] *
-                                     (goma_ctx->fem.fv->x[0] - BC_Types[i1].BC_Data_Float[2]));
+                                     (goma_ctx->fem.fv->x[0] -
+                                      goma_ctx->bc.bc_types[i1].BC_Data_Float[2]));
                           }
                         }
                         for (i3 = 0;
                              i3 <
                              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
                              i3++) {
-                          dwall_velo_dx[0][i3] += BC_Types[i1].BC_Data_Float[1] * (-ssnrml[0]) *
+                          dwall_velo_dx[0][i3] += goma_ctx->bc.bc_types[i1].BC_Data_Float[1] *
+                                                  (-ssnrml[0]) *
                                                   goma_ctx->fem.bf[MESH_DISPLACEMENT1]->phi[i3];
-                          dwall_velo_dx[1][i3] += BC_Types[i1].BC_Data_Float[1] * (ssnrml[1]) *
+                          dwall_velo_dx[1][i3] += goma_ctx->bc.bc_types[i1].BC_Data_Float[1] *
+                                                  (ssnrml[1]) *
                                                   goma_ctx->fem.bf[MESH_DISPLACEMENT1]->phi[i3];
                         }
                         found_wall_velocity = 1;
                         break;
                       case VELO_TANGENT_USER_BC:
-                        velo[0] =
-                            velo_vary_fnc(UVARY_BC, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
-                                          goma_ctx->fem.fv->x[2], BC_Types[i1].u_BC, time_value);
-                        velo[1] =
-                            velo_vary_fnc(VVARY_BC, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
-                                          goma_ctx->fem.fv->x[2], BC_Types[i1].u_BC, time_value);
+                        velo[0] = velo_vary_fnc(UVARY_BC, goma_ctx->fem.fv->x[0],
+                                                goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2],
+                                                goma_ctx->bc.bc_types[i1].u_BC, time_value);
+                        velo[1] = velo_vary_fnc(VVARY_BC, goma_ctx->fem.fv->x[0],
+                                                goma_ctx->fem.fv->x[1], goma_ctx->fem.fv->x[2],
+                                                goma_ctx->bc.bc_types[i1].u_BC, time_value);
                         wall_velocity = ssnrml[1] * velo[0] - ssnrml[0] * velo[1];
                         dvelo_dx[0][0] = dvelo_vary_fnc_d1(
                             UVARY_BC, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
-                            goma_ctx->fem.fv->x[2], BC_Types[i1].u_BC, time_value);
+                            goma_ctx->fem.fv->x[2], goma_ctx->bc.bc_types[i1].u_BC, time_value);
                         dvelo_dx[0][1] = dvelo_vary_fnc_d2(
                             UVARY_BC, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
-                            goma_ctx->fem.fv->x[2], BC_Types[i1].u_BC, time_value);
+                            goma_ctx->fem.fv->x[2], goma_ctx->bc.bc_types[i1].u_BC, time_value);
                         dvelo_dx[1][0] = dvelo_vary_fnc_d1(
                             VVARY_BC, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
-                            goma_ctx->fem.fv->x[2], BC_Types[i1].u_BC, time_value);
+                            goma_ctx->fem.fv->x[2], goma_ctx->bc.bc_types[i1].u_BC, time_value);
                         dvelo_dx[1][1] = dvelo_vary_fnc_d2(
                             VVARY_BC, goma_ctx->fem.fv->x[0], goma_ctx->fem.fv->x[1],
-                            goma_ctx->fem.fv->x[2], BC_Types[i1].u_BC, time_value);
+                            goma_ctx->fem.fv->x[2], goma_ctx->bc.bc_types[i1].u_BC, time_value);
                         for (i2 = 0; i2 < ielem_dim; i2++) {
                           for (i3 = 0;
                                i3 <
@@ -821,7 +840,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                         break;
                       case VELO_TANGENT_SOLID_BC:
                       case VELO_SLIP_SOLID_BC:
-                        mn = map_mat_index(BC_Types[i1].BC_Data_Int[0]);
+                        mn = map_mat_index(goma_ctx->bc.bc_types[i1].BC_Data_Int[0]);
                         switch (goma_ctx->fem.pd_glob[mn]->MeshMotion) {
                         case LAGRANGIAN:
                           if (goma_ctx->fem.elc_glob[mn]->v_mesh_sfs_model == CONSTANT) {
@@ -929,18 +948,18 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                     wall_velocity = 0;
                     GOMA_WH(-1, "Wall velocity not found : setting to zero\n");
                   }
-                  f = BC_Types[j].BC_Data_Float;
-                  if (BC_Types[j].BC_Name == VELO_THETA_SHIK_BC) {
+                  f = goma_ctx->bc.bc_types[j].BC_Data_Float;
+                  if (goma_ctx->bc.bc_types[j].BC_Name == VELO_THETA_SHIK_BC) {
                     theta_max = f[8];
                   }
-                  if (BC_Types[j].BC_Name == VELO_THETA_HOFFMAN_BC ||
-                      BC_Types[j].BC_Name == VELO_THETA_COX_BC) {
+                  if (goma_ctx->bc.bc_types[j].BC_Name == VELO_THETA_HOFFMAN_BC ||
+                      goma_ctx->bc.bc_types[j].BC_Name == VELO_THETA_COX_BC) {
                     theta_max = f[9];
                     dcl_shearrate = f[10];
                   }
-                  if (BC_Types[j].BC_Name == VELO_THETA_HOFFMAN_BC ||
-                      BC_Types[j].BC_Name == VELO_THETA_COX_BC ||
-                      BC_Types[j].BC_Name == VELO_THETA_TPL_BC) {
+                  if (goma_ctx->bc.bc_types[j].BC_Name == VELO_THETA_HOFFMAN_BC ||
+                      goma_ctx->bc.bc_types[j].BC_Name == VELO_THETA_COX_BC ||
+                      goma_ctx->bc.bc_types[j].BC_Name == VELO_THETA_TPL_BC) {
                     dewet = f[8];
                   }
                   fapply_moving_CA_sinh(func, d_func, d_func_ss, fsnrml, dfsnrml_dx, ssnrml,
@@ -950,8 +969,9 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                                         f[6],             /* t_relax */
                                         f[7],             /* v_old */
                                         x_dot, delta_t, theta, time_value, wall_velocity, theta_max,
-                                        dewet, dcl_shearrate, BC_Types[j_bc_id].BC_Name,
-                                        dwall_velo_dx, local_node_id);
+                                        dewet, dcl_shearrate,
+                                        goma_ctx->bc.bc_types[j_bc_id].BC_Name, dwall_velo_dx,
+                                        local_node_id);
                 } /* if VELO_THETA bc		*/
                 else
                   GOMA_EH(GOMA_ERROR, "NO CA Condition applied ");
@@ -1017,73 +1037,81 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
          *
          */
         if (node->DBST == 1 && iapply &&
-            (BC_Types[bc_input_id].BC_Name == CAPILLARY_BC ||
-             BC_Types[bc_input_id].BC_Name == CAP_REPULSE_BC ||
-             BC_Types[bc_input_id].BC_Name == CAP_REPULSE_ROLL_BC ||
-             BC_Types[bc_input_id].BC_Name == CAP_REPULSE_USER_BC ||
-             BC_Types[bc_input_id].BC_Name == CAP_REPULSE_TABLE_BC ||
-             BC_Types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC ||
-             BC_Types[bc_input_id].BC_Name == CAP_RECOIL_PRESS_BC)) {
+            (goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAPILLARY_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_ROLL_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_USER_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_TABLE_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_RECOIL_PRESS_BC)) {
           j_bc_id = -1;
           for (j = 0; j < goma_ctx->problem.num_bc; j++) {
-            if (BC_Types[j].BC_Data_Int[0] == I &&
-                (BC_Types[j].BC_Name == SURFTANG_BC || BC_Types[j].BC_Name == CAP_ENDFORCE_BC)) {
+            if (goma_ctx->bc.bc_types[j].BC_Data_Int[0] == I &&
+                (goma_ctx->bc.bc_types[j].BC_Name == SURFTANG_BC ||
+                 goma_ctx->bc.bc_types[j].BC_Name == CAP_ENDFORCE_BC)) {
               j_bc_id = j;
             }
           }
           GOMA_EH(j_bc_id, "Surface Tangent condition not found at this node");
           jflag = 0; /* Sensitivies from this BC will be applied. */
-          if (BC_Types[j_bc_id].BC_Name == SURFTANG_BC) {
-            fapply_ST(func, d_func, BC_Types[j_bc_id].BC_Data_Float[0],
-                      BC_Types[j_bc_id].BC_Data_Float[1], BC_Types[j_bc_id].BC_Data_Float[2],
-                      BC_Types[j_bc_id].BC_Data_Float[3], rcoord, (int)elem_side_bc->id_side);
+          if (goma_ctx->bc.bc_types[j_bc_id].BC_Name == SURFTANG_BC) {
+            fapply_ST(func, d_func, goma_ctx->bc.bc_types[j_bc_id].BC_Data_Float[0],
+                      goma_ctx->bc.bc_types[j_bc_id].BC_Data_Float[1],
+                      goma_ctx->bc.bc_types[j_bc_id].BC_Data_Float[2],
+                      goma_ctx->bc.bc_types[j_bc_id].BC_Data_Float[3], rcoord,
+                      (int)elem_side_bc->id_side);
           } else {
-            fapply_ST(func, d_func, BC_Types[j_bc_id].BC_Data_Float[0],
-                      BC_Types[j_bc_id].BC_Data_Float[1], BC_Types[j_bc_id].BC_Data_Float[2],
-                      BC_Types[j_bc_id].BC_Data_Float[3], rcoord, 0);
+            fapply_ST(func, d_func, goma_ctx->bc.bc_types[j_bc_id].BC_Data_Float[0],
+                      goma_ctx->bc.bc_types[j_bc_id].BC_Data_Float[1],
+                      goma_ctx->bc.bc_types[j_bc_id].BC_Data_Float[2],
+                      goma_ctx->bc.bc_types[j_bc_id].BC_Data_Float[3], rcoord, 0);
           }
         }
 
         if (node->DBSTS == 1 && iapply &&
-            (BC_Types[bc_input_id].BC_Name == CAPILLARY_BC ||
-             BC_Types[bc_input_id].BC_Name == CAP_REPULSE_BC ||
-             BC_Types[bc_input_id].BC_Name == CAP_REPULSE_ROLL_BC ||
-             BC_Types[bc_input_id].BC_Name == CAP_REPULSE_USER_BC ||
-             BC_Types[bc_input_id].BC_Name == CAP_REPULSE_TABLE_BC ||
-             BC_Types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC ||
-             BC_Types[bc_input_id].BC_Name == CAP_RECOIL_PRESS_BC)) {
+            (goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAPILLARY_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_ROLL_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_USER_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_REPULSE_TABLE_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC ||
+             goma_ctx->bc.bc_types[bc_input_id].BC_Name == CAP_RECOIL_PRESS_BC)) {
           j_bc_id = -1;
           for (j = 0; j < goma_ctx->problem.num_bc; j++) {
-            if (BC_Types[j].BC_Data_Int[0] == I &&
-                (BC_Types[j].BC_Name == SURFTANG_SCALAR_BC ||
-                 BC_Types[j].BC_Name == CAP_ENDFORCE_SCALAR_BC)) {
+            if (goma_ctx->bc.bc_types[j].BC_Data_Int[0] == I &&
+                (goma_ctx->bc.bc_types[j].BC_Name == SURFTANG_SCALAR_BC ||
+                 goma_ctx->bc.bc_types[j].BC_Name == CAP_ENDFORCE_SCALAR_BC)) {
               j_bc_id = j;
             }
           }
           GOMA_EH(j_bc_id, "Surface Tangent condition not found at this node");
           jflag = 0; /* Sensitivies from this BC will be applied. */
-          if (BC_Types[j_bc_id].BC_Name == SURFTANG_SCALAR_BC) {
+          if (goma_ctx->bc.bc_types[j_bc_id].BC_Name == SURFTANG_SCALAR_BC) {
             apply_ST_scalar(func, d_func, (int)elem_side_bc->id_side,
-                            BC_Types[j_bc_id].BC_Data_Float[0], BC_Types[j_bc_id].BC_Data_Int[1]);
+                            goma_ctx->bc.bc_types[j_bc_id].BC_Data_Float[0],
+                            goma_ctx->bc.bc_types[j_bc_id].BC_Data_Int[1]);
           } else {
-            apply_ST_scalar(func, d_func, 0, BC_Types[j_bc_id].BC_Data_Float[0],
-                            BC_Types[j_bc_id].BC_Data_Int[1]);
+            apply_ST_scalar(func, d_func, 0, goma_ctx->bc.bc_types[j_bc_id].BC_Data_Float[0],
+                            goma_ctx->bc.bc_types[j_bc_id].BC_Data_Int[1]);
           }
         }
 
-        if (node->DBSES == 1 && iapply && (BC_Types[bc_input_id].BC_Name == TENSION_SHEET_BC)) {
+        if (node->DBSES == 1 && iapply &&
+            (goma_ctx->bc.bc_types[bc_input_id].BC_Name == TENSION_SHEET_BC)) {
           j_bc_id = -1;
 
           for (j = 0; j < goma_ctx->problem.num_bc; j++) {
-            if ((BC_Types[j].BC_Data_Int[0] == I) && (BC_Types[j].BC_Name == SHEET_ENDSLOPE_BC)) {
+            if ((goma_ctx->bc.bc_types[j].BC_Data_Int[0] == I) &&
+                (goma_ctx->bc.bc_types[j].BC_Name == SHEET_ENDSLOPE_BC)) {
               j_bc_id = j;
             }
           }
           GOMA_EH(j_bc_id, "Surface Tangent condition not found at this node");
 
-          apply_SES(func, d_func, elem_side_bc, BC_Types[bc_input_id].BC_Data_Float[0], I,
-                    BC_Types[j_bc_id].BC_Data_Float[0], BC_Types[j_bc_id].BC_Data_Float[1], id,
-                    iconnect_ptr, (int)elem_side_bc->id_side);
+          apply_SES(func, d_func, elem_side_bc, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                    I, goma_ctx->bc.bc_types[j_bc_id].BC_Data_Float[0],
+                    goma_ctx->bc.bc_types[j_bc_id].BC_Data_Float[1], id, iconnect_ptr,
+                    (int)elem_side_bc->id_side);
 
           jflag = 0; /* TAB:  this assignment is so the sensitivies from this BC will
                       * be applied.  Note it may be that SURFTANG_SCALAR, CAP_ENDFORCE might
@@ -1097,20 +1125,20 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
          *        -> residual may be a vector of residuals
          */
         if (j_bc_id != -1) {
-          for (p = 0; p < BC_Types[j_bc_id].desc->vector; p++) {
+          for (p = 0; p < goma_ctx->bc.bc_types[j_bc_id].desc->vector; p++) {
             /*
              * Check to see if this BC on this node is applicable
              *   (i.e. no other overriding Dirichlet conditions,
              * And find the global unknown number for applying this condition
              */
-            if (jflag != -1 && (BC_Types[j_bc_id].BC_Name == CA_BC ||
-                                BC_Types[j_bc_id].BC_Name == CA_MOMENTUM_BC ||
-                                BC_Types[j_bc_id].BC_Name == CA_OR_FIX_BC ||
-                                BC_Types[j_bc_id].BC_Name == VELO_THETA_TPL_BC ||
-                                BC_Types[j_bc_id].BC_Name == VELO_THETA_HOFFMAN_BC ||
-                                BC_Types[j_bc_id].BC_Name == VELO_THETA_COX_BC ||
-                                BC_Types[j_bc_id].BC_Name == VELO_THETA_SHIK_BC ||
-                                BC_Types[j_bc_id].BC_Name == MOVING_CA_BC)) {
+            if (jflag != -1 && (goma_ctx->bc.bc_types[j_bc_id].BC_Name == CA_BC ||
+                                goma_ctx->bc.bc_types[j_bc_id].BC_Name == CA_MOMENTUM_BC ||
+                                goma_ctx->bc.bc_types[j_bc_id].BC_Name == CA_OR_FIX_BC ||
+                                goma_ctx->bc.bc_types[j_bc_id].BC_Name == VELO_THETA_TPL_BC ||
+                                goma_ctx->bc.bc_types[j_bc_id].BC_Name == VELO_THETA_HOFFMAN_BC ||
+                                goma_ctx->bc.bc_types[j_bc_id].BC_Name == VELO_THETA_COX_BC ||
+                                goma_ctx->bc.bc_types[j_bc_id].BC_Name == VELO_THETA_SHIK_BC ||
+                                goma_ctx->bc.bc_types[j_bc_id].BC_Name == MOVING_CA_BC)) {
               if (CA_fselem[jflag] != -1 && CA_sselem[jflag] != -1 && CA_id[jflag] == j_bc_id) {
                 index_eq =
                     bc_eqn_index(id, I, j_bc_id, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn, p,
@@ -1124,20 +1152,20 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
             }
 
             if (index_eq >= 0) {
-              if (BC_Types[j_bc_id].BC_Name == SURFTANG_BC ||
-                  BC_Types[j_bc_id].BC_Name == SURFTANG_SCALAR_BC ||
-                  BC_Types[j_bc_id].BC_Name == CAP_ENDFORCE_BC ||
-                  BC_Types[j_bc_id].BC_Name == CAP_ENDFORCE_SCALAR_BC)
+              if (goma_ctx->bc.bc_types[j_bc_id].BC_Name == SURFTANG_BC ||
+                  goma_ctx->bc.bc_types[j_bc_id].BC_Name == SURFTANG_SCALAR_BC ||
+                  goma_ctx->bc.bc_types[j_bc_id].BC_Name == CAP_ENDFORCE_BC ||
+                  goma_ctx->bc.bc_types[j_bc_id].BC_Name == CAP_ENDFORCE_SCALAR_BC)
                 weight = 1.;
-              if (BC_Types[j_bc_id].BC_Name == CA_BC ||
-                  BC_Types[j_bc_id].BC_Name == CA_MOMENTUM_BC ||
-                  BC_Types[j_bc_id].BC_Name == CA_OR_FIX_BC ||
-                  BC_Types[j_bc_id].BC_Name == VELO_THETA_TPL_BC ||
-                  BC_Types[j_bc_id].BC_Name == VELO_THETA_HOFFMAN_BC ||
-                  BC_Types[j_bc_id].BC_Name == VELO_THETA_COX_BC ||
-                  BC_Types[j_bc_id].BC_Name == VELO_THETA_SHIK_BC ||
-                  BC_Types[j_bc_id].BC_Name == MOVING_CA_BC ||
-                  BC_Types[j_bc_id].BC_Name == SHEET_ENDSLOPE_BC)
+              if (goma_ctx->bc.bc_types[j_bc_id].BC_Name == CA_BC ||
+                  goma_ctx->bc.bc_types[j_bc_id].BC_Name == CA_MOMENTUM_BC ||
+                  goma_ctx->bc.bc_types[j_bc_id].BC_Name == CA_OR_FIX_BC ||
+                  goma_ctx->bc.bc_types[j_bc_id].BC_Name == VELO_THETA_TPL_BC ||
+                  goma_ctx->bc.bc_types[j_bc_id].BC_Name == VELO_THETA_HOFFMAN_BC ||
+                  goma_ctx->bc.bc_types[j_bc_id].BC_Name == VELO_THETA_COX_BC ||
+                  goma_ctx->bc.bc_types[j_bc_id].BC_Name == VELO_THETA_SHIK_BC ||
+                  goma_ctx->bc.bc_types[j_bc_id].BC_Name == MOVING_CA_BC ||
+                  goma_ctx->bc.bc_types[j_bc_id].BC_Name == SHEET_ENDSLOPE_BC)
                 weight = BIG_PENALTY;
 
               /*
@@ -1146,7 +1174,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                * degree of freedom for a variable located at a node.
                */
               if (eqn == R_MASS) {
-                ieqn = MAX_PROB_EQN + BC_Types[bc_input_id].species_eq;
+                ieqn = MAX_PROB_EQN + goma_ctx->bc.bc_types[bc_input_id].species_eq;
               } else {
                 ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
               }
@@ -1166,7 +1194,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
 
                 for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
                   if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var] &&
-                      (BC_Types[j_bc_id].desc->sens[var] || 1) && jflag != -1)
+                      (goma_ctx->bc.bc_types[j_bc_id].desc->sens[var] || 1) && jflag != -1)
                   /*			    if (pd->v[pg->imtrx][var] &&
                      (BC_Types[j_bc_id].desc->sens[var]
                      || 1 ) && jflag != -1) TAB 01-08-07 */
@@ -1449,10 +1477,12 @@ int apply_shell_grad_bc(double x[],              /* Solution vector for the curr
         /* Loop over defined boundary conditions */
         for (ibc = 0; ibc < nbc; ibc++) {
           BCid = (int)side->BC_input_id[ibc];
-          bc = BC_Types + BCid;
+          bc = goma_ctx->bc.bc_types + BCid;
           bc_desc = bc->desc;
-          if ((ss_index = in_list(bc->BC_ID, 0, exo->num_side_sets, &(ss_to_blks[0][0]))) == -1) {
-            sprintf(Err_Msg, "Could not find BC_ID %d in ss_to_blks", BC_Types[bc_input_id].BC_ID);
+          if ((ss_index = in_list(bc->BC_ID, 0, exo->num_side_sets,
+                                  &(goma_ctx->bc.ss_to_blks[0][0]))) == -1) {
+            sprintf(Err_Msg, "Could not find BC_ID %d in ss_to_blks",
+                    goma_ctx->bc.bc_types[bc_input_id].BC_ID);
             GOMA_EH(GOMA_ERROR, Err_Msg);
           }
 
@@ -1754,40 +1784,47 @@ void assemble_sharp_integrated_bc(
   ibc = 0;
 
   while ((bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1) {
-    bc = BC_Types + bc_input_id;
+    bc = goma_ctx->bc.bc_types + bc_input_id;
     bc_desc = bc->desc;
     memset(func, 0, DIM * sizeof(double));
     memset(d_func, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
 
     switch (bc->BC_Name) {
     case SHARP_CA_2D_BC:
-      apply_sharp_ca(func, d_func, BC_Types[bc_input_id].BC_Data_Float[0]);
+      apply_sharp_ca(func, d_func, goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0]);
       break;
     case SHARP_WETLIN_VELOCITY_BC:
-      apply_sharp_wetting_velocity(
-          func, d_func, bc->BC_Name, BC_Types[bc_input_id].BC_Data_Float[3],
-          BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[1], 0, 0, 0);
+      apply_sharp_wetting_velocity(func, d_func, bc->BC_Name,
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1], 0, 0, 0);
       break;
     case SHARP_BLAKE_VELOCITY_BC:
-      apply_sharp_wetting_velocity(
-          func, d_func, bc->BC_Name, BC_Types[bc_input_id].BC_Data_Float[3],
-          BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[2],
-          BC_Types[bc_input_id].BC_Data_Float[1], BC_Types[bc_input_id].BC_Data_Float[4],
-          BC_Types[bc_input_id].BC_Data_Float[5]);
+      apply_sharp_wetting_velocity(func, d_func, bc->BC_Name,
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5]);
       break;
     case SHARP_HOFFMAN_VELOCITY_BC:
-      apply_sharp_wetting_velocity(
-          func, d_func, bc->BC_Name, BC_Types[bc_input_id].BC_Data_Float[2],
-          BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[1], 0,
-          BC_Types[bc_input_id].BC_Data_Float[3], BC_Types[bc_input_id].BC_Data_Float[4]);
+      apply_sharp_wetting_velocity(func, d_func, bc->BC_Name,
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1], 0,
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4]);
       break;
     case SHARP_COX_VELOCITY_BC:
     case SHARP_SHIK_VELOCITY_BC:
-      apply_sharp_wetting_velocity(
-          func, d_func, bc->BC_Name, BC_Types[bc_input_id].BC_Data_Float[3],
-          BC_Types[bc_input_id].BC_Data_Float[0], BC_Types[bc_input_id].BC_Data_Float[1],
-          BC_Types[bc_input_id].BC_Data_Float[2], BC_Types[bc_input_id].BC_Data_Float[4],
-          BC_Types[bc_input_id].BC_Data_Float[5]);
+      apply_sharp_wetting_velocity(func, d_func, bc->BC_Name,
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[3],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[0],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[1],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[2],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[4],
+                                   goma_ctx->bc.bc_types[bc_input_id].BC_Data_Float[5]);
       break;
 
     default:

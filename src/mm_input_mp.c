@@ -6873,8 +6873,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   read_bc_mp = -1;
   for (i = 0; i < goma_ctx->problem.num_bc; i++) {
-    if (BC_Types[i].BC_Name == VL_POLY_BC || BC_Types[i].BC_Name == YFLUX_EQUIL_BC ||
-        BC_Types[i].BC_Name == VL_EQUIL_PRXN_BC) {
+    if (goma_ctx->bc.bc_types[i].BC_Name == VL_POLY_BC ||
+        goma_ctx->bc.bc_types[i].BC_Name == YFLUX_EQUIL_BC ||
+        goma_ctx->bc.bc_types[i].BC_Name == VL_EQUIL_PRXN_BC) {
       read_bc_mp = i;
     }
   }

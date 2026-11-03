@@ -5166,12 +5166,12 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
              */
             iapply = 0;
             if ((ss_index = in_list(ss_ids[iss], 0, goma_ctx->mesh.proc_num_side_sets,
-                                    ss_to_blks[0])) == -1) {
+                                    goma_ctx->bc.ss_to_blks[0])) == -1) {
               GOMA_EH(GOMA_ERROR, "Cannot match side SSID to ss_to_blks[].");
             }
 
             if (exo->eb_id[find_elemblock_index(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem,
-                                                exo)] == ss_to_blks[1][ss_index]) {
+                                                exo)] == goma_ctx->bc.ss_to_blks[1][ss_index]) {
               iapply = 1;
             }
             if (iapply) {
@@ -13196,9 +13196,9 @@ int count_nodes_on_SS(const int ss_id,  /* SS id of Primary Side Set */
   num_nodes_on_side = 0;
   for (j = 0; j < num_local_nodes; j++) {
     J = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + j];
-    if (in_list(ss_id, 0, MAX_SS_PER_NODE, SS_list[J]) != -1) {
-      if (ss_id2 == -1 || in_list(ss_id2, 0, MAX_SS_PER_NODE, SS_list[J]) != -1) {
-        if (ss_id3 == -1 || in_list(ss_id3, 0, MAX_SS_PER_NODE, SS_list[J]) != -1) {
+    if (in_list(ss_id, 0, MAX_SS_PER_NODE, goma_ctx->bc.ss_list[J]) != -1) {
+      if (ss_id2 == -1 || in_list(ss_id2, 0, MAX_SS_PER_NODE, goma_ctx->bc.ss_list[J]) != -1) {
+        if (ss_id3 == -1 || in_list(ss_id3, 0, MAX_SS_PER_NODE, goma_ctx->bc.ss_list[J]) != -1) {
           local_ss_node_list[num_nodes_on_side] = J;
           local_elem_node_id[num_nodes_on_side] = j;
           num_nodes_on_side++;

@@ -1150,10 +1150,10 @@ void rd_genl_specs(FILE *ifp, char *input) {
       goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_SP;
     } else if (!strcmp(input, "TABLE")) {
       goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_TABLE;
-      num_ext_Tables++;
+      goma_ctx->bc.num_ext_tables++;
     } else if (!strcmp(input, "N1")) {
       goma_ctx->fem.efv->i[goma_ctx->num_var_external] = I_N1;
-      num_ext_Tables++;
+      goma_ctx->bc.num_ext_tables++;
     } else {
       sprintf(err_msg, "??? interpolation \"%s\" for external field var", input);
       GOMA_EH(GOMA_ERROR, err_msg);
@@ -5998,8 +5998,9 @@ void rd_ac_specs(FILE *ifp, char *input) {
               strcpy(filename, arguments[i + 1]);
               strcpy(table_var, arguments[i + 2]);
               strcpy(interpolation, arguments[i + 3]);
-              AC_Tables[0] = setup_table_AC(filename, AC_table, table_var, interpolation);
-              num_AC_Tables++;
+              goma_ctx->bc.ac_tables[0] =
+                  setup_table_AC(filename, AC_table, table_var, interpolation);
+              goma_ctx->bc.num_ac_tables++;
               break;
             }
           } else {
@@ -11336,13 +11337,14 @@ int look_for_mat_proptable(FILE *imp,              /* ptr to input stream (in)*/
       /*
        * Fall through for all unimplemented cases
        */
-      if (num_MP_Tables == MAX_MP_TABLES) {
+      if (goma_ctx->bc.num_mp_tables == MAX_MP_TABLES) {
         GOMA_EH(GOMA_ERROR, "Maximum TABLE_MPs exceeded .");
       }
 
       table_local = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
-      MP_Tables[num_MP_Tables] = setup_table_MP(imp, table_local, search_string);
-      *tableindex = num_MP_Tables++;
+      goma_ctx->bc.mp_tables[goma_ctx->bc.num_mp_tables] =
+          setup_table_MP(imp, table_local, search_string);
+      *tableindex = goma_ctx->bc.num_mp_tables++;
 
       MaterialModel[species_no] = DumModel;
       iread = 1;

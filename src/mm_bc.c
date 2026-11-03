@@ -61,20 +61,6 @@
 
 static Spfrtn sr;
 
-/*
- * Variable DEFINITIONS...
- */
-
-int **ROT_list = NULL;
-
-int **SS_list = NULL;
-
-int Use_2D_Rotation_Vectors = FALSE;
-
-int PRESSURE_DATUM = FALSE;        /* flag to determine if a pressure datum is set */
-int pressure_datum_element = 0;    /* element in which the pressure datum is set */
-double pressure_datum_value = 0.0; /* value of the pressure datum */
-
 /********** R O U T I N E S   D E F I N E D   I N   T H I S   F I L E **********
  *
  *     NAME OF FUNCTION			TYPE 		CALLED BY
@@ -176,21 +162,28 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
     /*****************************************************************************/
 
     /* First check to see if this boundary condition is a node set */
-    if (!strcmp(BC_Types[ibc].Set_Type, "NS")) {
+    if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "NS")) {
 
       /*
        *   Next, check to see if this node set boundary condition is a Dirichlet
        *  boundary condition
        */
-      if (BC_Types[ibc].desc->method == DIRICHLET || BC_Types[ibc].BC_Name == SURFTANG_BC ||
-          BC_Types[ibc].BC_Name == SURFTANG_SCALAR_BC || BC_Types[ibc].BC_Name == CAP_ENDFORCE_BC ||
-          BC_Types[ibc].BC_Name == CAP_ENDFORCE_SCALAR_BC || BC_Types[ibc].BC_Name == CA_BC ||
-          BC_Types[ibc].BC_Name == CA_MOMENTUM_BC || BC_Types[ibc].BC_Name == CA_OR_FIX_BC ||
-          BC_Types[ibc].BC_Name == MOVING_CA_BC || BC_Types[ibc].BC_Name == VELO_THETA_TPL_BC ||
-          BC_Types[ibc].BC_Name == VELO_THETA_HOFFMAN_BC ||
-          BC_Types[ibc].BC_Name == VELO_THETA_COX_BC ||
-          BC_Types[ibc].BC_Name == VELO_THETA_SHIK_BC || BC_Types[ibc].BC_Name == SH_SLOPE_X_BC ||
-          BC_Types[ibc].BC_Name == SH_SLOPE_Y_BC || BC_Types[ibc].BC_Name == SHEET_ENDSLOPE_BC) {
+      if (goma_ctx->bc.bc_types[ibc].desc->method == DIRICHLET ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == SURFTANG_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == SURFTANG_SCALAR_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == CAP_ENDFORCE_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == CAP_ENDFORCE_SCALAR_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == CA_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == CA_MOMENTUM_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == CA_OR_FIX_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == MOVING_CA_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == VELO_THETA_TPL_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == VELO_THETA_HOFFMAN_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == VELO_THETA_COX_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == VELO_THETA_SHIK_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == SH_SLOPE_X_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == SH_SLOPE_Y_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == SHEET_ENDSLOPE_BC) {
 
         /*
          * Resolve what material's variables this boundary condition will
@@ -202,10 +195,10 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
          * only the variable associated with that particular material is
          * assigned to the Dirichlet condition.
          */
-        if (BC_Types[ibc].BC_EBID_Apply == -1) {
+        if (goma_ctx->bc.bc_types[ibc].BC_EBID_Apply == -1) {
           matID = -2;
         } else {
-          matID = map_mat_index(BC_Types[ibc].BC_EBID_Apply);
+          matID = map_mat_index(goma_ctx->bc.bc_types[ibc].BC_EBID_Apply);
         }
 
         /* Loop over the total number of node sets defined for the current processor */
@@ -213,7 +206,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
 
           /* Check for a match between the ID of the current node set and the node set
              ID specified in the input file - continue if a match is found */
-          if (exo->ns_id[ins] == BC_Types[ibc].BC_ID) {
+          if (exo->ns_id[ins] == goma_ctx->bc.bc_types[ibc].BC_ID) {
 
             /* Loop over all the global nodes in the current node set */
             for (i = 0; i < exo->ns_num_nodes[ins]; i++) {
@@ -225,7 +218,8 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
                * of a dirichlet BC and also set the boundary condition in x[],
                * for the current node, inode, and boundary condition
                */
-              error_cond = (set_nodal_Dirichlet_BC(inode, ibc, &BC_Types[ibc], x, xdot, matID) ||
+              error_cond = (set_nodal_Dirichlet_BC(inode, ibc, &goma_ctx->bc.bc_types[ibc], x, xdot,
+                                                   matID) ||
                             error_cond);
 
             } /* END for (i = 0; i < Proc_NS_Count[ins]; i++)               */
@@ -240,21 +234,21 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
     /*****************************************************************************/
 
     /* First check to see if this boundary condition is a side set 	      */
-    if (!strcmp(BC_Types[ibc].Set_Type, "SS")) {
+    if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "SS")) {
 
       /* Next, check to see if this boundary condition is a Dirichlet
        * boundary condition specified by a side set
        */
-      if (BC_Types[ibc].desc->method == DIRICHLET) {
+      if (goma_ctx->bc.bc_types[ibc].desc->method == DIRICHLET) {
         fprintf(stderr, "\nWARNING: using side-sets for Dirichlet BC %s",
-                BC_Types[ibc].desc->name1);
+                goma_ctx->bc.bc_types[ibc].desc->name1);
         /* Loop over the total number of side sets defined for the current processor */
         for (ins = 0; ins < exo->num_side_sets; ins++) {
           /*
            * Check for a match between the ID of the current side set and the side set
            * ID specified in the input file - continue if a match is found
            */
-          if (goma_ctx->mesh.proc_ss_ids[ins] == BC_Types[ibc].BC_ID) {
+          if (goma_ctx->mesh.proc_ss_ids[ins] == goma_ctx->bc.bc_types[ibc].BC_ID) {
             /*
              * Loop over all the sides in the current side set
              */
@@ -275,8 +269,9 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
               ielem = exo->ss_elem_list[exo->ss_elem_index[ins] + side_index];
               elem_block_index = find_elemblock_index(ielem, exo);
               matID = goma_ctx->problem.matilda[elem_block_index];
-              if (BC_Types[ibc].BC_EBID_Apply != -1) {
-                if (Element_Blocks[elem_block_index].Elem_Blk_Id != BC_Types[ibc].BC_EBID_Apply) {
+              if (goma_ctx->bc.bc_types[ibc].BC_EBID_Apply != -1) {
+                if (Element_Blocks[elem_block_index].Elem_Blk_Id !=
+                    goma_ctx->bc.bc_types[ibc].BC_EBID_Apply) {
                   continue;
                 }
               }
@@ -291,7 +286,8 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
                  *  of a dirichlet BC and also set the boundary condition in x[],
                  * for the current node, inode, and boundary condition
                  */
-                error_cond |= set_nodal_Dirichlet_BC(inode, ibc, &BC_Types[ibc], x, xdot, matID);
+                error_cond |=
+                    set_nodal_Dirichlet_BC(inode, ibc, &goma_ctx->bc.bc_types[ibc], x, xdot, matID);
               }
             }
           } /* END if (Proc_SS_Ids[ins] == BC_Types[ibc].BC_ID)	      */
@@ -307,7 +303,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
      * First check to see if this boundary condition is volumetric bc
      * based on material numbers
      */
-    if (!strcmp(BC_Types[ibc].Set_Type, "MN")) {
+    if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "MN")) {
       /*
        *  Malloc a temporary vector of ints, that will be used
        *  to ensure that we vist each node that needs a bc, once
@@ -317,7 +313,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
       /*
        *  Check to see if this is indeed a Dirichlet condition
        */
-      if (BC_Types[ibc].desc->method == DIRICHLET) {
+      if (goma_ctx->bc.bc_types[ibc].desc->method == DIRICHLET) {
         /*
          * Loop over all of the element blocks in the problem
          */
@@ -361,7 +357,8 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
                  * of a Dirichlet BC and also set the boundary condition in x[],
                  * for the current node, inode, and boundary condition
                  */
-                error_cond |= set_nodal_Dirichlet_BC(inode, ibc, &BC_Types[ibc], x, xdot, mn);
+                error_cond |=
+                    set_nodal_Dirichlet_BC(inode, ibc, &goma_ctx->bc.bc_types[ibc], x, xdot, mn);
               }
             }
           } /*  for (ielem = e_start; ielem < e_end; ielem++) */
@@ -384,12 +381,15 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
 
   apply_pressure_datum = FALSE; /* standard default to begin... */
 
-  if (PRESSURE_DATUM == 1) {
-    if (pressure_datum_element < 0 || pressure_datum_element >= dpi->num_elems_global) {
-      log_err("Specified pressure datum element %d out of range.", pressure_datum_element);
+  if (goma_ctx->bc.pressure_datum == 1) {
+    if (goma_ctx->bc.pressure_datum_element < 0 ||
+        goma_ctx->bc.pressure_datum_element >= dpi->num_elems_global) {
+      log_err("Specified pressure datum element %d out of range.",
+              goma_ctx->bc.pressure_datum_element);
     }
 
-    local_elem = in_list(pressure_datum_element, 0, dpi->num_elems, dpi->elem_index_global);
+    local_elem =
+        in_list(goma_ctx->bc.pressure_datum_element, 0, dpi->num_elems, dpi->elem_index_global);
 
     /*
      * Still need to check whether the element is actually owned by
@@ -409,13 +409,13 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
          * instead of global.
          */
 
-        pressure_datum_element = local_elem;
+        goma_ctx->bc.pressure_datum_element = local_elem;
       }
     }
   }
 
   if (apply_pressure_datum) {
-    iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[pressure_datum_element];
+    iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[goma_ctx->bc.pressure_datum_element];
     /*
      * determine the node at which to apply the pressure datum
      * it is always applied to the first pressure unknown in the designated
@@ -425,9 +425,9 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
      *        so that PRESSURE DATUM could be treated the same as
      *        all of the other boundary conditions.
      */
-    num_nodes = elem_info(NNODES, Elem_Type(exo, pressure_datum_element));
+    num_nodes = elem_info(NNODES, Elem_Type(exo, goma_ctx->bc.pressure_datum_element));
     datum_set = 1;
-    mn = find_mat_number(pressure_datum_element, exo);
+    mn = find_mat_number(goma_ctx->bc.pressure_datum_element, exo);
     for (n = 0; n < num_nodes; n++) {
       inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + n];
       node = Nodes[inode];
@@ -441,16 +441,17 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
 
         node->DBC[goma_ctx->fem.pg->imtrx][offset] = 0;
         ie = Index_Solution(inode, PRESSURE, 0, 0, mn, goma_ctx->fem.pg->imtrx);
-        x[ie] = pressure_datum_value;
+        x[ie] = goma_ctx->bc.pressure_datum_value;
         xdot[ie] = 0.0;
         log_msg("Setting pressure datum");
-        log_msg("        pressure datum element (local)  = %d", pressure_datum_element);
+        log_msg("        pressure datum element (local)  = %d",
+                goma_ctx->bc.pressure_datum_element);
         log_msg("        pressure datum element (global) = %d",
-                dpi->elem_index_global[pressure_datum_element]);
+                dpi->elem_index_global[goma_ctx->bc.pressure_datum_element]);
         log_msg("        pressure datum node (local)     = %d", inode);
         log_msg("        pressure datum node (global)    = %d", dpi->node_index_global[inode]);
         log_msg("        pressure datum dof (local)      = %d", ie);
-        log_msg("        pressure datum value            = %g", pressure_datum_value);
+        log_msg("        pressure datum value            = %g", goma_ctx->bc.pressure_datum_value);
       }
     }
   }
@@ -888,7 +889,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
     /******************************************************************************/
 
     /* First check to see if this boundary condition is a node set 	      */
-    if (!strcmp(BC_Types[ibc].Set_Type, "NS")) {
+    if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "NS")) {
 
       /*
        *  Next, check to see if this boundary condition is a Surface Integral
@@ -900,22 +901,22 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
        */
 
       // Isolate this case for now
-      if (BC_Types[ibc].BC_Name == SH_GAMMA1_DERIV_SYMM_BC ||
-          BC_Types[ibc].BC_Name == SH_GAMMA2_DERIV_SYMM_BC) {
+      if (goma_ctx->bc.bc_types[ibc].BC_Name == SH_GAMMA1_DERIV_SYMM_BC ||
+          goma_ctx->bc.bc_types[ibc].BC_Name == SH_GAMMA2_DERIV_SYMM_BC) {
         /*
          *  Next, check to see if this boundary condition (not necessarily a
          *  Surface Integral boundary condition) should be specified by  edges of surface shells.
          *
          */
-        if (BC_Types[ibc].desc->method == COLLOCATE_SURF ||
-            BC_Types[ibc].desc->method == STRONG_INT_SURF ||
-            BC_Types[ibc].desc->method == WEAK_INT_SURF ||
-            BC_Types[ibc].desc->method == WEAK_SHARP_INT ||
-            BC_Types[ibc].desc->method == CONTACT_SURF ||
-            BC_Types[ibc].desc->method == WEAK_SHELL_GRAD ||
-            BC_Types[ibc].desc->method == STRONG_SHELL_GRAD ||
-            BC_Types[ibc].desc->method == STRONG_INT_NEDELEC ||
-            BC_Types[ibc].desc->method == WEAK_INT_NEDELEC) {
+        if (goma_ctx->bc.bc_types[ibc].desc->method == COLLOCATE_SURF ||
+            goma_ctx->bc.bc_types[ibc].desc->method == STRONG_INT_SURF ||
+            goma_ctx->bc.bc_types[ibc].desc->method == WEAK_INT_SURF ||
+            goma_ctx->bc.bc_types[ibc].desc->method == WEAK_SHARP_INT ||
+            goma_ctx->bc.bc_types[ibc].desc->method == CONTACT_SURF ||
+            goma_ctx->bc.bc_types[ibc].desc->method == WEAK_SHELL_GRAD ||
+            goma_ctx->bc.bc_types[ibc].desc->method == STRONG_SHELL_GRAD ||
+            goma_ctx->bc.bc_types[ibc].desc->method == STRONG_INT_NEDELEC ||
+            goma_ctx->bc.bc_types[ibc].desc->method == WEAK_INT_NEDELEC) {
           /*
            * Resolve what material's variables this boundary condition will
            * be applied on. If no specification of element block ID is made,
@@ -942,7 +943,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
              *Check for a match between the ID of the current node set and the node set
              *  ID specified in the input file - continue if a match is found
              */
-            if (exo->ns_id[ins] == BC_Types[ibc].BC_ID) {
+            if (exo->ns_id[ins] == goma_ctx->bc.bc_types[ibc].BC_ID) {
               /*
                * Loop over all the global nodes in the current node set
                */
@@ -954,10 +955,10 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
                  *  Get the ith local node in the current node set
                  */
                 inode = exo->ns_node_list[exo->ns_node_index[ins] + i];
-                if (BC_Types[ibc].BC_Name == SH_GAMMA1_DERIV_SYMM_BC ||
-                    BC_Types[ibc].BC_Name == SH_GAMMA2_DERIV_SYMM_BC) {
+                if (goma_ctx->bc.bc_types[ibc].BC_Name == SH_GAMMA1_DERIV_SYMM_BC ||
+                    goma_ctx->bc.bc_types[ibc].BC_Name == SH_GAMMA2_DERIV_SYMM_BC) {
 
-                  ebid_target = BC_Types[ibc].BC_Data_Int[0];
+                  ebid_target = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
 
                   nfound = searchEBForNode(ebid_target, exo, inode, elemList, 5);
                   if (nfound != 1) {
@@ -973,10 +974,11 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
                     fprintf(stderr, "local_node_list[%d] = %d\n", j, inode);
                   }
 #endif
-                  if (BC_Types[ibc].matrix >= 0) {
-                    setup_Elem_BC(&First_Elem_Side_BC_Array[BC_Types[ibc].matrix][ielem],
-                                  &BC_Types[ibc], ibc, num_nodes_on_side, ielem, local_node_list,
-                                  exo);
+                  if (goma_ctx->bc.bc_types[ibc].matrix >= 0) {
+                    setup_Elem_BC(
+                        &First_Elem_Side_BC_Array[goma_ctx->bc.bc_types[ibc].matrix][ielem],
+                        &goma_ctx->bc.bc_types[ibc], ibc, num_nodes_on_side, ielem, local_node_list,
+                        exo);
                   }
                 }
               } /* END for (i = 0; i < Proc_NS_Count[ins]; i++)           */
@@ -993,19 +995,19 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
     /*****************************************************************************/
 
     /* First check to see if this boundary condition is a side set 	     */
-    if (!strcmp(BC_Types[ibc].Set_Type, "SS")) {
+    if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "SS")) {
 
       /* Next, check to see if this boundary condition (not necessarily a
          Surface Integral boundary condition) should be specified by side-sets */
-      if (BC_Types[ibc].desc->method == COLLOCATE_SURF ||
-          BC_Types[ibc].desc->method == STRONG_INT_SURF ||
-          BC_Types[ibc].desc->method == WEAK_INT_SURF ||
-          BC_Types[ibc].desc->method == WEAK_SHARP_INT ||
-          BC_Types[ibc].desc->method == CONTACT_SURF ||
-          BC_Types[ibc].desc->method == WEAK_SHELL_GRAD ||
-          BC_Types[ibc].desc->method == STRONG_SHELL_GRAD ||
-          BC_Types[ibc].desc->method == STRONG_INT_NEDELEC ||
-          BC_Types[ibc].desc->method == WEAK_INT_NEDELEC) {
+      if (goma_ctx->bc.bc_types[ibc].desc->method == COLLOCATE_SURF ||
+          goma_ctx->bc.bc_types[ibc].desc->method == STRONG_INT_SURF ||
+          goma_ctx->bc.bc_types[ibc].desc->method == WEAK_INT_SURF ||
+          goma_ctx->bc.bc_types[ibc].desc->method == WEAK_SHARP_INT ||
+          goma_ctx->bc.bc_types[ibc].desc->method == CONTACT_SURF ||
+          goma_ctx->bc.bc_types[ibc].desc->method == WEAK_SHELL_GRAD ||
+          goma_ctx->bc.bc_types[ibc].desc->method == STRONG_SHELL_GRAD ||
+          goma_ctx->bc.bc_types[ibc].desc->method == STRONG_INT_NEDELEC ||
+          goma_ctx->bc.bc_types[ibc].desc->method == WEAK_INT_NEDELEC) {
 
         /* Loop over the total number of side sets defined on the current processor */
 
@@ -1016,7 +1018,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
            * and the side set ID specified in the input file
            * - continue if a match is found
            */
-          if (exo->ss_id[iss] == BC_Types[ibc].BC_ID) {
+          if (exo->ss_id[iss] == goma_ctx->bc.bc_types[ibc].BC_ID) {
             /*
              * Loop over all the global elements in the current
              * side set
@@ -1053,9 +1055,10 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
                 fprintf(stderr, "local_node_list[%d] = %d\n", j, local_node_list[j]);
               }
 #endif
-              if (BC_Types[ibc].matrix >= 0) {
-                setup_Elem_BC(&First_Elem_Side_BC_Array[BC_Types[ibc].matrix][ielem],
-                              &BC_Types[ibc], ibc, num_nodes_on_side, ielem, local_node_list, exo);
+              if (goma_ctx->bc.bc_types[ibc].matrix >= 0) {
+                setup_Elem_BC(&First_Elem_Side_BC_Array[goma_ctx->bc.bc_types[ibc].matrix][ielem],
+                              &goma_ctx->bc.bc_types[ibc], ibc, num_nodes_on_side, ielem,
+                              local_node_list, exo);
               }
 
             } /* END for (i = 0; i < Proc_SS_Elem_Count[iss]; i++)          */
@@ -1071,13 +1074,13 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
   /*****************************************************************************/
 
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-    bc = BC_Types + ibc;
+    bc = goma_ctx->bc.bc_types + ibc;
     if (bc->BC_Name == SDC_STEFANFLOW_BC) {
       ibc_id = bc->BC_ID;
       bc->BC_Data_Int[1] = 0;
       ibc1 = 2;
       for (ibc2 = 0; ibc2 < goma_ctx->problem.num_bc; ibc2++) {
-        bc2 = BC_Types + ibc2;
+        bc2 = goma_ctx->bc.bc_types + ibc2;
         if ((bc2->BC_ID == ibc_id) && (bc2->BC_Name == VL_EQUIL_PRXN_BC)) {
           bc->BC_Data_Int[1]++;
           bc->BC_Data_Int[ibc1] = ibc2;
@@ -1096,13 +1099,17 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
    */
   DPRINTF(stdout, "\n");
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-    if (BC_Types[ibc].BC_Name == KIN_LEAK_BC || BC_Types[ibc].BC_Name == KIN_CHEM_BC ||
-        BC_Types[ibc].BC_Name == KIN_ELECTRODEPOSITION_BC ||   /*  RSL 5/27/02  */
-        BC_Types[ibc].BC_Name == VNORM_ELECTRODEPOSITION_BC || /*  RSL 5/30/02  */
-        BC_Types[ibc].BC_Name == QRAD_BC || BC_Types[ibc].BC_Name == QCONV_BC ||
-        BC_Types[ibc].BC_Name == VNORM_LEAK_BC || BC_Types[ibc].BC_Name == LATENT_HEAT_BC ||
-        BC_Types[ibc].BC_Name == LS_EIK_KIN_LEAK_BC ||
-        BC_Types[ibc].BC_Name == LS_EXTV_KIN_LEAK_BC || BC_Types[ibc].BC_Name == LS_EXTV_LATENT_BC)
+    if (goma_ctx->bc.bc_types[ibc].BC_Name == KIN_LEAK_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == KIN_CHEM_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == KIN_ELECTRODEPOSITION_BC ||   /*  RSL 5/27/02  */
+        goma_ctx->bc.bc_types[ibc].BC_Name == VNORM_ELECTRODEPOSITION_BC || /*  RSL 5/30/02  */
+        goma_ctx->bc.bc_types[ibc].BC_Name == QRAD_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == QCONV_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == VNORM_LEAK_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == LATENT_HEAT_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == LS_EIK_KIN_LEAK_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == LS_EXTV_KIN_LEAK_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == LS_EXTV_LATENT_BC)
 
     {
       /*
@@ -1110,37 +1117,39 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
        * Conditions that describe the rate of the leak
        */
 
-      ibc_id = BC_Types[ibc].BC_ID;
-      ibc_compid = BC_Types[ibc].species_eq;
-      ibc_desc = BC_Types[ibc].BC_Desc_index;
+      ibc_id = goma_ctx->bc.bc_types[ibc].BC_ID;
+      ibc_compid = goma_ctx->bc.bc_types[ibc].species_eq;
+      ibc_desc = goma_ctx->bc.bc_types[ibc].BC_Desc_index;
       ibc1 = -1;
       ibcmp = -1;
       DPRINTF(stdout, "Leaky %s BC found on %2s %d\n", BC_Desc[ibc_desc].name1,
-              BC_Types[ibc].Set_Type, ibc_id);
+              goma_ctx->bc.bc_types[ibc].Set_Type, ibc_id);
 
       for (ibc2 = 0; ibc2 < goma_ctx->problem.num_bc; ibc2++) {
         /*
          * Assume grouping for either of the 3 cases.
          */
-        if ((BC_Types[ibc2].BC_ID == ibc_id) &&
-            ((BC_Types[ibc2].BC_Name == YFLUX_BC) || (BC_Types[ibc2].BC_Name == LS_YFLUX_BC) ||
-             (BC_Types[ibc2].BC_Name == LS_LATENT_HEAT_BC) ||
-             (BC_Types[ibc2].BC_Name == YFLUX_BV_BC) || (BC_Types[ibc2].BC_Name == YFLUX_HOR_BC) ||
-             (BC_Types[ibc2].BC_Name == YFLUX_ORR_BC) ||
-             (BC_Types[ibc2].BC_Name == YFLUX_H2O_ANODE_BC) ||
-             (BC_Types[ibc2].BC_Name == YFLUX_H2O_CATHODE_BC) ||
-             (BC_Types[ibc2].BC_Name == YFLUX_SULFIDATION_BC) ||
-             (BC_Types[ibc2].BC_Name == YFLUX_BV2_BC) || /*  RSL 8/8/01  */
-             (BC_Types[ibc2].BC_Name == YFLUX_NI_BC) ||  /*  RSL 8/8/01  */
-             (BC_Types[ibc2].BC_Name == YFLUX_EQUIL_BC) ||
-             (BC_Types[ibc2].BC_Name == YFLUX_USER_BC) ||
-             (BC_Types[ibc2].BC_Name == YFLUX_CONST_BC) ||
-             (BC_Types[ibc2].BC_Name == POROUS_LIQ_FLUX_CONST_BC) ||
-             (BC_Types[ibc2].BC_Name == POROUS_GAS_FLUX_CONST_BC) ||
-             (BC_Types[ibc2].BC_Name == POROUS_FLUX_BC))) {
-          BC_Types[ibc2].BC_Data_Int[1] = ibc1;
+        if ((goma_ctx->bc.bc_types[ibc2].BC_ID == ibc_id) &&
+            ((goma_ctx->bc.bc_types[ibc2].BC_Name == YFLUX_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == LS_YFLUX_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == LS_LATENT_HEAT_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == YFLUX_BV_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == YFLUX_HOR_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == YFLUX_ORR_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == YFLUX_H2O_ANODE_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == YFLUX_H2O_CATHODE_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == YFLUX_SULFIDATION_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == YFLUX_BV2_BC) || /*  RSL 8/8/01  */
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == YFLUX_NI_BC) ||  /*  RSL 8/8/01  */
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == YFLUX_EQUIL_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == YFLUX_USER_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == YFLUX_CONST_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == POROUS_LIQ_FLUX_CONST_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == POROUS_GAS_FLUX_CONST_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == POROUS_FLUX_BC))) {
+          goma_ctx->bc.bc_types[ibc2].BC_Data_Int[1] = ibc1;
           ibc1 = ibc2;
-          if ((ibc_compid != -1) && (ibc_compid == BC_Types[ibc2].species_eq))
+          if ((ibc_compid != -1) && (ibc_compid == goma_ctx->bc.bc_types[ibc2].species_eq))
             ibcmp = ibc2;
           DPRINTF(stdout, "Leaky BC connection found to flux %d %d\n", ibc, ibc2);
         }
@@ -1150,9 +1159,9 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
        * of last Flux condition
        */
       if (ibcmp != -1) {
-        BC_Types[ibc].BC_Data_Int[1] = ibcmp;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[1] = ibcmp;
       } else {
-        BC_Types[ibc].BC_Data_Int[1] = ibc1;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[1] = ibc1;
       }
     }
   }
@@ -1168,14 +1177,18 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
      global node number                                                        */
 
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-    if (BC_Types[ibc].BC_Name == VELO_TANGENT_BC || BC_Types[ibc].BC_Name == VELO_TANGENT_USER_BC ||
-        BC_Types[ibc].BC_Name == VELO_SLIP_BC || BC_Types[ibc].BC_Name == VELO_SLIP_ROT_BC ||
-        BC_Types[ibc].BC_Name == VELO_SLIP_FILL_BC ||
-        BC_Types[ibc].BC_Name == VELO_SLIP_ROT_FILL_BC || BC_Types[ibc].BC_Name == AIR_FILM_BC ||
-        BC_Types[ibc].BC_Name == AIR_FILM_ROT_BC || BC_Types[ibc].BC_Name == VELO_SLIP_FLUID_BC ||
-        BC_Types[ibc].BC_Name == VELO_SLIP_ROT_FLUID_BC ||
-        BC_Types[ibc].BC_Name == VELO_STREAMING_BC) {
-      poinbc = BC_Types[ibc].BC_Data_Int[0];
+    if (goma_ctx->bc.bc_types[ibc].BC_Name == VELO_TANGENT_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == VELO_TANGENT_USER_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == VELO_SLIP_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == VELO_SLIP_ROT_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == VELO_SLIP_FILL_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == VELO_SLIP_ROT_FILL_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == AIR_FILM_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == AIR_FILM_ROT_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == VELO_SLIP_FLUID_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == VELO_SLIP_ROT_FLUID_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == VELO_STREAMING_BC) {
+      poinbc = goma_ctx->bc.bc_types[ibc].BC_Data_Int[0];
       if (poinbc != 0 && poinbc != -1) { /*the -1 case is another new
                                            velo_tangent retaining case,
                                            prs 8/98 */
@@ -1192,15 +1205,15 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
             }
           }
         }
-        BC_Types[ibc].BC_Data_Int[0] = inode;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = inode;
         if (goma_ctx->debug_flag > 1) {
           printf("set_up_Surf_BC: point BC= %d corresponds to node= %d\n", poinbc, inode);
         }
       }
     }
-    if (BC_Types[ibc].BC_Name == VELO_TANGENT_SOLID_BC ||
-        BC_Types[ibc].BC_Name == VELO_SLIP_SOLID_BC) {
-      poinbc = BC_Types[ibc].BC_Data_Int[2];
+    if (goma_ctx->bc.bc_types[ibc].BC_Name == VELO_TANGENT_SOLID_BC ||
+        goma_ctx->bc.bc_types[ibc].BC_Name == VELO_SLIP_SOLID_BC) {
+      poinbc = goma_ctx->bc.bc_types[ibc].BC_Data_Int[2];
       if (poinbc != 0 && poinbc != -1) {
         for (ins = 0; ins < exo->num_node_sets; ins++) {
           if (exo->ns_id[ins] == poinbc) {
@@ -1209,7 +1222,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
             }
           }
         }
-        BC_Types[ibc].BC_Data_Int[2] = inode;
+        goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = inode;
         if (goma_ctx->debug_flag > 1) {
           printf("set_up_Surf_BC: point BC= %d corresponds to node= %d\n", poinbc, inode);
         }
@@ -1217,10 +1230,10 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
     }
   }
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-    if (BC_Types[ibc].BC_Name == ROLL_FLUID_BC) {
+    if (goma_ctx->bc.bc_types[ibc].BC_Name == ROLL_FLUID_BC) {
       for (ibc2 = 0; ibc2 < goma_ctx->problem.num_bc; ibc2++) {
-        if (BC_Types[ibc2].BC_Name == VELO_SLIP_ROT_FLUID_BC) {
-          BC_Types[ibc].BC_Data_Int[2] = ibc2;
+        if (goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_SLIP_ROT_FLUID_BC) {
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[2] = ibc2;
         }
       }
     }
@@ -1236,7 +1249,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
 
   DPRINTF(stdout, "\n");
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-    if (BC_Types[ibc].BC_Name == Q_VELO_SLIP_BC)
+    if (goma_ctx->bc.bc_types[ibc].BC_Name == Q_VELO_SLIP_BC)
 
     {
       /*
@@ -1244,30 +1257,32 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
        * corresponding VELO_SLIP or VELO_SLIP_ROT condition
        */
 
-      ibc_id = BC_Types[ibc].BC_ID;
-      ibc_desc = BC_Types[ibc].BC_Desc_index;
-      DPRINTF(stdout, "Q_VELO_SLIP BC found on %2s %d\n", BC_Types[ibc].Set_Type, ibc_id);
+      ibc_id = goma_ctx->bc.bc_types[ibc].BC_ID;
+      ibc_desc = goma_ctx->bc.bc_types[ibc].BC_Desc_index;
+      DPRINTF(stdout, "Q_VELO_SLIP BC found on %2s %d\n", goma_ctx->bc.bc_types[ibc].Set_Type,
+              ibc_id);
 
       /* now search for corresponding slip condition */
-      BC_Types[ibc].BC_Data_Int[0] = -1;
+      goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = -1;
       for (ibc2 = 0; ibc2 < goma_ctx->problem.num_bc; ibc2++) {
-        if ((BC_Types[ibc2].BC_ID == ibc_id) &&
-            ((BC_Types[ibc2].BC_Name == VELO_SLIP_BC) ||
-             (BC_Types[ibc2].BC_Name == VELO_SLIP_ROT_BC) ||
-             (BC_Types[ibc2].BC_Name == VELO_SLIP_FLUID_BC) ||
-             (BC_Types[ibc2].BC_Name == VELO_SLIP_ROT_FLUID_BC) ||
-             (BC_Types[ibc2].BC_Name == AIR_FILM_BC) ||
-             (BC_Types[ibc2].BC_Name == AIR_FILM_ROT_BC))) {
+        if ((goma_ctx->bc.bc_types[ibc2].BC_ID == ibc_id) &&
+            ((goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_SLIP_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_SLIP_ROT_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_SLIP_FLUID_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_SLIP_ROT_FLUID_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == AIR_FILM_BC) ||
+             (goma_ctx->bc.bc_types[ibc2].BC_Name == AIR_FILM_ROT_BC))) {
           /*
            * Set integer to BC number of matching SLIP CONDITON
            */
-          BC_Types[ibc].BC_Data_Int[0] = ibc2;
-          DPRINTF(stdout, "%s BC found for Q_VELO_SLIP BC on %2s %d\n", BC_Types[ibc2].desc->name2,
-                  BC_Types[ibc].Set_Type, ibc_id);
+          goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] = ibc2;
+          DPRINTF(stdout, "%s BC found for Q_VELO_SLIP BC on %2s %d\n",
+                  goma_ctx->bc.bc_types[ibc2].desc->name2, goma_ctx->bc.bc_types[ibc].Set_Type,
+                  ibc_id);
         }
       }
 
-      if (BC_Types[ibc].BC_Data_Int[0] == -1) {
+      if (goma_ctx->bc.bc_types[ibc].BC_Data_Int[0] == -1) {
         sr = sprintf(err_msg, "%s: Q_VELO_SLIP specified without corresponding VELO_SLIP condition",
                      yo);
         GOMA_EH(GOMA_ERROR, err_msg);
@@ -1276,12 +1291,15 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
   }
 
   /* Initialize rotation variables and lists */
-  mesh_rotate_node = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
-  mesh_rotate_ss = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
-  num_mesh_rotate = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int));
-  mom_rotate_node = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
-  mom_rotate_ss = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
-  num_mom_rotate = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int));
+  goma_ctx->bc.mesh_rotate_node =
+      calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
+  goma_ctx->bc.mesh_rotate_ss =
+      calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
+  goma_ctx->bc.num_mesh_rotate = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int));
+  goma_ctx->bc.mom_rotate_node =
+      calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
+  goma_ctx->bc.mom_rotate_ss = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
+  goma_ctx->bc.num_mom_rotate = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int));
 
   if (goma_ctx->problem.num_rot == 0 && exo->num_dim < 3) {
     check_for_bc_conflicts2D(exo, dpi);
@@ -1379,17 +1397,17 @@ void setup_Point_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[],
 
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     /* First check to see if this boundary condition is a nodeset         */
-    if (!strcmp(BC_Types[ibc].Set_Type, "NS")) {
+    if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "NS")) {
       /* Make sure the condition is Neumann type (necessary?) */
       // struct Boundary_Condition thisBC;
       // thisBC = BC_Types[ibc];
-      if (BC_Types[ibc].desc->method == WEAK_INT_SURF ||
-          BC_Types[ibc].desc->method == STRONG_INT_SURF) {
+      if (goma_ctx->bc.bc_types[ibc].desc->method == WEAK_INT_SURF ||
+          goma_ctx->bc.bc_types[ibc].desc->method == STRONG_INT_SURF) {
 
         // This is a Neumann condition that gets applied to a node set
         // What if the nodeset has more than one node?
         // Get the NS_ID for this condition
-        ns_id = BC_Types[ibc].BC_ID;
+        ns_id = goma_ctx->bc.bc_types[ibc].BC_ID;
         // see if I (in the mpi processors sense) have this nodeset
         ins = in_list(ns_id, 0, exo->num_node_sets, exo->ns_id);
         // record truth value of having the nodeset in the mesh
@@ -1431,8 +1449,8 @@ void setup_Point_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[],
           node_list[0] = exo->ns_node_list[ins];
           ielem = exo->node_elem_list[exo->node_elem_pntr[exo->ns_node_list[ins]]];
 
-          setup_Elem_BC(&First_Elem_Side_BC_Array[BC_Types[ibc].matrix][ielem], &BC_Types[ibc], ibc,
-                        num_nodes_on_side, ielem, node_list, exo);
+          setup_Elem_BC(&First_Elem_Side_BC_Array[goma_ctx->bc.bc_types[ibc].matrix][ielem],
+                        &goma_ctx->bc.bc_types[ibc], ibc, num_nodes_on_side, ielem, node_list, exo);
         }
       }
     }
@@ -1486,13 +1504,13 @@ void set_up_Edge_BC(struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[],
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
 
     /* First check to see if this boundary condition is a side set 	      */
-    if (!strcmp(BC_Types[ibc].Set_Type, "SS")) {
+    if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "SS")) {
 
       /* Next, check to see if this boundary condition (not necessarily a
          Surface Integral boundary condition) should be specified by side-sets */
-      if (BC_Types[ibc].desc->method == COLLOCATE_EDGE ||
-          BC_Types[ibc].desc->method == WEAK_INT_EDGE ||
-          BC_Types[ibc].desc->method == STRONG_INT_EDGE) {
+      if (goma_ctx->bc.bc_types[ibc].desc->method == COLLOCATE_EDGE ||
+          goma_ctx->bc.bc_types[ibc].desc->method == WEAK_INT_EDGE ||
+          goma_ctx->bc.bc_types[ibc].desc->method == STRONG_INT_EDGE) {
 
         num_nodes_on_edge = -1;
         ipin = 1; /*Assume these nodes are pinned on startup if CA_EDGE_OR_FIX
@@ -1509,7 +1527,7 @@ void set_up_Edge_BC(struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[],
         /* Load list of elements along this EDGE */
         /* get list along primary SS */
 
-        ss_id1 = BC_Types[ibc].BC_ID;
+        ss_id1 = goma_ctx->bc.bc_types[ibc].BC_ID;
         iss1 = in_list(ss_id1, 0, exo->num_side_sets, exo->ss_id);
 
         found_ss_primary_local = (iss1 > -1);
@@ -1535,7 +1553,7 @@ void set_up_Edge_BC(struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[],
         }
 
         /* get list along secondary SS */
-        ss_id2 = BC_Types[ibc].BC_ID2;
+        ss_id2 = goma_ctx->bc.bc_types[ibc].BC_ID2;
         iss2 = in_list(ss_id2, 0, exo->num_side_sets, exo->ss_id);
 
         found_ss_secondary_local = (iss2 > -1);
@@ -1624,16 +1642,17 @@ void set_up_Edge_BC(struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[],
                 num_nodes_on_edge = node_ctr;
               }
 
-              if (BC_Types[ibc].matrix >= 0) {
+              if (goma_ctx->bc.bc_types[ibc].matrix >= 0) {
                 this_edge_bc = setup_Elem_Edge_BC(
-                    &First_Elem_Edge_BC_Array[BC_Types[ibc].matrix][ielem], &BC_Types[ibc], ibc,
-                    num_nodes_on_edge, ipin, FALSE, ielem, node_list, exo);
+                    &First_Elem_Edge_BC_Array[goma_ctx->bc.bc_types[ibc].matrix][ielem],
+                    &goma_ctx->bc.bc_types[ibc], ibc, num_nodes_on_edge, ipin, FALSE, ielem,
+                    node_list, exo);
 
-                setup_Elem_BC(&(this_edge_bc->elem_side_bc_1), &BC_Types[ibc], ibc,
+                setup_Elem_BC(&(this_edge_bc->elem_side_bc_1), &goma_ctx->bc.bc_types[ibc], ibc,
                               num_nodes_on_side, ielem,
                               &(exo->ss_node_list[iss1][exo->ss_node_side_index[iss1][i]]), exo);
 
-                setup_Elem_BC(&(this_edge_bc->elem_side_bc_2), &BC_Types[ibc], ibc,
+                setup_Elem_BC(&(this_edge_bc->elem_side_bc_2), &goma_ctx->bc.bc_types[ibc], ibc,
                               num_nodes_on_side, ielem,
                               &(exo->ss_node_list[iss2][exo->ss_node_side_index[iss2][j]]), exo);
               }
@@ -1717,18 +1736,19 @@ void set_up_Edge_BC(struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[],
                 /*
                  * Set up elem_edge_bc structure for this edge */
 
-                if (BC_Types[ibc].matrix >= 0) {
+                if (goma_ctx->bc.bc_types[ibc].matrix >= 0) {
                   this_edge_bc = setup_Elem_Edge_BC(
-                      &First_Elem_Edge_BC_Array[BC_Types[ibc].matrix][ielem], &BC_Types[ibc], ibc,
-                      num_nodes_on_edge, ipin, TRUE, ielem, node_list, exo);
+                      &First_Elem_Edge_BC_Array[goma_ctx->bc.bc_types[ibc].matrix][ielem],
+                      &goma_ctx->bc.bc_types[ibc], ibc, num_nodes_on_edge, ipin, TRUE, ielem,
+                      node_list, exo);
 
                   /* create elem_side_bc's for SS1 and SS2 */
 
-                  setup_Elem_BC(&(this_edge_bc->elem_side_bc_1), &BC_Types[ibc], ibc,
+                  setup_Elem_BC(&(this_edge_bc->elem_side_bc_1), &goma_ctx->bc.bc_types[ibc], ibc,
                                 num_nodes_on_side, ielem,
                                 &(exo->ss_node_list[iss1][exo->ss_node_side_index[iss1][i]]), exo);
 
-                  setup_Elem_BC(&(this_edge_bc->elem_side_bc_2), &BC_Types[ibc], ibc,
+                  setup_Elem_BC(&(this_edge_bc->elem_side_bc_2), &goma_ctx->bc.bc_types[ibc], ibc,
                                 num_nodes_on_side, ielem2,
                                 &(exo->ss_node_list[iss2][exo->ss_node_side_index[iss2][j]]), exo);
                 }
@@ -1785,7 +1805,7 @@ void set_up_Embedded_BC(void)
 
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
 
-    if (!strcmp(BC_Types[ibc].Set_Type, "LS")) {
+    if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "LS")) {
 
       bc = (struct LS_Embedded_BC *)smalloc(sizeof(struct LS_Embedded_BC));
 
@@ -1801,10 +1821,10 @@ void set_up_Embedded_BC(void)
 
       /* if ( BC_Types[ibc].BC_Name == LS_CAPILLARY_BC ) found_capillary = TRUE; */
 
-    } else if (!strcmp(BC_Types[ibc].Set_Type, "PF")) {
+    } else if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "PF")) {
 
       bc = (struct LS_Embedded_BC *)smalloc(sizeof(struct LS_Embedded_BC));
-      pf = abs(BC_Types[ibc].BC_ID) - 1;
+      pf = abs(goma_ctx->bc.bc_types[ibc].BC_ID) - 1;
 
       if (goma_ctx->fem.pfd == NULL) {
         GOMA_EH(GOMA_ERROR, "Attempt to apply bc on PF but phase functions are not active.\n");
@@ -2726,12 +2746,12 @@ void set_up_BC_connectivity(void)
   BOUNDARY_CONDITION_STRUCT *bc, *bc2;
   struct BC_descriptions *bc_desc, *bc_desc2;
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-    bc = BC_Types + ibc;
+    bc = goma_ctx->bc.bc_types + ibc;
     bc_desc = bc->desc;
     switch (bc_desc->BC_Name) {
     case SDC_KIN_SF_BC:
       for (jbc = 0, ifound = FALSE; jbc < goma_ctx->problem.num_bc && !ifound; jbc++) {
-        bc2 = BC_Types + jbc;
+        bc2 = goma_ctx->bc.bc_types + jbc;
         bc_desc2 = bc2->desc;
         if (bc2->BC_ID == bc->BC_ID) {
           if (bc_desc2->BC_Name == bc->BC_Data_Int[1]) {
@@ -2774,7 +2794,7 @@ int exchange_bc_info(void) {
   /* loop over boundary conditions */
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     /* check if BC needs special exchange information */
-    switch (BC_Types[ibc].BC_Name) {
+    switch (goma_ctx->bc.bc_types[ibc].BC_Name) {
     case VELO_SLIP_BC:
     case VELO_SLIP_ROT_BC:
     case VELO_SLIP_FLUID_BC:

@@ -52,20 +52,6 @@
  * in every routine in this file without worrying about local declaration.
  */
 
-/*
- * Variable DEFINITIONS...
- */
-
-int **BC_dup_nodes = NULL;
-int ****BC_dup_list = NULL;
-int *BC_dup_ptr = NULL;
-int **mesh_rotate_node = NULL;
-int **mesh_rotate_ss = NULL;
-int *num_mesh_rotate;
-int **mom_rotate_node = NULL;
-int **mom_rotate_ss = NULL;
-int *num_mom_rotate;
-
 /********** R O U T I N E S   D E F I N E D   I N   T H I S   F I L E **********
 *
 *     NAME OF FUNCTION			TYPE 		CALLED BY
@@ -304,9 +290,10 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
   action = -1;
   i_delete = -1;
 
-  BC_dup_nodes = malloc(sizeof(int *) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
-  BC_dup_list = malloc(sizeof(int ***) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
-  BC_dup_ptr = malloc(sizeof(int) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
+  goma_ctx->bc.bc_dup_nodes = malloc(sizeof(int *) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
+  goma_ctx->bc.bc_dup_list =
+      malloc(sizeof(int ***) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
+  goma_ctx->bc.bc_dup_ptr = malloc(sizeof(int) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
 
   /*****************************************************************************/
   /*                              BLOCK 3                                      */
@@ -352,14 +339,14 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 
     for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
       /* First check to see if this boundary condition is a node set */
-      if (!strcmp(BC_Types[ibc].Set_Type, "NS")) {
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "NS")) {
         /*
          * Set a flag to indicate that a boundary condition is used
          */
         used_BC = 0;
         matIndex = -2;
-        if (BC_Types[ibc].BC_EBID_Apply != -1) {
-          matIndex = map_mat_index(BC_Types[ibc].BC_EBID_Apply);
+        if (goma_ctx->bc.bc_types[ibc].BC_EBID_Apply != -1) {
+          matIndex = map_mat_index(goma_ctx->bc.bc_types[ibc].BC_EBID_Apply);
         }
         /*
          * Loop over the total number of node sets defined for the
@@ -370,7 +357,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
            * and the node set ID specified in the input file
            *  - continue if a match is found
            */
-          if (exo->ns_id[ins] == BC_Types[ibc].BC_ID) {
+          if (exo->ns_id[ins] == goma_ctx->bc.bc_types[ibc].BC_ID) {
 
             /* Loop over all the global nodes in the current node set */
             for (i = 0; i < exo->ns_num_nodes[ins]; i++) {
@@ -389,9 +376,9 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                * Fill in an entry into the list for each component of the
                * boundary condition
                */
-              for (p = 0; p < BC_Types[ibc].desc->vector; p++) {
-                offset = find_bc_unk_offset(BC_Types + ibc, matIndex, inode, p, &retn_matIndex,
-                                            &vd_retn1);
+              for (p = 0; p < goma_ctx->bc.bc_types[ibc].desc->vector; p++) {
+                offset = find_bc_unk_offset(goma_ctx->bc.bc_types + ibc, matIndex, inode, p,
+                                            &retn_matIndex, &vd_retn1);
                 if (offset >= 0) {
                   add_to_node_unk_bc_list(BC_Unk_List[inode][offset], ibc);
                   used_BC = 1;
@@ -415,7 +402,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 
     for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
       /* First check to see if this boundary condition is a side set */
-      if (!strcmp(BC_Types[ibc].Set_Type, "SS")) {
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "SS")) {
         /*
          * Set a flag to indicate that a boundary condition is used
          */
@@ -425,7 +412,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
           /* Check for a match between the ID of the current side set and the side set
            * ID specified in the input file - continue if a match is found
            */
-          if (exo->ss_id[iss] == BC_Types[ibc].BC_ID) {
+          if (exo->ss_id[iss] == goma_ctx->bc.bc_types[ibc].BC_ID) {
 
             /*
              * Step through every elem/side and look at every node on that
@@ -460,9 +447,9 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                  * Fill in an entry into the list for each component of the
                  * boundary condition
                  */
-                for (p = 0; p < BC_Types[ibc].desc->vector; p++) {
-                  offset = find_bc_unk_offset(BC_Types + ibc, matIndex, inode, p, &retn_matIndex,
-                                              &vd_retn1);
+                for (p = 0; p < goma_ctx->bc.bc_types[ibc].desc->vector; p++) {
+                  offset = find_bc_unk_offset(goma_ctx->bc.bc_types + ibc, matIndex, inode, p,
+                                              &retn_matIndex, &vd_retn1);
                   if (offset >= 0) {
                     add_to_node_unk_bc_list(BC_Unk_List[inode][offset], ibc);
                     used_BC = 1;
@@ -493,14 +480,15 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                   idup2 = find_first_opening(BC_Unk_List[inode][offset_mom2], MAX_NODAL_BCS);
                   for (i = 0; i < idup1; i++) {
                     ibc1 = BC_Unk_List[inode][offset_mom1][i];
-                    if (BC_Types[ibc1].BC_Name == VELO_NORMAL_BC ||
-                        BC_Types[ibc1].BC_Name == VELO_NORMAL_LS_BC) {
+                    if (goma_ctx->bc.bc_types[ibc1].BC_Name == VELO_NORMAL_BC ||
+                        goma_ctx->bc.bc_types[ibc1].BC_Name == VELO_NORMAL_LS_BC) {
                       for (j = 0; j < idup2; j++) {
                         ibc2 = BC_Unk_List[inode][offset_mom2][j];
-                        if (BC_Types[ibc2].BC_Name == VELO_TANGENT_BC ||
-                            BC_Types[ibc2].BC_Name == VELO_TANGENT_USER_BC ||
-                            BC_Types[ibc2].BC_Name == VELO_STREAMING_BC) {
-                          if (BC_Types[ibc2].BC_ID != BC_Types[ibc1].BC_ID) {
+                        if (goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_TANGENT_BC ||
+                            goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_TANGENT_USER_BC ||
+                            goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_STREAMING_BC) {
+                          if (goma_ctx->bc.bc_types[ibc2].BC_ID !=
+                              goma_ctx->bc.bc_types[ibc1].BC_ID) {
                             /* Now you have established a velo_normal and velo_tangent
                              *  coming from two separate side sets, at the same node.  We know
                              *  if these sides meet at 90 deg., the conditions are redundant
@@ -526,8 +514,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
             /* Check for table boundary conditions which may be used by */
             /* a discontinuous polymer stress formulation on the inlet   */
 
-            if (BC_Types[ibc].BC_Name == TABLE_BC) {
-              varType = BC_Types[ibc].table->f_index;
+            if (goma_ctx->bc.bc_types[ibc].BC_Name == TABLE_BC) {
+              varType = goma_ctx->bc.bc_types[ibc].table->f_index;
               switch (varType) {
               case POLYMER_STRESS11:
               case POLYMER_STRESS12:
@@ -562,7 +550,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                   fprintf(stderr,
                           "WARNING: Boundary condition %d, %s, applied on SS %d, may be used as an "
                           "inlet condition \n",
-                          ibc, BC_Types[ibc].desc->name1, BC_Types[ibc].BC_ID);
+                          ibc, goma_ctx->bc.bc_types[ibc].desc->name1,
+                          goma_ctx->bc.bc_types[ibc].BC_ID);
                   break;
                 }
                 default: {
@@ -606,13 +595,13 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
      */
 
     if (num_bc_nodes > 0) {
-      BC_dup_nodes[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, -1);
-      BC_dup_list[goma_ctx->fem.pg->imtrx] = (int ***)alloc_ptr_1(num_bc_nodes);
+      goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, -1);
+      goma_ctx->bc.bc_dup_list[goma_ctx->fem.pg->imtrx] = (int ***)alloc_ptr_1(num_bc_nodes);
     }
 
     /* resolve conflicts between BC's at each node */
     /* first initialize the BC duplications list*/
-    BC_dup_ptr[goma_ctx->fem.pg->imtrx] = 0;
+    goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx] = 0;
 
     /*
      * loop through nodes and remove nodes that don't have conflicts
@@ -633,19 +622,21 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
            */
           if (idup > 1) {
             /* initialize new entry in the duplications list, if not already listed */
-            if (in_list(inode, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx],
-                        BC_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
+            if (in_list(inode, 0, goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx],
+                        goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
               /* Put the node in the list */
-              BC_dup_nodes[goma_ctx->fem.pg->imtrx][BC_dup_ptr[goma_ctx->fem.pg->imtrx]] = inode;
+              goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx]
+                                       [goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]] = inode;
               /* Put the pointer to the BC_Unk_List for the node
                * into another list
                */
-              BC_dup_list[goma_ctx->fem.pg->imtrx][BC_dup_ptr[goma_ctx->fem.pg->imtrx]] =
+              goma_ctx->bc.bc_dup_list[goma_ctx->fem.pg->imtrx]
+                                      [goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]] =
                   BC_Unk_List[inode];
-              BC_dup_ptr[goma_ctx->fem.pg->imtrx]++;
+              goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]++;
               if (goma_ctx->debug_flag > 0) {
                 fprintf(stderr, "New node in duplication list %d %d\n", inode + 1,
-                        BC_dup_ptr[goma_ctx->fem.pg->imtrx]);
+                        goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]);
               }
             }
 
@@ -654,7 +645,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
               fprintf(stderr, "  DUPLICATE BC at node %d equation %d, material %d: ", inode + 1,
                       eqn, vd->MatID);
               while ((ibc = BC_Unk_List[inode][offset][idup]) != -1) {
-                fprintf(stderr, "%s, ", BC_Types[ibc].desc->name2);
+                fprintf(stderr, "%s, ", goma_ctx->bc.bc_types[ibc].desc->name2);
                 idup++;
               }
               fprintf(stderr, "\n");
@@ -693,20 +684,21 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 
               for (i = 0; i < idup1; i++) {
                 ibc1 = BC_Unk_List[inode][offset_mom1][i];
-                if (BC_Types[ibc1].BC_Name == VELO_NORMAL_BC ||
-                    BC_Types[ibc1].BC_Name == VELO_NORMAL_LS_BC) {
+                if (goma_ctx->bc.bc_types[ibc1].BC_Name == VELO_NORMAL_BC ||
+                    goma_ctx->bc.bc_types[ibc1].BC_Name == VELO_NORMAL_LS_BC) {
                   for (j = 0; j < idup2; j++) {
                     ibc2 = BC_Unk_List[inode][offset_mom2][j];
                     if (ibc2 != -1) {
-                      if (BC_Types[ibc2].BC_Name == VELO_TANGENT_BC ||
-                          BC_Types[ibc2].BC_Name == VELO_TANGENT_USER_BC ||
-                          BC_Types[ibc2].BC_Name == VELO_STREAMING_BC) {
+                      if (goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_TANGENT_BC ||
+                          goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_TANGENT_USER_BC ||
+                          goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_STREAMING_BC) {
                         /* Hmm, we got a hit.
                          * Now make sure they are not coming from the same
                          * side set, which is something that is common and
                          * permissible.
                          */
-                        if (BC_Types[ibc2].BC_ID != BC_Types[ibc1].BC_ID) {
+                        if (goma_ctx->bc.bc_types[ibc2].BC_ID !=
+                            goma_ctx->bc.bc_types[ibc1].BC_ID) {
                           /* Now you have established a velo_normal and velo_tangent
                            *  coming from two separate side sets, at the same node.  We know
                            *  if these sides meet at 90 deg., the conditions are redundant
@@ -741,23 +733,23 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
               }
               for (i = 0; i < idup1; i++) {
                 ibc1 = BC_Unk_List[inode][offset_mesh1][i];
-                if (BC_Types[ibc1].BC_Name == KINEMATIC_BC ||
-                    BC_Types[ibc1].BC_Name == KINEMATIC_DISC_BC ||
-                    BC_Types[ibc1].BC_Name == KINEMATIC_PETROV_BC ||
-                    BC_Types[ibc1].BC_Name == LUB_KINEMATIC_BC ||
-                    BC_Types[ibc1].BC_Name == KINEMATIC_COLLOC_BC) {
+                if (goma_ctx->bc.bc_types[ibc1].BC_Name == KINEMATIC_BC ||
+                    goma_ctx->bc.bc_types[ibc1].BC_Name == KINEMATIC_DISC_BC ||
+                    goma_ctx->bc.bc_types[ibc1].BC_Name == KINEMATIC_PETROV_BC ||
+                    goma_ctx->bc.bc_types[ibc1].BC_Name == LUB_KINEMATIC_BC ||
+                    goma_ctx->bc.bc_types[ibc1].BC_Name == KINEMATIC_COLLOC_BC) {
                   for (j = 0; j < idup2; j++) {
                     ibc2 = BC_Unk_List[inode][offset_mom2][j];
-                    if (BC_Types[ibc2].BC_Name == VELO_TANGENT_BC ||
-                        BC_Types[ibc2].BC_Name == VELO_TANGENT_USER_BC ||
-                        BC_Types[ibc2].BC_Name == VELO_SLIP_FLUID_BC ||
-                        BC_Types[ibc2].BC_Name == VELO_SLIP_ROT_FLUID_BC ||
-                        BC_Types[ibc2].BC_Name == VELO_STREAMING_BC ||
-                        BC_Types[ibc2].BC_Name == VELO_TANGENT_SOLID_BC ||
-                        BC_Types[ibc2].BC_Name == VELO_SLIP_SOLID_BC) {
+                    if (goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_TANGENT_BC ||
+                        goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_TANGENT_USER_BC ||
+                        goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_SLIP_FLUID_BC ||
+                        goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_SLIP_ROT_FLUID_BC ||
+                        goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_STREAMING_BC ||
+                        goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_TANGENT_SOLID_BC ||
+                        goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_SLIP_SOLID_BC) {
                       /* Hmm, we got a hit.  Now make sure they are not coming from the same
                          side set, which is something that is common */
-                      if (BC_Types[ibc2].BC_ID != BC_Types[ibc1].BC_ID) {
+                      if (goma_ctx->bc.bc_types[ibc2].BC_ID != goma_ctx->bc.bc_types[ibc1].BC_ID) {
                         /* Now you have established a KINEMATIC and velo_tangent
                          *  makes the dup_list, lets get rid of the velo_tangent,
                          *  unless we have a rolling motion condition at a dynamic
@@ -766,29 +758,36 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                          *  as they are not redundant.  The user signifies this case
                          *  with a -1 in the Data_int[0] slot
                          */
-                        if (BC_Types[ibc2].BC_Name == VELO_TANGENT_SOLID_BC ||
-                            BC_Types[ibc2].BC_Name == VELO_SLIP_SOLID_BC) {
-                          if (BC_Types[ibc2].BC_Data_Int[2] > -1) {
+                        if (goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_TANGENT_SOLID_BC ||
+                            goma_ctx->bc.bc_types[ibc2].BC_Name == VELO_SLIP_SOLID_BC) {
+                          if (goma_ctx->bc.bc_types[ibc2].BC_Data_Int[2] > -1) {
                             fprintf(stderr, "  REMOVING BC %s at %s %d/%d because of %s \n",
-                                    BC_Types[ibc2].desc->name1, BC_Types[ibc2].Set_Type,
-                                    BC_Types[ibc2].BC_ID, BC_Types[ibc1].BC_ID,
-                                    BC_Types[ibc1].desc->name1);
+                                    goma_ctx->bc.bc_types[ibc2].desc->name1,
+                                    goma_ctx->bc.bc_types[ibc2].Set_Type,
+                                    goma_ctx->bc.bc_types[ibc2].BC_ID,
+                                    goma_ctx->bc.bc_types[ibc1].BC_ID,
+                                    goma_ctx->bc.bc_types[ibc1].desc->name1);
                             delete_bc_entry(BC_Unk_List[inode][offset_mom2], j);
                           } else { /* move VELO to the top... */
                             fprintf(stderr, "  MOVING BC %s to the top on %s %d/%d \n",
-                                    BC_Types[ibc2].desc->name1, BC_Types[ibc2].Set_Type,
-                                    BC_Types[ibc2].BC_ID, BC_Types[ibc1].BC_ID);
+                                    goma_ctx->bc.bc_types[ibc2].desc->name1,
+                                    goma_ctx->bc.bc_types[ibc2].Set_Type,
+                                    goma_ctx->bc.bc_types[ibc2].BC_ID,
+                                    goma_ctx->bc.bc_types[ibc1].BC_ID);
                             for (k = 0; k < j; k++) {
                               delete_bc_entry(BC_Unk_List[inode][offset_mom2], k);
                             }
                           }
-                        } else if (BC_Types[ibc2].BC_Data_Int[0] > -1) /*this is a last defense
-                                                                     to retain velo_tangent*/
+                        } else if (goma_ctx->bc.bc_types[ibc2].BC_Data_Int[0] >
+                                   -1) /*this is a last defense
+                        to retain velo_tangent*/
                         {
                           fprintf(stderr, "  REMOVING BC %s at %s %d/%d because of %s \n",
-                                  BC_Types[ibc2].desc->name1, BC_Types[ibc2].Set_Type,
-                                  BC_Types[ibc2].BC_ID, BC_Types[ibc1].BC_ID,
-                                  BC_Types[ibc1].desc->name1);
+                                  goma_ctx->bc.bc_types[ibc2].desc->name1,
+                                  goma_ctx->bc.bc_types[ibc2].Set_Type,
+                                  goma_ctx->bc.bc_types[ibc2].BC_ID,
+                                  goma_ctx->bc.bc_types[ibc1].BC_ID,
+                                  goma_ctx->bc.bc_types[ibc1].desc->name1);
                           delete_bc_entry(BC_Unk_List[inode][offset_mom2], j);
                         }
                       }
@@ -806,27 +805,27 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
             for (j = 0; j < idup; j++) {
               ibc1 = BC_Unk_List[inode][offset][j];
               if (ibc1 != -1) {
-                bct1 = BC_Types[ibc1].BC_Name;
-                if (BC_Types[ibc1].desc->method == DIRICHLET) {
+                bct1 = goma_ctx->bc.bc_types[ibc1].BC_Name;
+                if (goma_ctx->bc.bc_types[ibc1].desc->method == DIRICHLET) {
                   for (k = 0; k < idup; k++) {
                     /* flag indicating that the k bc should be deleted from the
                      * list */
                     i_delete = 1;
                     ibc2 = BC_Unk_List[inode][offset][k];
                     if (ibc2 != -1 && ibc1 != ibc2) {
-                      bct2 = BC_Types[ibc2].BC_Name;
+                      bct2 = goma_ctx->bc.bc_types[ibc2].BC_Name;
 
                       /* deal with identical conditions */
                       sum = 0.0;
                       max = 0.0;
                       if (bct1 == bct2) { /* these conditions are the same type */
                         if (bct1 != FIX_BC) {
-                          sum += fabs(BC_Types[ibc1].BC_Data_Float[0] -
-                                      BC_Types[ibc2].BC_Data_Float[0]);
-                          if (fabs(BC_Types[ibc1].BC_Data_Float[0]) > max)
-                            max = fabs(BC_Types[ibc1].BC_Data_Float[0]);
-                          if (fabs(BC_Types[ibc2].BC_Data_Float[0]) > max)
-                            max = fabs(BC_Types[ibc2].BC_Data_Float[0]);
+                          sum += fabs(goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0] -
+                                      goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0]);
+                          if (fabs(goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0]) > max)
+                            max = fabs(goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0]);
+                          if (fabs(goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0]) > max)
+                            max = fabs(goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0]);
                         }
                         /* sum the differences between coefficients and normalize*/
                         if (max > 0. && sum / max > 1e-8) {
@@ -834,29 +833,29 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                             fprintf(stderr,
                                     "    TWO BC's %s at node %d have conflicting values, "
                                     " defaulting to 1st occurence = %g\n",
-                                    BC_Types[ibc1].desc->name2, inode,
-                                    BC_Types[ibc2].BC_Data_Float[0]);
+                                    goma_ctx->bc.bc_types[ibc1].desc->name2, inode,
+                                    goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0]);
                           }
                           i_delete = 2; /* delete 2nd occurence */
                         } else {
                           if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr, "    IDENTICAL BC %s at node %d equation %d\n",
-                                    BC_Types[ibc1].desc->name2, inode + 1, eqn);
+                                    goma_ctx->bc.bc_types[ibc1].desc->name2, inode + 1, eqn);
                           }
                         }
                         action = 1; /* discard extra bc */
                       }
 
                       /* move rotated conditions */
-                      if (BC_Types[ibc2].desc->rotate != NO_ROT ||
-                          BC_Types[ibc2].desc->BC_Name == SDC_STEFANFLOW_BC) {
+                      if (goma_ctx->bc.bc_types[ibc2].desc->rotate != NO_ROT ||
+                          goma_ctx->bc.bc_types[ibc2].desc->BC_Name == SDC_STEFANFLOW_BC) {
                         /*  move this condition ibc2 to the next coordinate direction,
                          *  if available
                          * HKM -> Note this seems to preclude that a tangential
                          *   mesh condition can move to the x coordinate direction
                          *   due to a dv dirichlet condition ?!??
                          */
-                        if (BC_Types[ibc2].desc->rotate == R_MESH1) {
+                        if (goma_ctx->bc.bc_types[ibc2].desc->rotate == R_MESH1) {
                           p = eqn - R_MESH1;
                           if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mesh2 =
@@ -865,18 +864,18 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                 find_first_opening(BC_Unk_List[inode][offset_mesh2], MAX_NODAL_BCS);
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                             BC_Unk_List[inode][offset_mesh2][idum] = ibc2;
                           } else {
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                           }
-                        } else if (BC_Types[ibc2].desc->rotate == R_MOMENTUM1) {
+                        } else if (goma_ctx->bc.bc_types[ibc2].desc->rotate == R_MOMENTUM1) {
                           p = eqn - R_MOMENTUM1;
                           if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mom2 =
@@ -886,18 +885,18 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                             BC_Unk_List[inode][offset_mom2][idum] = ibc2;
                           } else {
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                           }
-                        } else if (BC_Types[ibc2].desc->rotate == R_SOLID1) {
+                        } else if (goma_ctx->bc.bc_types[ibc2].desc->rotate == R_SOLID1) {
                           p = eqn - R_SOLID1;
                           if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mom2 =
@@ -907,15 +906,15 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                             BC_Unk_List[inode][offset_mom2][idum] = ibc2;
                           } else {
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                           }
                         } else {
@@ -926,17 +925,19 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                       /* remove this BC from list */
                       if (i_delete == 1) {
                         if (goma_ctx->debug_flag > 0) {
-                          fprintf(
-                              stderr, "    DISCARDING %s at node %d from dup_list because of %s\n",
-                              BC_Types[ibc2].desc->name2, inode + 1, BC_Types[ibc1].desc->name2);
+                          fprintf(stderr,
+                                  "    DISCARDING %s at node %d from dup_list because of %s\n",
+                                  goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                  goma_ctx->bc.bc_types[ibc1].desc->name2);
                         }
                         BC_Unk_List[inode][offset][k] = -1;
                       }
                       if (i_delete == 2) {
                         if (goma_ctx->debug_flag > 0) {
-                          fprintf(
-                              stderr, "    DISCARDING %s at node %d from dup_list because of %s\n",
-                              BC_Types[ibc1].desc->name2, inode + 1, BC_Types[ibc2].desc->name2);
+                          fprintf(stderr,
+                                  "    DISCARDING %s at node %d from dup_list because of %s\n",
+                                  goma_ctx->bc.bc_types[ibc1].desc->name2, inode + 1,
+                                  goma_ctx->bc.bc_types[ibc2].desc->name2);
                         }
                         BC_Unk_List[inode][offset][j] = -1;
                       }
@@ -960,15 +961,15 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
             for (j = 0; j < idup; j++) {
               ibc1 = BC_Unk_List[inode][offset][j];
               if (ibc1 != -1) {
-                bct1 = BC_Types[ibc1].BC_Name;
-                if (BC_Types[ibc1].desc->rotate == NO_ROT &&
-                    (BC_Types[ibc1].desc->method == COLLOCATE_SURF ||
-                     BC_Types[ibc1].desc->method == STRONG_INT_SURF)) {
+                bct1 = goma_ctx->bc.bc_types[ibc1].BC_Name;
+                if (goma_ctx->bc.bc_types[ibc1].desc->rotate == NO_ROT &&
+                    (goma_ctx->bc.bc_types[ibc1].desc->method == COLLOCATE_SURF ||
+                     goma_ctx->bc.bc_types[ibc1].desc->method == STRONG_INT_SURF)) {
 
                   for (k = 0; k < idup; k++) {
                     ibc2 = BC_Unk_List[inode][offset][k];
                     if ((ibc2 != ibc1) && (ibc2 != -1)) {
-                      bct2 = BC_Types[ibc2].BC_Name;
+                      bct2 = goma_ctx->bc.bc_types[ibc2].BC_Name;
                       /* Flag indicating that this bc should be deleted */
                       i_delete = 1;
 
@@ -980,11 +981,12 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                        */
                       if ((bct1 <= GD_TIME_BC && bct1 >= GD_CONST_BC) &&
                           (bct2 <= GD_TIME_BC && bct2 >= GD_CONST_BC)) {
-                        if (BC_Types[ibc1].BC_ID == BC_Types[ibc2].BC_ID) {
+                        if (goma_ctx->bc.bc_types[ibc1].BC_ID ==
+                            goma_ctx->bc.bc_types[ibc2].BC_ID) {
                           action = -1;
                           if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr, "    MULTIPLE GD %s at node %d\n",
-                                    BC_Types[ibc2].desc->name2, inode + 1);
+                                    goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1);
                           }
                         }
                       }
@@ -1009,8 +1011,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           fprintf(stderr,
                                   "    TWO BC's %s at node %d have same type, "
                                   " defaulting to 1st occurence = %g\n",
-                                  BC_Types[ibc1].desc->name2, inode + 1,
-                                  BC_Types[ibc1].BC_Data_Float[0]);
+                                  goma_ctx->bc.bc_types[ibc1].desc->name2, inode + 1,
+                                  goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0]);
                         }
                       }
 
@@ -1032,15 +1034,16 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                        */
                       if (bct1 == FLUID_SOLID_BC || bct1 == SOLID_FLUID_BC ||
                           bct1 == SOLID_FLUID_RS_BC) {
-                        if (BC_Types[ibc2].desc->method == WEAK_INT_SURF ||
-                            BC_Types[ibc2].desc->method == WEAK_INT_EDGE ||
-                            BC_Types[ibc2].desc->method == WEAK_SHARP_INT) {
+                        if (goma_ctx->bc.bc_types[ibc2].desc->method == WEAK_INT_SURF ||
+                            goma_ctx->bc.bc_types[ibc2].desc->method == WEAK_INT_EDGE ||
+                            goma_ctx->bc.bc_types[ibc2].desc->method == WEAK_SHARP_INT) {
                           action = -1;
                           if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr,
                                     "    BC %s is a Weak BC masquerading as colloc BC"
                                     " Allow Weak BC %s to stack on top of it\n",
-                                    BC_Types[ibc1].desc->name2, BC_Types[ibc2].desc->name2);
+                                    goma_ctx->bc.bc_types[ibc1].desc->name2,
+                                    goma_ctx->bc.bc_types[ibc2].desc->name2);
                           }
                         }
                         /*
@@ -1049,8 +1052,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                          *  STRONG_INT_SURF boundary conditions will take
                          *  precedence over these at the current node.
                          */
-                        if (BC_Types[ibc2].desc->method == COLLOCATE_SURF ||
-                            BC_Types[ibc2].desc->method == STRONG_INT_SURF) {
+                        if (goma_ctx->bc.bc_types[ibc2].desc->method == COLLOCATE_SURF ||
+                            goma_ctx->bc.bc_types[ibc2].desc->method == STRONG_INT_SURF) {
                           if (bct2 != bct1) {
                             i_delete = -1;
                             action = -1;
@@ -1063,8 +1066,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                        *  direction if available.
                        *
                        */
-                      if (action == 1 && BC_Types[ibc2].desc->rotate != NO_ROT) {
-                        if (BC_Types[ibc2].desc->rotate == R_MESH1) {
+                      if (action == 1 && goma_ctx->bc.bc_types[ibc2].desc->rotate != NO_ROT) {
+                        if (goma_ctx->bc.bc_types[ibc2].desc->rotate == R_MESH1) {
                           p = eqn - R_MESH1;
                           if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mesh2 =
@@ -1073,8 +1076,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                 find_first_opening(BC_Unk_List[inode][offset_mesh2], MAX_NODAL_BCS);
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                               BC_Unk_List[inode][offset_mesh2][idum] = ibc2;
                             }
                           } else {
@@ -1082,11 +1085,11 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                               fprintf(stderr,
                                       "    REMOVING BC %s at node %d because of %s and next coord "
                                       "not available\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                           }
-                        } else if (BC_Types[ibc2].desc->rotate == R_MOMENTUM1) {
+                        } else if (goma_ctx->bc.bc_types[ibc2].desc->rotate == R_MOMENTUM1) {
                           p = eqn - R_MOMENTUM1;
                           if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mom2 =
@@ -1096,8 +1099,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr,
                                       "    MOVING BC %s at node %d to next coord because of %s\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                             BC_Unk_List[inode][offset_mom2][idum] = ibc2;
                           } else {
@@ -1105,8 +1108,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                               fprintf(stderr,
                                       "    REMOVING BC %s at node %d because of %s and next coord "
                                       "not avail\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                           }
                         } else {
@@ -1116,8 +1119,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                       /*
                        * Special Kluge
                        */
-                      if (BC_Types[ibc1].desc->BC_Name == CONT_TANG_VEL_BC &&
-                          BC_Types[ibc2].desc->BC_Name == SDC_STEFANFLOW_BC) {
+                      if (goma_ctx->bc.bc_types[ibc1].desc->BC_Name == CONT_TANG_VEL_BC &&
+                          goma_ctx->bc.bc_types[ibc2].desc->BC_Name == SDC_STEFANFLOW_BC) {
                         if (i_delete == 1)
                           i_delete = -1;
                       }
@@ -1126,18 +1129,20 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                       if (action == 1 && i_delete == 1) {
 
                         if (goma_ctx->debug_flag > 0) {
-                          fprintf(
-                              stderr, "    DISCARDING %s at node %d from dup_list because of %s\n",
-                              BC_Types[ibc2].desc->name2, inode + 1, BC_Types[ibc1].desc->name2);
+                          fprintf(stderr,
+                                  "    DISCARDING %s at node %d from dup_list because of %s\n",
+                                  goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                  goma_ctx->bc.bc_types[ibc1].desc->name2);
                         }
                         BC_Unk_List[inode][offset][k] = -1;
                       }
 
                       if (i_delete == -1) {
                         if (goma_ctx->debug_flag > 0) {
-                          fprintf(
-                              stderr, "    DISCARDING %s at node %d from dup_list because of %s\n",
-                              BC_Types[ibc1].desc->name2, inode + 1, BC_Types[ibc2].desc->name2);
+                          fprintf(stderr,
+                                  "    DISCARDING %s at node %d from dup_list because of %s\n",
+                                  goma_ctx->bc.bc_types[ibc1].desc->name2, inode + 1,
+                                  goma_ctx->bc.bc_types[ibc2].desc->name2);
                         }
                         BC_Unk_List[inode][offset][j] = -1;
                       }
@@ -1167,10 +1172,10 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
             for (j = 0; j < idup; j++) {
               ibc1 = BC_Unk_List[inode][offset][j];
               if (ibc1 != -1) {
-                bct1 = BC_Types[ibc1].BC_Name;
-                if (BC_Types[ibc1].desc->rotate != NO_ROT &&
-                    (BC_Types[ibc1].desc->method == COLLOCATE_EDGE ||
-                     BC_Types[ibc1].desc->method == SPECIAL)) {
+                bct1 = goma_ctx->bc.bc_types[ibc1].BC_Name;
+                if (goma_ctx->bc.bc_types[ibc1].desc->rotate != NO_ROT &&
+                    (goma_ctx->bc.bc_types[ibc1].desc->method == COLLOCATE_EDGE ||
+                     goma_ctx->bc.bc_types[ibc1].desc->method == SPECIAL)) {
                   /*
                    * make sure that CONTACT ANGLE conditions end up
                    * on the correct equation - it has
@@ -1182,20 +1187,21 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                     i_dont_move = 0;
                     ibc2 = BC_Unk_List[inode][offset][k];
                     if ((ibc2 != ibc1) && (ibc2 != -1)) {
-                      bct2 = BC_Types[ibc2].BC_Name;
+                      bct2 = goma_ctx->bc.bc_types[ibc2].BC_Name;
 
-                      if ((BC_Types[ibc1].desc->BC_Name == SHEET_ENDSLOPE_BC) &&
-                          (BC_Types[ibc2].desc->BC_Name == TENSION_SHEET_BC)) {
+                      if ((goma_ctx->bc.bc_types[ibc1].desc->BC_Name == SHEET_ENDSLOPE_BC) &&
+                          (goma_ctx->bc.bc_types[ibc2].desc->BC_Name == TENSION_SHEET_BC)) {
                         i_dont_move = 1; /* This is a kludge.  I'm hoping to do better tab*/
                         i_delete = 0;
                       }
 
                       /* move rotated conditions */
-                      if ((i_dont_move != 1) && BC_Types[ibc2].desc->rotate != NO_ROT) {
+                      if ((i_dont_move != 1) &&
+                          goma_ctx->bc.bc_types[ibc2].desc->rotate != NO_ROT) {
                         /* move this condition ibc2 to the next coordinate
                          * direction, if available
                          */
-                        if (BC_Types[ibc2].desc->rotate == R_MESH1) {
+                        if (goma_ctx->bc.bc_types[ibc2].desc->rotate == R_MESH1) {
                           p = eqn - R_MESH1;
                           if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mesh2 =
@@ -1204,18 +1210,18 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                 find_first_opening(BC_Unk_List[inode][offset_mesh2], MAX_NODAL_BCS);
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                             BC_Unk_List[inode][offset_mesh2][idum] = ibc2;
                           } else {
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                           }
-                        } else if (BC_Types[ibc2].desc->rotate == R_MOMENTUM1) {
+                        } else if (goma_ctx->bc.bc_types[ibc2].desc->rotate == R_MOMENTUM1) {
                           p = eqn - R_MOMENTUM1;
                           if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                             offset_mom2 =
@@ -1224,15 +1230,15 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                 find_first_opening(BC_Unk_List[inode][offset_mom2], MAX_NODAL_BCS);
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                             BC_Unk_List[inode][offset_mom2][idum] = ibc2;
                           } else {
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
-                                      BC_Types[ibc2].desc->name2, inode + 1,
-                                      BC_Types[ibc1].desc->name2);
+                                      goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2);
                             }
                           }
                         } else {
@@ -1243,23 +1249,24 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                       /* remove this BC from list */
                       if (i_delete == 1) {
                         if (goma_ctx->debug_flag > 0) {
-                          fprintf(
-                              stderr, "    DISCARDING %s at node %d from dup_list because of %s\n",
-                              BC_Types[ibc2].desc->name2, inode + 1, BC_Types[ibc1].desc->name2);
+                          fprintf(stderr,
+                                  "    DISCARDING %s at node %d from dup_list because of %s\n",
+                                  goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                  goma_ctx->bc.bc_types[ibc1].desc->name2);
                         }
                         BC_Unk_List[inode][offset][k] = -1;
                       }
                     }
                   } /* for (k=j+1; k<idup; k++) */
 
-                } else if (BC_Types[ibc1].desc->rotate != NO_ROT &&
-                           (BC_Types[ibc1].desc->method == COLLOCATE_SURF ||
-                            BC_Types[ibc1].desc->method == STRONG_INT_SURF)) {
+                } else if (goma_ctx->bc.bc_types[ibc1].desc->rotate != NO_ROT &&
+                           (goma_ctx->bc.bc_types[ibc1].desc->method == COLLOCATE_SURF ||
+                            goma_ctx->bc.bc_types[ibc1].desc->method == STRONG_INT_SURF)) {
 
                   for (k = 0; k < idup; k++) {
                     ibc2 = BC_Unk_List[inode][offset][k];
                     if ((ibc2 != ibc1) && (ibc2 != -1) && (ibc1 != -1)) {
-                      bct2 = BC_Types[ibc2].BC_Name;
+                      bct2 = goma_ctx->bc.bc_types[ibc2].BC_Name;
                       /* flag indicating whether this bc should be deleted from list */
                       /*
                        * HKM -> Why is this turned off ?
@@ -1275,20 +1282,21 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                        */
                       if ((bct1 <= GD_TIME_BC && bct1 >= GD_CONST_BC) &&
                           (bct2 <= GD_TIME_BC && bct2 >= GD_CONST_BC)) {
-                        if (BC_Types[ibc1].BC_ID == BC_Types[ibc2].BC_ID) {
+                        if (goma_ctx->bc.bc_types[ibc1].BC_ID ==
+                            goma_ctx->bc.bc_types[ibc2].BC_ID) {
                           action = -1;
                           if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr, "    MULTIPLE GD %s at node %d\n",
-                                    BC_Types[ibc2].desc->name2, inode + 1);
+                                    goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1);
                           }
                         }
                       }
 
-                      if (BC_Types[ibc2].desc->method == WEAK_INT_SURF ||
-                          BC_Types[ibc2].desc->method == WEAK_SHARP_INT) {
+                      if (goma_ctx->bc.bc_types[ibc2].desc->method == WEAK_INT_SURF ||
+                          goma_ctx->bc.bc_types[ibc2].desc->method == WEAK_SHARP_INT) {
                         i_delete = 1;
-                      } else if (BC_Types[ibc1].desc->method == COLLOCATE_EDGE ||
-                                 BC_Types[ibc2].desc->method == SPECIAL) {
+                      } else if (goma_ctx->bc.bc_types[ibc1].desc->method == COLLOCATE_EDGE ||
+                                 goma_ctx->bc.bc_types[ibc2].desc->method == SPECIAL) {
                         /* put additional cross check for bct1 being
                          * on a mesh equation.  E.G. Currently goes in
                          * here if bct1 is a qside
@@ -1303,15 +1311,16 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                            * make sure this ends up on the same equation as kinematic or capillary
                            */
                           sprintf(Err_Msg, "Contact angle at node %d from %s and %s?", inode + 1,
-                                  BC_Types[ibc1].desc->name1, BC_Types[ibc2].desc->name1);
+                                  goma_ctx->bc.bc_types[ibc1].desc->name1,
+                                  goma_ctx->bc.bc_types[ibc2].desc->name1);
                           GOMA_WH(-1, Err_Msg);
                         } else {
                           if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr,
                                     "    REMOVING SPECIAL BC %s at node %d from dup_list because "
                                     "of %s\n",
-                                    BC_Types[ibc2].desc->name2, inode + 1,
-                                    BC_Types[ibc1].desc->name2);
+                                    goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                    goma_ctx->bc.bc_types[ibc1].desc->name2);
                           }
                           i_delete = 1;
                         }
@@ -1333,12 +1342,12 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           case SLOPEY_BC:
                           case SLOPEZ_BC:
                           case SLOPE_BC:
-                            a1 = BC_Types[ibc1].BC_Data_Float[0];
-                            b1 = BC_Types[ibc1].BC_Data_Float[1];
-                            c1 = BC_Types[ibc1].BC_Data_Float[2];
-                            a2 = BC_Types[ibc2].BC_Data_Float[0];
-                            b2 = BC_Types[ibc2].BC_Data_Float[1];
-                            c2 = BC_Types[ibc2].BC_Data_Float[2];
+                            a1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0];
+                            b1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[1];
+                            c1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[2];
+                            a2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0];
+                            b2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[1];
+                            c2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[2];
                             /* determine if the lines are linearly independent */
                             det1 = a1 * b2 - a2 * b1;
                             det2 = a1 * c2 - a2 * c1;
@@ -1350,25 +1359,27 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           case DOUBLE_FILLET_BC:
                           case DOUBLE_FILLET_GEOM_BC:
                           case FEATURE_ROLLON_BC:
-                            a1 = BC_Types[ibc1].BC_Data_Float[0];
-                            a2 = BC_Types[ibc1].BC_Data_Float[1];
-                            a3 = BC_Types[ibc1].BC_Data_Float[2];
-                            a4 = BC_Types[ibc1].BC_Data_Float[3];
-                            a5 = BC_Types[ibc1].BC_Data_Float[4];
-                            b1 = BC_Types[ibc2].BC_Data_Float[0];
-                            b2 = BC_Types[ibc2].BC_Data_Float[1];
-                            b3 = BC_Types[ibc2].BC_Data_Float[2];
-                            b4 = BC_Types[ibc2].BC_Data_Float[3];
-                            b5 = BC_Types[ibc2].BC_Data_Float[4];
+                            a1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0];
+                            a2 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[1];
+                            a3 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[2];
+                            a4 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[3];
+                            a5 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[4];
+                            b1 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0];
+                            b2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[1];
+                            b3 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[2];
+                            b4 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[3];
+                            b5 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[4];
                             det = fabs(a1 - b1) + fabs(a2 - b2) + fabs(a3 - b3) + fabs(a4 - b4) +
                                   fabs(a5 - b5);
                             break;
                           case GD_CONST_BC:
-                            if ((BC_Types[ibc1].BC_Data_Int[2] == BC_Types[ibc2].BC_Data_Int[2]) &&
-                                (BC_Types[ibc1].BC_Data_Int[1] == BC_Types[ibc2].BC_Data_Int[1])) {
+                            if ((goma_ctx->bc.bc_types[ibc1].BC_Data_Int[2] ==
+                                 goma_ctx->bc.bc_types[ibc2].BC_Data_Int[2]) &&
+                                (goma_ctx->bc.bc_types[ibc1].BC_Data_Int[1] ==
+                                 goma_ctx->bc.bc_types[ibc2].BC_Data_Int[1])) {
                               /* the functional form of the geometry  */
-                              a1 = BC_Types[ibc1].BC_Data_Float[0];
-                              a2 = BC_Types[ibc2].BC_Data_Float[0];
+                              a1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0];
+                              a2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0];
                               /* determine if the lines are linearly independent */
                               det = a1 - a2;
                             } else
@@ -1376,12 +1387,14 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                             break;
                           case GD_TIME_BC:
                           case GD_LINEAR_BC:
-                            if ((BC_Types[ibc1].BC_Data_Int[2] == BC_Types[ibc2].BC_Data_Int[2]) &&
-                                (BC_Types[ibc1].BC_Data_Int[1] == BC_Types[ibc2].BC_Data_Int[1])) {
-                              a1 = BC_Types[ibc1].BC_Data_Float[0];
-                              b1 = BC_Types[ibc2].BC_Data_Float[0];
-                              a2 = BC_Types[ibc1].BC_Data_Float[1];
-                              b2 = BC_Types[ibc2].BC_Data_Float[1];
+                            if ((goma_ctx->bc.bc_types[ibc1].BC_Data_Int[2] ==
+                                 goma_ctx->bc.bc_types[ibc2].BC_Data_Int[2]) &&
+                                (goma_ctx->bc.bc_types[ibc1].BC_Data_Int[1] ==
+                                 goma_ctx->bc.bc_types[ibc2].BC_Data_Int[1])) {
+                              a1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0];
+                              b1 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0];
+                              a2 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[1];
+                              b2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[1];
                               /* determine if the lines are linearly independent */
                               det = fabs(a1 - b1) + fabs(a2 - b2);
                             } else
@@ -1389,57 +1402,63 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                             break;
                           case GD_CIRC_BC:
                           case GD_PARAB_BC:
-                            if ((BC_Types[ibc1].BC_Data_Int[2] == BC_Types[ibc2].BC_Data_Int[2]) &&
-                                (BC_Types[ibc1].BC_Data_Int[1] == BC_Types[ibc2].BC_Data_Int[1])) {
-                              a1 = BC_Types[ibc1].BC_Data_Float[0];
-                              b1 = BC_Types[ibc2].BC_Data_Float[0];
-                              a2 = BC_Types[ibc1].BC_Data_Float[1];
-                              b2 = BC_Types[ibc2].BC_Data_Float[1];
-                              a3 = BC_Types[ibc1].BC_Data_Float[2];
-                              b3 = BC_Types[ibc2].BC_Data_Float[2];
+                            if ((goma_ctx->bc.bc_types[ibc1].BC_Data_Int[2] ==
+                                 goma_ctx->bc.bc_types[ibc2].BC_Data_Int[2]) &&
+                                (goma_ctx->bc.bc_types[ibc1].BC_Data_Int[1] ==
+                                 goma_ctx->bc.bc_types[ibc2].BC_Data_Int[1])) {
+                              a1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0];
+                              b1 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0];
+                              a2 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[1];
+                              b2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[1];
+                              a3 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[2];
+                              b3 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[2];
                               det = fabs(a1 - b1) + fabs(a2 - b2) + fabs(a3 - b3);
                             }
                             break;
                           case GD_PARAB_OFFSET_BC:
-                            if ((BC_Types[ibc1].BC_Data_Int[2] == BC_Types[ibc2].BC_Data_Int[2]) &&
-                                (BC_Types[ibc1].BC_Data_Int[1] == BC_Types[ibc2].BC_Data_Int[1])) {
-                              a1 = BC_Types[ibc1].BC_Data_Float[0];
-                              b1 = BC_Types[ibc2].BC_Data_Float[0];
-                              a2 = BC_Types[ibc1].BC_Data_Float[1];
-                              b2 = BC_Types[ibc2].BC_Data_Float[1];
-                              a3 = BC_Types[ibc1].BC_Data_Float[2];
-                              b3 = BC_Types[ibc2].BC_Data_Float[2];
-                              a4 = BC_Types[ibc1].BC_Data_Float[3];
-                              b4 = BC_Types[ibc2].BC_Data_Float[3];
+                            if ((goma_ctx->bc.bc_types[ibc1].BC_Data_Int[2] ==
+                                 goma_ctx->bc.bc_types[ibc2].BC_Data_Int[2]) &&
+                                (goma_ctx->bc.bc_types[ibc1].BC_Data_Int[1] ==
+                                 goma_ctx->bc.bc_types[ibc2].BC_Data_Int[1])) {
+                              a1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0];
+                              b1 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0];
+                              a2 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[1];
+                              b2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[1];
+                              a3 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[2];
+                              b3 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[2];
+                              a4 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[3];
+                              b4 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[3];
                               det = fabs(a1 - b1) + fabs(a2 - b2) + fabs(a3 - b3) + fabs(a4 - b4);
                             }
                             break;
                           case GD_POLYN_BC:
-                            if ((BC_Types[ibc1].BC_Data_Int[2] == BC_Types[ibc2].BC_Data_Int[2]) &&
-                                (BC_Types[ibc1].BC_Data_Int[1] == BC_Types[ibc2].BC_Data_Int[1])) {
-                              a1 = BC_Types[ibc1].BC_Data_Float[0];
-                              b1 = BC_Types[ibc2].BC_Data_Float[0];
-                              a2 = BC_Types[ibc1].BC_Data_Float[1];
-                              b2 = BC_Types[ibc2].BC_Data_Float[1];
-                              a3 = BC_Types[ibc1].BC_Data_Float[2];
-                              b3 = BC_Types[ibc2].BC_Data_Float[2];
-                              a4 = BC_Types[ibc1].BC_Data_Float[3];
-                              b4 = BC_Types[ibc2].BC_Data_Float[3];
-                              a5 = BC_Types[ibc1].BC_Data_Float[4];
-                              b5 = BC_Types[ibc2].BC_Data_Float[4];
-                              a6 = BC_Types[ibc1].BC_Data_Float[5];
-                              b6 = BC_Types[ibc2].BC_Data_Float[5];
-                              a7 = BC_Types[ibc1].BC_Data_Float[6];
-                              b7 = BC_Types[ibc2].BC_Data_Float[6];
+                            if ((goma_ctx->bc.bc_types[ibc1].BC_Data_Int[2] ==
+                                 goma_ctx->bc.bc_types[ibc2].BC_Data_Int[2]) &&
+                                (goma_ctx->bc.bc_types[ibc1].BC_Data_Int[1] ==
+                                 goma_ctx->bc.bc_types[ibc2].BC_Data_Int[1])) {
+                              a1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0];
+                              b1 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0];
+                              a2 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[1];
+                              b2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[1];
+                              a3 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[2];
+                              b3 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[2];
+                              a4 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[3];
+                              b4 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[3];
+                              a5 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[4];
+                              b5 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[4];
+                              a6 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[5];
+                              b6 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[5];
+                              a7 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[6];
+                              b7 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[6];
                               det = fabs(a1 - b1) + fabs(a2 - b2) + fabs(a3 - b3) + fabs(a4 - b4) +
                                     fabs(a5 - b5) + fabs(a6 - b6) + fabs(a7 - b7);
                             }
                             break;
                           case VNORM_LEAK_BC:
-                            a1 = BC_Types[ibc1].BC_Data_Float[0];
-                            b1 = BC_Types[ibc2].BC_Data_Float[0];
-                            a2 = BC_Types[ibc1].BC_Data_Float[1];
-                            b2 = BC_Types[ibc2].BC_Data_Float[1];
+                            a1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0];
+                            b1 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0];
+                            a2 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[1];
+                            b2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[1];
                             /* determine if the lines are linearly independent */
                             det = fabs(a1 - b1) + fabs(a2 - b2);
                             break;
@@ -1448,41 +1467,41 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           case VELO_NORMAL_DISC_BC:
                           case VELO_NORMAL_LS_BC:
                             /* the functional form of the geometry  */
-                            a1 = BC_Types[ibc1].BC_Data_Float[0];
-                            a2 = BC_Types[ibc2].BC_Data_Float[0];
+                            a1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0];
+                            a2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0];
                             /* determine if the lines are linearly independent */
                             det = a1 - a2;
                             /* Actually, also determine if the user is trying to
                                override the code and get one velo_normal shifted to
                                the next available equation, as you would want to do
                                if the lines are at least a bit anti-parallel */
-                            if (BC_Types[ibc1].BC_Data_Int[0] == 1 ||
-                                BC_Types[ibc2].BC_Data_Int[0] == 1)
+                            if (goma_ctx->bc.bc_types[ibc1].BC_Data_Int[0] == 1 ||
+                                goma_ctx->bc.bc_types[ibc2].BC_Data_Int[0] == 1)
                               det = 1.;
 
                             break;
                           case VELO_TANGENT_BC:
                           case VELO_TANGENT_USER_BC:
                           case VELO_STREAMING_BC:
-                            a1 = BC_Types[ibc1].BC_Data_Float[0];
-                            b1 = BC_Types[ibc2].BC_Data_Float[0];
-                            a2 = BC_Types[ibc1].BC_Data_Float[1];
-                            b2 = BC_Types[ibc2].BC_Data_Float[1];
-                            a3 = BC_Types[ibc1].BC_Data_Float[2];
-                            b3 = BC_Types[ibc2].BC_Data_Float[2];
+                            a1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0];
+                            b1 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0];
+                            a2 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[1];
+                            b2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[1];
+                            a3 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[2];
+                            b3 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[2];
                             det = fabs(a1 - b1) + fabs(a2 - b2) + fabs(a3 - b3);
-                            det += fabs((double)BC_Types[ibc1].BC_Data_Int[0] +
-                                        (double)BC_Types[ibc2].BC_Data_Int[0]);
+                            det += fabs((double)goma_ctx->bc.bc_types[ibc1].BC_Data_Int[0] +
+                                        (double)goma_ctx->bc.bc_types[ibc2].BC_Data_Int[0]);
                             break;
                           case VELO_TANGENT_SOLID_BC:
                           case VELO_SLIP_SOLID_BC:
-                            a1 = BC_Types[ibc1].BC_Data_Float[0];
-                            b1 = BC_Types[ibc2].BC_Data_Float[0];
-                            a2 = BC_Types[ibc1].BC_Data_Float[1];
-                            b2 = BC_Types[ibc2].BC_Data_Float[1];
+                            a1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0];
+                            b1 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0];
+                            a2 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[1];
+                            b2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[1];
                             det = fabs(a1 - b1) + fabs(a2 - b2);
-                            det += fabs((double)BC_Types[ibc1].BC_Data_Int[2] +
-                                        (double)BC_Types[ibc2].BC_Data_Int[2]);
+                            det += fabs((double)goma_ctx->bc.bc_types[ibc1].BC_Data_Int[2] +
+                                        (double)goma_ctx->bc.bc_types[ibc2].BC_Data_Int[2]);
                             break;
                           case VELO_SLIP_BC:
                           case VELO_SLIP_ROT_BC:
@@ -1490,20 +1509,20 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           case VELO_SLIP_ROT_FLUID_BC:
                           case AIR_FILM_BC:
                           case AIR_FILM_ROT_BC:
-                            a1 = BC_Types[ibc1].BC_Data_Float[0];
-                            b1 = BC_Types[ibc2].BC_Data_Float[0];
-                            a2 = BC_Types[ibc1].BC_Data_Float[1];
-                            b2 = BC_Types[ibc2].BC_Data_Float[1];
-                            a3 = BC_Types[ibc1].BC_Data_Float[2];
-                            b3 = BC_Types[ibc2].BC_Data_Float[2];
-                            a4 = BC_Types[ibc1].BC_Data_Float[3];
-                            b4 = BC_Types[ibc2].BC_Data_Float[3];
-                            a5 = BC_Types[ibc1].BC_Data_Float[4];
-                            b5 = BC_Types[ibc2].BC_Data_Float[4];
+                            a1 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[0];
+                            b1 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[0];
+                            a2 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[1];
+                            b2 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[1];
+                            a3 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[2];
+                            b3 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[2];
+                            a4 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[3];
+                            b4 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[3];
+                            a5 = goma_ctx->bc.bc_types[ibc1].BC_Data_Float[4];
+                            b5 = goma_ctx->bc.bc_types[ibc2].BC_Data_Float[4];
                             det = fabs(a1 - b1) + fabs(a2 - b2) + fabs(a3 - b3) + fabs(a4 - b4) +
                                   fabs(a5 - b5);
-                            det += fabs((double)BC_Types[ibc1].BC_Data_Int[0] +
-                                        (double)BC_Types[ibc2].BC_Data_Int[0]);
+                            det += fabs((double)goma_ctx->bc.bc_types[ibc1].BC_Data_Int[0] +
+                                        (double)goma_ctx->bc.bc_types[ibc2].BC_Data_Int[0]);
                             break;
                             /*
                              * Conditions which always get applied along both
@@ -1526,11 +1545,11 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           if (fabs(det) < 1.0e-10) {
                             if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    COLINEAR SIDES %s at node %d \n",
-                                      BC_Types[ibc1].desc->name2, inode + 1);
+                                      goma_ctx->bc.bc_types[ibc1].desc->name2, inode + 1);
                             }
                             i_delete = 1;
                             /* colinear strong conditions don't get deleted */
-                            if (BC_Types[ibc2].desc->method == STRONG_INT_SURF) {
+                            if (goma_ctx->bc.bc_types[ibc2].desc->method == STRONG_INT_SURF) {
                               i_delete = 2;
                             }
                           }
@@ -1563,11 +1582,11 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           /*
                            * move integrated conditions in favor of collocated conditions
                            */
-                          if (BC_Types[ibc1].desc->method == COLLOCATE_SURF &&
-                              BC_Types[ibc2].desc->method == STRONG_INT_SURF) {
+                          if (goma_ctx->bc.bc_types[ibc1].desc->method == COLLOCATE_SURF &&
+                              goma_ctx->bc.bc_types[ibc2].desc->method == STRONG_INT_SURF) {
                             /* do nothing */
-                          } else if (BC_Types[ibc2].desc->method == COLLOCATE_SURF &&
-                                     BC_Types[ibc1].desc->method == STRONG_INT_SURF) {
+                          } else if (goma_ctx->bc.bc_types[ibc2].desc->method == COLLOCATE_SURF &&
+                                     goma_ctx->bc.bc_types[ibc1].desc->method == STRONG_INT_SURF) {
                             imove = ibc1;
                             istay = ibc2;
                             i_delete = -1;
@@ -1577,12 +1596,13 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                            * If the first boundary condition is a tangent condition, move it
                            * and keep the second boundary condition
                            */
-                          else if (BC_Types[ibc1].desc->equation > BC_Types[ibc2].desc->equation) {
+                          else if (goma_ctx->bc.bc_types[ibc1].desc->equation >
+                                   goma_ctx->bc.bc_types[ibc2].desc->equation) {
                             imove = ibc1;
                             istay = ibc2;
                             i_delete = -1; /* indicates that first bc should be deleted */
                           }
-                          if (BC_Types[imove].desc->rotate == R_MESH1) {
+                          if (goma_ctx->bc.bc_types[imove].desc->rotate == R_MESH1) {
                             p = eqn - R_MESH1;
                             if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                               offset_mesh2 =
@@ -1591,18 +1611,18 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                                         MAX_NODAL_BCS);
                               if (goma_ctx->debug_flag > 0) {
                                 fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
-                                        BC_Types[imove].desc->name2, inode + 1,
-                                        BC_Types[istay].desc->name2);
+                                        goma_ctx->bc.bc_types[imove].desc->name2, inode + 1,
+                                        goma_ctx->bc.bc_types[istay].desc->name2);
                               }
                               BC_Unk_List[inode][offset_mesh2][idum] = imove;
                             } else {
                               if (goma_ctx->debug_flag > 0) {
                                 fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
-                                        BC_Types[imove].desc->name2, inode + 1,
-                                        BC_Types[istay].desc->name2);
+                                        goma_ctx->bc.bc_types[imove].desc->name2, inode + 1,
+                                        goma_ctx->bc.bc_types[istay].desc->name2);
                               }
                             }
-                          } else if (BC_Types[imove].desc->rotate == R_MOMENTUM1) {
+                          } else if (goma_ctx->bc.bc_types[imove].desc->rotate == R_MOMENTUM1) {
                             p = eqn - R_MOMENTUM1;
                             if (p + 1 < goma_ctx->fem.pd_glob[0]->Num_Dim) {
                               offset_mom2 =
@@ -1611,15 +1631,15 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                                         MAX_NODAL_BCS);
                               if (goma_ctx->debug_flag > 0) {
                                 fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
-                                        BC_Types[imove].desc->name2, inode + 1,
-                                        BC_Types[istay].desc->name2);
+                                        goma_ctx->bc.bc_types[imove].desc->name2, inode + 1,
+                                        goma_ctx->bc.bc_types[istay].desc->name2);
                               }
                               BC_Unk_List[inode][offset_mom2][idum] = imove;
                             } else {
                               if (goma_ctx->debug_flag > 0) {
                                 fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
-                                        BC_Types[imove].desc->name2, inode + 1,
-                                        BC_Types[istay].desc->name2);
+                                        goma_ctx->bc.bc_types[imove].desc->name2, inode + 1,
+                                        goma_ctx->bc.bc_types[istay].desc->name2);
                               }
                             }
                           } else {
@@ -1632,8 +1652,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr,
                                     "    DISCARDING %s at node %d from dup_list because of %s\n",
-                                    BC_Types[ibc2].desc->name2, inode + 1,
-                                    BC_Types[ibc1].desc->name2);
+                                    goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1,
+                                    goma_ctx->bc.bc_types[ibc1].desc->name2);
                           }
                           BC_Unk_List[inode][offset][k] = -1;
                         }
@@ -1642,8 +1662,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr,
                                     "    DISCARDING %s at node %d from dup_list because of %s\n",
-                                    BC_Types[ibc1].desc->name2, inode + 1,
-                                    BC_Types[ibc2].desc->name2);
+                                    goma_ctx->bc.bc_types[ibc1].desc->name2, inode + 1,
+                                    goma_ctx->bc.bc_types[ibc2].desc->name2);
                           }
                           BC_Unk_List[inode][offset][j] = -1;
                         }
@@ -1711,7 +1731,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
         } else {
           bc_dup_out = fopen(bc_divert_fn, "a");
         }
-        if (BC_dup_ptr[goma_ctx->fem.pg->imtrx] > 0) {
+        if (goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx] > 0) {
           fprintf(bc_dup_out, "BC Duplication list for Processor %d:\n", goma_ctx->proc_id);
           fprintf(bc_dup_out, "-------- --------- ----------- ----\n");
         }
@@ -1719,8 +1739,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
         bc_dup_out = stderr;
       }
 
-      for (i = 0; i < BC_dup_ptr[goma_ctx->fem.pg->imtrx]; i++) {
-        inode = BC_dup_nodes[goma_ctx->fem.pg->imtrx][i];
+      for (i = 0; i < goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]; i++) {
+        inode = goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx][i];
         if (inode < (dpi->num_internal_nodes + dpi->num_boundary_nodes)) {
           node = Nodes[inode];
           nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
@@ -1752,11 +1772,15 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
               idup = 0;
               while ((bickel = BC_Unk_List[inode][offset][idup]) != -1) {
                 if (idup == 0) {
-                  fprintf(bc_dup_out, "  %-15s (%d) from %s %d\n", BC_Types[bickel].desc->name1,
-                          bickel, BC_Types[bickel].Set_Type, BC_Types[bickel].BC_ID);
+                  fprintf(bc_dup_out, "  %-15s (%d) from %s %d\n",
+                          goma_ctx->bc.bc_types[bickel].desc->name1, bickel,
+                          goma_ctx->bc.bc_types[bickel].Set_Type,
+                          goma_ctx->bc.bc_types[bickel].BC_ID);
                 } else {
-                  fprintf(bc_dup_out, "\t\t\t%-15s (%d) from %s %d\n", BC_Types[bickel].desc->name1,
-                          bickel, BC_Types[bickel].Set_Type, BC_Types[bickel].BC_ID);
+                  fprintf(bc_dup_out, "\t\t\t%-15s (%d) from %s %d\n",
+                          goma_ctx->bc.bc_types[bickel].desc->name1, bickel,
+                          goma_ctx->bc.bc_types[bickel].Set_Type,
+                          goma_ctx->bc.bc_types[bickel].BC_ID);
                 }
                 idup++;
               }
@@ -1781,14 +1805,15 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     /* make a list of momentum and mesh nodes that will have rotated conditions
      * and the SS#'s of the sides on which they should be rotated
      */
-    num_mesh_rotate[goma_ctx->fem.pg->imtrx] = 0;
-    num_mom_rotate[goma_ctx->fem.pg->imtrx] = 0;
+    goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx] = 0;
+    goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx] = 0;
 
     if (num_bc_nodes > 0) {
-      mesh_rotate_node[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
-      mesh_rotate_ss[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
-      mom_rotate_node[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
-      mom_rotate_ss[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
+      goma_ctx->bc.mesh_rotate_node[goma_ctx->fem.pg->imtrx] =
+          alloc_int_1(num_bc_nodes, INT_NOINIT);
+      goma_ctx->bc.mesh_rotate_ss[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
+      goma_ctx->bc.mom_rotate_node[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
+      goma_ctx->bc.mom_rotate_ss[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, INT_NOINIT);
     }
 
     /* loop through nodes and remove nodes that don't have conflicts
@@ -1836,7 +1861,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                      BC_Unk_List[inode][offset_p][idup] != -1) {
                 count_BC++;
                 ibc = BC_Unk_List[inode][offset_p][idup];
-                bc_desc = BC_Types[ibc].desc;
+                bc_desc = goma_ctx->bc.bc_types[ibc].desc;
                 if (bc_desc->method == DIRICHLET)
                   count_DC++;
                 if (bc_desc->method == WEAK_INT_SURF)
@@ -1852,10 +1877,10 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                 /* count independent rotated conditions */
                 if (bc_desc->rotate != NO_ROT) {
                   if (count_rotate == 0 || jvar != dir_rot) {
-                    if (ss_rot != -1 && ss_rot != BC_Types[ibc].BC_ID) {
+                    if (ss_rot != -1 && ss_rot != goma_ctx->bc.bc_types[ibc].BC_ID) {
                       two_ss_rot = 1;
                     }
-                    ss_rot = BC_Types[ibc].BC_ID;
+                    ss_rot = goma_ctx->bc.bc_types[ibc].BC_ID;
                     dir_rot = jvar;
                     count_rotate++;
                   } else {
@@ -1907,27 +1932,36 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
               if (goma_ctx->debug_flag > 0) {
                 fprintf(stderr, "Rotate MESH for BC's at node %d\n", inode + 1);
               }
-              if (num_mesh_rotate[goma_ctx->fem.pg->imtrx] == 0 ||
-                  mesh_rotate_node[goma_ctx->fem.pg->imtrx]
-                                  [num_mesh_rotate[goma_ctx->fem.pg->imtrx] - 1] != inode) {
-                mesh_rotate_node[goma_ctx->fem.pg->imtrx]
-                                [num_mesh_rotate[goma_ctx->fem.pg->imtrx]] = inode;
-                mesh_rotate_ss[goma_ctx->fem.pg->imtrx][num_mesh_rotate[goma_ctx->fem.pg->imtrx]] =
+              if (goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx] == 0 ||
+                  goma_ctx->bc
+                          .mesh_rotate_node[goma_ctx->fem.pg->imtrx]
+                                           [goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx] -
+                                            1] != inode) {
+                goma_ctx->bc
+                    .mesh_rotate_node[goma_ctx->fem.pg->imtrx]
+                                     [goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx]] =
+                    inode;
+                goma_ctx->bc.mesh_rotate_ss[goma_ctx->fem.pg->imtrx]
+                                           [goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx]] =
                     ss_rot;
-                num_mesh_rotate[goma_ctx->fem.pg->imtrx]++;
+                goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx]++;
               }
             }
             if (i_rotate && ivar == 1) {
               if (goma_ctx->debug_flag > 0)
                 fprintf(stderr, "Rotate MOMENTUM for BC's at node %d\n", inode + 1);
-              if (num_mom_rotate[goma_ctx->fem.pg->imtrx] == 0 ||
-                  mom_rotate_node[goma_ctx->fem.pg->imtrx]
-                                 [num_mom_rotate[goma_ctx->fem.pg->imtrx] - 1] != inode) {
-                mom_rotate_node[goma_ctx->fem.pg->imtrx][num_mom_rotate[goma_ctx->fem.pg->imtrx]] =
+              if (goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx] == 0 ||
+                  goma_ctx->bc
+                          .mom_rotate_node[goma_ctx->fem.pg->imtrx]
+                                          [goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx] -
+                                           1] != inode) {
+                goma_ctx->bc.mom_rotate_node[goma_ctx->fem.pg->imtrx]
+                                            [goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx]] =
                     inode;
-                mom_rotate_ss[goma_ctx->fem.pg->imtrx][num_mom_rotate[goma_ctx->fem.pg->imtrx]] =
+                goma_ctx->bc.mom_rotate_ss[goma_ctx->fem.pg->imtrx]
+                                          [goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx]] =
                     ss_rot;
-                num_mom_rotate[goma_ctx->fem.pg->imtrx]++;
+                goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx]++;
               }
             }
 
@@ -1950,30 +1984,30 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     }
 
     if (num_bc_nodes > 0) {
-      if (num_mesh_rotate[goma_ctx->fem.pg->imtrx] > 0) {
-        mesh_rotate_node[goma_ctx->fem.pg->imtrx] =
-            (int *)realloc(mesh_rotate_node[goma_ctx->fem.pg->imtrx],
-                           (size_t)num_mesh_rotate[goma_ctx->fem.pg->imtrx] * sizeof(int));
-        mesh_rotate_ss[goma_ctx->fem.pg->imtrx] =
-            (int *)realloc(mesh_rotate_ss[goma_ctx->fem.pg->imtrx],
-                           (size_t)num_mesh_rotate[goma_ctx->fem.pg->imtrx] * sizeof(int));
+      if (goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx] > 0) {
+        goma_ctx->bc.mesh_rotate_node[goma_ctx->fem.pg->imtrx] = (int *)realloc(
+            goma_ctx->bc.mesh_rotate_node[goma_ctx->fem.pg->imtrx],
+            (size_t)goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx] * sizeof(int));
+        goma_ctx->bc.mesh_rotate_ss[goma_ctx->fem.pg->imtrx] = (int *)realloc(
+            goma_ctx->bc.mesh_rotate_ss[goma_ctx->fem.pg->imtrx],
+            (size_t)goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx] * sizeof(int));
       }
-      if (num_mom_rotate[goma_ctx->fem.pg->imtrx] > 0) {
-        mom_rotate_node[goma_ctx->fem.pg->imtrx] =
-            (int *)realloc(mom_rotate_node[goma_ctx->fem.pg->imtrx],
-                           (size_t)num_mom_rotate[goma_ctx->fem.pg->imtrx] * sizeof(int));
-        mom_rotate_ss[goma_ctx->fem.pg->imtrx] =
-            (int *)realloc(mom_rotate_ss[goma_ctx->fem.pg->imtrx],
-                           (size_t)num_mom_rotate[goma_ctx->fem.pg->imtrx] * sizeof(int));
+      if (goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx] > 0) {
+        goma_ctx->bc.mom_rotate_node[goma_ctx->fem.pg->imtrx] = (int *)realloc(
+            goma_ctx->bc.mom_rotate_node[goma_ctx->fem.pg->imtrx],
+            (size_t)goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx] * sizeof(int));
+        goma_ctx->bc.mom_rotate_ss[goma_ctx->fem.pg->imtrx] = (int *)realloc(
+            goma_ctx->bc.mom_rotate_ss[goma_ctx->fem.pg->imtrx],
+            (size_t)goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx] * sizeof(int));
       }
     }
 
-    if (mesh_rotate_node[goma_ctx->fem.pg->imtrx] != NULL ||
-        mom_rotate_node[goma_ctx->fem.pg->imtrx] != NULL) {
+    if (goma_ctx->bc.mesh_rotate_node[goma_ctx->fem.pg->imtrx] != NULL ||
+        goma_ctx->bc.mom_rotate_node[goma_ctx->fem.pg->imtrx] != NULL) {
       int ebi = 0;
 
-      while (!Use_2D_Rotation_Vectors && ebi < exo->num_elem_blocks) {
-        Use_2D_Rotation_Vectors =
+      while (!goma_ctx->bc.use_2d_rotation_vectors && ebi < exo->num_elem_blocks) {
+        goma_ctx->bc.use_2d_rotation_vectors =
             (exo->eb_elem_itype[ebi] == LINEAR_TRI || exo->eb_elem_itype[ebi] == QUAD_TRI);
 
         ebi++;
@@ -1981,21 +2015,21 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     }
 
     if (goma_ctx->debug_flag > 0) {
-      for (i = 0; i < num_mesh_rotate[goma_ctx->fem.pg->imtrx]; i++) {
+      for (i = 0; i < goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx]; i++) {
         fprintf(stderr, "\tMESH node %d rotate on SS %d\n",
-                mesh_rotate_node[goma_ctx->fem.pg->imtrx][i] + 1,
-                mesh_rotate_ss[goma_ctx->fem.pg->imtrx][i]);
+                goma_ctx->bc.mesh_rotate_node[goma_ctx->fem.pg->imtrx][i] + 1,
+                goma_ctx->bc.mesh_rotate_ss[goma_ctx->fem.pg->imtrx][i]);
       }
     }
-    if (goma_ctx->debug_flag > 0 && num_mom_rotate[goma_ctx->fem.pg->imtrx] > 0) {
+    if (goma_ctx->debug_flag > 0 && goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx] > 0) {
       fprintf(stderr, "Rotate MOMENTUM for BC's at %d NODES \n",
-              num_mom_rotate[goma_ctx->fem.pg->imtrx]);
+              goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx]);
     }
     if (goma_ctx->debug_flag > 0) {
-      for (i = 0; i < num_mom_rotate[goma_ctx->fem.pg->imtrx]; i++) {
+      for (i = 0; i < goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx]; i++) {
         fprintf(stderr, "\tMOMENTUM node %d rotate on SS %d\n",
-                mom_rotate_node[goma_ctx->fem.pg->imtrx][i] + 1,
-                mom_rotate_ss[goma_ctx->fem.pg->imtrx][i]);
+                goma_ctx->bc.mom_rotate_node[goma_ctx->fem.pg->imtrx][i] + 1,
+                goma_ctx->bc.mom_rotate_ss[goma_ctx->fem.pg->imtrx][i]);
       }
     }
 
@@ -2003,8 +2037,8 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
      */
     for (inode = 0; inode < num_total_nodes; inode++) {
       if (BC_Unk_List[inode] != NULL) {
-        if (in_list(inode, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx],
-                    BC_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
+        if (in_list(inode, 0, goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx],
+                    goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
           free_bc_unk_list_node(BC_Unk_List + inode, inode);
         }
       }
@@ -2018,7 +2052,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     for (int ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
       if (matrix_used_BC[ibc] == 0) {
         GOMA_WH_MANY(-1, "Boundary condition %d, %s, applied on NS %d, is never used\n", ibc,
-                     BC_Types[ibc].desc->name1, BC_Types[ibc].BC_ID);
+                     goma_ctx->bc.bc_types[ibc].desc->name1, goma_ctx->bc.bc_types[ibc].BC_ID);
       }
     }
     free(matrix_used_BC);
@@ -2093,9 +2127,10 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     }
   }
 
-  BC_dup_nodes = malloc(sizeof(int *) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
-  BC_dup_list = malloc(sizeof(int ***) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
-  BC_dup_ptr = malloc(sizeof(int) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
+  goma_ctx->bc.bc_dup_nodes = malloc(sizeof(int *) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
+  goma_ctx->bc.bc_dup_list =
+      malloc(sizeof(int ***) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
+  goma_ctx->bc.bc_dup_ptr = malloc(sizeof(int) * (size_t)goma_ctx->fem.upd->Total_Num_Matrices);
 
   for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
        goma_ctx->fem.pg->imtrx++) {
@@ -2134,10 +2169,10 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
 
       /* First check to see if this boundary condition is a node set 	      */
-      if (!strcmp(BC_Types[ibc].Set_Type, "NS")) {
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "NS")) {
         matIndex = -2;
-        if (BC_Types[ibc].BC_EBID_Apply != -1) {
-          matIndex = map_mat_index(BC_Types[ibc].BC_EBID_Apply);
+        if (goma_ctx->bc.bc_types[ibc].BC_EBID_Apply != -1) {
+          matIndex = map_mat_index(goma_ctx->bc.bc_types[ibc].BC_EBID_Apply);
         }
         /*
          *  Loop over the total number of node sets defined for the
@@ -2149,7 +2184,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
            * and the node set ID specified in the input file
            * - continue if a match is found
            */
-          if (exo->ns_id[ins] == BC_Types[ibc].BC_ID) {
+          if (exo->ns_id[ins] == goma_ctx->bc.bc_types[ibc].BC_ID) {
 
             /* Loop over all the global nodes in the current node set */
             for (i = 0; i < exo->ns_num_nodes[ins]; i++) {
@@ -2177,9 +2212,9 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                * Fill in an entry into the list for each component of the
                * boundary condition
                */
-              for (p = 0; p < BC_Types[ibc].desc->vector; p++) {
-                offset =
-                    find_bc_unk_offset(BC_Types + ibc, matIndex, inode, p, &retn_matIndex, &vd);
+              for (p = 0; p < goma_ctx->bc.bc_types[ibc].desc->vector; p++) {
+                offset = find_bc_unk_offset(goma_ctx->bc.bc_types + ibc, matIndex, inode, p,
+                                            &retn_matIndex, &vd);
                 if (offset >= 0) {
                   add_to_node_unk_bc_list(BC_Unk_List[inode][offset], ibc);
                 }
@@ -2196,9 +2231,9 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     /*  Also, make a list of all SS at each node                                 */
     /*****************************************************************************/
 
-    SS_list = (int **)alloc_ptr_1(num_total_nodes);
+    goma_ctx->bc.ss_list = (int **)alloc_ptr_1(num_total_nodes);
     for (i = 0; i < num_total_nodes; i++) {
-      SS_list[i] = alloc_int_1(MAX_SS_PER_NODE, -1);
+      goma_ctx->bc.ss_list[i] = alloc_int_1(MAX_SS_PER_NODE, -1);
     }
 
     /* Loop over the total number of side sets defined on the current
@@ -2225,9 +2260,9 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
              lni < exo->ss_node_side_index[iss][side_index + 1]; lni++) {
           inode = exo->ss_node_list[iss][lni];
 
-          if (in_list(exo->ss_id[iss], 0, MAX_SS_PER_NODE, SS_list[inode]) == -1) {
+          if (in_list(exo->ss_id[iss], 0, MAX_SS_PER_NODE, goma_ctx->bc.ss_list[inode]) == -1) {
             iptr = 0;
-            while (SS_list[inode][iptr] != -1)
+            while (goma_ctx->bc.ss_list[inode][iptr] != -1)
               iptr++;
             if (iptr >= MAX_SS_PER_NODE) {
               sprintf(Err_Msg, "Node (%d) wants > %d sidesets - boost MAX_SS_PER_NODE.", inode + 1,
@@ -2235,7 +2270,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
               GOMA_EH(GOMA_ERROR, Err_Msg);
             }
 
-            SS_list[inode][iptr] = exo->ss_id[iss];
+            goma_ctx->bc.ss_list[inode][iptr] = exo->ss_id[iss];
           }
         }
       }
@@ -2244,25 +2279,29 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
 
       /* First check to see if this boundary condition is a side set      */
-      if (!strcmp(BC_Types[ibc].Set_Type, "SS")) {
+      if (!strcmp(goma_ctx->bc.bc_types[ibc].Set_Type, "SS")) {
 
         /*
          * Determine what entity this boundary condition is applied to
          * - nedelec, face, edge, or vertex
          */
         nedelecBC = faceBC = edgeBC = vertexBC = FALSE;
-        if ((BC_Types[ibc].desc->method == WEAK_INT_NEDELEC ||
-             BC_Types[ibc].desc->method == STRONG_INT_NEDELEC) &&
-            BC_Types[ibc].BC_ID != -1 && BC_Types[ibc].BC_ID2 == -1 && BC_Types[ibc].BC_ID3 == -1) {
+        if ((goma_ctx->bc.bc_types[ibc].desc->method == WEAK_INT_NEDELEC ||
+             goma_ctx->bc.bc_types[ibc].desc->method == STRONG_INT_NEDELEC) &&
+            goma_ctx->bc.bc_types[ibc].BC_ID != -1 && goma_ctx->bc.bc_types[ibc].BC_ID2 == -1 &&
+            goma_ctx->bc.bc_types[ibc].BC_ID3 == -1) {
           nedelecBC = TRUE;
-        } else if (BC_Types[ibc].BC_ID != -1 && BC_Types[ibc].BC_ID2 == -1 &&
-                   BC_Types[ibc].BC_ID3 == -1) {
+        } else if (goma_ctx->bc.bc_types[ibc].BC_ID != -1 &&
+                   goma_ctx->bc.bc_types[ibc].BC_ID2 == -1 &&
+                   goma_ctx->bc.bc_types[ibc].BC_ID3 == -1) {
           faceBC = TRUE;
-        } else if (BC_Types[ibc].BC_ID != -1 && BC_Types[ibc].BC_ID2 != -1 &&
-                   BC_Types[ibc].BC_ID3 == -1) {
+        } else if (goma_ctx->bc.bc_types[ibc].BC_ID != -1 &&
+                   goma_ctx->bc.bc_types[ibc].BC_ID2 != -1 &&
+                   goma_ctx->bc.bc_types[ibc].BC_ID3 == -1) {
           edgeBC = TRUE;
-        } else if (BC_Types[ibc].BC_ID != -1 && BC_Types[ibc].BC_ID2 != -1 &&
-                   BC_Types[ibc].BC_ID3 != -1) {
+        } else if (goma_ctx->bc.bc_types[ibc].BC_ID != -1 &&
+                   goma_ctx->bc.bc_types[ibc].BC_ID2 != -1 &&
+                   goma_ctx->bc.bc_types[ibc].BC_ID3 != -1) {
           vertexBC = TRUE;
         }
 
@@ -2274,7 +2313,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
            * and the side set ID specified in the input file
            * - continue if a match is found
            */
-          if (exo->ss_id[iss] == BC_Types[ibc].BC_ID) {
+          if (exo->ss_id[iss] == goma_ctx->bc.bc_types[ibc].BC_ID) {
 
             for (side_index = 0; side_index < exo->ss_num_sides[iss]; side_index++) {
               /*
@@ -2315,15 +2354,17 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                   node_ok = 1;
 
                 /* Edge conditions */
-                if (edgeBC &&
-                    (in_list(BC_Types[ibc].BC_ID2, 0, MAX_SS_PER_NODE, SS_list[inode]) != -1)) {
+                if (edgeBC && (in_list(goma_ctx->bc.bc_types[ibc].BC_ID2, 0, MAX_SS_PER_NODE,
+                                       goma_ctx->bc.ss_list[inode]) != -1)) {
                   node_ok = 1;
                 }
 
                 /* Vertex conditons */
                 if (vertexBC &&
-                    (in_list(BC_Types[ibc].BC_ID2, 0, MAX_SS_PER_NODE, SS_list[inode]) != -1) &&
-                    (in_list(BC_Types[ibc].BC_ID3, 0, MAX_SS_PER_NODE, SS_list[inode]) != -1)) {
+                    (in_list(goma_ctx->bc.bc_types[ibc].BC_ID2, 0, MAX_SS_PER_NODE,
+                             goma_ctx->bc.ss_list[inode]) != -1) &&
+                    (in_list(goma_ctx->bc.bc_types[ibc].BC_ID3, 0, MAX_SS_PER_NODE,
+                             goma_ctx->bc.ss_list[inode]) != -1)) {
                   node_ok = 1;
                 }
 
@@ -2341,9 +2382,9 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                    * Fill in an entry into the list for each component of the
                    * boundary condition
                    */
-                  for (p = 0; p < BC_Types[ibc].desc->vector; p++) {
-                    offset =
-                        find_bc_unk_offset(BC_Types + ibc, matIndex, inode, p, &retn_matIndex, &vd);
+                  for (p = 0; p < goma_ctx->bc.bc_types[ibc].desc->vector; p++) {
+                    offset = find_bc_unk_offset(goma_ctx->bc.bc_types + ibc, matIndex, inode, p,
+                                                &retn_matIndex, &vd);
                     if (offset >= 0) {
                       add_to_node_unk_bc_list(BC_Unk_List[inode][offset], ibc);
                     }
@@ -2365,7 +2406,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     /* create an array which will hold boundary condition information temporarily
      * for each node
      */
-    ROT_list = (int **)alloc_ptr_1(num_total_nodes);
+    goma_ctx->bc.rot_list = (int **)alloc_ptr_1(num_total_nodes);
     num_rot_nodes = 0;
 
     /***************************************************************************/
@@ -2396,11 +2437,11 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
        * it's invalid.
        */
 
-      if (-1 == in_list(ROT_Types[irc].ss_id[0], 0, len_ssid_list, ssid_list)) {
+      if (-1 == in_list(goma_ctx->bc.rot_types[irc].ss_id[0], 0, len_ssid_list, ssid_list)) {
         sprintf(Err_Msg, "ROT[%d] (ROT = %s %s %d ...) has ss_id_1 = %d not in mesh.", irc,
-                rot_eq_type2string(ROT_Types[irc].eq_type),
-                rotopology_type2string(ROT_Types[irc].type), ROT_Types[irc].ss_id[0],
-                ROT_Types[irc].ss_id[0]);
+                rot_eq_type2string(goma_ctx->bc.rot_types[irc].eq_type),
+                rotopology_type2string(goma_ctx->bc.rot_types[irc].type),
+                goma_ctx->bc.rot_types[irc].ss_id[0], goma_ctx->bc.rot_types[irc].ss_id[0]);
         fprintf(stderr, "Warning: %s\n", Err_Msg);
 #if 0	
         /* Leave this barn door open to help test further... */
@@ -2412,7 +2453,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
        * For each rotation card, Loop over the total number of nodes
        * checking to see if the rotation card affects that node.
        */
-      ROT_Types[irc].node = -1;
+      goma_ctx->bc.rot_types[irc].node = -1;
       for (inode = 0; inode < num_total_nodes; inode++) {
         /*
          * Check for a match between the ID of the current side set and the
@@ -2420,20 +2461,26 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
          * is found
          */
         node_ok = 0;
-        if (ROT_Types[irc].type == FACE &&
-            (in_list(ROT_Types[irc].ss_id[0], 0, MAX_SS_PER_NODE, SS_list[inode]) != -1)) {
+        if (goma_ctx->bc.rot_types[irc].type == FACE &&
+            (in_list(goma_ctx->bc.rot_types[irc].ss_id[0], 0, MAX_SS_PER_NODE,
+                     goma_ctx->bc.ss_list[inode]) != -1)) {
           node_ok = 1;
         }
-        if (ROT_Types[irc].type == CURVE &&
-            (in_list(ROT_Types[irc].ss_id[0], 0, MAX_SS_PER_NODE, SS_list[inode]) != -1) &&
-            (in_list(ROT_Types[irc].ss_id[1], 0, MAX_SS_PER_NODE, SS_list[inode]) != -1)) {
+        if (goma_ctx->bc.rot_types[irc].type == CURVE &&
+            (in_list(goma_ctx->bc.rot_types[irc].ss_id[0], 0, MAX_SS_PER_NODE,
+                     goma_ctx->bc.ss_list[inode]) != -1) &&
+            (in_list(goma_ctx->bc.rot_types[irc].ss_id[1], 0, MAX_SS_PER_NODE,
+                     goma_ctx->bc.ss_list[inode]) != -1)) {
           node_ok = 1;
         }
-        if (ROT_Types[irc].type == VERTEX &&
-            (in_list(ROT_Types[irc].ss_id[0], 0, MAX_SS_PER_NODE, SS_list[inode]) != -1) &&
-            (in_list(ROT_Types[irc].ss_id[1], 0, MAX_SS_PER_NODE, SS_list[inode]) != -1) &&
-            (in_list(ROT_Types[irc].ss_id[2], 0, MAX_SS_PER_NODE, SS_list[inode]) != -1)) {
-          ROT_Types[irc].node = inode;
+        if (goma_ctx->bc.rot_types[irc].type == VERTEX &&
+            (in_list(goma_ctx->bc.rot_types[irc].ss_id[0], 0, MAX_SS_PER_NODE,
+                     goma_ctx->bc.ss_list[inode]) != -1) &&
+            (in_list(goma_ctx->bc.rot_types[irc].ss_id[1], 0, MAX_SS_PER_NODE,
+                     goma_ctx->bc.ss_list[inode]) != -1) &&
+            (in_list(goma_ctx->bc.rot_types[irc].ss_id[2], 0, MAX_SS_PER_NODE,
+                     goma_ctx->bc.ss_list[inode]) != -1)) {
+          goma_ctx->bc.rot_types[irc].node = inode;
           node_ok = 1;
         }
 
@@ -2442,33 +2489,35 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
           /*
            * allocate temp BC storage for this node and initialize
            */
-          if (ROT_list[inode] == NULL) {
+          if (goma_ctx->bc.rot_list[inode] == NULL) {
             num_rot_nodes++;
-            ROT_list[inode] = alloc_int_1(NUM_VECTOR_EQUATIONS, -1);
+            goma_ctx->bc.rot_list[inode] = alloc_int_1(NUM_VECTOR_EQUATIONS, -1);
           }
-          if (ROT_Types[irc].eq_type == R_MESH1)
+          if (goma_ctx->bc.rot_types[irc].eq_type == R_MESH1)
             eq = VECT_EQ_MESH;
-          else if (ROT_Types[irc].eq_type == R_MOMENTUM1)
+          else if (goma_ctx->bc.rot_types[irc].eq_type == R_MOMENTUM1)
             eq = VECT_EQ_MOM;
           else
             GOMA_EH(GOMA_ERROR, "Illegal vector equation");
 
-          if (ROT_list[inode][eq] == -1) {
-            ROT_list[inode][eq] = irc;
+          if (goma_ctx->bc.rot_list[inode][eq] == -1) {
+            goma_ctx->bc.rot_list[inode][eq] = irc;
           } else {
             /*
              * Resolve conflicts between conflicting rotation conditions.
              * Give precedence to vertex, then edge, then face then body
              */
-            if (ROT_Types[irc].type > ROT_Types[ROT_list[inode][eq]].type) {
-              ROT_list[inode][eq] = irc;
-            } else if (ROT_Types[irc].type == ROT_Types[ROT_list[inode][eq]].type) {
+            if (goma_ctx->bc.rot_types[irc].type >
+                goma_ctx->bc.rot_types[goma_ctx->bc.rot_list[inode][eq]].type) {
+              goma_ctx->bc.rot_list[inode][eq] = irc;
+            } else if (goma_ctx->bc.rot_types[irc].type ==
+                       goma_ctx->bc.rot_types[goma_ctx->bc.rot_list[inode][eq]].type) {
               /*
                * If two rotations of same type - give precedence to rotation which
                * is first in input file
                */
-              if (irc < ROT_list[inode][eq]) {
-                ROT_list[inode][eq] = irc;
+              if (irc < goma_ctx->bc.rot_list[inode][eq]) {
+                goma_ctx->bc.rot_list[inode][eq] = irc;
               }
             }
           }
@@ -2493,9 +2542,9 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
      * that flow chart somewhat religiously
      */
 
-    BC_dup_nodes[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, -1);
-    BC_dup_list[goma_ctx->fem.pg->imtrx] = (int ***)alloc_ptr_1(num_bc_nodes);
-    BC_dup_ptr[goma_ctx->fem.pg->imtrx] = 0;
+    goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, -1);
+    goma_ctx->bc.bc_dup_list[goma_ctx->fem.pg->imtrx] = (int ***)alloc_ptr_1(num_bc_nodes);
+    goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx] = 0;
     bool *explicit_rot_print = malloc(sizeof(bool) * goma_ctx->problem.num_bc);
     for (int i = 0; i < goma_ctx->problem.num_bc; i++) {
       explicit_rot_print[i] = false;
@@ -2523,13 +2572,13 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
             ndup++;
           }
 
-          if (ROT_list[inode] == NULL) {
+          if (goma_ctx->bc.rot_list[inode] == NULL) {
             standard_BC = 1;
           } else if ((eqn == R_MESH1 || eqn == R_MESH2 || eqn == R_MESH3) &&
-                     ROT_list[inode][VECT_EQ_MESH] == -1) {
+                     goma_ctx->bc.rot_list[inode][VECT_EQ_MESH] == -1) {
             standard_BC = 1;
           } else if ((eqn == R_MOMENTUM1 || eqn == R_MOMENTUM2 || eqn == R_MOMENTUM3) &&
-                     ROT_list[inode][VECT_EQ_MOM] == -1) {
+                     goma_ctx->bc.rot_list[inode][VECT_EQ_MOM] == -1) {
             standard_BC = 1;
           } else {
             /* use ROT_Types to resolve BC's */
@@ -2547,27 +2596,29 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                 eq = VECT_EQ_MESH;
               if (eqn == R_MOMENTUM1)
                 eq = VECT_EQ_MOM;
-              irc = ROT_list[inode][eq];
+              irc = goma_ctx->bc.rot_list[inode][eq];
 
               /* initialize new entry in the duplications list,
                * if not already listed
                */
-              if (in_list(inode, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx],
-                          BC_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
-                BC_dup_nodes[goma_ctx->fem.pg->imtrx][BC_dup_ptr[goma_ctx->fem.pg->imtrx]] =
+              if (in_list(inode, 0, goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx],
+                          goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
+                goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx]
+                                         [goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]] =
                     inode; /* put node in
                             * list
                             */
-                BC_dup_list[goma_ctx->fem.pg->imtrx][BC_dup_ptr[goma_ctx->fem.pg->imtrx]] =
+                goma_ctx->bc.bc_dup_list[goma_ctx->fem.pg->imtrx]
+                                        [goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]] =
                     BC_Unk_List[inode]; /* ptr to
                                          * eqn
                                          * BC_list
                                          */
-                BC_dup_ptr[goma_ctx->fem.pg->imtrx]++;
+                goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]++;
                 if ((goma_ctx->solver.print3dbcdup > 1 || goma_ctx->debug_flag > 1) &&
                     goma_ctx->unlimited_output) {
                   fprintf(ofbc, "New Rot node in dup list %d %d\n", inode + 1,
-                          BC_dup_ptr[goma_ctx->fem.pg->imtrx]);
+                          goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]);
                 }
               }
 
@@ -2588,8 +2639,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
 
               /* loop over dimensions in Rotation specification */
               for (p = 0; p < dim; p++) {
-                bct = ROT_Types[irc].BC_Type[p];
-                bcSS = ROT_Types[irc].BC_SS[p];
+                bct = goma_ctx->bc.rot_types[irc].BC_Type[p];
+                bcSS = goma_ctx->bc.rot_types[irc].BC_SS[p];
 #ifndef PARALLEL
                 bc_found = 0;
 #endif
@@ -2610,8 +2661,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                     for (j = 0; j < ndup1[q]; j++) {
                       offset_mom2 = get_nodal_unknown_offset(nv, eqn + q, vd->MatID, 0, &vd_retn2);
                       ibc1 = BC_Unk_List[inode][offset_mom2][j];
-                      bct1 = BC_Types[ibc1].BC_Name;
-                      bcSS1 = BC_Types[ibc1].BC_ID;
+                      bct1 = goma_ctx->bc.bc_types[ibc1].BC_Name;
+                      bcSS1 = goma_ctx->bc.bc_types[ibc1].BC_ID;
 
                       /* check to see that the BC's are
                        * the same and that this BC hasn't
@@ -2638,8 +2689,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
 #ifndef PARALLEL
                         bc_found = 1;
 #endif
-                        ROT_Types[irc].BC_desc[p] = BC_Types[ibc1].desc;
-                        ROT_Types[irc].BC_id[p] = ibc1;
+                        goma_ctx->bc.rot_types[irc].BC_desc[p] = goma_ctx->bc.bc_types[ibc1].desc;
+                        goma_ctx->bc.rot_types[irc].BC_id[p] = ibc1;
 
                         /* find a spot for this BC in the
                          * dup_list */
@@ -2651,24 +2702,24 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                         /* need to deal with GD conditions
                          * here!! */
 
-                        if (BC_Types[ibc1].desc->method == DIRICHLET && p != q) {
+                        if (goma_ctx->bc.bc_types[ibc1].desc->method == DIRICHLET && p != q) {
                           GOMA_EH(GOMA_ERROR, "Can't change equation type of DIRICHLET!");
                         }
                       }
 
                       /* retain all weak conditions */
-                      if (BC_Types[ibc1].desc->method == WEAK_INT_SURF ||
-                          BC_Types[ibc1].desc->method == WEAK_SHARP_INT ||
-                          BC_Types[ibc1].desc->method == WEAK_INT_NEDELEC ||
-                          BC_Types[ibc1].desc->method == STRONG_INT_NEDELEC) {
+                      if (goma_ctx->bc.bc_types[ibc1].desc->method == WEAK_INT_SURF ||
+                          goma_ctx->bc.bc_types[ibc1].desc->method == WEAK_SHARP_INT ||
+                          goma_ctx->bc.bc_types[ibc1].desc->method == WEAK_INT_NEDELEC ||
+                          goma_ctx->bc.bc_types[ibc1].desc->method == STRONG_INT_NEDELEC) {
                         save_this_bc1[q][j] = 1;
 
                         /* retain all weak conditions */
-                      } else if (BC_Types[ibc1].desc->method == WEAK_SHIFT) {
+                      } else if (goma_ctx->bc.bc_types[ibc1].desc->method == WEAK_SHIFT) {
                         save_this_bc1[q][j] = 1;
 
                         /* retain all weak conditions */
-                      } else if (BC_Types[ibc1].desc->method == WEAK_INT_EDGE) {
+                      } else if (goma_ctx->bc.bc_types[ibc1].desc->method == WEAK_INT_EDGE) {
                         save_this_bc1[q][j] = 1;
                       }
 
@@ -2740,16 +2791,18 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
               /* initialize new entry in the duplications list,
                *  if not already listed
                */
-              if (in_list(inode, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx],
-                          BC_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
-                BC_dup_nodes[goma_ctx->fem.pg->imtrx][BC_dup_ptr[goma_ctx->fem.pg->imtrx]] = inode;
-                BC_dup_list[goma_ctx->fem.pg->imtrx][BC_dup_ptr[goma_ctx->fem.pg->imtrx]] =
+              if (in_list(inode, 0, goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx],
+                          goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
+                goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx]
+                                         [goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]] = inode;
+                goma_ctx->bc.bc_dup_list[goma_ctx->fem.pg->imtrx]
+                                        [goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]] =
                     BC_Unk_List[inode];
-                BC_dup_ptr[goma_ctx->fem.pg->imtrx]++;
+                goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]++;
                 if ((goma_ctx->solver.print3dbcdup > 1 || goma_ctx->debug_flag > 1) &&
                     goma_ctx->unlimited_output) {
                   fprintf(ofbc, "New node in duplication list %d %d\n", inode + 1,
-                          BC_dup_ptr[goma_ctx->fem.pg->imtrx]);
+                          goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]);
                 }
               }
 
@@ -2762,7 +2815,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                 ibc = BC_Unk_List[inode][offset][idup];
                 if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                     goma_ctx->unlimited_output) {
-                  fprintf(ofbc, "%s, ", BC_Types[ibc].desc->name2);
+                  fprintf(ofbc, "%s, ", goma_ctx->bc.bc_types[ibc].desc->name2);
                 }
                 idup++;
               }
@@ -2794,44 +2847,45 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
               j_CSWI = -1;
               for (j = 0; j < ndup; j++) {
                 ibc1 = BC_Unk_List[inode][offset][j];
-                bct1 = BC_Types[ibc1].BC_Name;
+                bct1 = goma_ctx->bc.bc_types[ibc1].BC_Name;
 
                 /* Check to make sure user isn't trying to rotate without
                  * specifying a rotation condition */
-                if (BC_Types[ibc1].desc->rotate != NO_ROT) {
+                if (goma_ctx->bc.bc_types[ibc1].desc->rotate != NO_ROT) {
                   if (!explicit_rot_print[ibc1]) {
                     DPRINTF(
                         stdout,
                         "BC [%d] %s %2s %d is a rotated condition, but lacks explicit ROT\n\twill "
                         "use automatic rotations\n",
-                        ibc1, BC_Types[ibc1].desc->name1, BC_Types[ibc1].Set_Type,
-                        BC_Types[ibc1].BC_ID);
+                        ibc1, goma_ctx->bc.bc_types[ibc1].desc->name1,
+                        goma_ctx->bc.bc_types[ibc1].Set_Type, goma_ctx->bc.bc_types[ibc1].BC_ID);
                   }
                   explicit_rot_print[ibc1] = true;
                 }
 
                 /* save all WEAK conditions */
-                if (BC_Types[ibc1].desc->method == WEAK_INT_SURF ||
-                    BC_Types[ibc1].desc->method == WEAK_SHARP_INT) {
+                if (goma_ctx->bc.bc_types[ibc1].desc->method == WEAK_INT_SURF ||
+                    goma_ctx->bc.bc_types[ibc1].desc->method == WEAK_SHARP_INT) {
                   save_this_bc[j] = 1;
 
-                } else if (BC_Types[ibc1].desc->method == WEAK_SHIFT) {
+                } else if (goma_ctx->bc.bc_types[ibc1].desc->method == WEAK_SHIFT) {
                   save_this_bc[j] = 1;
 
-                } else if (BC_Types[ibc1].desc->method == WEAK_INT_EDGE) {
+                } else if (goma_ctx->bc.bc_types[ibc1].desc->method == WEAK_INT_EDGE) {
                   save_this_bc[j] = 1;
 
                   /* DIRICHLET has precedence */
-                } else if (BC_Types[ibc1].desc->method == DIRICHLET) {
+                } else if (goma_ctx->bc.bc_types[ibc1].desc->method == DIRICHLET) {
                   if (j_DC != -1) {
                     ibc2 = BC_Unk_List[inode][offset][j_DC];
-                    bct2 = BC_Types[ibc2].BC_Name;
+                    bct2 = goma_ctx->bc.bc_types[ibc2].BC_Name;
                     /* RESOLVE CONFLICT */
                     if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                         goma_ctx->unlimited_output) {
                       ibc = BC_Unk_List[inode][offset][j_DC];
                       fprintf(ofbc, "    TWO DBC's %s and %s at node %d \n",
-                              BC_Types[ibc1].desc->name2, BC_Types[ibc].desc->name2, inode + 1);
+                              goma_ctx->bc.bc_types[ibc1].desc->name2,
+                              goma_ctx->bc.bc_types[ibc].desc->name2, inode + 1);
                     }
                   } else {
                     save_this_bc[j] = 1;
@@ -2844,13 +2898,13 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
               if (j_DC == -1) {
                 for (j = 0; j < ndup; j++) {
                   ibc1 = BC_Unk_List[inode][offset][j];
-                  bct1 = BC_Types[ibc1].BC_Name;
-                  if ((BC_Types[ibc1].desc->method == COLLOCATE_SURF) &&
+                  bct1 = goma_ctx->bc.bc_types[ibc1].BC_Name;
+                  if ((goma_ctx->bc.bc_types[ibc1].desc->method == COLLOCATE_SURF) &&
                       (bct1 != FLUID_SOLID_BC && bct1 != SOLID_FLUID_BC &&
                        bct1 != SOLID_FLUID_RS_BC)) {
                     if (j_PC != -1) {
                       ibc2 = BC_Unk_List[inode][offset][j_PC];
-                      bct2 = BC_Types[ibc2].BC_Name;
+                      bct2 = goma_ctx->bc.bc_types[ibc2].BC_Name;
                       /* RESOLVE CONFLICT */
                       /* need to deal with GD conditions here
                        * - two GD conditions on the same SS and
@@ -2858,27 +2912,28 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                        */
                       if ((bct1 <= GD_TIME_BC && bct1 >= GD_CONST_BC) &&
                           (bct2 <= GD_TIME_BC && bct2 >= GD_CONST_BC)) {
-                        if (BC_Types[ibc1].BC_ID == BC_Types[ibc2].BC_ID) {
+                        if (goma_ctx->bc.bc_types[ibc1].BC_ID ==
+                            goma_ctx->bc.bc_types[ibc2].BC_ID) {
                           if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                               goma_ctx->unlimited_output) {
                             fprintf(ofbc, "    MULTIPLE GD %s at node %d\n",
-                                    BC_Types[ibc2].desc->name2, inode + 1);
+                                    goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1);
                           }
                           save_this_bc[j] = 1;
                         } else {
                           if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                               goma_ctx->unlimited_output) {
                             fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
-                                    BC_Types[ibc2].desc->name2, BC_Types[ibc1].desc->name2,
-                                    inode + 1);
+                                    goma_ctx->bc.bc_types[ibc2].desc->name2,
+                                    goma_ctx->bc.bc_types[ibc1].desc->name2, inode + 1);
                           }
                         }
                       } else {
                         if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                             goma_ctx->unlimited_output) {
                           fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
-                                  BC_Types[ibc2].desc->name2, BC_Types[ibc1].desc->name2,
-                                  inode + 1);
+                                  goma_ctx->bc.bc_types[ibc2].desc->name2,
+                                  goma_ctx->bc.bc_types[ibc1].desc->name2, inode + 1);
                         }
                       }
 
@@ -2893,17 +2948,17 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                 if (j_PC == -1) {
                   for (j = 0; j < ndup; j++) {
                     ibc1 = BC_Unk_List[inode][offset][j];
-                    bct1 = BC_Types[ibc1].BC_Name;
-                    if (BC_Types[ibc1].desc->method == STRONG_INT_SURF) {
+                    bct1 = goma_ctx->bc.bc_types[ibc1].BC_Name;
+                    if (goma_ctx->bc.bc_types[ibc1].desc->method == STRONG_INT_SURF) {
                       if (j_SI != -1) {
                         ibc2 = BC_Unk_List[inode][offset][j_SI];
-                        bct2 = BC_Types[ibc2].BC_Name;
+                        bct2 = goma_ctx->bc.bc_types[ibc2].BC_Name;
                         /* RESOLVE CONFLICT */
                         if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                             goma_ctx->unlimited_output) {
                           fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
-                                  BC_Types[ibc2].desc->name2, BC_Types[ibc1].desc->name2,
-                                  inode + 1);
+                                  goma_ctx->bc.bc_types[ibc2].desc->name2,
+                                  goma_ctx->bc.bc_types[ibc1].desc->name2, inode + 1);
                         }
                       } else {
                         save_this_bc[j] = 1;
@@ -2917,18 +2972,18 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                   if (j_SI == -1) {
                     for (j = 0; j < ndup; j++) {
                       ibc1 = BC_Unk_List[inode][offset][j];
-                      bct1 = BC_Types[ibc1].BC_Name;
-                      if ((BC_Types[ibc1].desc->method == COLLOCATE_SURF) &&
+                      bct1 = goma_ctx->bc.bc_types[ibc1].BC_Name;
+                      if ((goma_ctx->bc.bc_types[ibc1].desc->method == COLLOCATE_SURF) &&
                           (bct1 == FLUID_SOLID_BC || bct1 == SOLID_FLUID_BC ||
                            bct1 == SOLID_FLUID_RS_BC)) {
                         if (j_CSWI != -1) {
                           ibc2 = BC_Unk_List[inode][offset][j_CSWI];
-                          bct2 = BC_Types[ibc2].BC_Name;
+                          bct2 = goma_ctx->bc.bc_types[ibc2].BC_Name;
                           if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                               goma_ctx->unlimited_output) {
                             fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
-                                    BC_Types[ibc1].desc->name2, BC_Types[ibc2].desc->name2,
-                                    inode + 1);
+                                    goma_ctx->bc.bc_types[ibc1].desc->name2,
+                                    goma_ctx->bc.bc_types[ibc2].desc->name2, inode + 1);
                           }
                         } else {
                           save_this_bc[j] = 1;
@@ -2970,11 +3025,11 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
       if (goma_ctx->unlimited_output) {
         fprintf(ofbc, "\nBoundary Condition Duplication List (numbers in paren are BC_ID):\n");
       }
-      for (i = 0; i < BC_dup_ptr[goma_ctx->fem.pg->imtrx]; i++) {
-        inode = BC_dup_nodes[goma_ctx->fem.pg->imtrx][i];
+      for (i = 0; i < goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx]; i++) {
+        inode = goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx][i];
         node = Nodes[inode];
         if (goma_ctx->unlimited_output) {
-          fprintf(ofbc, "N=%d:", BC_dup_nodes[goma_ctx->fem.pg->imtrx][i] + 1);
+          fprintf(ofbc, "N=%d:", goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx][i] + 1);
         }
         nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
         /* check for duplications */
@@ -2983,9 +3038,11 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
           eqn = vd->Variable_Type;
           eprint = 1;
           if (eqn >= R_MOMENTUM1 && eqn <= R_MOMENTUM3) {
-            if (ROT_list[inode] != NULL && ROT_list[inode][VECT_EQ_MOM] >= 0) {
-              if (ROT_Types[ROT_list[inode][VECT_EQ_MOM]].BC_Type[eqn - R_MOMENTUM1] < 0 &&
-                  ROT_Types[ROT_list[inode][VECT_EQ_MOM]].ROTATE) {
+            if (goma_ctx->bc.rot_list[inode] != NULL &&
+                goma_ctx->bc.rot_list[inode][VECT_EQ_MOM] >= 0) {
+              if (goma_ctx->bc.rot_types[goma_ctx->bc.rot_list[inode][VECT_EQ_MOM]]
+                          .BC_Type[eqn - R_MOMENTUM1] < 0 &&
+                  goma_ctx->bc.rot_types[goma_ctx->bc.rot_list[inode][VECT_EQ_MOM]].ROTATE) {
                 if (goma_ctx->unlimited_output)
                   fprintf(ofbc, " E%d=ROTATE", eqn);
                 eprint = 0;
@@ -2993,9 +3050,11 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
             }
           }
           if (eqn >= R_MESH1 && eqn <= R_MESH3) {
-            if (ROT_list[inode] != NULL && ROT_list[inode][VECT_EQ_MESH] >= 0) {
-              if (ROT_Types[ROT_list[inode][VECT_EQ_MESH]].BC_Type[eqn - R_MESH1] < 0 &&
-                  ROT_Types[ROT_list[inode][VECT_EQ_MESH]].ROTATE) {
+            if (goma_ctx->bc.rot_list[inode] != NULL &&
+                goma_ctx->bc.rot_list[inode][VECT_EQ_MESH] >= 0) {
+              if (goma_ctx->bc.rot_types[goma_ctx->bc.rot_list[inode][VECT_EQ_MESH]]
+                          .BC_Type[eqn - R_MESH1] < 0 &&
+                  goma_ctx->bc.rot_types[goma_ctx->bc.rot_list[inode][VECT_EQ_MESH]].ROTATE) {
                 if (goma_ctx->unlimited_output)
                   fprintf(ofbc, " E%d=ROTATE", eqn);
                 eprint = 0;
@@ -3008,16 +3067,18 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
             idup = 0;
             while (BC_Unk_List[inode][offset][idup] != -1) {
               if (goma_ctx->unlimited_output) {
-                fprintf(ofbc, "%s(%d", BC_Types[BC_Unk_List[inode][offset][idup]].desc->name1,
-                        BC_Types[BC_Unk_List[inode][offset][idup]].BC_ID);
+                fprintf(ofbc, "%s(%d",
+                        goma_ctx->bc.bc_types[BC_Unk_List[inode][offset][idup]].desc->name1,
+                        goma_ctx->bc.bc_types[BC_Unk_List[inode][offset][idup]].BC_ID);
               }
-              if (BC_Types[BC_Unk_List[inode][offset][idup]].BC_ID2 == -1) {
+              if (goma_ctx->bc.bc_types[BC_Unk_List[inode][offset][idup]].BC_ID2 == -1) {
                 if (goma_ctx->unlimited_output) {
                   fprintf(ofbc, ")");
                 }
               } else {
                 if (goma_ctx->unlimited_output) {
-                  fprintf(ofbc, ",%d)", BC_Types[BC_Unk_List[inode][offset][idup]].BC_ID2);
+                  fprintf(ofbc, ",%d)",
+                          goma_ctx->bc.bc_types[BC_Unk_List[inode][offset][idup]].BC_ID2);
                 }
               }
               idup++;
@@ -3034,8 +3095,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     /* free memory associated with nodes that don't have duplicate BC's */
     for (inode = 0; inode < num_total_nodes; inode++) {
       if (BC_Unk_List[inode] != NULL) {
-        if (in_list(inode, 0, BC_dup_ptr[goma_ctx->fem.pg->imtrx],
-                    BC_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
+        if (in_list(inode, 0, goma_ctx->bc.bc_dup_ptr[goma_ctx->fem.pg->imtrx],
+                    goma_ctx->bc.bc_dup_nodes[goma_ctx->fem.pg->imtrx]) == -1) {
           free_bc_unk_list_node(BC_Unk_List + inode, inode);
         }
       }

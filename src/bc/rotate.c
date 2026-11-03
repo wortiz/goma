@@ -65,7 +65,6 @@
  *  Variable Definitions
  */
 int **local_ROT_list = NULL;
-int dup_blks_list[MAX_MAT_PER_SS + 1];
 int rotation_allocated = FALSE;
 
 #define GOMA_BC_ROTATE_C
@@ -150,13 +149,13 @@ int apply_rotated_bc(double resid_vector[], /* Residual vector for the current p
       I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id]; /* Find global node */
       /* check to see if this global node is in the momentum rotation list and
        * make sure this nodal equation hasn't been rotated yet */
-      if (((irot = in_list(I, 0, num_mom_rotate[goma_ctx->fem.pg->imtrx],
-                           mom_rotate_node[goma_ctx->fem.pg->imtrx])) != -1) &&
+      if (((irot = in_list(I, 0, goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx],
+                           goma_ctx->bc.mom_rotate_node[goma_ctx->fem.pg->imtrx])) != -1) &&
           mom_already_rotated[id] == 0) {
         /* determine if SS for rotation is on this side */
-        ss_rot = mom_rotate_ss[goma_ctx->fem.pg->imtrx][irot];
+        ss_rot = goma_ctx->bc.mom_rotate_ss[goma_ctx->fem.pg->imtrx][irot];
         for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
-          if (BC_Types[bc_input_id].BC_ID == ss_rot) {
+          if (goma_ctx->bc.bc_types[bc_input_id].BC_ID == ss_rot) {
             rot_mom[i] = 1;
             rotate_this_side = 1;
             mom_already_rotated[id] = 1;
@@ -164,56 +163,57 @@ int apply_rotated_bc(double resid_vector[], /* Residual vector for the current p
              *  Determine if the tangent should be negated for a consistent
              * force balance
              */
-            if ((ss_index = in_list(ss_rot, 0, goma_ctx->mesh.proc_num_side_sets, ss_to_blks[0])) ==
-                -1) {
+            if ((ss_index = in_list(ss_rot, 0, goma_ctx->mesh.proc_num_side_sets,
+                                    goma_ctx->bc.ss_to_blks[0])) == -1) {
               GOMA_EH(GOMA_ERROR, "Cannot match side set id with that in ss_to_blks array");
             } else {
               for (j = 0; j < MAX_MAT_PER_SS; j++) {
-                dup_blks_list[j] = ss_to_blks[j + 1][ss_index];
+                goma_ctx->bc.dup_blks_list[j] = goma_ctx->bc.ss_to_blks[j + 1][ss_index];
               }
             }
             if ((blk_index = in_list(Current_EB_ptr->Elem_Blk_Id, 0, MAX_MAT_PER_SS + 1,
-                                     dup_blks_list)) == -1) {
+                                     goma_ctx->bc.dup_blks_list)) == -1) {
               GOMA_EH(GOMA_ERROR,
                       "Cannot match current element block with that in ss_to_blks array");
             }
             blk_index++;
-            if (SS_Internal_Boundary[ss_index] != -1 && ((blk_index % 2) == 1)) {
+            if (goma_ctx->bc.ss_internal_boundary[ss_index] != -1 && ((blk_index % 2) == 1)) {
               sign_rot_mom[i] = -1.;
             }
           }
         }
       }
 
-      if (((irot = in_list(I, 0, num_mesh_rotate[goma_ctx->fem.pg->imtrx],
-                           mesh_rotate_node[goma_ctx->fem.pg->imtrx])) != -1) &&
+      if (((irot = in_list(I, 0, goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx],
+                           goma_ctx->bc.mesh_rotate_node[goma_ctx->fem.pg->imtrx])) != -1) &&
           mesh_already_rotated[id] == 0) {
         /* determine if SS for rotation is on this side */
-        ss_rot = mesh_rotate_ss[goma_ctx->fem.pg->imtrx][irot];
+        ss_rot = goma_ctx->bc.mesh_rotate_ss[goma_ctx->fem.pg->imtrx][irot];
         /* check to see if this global node is in the mesh rotation list and
          * make sure this nodal equation hasn't been rotated yet */
         for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
-          if (BC_Types[bc_input_id].BC_ID == ss_rot) {
+          if (goma_ctx->bc.bc_types[bc_input_id].BC_ID == ss_rot) {
             rot_mesh[i] = 1;
             rotate_this_side = 1;
             mesh_already_rotated[id] = 1;
             /*  ---- Determine if the tangent should be negated for a consistent force balance */
-            if ((ss_index = in_list(ss_rot, 0, exo->num_side_sets, ss_to_blks[0])) == -1) {
+            if ((ss_index = in_list(ss_rot, 0, exo->num_side_sets, goma_ctx->bc.ss_to_blks[0])) ==
+                -1) {
               sprintf(err_msg, "Could not find SS %d in ss_to_blks", ss_rot);
               GOMA_EH(GOMA_ERROR, err_msg);
             } else {
               for (j = 0; j < MAX_MAT_PER_SS; j++) {
-                dup_blks_list[j] = ss_to_blks[j + 1][ss_index];
+                goma_ctx->bc.dup_blks_list[j] = goma_ctx->bc.ss_to_blks[j + 1][ss_index];
               }
             }
             if ((blk_index = in_list(Current_EB_ptr->Elem_Blk_Id, 0, MAX_MAT_PER_SS + 1,
-                                     dup_blks_list)) == -1) {
+                                     goma_ctx->bc.dup_blks_list)) == -1) {
               sprintf(err_msg, "Could not find EB %d in dup_blks_list",
                       Current_EB_ptr->Elem_Blk_Id);
               GOMA_EH(GOMA_ERROR, err_msg);
             }
             blk_index++;
-            if (SS_Internal_Boundary[ss_index] != -1 && ((blk_index % 2) == 1)) {
+            if (goma_ctx->bc.ss_internal_boundary[ss_index] != -1 && ((blk_index % 2) == 1)) {
               sign_rot_mesh[i] = -1.;
             }
             /* Special cludge for Bridgman case (the Pi case)  */
@@ -2057,7 +2057,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
       for (j = 0; j < NUM_VECTOR_EQUATIONS; j++) {
         goma_ctx->fem.rotation[i][j] = NULL;
 
-        if (ROT_list[i] != NULL && ROT_list[i][j] != -1) {
+        if (goma_ctx->bc.rot_list[i] != NULL && goma_ctx->bc.rot_list[i][j] != -1) {
           goma_ctx->fem.rotation[i][j] =
               (struct Rotation_Vectors **)smalloc(dim * sizeof(struct Rotation_Vectors *));
           for (k = 0; k < dim; k++) {
@@ -2097,23 +2097,24 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
 
   /* LOOP over rotation conditions in input deck */
   for (irc = 0; irc < goma_ctx->problem.num_rot; irc++) {
-    if (ROT_Types[irc].eq_type == R_MESH1)
+    if (goma_ctx->bc.rot_types[irc].eq_type == R_MESH1)
       eq = VECT_EQ_MESH;
-    if (ROT_Types[irc].eq_type == R_MOMENTUM1)
+    if (goma_ctx->bc.rot_types[irc].eq_type == R_MOMENTUM1)
       eq = VECT_EQ_MOM;
 
     /* quick escape if no rotation needed */
-    if (ROT_Types[irc].ROTATE) {
+    if (goma_ctx->bc.rot_types[irc].ROTATE) {
 
-      if (ROT_Types[irc].elems == NULL) {
+      if (goma_ctx->bc.rot_types[irc].elems == NULL) {
         /* Load list of elements to which the ROTATION condition applies*/
-        get_ss_element_list(ROT_Types[irc].ss_id[0], ROT_Types[irc].ss_id[1],
-                            ROT_Types[irc].ss_id[2], &ROT_Types[irc].num_elem,
-                            &ROT_Types[irc].elems, &ROT_Types[irc].ss_ptr, eq, irc, exo);
+        get_ss_element_list(
+            goma_ctx->bc.rot_types[irc].ss_id[0], goma_ctx->bc.rot_types[irc].ss_id[1],
+            goma_ctx->bc.rot_types[irc].ss_id[2], &goma_ctx->bc.rot_types[irc].num_elem,
+            &goma_ctx->bc.rot_types[irc].elems, &goma_ctx->bc.rot_types[irc].ss_ptr, eq, irc, exo);
       }
 
-      for (i = 0; i < ROT_Types[irc].num_elem; i++) {
-        ielem = ROT_Types[irc].elems[i];
+      for (i = 0; i < goma_ctx->bc.rot_types[irc].num_elem; i++) {
+        ielem = goma_ctx->bc.rot_types[irc].elems[i];
 
         if (x == x_static) /* be the least disruptive possible */
         {
@@ -2132,7 +2133,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
 
         /* find SIDE info for primary side */
         num_nodes_on_side =
-            count_nodes_on_SS(ROT_Types[irc].ss_id[0], -1, -1,
+            count_nodes_on_SS(goma_ctx->bc.rot_types[irc].ss_id[0], -1, -1,
                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr, ielem,
                               num_local_nodes, local_side_node_list, side_elem_node_id);
 
@@ -2141,7 +2142,8 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
         /* Calculates the ID side correctly for tets */
         int current_id;
 
-        current_id = in_list(ROT_Types[irc].ss_id[0], 0, exo->num_side_sets, exo->ss_id);
+        current_id =
+            in_list(goma_ctx->bc.rot_types[irc].ss_id[0], 0, exo->num_side_sets, exo->ss_id);
         if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type == LINEAR_TET ||
             goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type == QUADRATIC_TET) {
           id_side =
@@ -2149,11 +2151,12 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
         }
 
         /* find EDGE info for primary edge */
-        if (ROT_Types[irc].type == CURVE || ROT_Types[irc].type == VERTEX) {
-          num_nodes_on_edge =
-              count_nodes_on_SS(ROT_Types[irc].ss_id[0], ROT_Types[irc].ss_id[1], -1,
-                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr, ielem,
-                                num_local_nodes, local_edge_node_list, edge_elem_node_id);
+        if (goma_ctx->bc.rot_types[irc].type == CURVE ||
+            goma_ctx->bc.rot_types[irc].type == VERTEX) {
+          num_nodes_on_edge = count_nodes_on_SS(
+              goma_ctx->bc.rot_types[irc].ss_id[0], goma_ctx->bc.rot_types[irc].ss_id[1], -1,
+              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr, ielem, num_local_nodes,
+              local_edge_node_list, edge_elem_node_id);
 
           if (num_nodes_on_edge > 0) {
             param_dir = -1;
@@ -2174,19 +2177,19 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
 
         num_ROT_nodes = 0;
 
-        if (ROT_Types[irc].type == FACE) {
+        if (goma_ctx->bc.rot_types[irc].type == FACE) {
           num_ROT_nodes = num_nodes_on_side;
           elem_node_id = &(side_elem_node_id[0]);
-        } else if (ROT_Types[irc].type == CURVE) {
+        } else if (goma_ctx->bc.rot_types[irc].type == CURVE) {
           num_ROT_nodes = num_nodes_on_edge;
           elem_node_id = &(edge_elem_node_id[0]);
-        } else if (ROT_Types[irc].type == VERTEX && num_nodes_on_edge > 0) {
+        } else if (goma_ctx->bc.rot_types[irc].type == VERTEX && num_nodes_on_edge > 0) {
           num_ROT_nodes = 1;
           /* determine id of vertex node */
           v_id = 0;
           while (goma_ctx->mesh
                      .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr +
-                                        v_id] != ROT_Types[irc].node)
+                                        v_id] != goma_ctx->bc.rot_types[irc].node)
             v_id++;
           elem_node_id = &(v_id);
         }
@@ -2198,7 +2201,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
           I = goma_ctx->mesh
                   .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + id];
 
-          if (ROT_list[I] != NULL && ROT_list[I][eq] == irc) {
+          if (goma_ctx->bc.rot_list[I] != NULL && goma_ctx->bc.rot_list[I][eq] == irc) {
 
             /* set up pointers to spaces in the rotation structure array */
             num_rots_finished = set_pointers_to_vectors(&normal, &tangent1, &tangent2, &normal2,
@@ -2251,7 +2254,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
               do_LSA_mods(LSA_SURFACE);
 
               reseed = 0;
-              if (ROT_Types[irc].method == ROT_BASIS_RESEED) {
+              if (goma_ctx->bc.rot_types[irc].method == ROT_BASIS_RESEED) {
                 /* need some special logic to use previously calculated
                  * tangent-along-basis to reseed the calculation of
                  * the new tangent - this allows averaging of tangents
@@ -2261,7 +2264,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
                 /* determine which direction holds tangent1 */
                 kdir = -1;
                 for (p = 0; p < dim; p++)
-                  if (ROT_Types[irc].BC_Type[p] == ROT_T1)
+                  if (goma_ctx->bc.rot_types[irc].BC_Type[p] == ROT_T1)
                     kdir = p;
                 GOMA_EH(kdir, "cant find tangent1");
 
@@ -2277,17 +2280,18 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
 
               /* calculate SEEDED tangent, if requested */
               if (tangent1 != NULL || tangent2 != NULL) {
-                if (ROT_Types[irc].method == ROT_SEED) {
-                  calc_tangent_from_seed(tangent1, normal, ROT_Types[irc].seed, dim);
-                } else if (ROT_Types[irc].method == ROT_BASIS_RESEED && reseed) {
+                if (goma_ctx->bc.rot_types[irc].method == ROT_SEED) {
+                  calc_tangent_from_seed(tangent1, normal, goma_ctx->bc.rot_types[irc].seed, dim);
+                } else if (goma_ctx->bc.rot_types[irc].method == ROT_BASIS_RESEED && reseed) {
                   calc_tangent_from_seed(tangent1, normal, seed, dim);
                 }
               } /* end of SEEDED tangent */
 
               /* calculate UNSEEDED tangent, if required */
               if (tangent1 != NULL || tangent2 != NULL) {
-                if (ROT_Types[irc].method == ROT_BASIS || ROT_Types[irc].method == ROT_BASIS_ONCE ||
-                    (ROT_Types[irc].method == ROT_BASIS_RESEED && !reseed)) {
+                if (goma_ctx->bc.rot_types[irc].method == ROT_BASIS ||
+                    goma_ctx->bc.rot_types[irc].method == ROT_BASIS_ONCE ||
+                    (goma_ctx->bc.rot_types[irc].method == ROT_BASIS_RESEED && !reseed)) {
 
                   calc_tangent_along_basis(tangent1, normal, dim, id_side, num_nodes_on_side,
                                            side_elem_node_id);
@@ -2324,7 +2328,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
               /* ADD the results into rotation vectors */
               for (p = 0; p < dim; p++) {
                 if (vector[p].ok) {
-                  if (ROT_Types[irc].method == ROT_BASIS_ONCE &&
+                  if (goma_ctx->bc.rot_types[irc].method == ROT_BASIS_ONCE &&
                       goma_ctx->fem.rotation[I][eq][p]->ok) {
                     /* Don't add in the new vector */
                   } else {
@@ -2442,17 +2446,17 @@ void calculate_2D_rotation_vectors(Exo_DB *exo, /* the mesh */
     rotation_allocated = TRUE;
   }
 
-  while (mesh_count < num_mesh_rotate[goma_ctx->fem.pg->imtrx] ||
-         mom_count < num_mom_rotate[goma_ctx->fem.pg->imtrx]) {
+  while (mesh_count < goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx] ||
+         mom_count < goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx]) {
 
-    if (mom_count < num_mom_rotate[goma_ctx->fem.pg->imtrx]) {
-      inode = mom_rotate_node[goma_ctx->fem.pg->imtrx][mom_count];
-      local_ROT_list[inode][0] = mom_rotate_ss[goma_ctx->fem.pg->imtrx][mom_count];
+    if (mom_count < goma_ctx->bc.num_mom_rotate[goma_ctx->fem.pg->imtrx]) {
+      inode = goma_ctx->bc.mom_rotate_node[goma_ctx->fem.pg->imtrx][mom_count];
+      local_ROT_list[inode][0] = goma_ctx->bc.mom_rotate_ss[goma_ctx->fem.pg->imtrx][mom_count];
     }
 
-    if (mesh_count < num_mesh_rotate[goma_ctx->fem.pg->imtrx]) {
-      inode = mesh_rotate_node[goma_ctx->fem.pg->imtrx][mesh_count];
-      local_ROT_list[inode][1] = mesh_rotate_ss[goma_ctx->fem.pg->imtrx][mesh_count];
+    if (mesh_count < goma_ctx->bc.num_mesh_rotate[goma_ctx->fem.pg->imtrx]) {
+      inode = goma_ctx->bc.mesh_rotate_node[goma_ctx->fem.pg->imtrx][mesh_count];
+      local_ROT_list[inode][1] = goma_ctx->bc.mesh_rotate_ss[goma_ctx->fem.pg->imtrx][mesh_count];
     }
 
     mesh_count++;
@@ -2504,11 +2508,12 @@ void calculate_2D_rotation_vectors(Exo_DB *exo, /* the mesh */
 
               err = load_elem_dofptr(elem, exo, x, x, x, x, 0);
 
-            if (SS_Internal_Boundary[iss] != -1) {
+            if (goma_ctx->bc.ss_internal_boundary[iss] != -1) {
               int curr_eb = Current_EB_ptr->Elem_Blk_Id;
               int index = 0;
 
-              while (ss_to_blks[index + 1][iss] != curr_eb && index < (MAX_MAT_PER_SS + 1))
+              while (goma_ctx->bc.ss_to_blks[index + 1][iss] != curr_eb &&
+                     index < (MAX_MAT_PER_SS + 1))
                 index++;
 
               if (index == (MAX_MAT_PER_SS + 1))
@@ -2942,12 +2947,12 @@ void get_ss_element_list(const int ss_id1,  /*  side set ID                   (i
          */
 
         if (index_node_in_ssid2 > -1) {
-          if (ROT_list[inode] != NULL) {
+          if (goma_ctx->bc.rot_list[inode] != NULL) {
             /*
              * If the node we found lists this irc, then
              * the circle of trust is complete.
              */
-            if (ROT_list[inode][eq] == irc) {
+            if (goma_ctx->bc.rot_list[inode][eq] == irc) {
               nodes_on_edge++;
             }
             /*
@@ -2955,10 +2960,11 @@ void get_ss_element_list(const int ss_id1,  /*  side set ID                   (i
              * have to check it because it stands first in line.
              */
 
-            irc_node = ROT_list[inode][eq];
-            node_ssid_list = ROT_Types[irc_node].ss_id;
+            irc_node = goma_ctx->bc.rot_list[inode][eq];
+            node_ssid_list = goma_ctx->bc.rot_types[irc_node].ss_id;
 
-            if (ROT_Types[irc_node].type == VERTEX && in_list(ss_id1, 0, 3, node_ssid_list) != -1 &&
+            if (goma_ctx->bc.rot_types[irc_node].type == VERTEX &&
+                in_list(ss_id1, 0, 3, node_ssid_list) != -1 &&
                 in_list(ss_id2, 0, 3, node_ssid_list) != -1) {
               nodes_on_edge++;
             }
@@ -3070,19 +3076,19 @@ void get_ss_element_list(const int ss_id1,  /*  side set ID                   (i
            * applied to it. Check and see...
            */
 
-          if (ROT_list[inode] != NULL) {
+          if (goma_ctx->bc.rot_list[inode] != NULL) {
             /*
              * Maybe there are multiple verteces and they even
              * have ROT conditions, but not all of them have the
              * same ROT conditions!
              */
 
-            if (ROT_list[inode][eq] == irc) {
+            if (goma_ctx->bc.rot_list[inode][eq] == irc) {
               /*
                * I'm not sure why the following check is needed.
                */
 
-              if (inode == ROT_Types[irc].node) {
+              if (inode == goma_ctx->bc.rot_types[irc].node) {
 
                 /*
                  * But I do know that we only want to add
@@ -3158,7 +3164,7 @@ int set_pointers_to_vectors(struct Rotation_Vectors **normal, /* defined in mm_a
 
   /* Specify which types of vectors end up in which slots for
    * rotation vectors and set up pointers so this becomes transparent */
-  if (ROT_Types[irc].type == FACE) {
+  if (goma_ctx->bc.rot_types[irc].type == FACE) {
     /* defaults for SURFACE */
     *normal = dum_vect;
     *tangent1 = dum_vect + 1;
@@ -3168,7 +3174,7 @@ int set_pointers_to_vectors(struct Rotation_Vectors **normal, /* defined in mm_a
     *line_tangent = NULL;
     *binormal = NULL;
 
-  } else if (ROT_Types[irc].type == CURVE) {
+  } else if (goma_ctx->bc.rot_types[irc].type == CURVE) {
     /* defaults for EDGES */
     *normal = dum_vect;
     *line_tangent = dum_vect + 1;
@@ -3178,7 +3184,7 @@ int set_pointers_to_vectors(struct Rotation_Vectors **normal, /* defined in mm_a
     *tangent1 = NULL;
     *tangent2 = NULL;
 
-  } else if (ROT_Types[irc].type == VERTEX) {
+  } else if (goma_ctx->bc.rot_types[irc].type == VERTEX) {
     /* defaults for VERTEX */
     *normal = dum_vect;
     *line_tangent = dum_vect + 1;
@@ -3214,12 +3220,12 @@ int set_pointers_to_vectors(struct Rotation_Vectors **normal, /* defined in mm_a
 
   num_rots_finished = 0;
   for (p = 0; p < dim; p++) {
-    if (ROT_Types[irc].BC_Type[p] > 0) {
+    if (goma_ctx->bc.rot_types[irc].BC_Type[p] > 0) {
       /*     if (ROT_Types[irc].BC_Type[p] > 0 || rotation[I][eq][p]->ok) { */
       /* No rotation at this node */
       num_rots_finished++;
     } else {
-      switch (ROT_Types[irc].BC_Type[p]) {
+      switch (goma_ctx->bc.rot_types[irc].BC_Type[p]) {
       case ROT_NONE:
         /* do nothing */
         num_rots_finished++;
@@ -3241,7 +3247,7 @@ int set_pointers_to_vectors(struct Rotation_Vectors **normal, /* defined in mm_a
 
       case ROT_T:
         *line_tangent = vector + p;
-        if (ROT_Types[irc].type == FACE)
+        if (goma_ctx->bc.rot_types[irc].type == FACE)
           GOMA_EH(GOMA_ERROR, "Need to specify T1 or T2 on Surfaces");
         break;
 
@@ -3255,14 +3261,14 @@ int set_pointers_to_vectors(struct Rotation_Vectors **normal, /* defined in mm_a
 
       case ROT_B:
         *binormal = vector + p;
-        if (ROT_Types[irc].type == FACE)
+        if (goma_ctx->bc.rot_types[irc].type == FACE)
           GOMA_EH(GOMA_ERROR, "Need to specify T1 or T2 on Surfaces");
         break;
 
       case ROT_S:
-        goma_ctx->fem.rotation[I][eq][p]->vector[0] = ROT_Types[irc].seed[0];
-        goma_ctx->fem.rotation[I][eq][p]->vector[1] = ROT_Types[irc].seed[1];
-        goma_ctx->fem.rotation[I][eq][p]->vector[2] = ROT_Types[irc].seed[2];
+        goma_ctx->fem.rotation[I][eq][p]->vector[0] = goma_ctx->bc.rot_types[irc].seed[0];
+        goma_ctx->fem.rotation[I][eq][p]->vector[1] = goma_ctx->bc.rot_types[irc].seed[1];
+        goma_ctx->fem.rotation[I][eq][p]->vector[2] = goma_ctx->bc.rot_types[irc].seed[2];
         goma_ctx->fem.rotation[I][eq][p]->ok = 1;
         num_rots_finished++;
         break;

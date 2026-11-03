@@ -117,15 +117,15 @@ void noahs_raven(void) {
   ddd_add_member(n, &goma_ctx->num_var_external, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.time_integration, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.num_bc, 1, MPI_INT);
-  ddd_add_member(n, &num_new_BC_Desc, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->bc.num_new_bc_desc, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.num_rot, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.num_interpolations, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.coordinate_system, 1, MPI_INT);
   ddd_add_member(n, &len_u_post_proc, 1, MPI_INT);
-  ddd_add_member(n, &num_AC_Tables, 1, MPI_INT);
-  ddd_add_member(n, &num_BC_Tables, 1, MPI_INT);
-  ddd_add_member(n, &num_MP_Tables, 1, MPI_INT);
-  ddd_add_member(n, &num_ext_Tables, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->bc.num_ac_tables, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->bc.num_bc_tables, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->bc.num_mp_tables, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->bc.num_ext_tables, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.continuation, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.n_ac, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.n_cc, 1, MPI_INT);
@@ -211,8 +211,8 @@ void raven_landing(void) {
   }
 
   if (goma_ctx->problem.num_bc > 0) {
-    BC_Types = (struct Boundary_Condition *)array_alloc(1, goma_ctx->problem.num_bc,
-                                                        sizeof(struct Boundary_Condition));
+    goma_ctx->bc.bc_types = (struct Boundary_Condition *)array_alloc(
+        1, goma_ctx->problem.num_bc, sizeof(struct Boundary_Condition));
   }
 
   /* Broadcast input wave number array for 3D of 2D LSA */
@@ -235,43 +235,44 @@ void raven_landing(void) {
    * Create landing pad for new BC_Description structures
    */
 
-  if (num_new_BC_Desc > 0) {
-    new_BC_Desc = (struct BC_descriptions **)array_alloc(1, num_new_BC_Desc,
-                                                         sizeof(struct BC_descriptions *));
-    for (i = 0; i < num_new_BC_Desc; i++) {
-      new_BC_Desc[i] = (struct BC_descriptions *)calloc(1, sizeof(struct BC_descriptions));
+  if (goma_ctx->bc.num_new_bc_desc > 0) {
+    goma_ctx->bc.new_bc_desc = (struct BC_descriptions **)array_alloc(
+        1, goma_ctx->bc.num_new_bc_desc, sizeof(struct BC_descriptions *));
+    for (i = 0; i < goma_ctx->bc.num_new_bc_desc; i++) {
+      goma_ctx->bc.new_bc_desc[i] =
+          (struct BC_descriptions *)calloc(1, sizeof(struct BC_descriptions));
     }
   }
   /*
    * Create landing pads for TABLE_AC Data_Table structures
    */
 
-  for (i = 0; i < num_AC_Tables; i++) {
-    AC_Tables[i] = smalloc(sizeof(struct Data_Table));
+  for (i = 0; i < goma_ctx->bc.num_ac_tables; i++) {
+    goma_ctx->bc.ac_tables[i] = smalloc(sizeof(struct Data_Table));
   }
 
   /*
    * Create landing pads for TABLE_BC Data_Table structures
    */
 
-  for (i = 0; i < num_BC_Tables; i++) {
-    BC_Tables[i] = smalloc(sizeof(struct Data_Table));
+  for (i = 0; i < goma_ctx->bc.num_bc_tables; i++) {
+    goma_ctx->bc.bc_tables[i] = smalloc(sizeof(struct Data_Table));
   }
 
   /*
    * Create landing pads for TABLE_MP Data_Table structures
    */
 
-  for (i = 0; i < num_MP_Tables; i++) {
-    MP_Tables[i] = smalloc(sizeof(struct Data_Table));
+  for (i = 0; i < goma_ctx->bc.num_mp_tables; i++) {
+    goma_ctx->bc.mp_tables[i] = smalloc(sizeof(struct Data_Table));
   }
 
   /*
    * Create landing pads for external tables Data_Table structures
    */
 
-  for (i = 0; i < num_ext_Tables; i++) {
-    ext_Tables[i] = smalloc(sizeof(struct Data_Table));
+  for (i = 0; i < goma_ctx->bc.num_ext_tables; i++) {
+    goma_ctx->bc.ext_tables[i] = smalloc(sizeof(struct Data_Table));
   }
 
   /*
@@ -279,7 +280,7 @@ void raven_landing(void) {
    */
 
   if (goma_ctx->problem.num_rot > 0) {
-    ROT_Types =
+    goma_ctx->bc.rot_types =
         (struct Rotation_Specs *)calloc(goma_ctx->problem.num_rot, sizeof(struct Rotation_Specs));
   }
 
@@ -841,31 +842,31 @@ void noahs_ark(void) {
    */
 
   for (i = 0; i < goma_ctx->problem.num_bc; i++) {
-    ddd_add_member(n, &BC_Types[i].BC_Name, 1, MPI_INT);
-    ddd_add_member(n, BC_Types[i].Set_Type, 3, MPI_CHAR);
-    ddd_add_member(n, &BC_Types[i].BC_ID, 1, MPI_INT);
-    ddd_add_member(n, &BC_Types[i].BC_ID2, 1, MPI_INT);
-    ddd_add_member(n, &BC_Types[i].BC_ID3, 1, MPI_INT);
-    ddd_add_member(n, &BC_Types[i].BC_matrl_index_1, 1, MPI_INT);
-    ddd_add_member(n, &BC_Types[i].BC_matrl_index_2, 1, MPI_INT);
-    ddd_add_member(n, &BC_Types[i].BC_matrl_index_3, 1, MPI_INT);
-    ddd_add_member(n, &BC_Types[i].BC_matrl_index_4, 1, MPI_INT);
-    ddd_add_member(n, &BC_Types[i].BC_EBID_Apply, 1, MPI_INT);
-    ddd_add_member(n, BC_Types[i].BC_Data_Int, MAX_BC_INT_DATA, MPI_INT);
-    ddd_add_member(n, BC_Types[i].BC_Data_Float, MAX_BC_FLOAT_DATA, MPI_DOUBLE);
-    ddd_add_member(n, &BC_Types[i].len_u_BC, 1, MPI_INT);
-    ddd_add_member(n, &BC_Types[i].max_DFlt, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].BC_Name, 1, MPI_INT);
+    ddd_add_member(n, goma_ctx->bc.bc_types[i].Set_Type, 3, MPI_CHAR);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].BC_ID, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].BC_ID2, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].BC_ID3, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].BC_matrl_index_1, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].BC_matrl_index_2, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].BC_matrl_index_3, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].BC_matrl_index_4, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].BC_EBID_Apply, 1, MPI_INT);
+    ddd_add_member(n, goma_ctx->bc.bc_types[i].BC_Data_Int, MAX_BC_INT_DATA, MPI_INT);
+    ddd_add_member(n, goma_ctx->bc.bc_types[i].BC_Data_Float, MAX_BC_FLOAT_DATA, MPI_DOUBLE);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].len_u_BC, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].max_DFlt, 1, MPI_INT);
 
     /* double u_BC delivered by Dove...*/
 
-    ddd_add_member(n, &BC_Types[i].BC_Desc_index, 1, MPI_INT);
-    ddd_add_member(n, &BC_Types[i].index_dad, 1, MPI_INT);
-    ddd_add_member(n, &BC_Types[i].equation, 1, MPI_INT);
-    ddd_add_member(n, &BC_Types[i].matrix, 1, MPI_INT);
-    ddd_add_member(n, &BC_Types[i].species_eq, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].BC_Desc_index, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].index_dad, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].equation, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].matrix, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].species_eq, 1, MPI_INT);
 
-    ddd_add_member(n, &BC_Types[i].BC_relax, 1, MPI_DOUBLE);
-    ddd_add_member(n, &BC_Types[i].table_index, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].BC_relax, 1, MPI_DOUBLE);
+    ddd_add_member(n, &goma_ctx->bc.bc_types[i].table_index, 1, MPI_INT);
   }
 
   /*
@@ -879,14 +880,14 @@ void noahs_ark(void) {
    * after the ark is sent in the "ark_landing" below.
    */
 
-  for (i = 0; i < num_new_BC_Desc; i++) {
-    ddd_add_member(n, &(new_BC_Desc[i]->method), 1, MPI_INT);
-    ddd_add_member(n, &(new_BC_Desc[i]->BC_Name), 1, MPI_INT);
-    ddd_add_member(n, &(new_BC_Desc[i]->equation), 1, MPI_INT);
-    ddd_add_member(n, &(new_BC_Desc[i]->vector), 1, MPI_INT);
-    ddd_add_member(n, &(new_BC_Desc[i]->rotate), 1, MPI_INT);
-    ddd_add_member(n, &(new_BC_Desc[i]->sens[0]), MAX_VARIABLE_TYPES, MPI_INT);
-    ddd_add_member(n, &(new_BC_Desc[i]->i_apply), 1, MPI_INT);
+  for (i = 0; i < goma_ctx->bc.num_new_bc_desc; i++) {
+    ddd_add_member(n, &(goma_ctx->bc.new_bc_desc[i]->method), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.new_bc_desc[i]->BC_Name), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.new_bc_desc[i]->equation), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.new_bc_desc[i]->vector), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.new_bc_desc[i]->rotate), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.new_bc_desc[i]->sens[0]), MAX_VARIABLE_TYPES, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.new_bc_desc[i]->i_apply), 1, MPI_INT);
   }
 
   /*
@@ -895,70 +896,70 @@ void noahs_ark(void) {
    * The table data itself will be allocated in "ark_landing"
    */
 
-  for (i = 0; i < num_AC_Tables; i++) {
-    ddd_add_member(n, AC_Tables[i]->t_name[0], 132, MPI_CHAR);
-    ddd_add_member(n, AC_Tables[i]->t_name[1], 132, MPI_CHAR);
-    ddd_add_member(n, AC_Tables[i]->t_index, 2, MPI_INT);
-    ddd_add_member(n, &(AC_Tables[i]->columns), 1, MPI_INT);
-    ddd_add_member(n, &(AC_Tables[i]->interp_method), 1, MPI_INT);
-    ddd_add_member(n, &(AC_Tables[i]->tablelength), 1, MPI_INT);
-    ddd_add_member(n, &(AC_Tables[i]->f_index), 1, MPI_INT);
-    ddd_add_member(n, &(AC_Tables[i]->species_eq), 1, MPI_INT);
-    ddd_add_member(n, &(AC_Tables[i]->ngrid), 1, MPI_INT);
-    ddd_add_member(n, &(AC_Tables[i]->yscale), 1, MPI_DOUBLE);
-    ddd_add_member(n, &(AC_Tables[i]->Emin), 1, MPI_DOUBLE);
+  for (i = 0; i < goma_ctx->bc.num_ac_tables; i++) {
+    ddd_add_member(n, goma_ctx->bc.ac_tables[i]->t_name[0], 132, MPI_CHAR);
+    ddd_add_member(n, goma_ctx->bc.ac_tables[i]->t_name[1], 132, MPI_CHAR);
+    ddd_add_member(n, goma_ctx->bc.ac_tables[i]->t_index, 2, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ac_tables[i]->columns), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ac_tables[i]->interp_method), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ac_tables[i]->tablelength), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ac_tables[i]->f_index), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ac_tables[i]->species_eq), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ac_tables[i]->ngrid), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ac_tables[i]->yscale), 1, MPI_DOUBLE);
+    ddd_add_member(n, &(goma_ctx->bc.ac_tables[i]->Emin), 1, MPI_DOUBLE);
   }
 
-  for (i = 0; i < num_BC_Tables; i++) {
-    ddd_add_member(n, BC_Tables[i]->t_name[0], 132, MPI_CHAR);
-    ddd_add_member(n, BC_Tables[i]->t_name[1], 132, MPI_CHAR);
-    ddd_add_member(n, BC_Tables[i]->t_index, 2, MPI_INT);
-    ddd_add_member(n, &(BC_Tables[i]->columns), 1, MPI_INT);
-    ddd_add_member(n, &(BC_Tables[i]->interp_method), 1, MPI_INT);
-    ddd_add_member(n, &(BC_Tables[i]->tablelength), 1, MPI_INT);
-    ddd_add_member(n, &(BC_Tables[i]->f_index), 1, MPI_INT);
+  for (i = 0; i < goma_ctx->bc.num_bc_tables; i++) {
+    ddd_add_member(n, goma_ctx->bc.bc_tables[i]->t_name[0], 132, MPI_CHAR);
+    ddd_add_member(n, goma_ctx->bc.bc_tables[i]->t_name[1], 132, MPI_CHAR);
+    ddd_add_member(n, goma_ctx->bc.bc_tables[i]->t_index, 2, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.bc_tables[i]->columns), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.bc_tables[i]->interp_method), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.bc_tables[i]->tablelength), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.bc_tables[i]->f_index), 1, MPI_INT);
     /*    BC_Tables[i]->slope is computed locally  */
-    ddd_add_member(n, &(BC_Tables[i]->species_eq), 1, MPI_INT);
-    ddd_add_member(n, &(BC_Tables[i]->ngrid), 1, MPI_INT);
-    ddd_add_member(n, &(BC_Tables[i]->yscale), 1, MPI_DOUBLE);
-    ddd_add_member(n, &(BC_Tables[i]->Emin), 1, MPI_DOUBLE);
+    ddd_add_member(n, &(goma_ctx->bc.bc_tables[i]->species_eq), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.bc_tables[i]->ngrid), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.bc_tables[i]->yscale), 1, MPI_DOUBLE);
+    ddd_add_member(n, &(goma_ctx->bc.bc_tables[i]->Emin), 1, MPI_DOUBLE);
   }
 
-  for (i = 0; i < num_MP_Tables; i++) {
-    ddd_add_member(n, MP_Tables[i]->t_name[0], 132, MPI_CHAR);
-    ddd_add_member(n, MP_Tables[i]->t_name[1], 132, MPI_CHAR);
-    ddd_add_member(n, MP_Tables[i]->t_index, 2, MPI_INT);
-    ddd_add_member(n, &(MP_Tables[i]->columns), 1, MPI_INT);
-    ddd_add_member(n, &(MP_Tables[i]->interp_method), 1, MPI_INT);
-    ddd_add_member(n, &(MP_Tables[i]->tablelength), 1, MPI_INT);
-    ddd_add_member(n, &(MP_Tables[i]->f_index), 1, MPI_INT);
+  for (i = 0; i < goma_ctx->bc.num_mp_tables; i++) {
+    ddd_add_member(n, goma_ctx->bc.mp_tables[i]->t_name[0], 132, MPI_CHAR);
+    ddd_add_member(n, goma_ctx->bc.mp_tables[i]->t_name[1], 132, MPI_CHAR);
+    ddd_add_member(n, goma_ctx->bc.mp_tables[i]->t_index, 2, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.mp_tables[i]->columns), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.mp_tables[i]->interp_method), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.mp_tables[i]->tablelength), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.mp_tables[i]->f_index), 1, MPI_INT);
     /*    MP_Tables[i]->slope is computed locally    */
-    ddd_add_member(n, &(MP_Tables[i]->species_eq), 1, MPI_INT);
-    ddd_add_member(n, &(MP_Tables[i]->ngrid), 1, MPI_INT);
-    ddd_add_member(n, &(MP_Tables[i]->yscale), 1, MPI_DOUBLE);
-    ddd_add_member(n, &(MP_Tables[i]->Emin), 1, MPI_DOUBLE);
+    ddd_add_member(n, &(goma_ctx->bc.mp_tables[i]->species_eq), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.mp_tables[i]->ngrid), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.mp_tables[i]->yscale), 1, MPI_DOUBLE);
+    ddd_add_member(n, &(goma_ctx->bc.mp_tables[i]->Emin), 1, MPI_DOUBLE);
   }
 
-  for (i = 0; i < num_ext_Tables; i++) {
-    ddd_add_member(n, ext_Tables[i]->t_name[0], 132, MPI_CHAR);
-    ddd_add_member(n, ext_Tables[i]->t_name[1], 132, MPI_CHAR);
-    ddd_add_member(n, ext_Tables[i]->t_name[2], 132, MPI_CHAR);
-    ddd_add_member(n, ext_Tables[i]->t_index, 3, MPI_INT);
-    ddd_add_member(n, &(ext_Tables[i]->columns), 1, MPI_INT);
-    ddd_add_member(n, &(ext_Tables[i]->interp_method), 1, MPI_INT);
-    ddd_add_member(n, &(ext_Tables[i]->tablelength), 1, MPI_INT);
-    ddd_add_member(n, &(ext_Tables[i]->f_index), 1, MPI_INT);
+  for (i = 0; i < goma_ctx->bc.num_ext_tables; i++) {
+    ddd_add_member(n, goma_ctx->bc.ext_tables[i]->t_name[0], 132, MPI_CHAR);
+    ddd_add_member(n, goma_ctx->bc.ext_tables[i]->t_name[1], 132, MPI_CHAR);
+    ddd_add_member(n, goma_ctx->bc.ext_tables[i]->t_name[2], 132, MPI_CHAR);
+    ddd_add_member(n, goma_ctx->bc.ext_tables[i]->t_index, 3, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ext_tables[i]->columns), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ext_tables[i]->interp_method), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ext_tables[i]->tablelength), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ext_tables[i]->f_index), 1, MPI_INT);
     /*    ext_Tables[i]->slope is computed locally  */
-    ddd_add_member(n, &(ext_Tables[i]->species_eq), 1, MPI_INT);
-    ddd_add_member(n, &(ext_Tables[i]->ngrid), 1, MPI_INT);
-    ddd_add_member(n, &(ext_Tables[i]->ngrid2), 1, MPI_INT);
-    ddd_add_member(n, &(ext_Tables[i]->yscale), 1, MPI_DOUBLE);
-    ddd_add_member(n, &(ext_Tables[i]->Emin), 1, MPI_DOUBLE);
+    ddd_add_member(n, &(goma_ctx->bc.ext_tables[i]->species_eq), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ext_tables[i]->ngrid), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ext_tables[i]->ngrid2), 1, MPI_INT);
+    ddd_add_member(n, &(goma_ctx->bc.ext_tables[i]->yscale), 1, MPI_DOUBLE);
+    ddd_add_member(n, &(goma_ctx->bc.ext_tables[i]->Emin), 1, MPI_DOUBLE);
   }
 
-  ddd_add_member(n, &PRESSURE_DATUM, 1, MPI_INT);
-  ddd_add_member(n, &pressure_datum_element, 1, MPI_INT);
-  ddd_add_member(n, &pressure_datum_value, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->bc.pressure_datum, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->bc.pressure_datum_element, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->bc.pressure_datum_value, 1, MPI_DOUBLE);
 
   /*
    * Rotation Conditions. Initially assume that Rotation Specifications
@@ -972,23 +973,23 @@ void noahs_ark(void) {
    */
 
   for (i = 0; i < goma_ctx->problem.num_rot; i++) {
-    ddd_add_member(n, &ROT_Types[i].eq_type, 1, MPI_INT);
-    ddd_add_member(n, &ROT_Types[i].type, 1, MPI_INT);
-    ddd_add_member(n, ROT_Types[i].ss_id, CDIM, MPI_INT);
-    ddd_add_member(n, ROT_Types[i].BC_Type, CDIM, MPI_INT);
-    ddd_add_member(n, ROT_Types[i].BC_SS, CDIM, MPI_INT);
-    ddd_add_member(n, ROT_Types[i].BC_id, CDIM, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.rot_types[i].eq_type, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.rot_types[i].type, 1, MPI_INT);
+    ddd_add_member(n, goma_ctx->bc.rot_types[i].ss_id, CDIM, MPI_INT);
+    ddd_add_member(n, goma_ctx->bc.rot_types[i].BC_Type, CDIM, MPI_INT);
+    ddd_add_member(n, goma_ctx->bc.rot_types[i].BC_SS, CDIM, MPI_INT);
+    ddd_add_member(n, goma_ctx->bc.rot_types[i].BC_id, CDIM, MPI_INT);
 
     /*
      * Reconstruct the ptrs to BC_desc's via these integer indeces...
      */
 
-    ddd_add_member(n, ROT_Types[i].BC_desc_index, CDIM, MPI_INT);
+    ddd_add_member(n, goma_ctx->bc.rot_types[i].BC_desc_index, CDIM, MPI_INT);
 
-    ddd_add_member(n, &ROT_Types[i].method, 1, MPI_INT);
-    ddd_add_member(n, &ROT_Types[i].ROTATE, 1, MPI_INT);
-    ddd_add_member(n, ROT_Types[i].seed, CDIM, MPI_DOUBLE);
-    ddd_add_member(n, &ROT_Types[i].node, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.rot_types[i].method, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->bc.rot_types[i].ROTATE, 1, MPI_INT);
+    ddd_add_member(n, goma_ctx->bc.rot_types[i].seed, CDIM, MPI_DOUBLE);
+    ddd_add_member(n, &goma_ctx->bc.rot_types[i].node, 1, MPI_INT);
 
     /*
      * The ptr to a list of elements on the side set is empty for now.
@@ -3008,10 +3009,10 @@ void ark_landing(void) {
      * Setup pointers into the static BC Descriptions for most BCs.
      */
 
-    if (BC_Types[i].index_dad == -1) {
-      BC_Types[i].desc = &BC_Desc[BC_Types[i].BC_Desc_index];
+    if (goma_ctx->bc.bc_types[i].index_dad == -1) {
+      goma_ctx->bc.bc_types[i].desc = &BC_Desc[goma_ctx->bc.bc_types[i].BC_Desc_index];
     } else {
-      BC_Types[i].desc = NULL;
+      goma_ctx->bc.bc_types[i].desc = NULL;
     }
 
     /*
@@ -3019,11 +3020,11 @@ void ark_landing(void) {
      * to old names (just like what happens in alloc_BC_Desc().)
      */
 
-    if (BC_Types[i].index_dad != -1) {
-      BC_Types[i].desc = new_BC_Desc[BC_Types[i].index_dad];
-      index = BC_Types[i].BC_Desc_index;
-      BC_Types[i].desc->name1 = BC_Desc[index].name1;
-      BC_Types[i].desc->name2 = BC_Desc[index].name2;
+    if (goma_ctx->bc.bc_types[i].index_dad != -1) {
+      goma_ctx->bc.bc_types[i].desc = goma_ctx->bc.new_bc_desc[goma_ctx->bc.bc_types[i].index_dad];
+      index = goma_ctx->bc.bc_types[i].BC_Desc_index;
+      goma_ctx->bc.bc_types[i].desc->name1 = BC_Desc[index].name1;
+      goma_ctx->bc.bc_types[i].desc->name2 = BC_Desc[index].name2;
     }
 
     /*
@@ -3032,16 +3033,16 @@ void ark_landing(void) {
      * than ProcID 0.
      */
 
-    dalloc(BC_Types[i].len_u_BC, BC_Types[i].u_BC);
+    dalloc(goma_ctx->bc.bc_types[i].len_u_BC, goma_ctx->bc.bc_types[i].u_BC);
 
     /*
      * Handle BC Tables
      */
 
-    if (BC_Types[i].table_index != -1) {
-      BC_Types[i].table = BC_Tables[BC_Types[i].table_index];
+    if (goma_ctx->bc.bc_types[i].table_index != -1) {
+      goma_ctx->bc.bc_types[i].table = goma_ctx->bc.bc_tables[goma_ctx->bc.bc_types[i].table_index];
     } else {
-      BC_Types[i].table = NULL;
+      goma_ctx->bc.bc_types[i].table = NULL;
     }
   }
 
@@ -3051,21 +3052,21 @@ void ark_landing(void) {
    *  the axis (t) or (f) name on all procs
    */
 
-  for (i = 0; i < num_BC_Tables; i++) {
-    dalloc(BC_Tables[i]->tablelength, BC_Tables[i]->t);
-    dalloc(BC_Tables[i]->tablelength, BC_Tables[i]->t2);
-    dalloc(BC_Tables[i]->tablelength, BC_Tables[i]->f);
+  for (i = 0; i < goma_ctx->bc.num_bc_tables; i++) {
+    dalloc(goma_ctx->bc.bc_tables[i]->tablelength, goma_ctx->bc.bc_tables[i]->t);
+    dalloc(goma_ctx->bc.bc_tables[i]->tablelength, goma_ctx->bc.bc_tables[i]->t2);
+    dalloc(goma_ctx->bc.bc_tables[i]->tablelength, goma_ctx->bc.bc_tables[i]->f);
   }
 
   /*
    * Allocate space for any defined ext_Tables
    */
 
-  for (i = 0; i < num_ext_Tables; i++) {
-    dalloc(ext_Tables[i]->tablelength, ext_Tables[i]->t);
-    dalloc(ext_Tables[i]->tablelength, ext_Tables[i]->t2);
-    dalloc(ext_Tables[i]->tablelength, ext_Tables[i]->t3);
-    dalloc(ext_Tables[i]->tablelength, ext_Tables[i]->f);
+  for (i = 0; i < goma_ctx->bc.num_ext_tables; i++) {
+    dalloc(goma_ctx->bc.ext_tables[i]->tablelength, goma_ctx->bc.ext_tables[i]->t);
+    dalloc(goma_ctx->bc.ext_tables[i]->tablelength, goma_ctx->bc.ext_tables[i]->t2);
+    dalloc(goma_ctx->bc.ext_tables[i]->tablelength, goma_ctx->bc.ext_tables[i]->t3);
+    dalloc(goma_ctx->bc.ext_tables[i]->tablelength, goma_ctx->bc.ext_tables[i]->f);
   }
 
   /*
@@ -3081,11 +3082,11 @@ void ark_landing(void) {
 
   for (i = 0; i < goma_ctx->problem.num_rot; i++) {
     for (j = 0; j < CDIM; j++) {
-      index = ROT_Types[i].BC_desc_index[j];
+      index = goma_ctx->bc.rot_types[i].BC_desc_index[j];
       if (index > -1) {
-        ROT_Types[i].BC_desc[j] = &BC_Desc[index];
+        goma_ctx->bc.rot_types[i].BC_desc[j] = &BC_Desc[index];
       } else {
-        ROT_Types[i].BC_desc[j] = NULL;
+        goma_ctx->bc.rot_types[i].BC_desc[j] = NULL;
       }
     }
   }
@@ -3094,10 +3095,10 @@ void ark_landing(void) {
    * Allocate space for any defined MP_Tables
    */
 
-  for (i = 0; i < num_MP_Tables; i++) {
-    dalloc(MP_Tables[i]->tablelength, MP_Tables[i]->t);
-    dalloc(MP_Tables[i]->tablelength, MP_Tables[i]->t2);
-    dalloc(MP_Tables[i]->tablelength, MP_Tables[i]->f);
+  for (i = 0; i < goma_ctx->bc.num_mp_tables; i++) {
+    dalloc(goma_ctx->bc.mp_tables[i]->tablelength, goma_ctx->bc.mp_tables[i]->t);
+    dalloc(goma_ctx->bc.mp_tables[i]->tablelength, goma_ctx->bc.mp_tables[i]->t2);
+    dalloc(goma_ctx->bc.mp_tables[i]->tablelength, goma_ctx->bc.mp_tables[i]->f);
   }
 
   /*
@@ -3733,24 +3734,24 @@ void noahs_dove(void) {
   }
 
   for (i = 0; i < goma_ctx->problem.num_bc; i++) {
-    crdv(BC_Types[i].len_u_BC, BC_Types[i].u_BC);
+    crdv(goma_ctx->bc.bc_types[i].len_u_BC, goma_ctx->bc.bc_types[i].u_BC);
   }
 
-  for (i = 0; i < num_BC_Tables; i++) {
-    crdv(BC_Tables[i]->tablelength, BC_Tables[i]->t);
-    crdv(BC_Tables[i]->tablelength, BC_Tables[i]->t2);
-    crdv(BC_Tables[i]->tablelength, BC_Tables[i]->f);
+  for (i = 0; i < goma_ctx->bc.num_bc_tables; i++) {
+    crdv(goma_ctx->bc.bc_tables[i]->tablelength, goma_ctx->bc.bc_tables[i]->t);
+    crdv(goma_ctx->bc.bc_tables[i]->tablelength, goma_ctx->bc.bc_tables[i]->t2);
+    crdv(goma_ctx->bc.bc_tables[i]->tablelength, goma_ctx->bc.bc_tables[i]->f);
   }
-  for (i = 0; i < num_MP_Tables; i++) {
-    crdv(MP_Tables[i]->tablelength, MP_Tables[i]->t);
-    crdv(MP_Tables[i]->tablelength, MP_Tables[i]->t2);
-    crdv(MP_Tables[i]->tablelength, MP_Tables[i]->f);
+  for (i = 0; i < goma_ctx->bc.num_mp_tables; i++) {
+    crdv(goma_ctx->bc.mp_tables[i]->tablelength, goma_ctx->bc.mp_tables[i]->t);
+    crdv(goma_ctx->bc.mp_tables[i]->tablelength, goma_ctx->bc.mp_tables[i]->t2);
+    crdv(goma_ctx->bc.mp_tables[i]->tablelength, goma_ctx->bc.mp_tables[i]->f);
   }
-  for (i = 0; i < num_ext_Tables; i++) {
-    crdv(ext_Tables[i]->tablelength, ext_Tables[i]->t);
-    crdv(ext_Tables[i]->tablelength, ext_Tables[i]->t2);
-    crdv(ext_Tables[i]->tablelength, ext_Tables[i]->t3);
-    crdv(ext_Tables[i]->tablelength, ext_Tables[i]->f);
+  for (i = 0; i < goma_ctx->bc.num_ext_tables; i++) {
+    crdv(goma_ctx->bc.ext_tables[i]->tablelength, goma_ctx->bc.ext_tables[i]->t);
+    crdv(goma_ctx->bc.ext_tables[i]->tablelength, goma_ctx->bc.ext_tables[i]->t2);
+    crdv(goma_ctx->bc.ext_tables[i]->tablelength, goma_ctx->bc.ext_tables[i]->t3);
+    crdv(goma_ctx->bc.ext_tables[i]->tablelength, goma_ctx->bc.ext_tables[i]->f);
   }
 
   /*   Augmenting condition data tables    */

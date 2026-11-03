@@ -1349,7 +1349,7 @@ double conductivity(CONDUCTIVITY_DEPENDENCE_STRUCT *d_k, dbl time)
     }
   } else if (goma_ctx->fem.mp->ConductivityModel == TABLE) {
     struct Data_Table *table_local;
-    table_local = MP_Tables[goma_ctx->fem.mp->thermal_conductivity_tableid];
+    table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->thermal_conductivity_tableid];
     apply_table_mp(&goma_ctx->fem.mp->thermal_conductivity, table_local);
     k = goma_ctx->fem.mp->thermal_conductivity;
 
@@ -1550,7 +1550,7 @@ double heat_capacity(HEAT_CAPACITY_DEPENDENCE_STRUCT *d_Cp, dbl time)
 
   } else if (goma_ctx->fem.mp->HeatCapacityModel == TABLE) {
     struct Data_Table *table_local;
-    table_local = MP_Tables[goma_ctx->fem.mp->heat_capacity_tableid];
+    table_local = goma_ctx->bc.mp_tables[goma_ctx->fem.mp->heat_capacity_tableid];
     apply_table_mp(&goma_ctx->fem.mp->heat_capacity, table_local);
     Cp = goma_ctx->fem.mp->heat_capacity;
 

@@ -58,29 +58,29 @@ static void set_bc_equation(void) {
      *  Create a couple of pointers to cut down on the
      *  amount of indirect addressing
      */
-    int eqn = (BC_Types[ibc].desc)->equation;
-    int set_eqn = BC_Types[ibc].equation;
+    int eqn = (goma_ctx->bc.bc_types[ibc].desc)->equation;
+    int set_eqn = goma_ctx->bc.bc_types[ibc].equation;
     if (set_eqn < 0 || set_eqn >= V_LAST) {
       if (eqn >= V_FIRST && eqn < V_LAST) {
-        BC_Types[ibc].equation = eqn;
+        goma_ctx->bc.bc_types[ibc].equation = eqn;
       } else {
         switch (eqn) {
         case R_MESH_NORMAL:
         case R_MESH_TANG1:
         case R_MESH_TANG2:
         case MESH_POSITION1:
-          BC_Types[ibc].equation = R_MESH1;
+          goma_ctx->bc.bc_types[ibc].equation = R_MESH1;
           break;
         case MESH_POSITION2:
-          BC_Types[ibc].equation = R_MESH2;
+          goma_ctx->bc.bc_types[ibc].equation = R_MESH2;
           break;
         case MESH_POSITION3:
-          BC_Types[ibc].equation = R_MESH3;
+          goma_ctx->bc.bc_types[ibc].equation = R_MESH3;
           break;
         case R_MOM_NORMAL:
         case R_MOM_TANG1:
         case R_MOM_TANG2:
-          BC_Types[ibc].equation = R_MOMENTUM1;
+          goma_ctx->bc.bc_types[ibc].equation = R_MOMENTUM1;
           break;
         case R_SOLID_NORMAL:
         case R_SOLID_TANG1:
@@ -89,13 +89,13 @@ static void set_bc_equation(void) {
         case SOLID_TANG1:
         case SOLID_TANG2:
         case SOLID_POSITION1:
-          BC_Types[ibc].equation = R_SOLID1;
+          goma_ctx->bc.bc_types[ibc].equation = R_SOLID1;
           break;
         case SOLID_POSITION2:
-          BC_Types[ibc].equation = R_SOLID2;
+          goma_ctx->bc.bc_types[ibc].equation = R_SOLID2;
           break;
         case SOLID_POSITION3:
-          BC_Types[ibc].equation = R_SOLID3;
+          goma_ctx->bc.bc_types[ibc].equation = R_SOLID3;
           break;
         default:
           GOMA_EH(GOMA_ERROR, "Error in linking BC to equation");
@@ -115,7 +115,7 @@ static void associate_bc_to_matrix(void) {
     /* Preserve legacy behavior */
     for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
 
-      BC_Types[ibc].matrix = 0;
+      goma_ctx->bc.bc_types[ibc].matrix = 0;
     }
   } else {
     for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
@@ -123,23 +123,23 @@ static void associate_bc_to_matrix(void) {
        *  Create a couple of pointers to cut down on the
        *  amount of indirect addressing
        */
-      int eqn = BC_Types[ibc].equation;
+      int eqn = goma_ctx->bc.bc_types[ibc].equation;
 
-      BC_Types[ibc].matrix = -1;
+      goma_ctx->bc.bc_types[ibc].matrix = -1;
 
       if (eqn >= V_FIRST && eqn < V_LAST) {
         for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
           for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
             if (goma_ctx->fem.pd_glob[mn]->e[imtrx][eqn]) {
-              BC_Types[ibc].matrix = imtrx;
+              goma_ctx->bc.bc_types[ibc].matrix = imtrx;
             }
           }
         }
       }
-      if (BC_Types[ibc].matrix == -1) {
+      if (goma_ctx->bc.bc_types[ibc].matrix == -1) {
         char errstr[512];
         snprintf(errstr, 512, "Could not find matching matrix for BC #%d %s, BC will not be used",
-                 ibc, (BC_Types[ibc].desc)->name1);
+                 ibc, (goma_ctx->bc.bc_types[ibc].desc)->name1);
         GOMA_WH(-1, errstr);
       }
     }
@@ -344,13 +344,13 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    *  surface integrals
    */
   log_msg("set_up_Surf_BC...");
-  set_up_Surf_BC(First_Elem_Side_BC_Array, exo, dpi);
+  set_up_Surf_BC(goma_ctx->bc.first_elem_side_bc_array, exo, dpi);
 
   /*
    *  Set up the Edge boundary condition structures
    */
   log_msg("set_up_Edge_BC...");
-  set_up_Edge_BC(First_Elem_Edge_BC_Array, exo, dpi);
+  set_up_Edge_BC(goma_ctx->bc.first_elem_edge_bc_array, exo, dpi);
 
   /*
    * Set up "boundary" conditions on level set surfaces
@@ -362,7 +362,7 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * that apply at single nodes.
    */
 
-  setup_Point_BC(First_Elem_Side_BC_Array, exo, dpi);
+  setup_Point_BC(goma_ctx->bc.first_elem_side_bc_array, exo, dpi);
 
   /*
    *  Print out the edge boudary condition structures
@@ -372,7 +372,7 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
     for (goma_ctx->fem.pg->imtrx = 0;
          goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
          goma_ctx->fem.pg->imtrx++) {
-      print_setup_Surf_BC(First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx]);
+      print_setup_Surf_BC(goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx]);
     }
   }
 
@@ -441,8 +441,8 @@ int free_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
   /*
    * Free up the First_Elem_Side_BC_Array array
    */
-  free_Surf_BC(First_Elem_Side_BC_Array, exo);
-  free_Edge_BC(First_Elem_Edge_BC_Array, exo, dpi);
+  free_Surf_BC(goma_ctx->bc.first_elem_side_bc_array, exo);
+  free_Edge_BC(goma_ctx->bc.first_elem_edge_bc_array, exo, dpi);
   return 0;
 }
 /************************************************************************/
@@ -551,8 +551,8 @@ int coordinate_discontinuous_variables(Exo_DB *exo, Dpi *dpi)
    *  interface.
    */
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-    if (BC_Types[ibc].desc->i_apply == CROSS_PHASE_DISCONTINUOUS) {
-      eqn_type = BC_Types[ibc].desc->equation;
+    if (goma_ctx->bc.bc_types[ibc].desc->i_apply == CROSS_PHASE_DISCONTINUOUS) {
+      eqn_type = goma_ctx->bc.bc_types[ibc].desc->equation;
       /*
        * If we are applying a bc on the momentum equations
        * let's assign it a base equation type
@@ -570,7 +570,7 @@ int coordinate_discontinuous_variables(Exo_DB *exo, Dpi *dpi)
       }
 
       for (ss_index = 0; ss_index < exo->num_side_sets; ss_index++) {
-        if (BC_Types[ibc].BC_ID == exo->ss_id[ss_index]) {
+        if (goma_ctx->bc.bc_types[ibc].BC_ID == exo->ss_id[ss_index]) {
           for (side_index = 0; side_index < exo->ss_num_sides[ss_index]; side_index++) {
             for (k = exo->ss_node_side_index[ss_index][side_index];
                  k < exo->ss_node_side_index[ss_index][side_index + 1]; k++) {
@@ -776,7 +776,7 @@ void bc_set_index(Exo_DB *exo)
   int ibc, ss_index;
   struct Boundary_Condition *bc_ptr;
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-    bc_ptr = BC_Types + ibc;
+    bc_ptr = goma_ctx->bc.bc_types + ibc;
     bc_ptr->Set_Index = -1;
     /*
      * Side Sets
@@ -842,12 +842,12 @@ void bc_internal_boundary(Exo_DB *exo)
   int ibc, ss_index;
   struct Boundary_Condition *bc_ptr;
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-    bc_ptr = BC_Types + ibc;
+    bc_ptr = goma_ctx->bc.bc_types + ibc;
     bc_ptr->Internal_Boundary = FALSE;
     if (!strcmp(bc_ptr->Set_Type, "SS")) {
       ss_index = bc_ptr->Set_Index;
       if (ss_index >= 0) {
-        bc_ptr->Internal_Boundary = SS_Internal_Boundary[ss_index];
+        bc_ptr->Internal_Boundary = goma_ctx->bc.ss_internal_boundary[ss_index];
       } else {
         bc_ptr->Internal_Boundary = -1;
       }
@@ -916,7 +916,7 @@ void bc_matrl_index(Exo_DB *exo)
   node_flag_1ss = alloc_int_1(exo->num_nodes, INT_NOINIT);
 
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-    bc_ptr = BC_Types + ibc;
+    bc_ptr = goma_ctx->bc.bc_types + ibc;
     found = FALSE;
     /*
      *  Some boundary condition specifications already require
@@ -976,7 +976,7 @@ void bc_matrl_index(Exo_DB *exo)
      *  Determine how many materials each boundary condition needs
      *  based on the type of the boundary condition
      */
-    i_apply_meth = BC_Types[ibc].desc->i_apply;
+    i_apply_meth = goma_ctx->bc.bc_types[ibc].desc->i_apply;
     if (i_apply_meth == CROSS_PHASE_DISCONTINUOUS || i_apply_meth == CROSS_PHASE) {
       num_matrl_needed = 2;
     } else if (i_apply_meth == SINGLE_PHASE) {
@@ -1195,7 +1195,7 @@ void determine_dvi_index(void)
   struct Boundary_Condition *bc_ptr;
   struct BC_descriptions *bc_desc;
   for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
-    bc_ptr = BC_Types + ibc;
+    bc_ptr = goma_ctx->bc.bc_types + ibc;
     bc_desc = bc_ptr->desc;
 
     /*

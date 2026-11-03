@@ -1121,7 +1121,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 
   /* Deallocate local arrays */
 
-  safer_free((void **)&ROT_Types);
+  safer_free((void **)&goma_ctx->bc.rot_types);
   safer_free((void **)&node_to_fill);
   safer_free((void **)&resid_vector);
   safer_free((void **)&resid_vector_sens);
@@ -1954,7 +1954,8 @@ void matrix_residual_fill_conwrap(double *x, double *rhs, int matflag)
 
     (void)matrix_fill_full(ams, x, rhs, passdown.x_old, passdown.x_older, passdown.xdot,
                            passdown.xdot_old, passdown.x_update, &(passdown.delta_t),
-                           &(passdown.theta), First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx],
+                           &(passdown.theta),
+                           goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx],
                            &(passdown.time_value), passdown.exo, passdown.dpi,
                            &(passdown.dpi->num_universe_nodes), &(h_elem_avg), &(U_norm), NULL);
   }
@@ -2065,11 +2066,11 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
 
     exchange_dof(passdown.cx, passdown.dpi, x, goma_ctx->fem.pg->imtrx);
 
-    (void)matrix_fill_full(ams, x, rhs, passdown.x_old, passdown.x_older, passdown.xdot,
-                           passdown.xdot_old, passdown.x_update, &(passdown.delta_t),
-                           &(passdown.theta), First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx],
-                           &(passdown.time_value), passdown.exo, passdown.dpi, &(nnodes),
-                           &(h_elem_avg), &(U_norm), NULL);
+    (void)matrix_fill_full(
+        ams, x, rhs, passdown.x_old, passdown.x_older, passdown.xdot, passdown.xdot_old,
+        passdown.x_update, &(passdown.delta_t), &(passdown.theta),
+        goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx], &(passdown.time_value),
+        passdown.exo, passdown.dpi, &(nnodes), &(h_elem_avg), &(U_norm), NULL);
 
   } /* End of Jacobian pass loop */
 
@@ -2125,11 +2126,11 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
     passdown.delta_t = 1.0;
     goma_ctx->fem.tran->delta_t = 1.0; /*for Newmark-Beta terms in Lagrangian Solid*/
 
-    (void)matrix_fill_full(ams, x, rhs, passdown.x_old, passdown.x_older, passdown.xdot,
-                           passdown.xdot_old, passdown.x_update, &(passdown.delta_t),
-                           &(passdown.theta), First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx],
-                           &(passdown.time_value), passdown.exo, passdown.dpi, &(nnodes),
-                           &(h_elem_avg), &(U_norm), NULL);
+    (void)matrix_fill_full(
+        ams, x, rhs, passdown.x_old, passdown.x_older, passdown.xdot, passdown.xdot_old,
+        passdown.x_update, &(passdown.delta_t), &(passdown.theta),
+        goma_ctx->bc.first_elem_side_bc_array[goma_ctx->fem.pg->imtrx], &(passdown.time_value),
+        passdown.exo, passdown.dpi, &(nnodes), &(h_elem_avg), &(U_norm), NULL);
 
   } /* End of mass matrix pass loop */
 

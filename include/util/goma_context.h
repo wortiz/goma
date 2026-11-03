@@ -18,6 +18,7 @@
 #include <mpi.h>
 
 #include "ac_particles_types.h"
+#include "rf_bc_limits.h" /* MAX_MAT_PER_SS, MAX_*_TABLES */
 #include "rf_fem_const.h" /* MAX_NUM_MATRICES, MAX_VARIABLE_TYPES */
 #include "rf_io_const.h"  /* MAX_CHAR_IN_INPUT */
 
@@ -448,6 +449,61 @@ typedef struct GomaProblem {
   char ***resname;     /* residual equation names for each dof */
 } GomaProblem;
 
+struct BC_descriptions;
+struct Boundary_Condition;
+struct Data_Table;
+struct Rotation_Specs;
+struct elem_edge_bc_struct;
+struct elem_side_bc_struct;
+
+/*
+ * Boundary condition, rotation and data table state read from the input deck
+ * and set up for the mesh. Formerly the globals in rf_bc.h and rf_bc_const.h.
+ */
+typedef struct GomaBC {
+  struct Boundary_Condition *bc_types; /* boundary conditions from the input deck, num_bc long */
+  struct Rotation_Specs *rot_types;    /* rotation specifications, num_rot long */
+  int **rot_list;
+  int **ss_list;
+  int use_2d_rotation_vectors;
+
+  /* per element: list of integrated BCs on sides / edges; NULL if none */
+  struct elem_side_bc_struct ***first_elem_side_bc_array;
+  struct elem_edge_bc_struct ***first_elem_edge_bc_array;
+
+  /* dynamically allocated BC descriptions (sent to other processors) */
+  int num_new_bc_desc;
+  struct BC_descriptions **new_bc_desc;
+
+  /* data tables attached to BCs, material properties, external fields and ACs */
+  int num_bc_tables;
+  struct Data_Table *bc_tables[MAX_BC_TABLES];
+  int num_mp_tables;
+  struct Data_Table *mp_tables[MAX_MP_TABLES];
+  int num_ext_tables;
+  struct Data_Table *ext_tables[MAX_EXT_TABLES];
+  int num_ac_tables;
+  struct Data_Table *ac_tables[MAX_AC_TABLES];
+
+  /* BC conflict resolution and rotation bookkeeping (mm_bc_conflict.c) */
+  int **bc_dup_nodes;
+  int ****bc_dup_list;
+  int *bc_dup_ptr;
+  int *ss_to_blks[MAX_MAT_PER_SS + 1];
+  int dup_blks_list[MAX_MAT_PER_SS + 1];
+  int *ss_internal_boundary;
+  int **mesh_rotate_node;
+  int **mesh_rotate_ss;
+  int *num_mesh_rotate;
+  int **mom_rotate_node;
+  int **mom_rotate_ss;
+  int *num_mom_rotate;
+
+  int pressure_datum;          /* a pressure datum is set */
+  int pressure_datum_element;  /* element in which the pressure datum is set */
+  double pressure_datum_value; /* value of the pressure datum */
+} GomaBC;
+
 /*
  * GomaContext collects process-wide state that used to live in individual
  * global variables: MPI/parallel information and I/O / run configuration.
@@ -518,6 +574,7 @@ typedef struct GomaContext {
   GomaSolver solver;       /* linear and nonlinear solver options */
   GomaFem fem;             /* problem description, materials and element working storage */
   GomaProblem problem;     /* problem setup, continuation parameters and unknown maps */
+  GomaBC bc;               /* boundary conditions, rotations and data tables */
 } GomaContext;
 
 /*
