@@ -567,8 +567,11 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
   if (rd->ngv > MAX_NGV)
     GOMA_EH(GOMA_ERROR, "Augmenting condition values overflowing MAX_NGV.  Change and rerun .");
 
-  if (callnum == 1) {
+  if (goma_ctx->spec_source_inventory == NULL) {
     goma_ctx->spec_source_inventory = Dmatrix_birth(upd->Num_Mat, upd->Max_Num_Species_Eqn + 1);
+    goma_ctx->spec_source_inventory_rows = upd->Num_Mat;
+  }
+  if (goma_ctx->spec_source_lumped_mass == NULL) {
     goma_ctx->spec_source_lumped_mass = alloc_dbl_1(exo->num_nodes, 0.0);
   }
 
@@ -1118,17 +1121,17 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       DPRINTF(stderr, "\t\tcompleted LSA!\n");
     }
 
-    if (Particle_Dynamics) {
+    if (goma_ctx->particles.dynamics) {
       /* If this was steady-state we need to ensure the fv_old* values are the same as fv. */
       dcopy1(NumUnknowns[pg->imtrx], x, x_old);
       dcopy1(NumUnknowns[pg->imtrx], x, x_older);
       initialize_particles(exo, x, x_old, xdot, xdot_old, resid_vector);
-      for (n = 0; n < Particle_Max_Time_Steps; n++) {
-        time = (n + 1) * Particle_Output_Time_Step;
+      for (n = 0; n < goma_ctx->particles.max_time_steps; n++) {
+        time = (n + 1) * goma_ctx->particles.output_time_step;
         DPRINTF(stdout, "\nComputing particles for time %g (%2.0f%% done)\n", time,
-                (dbl)n / (dbl)Particle_Max_Time_Steps * 100.0);
+                (dbl)n / (dbl)goma_ctx->particles.max_time_steps * 100.0);
         err = compute_particles(exo, x, x_old, xdot, xdot_old, resid_vector, time,
-                                Particle_Output_Time_Step, n);
+                                goma_ctx->particles.output_time_step, n);
         GOMA_EH(err, "Error performing particle calculations.");
       }
     }
@@ -1266,7 +1269,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     const_delta_ts = const_delta_t;
     last_renorm_nt = 0;
 
-    if (Particle_Dynamics)
+    if (goma_ctx->particles.dynamics)
       initialize_particles(exo, x, x_old, xdot, xdot_old, resid_vector);
 
     /*
@@ -2101,7 +2104,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
         /* Particle calculations.  time = time at *beginning* of
          * current timestep, n = timestep. */
-        if (Particle_Dynamics)
+        if (goma_ctx->particles.dynamics)
           err = compute_particles(exo, x, x_old, xdot, xdot_old, resid_vector, time, delta_t, n);
         GOMA_EH(err, "Error performing particle calculations.");
 
@@ -2687,6 +2690,8 @@ free_and_clear:
   safer_free((void **)&x_update);
 
   Dmatrix_death(goma_ctx->spec_source_inventory, upd->Num_Mat, upd->Max_Num_Species_Eqn + 1);
+  goma_ctx->spec_source_inventory = NULL;
+  goma_ctx->spec_source_inventory_rows = 0;
   safer_free((void **)&goma_ctx->spec_source_lumped_mass);
   if ((nn_post_data_sens + nn_post_fluxes_sens) > 0) {
     safer_free((void **)&x_sens);

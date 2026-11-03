@@ -893,8 +893,7 @@ int main(int argc, char **argv)
   fflush(stdout);
   fflush(stderr);
   log_msg("GOMA ends normally.");
-  free(goma_ctx->status);
-  free(goma_ctx->request);
+  goma_context_release(goma_ctx);
   return (0);
 }
 /***********************************************************************/

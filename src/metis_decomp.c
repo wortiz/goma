@@ -1042,7 +1042,9 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
     free(ss_to_blks[i]);
   }
   free(goma_ctx->mesh.proc_ss_node_count);
+  goma_ctx->mesh.proc_ss_node_count = NULL;
   free(goma_ctx->mesh.coor);
+  goma_ctx->mesh.coor = NULL;
   return GOMA_SUCCESS;
 }
 

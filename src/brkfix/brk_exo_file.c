@@ -4306,6 +4306,7 @@ int brk_exo_file(int num_pieces, char *Brk_File, char *Exo_File) {
   }
 
   free(goma_ctx->mesh.proc_ss_node_count);
+  goma_ctx->mesh.proc_ss_node_count = NULL;
   free(Proc_SS_Node_Pointers);
   free(mono->eb_elem_itype);
 

@@ -358,6 +358,7 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
    * Node point coordinates.
    */
 
+  free(goma_ctx->mesh.coor);
   goma_ctx->mesh.coor = (dbl **)smalloc(goma_ctx->mesh.num_dim * sizeof(dbl *));
 
   if (goma_ctx->mesh.num_dim > 0) {
@@ -510,6 +511,7 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
    * old beast, doing some checking to avoid getting eaten.
    */
 
+  free(goma_ctx->mesh.proc_ss_node_count);
   goma_ctx->mesh.proc_ss_node_count =
       (int *)smalloc(goma_ctx->mesh.proc_num_side_sets * sizeof(int));
 

@@ -35,8 +35,6 @@
 #include "rf_fem_const.h"
 #include "std.h"
 
-extern int Particle_Show_Debug_Info;
-
 #define SLEN   256
 #define SLEN_2 512
 
@@ -47,20 +45,20 @@ void rd_particle_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Particle Specifications", input, '=');
   if (iread != 1) {
-    Particle_Dynamics = 0;
-    Particle_Number_Sample_Types = 0;
-    Particle_Number_Samples_Existing = NULL;
-    Particle_Number_Samples = NULL;
-    Particle_Number_Output_Variables = NULL;
-    Particle_Output_Variables = NULL;
-    Particle_Filename_Template = NULL;
-    Particle_Number_PBCs = 0;
-    PBCs = NULL;
+    goma_ctx->particles.dynamics = 0;
+    goma_ctx->particles.number_sample_types = 0;
+    goma_ctx->particles.number_samples_existing = NULL;
+    goma_ctx->particles.number_samples = NULL;
+    goma_ctx->particles.number_output_variables = NULL;
+    goma_ctx->particles.output_variables = NULL;
+    goma_ctx->particles.filename_template = NULL;
+    goma_ctx->particles.num_pbcs = 0;
+    goma_ctx->particles.pbcs = NULL;
     return;
   }
 
   printf("\n--- Particle specifications ---\n");
-  Particle_Dynamics = 1; /* turn on particle dynamics */
+  goma_ctx->particles.dynamics = 1; /* turn on particle dynamics */
 
   /* What kind of particle model do you want?  This determines all
    * kinds of things, such as FEM<->particle coupling, particle
@@ -76,30 +74,30 @@ void rd_particle_specs(FILE *ifp, char *input) {
   if (s_ptr1 != NULL)
     s_ptr1[0] = 0;
   if (!strncmp("INERTIAL_TRACER_EXPLICIT", s_tmp, 24))
-    Particle_Model = INERTIAL_TRACER_EXPLICIT;
+    goma_ctx->particles.model = INERTIAL_TRACER_EXPLICIT;
   else if (!strncmp("INERTIAL_TRACER_IMPLICIT", s_tmp, 24))
-    Particle_Model = INERTIAL_TRACER_IMPLICIT;
+    goma_ctx->particles.model = INERTIAL_TRACER_IMPLICIT;
   else if (!strncmp("TRACER_EXPLICIT", s_tmp, 15))
-    Particle_Model = TRACER_EXPLICIT;
+    goma_ctx->particles.model = TRACER_EXPLICIT;
   else if (!strncmp("TRACER_IMPLICIT", s_tmp, 15))
-    Particle_Model = TRACER_IMPLICIT;
+    goma_ctx->particles.model = TRACER_IMPLICIT;
   else if (!strncmp("SWIMMER_EXPLICIT", s_tmp, 16))
-    Particle_Model = SWIMMER_EXPLICIT;
+    goma_ctx->particles.model = SWIMMER_EXPLICIT;
   else if (!strncmp("SWIMMER_IMPLICIT", s_tmp, 16))
-    Particle_Model = SWIMMER_IMPLICIT;
+    goma_ctx->particles.model = SWIMMER_IMPLICIT;
   else if (!strncmp("CHARGED_TRACER_EXPLICIT", s_tmp, 23))
-    Particle_Model = CHARGED_TRACER_EXPLICIT;
+    goma_ctx->particles.model = CHARGED_TRACER_EXPLICIT;
   else if (!strncmp("CHARGED_TRACER_IMPLICIT", s_tmp, 23))
-    Particle_Model = CHARGED_TRACER_IMPLICIT;
+    goma_ctx->particles.model = CHARGED_TRACER_IMPLICIT;
   else if (!strncmp("DIELECTROPHORETIC_TRACER_IMPLICIT", s_tmp, 33))
-    Particle_Model = DIELECTROPHORETIC_TRACER_IMPLICIT;
+    goma_ctx->particles.model = DIELECTROPHORETIC_TRACER_IMPLICIT;
   else {
     sprintf(s_tmp_save, "Unknown Particle model: %s\n", s_tmp);
     GOMA_EH(GOMA_ERROR, s_tmp_save);
   }
   printf("Setting Particle_Model = %s\n", s_tmp_save);
 
-  switch (Particle_Model) {
+  switch (goma_ctx->particles.model) {
   case INERTIAL_TRACER_IMPLICIT:
   case INERTIAL_TRACER_EXPLICIT:
     s_ptr1 = s_tmp + 24;
@@ -107,15 +105,15 @@ void rd_particle_specs(FILE *ifp, char *input) {
       sprintf(err_msg, "Error reading random walk coefficient for %s particle model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[0] = atof(s_ptr2);
-    printf("Setting random walk coefficient = %g\n", Particle_Model_Data[0]);
+    goma_ctx->particles.model_data[0] = atof(s_ptr2);
+    printf("Setting random walk coefficient = %g\n", goma_ctx->particles.model_data[0]);
 
     if (!(s_ptr2 = strtok(NULL, " \t\n"))) {
       sprintf(err_msg, "Error reading gravity coefficient for %s particle_model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[1] = atof(s_ptr2);
-    printf("Setting gravity coefficient = %g\n", Particle_Model_Data[1]);
+    goma_ctx->particles.model_data[1] = atof(s_ptr2);
+    printf("Setting gravity coefficient = %g\n", goma_ctx->particles.model_data[1]);
     break;
   case TRACER_EXPLICIT:
   case TRACER_IMPLICIT:
@@ -124,8 +122,8 @@ void rd_particle_specs(FILE *ifp, char *input) {
       sprintf(err_msg, "Error reading random walk coefficient for %s particle model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[0] = atof(s_ptr2);
-    printf("Setting random walk coefficient = %g\n", Particle_Model_Data[0]);
+    goma_ctx->particles.model_data[0] = atof(s_ptr2);
+    printf("Setting random walk coefficient = %g\n", goma_ctx->particles.model_data[0]);
     break;
   case SWIMMER_EXPLICIT:
   case SWIMMER_IMPLICIT:
@@ -135,21 +133,21 @@ void rd_particle_specs(FILE *ifp, char *input) {
               s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[0] = atof(s_ptr2);
-    printf("Setting random swimming speed coefficient = %g\n", Particle_Model_Data[0]);
+    goma_ctx->particles.model_data[0] = atof(s_ptr2);
+    printf("Setting random swimming speed coefficient = %g\n", goma_ctx->particles.model_data[0]);
     if (!(s_ptr2 = strtok(NULL, " \t\n"))) {
       sprintf(err_msg, "Error reading random cell orientation coefficient for %s particle model.",
               s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[1] = atof(s_ptr2);
-    printf("Setting random cell orientation coefficient = %g\n", Particle_Model_Data[1]);
+    goma_ctx->particles.model_data[1] = atof(s_ptr2);
+    printf("Setting random cell orientation coefficient = %g\n", goma_ctx->particles.model_data[1]);
     if (!(s_ptr2 = strtok(NULL, " \t\n"))) {
       sprintf(err_msg, "Error reading upswimming speed for %s particle model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[2] = atof(s_ptr2);
-    printf("Setting particle upswimming speed = %g\n", Particle_Model_Data[2]);
+    goma_ctx->particles.model_data[2] = atof(s_ptr2);
+    printf("Setting particle upswimming speed = %g\n", goma_ctx->particles.model_data[2]);
     break;
   case CHARGED_TRACER_EXPLICIT:
   case CHARGED_TRACER_IMPLICIT:
@@ -158,14 +156,14 @@ void rd_particle_specs(FILE *ifp, char *input) {
       sprintf(err_msg, "Error reading random walk coefficient for %s particle model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[0] = atof(s_ptr2);
-    printf("Setting random walk coefficient = %g\n", Particle_Model_Data[0]);
+    goma_ctx->particles.model_data[0] = atof(s_ptr2);
+    printf("Setting random walk coefficient = %g\n", goma_ctx->particles.model_data[0]);
     if (!(s_ptr2 = strtok(NULL, " \t\n"))) {
       sprintf(err_msg, "Error reading charge coefficient for %s particle model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[1] = atof(s_ptr2);
-    printf("Setting charge coefficient = %g\n", Particle_Model_Data[1]);
+    goma_ctx->particles.model_data[1] = atof(s_ptr2);
+    printf("Setting charge coefficient = %g\n", goma_ctx->particles.model_data[1]);
     break;
   case DIELECTROPHORETIC_TRACER_IMPLICIT:
     s_ptr1 = s_tmp + 33;
@@ -173,44 +171,44 @@ void rd_particle_specs(FILE *ifp, char *input) {
       sprintf(err_msg, "Error reading random walk coefficient for %s particle model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[0] = atof(s_ptr2);
-    printf("Setting random walk coefficient = %g\n", Particle_Model_Data[0]);
+    goma_ctx->particles.model_data[0] = atof(s_ptr2);
+    printf("Setting random walk coefficient = %g\n", goma_ctx->particles.model_data[0]);
     if (!(s_ptr2 = strtok(NULL, " \t\n"))) {
       sprintf(err_msg, "Error reading particle permittivity for %s particle model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[1] = atof(s_ptr2);
-    printf("Setting particle permittivity = %g\n", Particle_Model_Data[1]);
+    goma_ctx->particles.model_data[1] = atof(s_ptr2);
+    printf("Setting particle permittivity = %g\n", goma_ctx->particles.model_data[1]);
     if (!(s_ptr2 = strtok(NULL, " \t\n"))) {
       sprintf(err_msg, "Error reading medium (fluid) permittivity for %s particle model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[2] = atof(s_ptr2);
-    printf("Setting medium (fluid) permittivity = %g\n", Particle_Model_Data[2]);
+    goma_ctx->particles.model_data[2] = atof(s_ptr2);
+    printf("Setting medium (fluid) permittivity = %g\n", goma_ctx->particles.model_data[2]);
     if (!(s_ptr2 = strtok(NULL, " \t\n"))) {
       sprintf(err_msg, "Error reading particle conductivity for %s particle model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[3] = atof(s_ptr2);
-    printf("Setting particle conductivity = %g\n", Particle_Model_Data[3]);
+    goma_ctx->particles.model_data[3] = atof(s_ptr2);
+    printf("Setting particle conductivity = %g\n", goma_ctx->particles.model_data[3]);
     if (!(s_ptr2 = strtok(NULL, " \t\n"))) {
       sprintf(err_msg, "Error reading medium (fluid) conductivity for %s particle model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[4] = atof(s_ptr2);
-    printf("Setting medium (fluid) conductivity = %g\n", Particle_Model_Data[4]);
+    goma_ctx->particles.model_data[4] = atof(s_ptr2);
+    printf("Setting medium (fluid) conductivity = %g\n", goma_ctx->particles.model_data[4]);
     if (!(s_ptr2 = strtok(NULL, " \t\n"))) {
       sprintf(err_msg, "Error reading AC angular frequency for %s particle model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[5] = atof(s_ptr2);
-    printf("Setting AC angular frequency = %g\n", Particle_Model_Data[5]);
+    goma_ctx->particles.model_data[5] = atof(s_ptr2);
+    printf("Setting AC angular frequency = %g\n", goma_ctx->particles.model_data[5]);
     if (!(s_ptr2 = strtok(NULL, " \t\n"))) {
       sprintf(err_msg, "Error reading Volt conversion factor for %s particle model.", s_tmp);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    Particle_Model_Data[6] = atof(s_ptr2);
-    printf("Setting Volt conversion factor = %g\n", Particle_Model_Data[6]);
+    goma_ctx->particles.model_data[6] = atof(s_ptr2);
+    printf("Setting Volt conversion factor = %g\n", goma_ctx->particles.model_data[6]);
     break;
   default:
     GOMA_EH(GOMA_ERROR, "How'd you get here?");
@@ -220,30 +218,30 @@ void rd_particle_specs(FILE *ifp, char *input) {
    * a steady-state solution... */
   if (TimeIntegration == STEADY) {
     if (look_for_optional(ifp, "Time steps", input, '=') == 1) {
-      if (fscanf(ifp, "%d", &Particle_Max_Time_Steps) != 1)
+      if (fscanf(ifp, "%d", &goma_ctx->particles.max_time_steps) != 1)
         GOMA_EH(GOMA_ERROR, "Error reading Time steps card for post-steady problem.");
-      printf("Setting Particle_Max_Time_Steps = %d\n", Particle_Max_Time_Steps);
+      printf("Setting Particle_Max_Time_Steps = %d\n", goma_ctx->particles.max_time_steps);
     } else
-      Particle_Max_Time_Steps = 0;
+      goma_ctx->particles.max_time_steps = 0;
   } else if (look_for_optional(ifp, "Time steps", input, '=') == 1)
     printf("CAUTION: ignoring Time steps card for transient problem.");
 
   /* How many particles would you like?  For now, they are always
    * introduced unformly throughout the domain. */
   look_for(ifp, "Number of particles", input, '=');
-  if (fscanf(ifp, "%d", &Particle_Number) != 1)
+  if (fscanf(ifp, "%d", &goma_ctx->particles.number) != 1)
     GOMA_EH(GOMA_ERROR, "Error reading Number of particles card.");
-  printf("Setting Particle_Number = %d\n", Particle_Number);
+  printf("Setting Particle_Number = %d\n", goma_ctx->particles.number);
 
   if (look_for_optional(ifp, "Restart file", input, '=') == 1) {
     char file_name_temp[MAX_PARTICLE_FILENAME_LENGTH];
     if (!fgets(file_name_temp, MAX_PARTICLE_FILENAME_LENGTH, ifp))
       GOMA_EH(GOMA_ERROR, "Error reading Restart file card.");
     strip(file_name_temp);
-    strncpy(Particle_Restart_Filename, file_name_temp, MAX_PARTICLE_FILENAME_LENGTH);
-    printf("Restart file = %s\n", Particle_Restart_Filename);
+    strncpy(goma_ctx->particles.restart_filename, file_name_temp, MAX_PARTICLE_FILENAME_LENGTH);
+    printf("Restart file = %s\n", goma_ctx->particles.restart_filename);
   } else
-    sprintf(Particle_Restart_Filename, "<not active>");
+    sprintf(goma_ctx->particles.restart_filename, "<not active>");
 
   /* When to output particle information.  There are two ways to
    * specify this, and they are incompatible (i.e., only one can be
@@ -252,22 +250,22 @@ void rd_particle_specs(FILE *ifp, char *input) {
    * time-wise (e.g., every 0.1 seconds), whether within a Goma time
    * step or containing many Goma time steps.*/
   if (look_for_optional(ifp, "Output stride", input, '=') == 1) {
-    if (fscanf(ifp, "%d", &Particle_Output_Stride) != 1)
+    if (fscanf(ifp, "%d", &goma_ctx->particles.output_stride) != 1)
       GOMA_EH(GOMA_ERROR, "Error reading Output stride card.");
-    printf("Setting Particle_Output_Stride = %d\n", Particle_Output_Stride);
+    printf("Setting Particle_Output_Stride = %d\n", goma_ctx->particles.output_stride);
   } else
-    Particle_Output_Stride = -1;
+    goma_ctx->particles.output_stride = -1;
 
   if (look_for_optional(ifp, "Output time step", input, '=') == 1) {
-    if (fscanf(ifp, "%lf", &Particle_Output_Time_Step) != 1)
+    if (fscanf(ifp, "%lf", &goma_ctx->particles.output_time_step) != 1)
       GOMA_EH(GOMA_ERROR, "Error reading Output time step card.");
-    printf("Setting Particle_Output_Time_Step = %g\n", Particle_Output_Time_Step);
-    if (Particle_Output_Stride != -1)
+    printf("Setting Particle_Output_Time_Step = %g\n", goma_ctx->particles.output_time_step);
+    if (goma_ctx->particles.output_stride != -1)
       GOMA_EH(GOMA_ERROR, "You cannot specify both Output stride and Output time step.");
   } else
-    Particle_Output_Time_Step = 0.0;
+    goma_ctx->particles.output_time_step = 0.0;
 
-  if (Particle_Output_Stride == -1 && Particle_Output_Time_Step == 0.0)
+  if (goma_ctx->particles.output_stride == -1 && goma_ctx->particles.output_time_step == 0.0)
     GOMA_EH(GOMA_ERROR, "One of the Output stride or Output time step cards must be present.");
 
   if (look_for_optional(ifp, "Output format", input, '=') == 1) {
@@ -275,80 +273,85 @@ void rd_particle_specs(FILE *ifp, char *input) {
       GOMA_EH(GOMA_ERROR, "Error reading Output format card.");
     strip(s_tmp); /* s_tmp still has '\n' at end -- don't care. */
     if (!strncmp("TECPLOT", s_tmp, 7))
-      Particle_Output_Format = TECPLOT;
+      goma_ctx->particles.output_format = TECPLOT;
     else if (!strncmp("FLAT_TEXT", s_tmp, 9))
-      Particle_Output_Format = FLAT_TEXT;
+      goma_ctx->particles.output_format = FLAT_TEXT;
     else {
       sprintf(s_tmp_save, "Unknown Output format: %s\n", s_tmp);
       GOMA_EH(GOMA_ERROR, s_tmp_save);
     }
   } else
-    Particle_Output_Format = FLAT_TEXT;
+    goma_ctx->particles.output_format = FLAT_TEXT;
 
   if (look_for_optional(ifp, "Particle density", input, '=') == 1) {
-    if (fscanf(ifp, "%lf", &Particle_Density) != 1)
+    if (fscanf(ifp, "%lf", &goma_ctx->particles.density) != 1)
       GOMA_EH(GOMA_ERROR, "Error reading Particle density card.");
   } else
-    Particle_Density = 1.0;
-  printf("Setting Particle_Density = %g\n", Particle_Density);
+    goma_ctx->particles.density = 1.0;
+  printf("Setting Particle_Density = %g\n", goma_ctx->particles.density);
 
   if (look_for_optional(ifp, "Particle radius", input, '=') == 1) {
-    if (fscanf(ifp, "%lf", &Particle_Radius) != 1)
+    if (fscanf(ifp, "%lf", &goma_ctx->particles.radius) != 1)
       GOMA_EH(GOMA_ERROR, "Error reading Particle radius card.");
   } else
-    Particle_Radius = 1.0;
-  printf("Setting Particle_Radius = %g\n", Particle_Radius);
-  if (Particle_Radius <= 0.0)
+    goma_ctx->particles.radius = 1.0;
+  printf("Setting Particle_Radius = %g\n", goma_ctx->particles.radius);
+  if (goma_ctx->particles.radius <= 0.0)
     GOMA_EH(
         GOMA_ERROR,
         "Particle radius must be > 0.0.  Non-inertial tracer particles will ignore this setting.");
 
   if (look_for_optional(ifp, "Particle ratio", input, '=') == 1) {
-    if (fscanf(ifp, "%lf", &Particle_Ratio) != 1)
+    if (fscanf(ifp, "%lf", &goma_ctx->particles.ratio) != 1)
       GOMA_EH(GOMA_ERROR, "Error reading Particle ratio card.");
   } else
-    Particle_Ratio = 1.0;
-  printf("Setting Particle_Ratio = %g\n", Particle_Ratio);
+    goma_ctx->particles.ratio = 1.0;
+  printf("Setting Particle_Ratio = %g\n", goma_ctx->particles.ratio);
 
-  Particle_Show_Debug_Info = 0;
+  goma_ctx->particles.show_debug_info = 0;
   if (look_for_optional(ifp, "Show particle debug info", input, '=') == 1) {
     if (fscanf(ifp, "%s", s_tmp) != 1)
       GOMA_EH(GOMA_ERROR, "Need yes or no for Show particle debug info card.");
     if (!strncmp(s_tmp, "YES", 3)) {
-      Particle_Show_Debug_Info = 1;
+      goma_ctx->particles.show_debug_info = 1;
       printf("Showing particle debug info\n");
     }
   }
-  if (!Particle_Show_Debug_Info)
+  if (!goma_ctx->particles.show_debug_info)
     printf("Not showing particle debug info\n");
 
   /* Initialization for particle creation and move domains. */
   for (i = 0; i < MAX_DOMAIN_REAL_VALUES; i++) {
-    Particle_Creation_Domain_Reals[i] = 1.0e+10;
-    Particle_Move_Domain_Reals[i] = 1.0e+10;
+    goma_ctx->particles.creation_domain_reals[i] = 1.0e+10;
+    goma_ctx->particles.move_domain_reals[i] = 1.0e+10;
   }
-  Particle_Creation_Domain = UNRESTRICTED;
-  Particle_Move_Domain = UNRESTRICTED;
-  sprintf(Particle_Creation_Domain_Filename, "<not active>");
-  sprintf(Particle_Creation_Domain_Name, "<not active>");
-  sprintf(Particle_Move_Domain_Filename, "<not active>");
-  sprintf(Particle_Move_Domain_Name, "<not active>");
+  goma_ctx->particles.creation_domain = UNRESTRICTED;
+  goma_ctx->particles.move_domain = UNRESTRICTED;
+  sprintf(goma_ctx->particles.creation_domain_filename, "<not active>");
+  sprintf(goma_ctx->particles.creation_domain_name, "<not active>");
+  sprintf(goma_ctx->particles.move_domain_filename, "<not active>");
+  sprintf(goma_ctx->particles.move_domain_name, "<not active>");
 
   /* Set optional creation domain. */
   if (look_for_optional(ifp, "Particle creation domain", input, '=') == 1) {
     if (fscanf(ifp, "%s", s_tmp) != 1)
       GOMA_EH(GOMA_ERROR, "Error reading Particle creation domain card.");
     if (!strncmp(s_tmp, "BRICK", 5)) {
-      Particle_Creation_Domain = BRICK;
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf\n", &Particle_Creation_Domain_Reals[0],
-                 &Particle_Creation_Domain_Reals[1], &Particle_Creation_Domain_Reals[2],
-                 &Particle_Creation_Domain_Reals[3], &Particle_Creation_Domain_Reals[4],
-                 &Particle_Creation_Domain_Reals[5]) != 6)
+      goma_ctx->particles.creation_domain = BRICK;
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf\n", &goma_ctx->particles.creation_domain_reals[0],
+                 &goma_ctx->particles.creation_domain_reals[1],
+                 &goma_ctx->particles.creation_domain_reals[2],
+                 &goma_ctx->particles.creation_domain_reals[3],
+                 &goma_ctx->particles.creation_domain_reals[4],
+                 &goma_ctx->particles.creation_domain_reals[5]) != 6)
         GOMA_EH(GOMA_ERROR, "Error reading min/max values on Particle creation domain card.");
       printf("Using BRICK creation domain with x in [%g,%g], y in [%g,%g], z in [%g,%g]\n",
-             Particle_Creation_Domain_Reals[0], Particle_Creation_Domain_Reals[1],
-             Particle_Creation_Domain_Reals[2], Particle_Creation_Domain_Reals[3],
-             Particle_Creation_Domain_Reals[4], Particle_Creation_Domain_Reals[5]);
+             goma_ctx->particles.creation_domain_reals[0],
+             goma_ctx->particles.creation_domain_reals[1],
+             goma_ctx->particles.creation_domain_reals[2],
+             goma_ctx->particles.creation_domain_reals[3],
+             goma_ctx->particles.creation_domain_reals[4],
+             goma_ctx->particles.creation_domain_reals[5]);
     } else if (!strncmp(s_tmp, "ACIS", 4)) {
       GOMA_EH(GOMA_ERROR, "CGM not supported, ACIS");
     } else {
@@ -364,16 +367,17 @@ void rd_particle_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%s", s_tmp) != 1)
       GOMA_EH(GOMA_ERROR, "Error reading Particle move domain card.");
     if (!strncmp(s_tmp, "BRICK", 5)) {
-      Particle_Move_Domain = BRICK;
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf\n", &Particle_Move_Domain_Reals[0],
-                 &Particle_Move_Domain_Reals[1], &Particle_Move_Domain_Reals[2],
-                 &Particle_Move_Domain_Reals[3], &Particle_Move_Domain_Reals[4],
-                 &Particle_Move_Domain_Reals[5]) != 6)
+      goma_ctx->particles.move_domain = BRICK;
+      if (fscanf(
+              ifp, "%lf %lf %lf %lf %lf %lf\n", &goma_ctx->particles.move_domain_reals[0],
+              &goma_ctx->particles.move_domain_reals[1], &goma_ctx->particles.move_domain_reals[2],
+              &goma_ctx->particles.move_domain_reals[3], &goma_ctx->particles.move_domain_reals[4],
+              &goma_ctx->particles.move_domain_reals[5]) != 6)
         GOMA_EH(GOMA_ERROR, "Error reading min/max values on Particle move domain card.");
       printf("Using BRICK move domain with x in [%g,%g], y in [%g,%g], z in [%g,%g]\n",
-             Particle_Move_Domain_Reals[0], Particle_Move_Domain_Reals[1],
-             Particle_Move_Domain_Reals[2], Particle_Move_Domain_Reals[3],
-             Particle_Move_Domain_Reals[4], Particle_Move_Domain_Reals[5]);
+             goma_ctx->particles.move_domain_reals[0], goma_ctx->particles.move_domain_reals[1],
+             goma_ctx->particles.move_domain_reals[2], goma_ctx->particles.move_domain_reals[3],
+             goma_ctx->particles.move_domain_reals[4], goma_ctx->particles.move_domain_reals[5]);
     } else if (!strncmp(s_tmp, "ACIS", 4)) {
       GOMA_EH(GOMA_ERROR, "Need the CGM library to use ACIS for Particle creation domain card.");
     } else {
@@ -391,17 +395,17 @@ void rd_particle_specs(FILE *ifp, char *input) {
    * will be ignored here. */
   if (look_for_optional(ifp, "Full output stride", input, '=') == 1) {
     char file_name_temp[MAX_PARTICLE_FILENAME_LENGTH];
-    if (fscanf(ifp, "%d", &Particle_Full_Output_Stride) != 1)
+    if (fscanf(ifp, "%d", &goma_ctx->particles.full_output_stride) != 1)
       GOMA_EH(GOMA_ERROR, "Problem reading Full output stride card.");
     if (!fgets(file_name_temp, MAX_PARTICLE_FILENAME_LENGTH, ifp))
       GOMA_EH(GOMA_ERROR, "Problem reading Full output stride card.");
     strip(file_name_temp);
-    strncpy(Particle_Full_Output_Filename, file_name_temp, MAX_PARTICLE_FILENAME_LENGTH);
-    printf("Setting full output every %d steps to file %s\n", Particle_Full_Output_Stride,
-           Particle_Full_Output_Filename);
+    strncpy(goma_ctx->particles.full_output_filename, file_name_temp, MAX_PARTICLE_FILENAME_LENGTH);
+    printf("Setting full output every %d steps to file %s\n",
+           goma_ctx->particles.full_output_stride, goma_ctx->particles.full_output_filename);
   } else {
-    Particle_Full_Output_Stride = 0;
-    sprintf(Particle_Full_Output_Filename, "<not active>");
+    goma_ctx->particles.full_output_stride = 0;
+    sprintf(goma_ctx->particles.full_output_filename, "<not active>");
   }
 
   /* General description for number of particles to track, and how
@@ -409,78 +413,81 @@ void rd_particle_specs(FILE *ifp, char *input) {
    * will be separate samples.  Subject to total number of particles,
    * of course... */
   look_for(ifp, "Number of sample types", input, '=');
-  if (fscanf(ifp, "%d", &Particle_Number_Sample_Types) != 1)
+  if (fscanf(ifp, "%d", &goma_ctx->particles.number_sample_types) != 1)
     GOMA_EH(GOMA_ERROR, "Problem reading Number of sample types card.");
-  printf("Setting Particle_Number_Sample_Types = %d\n", Particle_Number_Sample_Types);
+  printf("Setting Particle_Number_Sample_Types = %d\n", goma_ctx->particles.number_sample_types);
 
-  if (Particle_Number_Sample_Types) {
-    Particle_Number_Samples_Existing =
-        (int *)array_alloc(1, Particle_Number_Sample_Types, sizeof(int));
-    Particle_Number_Samples = (int *)array_alloc(1, Particle_Number_Sample_Types, sizeof(int));
-    Particle_Number_Output_Variables =
-        (int *)array_alloc(1, Particle_Number_Sample_Types, sizeof(int));
-    Particle_Output_Variables = (particle_variable_s **)array_alloc(1, Particle_Number_Sample_Types,
-                                                                    sizeof(particle_variable_s *));
-    Particle_Filename_Template = (particle_filename_s *)array_alloc(1, Particle_Number_Sample_Types,
-                                                                    sizeof(particle_filename_s));
+  if (goma_ctx->particles.number_sample_types) {
+    goma_ctx->particles.number_samples_existing =
+        (int *)array_alloc(1, goma_ctx->particles.number_sample_types, sizeof(int));
+    goma_ctx->particles.number_samples =
+        (int *)array_alloc(1, goma_ctx->particles.number_sample_types, sizeof(int));
+    goma_ctx->particles.number_output_variables =
+        (int *)array_alloc(1, goma_ctx->particles.number_sample_types, sizeof(int));
+    goma_ctx->particles.output_variables = (particle_variable_s **)array_alloc(
+        1, goma_ctx->particles.number_sample_types, sizeof(particle_variable_s *));
+    goma_ctx->particles.filename_template = (particle_filename_s *)array_alloc(
+        1, goma_ctx->particles.number_sample_types, sizeof(particle_filename_s));
   } else {
-    Particle_Number_Samples_Existing = NULL;
-    Particle_Number_Samples = NULL;
-    Particle_Number_Output_Variables = NULL;
-    Particle_Output_Variables = NULL;
-    Particle_Filename_Template = NULL;
+    goma_ctx->particles.number_samples_existing = NULL;
+    goma_ctx->particles.number_samples = NULL;
+    goma_ctx->particles.number_output_variables = NULL;
+    goma_ctx->particles.output_variables = NULL;
+    goma_ctx->particles.filename_template = NULL;
   }
 
-  for (i = 0; i < Particle_Number_Sample_Types; i++) {
+  for (i = 0; i < goma_ctx->particles.number_sample_types; i++) {
     look_for(ifp, "Sample", input, '=');
-    if (fscanf(ifp, "%d", &Particle_Number_Samples[i]) != 1)
+    if (fscanf(ifp, "%d", &goma_ctx->particles.number_samples[i]) != 1)
       GOMA_EH(GOMA_ERROR, "Error reading number of particle samples.");
-    if (Particle_Number_Samples[i] > 0)
-      printf("Sample %d contains %d particles", i, Particle_Number_Samples[i]);
+    if (goma_ctx->particles.number_samples[i] > 0)
+      printf("Sample %d contains %d particles", i, goma_ctx->particles.number_samples[i]);
     else
       GOMA_EH(GOMA_ERROR, "Number of particle samples must be > 0.");
 
     if (!fgets(s_tmp, SLEN - 1, ifp))
       GOMA_EH(GOMA_ERROR, "Error reading sample variables and filename.");
     strncpy(s_tmp_save, s_tmp, SLEN);
-    Particle_Number_Output_Variables[i] = 0;
+    goma_ctx->particles.number_output_variables[i] = 0;
 
     s_ptr1 = strtok(s_tmp, " \t\n");
     while ((s_ptr1 = strtok(NULL, " \t\n")))
-      Particle_Number_Output_Variables[i]++;
+      goma_ctx->particles.number_output_variables[i]++;
 
     s_ptr1 = strtok(s_tmp_save, " \t\n");
-    if (Particle_Number_Output_Variables[i] > 0) {
+    if (goma_ctx->particles.number_output_variables[i] > 0) {
       printf(" tracking variable(s)");
-      Particle_Output_Variables[i] = (particle_variable_s *)calloc(
-          Particle_Number_Output_Variables[i], sizeof(particle_variable_s));
+      goma_ctx->particles.output_variables[i] = (particle_variable_s *)calloc(
+          goma_ctx->particles.number_output_variables[i], sizeof(particle_variable_s));
       /*
         Particle_Output_Variables[i] = (char **)array_alloc(1, Particle_Number_Output_Variables[i],
         sizeof(char *));
       */
-      for (j = 0; j < Particle_Number_Output_Variables[i]; j++) {
+      for (j = 0; j < goma_ctx->particles.number_output_variables[i]; j++) {
         if (strlen(s_ptr1) + 1 > MAX_PARTICLE_OUTPUT_VARIABLE_LENGTH)
           GOMA_EH(GOMA_ERROR, "Increase MAX_PARTICLE_OUTPUT_VARIABLE_LENGTH");
-        strncpy(Particle_Output_Variables[i][j], s_ptr1, strlen(s_ptr1) + 1);
-        printf(" %s", Particle_Output_Variables[i][j]);
+        strncpy(goma_ctx->particles.output_variables[i][j], s_ptr1, strlen(s_ptr1) + 1);
+        printf(" %s", goma_ctx->particles.output_variables[i][j]);
         s_ptr1 = strtok(NULL, " \t\n");
       }
+    } else {
+      goma_ctx->particles.output_variables[i] = NULL;
     }
 
     if (strlen(s_ptr1) + 1 > MAX_PARTICLE_FILENAME_LENGTH)
       GOMA_EH(GOMA_ERROR, "Increase MAX_PARTICLE_FILENAME_LENGTH");
-    strncpy(Particle_Filename_Template[i], s_ptr1, strlen(s_ptr1) + 1);
-    Particle_Filename_Template[i][strlen(s_ptr1)] = 0;
-    printf(" to file %s.\n", Particle_Filename_Template[i]);
+    strncpy(goma_ctx->particles.filename_template[i], s_ptr1, strlen(s_ptr1) + 1);
+    goma_ctx->particles.filename_template[i][strlen(s_ptr1)] = 0;
+    printf(" to file %s.\n", goma_ctx->particles.filename_template[i]);
   }
 
   iread = look_for_optional(ifp, "START OF PBC", input, '=');
   if (iread == 1) {
-    Particle_Number_PBCs = count_list(ifp, "PBC", input, '=', "END OF PBC");
-    printf("Found %d PBC's\n", Particle_Number_PBCs);
-    PBCs = (PBC_t *)calloc(Particle_Number_PBCs, sizeof(PBC_t));
-    for (i = 0; i < Particle_Number_PBCs; i++) {
-      PBC = &PBCs[i];
+    goma_ctx->particles.num_pbcs = count_list(ifp, "PBC", input, '=', "END OF PBC");
+    printf("Found %d PBC's\n", goma_ctx->particles.num_pbcs);
+    goma_ctx->particles.pbcs = (PBC_t *)calloc(goma_ctx->particles.num_pbcs, sizeof(PBC_t));
+    for (i = 0; i < goma_ctx->particles.num_pbcs; i++) {
+      PBC = &goma_ctx->particles.pbcs[i];
       look_for(ifp, "PBC", input, '=');
       if (fscanf(ifp, "%80s", input) != 1)
         GOMA_EH(GOMA_ERROR, "Error reading PBC.");
@@ -536,7 +543,7 @@ void rd_particle_specs(FILE *ifp, char *input) {
         GOMA_EH(GOMA_ERROR, "Error reading PBC type.");
     }
   } else {
-    Particle_Number_PBCs = 0;
-    PBCs = NULL;
+    goma_ctx->particles.num_pbcs = 0;
+    goma_ctx->particles.pbcs = NULL;
   }
 }

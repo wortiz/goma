@@ -1674,20 +1674,23 @@ static int calc_standard_fields(double **post_proc_vect,
   }
 
   if (DIELECTROPHORETIC_FIELD != -1 && pd->e[pg->imtrx][R_ENORM]) {
-    if (Particle_Model_Data[1] <= 0.0 || Particle_Model_Data[2] <= 0.0 ||
-        Particle_Model_Data[3] <= 0.0 || Particle_Model_Data[4] <= 0.0 ||
-        Particle_Model_Data[5] <= 0.0 || Particle_Model_Data[6] <= 0.0 || Particle_Density <= 0.0 ||
-        Particle_Radius <= 0.0)
+    if (goma_ctx->particles.model_data[1] <= 0.0 || goma_ctx->particles.model_data[2] <= 0.0 ||
+        goma_ctx->particles.model_data[3] <= 0.0 || goma_ctx->particles.model_data[4] <= 0.0 ||
+        goma_ctx->particles.model_data[5] <= 0.0 || goma_ctx->particles.model_data[6] <= 0.0 ||
+        goma_ctx->particles.density <= 0.0 || goma_ctx->particles.radius <= 0.0)
       GOMA_WH(-1, "Not performing Dielectrophoretic Force Vectors output becuase of inconsistent "
                   "Partile_Model_Data.");
-    coeff_a = Particle_Model_Data[1] - Particle_Model_Data[2];
-    coeff_b = (Particle_Model_Data[4] - Particle_Model_Data[3]) / Particle_Model_Data[5];
-    coeff_c = Particle_Model_Data[1] + 2.0 * Particle_Model_Data[2];
-    coeff_d = (Particle_Model_Data[3] + 2.0 * Particle_Model_Data[4]) / Particle_Model_Data[5];
+    coeff_a = goma_ctx->particles.model_data[1] - goma_ctx->particles.model_data[2];
+    coeff_b = (goma_ctx->particles.model_data[4] - goma_ctx->particles.model_data[3]) /
+              goma_ctx->particles.model_data[5];
+    coeff_c = goma_ctx->particles.model_data[1] + 2.0 * goma_ctx->particles.model_data[2];
+    coeff_d = (goma_ctx->particles.model_data[3] + 2.0 * goma_ctx->particles.model_data[4]) /
+              goma_ctx->particles.model_data[5];
     CM_fact = (coeff_a * coeff_c - coeff_b * coeff_d) / (coeff_c * coeff_c + coeff_d * coeff_d);
-    dielectrophoretic_force_coeff = 4.0 * M_PIE * Particle_Radius * Particle_Radius *
-                                    Particle_Radius * Particle_Model_Data[2] * CM_fact *
-                                    Particle_Model_Data[6] * Particle_Model_Data[6];
+    dielectrophoretic_force_coeff =
+        4.0 * M_PIE * goma_ctx->particles.radius * goma_ctx->particles.radius *
+        goma_ctx->particles.radius * goma_ctx->particles.model_data[2] * CM_fact *
+        goma_ctx->particles.model_data[6] * goma_ctx->particles.model_data[6];
     for (a = 0; a < dim; a++)
       dfvector[a] = dielectrophoretic_force_coeff * fv->Enorm * fv->grad_Enorm[a];
     for (a = 0; a < dim; a++) {
@@ -1697,20 +1700,23 @@ static int calc_standard_fields(double **post_proc_vect,
   }
 
   if (DIELECTROPHORETIC_FIELD_NORM != -1 && pd->e[pg->imtrx][R_ENORM]) {
-    if (Particle_Model_Data[1] <= 0.0 || Particle_Model_Data[2] <= 0.0 ||
-        Particle_Model_Data[3] <= 0.0 || Particle_Model_Data[4] <= 0.0 ||
-        Particle_Model_Data[5] <= 0.0 || Particle_Model_Data[6] <= 0.0 || Particle_Density <= 0.0 ||
-        Particle_Radius <= 0.0)
+    if (goma_ctx->particles.model_data[1] <= 0.0 || goma_ctx->particles.model_data[2] <= 0.0 ||
+        goma_ctx->particles.model_data[3] <= 0.0 || goma_ctx->particles.model_data[4] <= 0.0 ||
+        goma_ctx->particles.model_data[5] <= 0.0 || goma_ctx->particles.model_data[6] <= 0.0 ||
+        goma_ctx->particles.density <= 0.0 || goma_ctx->particles.radius <= 0.0)
       GOMA_WH(-1, "Not performing Dielectrophoretic Force Vectors output becuase of inconsistent "
                   "Partile_Model_Data.");
-    coeff_a = Particle_Model_Data[1] - Particle_Model_Data[2];
-    coeff_b = (Particle_Model_Data[4] - Particle_Model_Data[3]) / Particle_Model_Data[5];
-    coeff_c = Particle_Model_Data[1] + 2.0 * Particle_Model_Data[2];
-    coeff_d = (Particle_Model_Data[3] + 2.0 * Particle_Model_Data[4]) / Particle_Model_Data[5];
+    coeff_a = goma_ctx->particles.model_data[1] - goma_ctx->particles.model_data[2];
+    coeff_b = (goma_ctx->particles.model_data[4] - goma_ctx->particles.model_data[3]) /
+              goma_ctx->particles.model_data[5];
+    coeff_c = goma_ctx->particles.model_data[1] + 2.0 * goma_ctx->particles.model_data[2];
+    coeff_d = (goma_ctx->particles.model_data[3] + 2.0 * goma_ctx->particles.model_data[4]) /
+              goma_ctx->particles.model_data[5];
     CM_fact = (coeff_a * coeff_c - coeff_b * coeff_d) / (coeff_c * coeff_c + coeff_d * coeff_d);
-    dielectrophoretic_force_coeff = 4.0 * M_PIE * Particle_Radius * Particle_Radius *
-                                    Particle_Radius * Particle_Model_Data[2] * CM_fact *
-                                    Particle_Model_Data[6] * Particle_Model_Data[6];
+    dielectrophoretic_force_coeff =
+        4.0 * M_PIE * goma_ctx->particles.radius * goma_ctx->particles.radius *
+        goma_ctx->particles.radius * goma_ctx->particles.model_data[2] * CM_fact *
+        goma_ctx->particles.model_data[6] * goma_ctx->particles.model_data[6];
     for (a = 0; a < dim; a++)
       dfvector[a] = dielectrophoretic_force_coeff * fv->Enorm * fv->grad_Enorm[a];
     dfnorm = 0.0;

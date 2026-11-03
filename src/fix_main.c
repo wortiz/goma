@@ -257,6 +257,7 @@ fix_exit:
 #endif
   fflush(stdout);
   fflush(stderr);
+  goma_context_release(goma_ctx);
   return (0);
 }
 

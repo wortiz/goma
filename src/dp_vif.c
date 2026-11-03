@@ -151,9 +151,9 @@ void noahs_raven(void) {
   ddd_add_member(n, &Use_Phase_Field, 1, MPI_INT);
   ddd_add_member(n, &Use_DG, 1, MPI_INT);
   ddd_add_member(n, &Do_Overlap, 1, MPI_INT);
-  ddd_add_member(n, &Particle_Dynamics, 1, MPI_INT);
-  ddd_add_member(n, &Particle_Number_Sample_Types, 1, MPI_INT);
-  ddd_add_member(n, &Particle_Number_PBCs, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->particles.dynamics, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->particles.number_sample_types, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->particles.num_pbcs, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->num_var_ls_init, 1, MPI_INT);
   ddd_add_member(n, &TFMP_GAS_VELO, 1, MPI_INT);
   ddd_add_member(n, &TFMP_LIQ_VELO, 1, MPI_INT);
@@ -491,28 +491,29 @@ void raven_landing(void) {
     pfd = NULL;
   }
 
-  if (Particle_Dynamics) {
-    if (Particle_Number_Sample_Types) {
-      Particle_Number_Samples_Existing =
-          (int *)array_alloc(1, Particle_Number_Sample_Types, sizeof(int));
-      Particle_Number_Samples = (int *)array_alloc(1, Particle_Number_Sample_Types, sizeof(int));
-      Particle_Number_Output_Variables =
-          (int *)array_alloc(1, Particle_Number_Sample_Types, sizeof(int));
-      Particle_Output_Variables = (particle_variable_s **)array_alloc(
-          1, Particle_Number_Sample_Types, sizeof(particle_variable_s *));
-      Particle_Filename_Template = (particle_filename_s *)array_alloc(
-          1, Particle_Number_Sample_Types, sizeof(particle_filename_s));
+  if (goma_ctx->particles.dynamics) {
+    if (goma_ctx->particles.number_sample_types) {
+      goma_ctx->particles.number_samples_existing =
+          (int *)array_alloc(1, goma_ctx->particles.number_sample_types, sizeof(int));
+      goma_ctx->particles.number_samples =
+          (int *)array_alloc(1, goma_ctx->particles.number_sample_types, sizeof(int));
+      goma_ctx->particles.number_output_variables =
+          (int *)array_alloc(1, goma_ctx->particles.number_sample_types, sizeof(int));
+      goma_ctx->particles.output_variables = (particle_variable_s **)array_alloc(
+          1, goma_ctx->particles.number_sample_types, sizeof(particle_variable_s *));
+      goma_ctx->particles.filename_template = (particle_filename_s *)array_alloc(
+          1, goma_ctx->particles.number_sample_types, sizeof(particle_filename_s));
     } else {
-      Particle_Number_Samples_Existing = NULL;
-      Particle_Number_Samples = NULL;
-      Particle_Number_Output_Variables = NULL;
-      Particle_Output_Variables = NULL;
-      Particle_Filename_Template = NULL;
+      goma_ctx->particles.number_samples_existing = NULL;
+      goma_ctx->particles.number_samples = NULL;
+      goma_ctx->particles.number_output_variables = NULL;
+      goma_ctx->particles.output_variables = NULL;
+      goma_ctx->particles.filename_template = NULL;
     }
-    if (Particle_Number_PBCs)
-      PBCs = (PBC_t *)calloc(Particle_Number_PBCs, sizeof(PBC_t));
+    if (goma_ctx->particles.num_pbcs)
+      goma_ctx->particles.pbcs = (PBC_t *)calloc(goma_ctx->particles.num_pbcs, sizeof(PBC_t));
     else
-      PBCs = NULL;
+      goma_ctx->particles.pbcs = NULL;
   }
 
   return;
@@ -781,39 +782,46 @@ void noahs_ark(void) {
   /*
    * Particle data.
    */
-  ddd_add_member(n, &Particle_Model, 1, MPI_INT);
-  ddd_add_member(n, Particle_Model_Data, MAX_PARTICLE_MODEL_DATA_VALUES, MPI_DOUBLE);
-  ddd_add_member(n, &Particle_Max_Time_Steps, 1, MPI_INT);
-  ddd_add_member(n, &Particle_Number, 1, MPI_INT);
-  ddd_add_member(n, Particle_Restart_Filename, MAX_PARTICLE_FILENAME_LENGTH, MPI_CHAR);
-  ddd_add_member(n, &Particle_Output_Stride, 1, MPI_INT);
-  ddd_add_member(n, &Particle_Output_Time_Step, 1, MPI_DOUBLE);
-  ddd_add_member(n, &Particle_Output_Format, 1, MPI_INT);
-  ddd_add_member(n, &Particle_Density, 1, MPI_DOUBLE);
-  ddd_add_member(n, &Particle_Radius, 1, MPI_DOUBLE);
-  ddd_add_member(n, &Particle_Ratio, 1, MPI_DOUBLE);
-  ddd_add_member(n, &Particle_Creation_Domain, 1, MPI_INT);
-  ddd_add_member(n, &Particle_Move_Domain, 1, MPI_INT);
-  ddd_add_member(n, Particle_Creation_Domain_Reals, MAX_DOMAIN_REAL_VALUES, MPI_DOUBLE);
-  ddd_add_member(n, Particle_Move_Domain_Reals, MAX_DOMAIN_REAL_VALUES, MPI_DOUBLE);
-  ddd_add_member(n, Particle_Creation_Domain_Filename, MAX_PARTICLE_FILENAME_LENGTH, MPI_CHAR);
-  ddd_add_member(n, Particle_Creation_Domain_Name, MAX_PARTICLE_STRING_LENGTH, MPI_CHAR);
-  ddd_add_member(n, Particle_Move_Domain_Filename, MAX_PARTICLE_FILENAME_LENGTH, MPI_CHAR);
-  ddd_add_member(n, Particle_Move_Domain_Name, MAX_PARTICLE_STRING_LENGTH, MPI_CHAR);
-  ddd_add_member(n, &Particle_Full_Output_Stride, 1, MPI_INT);
-  ddd_add_member(n, Particle_Full_Output_Filename, MAX_PARTICLE_FILENAME_LENGTH, MPI_CHAR);
-  if (Particle_Number_Sample_Types) {
-    ddd_add_member(n, Particle_Number_Samples, Particle_Number_Sample_Types, MPI_INT);
-    ddd_add_member(n, Particle_Number_Output_Variables, Particle_Number_Sample_Types, MPI_INT);
-    for (i = 0; i < Particle_Number_Sample_Types; i++)
-      ddd_add_member(n, Particle_Filename_Template[i], MAX_PARTICLE_FILENAME_LENGTH, MPI_CHAR);
+  ddd_add_member(n, &goma_ctx->particles.model, 1, MPI_INT);
+  ddd_add_member(n, goma_ctx->particles.model_data, MAX_PARTICLE_MODEL_DATA_VALUES, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->particles.max_time_steps, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->particles.number, 1, MPI_INT);
+  ddd_add_member(n, goma_ctx->particles.restart_filename, MAX_PARTICLE_FILENAME_LENGTH, MPI_CHAR);
+  ddd_add_member(n, &goma_ctx->particles.output_stride, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->particles.output_time_step, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->particles.output_format, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->particles.density, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->particles.radius, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->particles.ratio, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->particles.creation_domain, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->particles.move_domain, 1, MPI_INT);
+  ddd_add_member(n, goma_ctx->particles.creation_domain_reals, MAX_DOMAIN_REAL_VALUES, MPI_DOUBLE);
+  ddd_add_member(n, goma_ctx->particles.move_domain_reals, MAX_DOMAIN_REAL_VALUES, MPI_DOUBLE);
+  ddd_add_member(n, goma_ctx->particles.creation_domain_filename, MAX_PARTICLE_FILENAME_LENGTH,
+                 MPI_CHAR);
+  ddd_add_member(n, goma_ctx->particles.creation_domain_name, MAX_PARTICLE_STRING_LENGTH, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->particles.move_domain_filename, MAX_PARTICLE_FILENAME_LENGTH,
+                 MPI_CHAR);
+  ddd_add_member(n, goma_ctx->particles.move_domain_name, MAX_PARTICLE_STRING_LENGTH, MPI_CHAR);
+  ddd_add_member(n, &goma_ctx->particles.full_output_stride, 1, MPI_INT);
+  ddd_add_member(n, goma_ctx->particles.full_output_filename, MAX_PARTICLE_FILENAME_LENGTH,
+                 MPI_CHAR);
+  if (goma_ctx->particles.number_sample_types) {
+    ddd_add_member(n, goma_ctx->particles.number_samples, goma_ctx->particles.number_sample_types,
+                   MPI_INT);
+    ddd_add_member(n, goma_ctx->particles.number_output_variables,
+                   goma_ctx->particles.number_sample_types, MPI_INT);
+    for (i = 0; i < goma_ctx->particles.number_sample_types; i++)
+      ddd_add_member(n, goma_ctx->particles.filename_template[i], MAX_PARTICLE_FILENAME_LENGTH,
+                     MPI_CHAR);
   }
-  for (i = 0; i < Particle_Number_PBCs; i++) {
-    ddd_add_member(n, &PBCs[i].SS_id, 1, MPI_INT);
-    ddd_add_member(n, &PBCs[i].type, 1, MPI_INT);
-    ddd_add_member(n, PBCs[i].real_data, MAX_PBC_REAL_VALUES, MPI_DOUBLE);
-    ddd_add_member(n, PBCs[i].int_data, MAX_PBC_INT_VALUES, MPI_INT);
-    ddd_add_member(n, PBCs[i].string_data, MAX_PBC_STRING_DATA_LENGTH, MPI_CHAR);
+  for (i = 0; i < goma_ctx->particles.num_pbcs; i++) {
+    ddd_add_member(n, &goma_ctx->particles.pbcs[i].SS_id, 1, MPI_INT);
+    ddd_add_member(n, &goma_ctx->particles.pbcs[i].type, 1, MPI_INT);
+    ddd_add_member(n, goma_ctx->particles.pbcs[i].real_data, MAX_PBC_REAL_VALUES, MPI_DOUBLE);
+    ddd_add_member(n, goma_ctx->particles.pbcs[i].int_data, MAX_PBC_INT_VALUES, MPI_INT);
+    ddd_add_member(n, goma_ctx->particles.pbcs[i].string_data, MAX_PBC_STRING_DATA_LENGTH,
+                   MPI_CHAR);
   }
 
   /*
@@ -2884,12 +2892,12 @@ void ark_landing(void) {
   }
 
   /* Particle variable-lengthed output variable lists. */
-  for (i = 0; i < Particle_Number_Sample_Types; i++) {
-    if (Particle_Number_Output_Variables[i])
-      Particle_Output_Variables[i] = (particle_variable_s *)array_alloc(
-          1, Particle_Number_Output_Variables[i], sizeof(particle_variable_s));
+  for (i = 0; i < goma_ctx->particles.number_sample_types; i++) {
+    if (goma_ctx->particles.number_output_variables[i])
+      goma_ctx->particles.output_variables[i] = (particle_variable_s *)array_alloc(
+          1, goma_ctx->particles.number_output_variables[i], sizeof(particle_variable_s));
     else
-      Particle_Output_Variables[i] = NULL;
+      goma_ctx->particles.output_variables[i] = NULL;
   }
 
   /*
@@ -3468,10 +3476,10 @@ void noahs_dove(void) {
     }
 
     /* Particle variable-lengthed output variable lists. */
-    for (j = 0; j < Particle_Number_Sample_Types; j++)
-      for (k = 0; k < Particle_Number_Output_Variables[j]; k++)
-        ddd_add_member(n, Particle_Output_Variables[j][k], MAX_PARTICLE_OUTPUT_VARIABLE_LENGTH,
-                       MPI_CHAR);
+    for (j = 0; j < goma_ctx->particles.number_sample_types; j++)
+      for (k = 0; k < goma_ctx->particles.number_output_variables[j]; k++)
+        ddd_add_member(n, goma_ctx->particles.output_variables[j][k],
+                       MAX_PARTICLE_OUTPUT_VARIABLE_LENGTH, MPI_CHAR);
 
     /*
      * Species constants...

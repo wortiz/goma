@@ -210,7 +210,8 @@ void initialize_particles(const Exo_DB *exo,
   DPRINTF(stdout, "\nParticle initialization:\n");
   fflush(stdout);
 
-  if ((Particle_Model == SWIMMER_EXPLICIT || Particle_Model == SWIMMER_IMPLICIT) &&
+  if ((goma_ctx->particles.model == SWIMMER_EXPLICIT ||
+       goma_ctx->particles.model == SWIMMER_IMPLICIT) &&
       pd_glob[0]->CoordinateSystem != CARTESIAN)
     GOMA_EH(GOMA_ERROR, "You probably need to fix something first...");
 
@@ -267,29 +268,34 @@ void initialize_particles(const Exo_DB *exo,
   /* We will always allocate this element-sized space even though we
    * might not always use it.  There are too many use cases (some
    * delayed) that complicate this... */
-  element_particle_info =
+  goma_particles_release_element_info(&goma_ctx->particles);
+  goma_ctx->particles.element_info =
       (element_particle_info_t *)malloc(static_exo->num_elems * sizeof(element_particle_info_t));
+  goma_ctx->particles.num_element_info = static_exo->num_elems;
   for (i = 0; i < static_exo->num_elems; i++) {
-    element_particle_info[i].PBC_side_id = (int *)malloc(sides_per_element * sizeof(int));
+    goma_ctx->particles.element_info[i].PBC_side_id =
+        (int *)malloc(sides_per_element * sizeof(int));
 #ifdef PARALLEL
-    element_particle_info[i].owner_local_element_id =
+    goma_ctx->particles.element_info[i].owner_local_element_id =
         (int *)calloc((unsigned)sides_per_element, sizeof(int));
-    element_particle_info[i].num_ghost_target_elems =
+    goma_ctx->particles.element_info[i].num_ghost_target_elems =
         0; /* number of times each particle needs to be ghosted. */
-    element_particle_info[i].ghost_proc = NULL;          /* what proc do they ghost to? */
-    element_particle_info[i].ghost_local_elem_id = NULL; /* what's the local element id there? */
+    goma_ctx->particles.element_info[i].ghost_proc = NULL; /* what proc do they ghost to? */
+    goma_ctx->particles.element_info[i].ghost_local_elem_id =
+        NULL; /* what's the local element id there? */
 #endif
     for (j = 0; j < sides_per_element; j++) {
-      element_particle_info[i].PBC_side_id[j] = -1;
+      goma_ctx->particles.element_info[i].PBC_side_id[j] = -1;
 #ifdef PARALLEL
-      element_particle_info[i].owner_local_element_id[j] = -1;
+      goma_ctx->particles.element_info[i].owner_local_element_id[j] = -1;
 #endif
     }
-    if (Particle_Model == SWIMMER_IMPLICIT || Particle_Model == SWIMMER_EXPLICIT)
-      element_particle_info[i].source_term = (dbl *)calloc(MDE, sizeof(dbl));
+    if (goma_ctx->particles.model == SWIMMER_IMPLICIT ||
+        goma_ctx->particles.model == SWIMMER_EXPLICIT)
+      goma_ctx->particles.element_info[i].source_term = (dbl *)calloc(MDE, sizeof(dbl));
     else
-      element_particle_info[i].source_term = NULL;
-    element_particle_info[i].list_PBC_IMPERMEABLE = NULL;
+      goma_ctx->particles.element_info[i].source_term = NULL;
+    goma_ctx->particles.element_info[i].list_PBC_IMPERMEABLE = NULL;
     element_particle_list_head[i] = NULL;
     backup_element_particle_list_head[i] = NULL;
   }
@@ -300,23 +306,23 @@ void initialize_particles(const Exo_DB *exo,
   DPRINTF(stdout, "  output: ");
   fflush(stdout);
   /* Open the output file for full output/restart if we've selected one. */
-  if (Particle_Full_Output_Stride) {
-    if (!(pa_full_fp = fopen(construct_filename(Particle_Full_Output_Filename), "w")))
+  if (goma_ctx->particles.full_output_stride) {
+    if (!(pa_full_fp = fopen(construct_filename(goma_ctx->particles.full_output_filename), "w")))
       GOMA_EH(GOMA_ERROR, "Could not open Particle_Full_Output_Filename for zeroing.");
-    DPRINTF(stdout, "%s, ", Particle_Full_Output_Filename);
+    DPRINTF(stdout, "%s, ", goma_ctx->particles.full_output_filename);
     fflush(stdout);
   } else
     pa_full_fp = NULL;
 
-  if (Particle_Number_Sample_Types) {
-    pa_fp = (FILE **)array_alloc(1, Particle_Number_Sample_Types, sizeof(FILE *));
-    for (i = 0; i < Particle_Number_Sample_Types; i++) {
-      if (!(pa_fp[i] = fopen(construct_filename(Particle_Filename_Template[i]), "w")))
+  if (goma_ctx->particles.number_sample_types) {
+    pa_fp = (FILE **)array_alloc(1, goma_ctx->particles.number_sample_types, sizeof(FILE *));
+    for (i = 0; i < goma_ctx->particles.number_sample_types; i++) {
+      if (!(pa_fp[i] = fopen(construct_filename(goma_ctx->particles.filename_template[i]), "w")))
         GOMA_EH(GOMA_ERROR, "Could not open a particle file for zeroing.");
-      DPRINTF(stdout, "%s, ", Particle_Filename_Template[i]);
+      DPRINTF(stdout, "%s, ", goma_ctx->particles.filename_template[i]);
       fflush(stdout);
-      Particle_Number_Samples_Existing[i] = 0;
-      if (Particle_Output_Format == TECPLOT) {
+      goma_ctx->particles.number_samples_existing[i] = 0;
+      if (goma_ctx->particles.output_format == TECPLOT) {
         fprintf(pa_fp[i], "TITLE = \"Goma Particles\"\n");
 #ifdef PARALLEL
         if (pdim == 2)
@@ -329,14 +335,14 @@ void initialize_particles(const Exo_DB *exo,
         else
           fprintf(pa_fp[i], "VARIABLES = \"X\", \"Y\", \"Z\", \"TIME\"");
 #endif
-        for (j = 0; j < Particle_Number_Output_Variables[i]; j++)
-          fprintf(pa_fp[i], ", \"%s\"", Particle_Output_Variables[i][j]);
+        for (j = 0; j < goma_ctx->particles.number_output_variables[i]; j++)
+          fprintf(pa_fp[i], ", \"%s\"", goma_ctx->particles.output_variables[i][j]);
         fprintf(pa_fp[i], "\n");
       }
     }
   } else
     pa_fp = NULL;
-  if (Particle_Output_Format == TECPLOT && Particle_Number > 0)
+  if (goma_ctx->particles.output_format == TECPLOT && goma_ctx->particles.number > 0)
     output_TECPLOT_zone_info(0.0, 0, 1);
   get_time(time_of_day);
   DPRINTF(stdout, "done at %s\n", time_of_day);
@@ -353,7 +359,7 @@ void initialize_particles(const Exo_DB *exo,
   DPRINTF(stdout, "  volumes: ");
   fflush(stdout);
   /* Position initial particles. */
-  if (Particle_Number > 0) {
+  if (goma_ctx->particles.number > 0) {
     el_index_begin = static_exo->eb_ptr[0];
     el_index_end = static_exo->eb_ptr[static_exo->num_elem_blocks];
     num_els = el_index_end - el_index_begin;
@@ -384,14 +390,16 @@ void initialize_particles(const Exo_DB *exo,
 
   DPRINTF(stdout, "  domains: ");
   fflush(stdout);
-  if (Particle_Number > 0) {
+  if (goma_ctx->particles.number > 0) {
     /* This is really the only check we can make unless I want to
      * implement some pretty serious probabilistic sampling and
      * in/out comparisons for ACIS objects. */
-    if (Particle_Creation_Domain == BRICK && Particle_Move_Domain == BRICK) {
+    if (goma_ctx->particles.creation_domain == BRICK && goma_ctx->particles.move_domain == BRICK) {
       for (i = 0; i < 3; i++)
-        if (Particle_Move_Domain_Reals[2 * i] > Particle_Creation_Domain_Reals[2 * i] ||
-            Particle_Move_Domain_Reals[2 * i + 1] < Particle_Creation_Domain_Reals[2 * i + 1])
+        if (goma_ctx->particles.move_domain_reals[2 * i] >
+                goma_ctx->particles.creation_domain_reals[2 * i] ||
+            goma_ctx->particles.move_domain_reals[2 * i + 1] <
+                goma_ctx->particles.creation_domain_reals[2 * i + 1])
           GOMA_EH(GOMA_ERROR, "Mismatch in BRICK bounds for Creation/Move.");
     }
   }
@@ -409,7 +417,7 @@ void initialize_particles(const Exo_DB *exo,
    * global value should sum to be, of course, (# particles) x (# real
    * particles per computational particle) x (mass per real particle).
    * Note that in this situation # particles = # elements. */
-  if (Particle_Number == -1) {
+  if (goma_ctx->particles.number == -1) {
     el_index_begin = static_exo->eb_ptr[0];
     el_index_end = static_exo->eb_ptr[static_exo->num_elem_blocks];
     num_els = el_index_end - el_index_begin;
@@ -434,7 +442,7 @@ void initialize_particles(const Exo_DB *exo,
     }
   }
 
-  if (Particle_Number > 0) {
+  if (goma_ctx->particles.number > 0) {
     rejection_count = 0;
     creation_count = 0;
 #ifdef PARALLEL
@@ -446,14 +454,14 @@ void initialize_particles(const Exo_DB *exo,
     number_created = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
     local_number_created = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
     if (goma_ctx->proc_id == 0) {
-      while (creation_count < Particle_Number) {
-        DPRINTF(stdout, "    %d=", Particle_Number - creation_count);
+      while (creation_count < goma_ctx->particles.number) {
+        DPRINTF(stdout, "    %d=", goma_ctx->particles.number - creation_count);
         fflush(stdout);
         /* First figure out how much each processor should generate, rounded down. */
-        left_over = Particle_Number - creation_count;
+        left_over = goma_ctx->particles.number - creation_count;
         for (proc_index = 0; proc_index < goma_ctx->num_proc; proc_index++) {
           number_to_create[proc_index] = (int)floor(proc_volume[proc_index] / total_volume *
-                                                    (Particle_Number - creation_count));
+                                                    (goma_ctx->particles.number - creation_count));
           left_over -= number_to_create[proc_index];
         }
 
@@ -527,7 +535,7 @@ void initialize_particles(const Exo_DB *exo,
     fflush(stdout);
 #else
     /* Single processor version. */
-    while (creation_count < Particle_Number) {
+    while (creation_count < goma_ctx->particles.number) {
       rejection = rejection_sample_a_particle();
       rejection_count += rejection;
       creation_count += (1 - rejection);
@@ -542,9 +550,9 @@ void initialize_particles(const Exo_DB *exo,
 
   DPRINTF(stdout, "  restart: ");
   fflush(stdout);
-  if (strncmp(Particle_Restart_Filename, "<not active>", 12)) {
+  if (strncmp(goma_ctx->particles.restart_filename, "<not active>", 12)) {
     load_restart_file();
-    DPRINTF(stdout, "%s, ", Particle_Restart_Filename);
+    DPRINTF(stdout, "%s, ", goma_ctx->particles.restart_filename);
   }
   get_time(time_of_day);
   DPRINTF(stdout, "done at %s\n", time_of_day);
@@ -575,7 +583,7 @@ void initialize_particles(const Exo_DB *exo,
   fflush(stdout);
 
 #ifdef PARALLEL
-  if (Particle_Number > 0) {
+  if (goma_ctx->particles.number > 0) {
     free(proc_volume);
     free(proc_volume_local);
     free(number_to_create);
@@ -737,7 +745,8 @@ static void find_exit_wound(const int elem_id,
 
       /* First, check the intersection corresponding to exit_id1. */
       xi_tmp[0] = (exit_id1 == 3 ? -1.0 : 1.0);
-      get_boundary_xi_newton(coeff, elem_id, xi_tmp, 0, xi_boundary_tolerances[tolerance_level]);
+      get_boundary_xi_newton(coeff, elem_id, xi_tmp, 0,
+                             goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
 
       if (fabs(xi_tmp[1]) > 1.0 ||
           fabs(xi_tmp[2]) > 1.0) /* Not this intersection!  Do exit_id2... */
@@ -745,7 +754,8 @@ static void find_exit_wound(const int elem_id,
         xi_tmp[0] = xi[0]; /* reset initial guess for Newton's method. */
         xi_tmp[2] = xi[2];
         xi_tmp[1] = (exit_id2 == 0 ? -1.0 : 1.0);
-        get_boundary_xi_newton(coeff, elem_id, xi_tmp, 1, xi_boundary_tolerances[tolerance_level]);
+        get_boundary_xi_newton(coeff, elem_id, xi_tmp, 1,
+                               goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
 
         if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[2]) > 1.0) /* Ok,third one's a charm, right? */
         {
@@ -753,7 +763,7 @@ static void find_exit_wound(const int elem_id,
           xi_tmp[1] = xi[1];
           xi_tmp[2] = (exit_id3 == 4 ? -1.0 : 1.0);
           get_boundary_xi_newton(coeff, elem_id, xi_tmp, 2,
-                                 xi_boundary_tolerances[tolerance_level]);
+                                 goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[1]) > 1.0) {
             if (tolerance_level < 2) {
               if (goma_ctx->num_proc > 1)
@@ -802,7 +812,8 @@ static void find_exit_wound(const int elem_id,
 
         /* Check exit_id1 first. */
         xi_tmp[1] = (exit_id1 == 0) ? -1.0 : 1.0;
-        get_boundary_xi_newton(coeff, elem_id, xi_tmp, 1, xi_boundary_tolerances[tolerance_level]);
+        get_boundary_xi_newton(coeff, elem_id, xi_tmp, 1,
+                               goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
         /*
         fprintf(stderr, "xi_tmp = (%g,%g,%g)\n", xi_tmp[0], xi_tmp[1], xi_tmp[2]);
         */
@@ -813,7 +824,7 @@ static void find_exit_wound(const int elem_id,
           xi_tmp[1] = xi[1]; /* reset initial guess for Newton's method. */
           xi_tmp[2] = (exit_id2 == 4) ? -1.0 : 1.0;
           get_boundary_xi_newton(coeff, elem_id, xi_tmp, 2,
-                                 xi_boundary_tolerances[tolerance_level]);
+                                 goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
 
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[1]) > 1.0) {
             if (tolerance_level < 2) {
@@ -856,7 +867,8 @@ static void find_exit_wound(const int elem_id,
 
         /* Check exit_id1 first. */
         xi_tmp[0] = (exit_id1 == 3) ? -1.0 : 1.0;
-        get_boundary_xi_newton(coeff, elem_id, xi_tmp, 0, xi_boundary_tolerances[tolerance_level]);
+        get_boundary_xi_newton(coeff, elem_id, xi_tmp, 0,
+                               goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
 
         if (fabs(xi_tmp[1]) > 1.0 ||
             fabs(xi_tmp[2]) > 1.0) /* Not this intersction!  Do exit_id2... */
@@ -865,7 +877,7 @@ static void find_exit_wound(const int elem_id,
           xi_tmp[0] = xi[0]; /* reset initial guess for Newton's method. */
           xi_tmp[2] = (exit_id2 == 4) ? -1.0 : 1.0;
           get_boundary_xi_newton(coeff, elem_id, xi_tmp, 2,
-                                 xi_boundary_tolerances[tolerance_level]);
+                                 goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
 
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[1]) > 1.0) {
             if (tolerance_level < 2) {
@@ -908,7 +920,8 @@ static void find_exit_wound(const int elem_id,
 
         /* Check exit_id1 first. */
         xi_tmp[0] = (exit_id1 == 3) ? -1.0 : 1.0;
-        get_boundary_xi_newton(coeff, elem_id, xi_tmp, 0, xi_boundary_tolerances[tolerance_level]);
+        get_boundary_xi_newton(coeff, elem_id, xi_tmp, 0,
+                               goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
 
         if (fabs(xi_tmp[1]) > 1.0 ||
             fabs(xi_tmp[2]) > 1.0) /* Not this intersction!  Do exit_id2... */
@@ -917,7 +930,7 @@ static void find_exit_wound(const int elem_id,
           xi_tmp[0] = xi[0]; /* reset initial guess for Newton's method. */
           xi_tmp[1] = (exit_id2 == 0) ? -1.0 : 1.0;
           get_boundary_xi_newton(coeff, elem_id, xi_tmp, 1,
-                                 xi_boundary_tolerances[tolerance_level]);
+                                 goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
 
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[2]) > 1.0) {
             if (tolerance_level < 2) {
@@ -962,7 +975,7 @@ static void find_exit_wound(const int elem_id,
         {
           xi_tmp[0] = -1.0;
           get_boundary_xi_newton(coeff, elem_id, xi_tmp, 0,
-                                 xi_boundary_tolerances[tolerance_level]);
+                                 goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[1]) > 1.0 || fabs(xi_tmp[2]) > 1.0) {
             if (tolerance_level < 2) {
               if (goma_ctx->num_proc > 1)
@@ -996,7 +1009,7 @@ static void find_exit_wound(const int elem_id,
         {
           xi_tmp[0] = 1.0;
           get_boundary_xi_newton(coeff, elem_id, xi_tmp, 0,
-                                 xi_boundary_tolerances[tolerance_level]);
+                                 goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[1]) > 1.0 || fabs(xi_tmp[2]) > 1.0) {
             if (tolerance_level < 2) {
               if (goma_ctx->num_proc > 1)
@@ -1033,7 +1046,7 @@ static void find_exit_wound(const int elem_id,
         {
           xi_tmp[1] = -1.0;
           get_boundary_xi_newton(coeff, elem_id, xi_tmp, 1,
-                                 xi_boundary_tolerances[tolerance_level]);
+                                 goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[2]) > 1.0) {
             if (tolerance_level < 2) {
               if (goma_ctx->num_proc > 1)
@@ -1067,7 +1080,7 @@ static void find_exit_wound(const int elem_id,
         {
           xi_tmp[1] = 1.0;
           get_boundary_xi_newton(coeff, elem_id, xi_tmp, 1,
-                                 xi_boundary_tolerances[tolerance_level]);
+                                 goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[2]) > 1.0) {
             if (tolerance_level < 2) {
               if (goma_ctx->num_proc > 1)
@@ -1104,7 +1117,7 @@ static void find_exit_wound(const int elem_id,
         {
           xi_tmp[2] = -1.0;
           get_boundary_xi_newton(coeff, elem_id, xi_tmp, 2,
-                                 xi_boundary_tolerances[tolerance_level]);
+                                 goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[1]) > 1.0) {
             if (tolerance_level < 2) {
               if (goma_ctx->num_proc > 1)
@@ -1138,7 +1151,7 @@ static void find_exit_wound(const int elem_id,
         {
           xi_tmp[2] = 1.0;
           get_boundary_xi_newton(coeff, elem_id, xi_tmp, 2,
-                                 xi_boundary_tolerances[tolerance_level]);
+                                 goma_ctx->particles.xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[1]) > 1.0) {
             if (tolerance_level < 2) {
               if (goma_ctx->num_proc > 1)
@@ -1173,7 +1186,7 @@ static void find_exit_wound(const int elem_id,
     }
   }
 
-  PBC_id = element_particle_info[elem_id].PBC_side_id[exit_id1];
+  PBC_id = goma_ctx->particles.element_info[elem_id].PBC_side_id[exit_id1];
 
   memcpy(x_intersect, fv->x, DIM * sizeof(dbl));
 
@@ -1255,7 +1268,7 @@ static void find_exit_wound(const int elem_id,
     /* Pack and ship this particle to another processor */
     memcpy(p->x_start, x_start, DIM * sizeof(dbl));
     memcpy(p->x_end, x_end, DIM * sizeof(dbl));
-    p->owning_elem_id = element_particle_info[elem_id].owner_local_element_id[exit_id1];
+    p->owning_elem_id = goma_ctx->particles.element_info[elem_id].owner_local_element_id[exit_id1];
     p->owning_proc_id = -(PBC_id + 2);
     p->state = PROC_TRANSFER;
 #ifdef SHOW_PARTICLE_MOVEMENT
@@ -1320,7 +1333,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
   static_xdot_old = xdot_old;
   static_resid_vector = resid_vector;
 
-  if (Particle_Output_Format == TECPLOT)
+  if (goma_ctx->particles.output_format == TECPLOT)
     output_TECPLOT_zone_info(global_end_time, n, 0);
   output_accum_ust = MAX(ust() - start_ust, 0.0);
 
@@ -1332,9 +1345,10 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
     last_fvs_xi_loaded[i] = 1.0e+10;
 
   /* Model-specific initializations. */
-  if (Particle_Model == SWIMMER_EXPLICIT || Particle_Model == SWIMMER_IMPLICIT)
+  if (goma_ctx->particles.model == SWIMMER_EXPLICIT ||
+      goma_ctx->particles.model == SWIMMER_IMPLICIT)
     for (i = 0; i < static_exo->num_elems; i++)
-      memset(element_particle_info[i].source_term, 0, MDE * sizeof(dbl));
+      memset(goma_ctx->particles.element_info[i].source_term, 0, MDE * sizeof(dbl));
 
   global_start_time = global_end_time - goma_dt;
   max_particle_iterations = 0;
@@ -1362,7 +1376,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
       if (get_element_xi_newton(el_index, p->x, p->xi) == -1)
         dump1(EXIT, p, "Sanity check.");
 
-      if (Particle_Show_Debug_Info) {
+      if (goma_ctx->particles.show_debug_info) {
         if (fabs(p->xi[0]) > 1.0 || fabs(p->xi[1]) > 1.0 || fabs(p->xi[2]) > 1.0)
           dump1(NO_EXIT, p, "PARTICLE NOT LOCATED ON PROPER ELEMENT");
 
@@ -1649,9 +1663,11 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
 
   DPRINTF(stderr, "           Number of particles = %d\n", num_particles);
   DPRINTF(stderr, "       Max particle time steps = %d\n", max_particle_iterations);
-  if (Particle_Model == INERTIAL_TRACER_IMPLICIT || Particle_Model == SWIMMER_IMPLICIT ||
-      Particle_Model == TRACER_IMPLICIT || Particle_Model == CHARGED_TRACER_IMPLICIT ||
-      Particle_Model == DIELECTROPHORETIC_TRACER_IMPLICIT)
+  if (goma_ctx->particles.model == INERTIAL_TRACER_IMPLICIT ||
+      goma_ctx->particles.model == SWIMMER_IMPLICIT ||
+      goma_ctx->particles.model == TRACER_IMPLICIT ||
+      goma_ctx->particles.model == CHARGED_TRACER_IMPLICIT ||
+      goma_ctx->particles.model == DIELECTROPHORETIC_TRACER_IMPLICIT)
     DPRINTF(stderr, "Max particle Newton iterations = %d\n", max_newton_iterations);
 #ifdef PARALLEL
   DPRINTF(stderr, "            Particle transfers = %d\n", particle_transfers);
@@ -1662,9 +1678,9 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
   DPRINTF(stderr, "                   Output time = %g seconds\n", output_accum_ust);
   DPRINTF(stderr, "                    Total time = %g seconds\n", total_accum_ust);
 
-  for (i = 0; i < Particle_Number_Sample_Types; i++)
+  for (i = 0; i < goma_ctx->particles.number_sample_types; i++)
     fflush(pa_fp[i]);
-  if (Particle_Full_Output_Stride)
+  if (goma_ctx->particles.full_output_stride)
     fflush(pa_full_fp);
 
   return 0;
@@ -2039,10 +2055,10 @@ static particle_t *create_a_particle(particle_t *seed_p, const int elem_id) {
    * volume.  In fact, this shouldn't be hit anymore since I modified
    * the rejection sampling method to handle this.  Leaving it here
    * "just in case". */
-  if (Particle_Move_Domain == BRICK)
+  if (goma_ctx->particles.move_domain == BRICK)
     for (i = 0; i < pdim; i++) {
-      p->x[i] = MAX(p->x[i], Particle_Move_Domain_Reals[2 * i]);
-      p->x[i] = MIN(p->x[i], Particle_Move_Domain_Reals[2 * i + 1]);
+      p->x[i] = MAX(p->x[i], goma_ctx->particles.move_domain_reals[2 * i]);
+      p->x[i] = MIN(p->x[i], goma_ctx->particles.move_domain_reals[2 * i + 1]);
     }
 
   num_particles++;
@@ -2089,10 +2105,10 @@ static int rejection_sample_a_particle(void) {
     rejection = 1;
   else {
     rejection = 0;
-    if (Particle_Creation_Domain == BRICK) {
+    if (goma_ctx->particles.creation_domain == BRICK) {
       for (i = 0; i < pdim; i++)
-        if (p.x[i] < Particle_Creation_Domain_Reals[2 * i] ||
-            p.x[i] > Particle_Creation_Domain_Reals[2 * i + 1])
+        if (p.x[i] < goma_ctx->particles.creation_domain_reals[2 * i] ||
+            p.x[i] > goma_ctx->particles.creation_domain_reals[2 * i + 1])
           rejection = 1;
     }
   }
@@ -2121,7 +2137,7 @@ static void initialize_and_create_new_particle(particle_t *p, const int elem_id)
   else
     p->time = tran->init_time;
 
-  switch (Particle_Model) {
+  switch (goma_ctx->particles.model) {
   case INERTIAL_TRACER_EXPLICIT:
   case INERTIAL_TRACER_IMPLICIT:
   case TRACER_EXPLICIT:
@@ -2183,8 +2199,8 @@ static void create_element_particle_info_maps(void) {
     /* Is that one we're using?  If so, save the PBC index
      * corresponding to it. */
     PBC_id = -1;
-    for (j = 0; j < Particle_Number_PBCs && PBC_id == -1; j++)
-      if (PBCs[j].SS_id == SS_id)
+    for (j = 0; j < goma_ctx->particles.num_pbcs && PBC_id == -1; j++)
+      if (goma_ctx->particles.pbcs[j].SS_id == SS_id)
         PBC_id = j;
     if (PBC_id == -1)
       continue;
@@ -2198,7 +2214,7 @@ static void create_element_particle_info_maps(void) {
       fprintf(stderr, "Setting element %d side %d to %d\n",
              elem_id, side_id, PBC_id);
       */
-      element_particle_info[elem_id].PBC_side_id[side_id] = PBC_id;
+      goma_ctx->particles.element_info[elem_id].PBC_side_id[side_id] = PBC_id;
     }
   }
 
@@ -2260,7 +2276,7 @@ static void create_element_particle_info_maps(void) {
           for (side_id = 0; side_id < sides_per_element; side_id++) {
             neighbor_elem_id =
                 static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + side_id];
-            if (element_particle_info[elem_id].PBC_side_id[side_id] == -1 &&
+            if (goma_ctx->particles.element_info[elem_id].PBC_side_id[side_id] == -1 &&
                 (neighbor_elem_id == -1 ||
                  DPI_ptr->elem_owner[neighbor_elem_id] != goma_ctx->proc_id)) {
               msg[0] = global_elem_id;
@@ -2311,8 +2327,8 @@ static void create_element_particle_info_maps(void) {
                         msg[1]);
                 fflush(fp);
               }
-              element_particle_info[elem_id].PBC_side_id[side_id] = -(2 + msg[0]);
-              element_particle_info[elem_id].owner_local_element_id[side_id] = msg[1];
+              goma_ctx->particles.element_info[elem_id].PBC_side_id[side_id] = -(2 + msg[0]);
+              goma_ctx->particles.element_info[elem_id].owner_local_element_id[side_id] = msg[1];
               msg_tag++;
             } /* if unknown reference ... */
           } /* for side_id ... */
@@ -2352,13 +2368,14 @@ static void create_element_particle_info_maps(void) {
           }
           elem_id = in_list(global_elem_id, 0, static_exo->num_elems, DPI_ptr->elem_index_global);
           if (elem_id > -1 && DPI_ptr->elem_owner[elem_id] == goma_ctx->proc_id) {
-            ghost_id = element_particle_info[elem_id].num_ghost_target_elems++;
-            element_particle_info[elem_id].ghost_proc = (int *)realloc(
-                element_particle_info[elem_id].ghost_proc, (ghost_id + 1) * sizeof(int));
-            element_particle_info[elem_id].ghost_local_elem_id = (int *)realloc(
-                element_particle_info[elem_id].ghost_local_elem_id, (ghost_id + 1) * sizeof(int));
-            element_particle_info[elem_id].ghost_proc[ghost_id] = proc_id;
-            element_particle_info[elem_id].ghost_local_elem_id[ghost_id] = msg[2];
+            ghost_id = goma_ctx->particles.element_info[elem_id].num_ghost_target_elems++;
+            goma_ctx->particles.element_info[elem_id].ghost_proc = (int *)realloc(
+                goma_ctx->particles.element_info[elem_id].ghost_proc, (ghost_id + 1) * sizeof(int));
+            goma_ctx->particles.element_info[elem_id].ghost_local_elem_id =
+                (int *)realloc(goma_ctx->particles.element_info[elem_id].ghost_local_elem_id,
+                               (ghost_id + 1) * sizeof(int));
+            goma_ctx->particles.element_info[elem_id].ghost_proc[ghost_id] = proc_id;
+            goma_ctx->particles.element_info[elem_id].ghost_local_elem_id[ghost_id] = msg[2];
             if (output) {
               fprintf(fp2, "from local elem %3d to proc=%d local_elem=%3d\n", elem_id, proc_id,
                       msg[2]);
@@ -2474,7 +2491,7 @@ static void handle_surface_interaction(particle_t *p, dbl *x, dbl *xi, int PBC_i
   PBC_t *PBC;
   FILE *fp;
 
-  PBC = &(PBCs[PBC_id]);
+  PBC = &(goma_ctx->particles.pbcs[PBC_id]);
 
   switch (PBC->type) {
   case PBC_IMPERMEABLE:
@@ -2522,8 +2539,8 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
   int *local_ss_node_list, local_elem_node_id[MAX_NODES_PER_SIDE];
   dbl inflow_volume, expected_particles, particle_volume, xi[DIM], s, t, u, wt;
 
-  for (i = 0; i < Particle_Number_PBCs; i++) {
-    PBC = &(PBCs[i]);
+  for (i = 0; i < goma_ctx->particles.num_pbcs; i++) {
+    PBC = &(goma_ctx->particles.pbcs[i]);
     if (PBC->type == PBC_SOURCE || PBC->type == PBC_FREESTREAM_SOURCE) {
       SS_id = PBC->SS_id;
       for (j = 0; j < static_exo->num_side_sets; j++)
@@ -2582,7 +2599,7 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
                     -(fv->v[m] * fv->snormal[m]) * wt * fv->sdet; /* Normal is outward pointing. */
             }
             inflow_volume *= dt;
-            particle_volume = 4.0 / 3.0 * M_PIE * pow(Particle_Radius, 3.0);
+            particle_volume = 4.0 / 3.0 * M_PIE * pow(goma_ctx->particles.radius, 3.0);
             expected_particles = inflow_volume * PBC->real_data[0] / particle_volume;
 
             if (expected_particles < 0.0) {
@@ -2665,8 +2682,8 @@ static void initialize_surface_interactions(void) {
   char err_msg[128];
 
   Num_Impermeable_PBCs = 0;
-  for (i = 0; i < Particle_Number_PBCs; i++) {
-    PBC = &(PBCs[i]);
+  for (i = 0; i < goma_ctx->particles.num_pbcs; i++) {
+    PBC = &(goma_ctx->particles.pbcs[i]);
     switch (PBC->type) {
     case PBC_TARGET:
       fp = fopen(construct_filename(PBC->string_data), "w");
@@ -3091,16 +3108,16 @@ output_TECPLOT_zone_info(const dbl end_time, const int goma_time_step, const int
   particles_exist = num_particles;
 #endif
 
-  if (!Particle_Number_Sample_Types)
+  if (!goma_ctx->particles.number_sample_types)
     return;
 
   if (!particles_exist && !force)
     return;
 
-  if ((TimeIntegration == TRANSIENT && Particle_Output_Stride > 0 &&
-       (!((goma_time_step + 1) % Particle_Output_Stride))) ||
-      (TimeIntegration == STEADY && Particle_Output_Time_Step > 0.0))
-    for (i = 0; i < Particle_Number_Sample_Types; i++)
+  if ((TimeIntegration == TRANSIENT && goma_ctx->particles.output_stride > 0 &&
+       (!((goma_time_step + 1) % goma_ctx->particles.output_stride))) ||
+      (TimeIntegration == STEADY && goma_ctx->particles.output_time_step > 0.0))
+    for (i = 0; i < goma_ctx->particles.number_sample_types; i++)
       fprintf(pa_fp[i], "ZONE T=\"%g\"\n", end_time);
 }
 
@@ -3134,13 +3151,14 @@ static void output_a_particle(particle_t *const p,
 
   /* The nice thing about strided output is that there is no
    * linearization by time fractions required... */
-  if (Particle_Output_Stride > 0) {
-    if ((!((goma_time_step + 1) % Particle_Output_Stride) || force_output) && last_step) {
+  if (goma_ctx->particles.output_stride > 0) {
+    if ((!((goma_time_step + 1) % goma_ctx->particles.output_stride) || force_output) &&
+        last_step) {
       if ((output_sample_number = p->output_sample_number) != -1) {
         for (i = 0; i < pdim; i++)
           fprintf(pa_fp[output_sample_number], " %12g ", p->x_old[i]);
         fprintf(pa_fp[output_sample_number], " %12g", particle_time);
-        for (i = 0; i < Particle_Number_Output_Variables[output_sample_number]; i++)
+        for (i = 0; i < goma_ctx->particles.number_output_variables[output_sample_number]; i++)
           fprintf(pa_fp[output_sample_number], " %12g", p->real_data[i]);
 #ifdef PARALLEL
         fprintf(pa_fp[output_sample_number], " %d", p->owning_proc_id);
@@ -3149,8 +3167,8 @@ static void output_a_particle(particle_t *const p,
       }
     }
   } else if ((output_sample_number = p->output_sample_number) != -1 || force_output) {
-    start_n = (int)floor(last_particle_time / Particle_Output_Time_Step);
-    end_n = (int)floor(particle_time / Particle_Output_Time_Step);
+    start_n = (int)floor(last_particle_time / goma_ctx->particles.output_time_step);
+    end_n = (int)floor(particle_time / goma_ctx->particles.output_time_step);
     if (TimeIntegration ==
         STEADY) /* Need to take care of the "off by one" errors that can happen with the
                    floating point operations directly above, for post-steady calculations. */
@@ -3162,7 +3180,7 @@ static void output_a_particle(particle_t *const p,
         output_time = 0.0;
         time_fraction = 1.0;
       } else {
-        output_time = (output_n + 1) * Particle_Output_Time_Step;
+        output_time = (output_n + 1) * goma_ctx->particles.output_time_step;
         time_fraction = (output_time - last_particle_time) / (particle_time - last_particle_time);
       }
       for (i = 0; i < pdim; i++)
@@ -3171,7 +3189,7 @@ static void output_a_particle(particle_t *const p,
         for (i = 0; i < pdim; i++)
           fprintf(pa_fp[output_sample_number], " %12g", x_time[i]);
         fprintf(pa_fp[output_sample_number], " %12g", output_time);
-        for (i = 0; i < Particle_Number_Output_Variables[output_sample_number]; i++) {
+        for (i = 0; i < goma_ctx->particles.number_output_variables[output_sample_number]; i++) {
           real_data_time =
               (1.0 - time_fraction) * p->real_data_old[i] + time_fraction * p->real_data[i];
           fprintf(pa_fp[output_sample_number], " %12g", real_data_time);
@@ -3187,10 +3205,11 @@ static void output_a_particle(particle_t *const p,
   /* This is for the full output, which is always strided in terms of
    * either the post steady-state timesteps or the (transient) Goma
    * time step. */
-  if (Particle_Full_Output_Stride > 0) {
-    strided_output = !((goma_time_step + 1) % Particle_Full_Output_Stride);
+  if (goma_ctx->particles.full_output_stride > 0) {
+    strided_output = !((goma_time_step + 1) % goma_ctx->particles.full_output_stride);
     last_goma_step =
-        ((TimeIntegration == STEADY) && (goma_time_step == Particle_Max_Time_Steps - 1)) ||
+        ((TimeIntegration == STEADY) &&
+         (goma_time_step == goma_ctx->particles.max_time_steps - 1)) ||
         ((TimeIntegration == TRANSIENT) &&
          ((goma_time_step == tran->MaxTimeSteps - 1) || (particle_time == tran->TimeMax)));
 
@@ -3203,7 +3222,8 @@ static void output_a_particle(particle_t *const p,
       for (i = 0; i < pdim; i++)
         fprintf(pa_full_fp, " %12g", p->x[i]);
       fprintf(pa_full_fp, " %12g", particle_time);
-      if (Particle_Model == SWIMMER_EXPLICIT || Particle_Model == SWIMMER_IMPLICIT) {
+      if (goma_ctx->particles.model == SWIMMER_EXPLICIT ||
+          goma_ctx->particles.model == SWIMMER_IMPLICIT) {
         fprintf(pa_full_fp, " %g", p->theta);
         if (pdim == 3)
           fprintf(pa_full_fp, " %g", p->phi);
@@ -3227,10 +3247,10 @@ static void store_particle_data(particle_t *const p) {
 
   output_sample_number = p->output_sample_number;
   j = 0;
-  for (i = 0; i < Particle_Number_Output_Variables[output_sample_number]; i++) {
+  for (i = 0; i < goma_ctx->particles.number_output_variables[output_sample_number]; i++) {
     if (j == MAX_DATA_REAL_VALUES)
       dump1(EXIT, p, "Uh-oh, was about to overwrite the p->real_data array!");
-    output_var = Particle_Output_Variables[output_sample_number][i];
+    output_var = goma_ctx->particles.output_variables[output_sample_number][i];
 
     /* The reason I do this in such a speed-poor way
      * (because of all the strncmp's) is because I may want
@@ -3282,7 +3302,7 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
   particle_speed = nnorm(DIM, p->v);
   fluid_speed = nnorm(DIM, fv->v);
   max_speed = MAX(particle_speed, fluid_speed);
-  switch (Particle_Model) {
+  switch (goma_ctx->particles.model) {
   case TRACER_EXPLICIT:
   case TRACER_IMPLICIT:
   case SWIMMER_EXPLICIT:
@@ -3301,16 +3321,17 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
 
   case INERTIAL_TRACER_IMPLICIT:
     /* These need to match the same values used in move_particle(). */
-    volume = 4.0 / 3.0 * M_PIE * Particle_Radius * Particle_Radius * Particle_Radius;
-    mass = Particle_Density * volume;
+    volume = 4.0 / 3.0 * M_PIE * goma_ctx->particles.radius * goma_ctx->particles.radius *
+             goma_ctx->particles.radius;
+    mass = goma_ctx->particles.density * volume;
     /*      fluid_mass = mp->density * volume; */
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * Particle_Radius;
-    gravity_force_coeff = Particle_Model_Data[1];
+    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    gravity_force_coeff = goma_ctx->particles.model_data[1];
 
     for (i = 0; i < pdim; i++)
       vel_rel[i] = fv->v[i] - p->v[i];
     vel_diff = nnorm(pdim, vel_rel);
-    Re_p = Particle_Density * vel_diff * 2.0 * Particle_Radius / mp->density;
+    Re_p = goma_ctx->particles.density * vel_diff * 2.0 * goma_ctx->particles.radius / mp->density;
     if (Re_p <= 0.1)
       Re_p_correction = 1.0 + 3.0 / 16.0 * Re_p;
     else
@@ -3382,10 +3403,10 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
 
   case CHARGED_TRACER_IMPLICIT:
     /* These need to match the same values used in move_particle(). */
-    mass =
-        4.0 / 3.0 * M_PIE * Particle_Density * Particle_Radius * Particle_Radius * Particle_Radius;
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * Particle_Radius;
-    coulombic_force_coeff = -Particle_Model_Data[1];
+    mass = 4.0 / 3.0 * M_PIE * goma_ctx->particles.density * goma_ctx->particles.radius *
+           goma_ctx->particles.radius * goma_ctx->particles.radius;
+    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    coulombic_force_coeff = -goma_ctx->particles.model_data[1];
 
     /* Starting timestep based on particle info. */
     if (max_speed == 0.0)
@@ -3425,18 +3446,21 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
      */
 
     /* These need to match the same values used in move_particle(). */
-    mass =
-        4.0 / 3.0 * M_PIE * Particle_Density * Particle_Radius * Particle_Radius * Particle_Radius;
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * Particle_Radius;
+    mass = 4.0 / 3.0 * M_PIE * goma_ctx->particles.density * goma_ctx->particles.radius *
+           goma_ctx->particles.radius * goma_ctx->particles.radius;
+    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
     /* Compute the Clausius-Mossoti factor, Re(K(omega)) */
-    coeff_a = Particle_Model_Data[1] - Particle_Model_Data[2];
-    coeff_b = (Particle_Model_Data[4] - Particle_Model_Data[3]) / Particle_Model_Data[5];
-    coeff_c = Particle_Model_Data[1] + 2.0 * Particle_Model_Data[2];
-    coeff_d = (Particle_Model_Data[3] + 2.0 * Particle_Model_Data[4]) / Particle_Model_Data[5];
+    coeff_a = goma_ctx->particles.model_data[1] - goma_ctx->particles.model_data[2];
+    coeff_b = (goma_ctx->particles.model_data[4] - goma_ctx->particles.model_data[3]) /
+              goma_ctx->particles.model_data[5];
+    coeff_c = goma_ctx->particles.model_data[1] + 2.0 * goma_ctx->particles.model_data[2];
+    coeff_d = (goma_ctx->particles.model_data[3] + 2.0 * goma_ctx->particles.model_data[4]) /
+              goma_ctx->particles.model_data[5];
     CM_fact = (coeff_a * coeff_c - coeff_b * coeff_d) / (coeff_c * coeff_c + coeff_d * coeff_d);
-    dielectrophoretic_force_coeff = 2.0 * M_PIE * Particle_Radius * Particle_Radius *
-                                    Particle_Radius * Particle_Model_Data[2] * CM_fact *
-                                    Particle_Model_Data[6] * Particle_Model_Data[6];
+    dielectrophoretic_force_coeff =
+        2.0 * M_PIE * goma_ctx->particles.radius * goma_ctx->particles.radius *
+        goma_ctx->particles.radius * goma_ctx->particles.model_data[2] * CM_fact *
+        goma_ctx->particles.model_data[6] * goma_ctx->particles.model_data[6];
 
     /*
     fprintf(stderr, "New dt calculation\n");
@@ -3549,9 +3573,9 @@ static int move_particle(particle_t *const p,
   for (i = 0; i < DIM; i++)
     current_v[i] = (1.0 - time_fraction) * fv_old->v[i] + time_fraction * fv->v[i];
 
-  rcubed = Particle_Radius * Particle_Radius * Particle_Radius;
+  rcubed = goma_ctx->particles.radius * goma_ctx->particles.radius * goma_ctx->particles.radius;
   volume = 4.0 / 3.0 * M_PIE * rcubed;
-  mass = volume * Particle_Density;
+  mass = volume * goma_ctx->particles.density;
 
   /* Get the index into Newton RHS's for gravity. */
   if (pd->CoordinateSystem == CARTESIAN)
@@ -3559,24 +3583,26 @@ static int move_particle(particle_t *const p,
   else
     gravity_index = pdim; /* z in (z,r) */
 
-  switch (Particle_Model) {
+  switch (goma_ctx->particles.model) {
   case TRACER_EXPLICIT:
   case SWIMMER_EXPLICIT:
     memset(ext_velocity, 0, DIM * sizeof(dbl));
     /* Currently only SWIMMER_EXPLICIT has a real stochastic component... */
-    if (Particle_Model == SWIMMER_EXPLICIT) {
+    if (goma_ctx->particles.model == SWIMMER_EXPLICIT) {
       /* 0th parameter is sigma for orientation angle in radians/second.
        * 1st parameter is sigma (in fractions of swimming speed) for swimming speed in L/second.
        * 2nd parameter is the swimming speed.
        */
       beta = 8.0 * M_PIE * mp->viscosity * rcubed;
       /* Including moment of inertia => */
-      beta *= 2.0 / 5.0 * mass * Particle_Radius * Particle_Radius;
+      beta *= 2.0 / 5.0 * mass * goma_ctx->particles.radius * goma_ctx->particles.radius;
 
-      weiner_angle = drand_truncated_normal(0.0, Particle_Model_Data[0] * sqrt(particle_dt));
-      weiner_speed = drand_truncated_normal(Particle_Model_Data[2], Particle_Model_Data[1] *
-                                                                        Particle_Model_Data[2] *
-                                                                        sqrt(particle_dt));
+      weiner_angle =
+          drand_truncated_normal(0.0, goma_ctx->particles.model_data[0] * sqrt(particle_dt));
+      weiner_speed =
+          drand_truncated_normal(goma_ctx->particles.model_data[2],
+                                 goma_ctx->particles.model_data[1] *
+                                     goma_ctx->particles.model_data[2] * sqrt(particle_dt));
 
       /*
       fprintf(stderr, "Proc%d: beta = %g, mass = %g\n", ProcID, beta, mass);
@@ -3587,9 +3613,9 @@ static int move_particle(particle_t *const p,
       if (mdim == 2) {
         /* For 2D, only one angle, theta.  theta = pi is up. */
         p->theta_old = p->theta;
-        p->theta += particle_dt * (980.0 * Particle_Radius * 0.05 * mass * sin(p->theta_old) /
-                                   beta) /* gravity-induced torque */
-                    + weiner_angle;      /* stochastic component */
+        p->theta += particle_dt * (980.0 * goma_ctx->particles.radius * 0.05 * mass *
+                                   sin(p->theta_old) / beta) /* gravity-induced torque */
+                    + weiner_angle;                          /* stochastic component */
         /* Drop that ODE crap, just set it ... */
         p->theta = M_PIE + weiner_angle;
         p->theta = fmod(p->theta, 2.0 * M_PIE);
@@ -3613,7 +3639,7 @@ static int move_particle(particle_t *const p,
         ext_velocity[1] = weiner_speed * sin(p->phi) * sin(p->theta);
         ext_velocity[2] = weiner_speed * cos(p->phi);
       }
-    } else if (Particle_Model_Data[0] != 0.0)
+    } else if (goma_ctx->particles.model_data[0] != 0.0)
       GOMA_EH(GOMA_ERROR, "Set up random components!");
 
     memcpy(total_velocity, current_v, DIM * sizeof(dbl));
@@ -3639,8 +3665,8 @@ static int move_particle(particle_t *const p,
           (1.0 - time_fraction) * (my_fv_old->grad_V[i]) + time_fraction * (fv->grad_V[i]);
 
     /* Fill the coefficients. */
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * Particle_Radius;
-    coulombic_force_coeff = -Particle_Model_Data[1];
+    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    coulombic_force_coeff = -goma_ctx->particles.model_data[1];
 
     for (i = 0; i < pd->Num_Dim; i++)
       total_velocity[i] =
@@ -3666,8 +3692,8 @@ static int move_particle(particle_t *const p,
           (1.0 - time_fraction) * (my_fv_old->grad_V[i]) + time_fraction * (fv->grad_V[i]);
 
     /* These need to match the same values used in compute_particle_dt(). */
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * Particle_Radius;
-    coulombic_force_coeff = -Particle_Model_Data[1];
+    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    coulombic_force_coeff = -goma_ctx->particles.model_data[1];
 
     for (i = 0; i < pdim; i++) {
       b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
@@ -3791,17 +3817,20 @@ static int move_particle(particle_t *const p,
           (1.0 - time_fraction) * (my_fv_old->grad_Enorm[i]) + time_fraction * (fv->grad_Enorm[i]);
 
     /* These need to match the same values used in compute_particle_dt(). */
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * Particle_Radius;
+    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
 
     /* Compute the Clausius-Mossoti factor, Re(K(omega)) */
-    coeff_a = Particle_Model_Data[1] - Particle_Model_Data[2];
-    coeff_b = (Particle_Model_Data[4] - Particle_Model_Data[3]) / Particle_Model_Data[5];
-    coeff_c = Particle_Model_Data[1] + 2.0 * Particle_Model_Data[2];
-    coeff_d = (Particle_Model_Data[3] + 2.0 * Particle_Model_Data[4]) / Particle_Model_Data[5];
+    coeff_a = goma_ctx->particles.model_data[1] - goma_ctx->particles.model_data[2];
+    coeff_b = (goma_ctx->particles.model_data[4] - goma_ctx->particles.model_data[3]) /
+              goma_ctx->particles.model_data[5];
+    coeff_c = goma_ctx->particles.model_data[1] + 2.0 * goma_ctx->particles.model_data[2];
+    coeff_d = (goma_ctx->particles.model_data[3] + 2.0 * goma_ctx->particles.model_data[4]) /
+              goma_ctx->particles.model_data[5];
     CM_fact = (coeff_a * coeff_c - coeff_b * coeff_d) / (coeff_c * coeff_c + coeff_d * coeff_d);
-    dielectrophoretic_force_coeff = 2.0 * M_PIE * Particle_Radius * Particle_Radius *
-                                    Particle_Radius * Particle_Model_Data[2] * CM_fact *
-                                    Particle_Model_Data[6] * Particle_Model_Data[6];
+    dielectrophoretic_force_coeff =
+        2.0 * M_PIE * goma_ctx->particles.radius * goma_ctx->particles.radius *
+        goma_ctx->particles.radius * goma_ctx->particles.model_data[2] * CM_fact *
+        goma_ctx->particles.model_data[6] * goma_ctx->particles.model_data[6];
 
     for (i = 0; i < pdim; i++) {
       b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
@@ -4100,7 +4129,7 @@ static int move_particle(particle_t *const p,
     break;
 
   case INERTIAL_TRACER_EXPLICIT:
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * Particle_Radius;
+    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
 
     for (i = 0; i < pd->Num_Dim; i++) {
       total_velocity[i] =
@@ -4180,13 +4209,13 @@ static int move_particle(particle_t *const p,
   case INERTIAL_TRACER_IMPLICIT:
     /* These need to match the same values used in compute_particle_dt(). */
     /* fluid_mass = 4.0/3.0 * M_PIE * mp->density * rcubed; */
-    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * Particle_Radius;
-    gravity_force_coeff = Particle_Model_Data[1];
+    stokes_force_coeff = 6.0 * M_PIE * mp->viscosity * goma_ctx->particles.radius;
+    gravity_force_coeff = goma_ctx->particles.model_data[1];
 
     for (i = 0; i < pdim; i++)
       vel_rel[i] = fv->v[i] - p->v[i];
     vel_diff = nnorm(pdim, vel_rel);
-    Re_p = Particle_Density * vel_diff * 2.0 * Particle_Radius / mp->density;
+    Re_p = goma_ctx->particles.density * vel_diff * 2.0 * goma_ctx->particles.radius / mp->density;
     if (Re_p <= 0.1)
       Re_p_correction = 1.0 + 3.0 / 16.0 * Re_p;
     else
@@ -4332,10 +4361,10 @@ static int move_particle(particle_t *const p,
     dump1(EXIT, p, "Unknown Particle_Model.");
   }
 
-  if (Particle_Move_Domain == BRICK)
+  if (goma_ctx->particles.move_domain == BRICK)
     for (i = 0; i < pdim; i++) {
-      p->x[i] = MAX(p->x[i], Particle_Move_Domain_Reals[2 * i]);
-      p->x[i] = MIN(p->x[i], Particle_Move_Domain_Reals[2 * i + 1]);
+      p->x[i] = MAX(p->x[i], goma_ctx->particles.move_domain_reals[2 * i]);
+      p->x[i] = MIN(p->x[i], goma_ctx->particles.move_domain_reals[2 * i + 1]);
     }
 
   *max_particle_dt = particle_dt;
@@ -4725,7 +4754,8 @@ static void couple_to_continuum(void) {
   particle_t *p_tmp, **ghost_particles_to_send, *ghost_particles_to_recv;
   MPI_Status mpi_status;
 
-  use_ghost_particles = (Particle_Model == SWIMMER_EXPLICIT || Particle_Model == SWIMMER_IMPLICIT);
+  use_ghost_particles = (goma_ctx->particles.model == SWIMMER_EXPLICIT ||
+                         goma_ctx->particles.model == SWIMMER_IMPLICIT);
 
   /* Testing to see if we really do need to ghost particles, or if
    * they already get summed properly in the source terms now,
@@ -4751,15 +4781,15 @@ static void couple_to_continuum(void) {
     /* First count the number of particles currently in each of the
      * to-be-ghosted elements. */
     for (i = 0; i < static_exo->num_elems; i++)
-      if (element_particle_info[i].num_ghost_target_elems)
+      if (goma_ctx->particles.element_info[i].num_ghost_target_elems)
         for (p = element_particle_list_head[i]; p; p = p->next)
           num_particles_in_elem[i]++;
 
     /* Now count the number of particles going to each of the other
      * processors. */
     for (i = 0; i < static_exo->num_elems; i++)
-      for (j = 0; j < element_particle_info[i].num_ghost_target_elems; j++)
-        num_ghost_particles_to_send[element_particle_info[i].ghost_proc[j]] +=
+      for (j = 0; j < goma_ctx->particles.element_info[i].num_ghost_target_elems; j++)
+        num_ghost_particles_to_send[goma_ctx->particles.element_info[i].ghost_proc[j]] +=
             num_particles_in_elem[i];
     for (i = 0; i < goma_ctx->num_proc; i++)
       local_num_particle_ghosts += num_ghost_particles_to_send[i];
@@ -4775,11 +4805,11 @@ static void couple_to_continuum(void) {
     /* Now memcpy the particle info into the send buffer.  Set the
      * owning element id, too! */
     for (i = 0; i < static_exo->num_elems; i++)
-      if (element_particle_info[i].num_ghost_target_elems)
+      if (goma_ctx->particles.element_info[i].num_ghost_target_elems)
         for (p = element_particle_list_head[i]; p; p = p->next)
-          for (j = 0; j < element_particle_info[i].num_ghost_target_elems; j++) {
-            recipient_proc = element_particle_info[i].ghost_proc[j];
-            recipient_local_elem_id = element_particle_info[i].ghost_local_elem_id[j];
+          for (j = 0; j < goma_ctx->particles.element_info[i].num_ghost_target_elems; j++) {
+            recipient_proc = goma_ctx->particles.element_info[i].ghost_proc[j];
+            recipient_local_elem_id = goma_ctx->particles.element_info[i].ghost_local_elem_id[j];
             memcpy(&ghost_particles_to_send[recipient_proc]
                                            [num_ghost_particles_copied[recipient_proc]],
                    p, sizeof(particle_t));
@@ -4831,18 +4861,21 @@ static void couple_to_continuum(void) {
 #endif
 
   /* Model-specific initializations. */
-  if (Particle_Model == SWIMMER_EXPLICIT || Particle_Model == SWIMMER_IMPLICIT) {
+  if (goma_ctx->particles.model == SWIMMER_EXPLICIT ||
+      goma_ctx->particles.model == SWIMMER_IMPLICIT) {
     source_eqn = R_MOMENTUM1 + pdim - 1;
     if (mp->DensityModel != CONSTANT)
       GOMA_EH(GOMA_ERROR,
               "Sorry, only handling CONSTANT density models right now.  Check back later.");
-    source_mass = 4.0 / 3.0 * M_PIE * (Particle_Density - mp->density) * Particle_Radius *
-                  Particle_Radius * Particle_Radius * Particle_Ratio;
+    source_mass = 4.0 / 3.0 * M_PIE * (goma_ctx->particles.density - mp->density) *
+                  goma_ctx->particles.radius * goma_ctx->particles.radius *
+                  goma_ctx->particles.radius * goma_ctx->particles.ratio;
   }
 
   for (i = 0; i < static_exo->num_elems; i++) {
     for (p = element_particle_list_head[i]; p; p = p->next) {
-      if (Particle_Model == SWIMMER_EXPLICIT || Particle_Model == SWIMMER_IMPLICIT) {
+      if (goma_ctx->particles.model == SWIMMER_EXPLICIT ||
+          goma_ctx->particles.model == SWIMMER_IMPLICIT) {
         load_field_variables_at_xi(i, p->xi);
 
         if (p->owning_elem_id != i) {
@@ -4853,7 +4886,7 @@ static void couple_to_continuum(void) {
         }
 
         for (j = 0; j < ei[pg->imtrx]->dof[source_eqn]; j++) {
-          element_particle_info[p->owning_elem_id].source_term[j] +=
+          goma_ctx->particles.element_info[p->owning_elem_id].source_term[j] +=
               source_mass * bf[source_eqn]->phi[j];
           total_particles += bf[source_eqn]->phi[j];
         }
@@ -4927,7 +4960,7 @@ static void test_map_integrity(void) {
           fprintf(fp, "Proc %2d Elem %4d(%3d)\n", goma_ctx->proc_id,
                   DPI_ptr->elem_index_global[elem_id], elem_id);
         for (face_id = 0; face_id < sides_per_element; face_id++) {
-          PBC_id = element_particle_info[elem_id].PBC_side_id[face_id];
+          PBC_id = goma_ctx->particles.element_info[elem_id].PBC_side_id[face_id];
           fprintf(fp, "\t\tFace %d PBC=%2d ", face_id, PBC_id);
           if (PBC_id >= 0)
             fprintf(fp, "boundary condition                 OK\n");
@@ -4944,7 +4977,8 @@ static void test_map_integrity(void) {
                                                                                     : "ghost"));
             } else {
               neighbor_elem_proc_id = -(PBC_id + 2);
-              neighbor_elem_id = element_particle_info[elem_id].owner_local_element_id[face_id];
+              neighbor_elem_id =
+                  goma_ctx->particles.element_info[elem_id].owner_local_element_id[face_id];
               fprintf(fp, "remote proc=%d neighbor=%3d        ????\n", neighbor_elem_proc_id,
                       neighbor_elem_id);
             }
@@ -4973,8 +5007,9 @@ static void load_restart_file(void) {
   char garbage[255];
   FILE *fp;
 
-  if (!(fp = fopen(construct_filename(Particle_Restart_Filename), "r"))) {
-    fprintf(stderr, "trying to open %s.\n", construct_filename(Particle_Restart_Filename));
+  if (!(fp = fopen(construct_filename(goma_ctx->particles.restart_filename), "r"))) {
+    fprintf(stderr, "trying to open %s.\n",
+            construct_filename(goma_ctx->particles.restart_filename));
     GOMA_EH(GOMA_ERROR, "Could not open restart file");
   }
   zero_a_particle(&p);
@@ -4996,7 +5031,7 @@ static void load_restart_file(void) {
       if (fabs(fv->x[i] - p.x[i]) > 1.0e-6)
         GOMA_EH(GOMA_ERROR, "Did not match particle location on restart.");
     p_ptr = create_a_particle(&p, p.owning_elem_id);
-    switch (Particle_Model) {
+    switch (goma_ctx->particles.model) {
     case INERTIAL_TRACER_EXPLICIT:
     case INERTIAL_TRACER_IMPLICIT:
     case TRACER_EXPLICIT:

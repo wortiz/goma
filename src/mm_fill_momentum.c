@@ -636,12 +636,12 @@ int assemble_momentum(dbl time,       /* current time */
           }
 
           /* MMH For massful particles. */
-          if (Particle_Dynamics &&
-              (Particle_Model == SWIMMER_EXPLICIT || Particle_Model == SWIMMER_IMPLICIT)) {
+          if (goma_ctx->particles.dynamics && (goma_ctx->particles.model == SWIMMER_EXPLICIT ||
+                                               goma_ctx->particles.model == SWIMMER_IMPLICIT)) {
             if (a == pd->Num_Dim - 1)
               /* These data values should hold the entire
                * source term. */
-              source = element_particle_info[ei[pg->imtrx]->ielem].source_term[i];
+              source = goma_ctx->particles.element_info[ei[pg->imtrx]->ielem].source_term[i];
           }
 
           // Continuity residual
