@@ -365,7 +365,8 @@ void initialize_particles(const Exo_DB *exo,
     proc_volume = (dbl *)calloc((unsigned)goma_ctx->num_proc, sizeof(dbl));
     proc_volume_local = (dbl *)calloc((unsigned)goma_ctx->num_proc, sizeof(dbl));
     proc_volume_local[goma_ctx->proc_id] = my_volume;
-    MPI_Reduce(proc_volume_local, proc_volume, goma_ctx->num_proc, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(proc_volume_local, proc_volume, goma_ctx->num_proc, MPI_DOUBLE, MPI_SUM, 0,
+               MPI_COMM_WORLD);
 
     /* Get total volume. */
     total_volume = 0.0;
@@ -1458,7 +1459,8 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
             mpi_retval = MPI_Send(&send_p, sizeof(particle_t), MPI_BYTE, p->owning_proc_id, 0,
                                   MPI_COMM_WORLD);
             if (mpi_retval != MPI_SUCCESS) {
-              fprintf(stderr, "Proc %d failed on particle send (%d).\n", goma_ctx->proc_id, mpi_retval);
+              fprintf(stderr, "Proc %d failed on particle send (%d).\n", goma_ctx->proc_id,
+                      mpi_retval);
               exit(-1);
             }
             free(p);
@@ -1475,8 +1477,8 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
               mpi_retval =
                   MPI_Send(&termination_p, sizeof(particle_t), MPI_BYTE, j, 0, MPI_COMM_WORLD);
               if (mpi_retval != MPI_SUCCESS) {
-                fprintf(stderr, "Proc %d failed on TERMINATION_MARKER send (%d).\n", goma_ctx->proc_id,
-                        mpi_retval);
+                fprintf(stderr, "Proc %d failed on TERMINATION_MARKER send (%d).\n",
+                        goma_ctx->proc_id, mpi_retval);
                 exit(-1);
               }
             }
@@ -1486,7 +1488,8 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
             mpi_retval =
                 MPI_Recv(&recv_p, sizeof(particle_t), MPI_BYTE, i, 0, MPI_COMM_WORLD, &mpi_status);
             if (mpi_retval != MPI_SUCCESS) {
-              fprintf(stderr, "Proc %d failed on particle receive (%d).\n", goma_ctx->proc_id, mpi_retval);
+              fprintf(stderr, "Proc %d failed on particle receive (%d).\n", goma_ctx->proc_id,
+                      mpi_retval);
               exit(-1);
             }
             MPI_Get_count(&mpi_status, MPI_BYTE, &mpi_byte_count);
@@ -1498,7 +1501,8 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
               fflush(stderr);
             */
             if (mpi_byte_count != sizeof(particle_t)) {
-              fprintf(stderr, "Proc %d did not have proper incoming byte count!\n", goma_ctx->proc_id);
+              fprintf(stderr, "Proc %d did not have proper incoming byte count!\n",
+                      goma_ctx->proc_id);
               fflush(stderr);
               MPI_Finalize();
               exit(-1);
@@ -2019,8 +2023,8 @@ static particle_t *create_a_particle(particle_t *seed_p, const int elem_id) {
 
   if (DPI_ptr->elem_owner[elem_id] != goma_ctx->proc_id && seed_p->state != GHOST)
     dump4(EXIT, seed_p,
-          "Proc %d tried to create a particle on element %d(%d), which it doesn't own.\n", goma_ctx->proc_id,
-          elem_id, DPI_ptr->elem_index_global[elem_id]);
+          "Proc %d tried to create a particle on element %d(%d), which it doesn't own.\n",
+          goma_ctx->proc_id, elem_id, DPI_ptr->elem_index_global[elem_id]);
 
   p = obtain_particle_space(elem_id);
   p_last_keep = p->last;
@@ -2243,8 +2247,8 @@ static void create_element_particle_info_maps(void) {
           msg[1] = global_elem_id;
           msg[2] = elem_id;
           if (output) {
-            fprintf(fp, "Proc %d Elem %4d(%3d) not owned, sending ghost message.\n", goma_ctx->proc_id,
-                    global_elem_id, elem_id);
+            fprintf(fp, "Proc %d Elem %4d(%3d) not owned, sending ghost message.\n",
+                    goma_ctx->proc_id, global_elem_id, elem_id);
             fflush(fp);
           }
           MPI_Barrier(MPI_COMM_WORLD);
@@ -2257,7 +2261,8 @@ static void create_element_particle_info_maps(void) {
             neighbor_elem_id =
                 static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + side_id];
             if (element_particle_info[elem_id].PBC_side_id[side_id] == -1 &&
-                (neighbor_elem_id == -1 || DPI_ptr->elem_owner[neighbor_elem_id] != goma_ctx->proc_id)) {
+                (neighbor_elem_id == -1 ||
+                 DPI_ptr->elem_owner[neighbor_elem_id] != goma_ctx->proc_id)) {
               msg[0] = global_elem_id;
               if (mdim == 2) {
                 indices[0] = side_id;
@@ -4734,7 +4739,8 @@ static void couple_to_continuum(void) {
     /* Exchange ghost particles first! */
     num_ghost_particles_to_send = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
     num_ghost_particles_to_recv = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
-    ghost_particles_to_send = (particle_t **)calloc((unsigned)goma_ctx->num_proc, sizeof(particle_t *));
+    ghost_particles_to_send =
+        (particle_t **)calloc((unsigned)goma_ctx->num_proc, sizeof(particle_t *));
     num_particles_in_elem = (int *)calloc((unsigned)(static_exo->num_elems), sizeof(int));
     num_ghost_particles_copied = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
 
@@ -4803,8 +4809,8 @@ static void couple_to_continuum(void) {
               (unsigned)num_ghost_particles_to_recv[goma_ctx->proc_id], sizeof(particle_t));
           temp_ust = ust();
           MPI_Recv(ghost_particles_to_recv,
-                   num_ghost_particles_to_recv[goma_ctx->proc_id] * sizeof(particle_t), MPI_BYTE, i, 0,
-                   MPI_COMM_WORLD, &mpi_status);
+                   num_ghost_particles_to_recv[goma_ctx->proc_id] * sizeof(particle_t), MPI_BYTE, i,
+                   0, MPI_COMM_WORLD, &mpi_status);
           communication_accum_ust += MAX(ust() - temp_ust, 0.0);
           for (j = 0; j < num_ghost_particles_to_recv[goma_ctx->proc_id]; j++) {
             ghost_particles_to_recv[j].state = GHOST;
@@ -4841,8 +4847,8 @@ static void couple_to_continuum(void) {
 
         if (p->owning_elem_id != i) {
           fprintf(stderr, "PROC%d: UH-OH, THEY ARE NOT EQUAL!\n", goma_ctx->proc_id);
-          fprintf(stderr, "PROC%d: \t\ti = %d, particle->owning_elem_id = %d\n", goma_ctx->proc_id, i,
-                  p->owning_elem_id);
+          fprintf(stderr, "PROC%d: \t\ti = %d, particle->owning_elem_id = %d\n", goma_ctx->proc_id,
+                  i, p->owning_elem_id);
           fprintf(stderr, "PROC%d: \t\tstate = %d\n", goma_ctx->proc_id, p->state);
         }
 
@@ -4918,8 +4924,8 @@ static void test_map_integrity(void) {
                   DPI_ptr->elem_index_global[elem_id], elem_id);
           continue;
         } else
-          fprintf(fp, "Proc %2d Elem %4d(%3d)\n", goma_ctx->proc_id, DPI_ptr->elem_index_global[elem_id],
-                  elem_id);
+          fprintf(fp, "Proc %2d Elem %4d(%3d)\n", goma_ctx->proc_id,
+                  DPI_ptr->elem_index_global[elem_id], elem_id);
         for (face_id = 0; face_id < sides_per_element; face_id++) {
           PBC_id = element_particle_info[elem_id].PBC_side_id[face_id];
           fprintf(fp, "\t\tFace %d PBC=%2d ", face_id, PBC_id);
@@ -4934,7 +4940,8 @@ static void test_map_integrity(void) {
               else
                 fprintf(fp, "local neighbor=%4d(%3d) (%5s)   OK\n",
                         DPI_ptr->elem_index_global[neighbor_elem_id], neighbor_elem_id,
-                        (DPI_ptr->elem_owner[neighbor_elem_id] == goma_ctx->proc_id ? "owned" : "ghost"));
+                        (DPI_ptr->elem_owner[neighbor_elem_id] == goma_ctx->proc_id ? "owned"
+                                                                                    : "ghost"));
             } else {
               neighbor_elem_proc_id = -(PBC_id + 2);
               neighbor_elem_id = element_particle_info[elem_id].owner_local_element_id[face_id];

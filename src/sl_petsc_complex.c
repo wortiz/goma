@@ -395,8 +395,8 @@ goma_error goma_setup_petsc_matrix_complex(struct GomaLinearSolverData *ams,
 
   ams->PetscMatrixData = (void *)matrix_data;
 
-  if (GomaPetscOptions != NULL && !GomaPetscOptionsInserted) {
-    err = PetscOptionsInsertString(NULL, GomaPetscOptions);
+  if (goma_ctx->petsc_options != NULL && !GomaPetscOptionsInserted) {
+    err = PetscOptionsInsertString(NULL, goma_ctx->petsc_options);
     CHKERRQ(err);
     GomaPetscOptionsInserted = true;
   }

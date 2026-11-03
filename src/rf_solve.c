@@ -568,8 +568,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     GOMA_EH(GOMA_ERROR, "Augmenting condition values overflowing MAX_NGV.  Change and rerun .");
 
   if (callnum == 1) {
-    Spec_source_inventory = Dmatrix_birth(upd->Num_Mat, upd->Max_Num_Species_Eqn + 1);
-    Spec_source_lumped_mass = alloc_dbl_1(exo->num_nodes, 0.0);
+    goma_ctx->spec_source_inventory = Dmatrix_birth(upd->Num_Mat, upd->Max_Num_Species_Eqn + 1);
+    goma_ctx->spec_source_lumped_mass = alloc_dbl_1(exo->num_nodes, 0.0);
   }
 
   if (nAC > 0) {
@@ -997,8 +997,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     if (goma_ctx->write_intermediate_solutions == 0) {
       nprint = 0;
 
-      write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev, tev_post,
-                     gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, x_pp, exo, dpi);
+      write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
+                     tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, x_pp, exo,
+                     dpi);
     } /* end of if Write Intermediate Solutions */
 
     /* Print out values of extra unknowns from augmenting conditions */
@@ -1010,8 +1011,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       for (iAC = 0; iAC < nAC; iAC++) {
         evol_local = augc[iAC].evol;
 #ifdef PARALLEL
-        if (goma_ctx->num_proc > 1 && (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
-                             augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
+        if (goma_ctx->num_proc > 1 &&
+            (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
+             augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
           MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
           evol_local = evol_global;
         }
@@ -1094,7 +1096,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       DPRINTF(stderr, "\t\tconverged SS!\n");
     } /* if converged */
 
-    if (Anneal_Mesh) {
+    if (goma_ctx->anneal_mesh) {
       /*
        * Transform the node point coordinates according to the
        * displacements and write out all the results using the
@@ -1278,9 +1280,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         if (error != 0)
           DPRINTF(stderr, "%s:  error writing ASCII soln file\n", yo);
       }
-      (void)write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
-                           tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time, x_pp,
-                           exo, dpi);
+      (void)write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old,
+                           tev, tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time,
+                           x_pp, exo, dpi);
       nprint++;
     }
 
@@ -2135,9 +2137,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             if (lib_print)
             /* Write out the full solution */
             {
-              write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
-                             tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time, x_pp,
-                             exo, dpi);
+              write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot,
+                             xdot_old, tev, tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t,
+                             theta, time, x_pp, exo, dpi);
               nprint++;
             } else if (Num_Export_XP > 0)
             /* Just update the post-processing fields */
@@ -2146,9 +2148,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
                                  &time_value, delta_t, theta, x_pp, exo, dpi, rd, NULL);
             }
 #else
-            write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
-                           tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time, x_pp,
-                           exo, dpi);
+            write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old,
+                           tev, tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time,
+                           x_pp, exo, dpi);
             nprint++;
 #endif
 
@@ -2416,14 +2418,14 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         for (i = 0; i < exo->num_nodes; i++) {
           if (efv->ev && nt > 1) {
             int ef;
-            if (fabs(Spec_source_lumped_mass[i]) > DBL_SMALL) {
+            if (fabs(goma_ctx->spec_source_lumped_mass[i]) > DBL_SMALL) {
               for (ef = 0; ef < efv->Num_external_field; ef++) {
-                efv->ext_fld_ndl_val[ef][i] *= Spec_source_lumped_mass[i];
+                efv->ext_fld_ndl_val[ef][i] *= goma_ctx->spec_source_lumped_mass[i];
               }
             }
           }
         }
-        memset(Spec_source_lumped_mass, 0.0, sizeof(double) * exo->num_nodes);
+        memset(goma_ctx->spec_source_lumped_mass, 0.0, sizeof(double) * exo->num_nodes);
 #endif
         for (i = 0; i < nn_volume; i++) {
           evaluate_volume_integral(exo, dpi, pp_volume[i]->volume_type, pp_volume[i]->volume_name,
@@ -2437,8 +2439,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
           if (efv->ev && nt > 1) {
             int ef;
             for (ef = 0; ef < efv->Num_external_field; ef++) {
-              if (fabs(Spec_source_lumped_mass[i]) > DBL_SMALL) {
-                efv->ext_fld_ndl_val[ef][i] /= Spec_source_lumped_mass[i];
+              if (fabs(goma_ctx->spec_source_lumped_mass[i]) > DBL_SMALL) {
+                efv->ext_fld_ndl_val[ef][i] /= goma_ctx->spec_source_lumped_mass[i];
               } else {
                 efv->ext_fld_ndl_val[ef][i] = 0.0;
               }
@@ -2454,9 +2456,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             }
           }
           if (goma_ctx->write_intermediate_solutions == 0) {
-            write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
-                           tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time, x_pp,
-                           exo, dpi);
+            write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old,
+                           tev, tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time,
+                           x_pp, exo, dpi);
             nprint++;
           }
         }
@@ -2464,7 +2466,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
         if (time1 >= (ROUND_TO_ONE * time_max)) {
           DPRINTF(stdout, "\t\tout of time!\n");
-          if (Anneal_Mesh) {
+          if (goma_ctx->anneal_mesh) {
             /*
              * Transform the node point coordinates according to the
              * displacements and write out all the results using the
@@ -2683,8 +2685,8 @@ free_and_clear:
   }
   safer_free((void **)&x_update);
 
-  Dmatrix_death(Spec_source_inventory, upd->Num_Mat, upd->Max_Num_Species_Eqn + 1);
-  safer_free((void **)&Spec_source_lumped_mass);
+  Dmatrix_death(goma_ctx->spec_source_inventory, upd->Num_Mat, upd->Max_Num_Species_Eqn + 1);
+  safer_free((void **)&goma_ctx->spec_source_lumped_mass);
   if ((nn_post_data_sens + nn_post_fluxes_sens) > 0) {
     safer_free((void **)&x_sens);
     Dmatrix_death(x_sens_p, num_pvector, numProcUnknowns);

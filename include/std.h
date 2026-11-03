@@ -383,23 +383,23 @@ typedef int MPI_Aint;
  */
 
 #ifdef PARALLEL
-#define DPRINTF(...)        \
-  do {                      \
-    if (goma_ctx->proc_id == 0) {      \
-      fprintf(__VA_ARGS__); \
-    }                       \
+#define DPRINTF(...)              \
+  do {                            \
+    if (goma_ctx->proc_id == 0) { \
+      fprintf(__VA_ARGS__);       \
+    }                             \
   } while (0)
-#define P0PRINTF(...)      \
-  do {                     \
-    if (goma_ctx->proc_id == 0) {     \
-      printf(__VA_ARGS__); \
-    }                      \
+#define P0PRINTF(...)             \
+  do {                            \
+    if (goma_ctx->proc_id == 0) { \
+      printf(__VA_ARGS__);        \
+    }                             \
   } while (0)
-#define DFPUTS(...)       \
-  do {                    \
-    if (goma_ctx->proc_id == 0) {    \
-      fputs(__VA_ARGS__); \
-    }                     \
+#define DFPUTS(...)               \
+  do {                            \
+    if (goma_ctx->proc_id == 0) { \
+      fputs(__VA_ARGS__);         \
+    }                             \
   } while (0)
 #else
 #define DPRINTF  fprintf

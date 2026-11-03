@@ -78,7 +78,8 @@ static goma_error initialize_PCD_matrices(PetscMatrixData *matrix_data,
           int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
           int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
           if (ldof_i >= 0 && ldof_j >= 0 &&
-              ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || goma_ctx->num_proc == 1)) {
+              ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
+               goma_ctx->num_proc == 1)) {
             if (gnn_i < num_rows) {
               PetscInt global_i = matrix_data->schur_s_local_to_global[gnn_i];
               if (gnn_j >= num_rows) {

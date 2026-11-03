@@ -112,9 +112,9 @@ void noahs_raven(void) {
   ddd_add_member(n, &goma_ctx->decompose_type, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->skip_fix, 1, MPI_INT);
 
-  ddd_add_member(n, &Num_Var_Init, 1, MPI_INT);
-  ddd_add_member(n, &Num_Var_Bound, 1, MPI_INT);
-  ddd_add_member(n, &Num_Var_External, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->num_var_init, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->num_var_bound, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->num_var_external, 1, MPI_INT);
   ddd_add_member(n, &TimeIntegration, 1, MPI_INT);
   ddd_add_member(n, &Num_BC, 1, MPI_INT);
   ddd_add_member(n, &num_new_BC_Desc, 1, MPI_INT);
@@ -154,12 +154,12 @@ void noahs_raven(void) {
   ddd_add_member(n, &Particle_Dynamics, 1, MPI_INT);
   ddd_add_member(n, &Particle_Number_Sample_Types, 1, MPI_INT);
   ddd_add_member(n, &Particle_Number_PBCs, 1, MPI_INT);
-  ddd_add_member(n, &Num_Var_LS_Init, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->num_var_ls_init, 1, MPI_INT);
   ddd_add_member(n, &TFMP_GAS_VELO, 1, MPI_INT);
   ddd_add_member(n, &TFMP_LIQ_VELO, 1, MPI_INT);
   ddd_add_member(n, &TFMP_INV_PECLET, 1, MPI_INT);
   ddd_add_member(n, &TFMP_KRG, 1, MPI_INT);
-  ddd_add_member(n, &GomaPetscOptionsStrLen, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->petsc_options_str_len, 1, MPI_INT);
 
   ddd_set_commit(n);
 
@@ -200,7 +200,7 @@ void raven_landing(void) {
    * the ark.
    */
 
-  efv->Num_external_field = Num_Var_External;
+  efv->Num_external_field = goma_ctx->num_var_external;
 
   /*
    * Gratuitous replication of this is achieved on other processors here.
@@ -223,8 +223,8 @@ void raven_landing(void) {
     LSA_wave_numbers = NULL;
   }
 
-  if (GomaPetscOptionsStrLen > 0) {
-    GomaPetscOptions = calloc(GomaPetscOptionsStrLen, sizeof(char));
+  if (goma_ctx->petsc_options_str_len > 0) {
+    goma_ctx->petsc_options = calloc(goma_ctx->petsc_options_str_len, sizeof(char));
   }
 
   /*
@@ -554,8 +554,8 @@ void noahs_ark(void) {
   ddd_add_member(n, &goma_ctx->write_intermediate_solutions, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->write_initial_solution, 1, MPI_INT);
 
-  if (GomaPetscOptionsStrLen > 0) {
-    ddd_add_member(n, GomaPetscOptions, GomaPetscOptionsStrLen, MPI_CHAR);
+  if (goma_ctx->petsc_options_str_len > 0) {
+    ddd_add_member(n, goma_ctx->petsc_options, goma_ctx->petsc_options_str_len, MPI_CHAR);
   }
   /*
    * rd_genl_specs()
@@ -578,8 +578,8 @@ void noahs_ark(void) {
    * in mm_input.c
    */
 
-  if (Num_Var_Init > 0 || Num_Var_Bound > 0) {
-    for (i = 0; i < (Num_Var_Init + Num_Var_Bound); i++) {
+  if (goma_ctx->num_var_init > 0 || goma_ctx->num_var_bound > 0) {
+    for (i = 0; i < (goma_ctx->num_var_init + goma_ctx->num_var_bound); i++) {
       ddd_add_member(n, &Var_init[i].var, 1, MPI_INT);
       ddd_add_member(n, &Var_init[i].ktype, 1, MPI_INT);
       ddd_add_member(n, &Var_init[i].init_val, 1, MPI_DOUBLE);
@@ -588,9 +588,9 @@ void noahs_ark(void) {
     }
   }
 
-  if (Num_Var_LS_Init > 0) {
-    for (i = Num_Var_Init + Num_Var_Bound; i < Num_Var_Init + Num_Var_Bound + Num_Var_LS_Init;
-         i++) {
+  if (goma_ctx->num_var_ls_init > 0) {
+    for (i = goma_ctx->num_var_init + goma_ctx->num_var_bound;
+         i < goma_ctx->num_var_init + goma_ctx->num_var_bound + goma_ctx->num_var_ls_init; i++) {
       ddd_add_member(n, &Var_init[i].var, 1, MPI_INT);
       ddd_add_member(n, &Var_init[i].ktype, 1, MPI_INT);
       ddd_add_member(n, &Var_init[i].init_val_minus, 1, MPI_DOUBLE);
@@ -618,7 +618,7 @@ void noahs_ark(void) {
   ddd_add_member(n, &efv->ev_etch_area, 1, MPI_INT);
   ddd_add_member(n, &efv->ev_etch_depth, 1, MPI_INT);
 
-  ddd_add_member(n, &Anneal_Mesh, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->anneal_mesh, 1, MPI_INT);
 
   /*
    * rd_timeint_specs()
@@ -3338,8 +3338,8 @@ void noahs_dove(void) {
 
     if (m->Num_Matrl_Elem_Blk > 0) {
       if (m->Matrl_Elem_Blk_Ids == NULL) {
-        printf("P_%d: ERROR: NULL address but nonzero length, %s line %d!\n", goma_ctx->proc_id, __FILE__,
-               __LINE__);
+        printf("P_%d: ERROR: NULL address but nonzero length, %s line %d!\n", goma_ctx->proc_id,
+               __FILE__, __LINE__);
         fflush(stdout);
         GOMA_EH(GOMA_ERROR, "noahs_dove fatal error");
       }

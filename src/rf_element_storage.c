@@ -244,7 +244,8 @@ void set_init_Element_Storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
       goma_ctx->cpu_word_size = sizeof(double);
       goma_ctx->io_word_size = 0;
 
-      exoid = ex_open(goma_ctx->exo_aux_file, EX_READ, &goma_ctx->cpu_word_size, &goma_ctx->io_word_size, &version);
+      exoid = ex_open(goma_ctx->exo_aux_file, EX_READ, &goma_ctx->cpu_word_size,
+                      &goma_ctx->io_word_size, &version);
       GOMA_EH(exoid, "ex_open");
 
       error = ex_get_init(exoid, title, &num_dim, &num_nodes, &num_elem, &num_elem_blk,

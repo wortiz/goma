@@ -115,9 +115,10 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
   memcpy(exo->base_mesh->elem_map, d->elem_index_global, sizeof(int) * exo->num_elems);
 
   // Load Balance Information
-  ex_error = ex_get_loadbal_param(
-      exoid, &d->num_internal_nodes, &d->num_boundary_nodes, &d->num_external_nodes,
-      &d->num_internal_elems, &d->num_border_elems, &d->num_node_cmaps, &d->num_elem_cmaps, goma_ctx->proc_id);
+  ex_error =
+      ex_get_loadbal_param(exoid, &d->num_internal_nodes, &d->num_boundary_nodes,
+                           &d->num_external_nodes, &d->num_internal_elems, &d->num_border_elems,
+                           &d->num_node_cmaps, &d->num_elem_cmaps, goma_ctx->proc_id);
   CHECK_EX_ERROR(ex_error, "ex_get_loadbal_param");
 
   d->base_internal_nodes = d->num_internal_nodes;
@@ -170,8 +171,9 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
     d->elem_cmap_elem_ids[i] = alloc_int_1(d->elem_cmap_elem_counts[i], 0);
     d->elem_cmap_side_ids[i] = alloc_int_1(d->elem_cmap_elem_counts[i], 0);
     d->elem_cmap_proc_ids[i] = alloc_int_1(d->elem_cmap_elem_counts[i], 0);
-    ex_error = ex_get_elem_cmap(exoid, d->elem_cmap_ids[i], d->elem_cmap_elem_ids[i],
-                                d->elem_cmap_side_ids[i], d->elem_cmap_proc_ids[i], goma_ctx->proc_id);
+    ex_error =
+        ex_get_elem_cmap(exoid, d->elem_cmap_ids[i], d->elem_cmap_elem_ids[i],
+                         d->elem_cmap_side_ids[i], d->elem_cmap_proc_ids[i], goma_ctx->proc_id);
     CHECK_EX_ERROR(ex_error, "ex_get_elem_cmap %d", i);
   }
 

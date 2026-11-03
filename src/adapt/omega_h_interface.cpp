@@ -429,7 +429,8 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
       }
 
       if (verbose) {
-        std::cout << "ss#" << dpi->ss_id_global[i] << " Proc " << goma_ctx->proc_id << " ss_side_nodes ";
+        std::cout << "ss#" << dpi->ss_id_global[i] << " Proc " << goma_ctx->proc_id
+                  << " ss_side_nodes ";
 
         for (auto n : ss_side_nodes) {
           std::cout << n << " ";
@@ -528,8 +529,9 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
 
       auto surface_id = dpi->ss_id_global[i];
       if (verbose) {
-        std::cout << "P" << goma_ctx->proc_id << " side set #" << surface_id << " \"" << name_ptrs[i]
-                  << "\" has " << nsides << " sides, will be surface " << surface_id << "\n";
+        std::cout << "P" << goma_ctx->proc_id << " side set #" << surface_id << " \""
+                  << name_ptrs[i] << "\" has " << nsides << " sides, will be surface " << surface_id
+                  << "\n";
 
         std::cout << "P" << goma_ctx->proc_id << " side set #" << surface_id << " nodes = ";
         for (int i = 0; i < h_set_nodes.size(); i++) {
@@ -1092,8 +1094,8 @@ void convert_omega_h_to_goma(
     cmap_node_counts.push_back(proc_node_counts[idx]);
   }
 
-  CALL(
-      ex_put_cmap_params(exoid, node_cmap_ids.data(), cmap_node_counts.data(), NULL, NULL, goma_ctx->proc_id));
+  CALL(ex_put_cmap_params(exoid, node_cmap_ids.data(), cmap_node_counts.data(), NULL, NULL,
+                          goma_ctx->proc_id));
 
   std::vector<int> node_map_proc_ids(proc_node_idx[neighbor_list.size()]);
   for (auto nidx : node_cmap_to_neighbor) {
@@ -1194,8 +1196,10 @@ void convert_omega_h_to_goma(
       free(goma_ctx->request);
       free(goma_ctx->status);
       cx[imtrx] = alloc_struct_1(Comm_Ex, DPI_ptr->num_neighbors);
-      goma_ctx->request = alloc_struct_1(MPI_Request, goma_ctx->num_requests * DPI_ptr->num_neighbors);
-      goma_ctx->status = alloc_struct_1(MPI_Status, goma_ctx->num_requests * DPI_ptr->num_neighbors);
+      goma_ctx->request =
+          alloc_struct_1(MPI_Request, goma_ctx->num_requests * DPI_ptr->num_neighbors);
+      goma_ctx->status =
+          alloc_struct_1(MPI_Status, goma_ctx->num_requests * DPI_ptr->num_neighbors);
     }
   }
 

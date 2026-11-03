@@ -5795,8 +5795,8 @@ non_finite_entry:
 #ifndef PARALLEL
     fprintf(stderr, "Non-finite entry in lec found at  %s:%d: %s\n", file, line, message);
 #else
-    fprintf(stderr, "P_%d: Non-finite entry in lec found at %s:%d: %s\n", goma_ctx->proc_id, file, line,
-            message);
+    fprintf(stderr, "P_%d: Non-finite entry in lec found at %s:%d: %s\n", goma_ctx->proc_id, file,
+            line, message);
 #endif
     return -1;
   }

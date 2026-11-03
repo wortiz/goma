@@ -1040,7 +1040,8 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
               if (num_nodes_on_side < 1) {
                 fprintf(stderr,
                         "P_%d: SS[%d]=%d, index=%d, elem=(%d), side=%d has num_nodes_on_side=%d!\n",
-                        goma_ctx->proc_id, iss, exo->ss_id[iss], i, ielem + 1, side, num_nodes_on_side);
+                        goma_ctx->proc_id, iss, exo->ss_id[iss], i, ielem + 1, side,
+                        num_nodes_on_side);
               }
               local_node_list = &(exo->ss_node_list[iss][exo->ss_node_side_index[iss][i]]);
 #ifdef DEBUG_SS

@@ -954,7 +954,7 @@ void shell_p_open_user_surf(double *func,
   // GOMA_EH(GOMA_ERROR,"No SHELL_P_OPEN_USER model implemented");
 
   if (!first_time) {
-    if (Porous_liq_inventory <= u_bc[1]) {
+    if (goma_ctx->porous_liq_inventory <= u_bc[1]) {
       *func = fv->sh_p_open - u_bc[0];
       d_func[SHELL_PRESS_OPEN] = 1.;
     } else {

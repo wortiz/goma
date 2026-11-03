@@ -36,10 +36,4 @@
  * are defined in main.c, where the arrays are also allocated and freed.
  */
 
-
-
-
-
-
-
 #endif /* end of GOMA_RF_MP_H */

@@ -357,9 +357,9 @@ for(i = 0; i < NZeros+1; i++)
     eggroll_init(NumUnknowns[pg->imtrx], NZeros, &istuff[0], &dstuff[0]);
 
     /* Call eggroll solver */
-    eggrollwrap(istuff, dstuff, ija, jacobian_matrix, mass_matrix, x, goma_ctx->exo_file_out, ProblemType,
-                delta_t, theta, x_old, xdot, xdot_old, resid_vector, converged, nprint, tnv,
-                tnv_post, tev, tev_post, rd, gindex, p_gsize, gvec, gvec_elem, time_value, exo,
+    eggrollwrap(istuff, dstuff, ija, jacobian_matrix, mass_matrix, x, goma_ctx->exo_file_out,
+                ProblemType, delta_t, theta, x_old, xdot, xdot_old, resid_vector, converged, nprint,
+                tnv, tnv_post, tev, tev_post, rd, gindex, p_gsize, gvec, gvec_elem, time_value, exo,
                 goma_ctx->num_proc, dpi);
   }
 
@@ -722,10 +722,10 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
       /* Call eggroll solver */
       printf("Entering eggrollwrap...\n");
       fflush(stdout);
-      eggrollwrap(istuff, dstuff, ija, jacobian_matrix, mass_matrix, x, goma_ctx->exo_file_out, ProblemType,
-                  delta_t, theta, x_old, xdot, xdot_old, resid_vector, converged, nprint, tnv,
-                  tnv_post, tev, tev_post, rd, gindex, p_gsize, gvec, gvec_elem, time_value, exo,
-                  goma_ctx->num_proc, dpi);
+      eggrollwrap(istuff, dstuff, ija, jacobian_matrix, mass_matrix, x, goma_ctx->exo_file_out,
+                  ProblemType, delta_t, theta, x_old, xdot, xdot_old, resid_vector, converged,
+                  nprint, tnv, tnv_post, tev, tev_post, rd, gindex, p_gsize, gvec, gvec_elem,
+                  time_value, exo, goma_ctx->num_proc, dpi);
     }
   } /* for(wn = 0; wn < LSA_num_wave_numbers; wn++) */
 

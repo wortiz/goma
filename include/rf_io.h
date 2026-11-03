@@ -31,34 +31,13 @@
 				  * -> We need this include dor this file */
 #include "util/goma_context.h"
 
-extern char *GomaPetscOptions;
-extern int GomaPetscOptionsStrLen;
-
 #ifdef MATRIX_DUMP
 extern int Number_Jac_Dump; /* Number of jacobians to dump out
                              * If the value is negative, then the one
                              * jacobian, the -n'th jacobian, is dumped
                              * out */
 #endif
-extern int Num_Var_Init;         /* Number of variables to overwrite with
-                                  * global initialization */
-extern int Num_Var_Bound;        /* Number of variables to apply bounds */
-extern int Num_Var_LS_Init;      /* number of variables to overwirte with
-                                  * level set index initialization */
-extern int Num_Var_External;     /* Number of external variables */
-extern int Num_Var_External_pix; /* number of external variables (pixel only)*/
-extern int Anneal_Mesh;          /* Flag specifying creation of a special exodus
-                                  * file with coordinates adjusted to the
-                                  * deformed coordinates (i.e. new displacements
-                                  * are set to zero and mesh is deemed stress-free */
 
-extern double Porous_liq_inventory; /*global variable for finite-insult boundary
-                                     * condition
-                                     */
-extern double **Spec_source_inventory;
-extern double *Spec_source_lumped_mass;
 extern const char anneal_file[];
-
-extern char front_scratch_directory[MAX_FNL]; /* def'd in main.c */
 
 #endif

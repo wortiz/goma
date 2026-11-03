@@ -303,14 +303,14 @@ void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
   for (p = 0; p < num_neighbors; p++) {
     retn = MPI_Wait(&(np_ptr->recv_request), &(np_ptr->recv_status));
     if (retn != MPI_SUCCESS) {
-      fprintf(stderr, "%s Proc %d: Irecv to %d failed: %d\n", yo, goma_ctx->proc_id, np_ptr->neighbor_ProcID,
-              retn);
+      fprintf(stderr, "%s Proc %d: Irecv to %d failed: %d\n", yo, goma_ctx->proc_id,
+              np_ptr->neighbor_ProcID, retn);
       GOMA_EH(GOMA_ERROR, "MPI failure");
     }
     retn = MPI_Wait(&(np_ptr->send_request), &(np_ptr->send_status));
     if (retn != MPI_SUCCESS) {
-      fprintf(stderr, "%s Proc %d: Isend to %d failed: %d\n", yo, goma_ctx->proc_id, np_ptr->neighbor_ProcID,
-              retn);
+      fprintf(stderr, "%s Proc %d: Isend to %d failed: %d\n", yo, goma_ctx->proc_id,
+              np_ptr->neighbor_ProcID, retn);
       GOMA_EH(GOMA_ERROR, "MPI failure");
     }
     np_ptr++;

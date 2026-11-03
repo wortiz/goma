@@ -1580,7 +1580,8 @@ void init_vec(
      * Initialize the solution vector from a stored solution
      * in the exodus input file
      */
-    DPRINTF(stdout, "\nInitial guess read from \"%s\" ...(last soln in file)\n", goma_ctx->exo_file);
+    DPRINTF(stdout, "\nInitial guess read from \"%s\" ...(last soln in file)\n",
+            goma_ctx->exo_file);
     err = rd_vectors_from_exoII(u, goma_ctx->exo_file, 0, 0, INT_MAX, timeValueRead, exo);
     if (err != 0) {
       DPRINTF(stderr, "%s: err for rd_vectors_from_exoII()\n", yo);
@@ -1621,12 +1622,14 @@ void init_vec(
      * in a different, specified exodus file
      */
     if (goma_ctx->exo_time_plane < INT_MAX) {
-      DPRINTF(stdout, "\nInitial guess read from \"%s\" ...(soln plane = %d)\n", goma_ctx->exo_aux_file,
-              goma_ctx->exo_time_plane);
+      DPRINTF(stdout, "\nInitial guess read from \"%s\" ...(soln plane = %d)\n",
+              goma_ctx->exo_aux_file, goma_ctx->exo_time_plane);
     } else {
-      DPRINTF(stdout, "\nInitial guess read from \"%s\" ...(last soln in file)\n", goma_ctx->exo_aux_file);
+      DPRINTF(stdout, "\nInitial guess read from \"%s\" ...(last soln in file)\n",
+              goma_ctx->exo_aux_file);
     }
-    err = rd_vectors_from_exoII(u, goma_ctx->exo_aux_file, 0, 0, goma_ctx->exo_time_plane, timeValueRead, exo);
+    err = rd_vectors_from_exoII(u, goma_ctx->exo_aux_file, 0, 0, goma_ctx->exo_time_plane,
+                                timeValueRead, exo);
     if (err != 0) {
       DPRINTF(stderr, "%s:  err for rd_vectors_from_exoII()\n", yo);
     }
@@ -1634,7 +1637,7 @@ void init_vec(
     /*
      * check for variables which have bounds applied to overide the values from exoII files
      */
-    if (Num_Var_Bound > 0) {
+    if (goma_ctx->num_var_bound > 0) {
       int idv;
       var = Var_init[0].var;
       if (pd->v[pg->imtrx][var]) {
@@ -1703,10 +1706,10 @@ void init_vec(
    * check for variables which have specified initialization to
    * overide the values from input files, etc.
    */
-  if (Num_Var_Init > 0) {
+  if (goma_ctx->num_var_init > 0) {
     retn = 0;
     dum_var = alloc_dbl_1(DPI_ptr->num_universe_nodes, DBL_NOINIT);
-    for (i = Num_Var_Bound; i < Num_Var_Init; i++) {
+    for (i = goma_ctx->num_var_bound; i < goma_ctx->num_var_init; i++) {
       switch (Var_init[i].var) {
       case MASS_FRACTION:
         DPRINTF(stdout, "\tSetting %s number %d (variable [%d]) to %g\n",
@@ -1754,8 +1757,8 @@ void init_vec(
      */
     if (retn == 1) {
       frac_vec = alloc_dbl_1(upd->Max_Num_Species, 0.0);
-      retn =
-          check_consistent_fraction_vector(Var_init, Num_Var_Init, upd->Max_Num_Species, frac_vec);
+      retn = check_consistent_fraction_vector(Var_init, goma_ctx->num_var_init,
+                                              upd->Max_Num_Species, frac_vec);
 
       /*
        *   Decide whether we need to do any conversions between the types of

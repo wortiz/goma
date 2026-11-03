@@ -219,8 +219,8 @@ int chemkin_mat_prop_init(MATRL_PROP_STRUCT *mat_ptr, int mn, PROBLEM_DESCRIPTIO
    */
   if (!chemkinDatabaseRead) {
     chemkinDatabaseRead = TRUE;
-    retn = cpc_initialize_1p(TRUE, goma_ctx->proc_id, goma_ctx->num_proc, initGasTransport, initLQCHEMKIN, TRUE,
-                             goma_ctx->domain_mapping_file);
+    retn = cpc_initialize_1p(TRUE, goma_ctx->proc_id, goma_ctx->num_proc, initGasTransport,
+                             initLQCHEMKIN, TRUE, goma_ctx->domain_mapping_file);
     if (retn != CPC_SUCCESS) {
       printf("Failure to read chemkin data files: BAIL!\n");
       return -1;
@@ -333,8 +333,8 @@ void chemkin_initialize_mp(void)
 #else
   pl = 0;
 #endif
-  retn = cpc_initialize_mp(pl, goma_ctx->num_proc, infoproc, goma_ctx->proc_id, initGasTransport, initLQCHEMKIN,
-                           initCKExtractGuts);
+  retn = cpc_initialize_mp(pl, goma_ctx->num_proc, infoproc, goma_ctx->proc_id, initGasTransport,
+                           initLQCHEMKIN, initCKExtractGuts);
   if (retn != CPC_SUCCESS)
     exit(-1);
 }

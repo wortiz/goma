@@ -480,8 +480,8 @@ int first_matID_at_node(const int nodeNum)
 {
   UMI_LIST_STRUCT *umi_ptr = &(Nodes[nodeNum]->Mat_List);
   if (umi_ptr == NULL || umi_ptr->Length <= 0) {
-    fprintf(stderr, "first_matID_at_node ERROR P_%d: mat list is empty at node %d\n", goma_ctx->proc_id,
-            nodeNum);
+    fprintf(stderr, "first_matID_at_node ERROR P_%d: mat list is empty at node %d\n",
+            goma_ctx->proc_id, nodeNum);
     GOMA_EH(GOMA_ERROR, "first_matID_at_node ERROR");
     return -1;
   }

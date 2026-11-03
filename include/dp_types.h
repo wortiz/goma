@@ -74,13 +74,13 @@
  *		(2) Data type is MPI_DOUBLE.
  */
 
-#define crdv(len, addr)                                                                            \
-  if ((len) > 0 && (addr) != NULL)                                                                 \
-    ddd_add_member(n, (addr), (len), MPI_DOUBLE);                                                  \
-  if ((len) > 0 && (addr) == NULL) {                                                               \
-    printf("P_%d: crdv ERROR: member %d NULL address but nonzero length=%d %s line %d!\n", goma_ctx->proc_id, \
-           n->num_members, (len), __FILE__, __LINE__);                                             \
-    fflush(stdout);                                                                                \
+#define crdv(len, addr)                                                                    \
+  if ((len) > 0 && (addr) != NULL)                                                         \
+    ddd_add_member(n, (addr), (len), MPI_DOUBLE);                                          \
+  if ((len) > 0 && (addr) == NULL) {                                                       \
+    printf("P_%d: crdv ERROR: member %d NULL address but nonzero length=%d %s line %d!\n", \
+           goma_ctx->proc_id, n->num_members, (len), __FILE__, __LINE__);                  \
+    fflush(stdout);                                                                        \
   }
 
 /*

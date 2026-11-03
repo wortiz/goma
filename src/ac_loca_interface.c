@@ -1357,10 +1357,11 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
   /* Write converged solution */
   if (converged) {
     if (goma_ctx->write_intermediate_solutions == 0 && goma_ctx->unlimited_output) {
-      write_solution(goma_ctx->exo_file_out, passdown.resid_vector, x, passdown.x_sens_p, passdown.x_old,
-                     passdown.xdot, passdown.xdot_old, passdown.tev, passdown.tev_post, passdown.gv,
-                     passdown.rd, passdown.gvec, passdown.gvec_elem, passdown.nprint, delta_s,
-                     passdown.theta, passdown.lambda, NULL, passdown.exo, passdown.dpi);
+      write_solution(goma_ctx->exo_file_out, passdown.resid_vector, x, passdown.x_sens_p,
+                     passdown.x_old, passdown.xdot, passdown.xdot_old, passdown.tev,
+                     passdown.tev_post, passdown.gv, passdown.rd, passdown.gvec, passdown.gvec_elem,
+                     passdown.nprint, delta_s, passdown.theta, passdown.lambda, NULL, passdown.exo,
+                     passdown.dpi);
     }
 
     DPRINTF(stdout, "\n\tStep accepted, theta (proportion complete) = %10.6e\n", theta);
@@ -3040,10 +3041,10 @@ void solution_output_conwrap(int num_soln_flag,
     if (error)
       DPRINTF(stdout, "%s:  error writing ASCII soln file\n", yo);
     if (goma_ctx->write_intermediate_solutions == 0 && goma_ctx->unlimited_output) {
-      write_solution(goma_ctx->exo_file_out, passdown.resid_vector, x, passdown.x_sens_p, passdown.x_old,
-                     passdown.xdot, passdown.xdot_old, passdown.tev, passdown.tev_post, passdown.gv,
-                     passdown.rd, passdown.gvec, passdown.gvec_elem, &n_print, param1,
-                     passdown.theta, param1, NULL, passdown.exo, passdown.dpi);
+      write_solution(goma_ctx->exo_file_out, passdown.resid_vector, x, passdown.x_sens_p,
+                     passdown.x_old, passdown.xdot, passdown.xdot_old, passdown.tev,
+                     passdown.tev_post, passdown.gv, passdown.rd, passdown.gvec, passdown.gvec_elem,
+                     &n_print, param1, passdown.theta, param1, NULL, passdown.exo, passdown.dpi);
       n_print++;
     }
   }

@@ -121,7 +121,8 @@ static int **alloc_bc_unk_list_node(int inode)
   }
 
   if (sum_unknowns <= 0) {
-    fprintf(stderr, "P_%d: Warning: node %d with zero unknowns has an applied bc\n", goma_ctx->proc_id, inode);
+    fprintf(stderr, "P_%d: Warning: node %d with zero unknowns has an applied bc\n",
+            goma_ctx->proc_id, inode);
   }
 
   return bc_unk_list_node;
@@ -2064,7 +2065,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
       ofbc = fopen(ofbc_fn, "a");
     }
     if (ofbc == NULL) {
-      sprintf(Err_Msg, "P_%d: cannot open file \"%s\" to write 3D BC info", goma_ctx->proc_id, ofbc_fn);
+      sprintf(Err_Msg, "P_%d: cannot open file \"%s\" to write 3D BC info", goma_ctx->proc_id,
+              ofbc_fn);
       GOMA_EH(GOMA_ERROR, Err_Msg);
     }
     if (goma_ctx->num_proc > 1) {
@@ -2666,7 +2668,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                           inode + 1);
                   if (tilt_bct && tilt_bcSS && tilt_save) {
                     fprintf(stderr, "P_%d: bct = %d, bct1 = %d\n", goma_ctx->proc_id, bct, bct1);
-                    fprintf(stderr, "P_%d: bcSS = %d, bcSS1 = %d\n", goma_ctx->proc_id, bcSS, bcSS1);
+                    fprintf(stderr, "P_%d: bcSS = %d, bcSS1 = %d\n", goma_ctx->proc_id, bcSS,
+                            bcSS1);
                     fprintf(stderr, "P_%d: save_this_bc1[q][j]=%d\n", goma_ctx->proc_id, val);
                   }
                   fprintf(stderr, "P_%d death, nss = %d\n", goma_ctx->proc_id, exo->num_side_sets);
@@ -2793,7 +2796,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                     ibc2 = BC_Unk_List[inode][offset][j_DC];
                     bct2 = BC_Types[ibc2].BC_Name;
                     /* RESOLVE CONFLICT */
-                    if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
+                    if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) &&
+                        goma_ctx->unlimited_output) {
                       ibc = BC_Unk_List[inode][offset][j_DC];
                       fprintf(ofbc, "    TWO DBC's %s and %s at node %d \n",
                               BC_Types[ibc1].desc->name2, BC_Types[ibc].desc->name2, inode + 1);
@@ -2824,20 +2828,23 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                       if ((bct1 <= GD_TIME_BC && bct1 >= GD_CONST_BC) &&
                           (bct2 <= GD_TIME_BC && bct2 >= GD_CONST_BC)) {
                         if (BC_Types[ibc1].BC_ID == BC_Types[ibc2].BC_ID) {
-                          if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
+                          if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) &&
+                              goma_ctx->unlimited_output) {
                             fprintf(ofbc, "    MULTIPLE GD %s at node %d\n",
                                     BC_Types[ibc2].desc->name2, inode + 1);
                           }
                           save_this_bc[j] = 1;
                         } else {
-                          if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
+                          if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) &&
+                              goma_ctx->unlimited_output) {
                             fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
                                     BC_Types[ibc2].desc->name2, BC_Types[ibc1].desc->name2,
                                     inode + 1);
                           }
                         }
                       } else {
-                        if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
+                        if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) &&
+                            goma_ctx->unlimited_output) {
                           fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
                                   BC_Types[ibc2].desc->name2, BC_Types[ibc1].desc->name2,
                                   inode + 1);
@@ -2861,7 +2868,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                         ibc2 = BC_Unk_List[inode][offset][j_SI];
                         bct2 = BC_Types[ibc2].BC_Name;
                         /* RESOLVE CONFLICT */
-                        if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
+                        if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) &&
+                            goma_ctx->unlimited_output) {
                           fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
                                   BC_Types[ibc2].desc->name2, BC_Types[ibc1].desc->name2,
                                   inode + 1);
@@ -2885,7 +2893,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                         if (j_CSWI != -1) {
                           ibc2 = BC_Unk_List[inode][offset][j_CSWI];
                           bct2 = BC_Types[ibc2].BC_Name;
-                          if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
+                          if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) &&
+                              goma_ctx->unlimited_output) {
                             fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
                                     BC_Types[ibc1].desc->name2, BC_Types[ibc2].desc->name2,
                                     inode + 1);

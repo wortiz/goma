@@ -3745,8 +3745,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             mn = find_mat_number(corner_elem, exo);
 
-            if (blk_id == -1 ||
-                (mn == map_mat_index(blk_id) && dpi->elem_owner[corner_elem] == goma_ctx->proc_id)) {
+            if (blk_id == -1 || (mn == map_mat_index(blk_id) &&
+                                 dpi->elem_owner[corner_elem] == goma_ctx->proc_id)) {
 
               err = load_elem_dofptr(corner_elem, exo, x, x, xdot, xdot, 0);
               GOMA_EH(err, "load_elem_dofptr");
@@ -4441,9 +4441,9 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
 
   if (quantity == I_SPECIES_SOURCE) {
     if (time_value <= tran->init_time + delta_t) {
-      Spec_source_inventory[mn][species_id] = sum;
+      goma_ctx->spec_source_inventory[mn][species_id] = sum;
     } else {
-      Spec_source_inventory[mn][species_id] += 0.5 * sum * (delta_t + tran->delta_t);
+      goma_ctx->spec_source_inventory[mn][species_id] += 0.5 * sum * (delta_t + tran->delta_t);
     }
   }
   if (print_flag && goma_ctx->proc_id == 0) {
@@ -4452,7 +4452,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
     if ((jfp = fopen(filenm, "a")) != NULL) {
       if (ppvi_type == PPVI_VERBOSE) {
         if (quantity == I_SPECIES_SOURCE) {
-          fprintf(jfp, "   volume= %10.7e \n", Spec_source_inventory[mn][species_id]);
+          fprintf(jfp, "   volume= %10.7e \n", goma_ctx->spec_source_inventory[mn][species_id]);
         } else {
           fprintf(jfp, "   volume= %10.7e \n", sum);
         }
@@ -4467,7 +4467,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
   // Kind of a hack to keep track of the porous liquid inventory for a time-dependent BC
 
   if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
-    Porous_liq_inventory = sum;
+    goma_ctx->porous_liq_inventory = sum;
 
   return (sum);
 }
@@ -4986,7 +4986,7 @@ int compute_volume_integrand(const int quantity,
                                                     (-s_terms.MassSource[species_no]) * exp_factor;
             /* for one time through, integrate lumped mass matrix   */
             if (species_no == 0) {
-              Spec_source_lumped_mass[ie] += bf[eqn]->phi[ldof] * weight * det;
+              goma_ctx->spec_source_lumped_mass[ie] += bf[eqn]->phi[ldof] * weight * det;
             }
           }
         }
@@ -5721,7 +5721,8 @@ double evaluate_global_flux(const Exo_DB *exo,
 #ifdef PARALLEL
             delta_sum = sum - sum0;
 
-            if (goma_ctx->num_proc > 1 && dpi->elem_owner[ei[pg->imtrx]->ielem] == goma_ctx->proc_id) {
+            if (goma_ctx->num_proc > 1 &&
+                dpi->elem_owner[ei[pg->imtrx]->ielem] == goma_ctx->proc_id) {
               proc_sum += delta_sum;
             }
 
@@ -7016,8 +7017,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
             mn = find_mat_number(corner_elem, exo);
 
-            if (mat_id == -1 ||
-                (mn == map_mat_index(mat_id) && dpi->elem_owner[corner_elem] == goma_ctx->proc_id)) {
+            if (mat_id == -1 || (mn == map_mat_index(mat_id) &&
+                                 dpi->elem_owner[corner_elem] == goma_ctx->proc_id)) {
 
               err = load_elem_dofptr(corner_elem, exo, x, x_sens_p[vector_id], xdot, xdot, 0);
               GOMA_EH(err, "load_elem_dofptr");

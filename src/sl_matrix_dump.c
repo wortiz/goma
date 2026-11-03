@@ -83,7 +83,8 @@ static void CHECK_FCLOSE(int result)
 {
   extern int errno;
   if (result) {
-    fprintf(stderr, "matrix_dump ERROR: fclose failed Proc = %d: %s\n", goma_ctx->proc_id, strerror(errno));
+    fprintf(stderr, "matrix_dump ERROR: fclose failed Proc = %d: %s\n", goma_ctx->proc_id,
+            strerror(errno));
     exit(-1);
   }
 }
@@ -384,7 +385,8 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
        *  Open the output file on the current processor for appending
        */
       if ((fptr = fopen(fname, "ab")) == NULL) {
-        (void)fprintf(stderr, "Proc %d: Couldn't open %s: %s\n", goma_ctx->proc_id, fname, strerror(errno));
+        (void)fprintf(stderr, "Proc %d: Couldn't open %s: %s\n", goma_ctx->proc_id, fname,
+                      strerror(errno));
         exit(-1);
       }
       xdrstdio_create(xdrs, fptr, XDR_ENCODE);
@@ -976,7 +978,8 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
        *  Open the output file on the current processor for appending
        */
       if ((fptr = fopen(fname, "ab")) == NULL) {
-        (void)fprintf(stderr, "Proc %d: Couldn't open %s: %s\n", goma_ctx->proc_id, fname, strerror(errno));
+        (void)fprintf(stderr, "Proc %d: Couldn't open %s: %s\n", goma_ctx->proc_id, fname,
+                      strerror(errno));
         exit(-1);
       }
       xdrstdio_create(xdrs, fptr, XDR_ENCODE);

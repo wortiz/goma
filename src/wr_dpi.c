@@ -123,8 +123,8 @@ int wr_dpi(Dpi *d, char *filename) {
                                   d->base_border_elems, d->num_node_cmaps, 0, goma_ctx->proc_id);
   CHECK_EX_ERROR(ex_error, "ex_put_loadbal_param");
 
-  ex_error =
-      ex_put_cmap_params(exoid, d->node_cmap_ids, d->node_cmap_node_counts, NULL, NULL, goma_ctx->proc_id);
+  ex_error = ex_put_cmap_params(exoid, d->node_cmap_ids, d->node_cmap_node_counts, NULL, NULL,
+                                goma_ctx->proc_id);
   CHECK_EX_ERROR(ex_error, "ex_put_cmap_params");
 
   ex_error = ex_put_processor_node_maps(exoid, d->proc_node_internal, d->proc_node_boundary,

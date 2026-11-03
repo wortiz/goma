@@ -1024,9 +1024,9 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                                 delta_t_old, time, 1);
           }
 
-          write_solution_segregated(goma_ctx->exo_file_out, resid_vector, x, x_old, xdot, xdot_old, tev_post,
-                                    gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, NULL,
-                                    exo, dpi);
+          write_solution_segregated(goma_ctx->exo_file_out, resid_vector, x, x_old, xdot, xdot_old,
+                                    tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta,
+                                    time1, NULL, exo, dpi);
 
           if (goma_ctx->proc_id == 0) {
             printf("\n Steady state reached \n");
@@ -1357,9 +1357,9 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
     last_renorm_nt = 0;
 
     if (goma_ctx->write_initial_solution) {
-      write_solution_segregated(goma_ctx->exo_file_out, resid_vector, x, x_old, xdot, xdot_old, tev_post, gv,
-                                rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, NULL, exo,
-                                dpi);
+      write_solution_segregated(goma_ctx->exo_file_out, resid_vector, x, x_old, xdot, xdot_old,
+                                tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time1,
+                                NULL, exo, dpi);
       nprint++;
     }
 
@@ -1905,11 +1905,13 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
              */
 
-            if (goma_ctx->proc_id == 0 && upd->SegregatedSubcycles == 1 && renorm_subcycle_count <= 1) {
+            if (goma_ctx->proc_id == 0 && upd->SegregatedSubcycles == 1 &&
+                renorm_subcycle_count <= 1) {
               printf("\n========================== SOLVING MATRIX %d "
                      "===========================\n\n",
                      pg->imtrx + 1);
-            } else if (goma_ctx->proc_id == 0 && (upd->SegregatedSubcycles > 1 || renorm_subcycle_count > 1)) {
+            } else if (goma_ctx->proc_id == 0 &&
+                       (upd->SegregatedSubcycles > 1 || renorm_subcycle_count > 1)) {
               int num_subcycles = MAX(upd->SegregatedSubcycles, renorm_subcycle_count);
               printf("\n================== SOLVING MATRIX %d Subcycle %d/%d "
                      "===================\n\n",
@@ -2294,9 +2296,9 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
         error = 0;
         if (i_print) {
           if (goma_ctx->write_intermediate_solutions == 0) {
-            write_solution_segregated(goma_ctx->exo_file_out, resid_vector, x, x_old, xdot, xdot_old, tev_post,
-                                      gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, NULL,
-                                      exo, dpi);
+            write_solution_segregated(goma_ctx->exo_file_out, resid_vector, x, x_old, xdot,
+                                      xdot_old, tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t,
+                                      theta, time1, NULL, exo, dpi);
             nprint++;
           }
 
@@ -2374,7 +2376,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
         if (time1 >= (ROUND_TO_ONE * TimeMax)) {
           DPRINTF(stdout, "\t\tout of time!\n");
-          if (Anneal_Mesh) {
+          if (goma_ctx->anneal_mesh) {
             /*
              * Transform the node point coordinates according to the
              * displacements and write out all the results using the

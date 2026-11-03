@@ -94,9 +94,6 @@ Exo_DB *EXO_ptr = NULL;
 
 #define LAST_LEGAL_STRING "Last Legal String"
 
-char *GomaPetscOptions = NULL;
-int GomaPetscOptionsStrLen = 0;
-
 #ifdef MATRIX_DUMP
 int Number_Jac_Dump = 0; /* Number of jacobians to dump out
                           * If the value is negative, then the one
@@ -104,32 +101,7 @@ int Number_Jac_Dump = 0; /* Number of jacobians to dump out
                           * out */
 #endif
 
-int Num_Var_Init;         /* number of variables to overwrite with
-                           * global initialization */
-int Num_Var_Bound;        /* number of variables to bound  */
-int Num_Var_LS_Init;      /* number of variables to overwirte with
-                           * level set index initialization */
-int Num_Var_External;     /* number of total external variables (exoII or pixel)*/
-int Num_Var_External_pix; /* number of external variables (pixel only)*/
-int Anneal_Mesh;          /* flag specifying creation of a special exodus
-                           *  file with coordinates adjusted to the
-                           * deformed coordinates (i.e. new displacements
-                           * are set to zero and mesh is deemed stress-free */
-
-double Porous_liq_inventory;     /*global variable for finite-insult boundary condition*/
-double **Spec_source_inventory;  /*global variable for cumulative reacted source */
-double *Spec_source_lumped_mass; /*global variable for species lumped mass */
-
 const char anneal_file[] = ANNEAL_FILE_NAME;
-
-/*
- * Benner's frontal solver wants to strcat() onto this directory name,
- * so leave enough space for dirname/lu.123456.0, for example.
- *
- * Here it is defined and initialized.
- */
-
-char front_scratch_directory[MAX_FNL] = FRONT_SCRATCH_DIRECTORY;
 
 /*
  * Do not change the line below. It is automatically transformed
@@ -703,8 +675,10 @@ int main(int argc, char **argv)
     int imtrx;
     for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
       cx[imtrx] = alloc_struct_1(Comm_Ex, DPI_ptr->num_neighbors);
-      goma_ctx->request = alloc_struct_1(MPI_Request, goma_ctx->num_requests * DPI_ptr->num_neighbors);
-      goma_ctx->status = alloc_struct_1(MPI_Status, goma_ctx->num_requests * DPI_ptr->num_neighbors);
+      goma_ctx->request =
+          alloc_struct_1(MPI_Request, goma_ctx->num_requests * DPI_ptr->num_neighbors);
+      goma_ctx->status =
+          alloc_struct_1(MPI_Status, goma_ctx->num_requests * DPI_ptr->num_neighbors);
     }
   }
 #endif
@@ -895,7 +869,7 @@ int main(int argc, char **argv)
    * Remove front scratch file [/tmp/lu.'pid'.0]
    */
   if (Linear_Solver == FRONT) {
-    unlerr = unlink(front_scratch_directory);
+    unlerr = unlink(goma_ctx->front_scratch_directory);
     GOMA_WH(unlerr, "Unlink problem with front scratch file");
   }
 

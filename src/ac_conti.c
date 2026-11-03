@@ -503,7 +503,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
 
     err = mf_setup(&exo->num_elems, &NumUnknowns[pg->imtrx], &max_unk_elem, &three, &one,
                    exo->elem_order_map, fss->el_proc_assign, fss->level, fss->nopdof, fss->ncn,
-                   fss->constraint, front_scratch_directory, &fss->ntra);
+                   fss->constraint, goma_ctx->front_scratch_directory, &fss->ntra);
     GOMA_EH(err, "problems in frontal setup ");
 
 #else
@@ -871,9 +871,9 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
       inewton = err;
       if (converged) {
         if (goma_ctx->write_intermediate_solutions == 0) {
-          write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
-                         tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_s, theta, path1, NULL,
-                         exo, dpi);
+          write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old,
+                         tev, tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_s, theta, path1,
+                         NULL, exo, dpi);
         }
 #ifdef PARALLEL
         check_parallel_error("Error writing exodusII file");
@@ -891,8 +891,9 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
           for (iAC = 0; iAC < nAC; iAC++) {
             evol_local = augc[iAC].evol;
 #ifdef PARALLEL
-            if (goma_ctx->num_proc > 1 && (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
-                                 augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
+            if (goma_ctx->num_proc > 1 &&
+                (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
+                 augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
               MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
               evol_local = evol_global;
             }
@@ -1118,11 +1119,12 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
         DPRINTF(stdout, "%s:  error writing ASCII soln file\n", yo);
       }
       if (goma_ctx->write_intermediate_solutions == 0) {
-        write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev, tev_post,
-                       gv, rd, gvec, gvec_elem, &nprint, delta_s, theta, path1, NULL, exo, dpi);
+        write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old,
+                       tev, tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_s, theta, path1, NULL,
+                       exo, dpi);
         nprint++;
       }
-      if (Anneal_Mesh && cont->anneal_on_print) {
+      if (goma_ctx->anneal_mesh && cont->anneal_on_print) {
         err = anneal_mesh(x, tev, tev_post, NULL, rd, path1, exo, dpi);
         GOMA_EH(err, "anneal_mesh() bad return.");
       }
@@ -1263,7 +1265,7 @@ free_and_clear:
    * displaced coordinates. Set the displacement field to
    * zero, too.
    */
-  if (Anneal_Mesh) {
+  if (goma_ctx->anneal_mesh) {
     err = anneal_mesh(x, tev, tev_post, NULL, rd, path1, exo, dpi);
     GOMA_EH(err, "anneal_mesh() bad return.");
   }

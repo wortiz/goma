@@ -159,8 +159,8 @@ int read_mesh_exoII(Exo_DB *exo, Dpi *dpi) {
   int *arr;
 
   multiname(goma_ctx->exo_file, goma_ctx->proc_id, goma_ctx->num_proc);
-  error =
-      rd_exo(exo, goma_ctx->exo_file, 0, (EXODB_ACTION_RD_INIT + EXODB_ACTION_RD_MESH + EXODB_ACTION_RD_RES0));
+  error = rd_exo(exo, goma_ctx->exo_file, 0,
+                 (EXODB_ACTION_RD_INIT + EXODB_ACTION_RD_MESH + EXODB_ACTION_RD_RES0));
   check_parallel_error("Error in reading exodus file");
   /*
    *    if an error was encountered return to
@@ -709,12 +709,14 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
   }
 
   if (num_global_node / goma_ctx->num_proc < 1) {
-    sprintf(err_msg, "Whoa! Problem with %lld nodes on %d processors.", num_global_node, goma_ctx->num_proc);
+    sprintf(err_msg, "Whoa! Problem with %lld nodes on %d processors.", num_global_node,
+            goma_ctx->num_proc);
     GOMA_EH(GOMA_ERROR, err_msg);
   }
 
   if (num_global_elem / goma_ctx->num_proc < 1) {
-    sprintf(err_msg, "Whoa! Problem with %lld elems on %d processors.", num_global_elem, goma_ctx->num_proc);
+    sprintf(err_msg, "Whoa! Problem with %lld elems on %d processors.", num_global_elem,
+            goma_ctx->num_proc);
     GOMA_EH(GOMA_ERROR, err_msg);
   }
 

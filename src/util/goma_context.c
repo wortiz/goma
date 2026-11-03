@@ -28,6 +28,7 @@ void goma_context_init(GomaContext *ctx) {
   ctx->unlimited_output = 1;
   ctx->exo_time_plane = INT_MAX;
   ctx->decompose_flag = 1;
+  strncpy(ctx->front_scratch_directory, FRONT_SCRATCH_DIRECTORY, MAX_FNL - 1);
 }
 
 /* Static storage with the same defaults goma_context_init() applies. */
@@ -36,6 +37,7 @@ static GomaContext goma_context_storage = {.num_proc = 1,
                                            .num_requests = 6,
                                            .unlimited_output = 1,
                                            .exo_time_plane = INT_MAX,
-                                           .decompose_flag = 1};
+                                           .decompose_flag = 1,
+                                           .front_scratch_directory = FRONT_SCRATCH_DIRECTORY};
 
 GomaContext *goma_ctx = &goma_context_storage;

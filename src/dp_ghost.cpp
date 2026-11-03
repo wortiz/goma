@@ -96,7 +96,8 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
 
   // setup eb_elem_type
   std::vector<std::array<char, MAX_STR_LENGTH>> local_elem_type(exo->num_elem_blocks);
-  std::vector<std::array<char, MAX_STR_LENGTH>> global_elem_type(goma_ctx->num_proc * exo->num_elem_blocks);
+  std::vector<std::array<char, MAX_STR_LENGTH>> global_elem_type(goma_ctx->num_proc *
+                                                                 exo->num_elem_blocks);
   for (int i = 0; i < exo->num_elem_blocks; i++) {
     memcpy(local_elem_type[i].data(), exo->eb_elem_type[i], MAX_STR_LENGTH);
   }

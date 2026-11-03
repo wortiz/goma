@@ -282,7 +282,8 @@ goma_error exchange_neighbor_ss_edges(Exo_DB *exo, Dpi *dpi) {
     for (int j = 0; j < dpi->num_side_sets_global; j++) {
       if (ss_edge_info[j].total_nodes > 0) {
         GOMA_CHECK_MPI_ERROR(MPI_Send(ss_edge_info[j].global_node_ids, ss_edge_info[j].total_nodes,
-                                      MPI_INT, dpi->neighbor[i], 103 + j + goma_ctx->proc_id, MPI_COMM_WORLD));
+                                      MPI_INT, dpi->neighbor[i], 103 + j + goma_ctx->proc_id,
+                                      MPI_COMM_WORLD));
       }
     }
   }
@@ -342,7 +343,8 @@ goma_error exchange_neighbor_ss_edges(Exo_DB *exo, Dpi *dpi) {
     for (int j = 0; j < dpi->num_side_sets_global; j++) {
       if (send_sides[j] > 0) {
         GOMA_CHECK_MPI_ERROR(MPI_Send(ss_edge_info[j].node_per_side, send_sides[j], MPI_INT,
-                                      dpi->neighbor[i], 104 + j + goma_ctx->proc_id, MPI_COMM_WORLD));
+                                      dpi->neighbor[i], 104 + j + goma_ctx->proc_id,
+                                      MPI_COMM_WORLD));
       }
       // printf("-2 Proc %d ISEND %d to %d size %d\n", ProcID, 204 + j + ProcID, dpi->neighbor[i],
       // dpi->num_side_sets_global);

@@ -814,8 +814,8 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
         }
       }
       if (count != nv->Num_Unknowns) {
-        fprintf(stderr, "P_%d: at node %d, Num_Unknowns_Node = %d, count = %d\n", goma_ctx->proc_id, i,
-                nv->Num_Unknowns, count);
+        fprintf(stderr, "P_%d: at node %d, Num_Unknowns_Node = %d, count = %d\n", goma_ctx->proc_id,
+                i, nv->Num_Unknowns, count);
         fprintf(stderr, "nv->Num_Unknowns lost count.\n");
         GOMA_EH(-1, "Num_Unknowns_Node incompatibility");
       }
@@ -829,8 +829,8 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
     for (i = 0; i < total_nodes; i++) {
       nv = Nodes[i]->Nodal_Vars_Info[imtrx];
       if (nv->Num_Unknowns == -1) {
-        fprintf(stderr, "P_%d: local node index (%d) at matrix %d lost track.\n", goma_ctx->proc_id, i + 1,
-                imtrx + 1);
+        fprintf(stderr, "P_%d: local node index (%d) at matrix %d lost track.\n", goma_ctx->proc_id,
+                i + 1, imtrx + 1);
         GOMA_EH(-1, "Num_Unknowns_Node incompatibility");
       }
     }
@@ -981,7 +981,8 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    *   intermediate solution or Debug_Flag > 1
    */
   if (dofname == NULL) {
-    if (goma_ctx->debug_flag < 0 || goma_ctx->debug_flag > 1 || goma_ctx->write_intermediate_solutions || (goma_ctx->iout == 1)) {
+    if (goma_ctx->debug_flag < 0 || goma_ctx->debug_flag > 1 ||
+        goma_ctx->write_intermediate_solutions || (goma_ctx->iout == 1)) {
       dofname = (char ***)malloc(upd->Total_Num_Matrices * sizeof(int **));
       for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
         dofname[imtrx] = alloc_VecFixedStrings(NumUnknowns[imtrx] + NumExtUnknowns[imtrx], 80);
@@ -1095,8 +1096,8 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
       }
 
       if (count != nv->Num_Unknowns) {
-        fprintf(stderr, "P_%d: at node %d, Num_Unknowns_Node = %d, count = %d\n", goma_ctx->proc_id, i,
-                nv->Num_Unknowns, count);
+        fprintf(stderr, "P_%d: at node %d, Num_Unknowns_Node = %d, count = %d\n", goma_ctx->proc_id,
+                i, nv->Num_Unknowns, count);
         fprintf(stderr, "nv->Num_Unknowns lost count.");
         GOMA_EH(-1, "Sorry, Charlie.");
       }

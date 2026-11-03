@@ -50,7 +50,8 @@ static void print_stacktrace(void) {
   }
 #endif
   if (print_color) {
-    fprintf(stderr, "\033[0;33mP_%d trace: Obtained %zd stack frames\033[0m\n", goma_ctx->proc_id, size);
+    fprintf(stderr, "\033[0;33mP_%d trace: Obtained %zd stack frames\033[0m\n", goma_ctx->proc_id,
+            size);
   } else {
     fprintf(stderr, "P_%d trace: Obtained %zd stack frames.\n", goma_ctx->proc_id, size);
   }
@@ -115,8 +116,8 @@ void goma_eh(const int error_flag, const char *file, const int line, const char 
 #endif
 #ifndef PARALLEL
     if (print_color) {
-      fprintf(stderr, "\033[0;31mP_%d Goma Error: %s \033[0m(@ %s:%d)\n", goma_ctx->proc_id, message, file,
-              line);
+      fprintf(stderr, "\033[0;31mP_%d Goma Error: %s \033[0m(@ %s:%d)\n", goma_ctx->proc_id,
+              message, file, line);
     } else {
       fprintf(stderr, "P_%d Goma Error: %s (@ %s:%d)\n", goma_ctx->proc_id, message, file, line);
     }
@@ -128,8 +129,8 @@ void goma_eh(const int error_flag, const char *file, const int line, const char 
     vsnprintf(message, MAX_CHAR_ERR_MSG, format, args);
     va_end(args);
     if (print_color) {
-      fprintf(stderr, "\033[0;31mP_%d Goma Error: %s \033[0m(@ %s:%d)\n", goma_ctx->proc_id, message, file,
-              line);
+      fprintf(stderr, "\033[0;31mP_%d Goma Error: %s \033[0m(@ %s:%d)\n", goma_ctx->proc_id,
+              message, file, line);
     } else {
       fprintf(stderr, "P_%d Goma Error: %s (@ %s:%d)\n", goma_ctx->proc_id, message, file, line);
     }

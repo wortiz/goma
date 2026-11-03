@@ -67,10 +67,10 @@ static char rcsid[] = "$Id: mm_shell_util.c,v 5.17 2010-07-21 16:39:27 hkmoffa E
 
 #define DEBUG_SHELL 0
 #define PRINTPROC   0
-#define DSPRINTF                          \
+#define DSPRINTF                                     \
   if (DEBUG_SHELL && goma_ctx->proc_id == PRINTPROC) \
   printf
-#define D2SPRINTF                             \
+#define D2SPRINTF                                        \
   if (DEBUG_SHELL > 1 && goma_ctx->proc_id == PRINTPROC) \
   printf
 

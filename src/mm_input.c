@@ -719,7 +719,8 @@ void rd_file_specs(FILE *ifp, char *input) {
   strip(input);
   strcpy(goma_ctx->exo_file_out, input);
   strcpy(goma_ctx->exo_file_out_mono, input);
-  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Output EXODUS II file", goma_ctx->exo_file_out);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Output EXODUS II file",
+           goma_ctx->exo_file_out);
   ECHO(echo_string, echo_file);
 
   look_for(ifp, "GUESS file", input, '=');
@@ -806,7 +807,8 @@ void rd_file_specs(FILE *ifp, char *input) {
   foundMappingFile =
       look_for_optional_string(ifp, "Domain Mapping File", goma_ctx->domain_mapping_file, MAX_FNL);
   if (foundMappingFile == 1) {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Domain Mapping File", goma_ctx->domain_mapping_file);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Domain Mapping File",
+             goma_ctx->domain_mapping_file);
     ECHO(echo_string, echo_file);
   }
 
@@ -989,7 +991,8 @@ void rd_genl_specs(FILE *ifp, char *input) {
       SPF(echo_string, "%s = %s %s", "Initial Guess", first_string, second_string);
       break;
     case 3:
-      SPF(echo_string, "%s = %s %s %d", "Initial Guess", first_string, second_string, goma_ctx->exo_time_plane);
+      SPF(echo_string, "%s = %s %s %d", "Initial Guess", first_string, second_string,
+          goma_ctx->exo_time_plane);
       break;
     }
     ECHO(echo_string, echo_file);
@@ -1001,7 +1004,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
   /*
    *             Search for commands to apply bounds to initialized variables
    */
-  Num_Var_Bound = 0;
+  goma_ctx->num_var_bound = 0;
   while ((iread = look_forward_optional(ifp, "Initialization Bound", input, '=')) == 1) {
     /*
      *  Read the variable name to be bounded
@@ -1013,19 +1016,22 @@ void rd_genl_specs(FILE *ifp, char *input) {
      *  Translate the string variable name to the internal integer value for
      *  that variable.
      */
-    Var_init[Num_Var_Bound].var = variable_string_to_int(input, "Initialize Keyword Error");
+    Var_init[goma_ctx->num_var_bound].var =
+        variable_string_to_int(input, "Initialize Keyword Error");
 
-    if (fscanf(ifp, "%d %lf %lf", &Var_init[Num_Var_Bound].ktype,
-               &Var_init[Num_Var_Bound].init_val_min, &Var_init[Num_Var_Bound].init_val_max) != 3) {
+    if (fscanf(ifp, "%d %lf %lf", &Var_init[goma_ctx->num_var_bound].ktype,
+               &Var_init[goma_ctx->num_var_bound].init_val_min,
+               &Var_init[goma_ctx->num_var_bound].init_val_max) != 3) {
       GOMA_EH(GOMA_ERROR, "Error reading Variable Bound data");
     }
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s %d %f %f", "Initialization Bound", input,
-             Var_init[Num_Var_Bound].ktype, Var_init[Num_Var_Bound].init_val_min,
-             Var_init[Num_Var_Bound].init_val_max);
+             Var_init[goma_ctx->num_var_bound].ktype,
+             Var_init[goma_ctx->num_var_bound].init_val_min,
+             Var_init[goma_ctx->num_var_bound].init_val_max);
     ECHO(echo_string, echo_file);
 
-    Num_Var_Bound++;
+    goma_ctx->num_var_bound++;
   }
 
   iread = look_for_optional(ifp, "Conformation Map", input, '=');
@@ -1056,7 +1062,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
   /*
    *             Search for commands to initialize a specific variable
    */
-  Num_Var_Init = Num_Var_Bound;
+  goma_ctx->num_var_init = goma_ctx->num_var_bound;
   while ((iread = look_forward_optional(ifp, "Initialize", input, '=')) == 1) {
     /*
      *  Read the variable name to be fixed
@@ -1068,24 +1074,25 @@ void rd_genl_specs(FILE *ifp, char *input) {
      *  Translate the string variable name to the internal integer value for
      *  that variable.
      */
-    Var_init[Num_Var_Init].len_u_pars = -1;
-    Var_init[Num_Var_Init].var = variable_string_to_int(input, "Initialize Keyword Error");
+    Var_init[goma_ctx->num_var_init].len_u_pars = -1;
+    Var_init[goma_ctx->num_var_init].var =
+        variable_string_to_int(input, "Initialize Keyword Error");
 
-    if (fscanf(ifp, "%d %lf", &Var_init[Num_Var_Init].ktype, &Var_init[Num_Var_Init].init_val) !=
-        2) {
+    if (fscanf(ifp, "%d %lf", &Var_init[goma_ctx->num_var_init].ktype,
+               &Var_init[goma_ctx->num_var_init].init_val) != 2) {
       GOMA_EH(GOMA_ERROR, "Error reading initialization data");
     }
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s %d %f", "Initialize", input,
-             Var_init[Num_Var_Init].ktype, Var_init[Num_Var_Init].init_val);
+             Var_init[goma_ctx->num_var_init].ktype, Var_init[goma_ctx->num_var_init].init_val);
     ECHO(echo_string, echo_file);
 
-    Num_Var_Init++;
+    goma_ctx->num_var_init++;
   }
 
   /* Search for commands to read in and hold fixed an external nodal field variable */
-  Num_Var_External = 0;
-  Num_Var_External_pix = 0;
+  goma_ctx->num_var_external = 0;
+  goma_ctx->num_var_external_pix = 0;
   Num_Import_NV = 0;
   Num_Import_EV = 0;
   efv->ev = T_NOTHING;
@@ -1100,12 +1107,12 @@ void rd_genl_specs(FILE *ifp, char *input) {
     tmp = strstr(input, StringToSearch);
     if (tmp != NULL) {
       strcpy(echo_string, "External Pixel Field = ");
-      Num_Var_External_pix++;
-      efv->ipix[Num_Var_External] = 1;
+      goma_ctx->num_var_external_pix++;
+      efv->ipix[goma_ctx->num_var_external] = 1;
       if (strstr(input, "Field_fast") != NULL) {
         strcpy(echo_string, "External Pixel Field_fast = ");
-        Num_Var_External_pix++;
-        efv->ipix[Num_Var_External] = 2;
+        goma_ctx->num_var_external_pix++;
+        efv->ipix[goma_ctx->num_var_external] = 2;
       }
     } else {
       strcpy(echo_string, "External Field = ");
@@ -1117,7 +1124,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
       GOMA_EH(GOMA_ERROR, "Error reading variable for initialization");
     }
 
-    (void)strcpy(efv->name[Num_Var_External], input);
+    (void)strcpy(efv->name[goma_ctx->num_var_external], input);
 
     strcat(echo_string, input);
     strcat(echo_string, "  ");
@@ -1136,32 +1143,32 @@ void rd_genl_specs(FILE *ifp, char *input) {
      */
 
     if (!strcmp(input, "Q1")) {
-      efv->i[Num_Var_External] = I_Q1;
+      efv->i[goma_ctx->num_var_external] = I_Q1;
     } else if (!strcmp(input, "Q2")) {
-      efv->i[Num_Var_External] = I_Q2;
+      efv->i[goma_ctx->num_var_external] = I_Q2;
     } else if (!strcmp(input, "Q2_LSA")) {
-      efv->i[Num_Var_External] = I_Q2_LSA;
+      efv->i[goma_ctx->num_var_external] = I_Q2_LSA;
     } else if (!strcmp(input, "Q1_D")) {
-      efv->i[Num_Var_External] = I_Q1_D;
+      efv->i[goma_ctx->num_var_external] = I_Q1_D;
     } else if (!strcmp(input, "Q2_D")) {
-      efv->i[Num_Var_External] = I_Q2_D;
+      efv->i[goma_ctx->num_var_external] = I_Q2_D;
     } else if (!strcmp(input, "Q2_D_LSA")) {
-      efv->i[Num_Var_External] = I_Q2_D_LSA;
+      efv->i[goma_ctx->num_var_external] = I_Q2_D_LSA;
     } else if (!strcmp(input, "PQ1")) {
-      efv->i[Num_Var_External] = I_PQ1;
+      efv->i[goma_ctx->num_var_external] = I_PQ1;
     } else if (!strcmp(input, "PQ2")) {
-      efv->i[Num_Var_External] = I_PQ2;
+      efv->i[goma_ctx->num_var_external] = I_PQ2;
     } else if (!strcmp(input, "P0")) {
-      efv->i[Num_Var_External] = I_P0;
+      efv->i[goma_ctx->num_var_external] = I_P0;
     } else if (!strcmp(input, "P1")) {
-      efv->i[Num_Var_External] = I_P1;
+      efv->i[goma_ctx->num_var_external] = I_P1;
     } else if (!strcmp(input, "SP")) {
-      efv->i[Num_Var_External] = I_SP;
+      efv->i[goma_ctx->num_var_external] = I_SP;
     } else if (!strcmp(input, "TABLE")) {
-      efv->i[Num_Var_External] = I_TABLE;
+      efv->i[goma_ctx->num_var_external] = I_TABLE;
       num_ext_Tables++;
     } else if (!strcmp(input, "N1")) {
-      efv->i[Num_Var_External] = I_N1;
+      efv->i[goma_ctx->num_var_external] = I_N1;
       num_ext_Tables++;
     } else {
       sprintf(err_msg, "??? interpolation \"%s\" for external field var", input);
@@ -1181,7 +1188,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
     }
     strip(input);
 
-    (void)strcpy(efv->file_nm[Num_Var_External], input);
+    (void)strcpy(efv->file_nm[goma_ctx->num_var_external], input);
 
     strcat(echo_string, input);
 
@@ -1221,7 +1228,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
 
     strip(input);
 
-    (void)strcpy(efv->field_type[Num_Var_External], ftype);
+    (void)strcpy(efv->field_type[goma_ctx->num_var_external], ftype);
 
     strcat(echo_string, ftype);
 
@@ -1230,15 +1237,15 @@ void rd_genl_specs(FILE *ifp, char *input) {
      *
      * PRS 7/27/2011
      */
-    if (Num_Var_External + 1 > MAX_EXTERNAL_FIELD) {
+    if (goma_ctx->num_var_external + 1 > MAX_EXTERNAL_FIELD) {
       SPF(err_msg,
           ">%d external field vars. Fix MAX_EXTERNAL_FIELD"
           " (rf_fem_const.h), recompile.",
           MAX_EXTERNAL_FIELD);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
-    if (efv->ipix[Num_Var_External]) {
-      if (fscanf(ifp, "%d", &efv->ipix_matid[Num_Var_External]) != 1) {
+    if (efv->ipix[goma_ctx->num_var_external]) {
+      if (fscanf(ifp, "%d", &efv->ipix_matid[goma_ctx->num_var_external]) != 1) {
         GOMA_EH(GOMA_ERROR, "Must specify a material ID for external pix field");
       }
 
@@ -1247,18 +1254,18 @@ void rd_genl_specs(FILE *ifp, char *input) {
        * Default to 1.0 (0 can cause issues for e.g. conductivities).
        * DSB 7/30/2013
        */
-      if (fscanf(ifp, "%lf", &efv->empty_value[Num_Var_External]) != 1) {
-        efv->empty_value[Num_Var_External] = 1.0;
+      if (fscanf(ifp, "%lf", &efv->empty_value[goma_ctx->num_var_external]) != 1) {
+        efv->empty_value[goma_ctx->num_var_external] = 1.0;
       }
     }
 
-    Num_Var_External++;
+    goma_ctx->num_var_external++;
 
     ECHO(echo_string, echo_file);
   }
 
-  efv->Num_external_field = Num_Var_External;
-  efv->Num_external_pixel_field = Num_Var_External_pix;
+  efv->Num_external_field = goma_ctx->num_var_external;
+  efv->Num_external_pixel_field = goma_ctx->num_var_external_pix;
 
   iread = look_forward_optional(ifp, "Exit after pixel map", input, '=');
   if (iread == 1) {
@@ -1314,7 +1321,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
   upd->XFEM = FALSE;
 
   while ((iread = look_forward_optional(ifp, "User Initialize", input, '=')) == 1) {
-    int curr_var = Num_Var_Init, var;
+    int curr_var = goma_ctx->num_var_init, var;
     double tmp;
 
     Var_init[curr_var].len_u_pars = -1;
@@ -1331,7 +1338,8 @@ void rd_genl_specs(FILE *ifp, char *input) {
       GOMA_EH(GOMA_ERROR, err_msg);
     }
 
-    if (fscanf(ifp, "%d %lf", &Var_init[Num_Var_Init].ktype, &Var_init[curr_var].init_val) != 2)
+    if (fscanf(ifp, "%d %lf", &Var_init[goma_ctx->num_var_init].ktype,
+               &Var_init[curr_var].init_val) != 2)
       GOMA_EH(GOMA_ERROR, "Error reading initialization data");
 
     SPF(err_msg, "%s = %s %d %.4g", "User Initialize", input, Var_init[curr_var].ktype,
@@ -1351,7 +1359,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
       SPF(endofstring(err_msg), " %.4g", tmp);
     }
 
-    Num_Var_Init++;
+    goma_ctx->num_var_init++;
     ECHO(err_msg, echo_file);
   }
 
@@ -1450,15 +1458,15 @@ void rd_genl_specs(FILE *ifp, char *input) {
    *  Anneal Mesh on Output - Optional
    *        Go through a mesh anneal step at the end of the run
    */
-  Anneal_Mesh = FALSE;
+  goma_ctx->anneal_mesh = FALSE;
   iread = look_for_optional(ifp, "Anneal Mesh on Output", input, '=');
   if (iread == 1) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0) {
-      Anneal_Mesh = FALSE;
+      goma_ctx->anneal_mesh = FALSE;
     } else if (strcmp(input, "yes") == 0) {
-      Anneal_Mesh = TRUE;
+      goma_ctx->anneal_mesh = TRUE;
       DPRINTF(stdout, "Annealing mesh on output\n");
     } else {
       GOMA_EH(GOMA_ERROR, "Bad specification for annealing mesh");
@@ -1982,7 +1990,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
 
     ls->Num_Var_Init = 0;
     while ((iread = look_forward_optional(ifp, "Level Set Initialize", input, '=')) == 1) {
-      int index = Num_Var_Init + ls->Num_Var_Init;
+      int index = goma_ctx->num_var_init + ls->Num_Var_Init;
       if (fscanf(ifp, "%80s", input) != 1) {
         GOMA_EH(GOMA_ERROR, "Error reading LS initialization field data \n");
       }
@@ -2005,7 +2013,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       ls->Num_Var_Init++;
     }
 
-    Num_Var_LS_Init = ls->Num_Var_Init;
+    goma_ctx->num_var_ls_init = ls->Num_Var_Init;
 
     ls->Length_Scale = -1.0;
     iread = look_for_optional(ifp, "Level Set Length Scale", input, '=');
@@ -3819,8 +3827,8 @@ void rd_track_specs(FILE *ifp, char *input) {
         ECHO("Continuation Anneal on Print = no", echo_file);
       } else if (!strcasecmp(input, "yes") || !strcasecmp(input, "true")) {
         cont->anneal_on_print = TRUE;
-        if (Anneal_Mesh == FALSE) {
-          Anneal_Mesh = TRUE;
+        if (goma_ctx->anneal_mesh == FALSE) {
+          goma_ctx->anneal_mesh = TRUE;
           GOMA_WH(GOMA_ERROR, "Turning on Anneal Mesh for Continuation Anneal on Print");
         }
         ECHO("Continuation Anneal on Print = yes", echo_file);
@@ -12110,9 +12118,9 @@ void translate_command_line(int argc, char *argv[], struct Command_line_command 
         (*nclc)++;
         istr++;
         int petsc_arg_length = strlen(argv[istr]) + 1;
-        GomaPetscOptions = malloc(sizeof(char) * petsc_arg_length);
-        GomaPetscOptionsStrLen = petsc_arg_length;
-        strncpy(GomaPetscOptions, argv[istr], petsc_arg_length);
+        goma_ctx->petsc_options = malloc(sizeof(char) * petsc_arg_length);
+        goma_ctx->petsc_options_str_len = petsc_arg_length;
+        strncpy(goma_ctx->petsc_options, argv[istr], petsc_arg_length);
         istr++;
         clc[*nclc]->type = NOECHO;
         ECHO("NOECHO", NULL);
@@ -12134,7 +12142,8 @@ void translate_command_line(int argc, char *argv[], struct Command_line_command 
       {
         clc[0]->type = INPUT_FILE;
         strcpy_rtn = strcpy(clc[0]->string, argv[istr]);
-        fprintf(stdout, "Change reading input from \"%s\" to \"%s\"\n", goma_ctx->input_file, argv[istr]);
+        fprintf(stdout, "Change reading input from \"%s\" to \"%s\"\n", goma_ctx->input_file,
+                argv[istr]);
 
         strcpy_rtn = strcpy(goma_ctx->input_file, clc[0]->string);
         istr++;
@@ -12214,22 +12223,22 @@ void apply_command_line(struct Command_line_command **clc, int nclc)
   upd->fpe_enabled = 0;
   for (i = 0; i < nclc; i++) {
     if (clc[i]->type == CONTIN_FILE) {
-      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "GUESS file", goma_ctx->init_guess_file, b, "GUESS file",
-              clc[i]->string);
+      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "GUESS file", goma_ctx->init_guess_file, b,
+              "GUESS file", clc[i]->string);
       strcpy_rtn = strcpy(goma_ctx->init_guess_file, clc[i]->string);
     } else if (clc[i]->type == HELP_USAGE) {
       usage(0);
     } else if (clc[i]->type == SOLN_FILE) {
-      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "SOLN file", goma_ctx->soln_out_file, b, "SOLN file",
-              clc[i]->string);
+      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "SOLN file", goma_ctx->soln_out_file, b,
+              "SOLN file", clc[i]->string);
       strcpy_rtn = strcpy(goma_ctx->soln_out_file, clc[i]->string);
     } else if (clc[i]->type == INEXOII_FILE) {
       fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "FEM file", goma_ctx->exo_file, b, "FEM file",
               clc[i]->string);
       strcpy_rtn = strcpy(goma_ctx->exo_file, clc[i]->string);
     } else if (clc[i]->type == OUTEXOII_FILE) {
-      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "Output EXODUS II file", goma_ctx->exo_file_out, b,
-              "Output EXODUS II file", clc[i]->string);
+      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "Output EXODUS II file",
+              goma_ctx->exo_file_out, b, "Output EXODUS II file", clc[i]->string);
       strcpy_rtn = strcpy(goma_ctx->exo_file_out, clc[i]->string);
       strcpy_rtn = strcpy(goma_ctx->exo_file_out_mono, clc[i]->string);
     } else if (clc[i]->type == DEBUG_OPTION) {

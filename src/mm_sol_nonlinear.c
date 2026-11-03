@@ -1209,8 +1209,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         calculate_2D_rotation_vectors(exo, x);
 
       numerical_jacobian(ams, x, resid_vector, delta_t, theta, x_old, x_older, xdot, xdot_old,
-                         x_update, num_total_nodes, First_Elem_Side_BC_Array[pg->imtrx], goma_ctx->debug_flag,
-                         time_value, exo, dpi, &h_elem_avg, &U_norm);
+                         x_update, num_total_nodes, First_Elem_Side_BC_Array[pg->imtrx],
+                         goma_ctx->debug_flag, time_value, exo, dpi, &h_elem_avg, &U_norm);
 
       DPRINTF(stdout, "%s: numerical Jacobian done....\n", yo);
       P0PRINTF("\n-done\n\n");
@@ -1298,10 +1298,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
 
       if (enable_numerical_jacobian && af->Assemble_Jacobian == TRUE) {
-        err = numerical_jacobian_compute_stress(ams, x, resid_vector, delta_t, theta, x_old,
-                                                x_older, xdot, xdot_old, x_update, num_total_nodes,
-                                                First_Elem_Side_BC_Array[pg->imtrx], goma_ctx->debug_flag,
-                                                time_value, exo, dpi, &h_elem_avg, &U_norm);
+        err = numerical_jacobian_compute_stress(
+            ams, x, resid_vector, delta_t, theta, x_old, x_older, xdot, xdot_old, x_update,
+            num_total_nodes, First_Elem_Side_BC_Array[pg->imtrx], goma_ctx->debug_flag, time_value,
+            exo, dpi, &h_elem_avg, &U_norm);
         a_end = ut();
       }
 
@@ -2755,7 +2755,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       /* Add additional user-specified post processing variables */
       if (rd->TotalNVPostOutput > 0) {
         post_process_nodal(x, x_sens_p, x_old, xdot, xdot_old, resid_vector, *nprint + 1,
-                           &time_value, delta_t, theta, NULL, exo, dpi, rd, goma_ctx->exo_file_out, pg->imtrx);
+                           &time_value, delta_t, theta, NULL, exo, dpi, rd, goma_ctx->exo_file_out,
+                           pg->imtrx);
       }
       /* Write out time derivatives if requested */
       if (TIME_DERIVATIVES != -1 && (TimeIntegration != STEADY)) {
@@ -2763,7 +2764,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           i_post = rd->TotalNVSolnOutput + rd->TotalNVPostOutput + i;
           extract_nodal_vec(xdot, rd->nvtype[i_post], rd->nvkind[i_post], rd->nvmatID[i_post], gvec,
                             exo, TRUE, time_value);
-          wr_nodal_result_exo(exo, goma_ctx->exo_file_out, gvec, i_post + 1, *nprint + 1, time_value);
+          wr_nodal_result_exo(exo, goma_ctx->exo_file_out, gvec, i_post + 1, *nprint + 1,
+                              time_value);
         }
       }
 
@@ -2783,12 +2785,14 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         if (is_P1) {
           for (int k = 0; k < dof; k++) {
             extract_elem_vec(x, i, rd->evtype[i], gvec_elem, exo, k);
-            wr_elem_result_exo(exo, goma_ctx->exo_file_out, gvec_elem, i, *nprint + 1, time_value, rd);
+            wr_elem_result_exo(exo, goma_ctx->exo_file_out, gvec_elem, i, *nprint + 1, time_value,
+                               rd);
             i++;
           }
         } else {
           extract_elem_vec(x, i, rd->evtype[i], gvec_elem, exo, 0);
-          wr_elem_result_exo(exo, goma_ctx->exo_file_out, gvec_elem, i, *nprint + 1, time_value, rd);
+          wr_elem_result_exo(exo, goma_ctx->exo_file_out, gvec_elem, i, *nprint + 1, time_value,
+                             rd);
         }
       }
       /* Add additional user-specified post processing variables */
@@ -2801,7 +2805,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           for (i = 0; i < tev; i++) {
             i_post = tev_post + i;
             extract_elem_vec(xdot, i_post, rd->evtype[i_post], gvec_elem, exo, 0);
-            wr_elem_result_exo(exo, goma_ctx->exo_file_out, gvec_elem, i_post, *nprint + 1, time_value, rd);
+            wr_elem_result_exo(exo, goma_ctx->exo_file_out, gvec_elem, i_post, *nprint + 1,
+                               time_value, rd);
           }
         }
       }

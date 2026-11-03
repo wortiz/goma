@@ -27,8 +27,8 @@ int main(int argc, char *argv[]) {
 
   if (goma_ctx->num_proc > 1) {
     if (goma_ctx->proc_id == 0) {
-      std::cerr << "Unit tests are currently expected to be run serially, found " << goma_ctx->num_proc
-                << " MPI Processes\n";
+      std::cerr << "Unit tests are currently expected to be run serially, found "
+                << goma_ctx->num_proc << " MPI Processes\n";
     }
     return -1;
   }

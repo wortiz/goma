@@ -1116,8 +1116,8 @@ void bc_matrl_index(Exo_DB *exo)
       matrl_first = find_next_max(bin_matrl, ind_matrl, upd->Num_Mat);
       success = assign_matrl_2(bc_ptr, matrl_first);
       if (success < 0) {
-        printf("%s P_%d: problem in assigning first matrl index in ibc %d, %d:\n", yo, goma_ctx->proc_id, ibc,
-               matrl_first);
+        printf("%s P_%d: problem in assigning first matrl index in ibc %d, %d:\n", yo,
+               goma_ctx->proc_id, ibc, matrl_first);
         bc_matrl_index_print(bc_ptr, bin_matrl, bin_matrl_elem, min_node_matrl, max_node_matrl,
                              node_matrl_1, node_matrl_2, node_matrl_3, node_matrl_4, ibc);
       }
@@ -1125,14 +1125,15 @@ void bc_matrl_index(Exo_DB *exo)
       if (matrl_first >= 0) {
         success = assign_matrl_2(bc_ptr, matrl_first);
         if (success < 0) {
-          printf("%s P_%d: problem in assigning second matrl index in ibc %d, %d:\n", yo, goma_ctx->proc_id,
-                 ibc, matrl_first);
+          printf("%s P_%d: problem in assigning second matrl index in ibc %d, %d:\n", yo,
+                 goma_ctx->proc_id, ibc, matrl_first);
           bc_matrl_index_print(bc_ptr, bin_matrl, bin_matrl_elem, min_node_matrl, max_node_matrl,
                                node_matrl_1, node_matrl_2, node_matrl_3, node_matrl_4, ibc);
         }
       } else {
         if (num_matrl_needed > 2) {
-          printf("%s P_%d: problem in finding a needed second matrl index:\n", yo, goma_ctx->proc_id);
+          printf("%s P_%d: problem in finding a needed second matrl index:\n", yo,
+                 goma_ctx->proc_id);
           GOMA_EH(GOMA_ERROR, "bc_matrl_index ERROR");
         }
       }
