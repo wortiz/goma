@@ -4625,7 +4625,7 @@ int assemble_shell_surface_rheo_pieces(double time_value, /* Time */
   BASIS_FUNCTIONS_STRUCT *bfn;
   BASIS_FUNCTIONS_STRUCT *bfv;
 
-  if (CURL_V == -1) {
+  if (goma_ctx->post.curl_v == -1) {
     GOMA_EH(GOMA_ERROR,
             "ERROR: inconsistency: need to set Vorticity Vector = yes in Post processing section");
   }

@@ -100,269 +100,19 @@
 #include "user_post.h"
 #include "wr_exo.h"
 
-/*
- * Global variable definitions.
- * This is the 1 place these variables are defined. If you need them
- * elsewhere, then include them via mm_post_def.h
- */
-int nn_post_fluxes;      /* Dimension of the following structure */
-int nn_post_fluxes_sens; /* Dimension of the following structure */
-int nn_post_data;        /* Dimension of the following structure */
-int nn_post_data_sens;   /* Dimension of the following structure */
-int nn_error_metrics;    /* Dimension of the following structure */
-int nn_particles;        /* Dimension of the following structure */
-int nn_volume;           /* number of pp_volume_int structures */
-int ppvi_type;           /* Maybe there's a better way to do this, Seems like globals abound! AMC*/
-int nn_global; /* Hopefully these post processing thin get refactored into non-globals at some point
-                */
-int nn_average;
-static int *listel; /* Pointer to element order map from exoII  */
-
-struct Post_Processing_Data **pp_data;
-struct Post_Processing_Data_Sens **pp_data_sens;
-struct Post_Processing_Error *pp_error_data;
-struct Post_Processing_Fluxes **pp_fluxes;
-struct Post_Processing_Fluxes_Sens **pp_fluxes_sens;
-struct Post_Processing_Particles **pp_particles;
-struct Post_Processing_Volumetric **pp_volume;
-pp_Global **pp_global;
-pp_Average **pp_average;
-
 static int error_presence_key[3]; /* Truth key (dim 3) as to which error
                                    * measure elem sizes are being done */
 
-int Num_Nodal_Post_Proc_Var = 0;
-int Num_Elem_Post_Proc_Var = 0;
-
-/* The following variables are flags for input options - i.e. 0 or 1,
- * but they are set to the post-processing variable number in load_nodal_tkn
- * to be used in mm_post_proc.c  - for options which imply more than one post-
- * processing variable to be output, the flag becomes the post-processing
- * variable number of the first one of this variable type
- *
- * Hey! All upper case should denote predefined constants from the
- * preprocessor, not *variables*! Just don't let it happen again!
- */
-
 /*
- * Legend:
+ * The post-processing variable flags (STREAM, DENSITY, ...) and the
+ * pp_fluxes/pp_data/... request lists now live in goma_ctx->post (GomaPost in
+ * util/goma_context.h). Each flag is -1 if the quantity is not requested;
+ * load_nodal_tkn sets it to the id of the post-processing variable.
  *
- *  n>0 -- "Yes, calculate this quantity during post processing." Typically, 1.
+ *  Post-processing Step 1: add a new int field to GomaPost in util/goma_context.h
  *
- *   -1 -- "No, do not calculate this quantity during post processing."
- */
-
-int CAPILLARY_PRESSURE = -1; /* capillary pressure in a porous media */
-int CONC_CONT = -1;          /* concentration at vertex & midside nodes*/
-int CONDUCTION_VECTORS = -1; /* conduction flux vectors*/
-int CURL_V = -1;             /* Steve Kempka's favorite quantity */
-int DARCY_VELOCITY_GAS = -1; /* Darcy velocity vectors for gas phase
-                              * flow in a partially saturated porous
-                              * media */
-int DARCY_VELOCITY_LIQ = -1; /* Darcy velocity vectors for flow in a
-                              * saturated or unsaturated medium */
-int DENSITY = -1;            /* density function at vertex and midside
-                              * nodes, e.g. for particle settling etc. */
-int POLYMER_VISCOSITY = -1;
-int POLYMER_TIME_CONST = -1;
-int PTT_XI = -1;
-int PTT_EPSILON = -1;
-int MOBILITY_PARAMETER = -1;
-
-int HEAVISIDE = -1;
-int DIELECTROPHORETIC_FIELD = -1;
-/* Dielectrophoretic force vectors. */
-int DIELECTROPHORETIC_FIELD_NORM = -1;
-/* Norm of DIELECTROPHORETIC_FIELD. */
-int ENORMSQ_FIELD;          /* grad(|E|^2), for dielectrophoresis. */
-int ENORMSQ_FIELD_NORM;     /* |grad(|E|^2)|, for dielectrophoresis. */
-int DIFFUSION_VECTORS = -1; /* Diffusive mass flux vectors (units ?) */
-int DIFFUSION_VECTORS_POR_LIQ_GPHASE = -1;
-/* Diffusion of the solvent liquid in the
- * gas phase for porous flow problems */
-int DIFFUSION_VECTORS_POR_AIR_GPHASE = -1;
-/* Diffusion of the air in the
- * gas phase for porous flow problems */
-int DIV_PVELOCITY = -1;      /* check the divergence of the particle phase
-                              * velocities.  */
-int DIV_TOTAL = -1;          /* Divergence of the sum of the fluid and
-                              * particle phases.  This should be zero. */
-int DIV_VELOCITY = -1;       /* incompressibility constraint at vertex and
-                              * midside nodes, e.g. del*v = 0 */
-int ELECTRIC_FIELD = -1;     /* Electric field vectors: E = -grad(VOLTAGE) */
-int ELECTRIC_FIELD_MAG = -1; /* Electric field magnitude: sqrt(E.E) */
-
-int ENERGY_FLUXLINES = -1;    /* energy flux function, analogous to
-                               * stream function ... */
-int ERROR_ZZ_P = -1;          /* Zienkiewicz-Zhu error indicator (element
-                               * quantity) based solely on pressure
-                               * contributions */
-int ERROR_ZZ_P_ELSIZE = -1;   /* Recommended new element size from ZZ
-                               * pressure measure                          */
-int ERROR_ZZ_Q = -1;          /* Zienkiewicz-Zhu error indicator (element
-                               * quantity) based solely on heat flux
-                               * contributions                             */
-int ERROR_ZZ_Q_ELSIZE = -1;   /* Recommended new element size from ZZ heat
-                               * flux measure */
-int ERROR_ZZ_VEL = -1;        /* Zienkiewicz-Zhu error indicator (element
-                               * quantity) based solely on velocity (shear
-                               * stress) contributions                     */
-int ERROR_ZZ_VEL_ELSIZE = -1; /* Recommended new element size from ZZ
-                               * velocity measure */
-int SAT_CURVE_TYPE = -1;
-int SAT_QP_SWITCH = -1;    /* Value of sat. function at hysteretic
-                            * swtch point */
-int CAP_PRESS_SWITCH = -1; /* Value of cap. press function at hysteretic
-                            * swtch point */
-int NUM_CURVE_SWITCH = -1; /* Number of hysteretic curve switch */
-int SAT_HYST_MIN = -1;     /* Minimum saturation value for scanning imbibition curve */
-int SAT_HYST_MAX = -1;     /* Maximum saturation value for scanning draining curve */
-
-int EVP_DEF_GRAD_TENSOR = -1;
-int EXTERNAL_POST = -1; /* external field variables read from other
-                         * files */
-int FILL_CONT = -1;     /* fill at vertex & midside nodes*/
-int FIRST_INVAR_STRAIN = -1;
-int FLUXLINES = -1;           /* mass flux function. This is analogous to
-                               * stream function but represents mass flux */
-int LAGRANGE_CONVECTION = -1; /* Lagrangian convection velocity */
-int MEAN_SHEAR = -1;
-int MEAN_VORTICITY = -1;
-int MM_RESIDUALS = -1; /* stress equation residuals at vertex
-                        * and midside nodes*/
-int NS_RESIDUALS = -1; /* Navier-Stokes residuals at vertex
-                        * and midside nodes */
-int POROUS_RHO_GAS_SOLVENTS = -1;
-/* gas phase concentration of each solvent
- * species in a porous media */
-int POROUS_RHO_LPHASE = -1; /* liquid phase density per unit volume of
-                             * material in a porous medium */
-int POROUS_RHO_TOTAL_SOLVENTS = -1;
-/* Total density of each solvent species in a
- * porous media. Total, here means the
- * density summed up over all phases */
-int POROUS_SATURATION = -1;   /* saturation in a porous media */
-int POROUS_GRIDPECLET = -1;   /* Grid Peclet number for porous media */
-int POROUS_SUPGVELOCITY = -1; /* Effective velocities to use in SUPG
-                               * formulations in porous media */
-int POROUS_LIQUID_ACCUM_RATE = -1;
-/* The rate at which liquid in a partially
- * saturated porous medium is accumulating
- * at a point */
-int REL_LIQ_PERM = -1; /* Relative liquid permeability in porous media */
-
-int PRESSURE_CONT = -1;   /* pressure at vertex & midside nodes*/
-int SH_DIV_S_V_CONT = -1; /* SH_DIV_S_V at midside nodes */
-int SH_CURV_CONT = -1;    /* SH_SURF_CURV at midside nodes */
-int REAL_STRESS_TENSOR = -1;
-int SEC_INVAR_STRAIN = -1;     /* 2nd strain invariant vertex,midside nodes*/
-int STRAIN_TENSOR = -1;        /* strain tensor for mesh deformation  */
-int STREAM = -1;               /* stream function*/
-int STREAM_NORMAL_STRESS = -1; /* streamwise normal stress function*/
-int STREAM_SHEAR_STRESS = -1;  /* streamwise shear stress function*/
-int STREAM_TENSION = -1;       /* streamwise tension - (Ttt-Tnn)/R*/
-int STRESS_CONT = -1;          /* stress at vertex & midside nodes*/
-int STRESS_TENSOR = -1;        /* stress tensor for mesh deformation
-                                * (Lagrangian pressure) */
-int SURFACE_VECTORS = -1;      /* vector field of normals and tangents on
-                                * surfaces, curves and vertices */
-int SHELL_NORMALS = -1;        /* vector field of smoothed normals computed from fv->sh_ang */
-int THIRD_INVAR_STRAIN = -1;
-int TIME_DERIVATIVES = -1; /* time derivatives */
-int TOTAL_STRESS11 = -1;   /* sum over all modes for multi-mode models */
-int TOTAL_STRESS12 = -1;   /* sum over all modes for multi-mode models */
-int TOTAL_STRESS13 = -1;   /* sum over all modes for multi-mode models */
-int TOTAL_STRESS22 = -1;   /* sum over all modes for multi-mode models */
-int TOTAL_STRESS23 = -1;   /* sum over all modes for multi-mode models */
-int TOTAL_STRESS33 = -1;   /* sum over all modes for multi-mode models */
-int USER_POST = -1;        /* a user defined function */
-int PP_Viscosity = -1;     /* Viscosity */
-int PP_Diffusivity = -1;
-int PP_FlowingLiquid_Viscosity = -1; /* Flowing Liquid Viscosity - Porous Brinkman term */
-int PP_VolumeFractionGas = -1; /* Volume fraction of gas in a foam or other two phase material */
-int ACOUSTIC_PRESSURE = -1;
-int ACOUSTIC_PHASE_ANGLE = -1;
-int ACOUSTIC_ENERGY_DENSITY = -1;
-int LIGHT_INTENSITY = -1;
-int PRINCIPAL_STRESS = -1;
-int PRINCIPAL_REAL_STRESS = -1;
-int LUB_HEIGHT = -1;
-int LUB_HEIGHT_2 = -1;
-int LUB_VELO_UPPER = -1;
-int LUB_VELO_LOWER = -1;
-int LUB_VELO_FIELD = -1;
-int LUB_VELO_FIELD_2 = -1;
-int LUB_FLUID_SOURCE = -1;
-int DISJ_PRESS = -1;
-int SH_SAT_OPEN = -1;
-int SH_SAT_OPEN_2 = -1;
-int SH_CAP_PRES = -1;
-int SH_PORE_FLUX = -1;
-int SH_STRESS_TENSOR = -1;
-int SH_TANG = -1;
-int PP_LAME_MU = -1;
-int PP_LAME_LAMBDA = -1;
-int VON_MISES_STRESS = -1;
-int VON_MISES_STRAIN = -1;
-int UNTRACKED_SPEC = -1;
-int CONF_MAP = -1;
-int RHO_DOT = -1;
-int MOMENT_SOURCES = -1;
-int YZBETA = -1;
-int TFMP_GAS_VELO = -1;
-int TFMP_LIQ_VELO = -1;
-int TFMP_INV_PECLET = -1;
-int TFMP_KRG = -1;
-int VELO_SPEED = -1;
-int GIES_CRIT = -1;
-int J_FLUX = -1;
-int EIG = -1;
-int EIG1 = -1;
-int EIG2 = -1;
-int EIG3 = -1;
-int GRAD_SH = -1;
-int GRAD_Y = -1;
-int HELICITY = -1;
-int LAMB_VECTOR = -1;
-int Q_FCN = -1;
-int POYNTING_VECTORS = -1; /* conduction flux vectors*/
-int PSPG_PP = -1;
-int SARAMITO_YIELD = -1;
-int STRESS_NORM = -1;
-int SPECIES_SOURCES = -1; /* continuous species sources*/
-int VISCOUS_STRESS = -1;
-int PP_VELOCITY_GRADIENTS = -1;
-int VISCOUS_STRESS_NORM = -1;
-int VISCOUS_VON_MISES_STRESS = -1;
-int EM_CONTOURS = -1;
-int TOTAL_EM_CONTOURS = -1;
-int SCATTERED_EM_CONTOURS = -1;
-int ORIENTATION_VECTORS = -1; /* orientation vectors*/
-int FIRST_STRAINRATE_INVAR = -1;
-int SEC_STRAINRATE_INVAR = -1;
-int THIRD_STRAINRATE_INVAR = -1;
-int WALL_DISTANCE = -1;
-int CONTACT_DISTANCE = -1;
-int PP_FLUID_STRESS = -1; /* Fluid Stress without Pressure contribution */
-int LUB_CONVECTION = -1;
-int PP_MESH_VELOCITY = -1;
-
-int len_u_post_proc = 0; /* size of dynamically allocated u_post_proc
-                          * actually is */
-double *u_post_proc = 0; /* user-provided values used in calculating
-                          * user defined post processing variable */
-
-/*
- *  Post-processing Step 1: add a new variable flag to end of mm_post_def.h
- *
- *       e.g.  extern int STREAM;
- *
- *       Note that this flag is now -1 (false) or the id number of the
- *       post-processing variable in load_nodal_tkn
- *
- *                  Step 2: add the definition in mm_post_proc.c
- *
- *       e.g.  int STREAM;
+ *                  Step 2: give it the default -1 in GOMA_CONTEXT_DEFAULTS in
+ *                          src/util/goma_context.c
  */
 
 /**********************************************************************/
@@ -691,7 +441,8 @@ static int calc_standard_fields(double **post_proc_vect,
    * into the post_proc_vector array
    */
 
-  if (STREAM_NORMAL_STRESS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.stream_normal_stress != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     velo_sqrd = 0.;
     stream_grad = 0.;
 
@@ -762,10 +513,11 @@ static int calc_standard_fields(double **post_proc_vect,
       Ttt = 0.0;
     }
 
-    local_post[STREAM_NORMAL_STRESS] = Ttt;
-    local_lumped[STREAM_NORMAL_STRESS] = 1.;
+    local_post[goma_ctx->post.stream_normal_stress] = Ttt;
+    local_lumped[goma_ctx->post.stream_normal_stress] = 1.;
   }
-  if (STREAM_SHEAR_STRESS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.stream_shear_stress != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     nv[0] = goma_ctx->fem.fv->v[1];
     nv[1] = -goma_ctx->fem.fv->v[0];
     velo_sqrd = 0.;
@@ -837,11 +589,12 @@ static int calc_standard_fields(double **post_proc_vect,
     } else {
       Tnt = 0.0;
     }
-    local_post[STREAM_SHEAR_STRESS] = Tnt;
-    local_lumped[STREAM_SHEAR_STRESS] = 1.;
+    local_post[goma_ctx->post.stream_shear_stress] = Tnt;
+    local_lumped[goma_ctx->post.stream_shear_stress] = 1.;
   }
 
-  if (STREAM_TENSION != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.stream_tension != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     velo_sqrd = 0.;
     stream_grad = 0.;
     curv = 0.;
@@ -934,30 +687,32 @@ static int calc_standard_fields(double **post_proc_vect,
     } else {
       Ttt = 0.0;
     }
-    local_post[STREAM_TENSION] = Ttt;
-    local_lumped[STREAM_TENSION] = 1.;
+    local_post[goma_ctx->post.stream_tension] = Ttt;
+    local_lumped[goma_ctx->post.stream_tension] = 1.;
   }
 
-  if (DIV_VELOCITY != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][PRESSURE]) {
+  if (goma_ctx->post.div_velocity != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][PRESSURE]) {
     Dnn = 0.;
     for (a = 0; a < dim; a++) {
       Dnn += goma_ctx->fem.fv->grad_v[a][a];
     }
     /* If you want everything positive, uncomment this next line */
     /* Dnn = fabs(Dnn);  */
-    local_post[DIV_VELOCITY] = Dnn;
-    local_lumped[DIV_VELOCITY] = 1.;
+    local_post[goma_ctx->post.div_velocity] = Dnn;
+    local_lumped[goma_ctx->post.div_velocity] = 1.;
   }
 
-  if (DIV_PVELOCITY != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1]) {
+  if (goma_ctx->post.div_pvelocity != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1]) {
     Dnn = 0.0;
     for (a = 0; a < dim; a++)
       Dnn += goma_ctx->fem.fv->grad_pv[a][a];
-    local_post[DIV_PVELOCITY] = Dnn;
-    local_lumped[DIV_PVELOCITY] = 1.0;
+    local_post[goma_ctx->post.div_pvelocity] = Dnn;
+    local_lumped[goma_ctx->post.div_pvelocity] = 1.0;
   }
 
-  if (DIV_TOTAL != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1]) {
+  if (goma_ctx->post.div_total != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1]) {
     species_particle = (int)goma_ctx->fem.mp->u_density[0];
     p_vol_frac = goma_ctx->fem.fv->c[species_particle];
     Dnn = 0.0;
@@ -968,12 +723,13 @@ static int calc_standard_fields(double **post_proc_vect,
       tempp = p_vol_frac * goma_ctx->fem.fv->grad_pv[a][a];
       Dnn += tempf + tempp;
     }
-    local_post[DIV_TOTAL] = Dnn;
-    local_lumped[DIV_TOTAL] = 1.0;
+    local_post[goma_ctx->post.div_total] = Dnn;
+    local_lumped[goma_ctx->post.div_total] = 1.0;
   }
 
 #if 1
-  if (PP_Viscosity != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.pp_viscosity != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     mu = 0;
     if (goma_ctx->fem.upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
@@ -1023,11 +779,12 @@ static int calc_standard_fields(double **post_proc_vect,
       }
     }
 
-    local_post[PP_Viscosity] = mu;
-    local_lumped[PP_Viscosity] = 1.;
+    local_post[goma_ctx->post.pp_viscosity] = mu;
+    local_lumped[goma_ctx->post.pp_viscosity] = 1.;
   }
 #else
-  if (PP_Viscosity != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.pp_viscosity != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
@@ -1078,14 +835,15 @@ static int calc_standard_fields(double **post_proc_vect,
       mu += goma_ctx->fem.gn->tau_y / Du_eps;
     }
 
-    local_post[PP_Viscosity] = mu;
-    local_lumped[PP_Viscosity] = 1.;
+    local_post[goma_ctx->post.pp_viscosity] = mu;
+    local_lumped[goma_ctx->post.pp_viscosity] = 1.;
   }
 #endif
 
-  if (PP_Viscosity != -1 && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP] ||
-                             goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] ||
-                             goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP_2])) {
+  if (goma_ctx->post.pp_viscosity != -1 &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP_2])) {
     if (goma_ctx->fem.gn->ConstitutiveEquation == POWER_LAW ||
         goma_ctx->fem.gn->ConstitutiveEquation == BINGHAM ||
         goma_ctx->fem.gn->ConstitutiveEquation == HERSCHEL_BULKLEY ||
@@ -1104,58 +862,59 @@ static int calc_standard_fields(double **post_proc_vect,
       } else {
         calculate_lub_q_v(R_SHELL_FILMP, time, delta_t, xi, exo);
       }
-      local_post[PP_Viscosity] = goma_ctx->fem.lub_aux->mu_star;
+      local_post[goma_ctx->post.pp_viscosity] = goma_ctx->fem.lub_aux->mu_star;
       /* Cleanup */
       safe_free((void *)n_dof);
     } else {
-      local_post[PP_Viscosity] = viscosity(goma_ctx->fem.gn, NULL, NULL);
+      local_post[goma_ctx->post.pp_viscosity] = viscosity(goma_ctx->fem.gn, NULL, NULL);
     }
-    local_lumped[PP_Viscosity] = 1.0;
+    local_lumped[goma_ctx->post.pp_viscosity] = 1.0;
   }
 
-  if (PP_FlowingLiquid_Viscosity != -1 &&
+  if (goma_ctx->post.pp_flowingliquid_viscosity != -1 &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->fem.mp->PorousMediaType == POROUS_BRINKMAN) {
       mu = flowing_liquid_viscosity(NULL);
     } else {
       mu = 0.0;
     }
-    local_post[PP_FlowingLiquid_Viscosity] = mu;
-    local_lumped[PP_FlowingLiquid_Viscosity] = 1.0;
+    local_post[goma_ctx->post.pp_flowingliquid_viscosity] = mu;
+    local_lumped[goma_ctx->post.pp_flowingliquid_viscosity] = 1.0;
   }
 
-  if (PP_VolumeFractionGas != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.pp_volumefractiongas != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     double volF = 0.0;
     computeCommonMaterialProps_gp(time);
     volF = goma_ctx->fem.mp->volumeFractionGas;
-    local_post[PP_VolumeFractionGas] = volF;
-    local_lumped[PP_VolumeFractionGas] = 1.0;
+    local_post[goma_ctx->post.pp_volumefractiongas] = volF;
+    local_lumped[goma_ctx->post.pp_volumefractiongas] = 1.0;
   }
 
-  if (DENSITY != -1 && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] ||
-                        (!goma_ctx->fem.pd->gv[R_MOMENTUM1] &&
-                         goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS]))) {
+  if (goma_ctx->post.density != -1 && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] ||
+                                       (!goma_ctx->fem.pd->gv[R_MOMENTUM1] &&
+                                        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS]))) {
     rho = density(NULL, time);
-    local_post[DENSITY] = rho;
-    local_lumped[DENSITY] = 1.;
+    local_post[goma_ctx->post.density] = rho;
+    local_lumped[goma_ctx->post.density] = 1.;
   }
 
-  if (PP_Diffusivity != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS]) {
+  if (goma_ctx->post.pp_diffusivity != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS]) {
     Diffusivity();
     for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-      local_post[PP_Diffusivity + w] = goma_ctx->fem.mp->diffusivity[w];
-      local_lumped[PP_Diffusivity + w] = 1.;
+      local_post[goma_ctx->post.pp_diffusivity + w] = goma_ctx->fem.mp->diffusivity[w];
+      local_lumped[goma_ctx->post.pp_diffusivity + w] = 1.;
     }
   }
 
-  if (HEAVISIDE != -1 && goma_ctx->fem.ls != NULL &&
+  if (goma_ctx->post.heaviside != -1 && goma_ctx->fem.ls != NULL &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_FILL]) {
     load_lsi(goma_ctx->fem.ls->Length_Scale);
-    local_post[HEAVISIDE] = goma_ctx->fem.lsi->H;
-    local_lumped[HEAVISIDE] = 1.;
+    local_post[goma_ctx->post.heaviside] = goma_ctx->fem.lsi->H;
+    local_lumped[goma_ctx->post.heaviside] = 1.;
   }
 
-  if (RHO_DOT != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.rho_dot != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     double rho_dot = 0;
     if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_PMDI_10) {
       double M_CO2 = goma_ctx->fem.mp->u_density[0];
@@ -1229,25 +988,27 @@ static int calc_standard_fields(double **post_proc_vect,
         rho_dot = rho_gas * volF_dot - rho_liq * volF_dot;
       }
     }
-    local_post[RHO_DOT] = rho_dot;
-    local_lumped[RHO_DOT] = 1.;
+    local_post[goma_ctx->post.rho_dot] = rho_dot;
+    local_lumped[goma_ctx->post.rho_dot] = 1.;
   }
 
-  if (POLYMER_VISCOSITY != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (goma_ctx->post.polymer_viscosity != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     mode = 0;
     double mup = viscosity(goma_ctx->fem.ve[mode]->gn, gamma, NULL);
-    local_post[POLYMER_VISCOSITY] = mup;
-    local_lumped[POLYMER_VISCOSITY] = 1.;
+    local_post[goma_ctx->post.polymer_viscosity] = mup;
+    local_lumped[goma_ctx->post.polymer_viscosity] = 1.;
   }
 
-  if (POLYMER_TIME_CONST != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (goma_ctx->post.polymer_time_const != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     mode = 0;
     double lambda = polymer_time_const(goma_ctx->fem.ve[mode]->time_const_st, gamma, NULL);
-    local_post[POLYMER_TIME_CONST] = lambda;
-    local_lumped[POLYMER_TIME_CONST] = 1.;
+    local_post[goma_ctx->post.polymer_time_const] = lambda;
+    local_lumped[goma_ctx->post.polymer_time_const] = 1.;
   }
 
-  if (PTT_XI != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (goma_ctx->post.ptt_xi != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     mode = 0;
     double xi = 0;
     double mup = viscosity(goma_ctx->fem.ve[mode]->gn, gamma, NULL);
@@ -1263,11 +1024,12 @@ static int calc_standard_fields(double **post_proc_vect,
       err = level_set_property(neg_xi, pos_xi, width, &xi, NULL);
       GOMA_EH(err, "level_set_property() failed for polymer time constant.");
     }
-    local_post[PTT_XI] = xi;
-    local_lumped[PTT_XI] = 1.;
+    local_post[goma_ctx->post.ptt_xi] = xi;
+    local_lumped[goma_ctx->post.ptt_xi] = 1.;
   }
 
-  if (PTT_EPSILON != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (goma_ctx->post.ptt_epsilon != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     mode = 0;
     double eps = 0;
     double mup = viscosity(goma_ctx->fem.ve[mode]->gn, gamma, NULL);
@@ -1283,11 +1045,12 @@ static int calc_standard_fields(double **post_proc_vect,
       err = level_set_property(neg_eps, pos_eps, width, &eps, NULL);
       GOMA_EH(err, "level_set_property() failed for polymer time constant.");
     }
-    local_post[PTT_EPSILON] = eps;
-    local_lumped[PTT_EPSILON] = 1.;
+    local_post[goma_ctx->post.ptt_epsilon] = eps;
+    local_lumped[goma_ctx->post.ptt_epsilon] = 1.;
   }
 
-  if (MOBILITY_PARAMETER != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (goma_ctx->post.mobility_parameter != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     mode = 0;
     double alpha = 0;
     double mup = viscosity(goma_ctx->fem.ve[mode]->gn, gamma, NULL);
@@ -1303,10 +1066,10 @@ static int calc_standard_fields(double **post_proc_vect,
       err = level_set_property(neg_alpha, pos_alpha, width, &alpha, NULL);
       GOMA_EH(err, "level_set_property() failed for polymer time constant.");
     }
-    local_post[MOBILITY_PARAMETER] = alpha;
-    local_lumped[MOBILITY_PARAMETER] = 1.;
+    local_post[goma_ctx->post.mobility_parameter] = alpha;
+    local_lumped[goma_ctx->post.mobility_parameter] = 1.;
   }
-  if (MEAN_SHEAR != -1) {
+  if (goma_ctx->post.mean_shear != -1) {
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
       double gammadot, gamma[DIM][DIM];
       for (a = 0; a < goma_ctx->problem.vim; a++) {
@@ -1317,8 +1080,8 @@ static int calc_standard_fields(double **post_proc_vect,
       /* find second invariant of strain-rate */
       calc_shearrate(&gammadot, gamma, NULL, NULL);
 
-      local_post[MEAN_SHEAR] = gammadot;
-      local_lumped[MEAN_SHEAR] = 1.;
+      local_post[goma_ctx->post.mean_shear] = gammadot;
+      local_lumped[goma_ctx->post.mean_shear] = 1.;
     }
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP] ||
         goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] ||
@@ -1335,14 +1098,15 @@ static int calc_standard_fields(double **post_proc_vect,
       } else {
         calculate_lub_q_v(R_SHELL_FILMP, time, delta_t, xi, exo);
       }
-      local_post[MEAN_SHEAR] = goma_ctx->fem.lub_aux->srate;
-      local_lumped[MEAN_SHEAR] = 1.;
+      local_post[goma_ctx->post.mean_shear] = goma_ctx->fem.lub_aux->srate;
+      local_lumped[goma_ctx->post.mean_shear] = 1.;
       /* Cleanup */
       safe_free((void *)n_dof);
     }
   }
 
-  if (MEAN_VORTICITY != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.mean_vorticity != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     double vorticity, omega[DIM][DIM];
     for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (b = 0; b < goma_ctx->problem.vim; b++) {
@@ -1352,11 +1116,11 @@ static int calc_standard_fields(double **post_proc_vect,
     /* find second invariant of vorticity dyadic */
     calc_shearrate(&vorticity, omega, NULL, NULL);
 
-    local_post[MEAN_VORTICITY] = vorticity;
-    local_lumped[MEAN_VORTICITY] = 1.;
+    local_post[goma_ctx->post.mean_vorticity] = vorticity;
+    local_lumped[goma_ctx->post.mean_vorticity] = 1.;
   }
 
-  if (GIES_CRIT != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.gies_crit != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     double gammadot, gamma[DIM][DIM];
     double vorticity, omega[DIM][DIM];
     for (a = 0; a < goma_ctx->problem.vim; a++) {
@@ -1368,11 +1132,12 @@ static int calc_standard_fields(double **post_proc_vect,
     /* find second invariant of strain-rate */
     calc_shearrate(&gammadot, gamma, NULL, NULL);
     calc_shearrate(&vorticity, omega, NULL, NULL);
-    local_post[GIES_CRIT] = (gammadot - vorticity) / (DBL_SMALL + gammadot + vorticity);
-    local_lumped[GIES_CRIT] = 1.;
+    local_post[goma_ctx->post.gies_crit] =
+        (gammadot - vorticity) / (DBL_SMALL + gammadot + vorticity);
+    local_lumped[goma_ctx->post.gies_crit] = 1.;
   }
 
-  if (Q_FCN != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.q_fcn != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     double gammadot, del_v[DIM][DIM];
     for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (b = 0; b < goma_ctx->problem.vim; b++) {
@@ -1382,29 +1147,30 @@ static int calc_standard_fields(double **post_proc_vect,
     /* find second invariant of velocity gradient tensor */
     calc_shearrate(&gammadot, del_v, NULL, NULL);
 
-    local_post[Q_FCN] = gammadot;
-    local_lumped[Q_FCN] = 1.;
+    local_post[goma_ctx->post.q_fcn] = gammadot;
+    local_lumped[goma_ctx->post.q_fcn] = 1.;
   }
 
-  if (PSPG_PP != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.pspg_pp != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     dbl pspg[DIM];
     calc_pspg(pspg, NULL, time, theta, delta_t, pg_data);
     for (int i = 0; i < goma_ctx->problem.vim; i++) {
-      local_post[PSPG_PP + i] = pspg[i];
-      local_lumped[PSPG_PP + i] = 1.;
+      local_post[goma_ctx->post.pspg_pp + i] = pspg[i];
+      local_lumped[goma_ctx->post.pspg_pp + i] = 1.;
     }
   }
 
-  if (VELO_SPEED != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.velo_speed != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     velo_sqrd = 0.;
     for (a = 0; a < goma_ctx->problem.vim; a++) {
       velo_sqrd += SQUARE(goma_ctx->fem.fv->v[a]);
     }
-    local_post[VELO_SPEED] = sqrt(velo_sqrd);
-    local_lumped[VELO_SPEED] = 1.;
+    local_post[goma_ctx->post.velo_speed] = sqrt(velo_sqrd);
+    local_lumped[goma_ctx->post.velo_speed] = 1.;
   }
 
-  if (PRESSURE_CONT != -1 &&
+  if (goma_ctx->post.pressure_cont != -1 &&
       (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][PRESSURE] ||
        goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TFMP_PRES]) &&
       (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] ||
@@ -1412,42 +1178,46 @@ static int calc_standard_fields(double **post_proc_vect,
         goma_ctx->fem.pd->MeshMotion == DYNAMIC_LAGRANGIAN) ||
        (goma_ctx->fem.pd->MeshMotion == TOTAL_ALE))) {
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][PRESSURE]) {
-      local_post[PRESSURE_CONT] = goma_ctx->fem.fv->P;
+      local_post[goma_ctx->post.pressure_cont] = goma_ctx->fem.fv->P;
     } else if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][TFMP_PRES]) {
-      local_post[PRESSURE_CONT] = goma_ctx->fem.fv->tfmp_pres;
+      local_post[goma_ctx->post.pressure_cont] = goma_ctx->fem.fv->tfmp_pres;
     }
-    local_lumped[PRESSURE_CONT] = 1.;
+    local_lumped[goma_ctx->post.pressure_cont] = 1.;
   }
 
-  if (SH_DIV_S_V_CONT != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_SURF_DIV_V]) {
-    local_post[SH_DIV_S_V_CONT] = goma_ctx->fem.fv->div_s_v;
-    local_lumped[SH_DIV_S_V_CONT] = 1.;
+  if (goma_ctx->post.sh_div_s_v_cont != -1 &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_SURF_DIV_V]) {
+    local_post[goma_ctx->post.sh_div_s_v_cont] = goma_ctx->fem.fv->div_s_v;
+    local_lumped[goma_ctx->post.sh_div_s_v_cont] = 1.;
   }
 
-  if (SH_CURV_CONT != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_SURF_CURV]) {
-    local_post[SH_CURV_CONT] = goma_ctx->fem.fv->curv;
-    local_lumped[SH_CURV_CONT] = 1.;
+  if (goma_ctx->post.sh_curv_cont != -1 &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_SURF_CURV]) {
+    local_post[goma_ctx->post.sh_curv_cont] = goma_ctx->fem.fv->curv;
+    local_lumped[goma_ctx->post.sh_curv_cont] = 1.;
   }
 
-  if (FILL_CONT != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][FILL]) {
-    local_post[FILL_CONT] = goma_ctx->fem.fv->F;
-    local_lumped[FILL_CONT] = 1.;
+  if (goma_ctx->post.fill_cont != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][FILL]) {
+    local_post[goma_ctx->post.fill_cont] = goma_ctx->fem.fv->F;
+    local_lumped[goma_ctx->post.fill_cont] = 1.;
   }
 
-  if (CONC_CONT != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+  if (goma_ctx->post.conc_cont != -1 &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
     for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-      local_post[CONC_CONT + w] = goma_ctx->fem.fv->c[w];
-      local_lumped[CONC_CONT + w] = 1.;
+      local_post[goma_ctx->post.conc_cont + w] = goma_ctx->fem.fv->c[w];
+      local_lumped[goma_ctx->post.conc_cont + w] = 1.;
     }
   }
 
-  if (EM_CONTOURS != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
+  if (goma_ctx->post.em_contours != -1 &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
     index = 0;
     for (b = 0; b < DIM; b++) {
 
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
-        local_post[EM_CONTOURS + index] = goma_ctx->fem.fv->em_er[b];
-        local_lumped[EM_CONTOURS + index] = 1.;
+        local_post[goma_ctx->post.em_contours + index] = goma_ctx->fem.fv->em_er[b];
+        local_lumped[goma_ctx->post.em_contours + index] = 1.;
         index++;
       }
     }
@@ -1455,49 +1225,15 @@ static int calc_standard_fields(double **post_proc_vect,
     for (b = 0; b < DIM; b++) {
 
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_IMAG]) {
-        local_post[EM_CONTOURS + index] = goma_ctx->fem.fv->em_ei[b];
-        local_lumped[EM_CONTOURS + index] = 1.;
+        local_post[goma_ctx->post.em_contours + index] = goma_ctx->fem.fv->em_ei[b];
+        local_lumped[goma_ctx->post.em_contours + index] = 1.;
         index++;
       }
     }
   }
 
-  if (TOTAL_EM_CONTOURS != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
-    index = 0;
-    const double c0 = 1.0 / (sqrt(goma_ctx->fem.upd->Free_Space_Permittivity *
-                                  goma_ctx->fem.upd->Free_Space_Permeability));
-    dbl x = goma_ctx->fem.fv->x[0];
-    dbl y = goma_ctx->fem.fv->x[1];
-    dbl z = goma_ctx->fem.fv->x[2];
-    dbl freq = goma_ctx->fem.upd->EM_Frequency;
-    dbl lambda0 = c0 / freq;
-    dbl k0 = 2 * M_PI / lambda0;
-    complex double wave[3] = {0};
-    complex double curl_wave[3];
-    if (goma_ctx->fem.mp->PermittivityModel != RADIAL_PML) {
-      incident_wave(x, y, z, k0, wave, curl_wave);
-    }
-
-    for (b = 0; b < DIM; b++) {
-
-      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
-        local_post[TOTAL_EM_CONTOURS + index] = creal(wave[b]);
-        local_lumped[TOTAL_EM_CONTOURS + index] = 1.;
-        index++;
-      }
-    }
-
-    for (b = 0; b < DIM; b++) {
-
-      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_IMAG]) {
-        local_post[TOTAL_EM_CONTOURS + index] = cimag(wave[b]);
-        local_lumped[TOTAL_EM_CONTOURS + index] = 1.;
-        index++;
-      }
-    }
-  }
-
-  if (SCATTERED_EM_CONTOURS != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
+  if (goma_ctx->post.total_em_contours != -1 &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
     index = 0;
     const double c0 = 1.0 / (sqrt(goma_ctx->fem.upd->Free_Space_Permittivity *
                                   goma_ctx->fem.upd->Free_Space_Permeability));
@@ -1516,8 +1252,8 @@ static int calc_standard_fields(double **post_proc_vect,
     for (b = 0; b < DIM; b++) {
 
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
-        local_post[SCATTERED_EM_CONTOURS + index] = goma_ctx->fem.fv->em_er[b] - creal(wave[b]);
-        local_lumped[SCATTERED_EM_CONTOURS + index] = 1.;
+        local_post[goma_ctx->post.total_em_contours + index] = creal(wave[b]);
+        local_lumped[goma_ctx->post.total_em_contours + index] = 1.;
         index++;
       }
     }
@@ -1525,14 +1261,53 @@ static int calc_standard_fields(double **post_proc_vect,
     for (b = 0; b < DIM; b++) {
 
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_IMAG]) {
-        local_post[SCATTERED_EM_CONTOURS + index] = goma_ctx->fem.fv->em_ei[b] - cimag(wave[b]);
-        local_lumped[SCATTERED_EM_CONTOURS + index] = 1.;
+        local_post[goma_ctx->post.total_em_contours + index] = cimag(wave[b]);
+        local_lumped[goma_ctx->post.total_em_contours + index] = 1.;
         index++;
       }
     }
   }
 
-  if (STRESS_CONT != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
+  if (goma_ctx->post.scattered_em_contours != -1 &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
+    index = 0;
+    const double c0 = 1.0 / (sqrt(goma_ctx->fem.upd->Free_Space_Permittivity *
+                                  goma_ctx->fem.upd->Free_Space_Permeability));
+    dbl x = goma_ctx->fem.fv->x[0];
+    dbl y = goma_ctx->fem.fv->x[1];
+    dbl z = goma_ctx->fem.fv->x[2];
+    dbl freq = goma_ctx->fem.upd->EM_Frequency;
+    dbl lambda0 = c0 / freq;
+    dbl k0 = 2 * M_PI / lambda0;
+    complex double wave[3] = {0};
+    complex double curl_wave[3];
+    if (goma_ctx->fem.mp->PermittivityModel != RADIAL_PML) {
+      incident_wave(x, y, z, k0, wave, curl_wave);
+    }
+
+    for (b = 0; b < DIM; b++) {
+
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
+        local_post[goma_ctx->post.scattered_em_contours + index] =
+            goma_ctx->fem.fv->em_er[b] - creal(wave[b]);
+        local_lumped[goma_ctx->post.scattered_em_contours + index] = 1.;
+        index++;
+      }
+    }
+
+    for (b = 0; b < DIM; b++) {
+
+      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_IMAG]) {
+        local_post[goma_ctx->post.scattered_em_contours + index] =
+            goma_ctx->fem.fv->em_ei[b] - cimag(wave[b]);
+        local_lumped[goma_ctx->post.scattered_em_contours + index] = 1.;
+        index++;
+      }
+    }
+  }
+
+  if (goma_ctx->post.stress_cont != -1 &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
     index = 0;
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v_s[mode][0][0]]) {
@@ -1542,8 +1317,8 @@ static int calc_standard_fields(double **post_proc_vect,
                only assemble the upper half */
             if (a <= b) {
               if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v_s[mode][a][b]]) {
-                local_post[STRESS_CONT + index] = goma_ctx->fem.fv->S[mode][a][b];
-                local_lumped[STRESS_CONT + index] = 1.;
+                local_post[goma_ctx->post.stress_cont + index] = goma_ctx->fem.fv->S[mode][a][b];
+                local_lumped[goma_ctx->post.stress_cont + index] = 1.;
                 index++;
               }
             }
@@ -1565,8 +1340,8 @@ static int calc_standard_fields(double **post_proc_vect,
                 ts += goma_ctx->fem.fv->S[mode][a][b];
               }
             }
-            local_post[STRESS_CONT + index] = ts;
-            local_lumped[STRESS_CONT + index] = 1.;
+            local_post[goma_ctx->post.stress_cont + index] = ts;
+            local_lumped[goma_ctx->post.stress_cont + index] = 1.;
             index++;
           }
         }
@@ -1574,7 +1349,8 @@ static int calc_standard_fields(double **post_proc_vect,
     }
   }
 
-  if (MOMENT_SOURCES != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MOMENT0]) {
+  if (goma_ctx->post.moment_sources != -1 &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MOMENT0]) {
     double msource[MAX_MOMENTS];
     MOMENT_SOURCE_DEPENDENCE_STRUCT *d_msource;
     d_msource = calloc(1, sizeof(MOMENT_SOURCE_DEPENDENCE_STRUCT));
@@ -1582,14 +1358,14 @@ static int calc_standard_fields(double **post_proc_vect,
 
     for (int mom = 0; mom < MAX_MOMENTS; mom++) {
       if (goma_ctx->fem.pd->gv[MOMENT0 + mom]) {
-        local_post[MOMENT_SOURCES + mom] = msource[mom];
-        local_lumped[MOMENT_SOURCES + mom] = 1.;
+        local_post[goma_ctx->post.moment_sources + mom] = msource[mom];
+        local_lumped[goma_ctx->post.moment_sources + mom] = 1.;
       }
     }
     free(d_msource);
   }
 
-  if (YZBETA != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+  if (goma_ctx->post.yzbeta != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
     struct Petrov_Galerkin_Data pg_data;
     h_elem_siz(pg_data.hsquared, pg_data.hhv, pg_data.dhv_dxnode,
                goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]);
@@ -1631,17 +1407,18 @@ static int calc_standard_fields(double **post_proc_vect,
       dbl dc2 = fabs(strong_residual) * h_elem * h_elem * 0.25;
       //        yzbeta = 0.5*(dc1 + dc2);
 
-      local_post[YZBETA + w] =
+      local_post[goma_ctx->post.yzbeta + w] =
           0.5 *
           (dc1 +
            dc2); // fmin(dc1,
                  // supg_terms.supg_tau);//yzbeta;//supg_terms.supg_tau;//fmin(supg_terms.supg_tau,
                  // 0.5*(dc1 + dc2));
-      local_lumped[YZBETA + w] = 1.;
+      local_lumped[goma_ctx->post.yzbeta + w] = 1.;
     }
   }
 
-  if (FIRST_INVAR_STRAIN != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (goma_ctx->post.first_invar_strain != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     TrE = 0.;
     if (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL) {
       TrE = goma_ctx->fem.fv->strain[0][0] + 2 * goma_ctx->fem.fv->strain[1][1];
@@ -1651,11 +1428,12 @@ static int calc_standard_fields(double **post_proc_vect,
       }
     }
     /*     TrE = fv->div_d; */
-    local_post[FIRST_INVAR_STRAIN] = TrE;
-    local_lumped[FIRST_INVAR_STRAIN] = 1.;
+    local_post[goma_ctx->post.first_invar_strain] = TrE;
+    local_lumped[goma_ctx->post.first_invar_strain] = 1.;
   }
 
-  if (SEC_INVAR_STRAIN != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (goma_ctx->post.sec_invar_strain != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     E_E = 0.;
     /* find second invariant of strain */
     for (a = 0; a < dim; a++) {
@@ -1664,50 +1442,56 @@ static int calc_standard_fields(double **post_proc_vect,
                       goma_ctx->fem.fv->strain[a][a] * goma_ctx->fem.fv->strain[b][b]);
       }
     }
-    local_post[SEC_INVAR_STRAIN] = E_E;
-    local_lumped[SEC_INVAR_STRAIN] = 1.;
+    local_post[goma_ctx->post.sec_invar_strain] = E_E;
+    local_lumped[goma_ctx->post.sec_invar_strain] = 1.;
   }
 
-  if (THIRD_INVAR_STRAIN != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (goma_ctx->post.third_invar_strain != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     /* this is actually the volume change - third invarient of the Deformation Gradient! */
-    local_post[THIRD_INVAR_STRAIN] = goma_ctx->fem.fv->volume_change;
-    local_lumped[THIRD_INVAR_STRAIN] = 1.;
+    local_post[goma_ctx->post.third_invar_strain] = goma_ctx->fem.fv->volume_change;
+    local_lumped[goma_ctx->post.third_invar_strain] = 1.;
   }
 
-  if (FIRST_STRAINRATE_INVAR != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (goma_ctx->post.first_strainrate_invar != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     dbl INV, d_INV_dT[DIM][DIM];
     INV = calc_tensor_invariant(goma_ctx->fem.fv_dot->strain, d_INV_dT, 1);
-    local_post[FIRST_STRAINRATE_INVAR] = INV;
-    local_lumped[FIRST_STRAINRATE_INVAR] = 1.;
+    local_post[goma_ctx->post.first_strainrate_invar] = INV;
+    local_lumped[goma_ctx->post.first_strainrate_invar] = 1.;
   }
 
-  if (SEC_STRAINRATE_INVAR != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (goma_ctx->post.sec_strainrate_invar != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     dbl INV, d_INV_dT[DIM][DIM];
     INV = calc_tensor_invariant(goma_ctx->fem.fv_dot->strain, d_INV_dT, 2);
-    local_post[SEC_STRAINRATE_INVAR] = INV;
-    local_lumped[SEC_STRAINRATE_INVAR] = 1.;
+    local_post[goma_ctx->post.sec_strainrate_invar] = INV;
+    local_lumped[goma_ctx->post.sec_strainrate_invar] = 1.;
   }
 
-  if (THIRD_STRAINRATE_INVAR != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (goma_ctx->post.third_strainrate_invar != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     dbl INV, d_INV_dT[DIM][DIM];
     INV = calc_tensor_invariant(goma_ctx->fem.fv_dot->strain, d_INV_dT, 3);
-    local_post[THIRD_STRAINRATE_INVAR] = INV;
-    local_lumped[THIRD_STRAINRATE_INVAR] = 1.;
+    local_post[goma_ctx->post.third_strainrate_invar] = INV;
+    local_lumped[goma_ctx->post.third_strainrate_invar] = 1.;
   }
 
-  if (WALL_DISTANCE != -1 && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][VELOCITY1] ||
-                              goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP])) {
-    local_post[WALL_DISTANCE] = goma_ctx->fem.fv->wall_distance;
-    local_lumped[WALL_DISTANCE] = 1.;
+  if (goma_ctx->post.wall_distance != -1 &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][VELOCITY1] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP])) {
+    local_post[goma_ctx->post.wall_distance] = goma_ctx->fem.fv->wall_distance;
+    local_lumped[goma_ctx->post.wall_distance] = 1.;
   }
 
-  if (CONTACT_DISTANCE != -1 &&
+  if (goma_ctx->post.contact_distance != -1 &&
       (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1])) {
-    local_post[CONTACT_DISTANCE] = goma_ctx->fem.fv->multi_contact_line_distance;
-    local_lumped[CONTACT_DISTANCE] = 1.;
+    local_post[goma_ctx->post.contact_distance] = goma_ctx->fem.fv->multi_contact_line_distance;
+    local_lumped[goma_ctx->post.contact_distance] = 1.;
   }
 
-  if (DIELECTROPHORETIC_FIELD != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENORM]) {
+  if (goma_ctx->post.dielectrophoretic_field != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENORM]) {
     if (goma_ctx->particles.model_data[1] <= 0.0 || goma_ctx->particles.model_data[2] <= 0.0 ||
         goma_ctx->particles.model_data[3] <= 0.0 || goma_ctx->particles.model_data[4] <= 0.0 ||
         goma_ctx->particles.model_data[5] <= 0.0 || goma_ctx->particles.model_data[6] <= 0.0 ||
@@ -1729,12 +1513,13 @@ static int calc_standard_fields(double **post_proc_vect,
       dfvector[a] =
           dielectrophoretic_force_coeff * goma_ctx->fem.fv->Enorm * goma_ctx->fem.fv->grad_Enorm[a];
     for (a = 0; a < dim; a++) {
-      local_post[DIELECTROPHORETIC_FIELD + a] = dfvector[a];
-      local_lumped[DIELECTROPHORETIC_FIELD + a] = 1.0;
+      local_post[goma_ctx->post.dielectrophoretic_field + a] = dfvector[a];
+      local_lumped[goma_ctx->post.dielectrophoretic_field + a] = 1.0;
     }
   }
 
-  if (DIELECTROPHORETIC_FIELD_NORM != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENORM]) {
+  if (goma_ctx->post.dielectrophoretic_field_norm != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENORM]) {
     if (goma_ctx->particles.model_data[1] <= 0.0 || goma_ctx->particles.model_data[2] <= 0.0 ||
         goma_ctx->particles.model_data[3] <= 0.0 || goma_ctx->particles.model_data[4] <= 0.0 ||
         goma_ctx->particles.model_data[5] <= 0.0 || goma_ctx->particles.model_data[6] <= 0.0 ||
@@ -1760,29 +1545,31 @@ static int calc_standard_fields(double **post_proc_vect,
       dfnorm += dfvector[a] * dfvector[a];
     dfnorm = MAX(0.0, dfnorm);
     dfnorm = sqrt(dfnorm);
-    local_post[DIELECTROPHORETIC_FIELD_NORM] = dfnorm;
-    local_lumped[DIELECTROPHORETIC_FIELD_NORM] = 1.0;
+    local_post[goma_ctx->post.dielectrophoretic_field_norm] = dfnorm;
+    local_lumped[goma_ctx->post.dielectrophoretic_field_norm] = 1.0;
   }
 
-  if (ENORMSQ_FIELD != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENORM])
+  if (goma_ctx->post.enormsq_field != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENORM])
     for (a = 0; a < dim; a++) {
-      local_post[ENORMSQ_FIELD + a] =
+      local_post[goma_ctx->post.enormsq_field + a] =
           2.0 * goma_ctx->fem.fv->Enorm * goma_ctx->fem.fv->grad_Enorm[a];
-      local_lumped[ENORMSQ_FIELD + a] = 1.0;
+      local_lumped[goma_ctx->post.enormsq_field + a] = 1.0;
     }
 
-  if (ENORMSQ_FIELD_NORM != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENORM]) {
+  if (goma_ctx->post.enormsq_field_norm != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENORM]) {
     dfnorm = 0.0;
     for (a = 0; a < dim; a++)
       dfnorm += (2.0 * goma_ctx->fem.fv->Enorm * goma_ctx->fem.fv->grad_Enorm[a]) *
                 (2.0 * goma_ctx->fem.fv->Enorm * goma_ctx->fem.fv->grad_Enorm[a]);
     dfnorm = MAX(0.0, dfnorm);
     dfnorm = sqrt(dfnorm);
-    local_post[ENORMSQ_FIELD_NORM] = dfnorm;
-    local_lumped[ENORMSQ_FIELD_NORM] = 1.0;
+    local_post[goma_ctx->post.enormsq_field_norm] = dfnorm;
+    local_lumped[goma_ctx->post.enormsq_field_norm] = 1.0;
   }
 
-  if (DIFFUSION_VECTORS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS]) {
+  if (goma_ctx->post.diffusion_vectors != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS]) {
     if (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS) {
       if (goma_ctx->fem.cr->MassFluxModel == FICKIAN) {
         for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
@@ -1821,13 +1608,13 @@ static int calc_standard_fields(double **post_proc_vect,
     }
     for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
       for (a = 0; a < dim; a++) {
-        local_post[DIFFUSION_VECTORS + w * dim + a] = n[w][a];
-        local_lumped[DIFFUSION_VECTORS + w * dim + a] = 1.0;
+        local_post[goma_ctx->post.diffusion_vectors + w * dim + a] = n[w][a];
+        local_lumped[goma_ctx->post.diffusion_vectors + w * dim + a] = 1.0;
       }
     }
   }
 
-  if (DIFFUSION_VECTORS_POR_LIQ_GPHASE != -1 &&
+  if (goma_ctx->post.diffusion_vectors_por_liq_gphase != -1 &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][POR_LIQ_PRES] &&
       goma_ctx->fem.mp->PorousMediaType != POROUS_SATURATED) {
     for (a = 0; a < goma_ctx->problem.vim; a++) {
@@ -1842,12 +1629,12 @@ static int calc_standard_fields(double **post_proc_vect,
                      goma_ctx->fem.fv->grad_p_gas[a]);
     }
     for (a = 0; a < dim; a++) {
-      local_post[DIFFUSION_VECTORS_POR_LIQ_GPHASE + a] = n[0][a];
-      local_lumped[DIFFUSION_VECTORS_POR_LIQ_GPHASE + a] = 1.0;
+      local_post[goma_ctx->post.diffusion_vectors_por_liq_gphase + a] = n[0][a];
+      local_lumped[goma_ctx->post.diffusion_vectors_por_liq_gphase + a] = 1.0;
     }
   }
 
-  if (DIFFUSION_VECTORS_POR_AIR_GPHASE != -1 &&
+  if (goma_ctx->post.diffusion_vectors_por_air_gphase != -1 &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][POR_LIQ_PRES] &&
       goma_ctx->fem.mp->PorousMediaType != POROUS_SATURATED) {
     for (a = 0; a < goma_ctx->problem.vim; a++) {
@@ -1862,12 +1649,13 @@ static int calc_standard_fields(double **post_proc_vect,
                      goma_ctx->fem.fv->grad_p_gas[a]);
     }
     for (a = 0; a < dim; a++) {
-      local_post[DIFFUSION_VECTORS_POR_AIR_GPHASE + a] = n[1][a];
-      local_lumped[DIFFUSION_VECTORS_POR_AIR_GPHASE + a] = 1.0;
+      local_post[goma_ctx->post.diffusion_vectors_por_air_gphase + a] = n[1][a];
+      local_lumped[goma_ctx->post.diffusion_vectors_por_air_gphase + a] = 1.0;
     }
   }
 
-  if (CONDUCTION_VECTORS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
+  if (goma_ctx->post.conduction_vectors != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
     if (goma_ctx->fem.cr->HeatFluxModel == CR_HF_FOURIER_0) {
       if (goma_ctx->fem.mp->ConductivityModel == USER) {
         err = usr_thermal_conductivity(goma_ctx->fem.mp->u_thermal_conductivity, time);
@@ -1887,20 +1675,20 @@ static int calc_standard_fields(double **post_proc_vect,
       }
     }
     for (a = 0; a < dim; a++) {
-      local_post[CONDUCTION_VECTORS + a] = qc[a];
-      local_lumped[CONDUCTION_VECTORS + a] = 1.;
+      local_post[goma_ctx->post.conduction_vectors + a] = qc[a];
+      local_lumped[goma_ctx->post.conduction_vectors + a] = 1.;
     }
   }
 
-  if (ORIENTATION_VECTORS != -1) {
+  if (goma_ctx->post.orientation_vectors != -1) {
     /* parameters are sent through USER_POST input line for 3D printing orientation ...  */
-    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENERGY] && USER_POST != -1 &&
-        len_u_post_proc > 2) {
+    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENERGY] && goma_ctx->post.user_post != -1 &&
+        goma_ctx->post.len_u_post_proc > 2) {
       double q_mag = 0., sign = 0.;
-      double radius = u_post_proc[1], overlap = u_post_proc[2];
+      double radius = goma_ctx->post.u_post_proc[1], overlap = goma_ctx->post.u_post_proc[2];
       int dir = 0, alternate_off;
       /*      int dir = 0, alternate_off = 0; */
-      alternate_off = (int)u_post_proc[0];
+      alternate_off = (int)goma_ctx->post.u_post_proc[0];
       /*alternate_off = 0; radius = 0.79375; overlap = 0.1;*/
       if (goma_ctx->fem.cr->HeatFluxModel == CR_HF_FOURIER_0) {
         if (goma_ctx->fem.mp->ConductivityModel == USER) {
@@ -1931,8 +1719,8 @@ static int calc_standard_fields(double **post_proc_vect,
         sign = 2 * (double)dir - 1.;
       }
       for (a = 0; a < dim; a++) {
-        local_post[ORIENTATION_VECTORS + a] = sign * qc[a] / sqrt(q_mag);
-        local_lumped[ORIENTATION_VECTORS + a] = 1.;
+        local_post[goma_ctx->post.orientation_vectors + a] = sign * qc[a] / sqrt(q_mag);
+        local_lumped[goma_ctx->post.orientation_vectors + a] = 1.;
       }
     } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
       double velo_sqrd = 0.;
@@ -1940,15 +1728,17 @@ static int calc_standard_fields(double **post_proc_vect,
         velo_sqrd += SQUARE(goma_ctx->fem.fv->v[a]);
       }
       for (a = 0; a < goma_ctx->problem.vim; a++) {
-        local_post[ORIENTATION_VECTORS + a] = goma_ctx->fem.fv->v[a] / sqrt(velo_sqrd);
-        local_lumped[ORIENTATION_VECTORS + a] = 1.;
+        local_post[goma_ctx->post.orientation_vectors + a] =
+            goma_ctx->fem.fv->v[a] / sqrt(velo_sqrd);
+        local_lumped[goma_ctx->post.orientation_vectors + a] = 1.;
       }
     } else {
       GOMA_EH(GOMA_ERROR, "Orientation field not defined!");
     }
   }
-  if (SHELL_NORMALS != -1 && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_ANGLE1] ||
-                              goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP])) {
+  if (goma_ctx->post.shell_normals != -1 &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_ANGLE1] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP])) {
     double sh_n[DIM];
     for (a = 0; a < DIM; a++) {
       sh_n[a] = 0;
@@ -1975,13 +1765,13 @@ static int calc_standard_fields(double **post_proc_vect,
       GOMA_EH(GOMA_ERROR, "Not sure how I got here.");
     }
     for (a = 0; a < dim; a++) {
-      local_post[SHELL_NORMALS + a] = sh_n[a];
-      local_lumped[SHELL_NORMALS + a] = 1.;
+      local_post[goma_ctx->post.shell_normals + a] = sh_n[a];
+      local_lumped[goma_ctx->post.shell_normals + a] = 1.;
     }
   }
 
   /* calculate mesh stress here !!*/
-  if (STRESS_TENSOR != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (goma_ctx->post.stress_tensor != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     /*
      * Total mesh stress tensor...
      */
@@ -2020,24 +1810,24 @@ static int calc_standard_fields(double **post_proc_vect,
     }
 
     for (j = 0; j < DIM; j++) {
-      local_post[STRESS_TENSOR + j] = TT[j][j];
-      local_lumped[STRESS_TENSOR + j] = 1.;
+      local_post[goma_ctx->post.stress_tensor + j] = TT[j][j];
+      local_lumped[goma_ctx->post.stress_tensor + j] = 1.;
     }
-    local_post[STRESS_TENSOR + 3] = TT[0][1];
-    local_lumped[STRESS_TENSOR + 3] = 1.;
+    local_post[goma_ctx->post.stress_tensor + 3] = TT[0][1];
+    local_lumped[goma_ctx->post.stress_tensor + 3] = 1.;
     if (dim == 3) /*Note the T_theta_theta term for
                     Axisymm is picked up in previous loop */
     {
-      local_post[STRESS_TENSOR + 4] = TT[0][2];
-      local_post[STRESS_TENSOR + 5] = TT[1][2];
-      local_lumped[STRESS_TENSOR + 4] = 1.;
-      local_lumped[STRESS_TENSOR + 5] = 1.;
+      local_post[goma_ctx->post.stress_tensor + 4] = TT[0][2];
+      local_post[goma_ctx->post.stress_tensor + 5] = TT[1][2];
+      local_lumped[goma_ctx->post.stress_tensor + 4] = 1.;
+      local_lumped[goma_ctx->post.stress_tensor + 5] = 1.;
     }
 
   } /* end of STRESS_TENSOR */
 
   /* calculate mesh strain here !!*/
-  if (STRAIN_TENSOR != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (goma_ctx->post.strain_tensor != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (i = 0; i < dim; i++) {
       for (j = 0; j < dim; j++) {
         EE[i][j] = goma_ctx->fem.fv->strain[i][j];
@@ -2053,22 +1843,23 @@ static int calc_standard_fields(double **post_proc_vect,
                  pow((1. - goma_ctx->fem.fv->P / goma_ctx->fem.elc->lame_mu), 3. / 4.);
     }
     for (j = 0; j < 3; j++) {
-      local_post[STRAIN_TENSOR + j] = EE[j][j];
-      local_lumped[STRAIN_TENSOR + j] = 1.;
+      local_post[goma_ctx->post.strain_tensor + j] = EE[j][j];
+      local_lumped[goma_ctx->post.strain_tensor + j] = 1.;
     }
-    local_post[STRAIN_TENSOR + 3] = EE[0][1];
-    local_lumped[STRAIN_TENSOR + 3] = 1.;
+    local_post[goma_ctx->post.strain_tensor + 3] = EE[0][1];
+    local_lumped[goma_ctx->post.strain_tensor + 3] = 1.;
     if (dim > 2) {
-      local_post[STRAIN_TENSOR + 4] = EE[0][2];
-      local_post[STRAIN_TENSOR + 5] = EE[1][2];
-      local_lumped[STRAIN_TENSOR + 4] = 1.;
-      local_lumped[STRAIN_TENSOR + 5] = 1.;
+      local_post[goma_ctx->post.strain_tensor + 4] = EE[0][2];
+      local_post[goma_ctx->post.strain_tensor + 5] = EE[1][2];
+      local_lumped[goma_ctx->post.strain_tensor + 4] = 1.;
+      local_lumped[goma_ctx->post.strain_tensor + 5] = 1.;
     }
   }
   /* end of STRAIN_TENSOR */
 
   /* calculate EVP def grad here !!*/
-  if (goma_ctx->fem.evpl->ConstitutiveEquation == EVP_HYPER && EVP_DEF_GRAD_TENSOR != -1 &&
+  if (goma_ctx->fem.evpl->ConstitutiveEquation == EVP_HYPER &&
+      goma_ctx->post.evp_def_grad_tensor != -1 &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     /*even though I changed this to VIM, I noticed that FVPs
       are not transmitted to restart file.....PRS 6/7/2002 */
@@ -2079,26 +1870,27 @@ static int calc_standard_fields(double **post_proc_vect,
     }
 
     for (j = 0; j < 3; j++) {
-      local_post[EVP_DEF_GRAD_TENSOR + j] = FVP[j][j];
-      local_lumped[EVP_DEF_GRAD_TENSOR + j] = 1.;
+      local_post[goma_ctx->post.evp_def_grad_tensor + j] = FVP[j][j];
+      local_lumped[goma_ctx->post.evp_def_grad_tensor + j] = 1.;
     }
-    local_post[EVP_DEF_GRAD_TENSOR + 3] = FVP[0][1];
-    local_post[EVP_DEF_GRAD_TENSOR + 4] = FVP[1][0];
-    local_lumped[EVP_DEF_GRAD_TENSOR + 3] = 1.;
-    local_lumped[EVP_DEF_GRAD_TENSOR + 4] = 1.;
+    local_post[goma_ctx->post.evp_def_grad_tensor + 3] = FVP[0][1];
+    local_post[goma_ctx->post.evp_def_grad_tensor + 4] = FVP[1][0];
+    local_lumped[goma_ctx->post.evp_def_grad_tensor + 3] = 1.;
+    local_lumped[goma_ctx->post.evp_def_grad_tensor + 4] = 1.;
     if (dim > 2) {
-      local_post[EVP_DEF_GRAD_TENSOR + 5] = FVP[0][2];
-      local_post[EVP_DEF_GRAD_TENSOR + 6] = FVP[2][0];
-      local_post[EVP_DEF_GRAD_TENSOR + 7] = FVP[1][2];
-      local_post[EVP_DEF_GRAD_TENSOR + 8] = FVP[2][1];
-      local_lumped[EVP_DEF_GRAD_TENSOR + 5] = 1.;
-      local_lumped[EVP_DEF_GRAD_TENSOR + 6] = 1.;
-      local_lumped[EVP_DEF_GRAD_TENSOR + 7] = 1.;
-      local_lumped[EVP_DEF_GRAD_TENSOR + 8] = 1.;
+      local_post[goma_ctx->post.evp_def_grad_tensor + 5] = FVP[0][2];
+      local_post[goma_ctx->post.evp_def_grad_tensor + 6] = FVP[2][0];
+      local_post[goma_ctx->post.evp_def_grad_tensor + 7] = FVP[1][2];
+      local_post[goma_ctx->post.evp_def_grad_tensor + 8] = FVP[2][1];
+      local_lumped[goma_ctx->post.evp_def_grad_tensor + 5] = 1.;
+      local_lumped[goma_ctx->post.evp_def_grad_tensor + 6] = 1.;
+      local_lumped[goma_ctx->post.evp_def_grad_tensor + 7] = 1.;
+      local_lumped[goma_ctx->post.evp_def_grad_tensor + 8] = 1.;
     }
     /* To restart the EVP calculation, you also need the stress tensor.
        We dump here if mesh-stress is requested !!*/
-    if (STRESS_TENSOR != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    if (goma_ctx->post.stress_tensor != -1 &&
+        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
       for (i = 0; i < DIM; i++) {
         for (j = 0; j < DIM; j++) {
           TVP[i][j] = goma_ctx->fem.evpl_glob[0]->TT_glob[ielem][ip][i][j];
@@ -2110,37 +1902,38 @@ static int calc_standard_fields(double **post_proc_vect,
         w1 = 5;
       }
       for (j = 0; j < 3; j++) {
-        local_post[EVP_DEF_GRAD_TENSOR + j + w1] = TVP[j][j];
-        local_lumped[EVP_DEF_GRAD_TENSOR + j + w1] = 1.;
+        local_post[goma_ctx->post.evp_def_grad_tensor + j + w1] = TVP[j][j];
+        local_lumped[goma_ctx->post.evp_def_grad_tensor + j + w1] = 1.;
       }
-      local_post[EVP_DEF_GRAD_TENSOR + 3 + w1] = TVP[0][1];
-      local_post[EVP_DEF_GRAD_TENSOR + 4 + w1] = TVP[1][0];
-      local_lumped[EVP_DEF_GRAD_TENSOR + 3 + w1] = 1.;
-      local_lumped[EVP_DEF_GRAD_TENSOR + 4 + w1] = 1.;
+      local_post[goma_ctx->post.evp_def_grad_tensor + 3 + w1] = TVP[0][1];
+      local_post[goma_ctx->post.evp_def_grad_tensor + 4 + w1] = TVP[1][0];
+      local_lumped[goma_ctx->post.evp_def_grad_tensor + 3 + w1] = 1.;
+      local_lumped[goma_ctx->post.evp_def_grad_tensor + 4 + w1] = 1.;
       if (dim > 2) {
-        local_post[EVP_DEF_GRAD_TENSOR + 5 + w1] = TVP[0][2];
-        local_post[EVP_DEF_GRAD_TENSOR + 6 + w1] = TVP[2][0];
-        local_post[EVP_DEF_GRAD_TENSOR + 7 + w1] = TVP[1][2];
-        local_post[EVP_DEF_GRAD_TENSOR + 8 + w1] = TVP[2][1];
-        local_lumped[EVP_DEF_GRAD_TENSOR + 5 + w1] = 1.;
-        local_lumped[EVP_DEF_GRAD_TENSOR + 6 + w1] = 1.;
-        local_lumped[EVP_DEF_GRAD_TENSOR + 7 + w1] = 1.;
-        local_lumped[EVP_DEF_GRAD_TENSOR + 8 + w1] = 1.;
+        local_post[goma_ctx->post.evp_def_grad_tensor + 5 + w1] = TVP[0][2];
+        local_post[goma_ctx->post.evp_def_grad_tensor + 6 + w1] = TVP[2][0];
+        local_post[goma_ctx->post.evp_def_grad_tensor + 7 + w1] = TVP[1][2];
+        local_post[goma_ctx->post.evp_def_grad_tensor + 8 + w1] = TVP[2][1];
+        local_lumped[goma_ctx->post.evp_def_grad_tensor + 5 + w1] = 1.;
+        local_lumped[goma_ctx->post.evp_def_grad_tensor + 6 + w1] = 1.;
+        local_lumped[goma_ctx->post.evp_def_grad_tensor + 7 + w1] = 1.;
+        local_lumped[goma_ctx->post.evp_def_grad_tensor + 8 + w1] = 1.;
       }
     }
   }
   /* end of EVP_DEF_GRAD_TENSOR */
 
-  if (LAGRANGE_CONVECTION != -1 && (goma_ctx->fem.pd->MeshMotion == LAGRANGIAN ||
-                                    goma_ctx->fem.cr->MeshMotion == DYNAMIC_LAGRANGIAN)) {
+  if (goma_ctx->post.lagrange_convection != -1 &&
+      (goma_ctx->fem.pd->MeshMotion == LAGRANGIAN ||
+       goma_ctx->fem.cr->MeshMotion == DYNAMIC_LAGRANGIAN)) {
     /* get the convection velocity (it's different for arbitrary and
        lagrangian meshes) */
     err = get_convection_velocity(vconv, vconv_old, d_vconv, delta_t, theta);
     GOMA_EH(err, "Error in calculating effective convection velocity");
 
     for (j = 0; j < dim; j++) {
-      local_post[LAGRANGE_CONVECTION + j] = vconv[j];
-      local_lumped[LAGRANGE_CONVECTION + j] = 1.;
+      local_post[goma_ctx->post.lagrange_convection + j] = vconv[j];
+      local_lumped[goma_ctx->post.lagrange_convection + j] = 1.;
     }
   }
 
@@ -2155,116 +1948,127 @@ static int calc_standard_fields(double **post_proc_vect,
     checkPorous = 1;
   }
 
-  if (POROUS_SATURATION != -1 && checkPorous) {
-    local_post[POROUS_SATURATION] = goma_ctx->fem.mp->saturation;
-    local_lumped[POROUS_SATURATION] = 1.;
+  if (goma_ctx->post.porous_saturation != -1 && checkPorous) {
+    local_post[goma_ctx->post.porous_saturation] = goma_ctx->fem.mp->saturation;
+    local_lumped[goma_ctx->post.porous_saturation] = 1.;
   } /* end of POROUS_SATURATION */
 
-  if (POROUS_RHO_TOTAL_SOLVENTS != -1 && checkPorous) {
+  if (goma_ctx->post.porous_rho_total_solvents != -1 && checkPorous) {
     w = 0;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_LIQ_PRES]) {
-      local_post[POROUS_RHO_TOTAL_SOLVENTS] = goma_ctx->fem.pmv->bulk_density[i_pl];
-      local_lumped[POROUS_RHO_TOTAL_SOLVENTS] = 1.;
+      local_post[goma_ctx->post.porous_rho_total_solvents] = goma_ctx->fem.pmv->bulk_density[i_pl];
+      local_lumped[goma_ctx->post.porous_rho_total_solvents] = 1.;
     }
     w++;
     if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES]) {
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_GAS_PRES]) {
-        local_post[POROUS_RHO_TOTAL_SOLVENTS + w] = goma_ctx->fem.pmv->bulk_density[i_pg];
-        local_lumped[POROUS_RHO_TOTAL_SOLVENTS + w] = 1.;
+        local_post[goma_ctx->post.porous_rho_total_solvents + w] =
+            goma_ctx->fem.pmv->bulk_density[i_pg];
+        local_lumped[goma_ctx->post.porous_rho_total_solvents + w] = 1.;
       }
       w++;
     }
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_POROSITY]) {
-      local_post[POROUS_RHO_TOTAL_SOLVENTS + w] = goma_ctx->fem.pmv->bulk_density[i_pore];
-      local_lumped[POROUS_RHO_TOTAL_SOLVENTS + w] = 1.;
+      local_post[goma_ctx->post.porous_rho_total_solvents + w] =
+          goma_ctx->fem.pmv->bulk_density[i_pore];
+      local_lumped[goma_ctx->post.porous_rho_total_solvents + w] = 1.;
     }
   } /* end of POROUS_RHO_TOTAL_SOLVENTS */
 
-  if (POROUS_RHO_GAS_SOLVENTS != -1 && checkPorous) {
+  if (goma_ctx->post.porous_rho_gas_solvents != -1 && checkPorous) {
     if (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
         goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE ||
         goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED) {
       w = 0;
       if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES]) {
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_LIQ_PRES]) {
-          local_post[POROUS_RHO_GAS_SOLVENTS] = goma_ctx->fem.pmv->gas_density_solvents[i_pl];
-          local_lumped[POROUS_RHO_GAS_SOLVENTS] = 1.;
+          local_post[goma_ctx->post.porous_rho_gas_solvents] =
+              goma_ctx->fem.pmv->gas_density_solvents[i_pl];
+          local_lumped[goma_ctx->post.porous_rho_gas_solvents] = 1.;
         }
         w++;
       }
       if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES]) {
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_GAS_PRES]) {
-          local_post[POROUS_RHO_GAS_SOLVENTS + w] = goma_ctx->fem.pmv->gas_density_solvents[i_pg];
-          local_lumped[POROUS_RHO_GAS_SOLVENTS + w] = 1.;
+          local_post[goma_ctx->post.porous_rho_gas_solvents + w] =
+              goma_ctx->fem.pmv->gas_density_solvents[i_pg];
+          local_lumped[goma_ctx->post.porous_rho_gas_solvents + w] = 1.;
         }
         w++;
       }
       if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_POROSITY]) {
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_POROSITY]) {
-          local_post[POROUS_RHO_GAS_SOLVENTS + w] = goma_ctx->fem.pmv->gas_density_solvents[i_pore];
-          local_lumped[POROUS_RHO_GAS_SOLVENTS + w] = 1.;
+          local_post[goma_ctx->post.porous_rho_gas_solvents + w] =
+              goma_ctx->fem.pmv->gas_density_solvents[i_pore];
+          local_lumped[goma_ctx->post.porous_rho_gas_solvents + w] = 1.;
         }
         w++;
       }
     }
   } /* end of POROUS_RHO_GAS_SOLVENTS */
 
-  if (POROUS_RHO_LPHASE != -1 && checkPorous) {
-    local_post[POROUS_RHO_LPHASE] =
+  if (goma_ctx->post.porous_rho_lphase != -1 && checkPorous) {
+    local_post[goma_ctx->post.porous_rho_lphase] =
         goma_ctx->fem.mp->density * goma_ctx->fem.mp->porosity * goma_ctx->fem.mp->saturation;
-    local_lumped[POROUS_RHO_LPHASE] = 1.;
+    local_lumped[goma_ctx->post.porous_rho_lphase] = 1.;
   } /* end of POROUS_RHO_LPHASE */
 
-  if (DARCY_VELOCITY_GAS != -1 && goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) {
+  if (goma_ctx->post.darcy_velocity_gas != -1 &&
+      goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) {
     for (a = 0; a < dim; a++) {
-      local_post[DARCY_VELOCITY_GAS + a] = goma_ctx->fem.pmv->gas_darcy_velocity[a];
-      local_lumped[DARCY_VELOCITY_GAS + a] = 1.;
+      local_post[goma_ctx->post.darcy_velocity_gas + a] = goma_ctx->fem.pmv->gas_darcy_velocity[a];
+      local_lumped[goma_ctx->post.darcy_velocity_gas + a] = 1.;
     }
   } /* end of DARCY_VELOCITY_GAS */
 
-  if (DARCY_VELOCITY_LIQ != -1 && (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
-                                   goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
-                                   goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED ||
-                                   goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE)) {
+  if (goma_ctx->post.darcy_velocity_liq != -1 &&
+      (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+       goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
+       goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED ||
+       goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE)) {
     for (a = 0; a < dim; a++) {
-      local_post[DARCY_VELOCITY_LIQ + a] = goma_ctx->fem.pmv->liq_darcy_velocity[a];
-      local_lumped[DARCY_VELOCITY_LIQ + a] = 1.;
+      local_post[goma_ctx->post.darcy_velocity_liq + a] = goma_ctx->fem.pmv->liq_darcy_velocity[a];
+      local_lumped[goma_ctx->post.darcy_velocity_liq + a] = 1.;
     }
   } /* end of DARCY_VELOCITY_LIQ */
 
-  if (POROUS_LIQUID_ACCUM_RATE != -1 &&
+  if (goma_ctx->post.porous_liquid_accum_rate != -1 &&
       (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
        goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
        goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE)) {
-    local_post[POROUS_LIQUID_ACCUM_RATE] = pmt->Inventory_solvent_dot[0];
+    local_post[goma_ctx->post.porous_liquid_accum_rate] = pmt->Inventory_solvent_dot[0];
     for (a = 0; a < dim; a++) {
-      local_post[POROUS_LIQUID_ACCUM_RATE] += pmt->conv_flux[0][a];
+      local_post[goma_ctx->post.porous_liquid_accum_rate] += pmt->conv_flux[0][a];
     }
-    local_lumped[POROUS_LIQUID_ACCUM_RATE] = 1.;
+    local_lumped[goma_ctx->post.porous_liquid_accum_rate] = 1.;
   } /* end of POROUS_LIQUID_ACCUM_RATE */
 
-  if (ELECTRIC_FIELD != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
+  if (goma_ctx->post.electric_field != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
     for (a = 0; a < dim; a++) {
-      local_post[ELECTRIC_FIELD + a] = -goma_ctx->fem.fv->grad_V[a];
-      local_lumped[ELECTRIC_FIELD + a] = 1.0;
+      local_post[goma_ctx->post.electric_field + a] = -goma_ctx->fem.fv->grad_V[a];
+      local_lumped[goma_ctx->post.electric_field + a] = 1.0;
     }
   } /* end of ELECTRIC_FIELD */
 
-  if (ACOUSTIC_PRESSURE != -1 && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] ||
-                                  goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
-    local_post[ACOUSTIC_PRESSURE] = sqrt(goma_ctx->fem.fv->apr * goma_ctx->fem.fv->apr +
-                                         goma_ctx->fem.fv->api * goma_ctx->fem.fv->api);
-    local_lumped[ACOUSTIC_PRESSURE] = 1.0;
+  if (goma_ctx->post.acoustic_pressure != -1 &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
+    local_post[goma_ctx->post.acoustic_pressure] =
+        sqrt(goma_ctx->fem.fv->apr * goma_ctx->fem.fv->apr +
+             goma_ctx->fem.fv->api * goma_ctx->fem.fv->api);
+    local_lumped[goma_ctx->post.acoustic_pressure] = 1.0;
   } /* end of ACOUSTIC_PRESSURE */
 
-  if (ACOUSTIC_PHASE_ANGLE != -1 && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] ||
-                                     goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
-    local_post[ACOUSTIC_PHASE_ANGLE] =
+  if (goma_ctx->post.acoustic_phase_angle != -1 &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
+    local_post[goma_ctx->post.acoustic_phase_angle] =
         atan2(goma_ctx->fem.fv->api, goma_ctx->fem.fv->apr) * 180 / M_PIE;
-    local_lumped[ACOUSTIC_PHASE_ANGLE] = 1.0;
+    local_lumped[goma_ctx->post.acoustic_phase_angle] = 1.0;
   } /* end of ACOUSTIC_PHASE_ANGLE */
 
-  if (ACOUSTIC_ENERGY_DENSITY != -1 &&
+  if (goma_ctx->post.acoustic_energy_density != -1 &&
       (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] ||
        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
     double acous_pgrad = 0;
@@ -2276,71 +2080,74 @@ static int calc_standard_fields(double **post_proc_vect,
       acous_pgrad += goma_ctx->fem.fv->grad_api[a] * goma_ctx->fem.fv->grad_api[a];
       acous_pgrad += goma_ctx->fem.fv->grad_apr[a] * goma_ctx->fem.fv->grad_apr[a];
     }
-    local_post[ACOUSTIC_ENERGY_DENSITY] =
+    local_post[goma_ctx->post.acoustic_energy_density] =
         0.25 * k / (R * omega) *
         (goma_ctx->fem.fv->apr * goma_ctx->fem.fv->apr +
          goma_ctx->fem.fv->api * goma_ctx->fem.fv->api + acous_pgrad / (k * k));
-    local_lumped[ACOUSTIC_ENERGY_DENSITY] = 1.0;
+    local_lumped[goma_ctx->post.acoustic_energy_density] = 1.0;
   } /* end of ACOUSTIC_ENERGY_DENSITY */
 
-  if (LIGHT_INTENSITY != -1 && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LIGHT_INTP] ||
-                                goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LIGHT_INTM])) {
-    local_post[LIGHT_INTENSITY] = goma_ctx->fem.fv->poynt[0] + goma_ctx->fem.fv->poynt[1];
-    local_lumped[LIGHT_INTENSITY] = 1.0;
+  if (goma_ctx->post.light_intensity != -1 &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LIGHT_INTP] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LIGHT_INTM])) {
+    local_post[goma_ctx->post.light_intensity] =
+        goma_ctx->fem.fv->poynt[0] + goma_ctx->fem.fv->poynt[1];
+    local_lumped[goma_ctx->post.light_intensity] = 1.0;
   } /* end of LIGHT_INTENSITY */
 
-  if (PP_FLUID_STRESS != -1 &&
+  if (goma_ctx->post.pp_fluid_stress != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     dbl Pi[DIM][DIM];
     fluid_stress(Pi, NULL);
     for (a = 0; a < goma_ctx->mesh.num_dim; a++) {
       for (b = 0; b < goma_ctx->mesh.num_dim; b++) {
-        local_post[PP_FLUID_STRESS + a * goma_ctx->mesh.num_dim + b] =
+        local_post[goma_ctx->post.pp_fluid_stress + a * goma_ctx->mesh.num_dim + b] =
             Pi[a][b] + goma_ctx->fem.fv->P * delta(a, b);
-        local_lumped[PP_FLUID_STRESS + a * goma_ctx->mesh.num_dim + b] = 1.;
+        local_lumped[goma_ctx->post.pp_fluid_stress + a * goma_ctx->mesh.num_dim + b] = 1.;
       }
     }
     if (goma_ctx->mesh.num_dim == 2 && goma_ctx->problem.vim == 3) {
-      local_post[PP_FLUID_STRESS + 4] = Pi[2][2] + goma_ctx->fem.fv->P * delta(a, b);
-      local_lumped[PP_FLUID_STRESS + 4] = 1.;
+      local_post[goma_ctx->post.pp_fluid_stress + 4] = Pi[2][2] + goma_ctx->fem.fv->P * delta(a, b);
+      local_lumped[goma_ctx->post.pp_fluid_stress + 4] = 1.;
     }
   }
 
-  if (UNTRACKED_SPEC != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS]) {
+  if (goma_ctx->post.untracked_spec != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS]) {
     double density_tot = 0.;
     switch (goma_ctx->fem.mp->Species_Var_Type) {
     case SPECIES_CONCENTRATION:
       density_tot = calc_density(goma_ctx->fem.mp, FALSE, NULL, 0.0);
-      local_post[UNTRACKED_SPEC] = density_tot;
+      local_post[goma_ctx->post.untracked_spec] = density_tot;
       for (j = 0; j < goma_ctx->fem.pd->Num_Species_Eqn; j++) {
-        local_post[UNTRACKED_SPEC] -=
+        local_post[goma_ctx->post.untracked_spec] -=
             goma_ctx->fem.fv->c[j] * goma_ctx->fem.mp->molecular_weight[j];
       }
-      local_post[UNTRACKED_SPEC] /=
+      local_post[goma_ctx->post.untracked_spec] /=
           goma_ctx->fem.mp->molecular_weight[goma_ctx->fem.pd->Num_Species_Eqn];
       break;
     case SPECIES_DENSITY:
       density_tot = calc_density(goma_ctx->fem.mp, FALSE, NULL, 0.0);
-      local_post[UNTRACKED_SPEC] = density_tot;
+      local_post[goma_ctx->post.untracked_spec] = density_tot;
       for (j = 0; j < goma_ctx->fem.pd->Num_Species_Eqn; j++) {
-        local_post[UNTRACKED_SPEC] -= goma_ctx->fem.fv->c[j];
+        local_post[goma_ctx->post.untracked_spec] -= goma_ctx->fem.fv->c[j];
       }
       break;
     case SPECIES_MASS_FRACTION:
     case SPECIES_VOL_FRACTION:
     case SPECIES_UNDEFINED_FORM:
-      local_post[UNTRACKED_SPEC] = 1.0;
+      local_post[goma_ctx->post.untracked_spec] = 1.0;
       for (j = 0; j < goma_ctx->fem.pd->Num_Species_Eqn; j++) {
-        local_post[UNTRACKED_SPEC] -= goma_ctx->fem.fv->c[j];
+        local_post[goma_ctx->post.untracked_spec] -= goma_ctx->fem.fv->c[j];
       }
       break;
     default:
       GOMA_WH(-1, "Undefined Species Type in UNTRACKED_SPEC\n");
     }
-    local_lumped[UNTRACKED_SPEC] = 1.0;
+    local_lumped[goma_ctx->post.untracked_spec] = 1.0;
   } /* end of UNTRACKED_SPEC*/
 
-  if ((TFMP_GAS_VELO != -1 || TFMP_LIQ_VELO != -1 || TFMP_KRG != -1) &&
+  if ((goma_ctx->post.tfmp_gas_velo != -1 || goma_ctx->post.tfmp_liq_velo != -1 ||
+       goma_ctx->post.tfmp_krg != -1) &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
 
@@ -2408,25 +2215,25 @@ static int calc_standard_fields(double **post_proc_vect,
       v_l[k] = -h * h / 12.0 / mu_l * Krl * gradII_P[k];
       v_g[k] = -h * h / 12.0 / mu_g * Krg * gradII_P[k];
     }
-    if (TFMP_GAS_VELO != -1) {
-      local_post[TFMP_GAS_VELO] = v_g[0] + veloAVG[0];
-      local_lumped[TFMP_GAS_VELO] += 1;
-      local_post[TFMP_GAS_VELO + 1] = v_g[1] + veloAVG[1];
-      local_lumped[TFMP_GAS_VELO + 1] += 1;
-      local_post[TFMP_GAS_VELO + 2] = v_g[2] + veloAVG[2];
-      local_lumped[TFMP_GAS_VELO + 2] += 1;
+    if (goma_ctx->post.tfmp_gas_velo != -1) {
+      local_post[goma_ctx->post.tfmp_gas_velo] = v_g[0] + veloAVG[0];
+      local_lumped[goma_ctx->post.tfmp_gas_velo] += 1;
+      local_post[goma_ctx->post.tfmp_gas_velo + 1] = v_g[1] + veloAVG[1];
+      local_lumped[goma_ctx->post.tfmp_gas_velo + 1] += 1;
+      local_post[goma_ctx->post.tfmp_gas_velo + 2] = v_g[2] + veloAVG[2];
+      local_lumped[goma_ctx->post.tfmp_gas_velo + 2] += 1;
     }
-    if (TFMP_LIQ_VELO != -1) {
-      local_post[TFMP_LIQ_VELO] = v_l[0] + veloAVG[0];
-      local_lumped[TFMP_LIQ_VELO] += 1;
-      local_post[TFMP_LIQ_VELO + 1] = v_l[1] + veloAVG[1];
-      local_lumped[TFMP_LIQ_VELO + 1] += 1;
-      local_post[TFMP_LIQ_VELO + 2] = v_l[2] + veloAVG[2];
-      local_lumped[TFMP_LIQ_VELO + 2] += 1;
+    if (goma_ctx->post.tfmp_liq_velo != -1) {
+      local_post[goma_ctx->post.tfmp_liq_velo] = v_l[0] + veloAVG[0];
+      local_lumped[goma_ctx->post.tfmp_liq_velo] += 1;
+      local_post[goma_ctx->post.tfmp_liq_velo + 1] = v_l[1] + veloAVG[1];
+      local_lumped[goma_ctx->post.tfmp_liq_velo + 1] += 1;
+      local_post[goma_ctx->post.tfmp_liq_velo + 2] = v_l[2] + veloAVG[2];
+      local_lumped[goma_ctx->post.tfmp_liq_velo + 2] += 1;
     }
-    if (TFMP_KRG != -1) {
-      local_post[TFMP_KRG] = Krg;
-      local_lumped[TFMP_KRG] += 1;
+    if (goma_ctx->post.tfmp_krg != -1) {
+      local_post[goma_ctx->post.tfmp_krg] = Krg;
+      local_lumped[goma_ctx->post.tfmp_krg] += 1;
       //    } else {
       //      local_post[TFMP_KRG] = 0.0;
     }
@@ -2434,7 +2241,8 @@ static int calc_standard_fields(double **post_proc_vect,
     /* Cleanup */
     safe_free((void *)n_dof);
   }
-  if ((TFMP_INV_PECLET != -1) && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] &&
+  if ((goma_ctx->post.tfmp_inv_peclet != -1) &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
 
     int k;
@@ -2508,12 +2316,12 @@ static int calc_standard_fields(double **post_proc_vect,
     // if (TFMP_GAS_VELO != -1) {
     // if ( Krd != 0.0 && mag_gradII_S >= 1.e-10 ) {
     if (Krd != 0.0 && mag_gradII_S != 0.0) {
-      local_post[TFMP_INV_PECLET] =
+      local_post[goma_ctx->post.tfmp_inv_peclet] =
           (Krl * h * h * h / 12.0 / mu_l * mag_gradII_P) / (D * Krd * mag_gradII_S);
     } else {
-      local_post[TFMP_INV_PECLET] = 0.0;
+      local_post[goma_ctx->post.tfmp_inv_peclet] = 0.0;
     }
-    local_lumped[TFMP_INV_PECLET] += 1;
+    local_lumped[goma_ctx->post.tfmp_inv_peclet] += 1;
 
     //}
     /* Cleanup */
@@ -2524,40 +2332,45 @@ static int calc_standard_fields(double **post_proc_vect,
   if (goma_ctx->fem.efv->ev) {
     for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
       if (goma_ctx->fem.efv->i[j] == I_TABLE) {
-        local_post[EXTERNAL_POST + j] = goma_ctx->fem.fv->external_field[j];
-        local_lumped[EXTERNAL_POST + j] = 1.0;
+        local_post[goma_ctx->post.external_post + j] = goma_ctx->fem.fv->external_field[j];
+        local_lumped[goma_ctx->post.external_post + j] = 1.0;
       }
     }
   }
 
-  if (ELECTRIC_FIELD_MAG != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
+  if (goma_ctx->post.electric_field_mag != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
     for (a = 0; a < dim; a++) {
-      local_post[ELECTRIC_FIELD_MAG] += goma_ctx->fem.fv->grad_V[a] * goma_ctx->fem.fv->grad_V[a];
+      local_post[goma_ctx->post.electric_field_mag] +=
+          goma_ctx->fem.fv->grad_V[a] * goma_ctx->fem.fv->grad_V[a];
     }
-    local_post[ELECTRIC_FIELD_MAG] = sqrt(local_post[ELECTRIC_FIELD_MAG]);
-    local_lumped[ELECTRIC_FIELD_MAG] = 1.0;
+    local_post[goma_ctx->post.electric_field_mag] =
+        sqrt(local_post[goma_ctx->post.electric_field_mag]);
+    local_lumped[goma_ctx->post.electric_field_mag] = 1.0;
   } /* end of ELECTRIC_FIELD_MAG */
 
-  if (CAPILLARY_PRESSURE != -1 && (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
-                                   goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
-                                   goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE)) {
-    local_post[CAPILLARY_PRESSURE] = goma_ctx->fem.pmv->cap_pres;
-    local_lumped[CAPILLARY_PRESSURE] = 1.;
+  if (goma_ctx->post.capillary_pressure != -1 &&
+      (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+       goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
+       goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE)) {
+    local_post[goma_ctx->post.capillary_pressure] = goma_ctx->fem.pmv->cap_pres;
+    local_lumped[goma_ctx->post.capillary_pressure] = 1.;
   } /* end of CAPILLARY_PRESSURE */
 
-  if (POROUS_GRIDPECLET != -1 && checkPorous) {
-    local_post[POROUS_GRIDPECLET] = goma_ctx->fem.stab->Grid_Peclet_Number[POR_LIQ_PRES];
-    local_lumped[POROUS_GRIDPECLET] = 1.0;
+  if (goma_ctx->post.porous_gridpeclet != -1 && checkPorous) {
+    local_post[goma_ctx->post.porous_gridpeclet] =
+        goma_ctx->fem.stab->Grid_Peclet_Number[POR_LIQ_PRES];
+    local_lumped[goma_ctx->post.porous_gridpeclet] = 1.0;
   } /* end of POROUS_GRIDPECLET */
 
-  if (POROUS_SUPGVELOCITY != -1 && checkPorous) {
+  if (goma_ctx->post.porous_supgvelocity != -1 && checkPorous) {
     for (a = 0; a < dim; a++) {
-      local_post[POROUS_SUPGVELOCITY + a] = goma_ctx->fem.pmv->U_supg[a];
-      local_lumped[POROUS_SUPGVELOCITY + a] = 1.0;
+      local_post[goma_ctx->post.porous_supgvelocity + a] = goma_ctx->fem.pmv->U_supg[a];
+      local_lumped[goma_ctx->post.porous_supgvelocity + a] = 1.0;
     }
   } /* end of POROUS_SUPGVELOCITY */
 
-  if (CURL_V != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.curl_v != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     /* MMH: Note that in the SWIRLING coordinate system, we really
      * do have a 3-vector and not just a scalar.
      *
@@ -2568,20 +2381,20 @@ static int calc_standard_fields(double **post_proc_vect,
         goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
         goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D || dim == 3) {
       for (j = 0; j < goma_ctx->problem.vim; j++) {
-        local_post[CURL_V + j] = goma_ctx->fem.fv->curl_v[j];
-        local_lumped[CURL_V + j] = 1.0;
+        local_post[goma_ctx->post.curl_v + j] = goma_ctx->fem.fv->curl_v[j];
+        local_lumped[goma_ctx->post.curl_v + j] = 1.0;
       }
     } else {
       /* We are in 2D or axisymmetric.  In either case, it is the
        * last component of the vorticity vector that contains the
        * magnitude.
        */
-      local_post[CURL_V] = goma_ctx->fem.fv->curl_v[2];
-      local_lumped[CURL_V] = 1.0;
+      local_post[goma_ctx->post.curl_v] = goma_ctx->fem.fv->curl_v[2];
+      local_lumped[goma_ctx->post.curl_v] = 1.0;
     }
   }
 
-  if (HELICITY != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.helicity != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     /* MMH: Note that in the SWIRLING coordinate system, we really
      * do have a 3-vector and not just a scalar.
      *
@@ -2591,29 +2404,30 @@ static int calc_standard_fields(double **post_proc_vect,
     if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
         goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
         goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D || dim == 3) {
-      local_post[HELICITY] = 0.0;
+      local_post[goma_ctx->post.helicity] = 0.0;
       for (j = 0; j < goma_ctx->problem.vim; j++) {
-        local_post[HELICITY] += goma_ctx->fem.fv->v[j] * goma_ctx->fem.fv->curl_v[j];
+        local_post[goma_ctx->post.helicity] += goma_ctx->fem.fv->v[j] * goma_ctx->fem.fv->curl_v[j];
       }
-      local_lumped[HELICITY] = 1.0;
+      local_lumped[goma_ctx->post.helicity] = 1.0;
     }
   }
 
-  if (LAMB_VECTOR != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.lamb_vector != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (j = 0; j < goma_ctx->problem.vim; j++) {
-      local_post[LAMB_VECTOR + j] = 0;
+      local_post[goma_ctx->post.lamb_vector + j] = 0;
       for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (b = 0; b < goma_ctx->problem.vim; b++) {
-          local_post[LAMB_VECTOR + j] +=
+          local_post[goma_ctx->post.lamb_vector + j] +=
               permute(a, b, j) * goma_ctx->fem.fv->curl_v[a] * goma_ctx->fem.fv->v[b];
         }
       }
-      local_lumped[LAMB_VECTOR + j] = 1.0;
+      local_lumped[goma_ctx->post.lamb_vector + j] = 1.0;
     }
   }
 
   /* calculate poynting vectors for EM calculations here !!  */
-  if (POYNTING_VECTORS != -1 &&
+  if (goma_ctx->post.poynting_vectors != -1 &&
       ((goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] ||
         goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG]))) {
     double poynt[DIM];
@@ -2632,21 +2446,23 @@ static int calc_standard_fields(double **post_proc_vect,
       }
     }
     for (a = 0; a < dim; a++) {
-      local_post[POYNTING_VECTORS + a] = poynt[a];
-      local_lumped[POYNTING_VECTORS + a] = 1.;
+      local_post[goma_ctx->post.poynting_vectors + a] = poynt[a];
+      local_lumped[goma_ctx->post.poynting_vectors + a] = 1.;
     }
   }
 
   /* calculate species sources  */
-  if (SPECIES_SOURCES != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS]) {
+  if (goma_ctx->post.species_sources != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS]) {
     err = get_continuous_species_terms(&s_terms, time, theta, delta_t, hs);
     for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-      local_post[SPECIES_SOURCES + w] = s_terms.MassSource[w];
-      local_lumped[SPECIES_SOURCES + w] = 1.;
+      local_post[goma_ctx->post.species_sources + w] = s_terms.MassSource[w];
+      local_lumped[goma_ctx->post.species_sources + w] = 1.;
     }
   }
 
-  if (STRESS_NORM != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
+  if (goma_ctx->post.stress_norm != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
     for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
 
       dbl traceOverVim = 0;
@@ -2667,22 +2483,24 @@ static int calc_standard_fields(double **post_proc_vect,
       }
 
       dbl normOfStressD = sqrt(normOfStressDSqr);
-      local_post[STRESS_NORM + mode] = normOfStressD;
-      local_lumped[STRESS_NORM + mode] = 1.;
+      local_post[goma_ctx->post.stress_norm + mode] = normOfStressD;
+      local_lumped[goma_ctx->post.stress_norm + mode] = 1.;
     }
   }
 
-  if (SARAMITO_YIELD != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
+  if (goma_ctx->post.saramito_yield != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
     for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       dbl coeff;
       compute_saramito_model_terms(&coeff, NULL, goma_ctx->fem.fv->S[mode],
                                    goma_ctx->fem.ve[mode]->gn, TRUE);
-      local_post[SARAMITO_YIELD + mode] = coeff;
-      local_lumped[SARAMITO_YIELD + mode] = 1.;
+      local_post[goma_ctx->post.saramito_yield + mode] = coeff;
+      local_lumped[goma_ctx->post.saramito_yield + mode] = 1.;
     }
   }
 
-  if (VISCOUS_STRESS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.viscous_stress != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
@@ -2693,31 +2511,34 @@ static int calc_standard_fields(double **post_proc_vect,
     // printf("%lf", mu);
     for (a = 0; a < goma_ctx->mesh.num_dim; a++) {
       for (b = 0; b < goma_ctx->mesh.num_dim; b++) {
-        local_post[VISCOUS_STRESS + a * goma_ctx->mesh.num_dim + b] = mu * gamma[a][b];
-        local_lumped[VISCOUS_STRESS + a * goma_ctx->mesh.num_dim + b] = 1.;
+        local_post[goma_ctx->post.viscous_stress + a * goma_ctx->mesh.num_dim + b] =
+            mu * gamma[a][b];
+        local_lumped[goma_ctx->post.viscous_stress + a * goma_ctx->mesh.num_dim + b] = 1.;
       }
     }
     if (goma_ctx->mesh.num_dim == 2 && goma_ctx->problem.vim == 3) {
-      local_post[VISCOUS_STRESS + 4] = mu * gamma[2][2];
-      local_lumped[VISCOUS_STRESS + 4] = 1.;
+      local_post[goma_ctx->post.viscous_stress + 4] = mu * gamma[2][2];
+      local_lumped[goma_ctx->post.viscous_stress + 4] = 1.;
     }
   }
 
-  if (PP_VELOCITY_GRADIENTS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.pp_velocity_gradients != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < goma_ctx->mesh.num_dim; a++) {
       for (b = 0; b < goma_ctx->mesh.num_dim; b++) {
-        local_post[PP_VELOCITY_GRADIENTS + a * goma_ctx->mesh.num_dim + b] =
+        local_post[goma_ctx->post.pp_velocity_gradients + a * goma_ctx->mesh.num_dim + b] =
             goma_ctx->fem.fv->grad_v[a][b];
-        local_lumped[PP_VELOCITY_GRADIENTS + a * goma_ctx->mesh.num_dim + b] = 1.;
+        local_lumped[goma_ctx->post.pp_velocity_gradients + a * goma_ctx->mesh.num_dim + b] = 1.;
       }
     }
     if (goma_ctx->mesh.num_dim == 2 && goma_ctx->problem.vim == 3) {
-      local_post[PP_VELOCITY_GRADIENTS + 4] = goma_ctx->fem.fv->grad_v[2][2];
-      local_lumped[PP_VELOCITY_GRADIENTS + 4] = 1.;
+      local_post[goma_ctx->post.pp_velocity_gradients + 4] = goma_ctx->fem.fv->grad_v[2][2];
+      local_lumped[goma_ctx->post.pp_velocity_gradients + 4] = 1.;
     }
   }
 
-  if (VISCOUS_STRESS_NORM != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.viscous_stress_norm != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
@@ -2748,11 +2569,12 @@ static int calc_standard_fields(double **post_proc_vect,
     }
 
     dbl normOfStressD = sqrt(normOfStressDSqr);
-    local_post[VISCOUS_STRESS_NORM] = normOfStressD;
-    local_lumped[VISCOUS_STRESS_NORM] = 1.;
+    local_post[goma_ctx->post.viscous_stress_norm] = normOfStressD;
+    local_lumped[goma_ctx->post.viscous_stress_norm] = 1.;
   }
 
-  if (VISCOUS_VON_MISES_STRESS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.viscous_von_mises_stress != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
@@ -2787,12 +2609,13 @@ static int calc_standard_fields(double **post_proc_vect,
     }
 
     // dbl viscousVonMisesStress1 = viscousVonMisesStress;
-    local_post[VISCOUS_VON_MISES_STRESS] = viscousVonMisesStress;
-    local_lumped[VISCOUS_VON_MISES_STRESS] = 1.;
+    local_post[goma_ctx->post.viscous_von_mises_stress] = viscousVonMisesStress;
+    local_lumped[goma_ctx->post.viscous_von_mises_stress] = 1.;
   }
 
   /* calculate real-solid stress here !!  */
-  if (REAL_STRESS_TENSOR != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SOLID1]) {
+  if (goma_ctx->post.real_stress_tensor != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SOLID1]) {
     mu = goma_ctx->fem.elc_rs->lame_mu;
     err = belly_flop_rs(mu);
     GOMA_EH(err, "error in belly flop");
@@ -2821,22 +2644,23 @@ static int calc_standard_fields(double **post_proc_vect,
     }
 
     for (j = 0; j < DIM; j++) {
-      local_post[REAL_STRESS_TENSOR + j] = TT[j][j];
-      local_lumped[REAL_STRESS_TENSOR + j] = 1.;
+      local_post[goma_ctx->post.real_stress_tensor + j] = TT[j][j];
+      local_lumped[goma_ctx->post.real_stress_tensor + j] = 1.;
     }
-    local_post[REAL_STRESS_TENSOR + 3] = TT[0][1];
-    local_lumped[REAL_STRESS_TENSOR + 3] = 1.;
+    local_post[goma_ctx->post.real_stress_tensor + 3] = TT[0][1];
+    local_lumped[goma_ctx->post.real_stress_tensor + 3] = 1.;
     if (dim == 3) {
-      local_post[REAL_STRESS_TENSOR + 4] = TT[0][2];
-      local_post[REAL_STRESS_TENSOR + 5] = TT[1][2];
-      local_lumped[REAL_STRESS_TENSOR + 4] = 1.;
-      local_lumped[REAL_STRESS_TENSOR + 5] = 1.;
+      local_post[goma_ctx->post.real_stress_tensor + 4] = TT[0][2];
+      local_post[goma_ctx->post.real_stress_tensor + 5] = TT[1][2];
+      local_lumped[goma_ctx->post.real_stress_tensor + 4] = 1.;
+      local_lumped[goma_ctx->post.real_stress_tensor + 5] = 1.;
     }
 
   } /* end of REAL_STRESS_TENSOR */
 
   /* calculate principal stress differences*/
-  if (PRINCIPAL_STRESS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (goma_ctx->post.principal_stress != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     double I_T, II_T, III_T, coeff_a, coeff_b;
     double m_par = 0, theta1, evalue1, evalue2, evalue3;
     if (goma_ctx->fem.cr->MeshMotion != ARBITRARY) {
@@ -2931,16 +2755,17 @@ static int calc_standard_fields(double **post_proc_vect,
       evalue2 = evalue1;
       evalue2 = theta1;
     }
-    local_post[PRINCIPAL_STRESS] = evalue1;
-    local_lumped[PRINCIPAL_STRESS] = 1.;
-    local_post[PRINCIPAL_STRESS + 1] = evalue2;
-    local_lumped[PRINCIPAL_STRESS + 1] = 1.;
-    local_post[PRINCIPAL_STRESS + 2] = evalue3;
-    local_lumped[PRINCIPAL_STRESS + 2] = 1.;
+    local_post[goma_ctx->post.principal_stress] = evalue1;
+    local_lumped[goma_ctx->post.principal_stress] = 1.;
+    local_post[goma_ctx->post.principal_stress + 1] = evalue2;
+    local_lumped[goma_ctx->post.principal_stress + 1] = 1.;
+    local_post[goma_ctx->post.principal_stress + 2] = evalue3;
+    local_lumped[goma_ctx->post.principal_stress + 2] = 1.;
   } /* end of PRINCIPAL_STRESS */
 
   /* calculate principal real stress differences*/
-  if (PRINCIPAL_REAL_STRESS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SOLID1]) {
+  if (goma_ctx->post.principal_real_stress != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SOLID1]) {
     double I_T, II_T, III_T, coeff_a, coeff_b;
     double m_par = 0, theta1, evalue1, evalue2, evalue3;
     /*
@@ -3000,23 +2825,24 @@ static int calc_standard_fields(double **post_proc_vect,
       evalue2 = evalue1;
       evalue2 = theta1;
     }
-    local_post[PRINCIPAL_REAL_STRESS] = evalue1;
-    local_lumped[PRINCIPAL_REAL_STRESS] = 1.;
-    local_post[PRINCIPAL_REAL_STRESS + 1] = evalue2;
-    local_lumped[PRINCIPAL_REAL_STRESS + 1] = 1.;
-    local_post[PRINCIPAL_REAL_STRESS + 2] = evalue3;
-    local_lumped[PRINCIPAL_REAL_STRESS + 2] = 1.;
+    local_post[goma_ctx->post.principal_real_stress] = evalue1;
+    local_lumped[goma_ctx->post.principal_real_stress] = 1.;
+    local_post[goma_ctx->post.principal_real_stress + 1] = evalue2;
+    local_lumped[goma_ctx->post.principal_real_stress + 1] = 1.;
+    local_post[goma_ctx->post.principal_real_stress + 2] = evalue3;
+    local_lumped[goma_ctx->post.principal_real_stress + 2] = 1.;
   } /* end of PRINCIPAL_REAL_STRESS */
 
-  if (LUB_HEIGHT != -1 && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP] ||
-                           goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_CLOSED] ||
-                           goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] ||
-                           goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_ENERGY] ||
-                           goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_LUB_CURV] ||
-                           (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS] &&
-                            goma_ctx->fem.pd->MassFluxModel == FICKIAN_SHELL) ||
-                           goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] ||
-                           goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND])) {
+  if (goma_ctx->post.lub_height != -1 &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_CLOSED] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_ENERGY] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_LUB_CURV] ||
+       (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS] &&
+        goma_ctx->fem.pd->MassFluxModel == FICKIAN_SHELL) ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND])) {
     double H_U, dH_U_dtime, H_L, dH_L_dtime;
     double dH_U_dX[DIM], dH_L_dX[DIM], dH_U_dp, dH_U_ddh, dH_dF[MDE];
 
@@ -3033,11 +2859,11 @@ static int calc_standard_fields(double **post_proc_vect,
         goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_LUB_CURV] ||
         (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS] &&
          goma_ctx->fem.pd->MassFluxModel == FICKIAN_SHELL)) {
-      local_post[LUB_HEIGHT] =
+      local_post[goma_ctx->post.lub_height] =
           height_function_model(&H_U, &dH_U_dtime, &H_L, &dH_L_dtime, dH_U_dX, dH_L_dX, &dH_U_dp,
                                 &dH_U_ddh, dH_dF, time, delta_t);
     } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP]) {
-      local_post[LUB_HEIGHT] = goma_ctx->fem.fv->sh_fh;
+      local_post[goma_ctx->post.lub_height] = goma_ctx->fem.fv->sh_fh;
     } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] ||
                goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
       double tt = 1.0;
@@ -3050,7 +2876,7 @@ static int calc_standard_fields(double **post_proc_vect,
       gap->dof_map = dof_map;
       load_gap_model(gap);
 
-      local_post[LUB_HEIGHT] = gap->h;
+      local_post[goma_ctx->post.lub_height] = gap->h;
     }
 
     switch (goma_ctx->fem.mp->FSIModel) {
@@ -3058,7 +2884,8 @@ static int calc_standard_fields(double **post_proc_vect,
     case FSI_MESH_UNDEF:
     case FSI_SHELL_ONLY_UNDEF:
       for (a = 0; a < dim; a++) {
-        local_post[LUB_HEIGHT] -= goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->d[a];
+        local_post[goma_ctx->post.lub_height] -=
+            goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->d[a];
       }
       break;
     case FSI_SHELL_ONLY_MESH:
@@ -3081,25 +2908,28 @@ static int calc_standard_fields(double **post_proc_vect,
         double dh_dtime = 1.0;
         double gradII_h[DIM];
 
-        load_displacement_coupling_model(
-            tt, delta_t, &(local_post[LUB_HEIGHT]), &dh_dtime, gradII_h, dh_dmesh, dh_dnormal,
-            d2h_dtime_dmesh, d2h_dtime_dnormal, d_gradIIh_dmesh, d_gradIIh_dnormal, n_dof, dof_map);
+        load_displacement_coupling_model(tt, delta_t, &(local_post[goma_ctx->post.lub_height]),
+                                         &dh_dtime, gradII_h, dh_dmesh, dh_dnormal, d2h_dtime_dmesh,
+                                         d2h_dtime_dnormal, d_gradIIh_dmesh, d_gradIIh_dnormal,
+                                         n_dof, dof_map);
       } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
         // do nothing:
         // the normal_dot_displacement is taken care of in load_gap_model
       } else {
         for (a = 0; a < dim; a++) {
-          local_post[LUB_HEIGHT] -= goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->d[a];
+          local_post[goma_ctx->post.lub_height] -=
+              goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->d[a];
         }
       }
       break;
     case FSI_REALSOLID_CONTINUUM:
       for (a = 0; a < dim; a++) {
-        local_post[LUB_HEIGHT] -= goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->d_rs[a];
+        local_post[goma_ctx->post.lub_height] -=
+            goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->d_rs[a];
       }
       break;
     }
-    local_lumped[LUB_HEIGHT] = 1.0;
+    local_lumped[goma_ctx->post.lub_height] = 1.0;
 
     /* Cleanup */
     goma_ctx->fem.fv->wt = wt;
@@ -3107,7 +2937,8 @@ static int calc_standard_fields(double **post_proc_vect,
 
   } /* end of LUB_HEIGHT */
 
-  if (LUB_HEIGHT_2 != -1 && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP_2])) {
+  if (goma_ctx->post.lub_height_2 != -1 &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP_2])) {
     double H_U_2, dH_U_2_dtime, H_L_2, dH_L_2_dtime;
     double dH_U_2_dX[DIM], dH_L_2_dX[DIM], dH_U_2_dp, dH_U_2_ddh, dH_2_dF[MDE];
 
@@ -3119,11 +2950,11 @@ static int calc_standard_fields(double **post_proc_vect,
     lubrication_shell_initialize(n_dof, dof_map, -1, xi, exo, 0);
 
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP_2]) {
-      local_post[LUB_HEIGHT_2] =
+      local_post[goma_ctx->post.lub_height_2] =
           height_function_model(&H_U_2, &dH_U_2_dtime, &H_L_2, &dH_L_2_dtime, dH_U_2_dX, dH_L_2_dX,
                                 &dH_U_2_dp, &dH_U_2_ddh, dH_2_dF, time, delta_t);
     } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP]) {
-      local_post[LUB_HEIGHT] = 0.;
+      local_post[goma_ctx->post.lub_height] = 0.;
     }
 
     switch (goma_ctx->fem.mp->FSIModel) {
@@ -3131,7 +2962,8 @@ static int calc_standard_fields(double **post_proc_vect,
     case FSI_MESH_UNDEF:
     case FSI_SHELL_ONLY_UNDEF:
       for (a = 0; a < dim; a++) {
-        local_post[LUB_HEIGHT_2] -= goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->d[a];
+        local_post[goma_ctx->post.lub_height_2] -=
+            goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->d[a];
       }
       break;
     case FSI_SHELL_ONLY_MESH:
@@ -3139,21 +2971,23 @@ static int calc_standard_fields(double **post_proc_vect,
           (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL2]) &&
           (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL3])) {
         for (a = 0; a < dim; a++) {
-          local_post[LUB_HEIGHT] -= goma_ctx->fem.fv->n[a] * goma_ctx->fem.fv->d[a];
+          local_post[goma_ctx->post.lub_height] -= goma_ctx->fem.fv->n[a] * goma_ctx->fem.fv->d[a];
         }
       } else {
         for (a = 0; a < dim; a++) {
-          local_post[LUB_HEIGHT] -= goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->d[a];
+          local_post[goma_ctx->post.lub_height] -=
+              goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->d[a];
         }
       }
       break;
     case FSI_REALSOLID_CONTINUUM:
       for (a = 0; a < dim; a++) {
-        local_post[LUB_HEIGHT_2] -= goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->d_rs[a];
+        local_post[goma_ctx->post.lub_height_2] -=
+            goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->d_rs[a];
       }
       break;
     }
-    local_lumped[LUB_HEIGHT_2] = 1.0;
+    local_lumped[goma_ctx->post.lub_height_2] = 1.0;
 
     /* Cleanup */
     goma_ctx->fem.fv->wt = wt;
@@ -3161,7 +2995,7 @@ static int calc_standard_fields(double **post_proc_vect,
 
   } /* end of LUB_HEIGHT_2 */
 
-  if ((LUB_VELO_UPPER != -1 || LUB_VELO_LOWER != -1) &&
+  if ((goma_ctx->post.lub_velo_upper != -1 || goma_ctx->post.lub_velo_lower != -1) &&
       (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP])) {
     /* Setup lubrication */
     int *n_dof = NULL;
@@ -3173,21 +3007,21 @@ static int calc_standard_fields(double **post_proc_vect,
     /* Post values */
     double veloU[DIM], veloL[DIM];
     velocity_function_model(veloU, veloL, time, delta_t);
-    if (LUB_VELO_UPPER != -1) {
-      local_post[LUB_VELO_UPPER] = veloU[0];
-      local_lumped[LUB_VELO_UPPER] = 1.0;
-      local_post[LUB_VELO_UPPER + 1] = veloU[1];
-      local_lumped[LUB_VELO_UPPER + 1] = 1.0;
-      local_post[LUB_VELO_UPPER + 2] = veloU[2];
-      local_lumped[LUB_VELO_UPPER + 2] = 1.0;
+    if (goma_ctx->post.lub_velo_upper != -1) {
+      local_post[goma_ctx->post.lub_velo_upper] = veloU[0];
+      local_lumped[goma_ctx->post.lub_velo_upper] = 1.0;
+      local_post[goma_ctx->post.lub_velo_upper + 1] = veloU[1];
+      local_lumped[goma_ctx->post.lub_velo_upper + 1] = 1.0;
+      local_post[goma_ctx->post.lub_velo_upper + 2] = veloU[2];
+      local_lumped[goma_ctx->post.lub_velo_upper + 2] = 1.0;
     }
-    if (LUB_VELO_LOWER != -1) {
-      local_post[LUB_VELO_LOWER] = veloL[0];
-      local_lumped[LUB_VELO_LOWER] = 1.0;
-      local_post[LUB_VELO_LOWER + 1] = veloL[1];
-      local_lumped[LUB_VELO_LOWER + 1] = 1.0;
-      local_post[LUB_VELO_LOWER + 2] = veloL[2];
-      local_lumped[LUB_VELO_LOWER + 2] = 1.0;
+    if (goma_ctx->post.lub_velo_lower != -1) {
+      local_post[goma_ctx->post.lub_velo_lower] = veloL[0];
+      local_lumped[goma_ctx->post.lub_velo_lower] = 1.0;
+      local_post[goma_ctx->post.lub_velo_lower + 1] = veloL[1];
+      local_lumped[goma_ctx->post.lub_velo_lower + 1] = 1.0;
+      local_post[goma_ctx->post.lub_velo_lower + 2] = veloL[2];
+      local_lumped[goma_ctx->post.lub_velo_lower + 2] = 1.0;
     }
 
     /* Cleanup */
@@ -3196,8 +3030,9 @@ static int calc_standard_fields(double **post_proc_vect,
 
   } /* end of LUB_VELO */
 
-  if ((LUB_VELO_FIELD != -1) && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP] ||
-                                 goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
+  if ((goma_ctx->post.lub_velo_field != -1) &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP] ||
+       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
 
     /* Setup lubrication */
     int *n_dof = NULL;
@@ -3213,19 +3048,20 @@ static int calc_standard_fields(double **post_proc_vect,
     }
 
     /* Post velocities */
-    local_post[LUB_VELO_FIELD] = goma_ctx->fem.lub_aux->v_avg[0];
-    local_lumped[LUB_VELO_FIELD] = 1.0;
-    local_post[LUB_VELO_FIELD + 1] = goma_ctx->fem.lub_aux->v_avg[1];
-    local_lumped[LUB_VELO_FIELD + 1] = 1.0;
-    local_post[LUB_VELO_FIELD + 2] = goma_ctx->fem.lub_aux->v_avg[2];
-    local_lumped[LUB_VELO_FIELD + 2] = 1.0;
+    local_post[goma_ctx->post.lub_velo_field] = goma_ctx->fem.lub_aux->v_avg[0];
+    local_lumped[goma_ctx->post.lub_velo_field] = 1.0;
+    local_post[goma_ctx->post.lub_velo_field + 1] = goma_ctx->fem.lub_aux->v_avg[1];
+    local_lumped[goma_ctx->post.lub_velo_field + 1] = 1.0;
+    local_post[goma_ctx->post.lub_velo_field + 2] = goma_ctx->fem.lub_aux->v_avg[2];
+    local_lumped[goma_ctx->post.lub_velo_field + 2] = 1.0;
 
     /* Cleanup */
     safe_free((void *)n_dof);
 
   } /* end of LUB_VELO_FIELD */
 
-  if ((LUB_VELO_FIELD_2 != -1) && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP_2])) {
+  if ((goma_ctx->post.lub_velo_field_2 != -1) &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP_2])) {
 
     /* Setup lubrication */
     int *n_dof = NULL;
@@ -3237,21 +3073,22 @@ static int calc_standard_fields(double **post_proc_vect,
     calculate_lub_q_v(R_LUBP_2, time, delta_t, xi, exo);
 
     /* Post velocities */
-    local_post[LUB_VELO_FIELD_2] = goma_ctx->fem.lub_aux->v_avg[0];
-    local_lumped[LUB_VELO_FIELD_2] = 1.0;
-    local_post[LUB_VELO_FIELD_2 + 1] = goma_ctx->fem.lub_aux->v_avg[1];
-    local_lumped[LUB_VELO_FIELD_2 + 1] = 1.0;
-    local_post[LUB_VELO_FIELD_2 + 2] = goma_ctx->fem.lub_aux->v_avg[2];
-    local_lumped[LUB_VELO_FIELD_2 + 2] = 1.0;
+    local_post[goma_ctx->post.lub_velo_field_2] = goma_ctx->fem.lub_aux->v_avg[0];
+    local_lumped[goma_ctx->post.lub_velo_field_2] = 1.0;
+    local_post[goma_ctx->post.lub_velo_field_2 + 1] = goma_ctx->fem.lub_aux->v_avg[1];
+    local_lumped[goma_ctx->post.lub_velo_field_2 + 1] = 1.0;
+    local_post[goma_ctx->post.lub_velo_field_2 + 2] = goma_ctx->fem.lub_aux->v_avg[2];
+    local_lumped[goma_ctx->post.lub_velo_field_2 + 2] = 1.0;
 
     /* Cleanup */
     safe_free((void *)n_dof);
 
   } /* end of LUB_VELO_FIELD_2 */
 
-  if ((LUB_FLUID_SOURCE != -1) && ((goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP]) ||
-                                   (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] &&
-                                    goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMH]))) {
+  if ((goma_ctx->post.lub_fluid_source != -1) &&
+      ((goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP]) ||
+       (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] &&
+        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMH]))) {
     /* Setup lubrication */
     int *n_dof = NULL;
     int dof_map[MDE];
@@ -3263,8 +3100,8 @@ static int calc_standard_fields(double **post_proc_vect,
     double LubSourceFlux = 0.0;
     lubrication_fluid_source(&LubSourceFlux, NULL, NULL);
 
-    local_post[LUB_FLUID_SOURCE] = LubSourceFlux;
-    local_lumped[LUB_FLUID_SOURCE] = 1.0;
+    local_post[goma_ctx->post.lub_fluid_source] = LubSourceFlux;
+    local_lumped[goma_ctx->post.lub_fluid_source] = 1.0;
 
     /* Cleanup */
     goma_ctx->fem.fv->wt = wt;
@@ -3272,7 +3109,8 @@ static int calc_standard_fields(double **post_proc_vect,
 
   } /* end of LUB_FLUID_SOURCE */
 
-  if ((LUB_CONVECTION != -1) && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] &&
+  if ((goma_ctx->post.lub_convection != -1) &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] &&
       (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_LUBP] ||
        goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
     int i, j;
@@ -3288,30 +3126,32 @@ static int calc_standard_fields(double **post_proc_vect,
     }
 
     /* Post velocities */
-    local_post[LUB_CONVECTION] = cvect[0];
-    local_lumped[LUB_CONVECTION] = 1.0;
-    local_post[LUB_CONVECTION + 1] = cvect[1];
-    local_lumped[LUB_CONVECTION + 1] = 1.0;
-    local_post[LUB_CONVECTION + 2] = cvect[2];
-    local_lumped[LUB_CONVECTION + 2] = 1.0;
+    local_post[goma_ctx->post.lub_convection] = cvect[0];
+    local_lumped[goma_ctx->post.lub_convection] = 1.0;
+    local_post[goma_ctx->post.lub_convection + 1] = cvect[1];
+    local_lumped[goma_ctx->post.lub_convection + 1] = 1.0;
+    local_post[goma_ctx->post.lub_convection + 2] = cvect[2];
+    local_lumped[goma_ctx->post.lub_convection + 2] = 1.0;
 
   } /* end of LUB_CONVECTION */
 
-  if ((PP_MESH_VELOCITY != -1) && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if ((goma_ctx->post.pp_mesh_velocity != -1) &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     /* Post velocities */
-    local_post[PP_MESH_VELOCITY] = goma_ctx->fem.fv_dot->d[0];
-    local_lumped[PP_MESH_VELOCITY] = 1.0;
+    local_post[goma_ctx->post.pp_mesh_velocity] = goma_ctx->fem.fv_dot->d[0];
+    local_lumped[goma_ctx->post.pp_mesh_velocity] = 1.0;
     if (goma_ctx->fem.pd->Num_Dim > 1) {
-      local_post[PP_MESH_VELOCITY + 1] = goma_ctx->fem.fv_dot->d[1];
-      local_lumped[PP_MESH_VELOCITY + 1] = 1.0;
+      local_post[goma_ctx->post.pp_mesh_velocity + 1] = goma_ctx->fem.fv_dot->d[1];
+      local_lumped[goma_ctx->post.pp_mesh_velocity + 1] = 1.0;
     }
     if (goma_ctx->fem.pd->Num_Dim > 2) {
-      local_post[PP_MESH_VELOCITY + 2] = goma_ctx->fem.fv_dot->d[2];
-      local_lumped[PP_MESH_VELOCITY + 2] = 1.0;
+      local_post[goma_ctx->post.pp_mesh_velocity + 2] = goma_ctx->fem.fv_dot->d[2];
+      local_lumped[goma_ctx->post.pp_mesh_velocity + 2] = 1.0;
     }
   }
 
-  if ((PP_LAME_MU != -1) && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1])) {
+  if ((goma_ctx->post.pp_lame_mu != -1) &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1])) {
 
     /* Define parameters */
     double mu;
@@ -3349,12 +3189,13 @@ static int calc_standard_fields(double **post_proc_vect,
     }
 
     /* Post velocities */
-    local_post[PP_LAME_MU] = mu;
-    local_lumped[PP_LAME_MU] = 1.0;
+    local_post[goma_ctx->post.pp_lame_mu] = mu;
+    local_lumped[goma_ctx->post.pp_lame_mu] = 1.0;
 
   } /* end of PP_LAME_MU */
 
-  if ((PP_LAME_LAMBDA != -1) && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1])) {
+  if ((goma_ctx->post.pp_lame_lambda != -1) &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1])) {
 
     /* Define parameters */
     double mu;
@@ -3391,12 +3232,13 @@ static int calc_standard_fields(double **post_proc_vect,
     }
 
     /* Post velocities */
-    local_post[PP_LAME_LAMBDA] = lambda;
-    local_lumped[PP_LAME_LAMBDA] = 1.0;
+    local_post[goma_ctx->post.pp_lame_lambda] = lambda;
+    local_lumped[goma_ctx->post.pp_lame_lambda] = 1.0;
 
   } /* end of PP_LAME_LAMBDA */
 
-  if (DISJ_PRESS != -1 && (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
+  if (goma_ctx->post.disj_press != -1 &&
+      (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
 
     /* Setup lubrication */
     int *n_dof = NULL;
@@ -3414,8 +3256,8 @@ static int calc_standard_fields(double **post_proc_vect,
                                           n_dof, dof_map, grad_DisjPress, dgrad_DisjPress_dH1,
                                           dgrad_DisjPress_dH2, dgrad_DisjPress_dH);
 
-    local_post[DISJ_PRESS] = DisjPress;
-    local_lumped[DISJ_PRESS] = 1.0;
+    local_post[goma_ctx->post.disj_press] = DisjPress;
+    local_lumped[goma_ctx->post.disj_press] = 1.0;
 
     /* Cleanup */
     goma_ctx->fem.fv->wt = wt;
@@ -3423,7 +3265,8 @@ static int calc_standard_fields(double **post_proc_vect,
 
   } /* end of DISJ_PRESS */
 
-  if ((SH_SAT_OPEN != -1) && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN]) {
+  if ((goma_ctx->post.sh_sat_open != -1) &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN]) {
 
     /* Calculate saturation */
     Patm = goma_ctx->fem.mp->PorousShellPatm;
@@ -3431,11 +3274,12 @@ static int calc_standard_fields(double **post_proc_vect,
     S = load_saturation(goma_ctx->fem.mp->porosity, cap_pres, d_cap_pres);
 
     /* Post saturation */
-    local_post[SH_SAT_OPEN] = S;
-    local_lumped[SH_SAT_OPEN] = 1.0;
+    local_post[goma_ctx->post.sh_sat_open] = S;
+    local_lumped[goma_ctx->post.sh_sat_open] = 1.0;
   } /* end of SH_SAT_OPEN */
 
-  if ((SH_SAT_OPEN_2 != -1) && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) {
+  if ((goma_ctx->post.sh_sat_open_2 != -1) &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) {
 
     /* Calculate saturation */
     Patm = goma_ctx->fem.mp->PorousShellPatm;
@@ -3443,11 +3287,12 @@ static int calc_standard_fields(double **post_proc_vect,
     S = load_saturation(goma_ctx->fem.mp->porosity, cap_pres, d_cap_pres);
 
     /* Post saturation */
-    local_post[SH_SAT_OPEN_2] = S;
-    local_lumped[SH_SAT_OPEN_2] = 1.0;
+    local_post[goma_ctx->post.sh_sat_open_2] = S;
+    local_lumped[goma_ctx->post.sh_sat_open_2] = 1.0;
   } /* end of SH_SAT_OPEN_2 */
 
-  if ((SH_CAP_PRES != -1) && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1]) {
+  if ((goma_ctx->post.sh_cap_pres != -1) &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1]) {
 
     double shell_cap_pressure_nodal[MDE] = {0.0};
     double shell_cap_pressure = 0.0;
@@ -3458,8 +3303,8 @@ static int calc_standard_fields(double **post_proc_vect,
     }
 
     /* Post capillary pressure */
-    local_post[SH_CAP_PRES] = shell_cap_pressure;
-    local_lumped[SH_CAP_PRES] = 1.0;
+    local_post[goma_ctx->post.sh_cap_pres] = shell_cap_pressure;
+    local_lumped[goma_ctx->post.sh_cap_pres] = 1.0;
 
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_2]) {
       shell_cap_pressure = 0.0;
@@ -3469,8 +3314,8 @@ static int calc_standard_fields(double **post_proc_vect,
       }
 
       /* Post capillary pressure */
-      local_post[SH_CAP_PRES + 1] = shell_cap_pressure;
-      local_lumped[SH_CAP_PRES + 1] = 1.0;
+      local_post[goma_ctx->post.sh_cap_pres + 1] = shell_cap_pressure;
+      local_lumped[goma_ctx->post.sh_cap_pres + 1] = 1.0;
     }
 
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3]) {
@@ -3481,13 +3326,14 @@ static int calc_standard_fields(double **post_proc_vect,
       }
 
       /* Post capillary pressure */
-      local_post[SH_CAP_PRES + 2] = shell_cap_pressure;
-      local_lumped[SH_CAP_PRES + 2] = 1.0;
+      local_post[goma_ctx->post.sh_cap_pres + 2] = shell_cap_pressure;
+      local_lumped[goma_ctx->post.sh_cap_pres + 2] = 1.0;
     }
 
   } /* end of SH_CAP_PRES */
 
-  if ((SH_PORE_FLUX != -1) && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1] &&
+  if ((goma_ctx->post.sh_pore_flux != -1) &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1] &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_2]) {
 
     double j_1_2_nodal[MDE] = {0.0}, j_2_3_nodal[MDE] = {0.0};
@@ -3502,24 +3348,25 @@ static int calc_standard_fields(double **post_proc_vect,
     }
 
     /* Post flux between porous shell layers 1 and 2 */
-    local_post[SH_PORE_FLUX] = j_1_2;
-    local_lumped[SH_PORE_FLUX] = 1.0;
+    local_post[goma_ctx->post.sh_pore_flux] = j_1_2;
+    local_lumped[goma_ctx->post.sh_pore_flux] = 1.0;
 
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3]) {
       /* Post flux between porous shell layers 2 and 3 */
-      local_post[SH_PORE_FLUX + 1] = j_2_3;
-      local_lumped[SH_PORE_FLUX + 1] = 1.0;
+      local_post[goma_ctx->post.sh_pore_flux + 1] = j_2_3;
+      local_lumped[goma_ctx->post.sh_pore_flux + 1] = 1.0;
     }
   } /* end of SH_PORE_FLUX */
 
-  if (REL_LIQ_PERM != -1 && (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
-                             goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
-                             goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE)) {
+  if (goma_ctx->post.rel_liq_perm != -1 &&
+      (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
+       goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
+       goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE)) {
 
     /* Continuum porous media */
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES]) {
-      local_post[REL_LIQ_PERM] = goma_ctx->fem.mp->rel_liq_perm;
-      local_lumped[REL_LIQ_PERM] = 1.;
+      local_post[goma_ctx->post.rel_liq_perm] = goma_ctx->fem.mp->rel_liq_perm;
+      local_lumped[goma_ctx->post.rel_liq_perm] = 1.;
     }
 
     /* Shell porous media */
@@ -3539,12 +3386,13 @@ static int calc_standard_fields(double **post_proc_vect,
                       d_cap_pres);
       }
 
-      local_post[REL_LIQ_PERM] = goma_ctx->fem.mp->rel_liq_perm;
-      local_lumped[REL_LIQ_PERM] = 1.;
+      local_post[goma_ctx->post.rel_liq_perm] = goma_ctx->fem.mp->rel_liq_perm;
+      local_lumped[goma_ctx->post.rel_liq_perm] = 1.;
     }
   } /* end of REL_LIQ_PERM */
 
-  if ((SH_STRESS_TENSOR != -1) && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1] &&
+  if ((goma_ctx->post.sh_stress_tensor != -1) &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1] &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL2] &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL3] &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
@@ -3560,15 +3408,16 @@ static int calc_standard_fields(double **post_proc_vect,
     shell_stress_tensor(TT, dTT_dx, dTT_dnormal);
 
     /* Post stresses */
-    local_post[SH_STRESS_TENSOR] = TT[0][0];
-    local_lumped[SH_STRESS_TENSOR] = 1.0;
-    local_post[SH_STRESS_TENSOR + 1] = TT[1][1];
-    local_lumped[SH_STRESS_TENSOR + 1] = 1.0;
-    local_post[SH_STRESS_TENSOR + 2] = TT[0][1];
-    local_lumped[SH_STRESS_TENSOR + 2] = 1.0;
+    local_post[goma_ctx->post.sh_stress_tensor] = TT[0][0];
+    local_lumped[goma_ctx->post.sh_stress_tensor] = 1.0;
+    local_post[goma_ctx->post.sh_stress_tensor + 1] = TT[1][1];
+    local_lumped[goma_ctx->post.sh_stress_tensor + 1] = 1.0;
+    local_post[goma_ctx->post.sh_stress_tensor + 2] = TT[0][1];
+    local_lumped[goma_ctx->post.sh_stress_tensor + 2] = 1.0;
   }
 
-  if ((SH_TANG != -1) && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1] &&
+  if ((goma_ctx->post.sh_tang != -1) &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1] &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL2] &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL3] &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
@@ -3580,30 +3429,32 @@ static int calc_standard_fields(double **post_proc_vect,
 
     /* Post tangents and curvatures */
 
-    local_post[SH_TANG] = t0[0];
-    local_lumped[SH_TANG] = 1.0;
-    local_post[SH_TANG + 1] = t0[1];
-    local_lumped[SH_TANG + 1] = 1.0;
-    local_post[SH_TANG + 2] = t0[2];
-    local_lumped[SH_TANG + 2] = 1.0;
+    local_post[goma_ctx->post.sh_tang] = t0[0];
+    local_lumped[goma_ctx->post.sh_tang] = 1.0;
+    local_post[goma_ctx->post.sh_tang + 1] = t0[1];
+    local_lumped[goma_ctx->post.sh_tang + 1] = 1.0;
+    local_post[goma_ctx->post.sh_tang + 2] = t0[2];
+    local_lumped[goma_ctx->post.sh_tang + 2] = 1.0;
 
-    local_post[SH_TANG + 3] = t1[0];
-    local_lumped[SH_TANG + 3] = 1.0;
-    local_post[SH_TANG + 4] = t1[1];
-    local_lumped[SH_TANG + 4] = 1.0;
-    local_post[SH_TANG + 5] = t1[2];
-    local_lumped[SH_TANG + 5] = 1.0;
+    local_post[goma_ctx->post.sh_tang + 3] = t1[0];
+    local_lumped[goma_ctx->post.sh_tang + 3] = 1.0;
+    local_post[goma_ctx->post.sh_tang + 4] = t1[1];
+    local_lumped[goma_ctx->post.sh_tang + 4] = 1.0;
+    local_post[goma_ctx->post.sh_tang + 5] = t1[2];
+    local_lumped[goma_ctx->post.sh_tang + 5] = 1.0;
   }
 
-  if (VON_MISES_STRAIN != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (goma_ctx->post.von_mises_strain != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
 
     dbl INV, d_INV_dT[DIM][DIM];
     INV = calc_tensor_invariant(goma_ctx->fem.fv->strain, d_INV_dT, 4);
-    local_post[VON_MISES_STRAIN] = 2.0 / 3.0 * INV;
-    local_lumped[VON_MISES_STRAIN] = 1.;
+    local_post[goma_ctx->post.von_mises_strain] = 2.0 / 3.0 * INV;
+    local_lumped[goma_ctx->post.von_mises_strain] = 1.;
   }
 
-  if (VON_MISES_STRESS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (goma_ctx->post.von_mises_stress != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
 
     dbl INV, d_INV_dT[DIM][DIM];
 
@@ -3641,11 +3492,12 @@ static int calc_standard_fields(double **post_proc_vect,
 
     // Calculate invariant
     INV = calc_tensor_invariant(TT, d_INV_dT, 4);
-    local_post[VON_MISES_STRESS] = INV;
-    local_lumped[VON_MISES_STRESS] = 1.;
+    local_post[goma_ctx->post.von_mises_stress] = INV;
+    local_lumped[goma_ctx->post.von_mises_stress] = 1.;
   }
 
-  if (CONF_MAP != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11] &&
+  if (goma_ctx->post.conf_map != -1 &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11] &&
       (goma_ctx->fem.vn->evssModel == LOG_CONF || goma_ctx->fem.vn->evssModel == LOG_CONF_GRADV ||
        goma_ctx->fem.vn->evssModel == CONF || goma_ctx->fem.vn->evssModel == LOG_CONF_TRANSIENT ||
        goma_ctx->fem.vn->evssModel == LOG_CONF_TRANSIENT_GRADV)) {
@@ -3686,8 +3538,9 @@ static int calc_standard_fields(double **post_proc_vect,
                only assemble the upper half */
             if (a <= b) {
               if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v_s[mode][a][b]]) {
-                local_post[CONF_MAP + index] = (mup / lambda) * (exp_s[a][b] - delta(a, b));
-                local_lumped[CONF_MAP + index] = 1.;
+                local_post[goma_ctx->post.conf_map + index] =
+                    (mup / lambda) * (exp_s[a][b] - delta(a, b));
+                local_lumped[goma_ctx->post.conf_map + index] = 1.;
                 index++;
               }
             }
@@ -3697,7 +3550,8 @@ static int calc_standard_fields(double **post_proc_vect,
     } // Loop over modes
   }
 
-  if (CONF_MAP != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11] &&
+  if (goma_ctx->post.conf_map != -1 &&
+      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11] &&
       (goma_ctx->fem.vn->evssModel == SQRT_CONF)) {
     index = 0;
     double lambda;
@@ -3732,8 +3586,9 @@ static int calc_standard_fields(double **post_proc_vect,
                only assemble the upper half */
             if (a <= b) {
               if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v_s[mode][a][b]]) {
-                local_post[CONF_MAP + index] = -(mup / lambda) * (delta(a, b) - b_dot_b[a][b]);
-                local_lumped[CONF_MAP + index] = 1.;
+                local_post[goma_ctx->post.conf_map + index] =
+                    -(mup / lambda) * (delta(a, b) - b_dot_b[a][b]);
+                local_lumped[goma_ctx->post.conf_map + index] = 1.;
                 index++;
               }
             }
@@ -3759,25 +3614,25 @@ static int calc_standard_fields(double **post_proc_vect,
       }
       }*/
 
-  if (GRAD_SH != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHEAR_RATE]) {
+  if (goma_ctx->post.grad_sh != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHEAR_RATE]) {
     index = 0;
     for (a = 0; a < dim; a++) {
-      local_post[GRAD_SH + index] = goma_ctx->fem.fv->grad_SH[a];
-      local_lumped[GRAD_SH + index] = 1.;
+      local_post[goma_ctx->post.grad_sh + index] = goma_ctx->fem.fv->grad_SH[a];
+      local_lumped[goma_ctx->post.grad_sh + index] = 1.;
       index++;
     }
   }
 
-  if (GRAD_Y != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+  if (goma_ctx->post.grad_y != -1 && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
     index = 0;
     for (a = 0; a < dim; a++) {
-      local_post[GRAD_Y + index] = goma_ctx->fem.fv->grad_c[0][a];
-      local_lumped[GRAD_Y + index] = 1.;
+      local_post[goma_ctx->post.grad_y + index] = goma_ctx->fem.fv->grad_c[0][a];
+      local_lumped[goma_ctx->post.grad_y + index] = 1.;
       index++;
     }
   }
 
-  if (EIG1 != -1) {
+  if (goma_ctx->post.eig1 != -1) {
     index = 0;
     dbl v1[DIM];
     dbl v2[DIM], v3[DIM];
@@ -3813,39 +3668,39 @@ static int calc_standard_fields(double **post_proc_vect,
     bias_eigenvector_to(v3, vort_bias);
 
     for (a = 0; a < DIM; a++) {
-      local_post[EIG + index] = eigen[a];
-      local_lumped[EIG + index] = 1.;
+      local_post[goma_ctx->post.eig + index] = eigen[a];
+      local_lumped[goma_ctx->post.eig + index] = 1.;
       index++;
     }
 
     index = 0;
     for (a = 0; a < DIM; a++) {
-      local_post[EIG1 + index] = v1[a];
-      local_lumped[EIG1 + index] = 1.;
+      local_post[goma_ctx->post.eig1 + index] = v1[a];
+      local_lumped[goma_ctx->post.eig1 + index] = 1.;
       index++;
     }
 
     index = 0;
     for (a = 0; a < DIM; a++) {
-      local_post[EIG2 + index] = v2[a];
-      local_lumped[EIG2 + index] = 1.;
+      local_post[goma_ctx->post.eig2 + index] = v2[a];
+      local_lumped[goma_ctx->post.eig2 + index] = 1.;
       index++;
     }
 
     index = 0;
     for (a = 0; a < DIM; a++) {
-      local_post[EIG3 + index] = v3[a];
-      local_lumped[EIG3 + index] = 1.;
+      local_post[goma_ctx->post.eig3 + index] = v3[a];
+      local_lumped[goma_ctx->post.eig3 + index] = 1.;
       index++;
     }
   }
 
-  if (USER_POST != -1) {
+  if (goma_ctx->post.user_post != -1) {
     /* calculate a user-specified post-processing variable */
 
     err = get_continuous_species_terms(&s_terms, time, theta, delta_t, hs);
-    local_post[USER_POST] = user_post(u_post_proc);
-    local_lumped[USER_POST] = 1.;
+    local_post[goma_ctx->post.user_post] = user_post(goma_ctx->post.u_post_proc);
+    local_lumped[goma_ctx->post.user_post] = 1.;
   }
 
   /*
@@ -3993,13 +3848,13 @@ void post_process_average(double x[],            /* Solution vector for the curr
   double **avg_count;
   double **avg_sum;
 
-  if (nn_average <= 0) {
+  if (goma_ctx->post.nn_average <= 0) {
     return;
   }
 
-  avg_count = calloc(nn_average, sizeof(double *));
-  avg_sum = calloc(nn_average, sizeof(double *));
-  for (int i = 0; i < nn_average; i++) {
+  avg_count = calloc(goma_ctx->post.nn_average, sizeof(double *));
+  avg_sum = calloc(goma_ctx->post.nn_average, sizeof(double *));
+  for (int i = 0; i < goma_ctx->post.nn_average; i++) {
     avg_count[i] = calloc(dpi->num_universe_nodes, sizeof(double));
     avg_sum[i] = calloc(dpi->num_universe_nodes, sizeof(double));
   }
@@ -4094,16 +3949,17 @@ void post_process_average(double x[],            /* Solution vector for the curr
     }
   }
 
-  for (int i = 0; i < nn_average; i++) {
+  for (int i = 0; i < goma_ctx->post.nn_average; i++) {
     int node;
     for (node = 0; node < dpi->num_universe_nodes; node++) {
-      if (post_process_variable_is_active(pp_average[i], goma_ctx->fem.pg->imtrx)) {
-        post_proc_vect[pp_average[i]->index_post][node] = avg_sum[i][node] / avg_count[i][node];
+      if (post_process_variable_is_active(goma_ctx->post.pp_average[i], goma_ctx->fem.pg->imtrx)) {
+        post_proc_vect[goma_ctx->post.pp_average[i]->index_post][node] =
+            avg_sum[i][node] / avg_count[i][node];
       }
     }
   }
 
-  for (int i = 0; i < nn_average; i++) {
+  for (int i = 0; i < goma_ctx->post.nn_average; i++) {
     free(avg_count[i]);
     free(avg_sum[i]);
   }
@@ -4113,10 +3969,10 @@ void post_process_average(double x[],            /* Solution vector for the curr
 }
 
 void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, double time) {
-  for (int i = 0; i < nn_average; i++) {
+  for (int i = 0; i < goma_ctx->post.nn_average; i++) {
     avg_count[i][global_node] += 1;
-    if (pp_average[i]->non_variable_type == 0) {
-      switch (pp_average[i]->type) {
+    if (goma_ctx->post.pp_average[i]->non_variable_type == 0) {
+      switch (goma_ctx->post.pp_average[i]->type) {
       case PRESSURE:
         avg_sum[i][global_node] += goma_ctx->fem.fv->P;
         break;
@@ -4124,7 +3980,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += goma_ctx->fem.fv->T;
         break;
       case MASS_FRACTION:
-        avg_sum[i][global_node] += goma_ctx->fem.fv->c[pp_average[i]->species_index];
+        avg_sum[i][global_node] += goma_ctx->fem.fv->c[goma_ctx->post.pp_average[i]->species_index];
         break;
       case MOMENT0:
         avg_sum[i][global_node] += goma_ctx->fem.fv->moment[0];
@@ -4143,12 +3999,12 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += rho;
       } break;
       default:
-        GOMA_EH(GOMA_ERROR, "Unknown nodal average type %d %s", pp_average[i]->type,
-                pp_average[i]->type_name);
+        GOMA_EH(GOMA_ERROR, "Unknown nodal average type %d %s", goma_ctx->post.pp_average[i]->type,
+                goma_ctx->post.pp_average[i]->type_name);
         break;
       }
     } else {
-      switch (pp_average[i]->type) {
+      switch (goma_ctx->post.pp_average[i]->type) {
       case AVG_DENSITY: {
         double rho = density(NULL, time);
         avg_sum[i][global_node] += rho;
@@ -4684,7 +4540,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   }
 
   if (goma_ctx->num_proc == 1) {
-    if (STREAM != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+    if (goma_ctx->post.stream != -1 &&
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
       listnd = (int *)smalloc(num_universe_nodes * sizeof(int));
     }
   }
@@ -4696,20 +4553,21 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
     if (goma_ctx->fem.pd_glob[i]->MeshMotion == DYNAMIC_LAGRANGIAN)
       check = 1;
   }
-  if (PRESSURE_CONT != -1 &&
+  if (goma_ctx->post.pressure_cont != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
     /* PRS Cludge for remeshing guys */
     pressure_elem_vect = (double *)smalloc(goma_ctx->mesh.num_internal_elems * sizeof(double));
   }
 
   if (goma_ctx->num_proc == 1) {
-    if (FLUXLINES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+    if (goma_ctx->post.fluxlines != -1 &&
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
       for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
         listndm[w] = (int *)smalloc(num_universe_nodes * sizeof(int));
         kountm[w] = 0;
       }
 
-      if (DIFFUSION_VECTORS == -1)
+      if (goma_ctx->post.diffusion_vectors == -1)
         GOMA_EH(GOMA_ERROR, "Need diffusion vectors for flux-function");
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         DPRINTF(stdout, "#####################################################");
@@ -4720,10 +4578,10 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   }
 
   if (goma_ctx->num_proc == 1) {
-    if (ENERGY_FLUXLINES != -1 &&
+    if (goma_ctx->post.energy_fluxlines != -1 &&
         goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
       listnde = (int *)smalloc(num_universe_nodes * sizeof(int));
-      if (CONDUCTION_VECTORS == -1)
+      if (goma_ctx->post.conduction_vectors == -1)
         GOMA_EH(GOMA_ERROR, "Need conduction vectors for flux-function");
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         DPRINTF(stdout, "######################################################");
@@ -4743,18 +4601,20 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
   /*Initialize */
   if (goma_ctx->num_proc == 1) {
-    if (STREAM != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+    if (goma_ctx->post.stream != -1 &&
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
       for (I = 0; I < num_universe_nodes; I++) {
         listnd[I] = 0;
       }
     }
-    if (ENERGY_FLUXLINES != -1 &&
+    if (goma_ctx->post.energy_fluxlines != -1 &&
         goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
       for (I = 0; I < num_universe_nodes; I++) {
         listnde[I] = 0;
       }
     }
-    if (FLUXLINES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+    if (goma_ctx->post.fluxlines != -1 &&
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
       for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
         for (I = 0; I < num_universe_nodes; I++) {
           listndm[w][I] = 0;
@@ -5022,8 +4882,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   /*                            SURFACE VARIABLES                               */
   /*     Evaluate Post-Processing Variables that are only defined on surfaces   */
   /******************************************************************************/
-  if (SURFACE_VECTORS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] &&
-      goma_ctx->problem.num_rot == 0) {
+  if (goma_ctx->post.surface_vectors != -1 &&
+      goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] && goma_ctx->problem.num_rot == 0) {
 
     /* loop over side-sets and find surface vectors for all elements on each
      * side-set */
@@ -5153,8 +5013,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
            * if it is not a right-hand side variable - it won't get
            * added in (contribution is zero)
            */
-          if (SURFACE_VECTORS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] &&
-              dim == 2) {
+          if (goma_ctx->post.surface_vectors != -1 &&
+              goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] && dim == 2) {
 
             for (p = 0; p < rd->TotalNVPostOutput; p++) {
               local_post[p] = 0.;
@@ -5176,7 +5036,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
             }
             if (iapply) {
               for (p = 0; p < dim; p++) {
-                idex = SURFACE_VECTORS + p;
+                idex = goma_ctx->post.surface_vectors + p;
                 local_post[idex] = goma_ctx->fem.fv->snormal[p];
                 local_lumped[idex] = 1.;
                 local_post[idex + dim] = goma_ctx->fem.fv->stangent[0][p];
@@ -5225,7 +5085,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
   /* if ROTATION conditions are defined, determine these tangents separately
    * and plug them directly into the post_proc_vect */
-  if (SURFACE_VECTORS != -1 && goma_ctx->problem.num_rot > 0) {
+  if (goma_ctx->post.surface_vectors != -1 && goma_ctx->problem.num_rot > 0) {
     dim = goma_ctx->fem.pd_glob[0]->Num_Dim;
     /*
      * NORMAL, TANGENT and OTHER Vectors required for ROTATION are calculated
@@ -5239,9 +5099,9 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
         for (p = 0; p < dim; p++) {
           if (goma_ctx->fem.rotation[I][VECT_EQ_MESH][p]->ok) {
             for (q = 0; q < dim; q++) {
-              post_proc_vect[SURFACE_VECTORS + p * dim + q][I] =
+              post_proc_vect[goma_ctx->post.surface_vectors + p * dim + q][I] =
                   goma_ctx->fem.rotation[I][VECT_EQ_MESH][p]->vector[q];
-              lumped_mass[SURFACE_VECTORS + p * dim + q][I] = 0.;
+              lumped_mass[goma_ctx->post.surface_vectors + p * dim + q][I] = 0.;
             }
           }
         }
@@ -5285,7 +5145,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   /******************************************************************************/
 
   if (goma_ctx->num_proc == 1) {
-    if (STREAM != -1 || FLUXLINES != -1 || ENERGY_FLUXLINES != -1) {
+    if (goma_ctx->post.stream != -1 || goma_ctx->post.fluxlines != -1 ||
+        goma_ctx->post.energy_fluxlines != -1) {
       /*
        * Loop over all the elements, in the "optimal" order.
        */
@@ -5336,7 +5197,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
         /* get convection velocity at the nodal points */
 
-        if (STREAM != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1] &&
+        if (goma_ctx->post.stream != -1 &&
+            goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1] &&
             goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim == 2) {
           /* Go for it -- Calculate the stream function at the nodes
            * of this element
@@ -5359,7 +5221,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
             GOMA_EH(GOMA_ERROR, "No stream function in 3D ");
 #endif
           }
-          err = correct_stream_fcn(&kount, iel, del_stream_fcn, post_proc_vect[STREAM], listnd);
+          err = correct_stream_fcn(&kount, iel, del_stream_fcn,
+                                   post_proc_vect[goma_ctx->post.stream], listnd);
 
         } /* END of if(STREAM) */
 
@@ -5373,7 +5236,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
             check = 2;
         }
 
-        if (FLUXLINES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+        if (goma_ctx->post.fluxlines != -1 &&
+            goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
           for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
             /* Go for it -- Calculate the flux function at the nodes
              *  of this element
@@ -5386,7 +5250,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
                   I = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[iel] + j];
                   /* add in contribution from diffusion */
                   vel[i][j] =
-                      post_proc_vect[DIFFUSION_VECTORS +
+                      post_proc_vect[goma_ctx->post.diffusion_vectors +
                                      w * goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim + i]
                                     [I];
                   if ((check == 1) &&
@@ -5399,10 +5263,10 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
                     I = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[iel] + j];
                     if (goma_ctx->problem.time_integration != STEADY) {
                       printf("\n Need to update Lagrangian convection velocities for transient \n");
-                      vel[i][j] += post_proc_vect[LAGRANGE_CONVECTION + i][I] *
+                      vel[i][j] += post_proc_vect[goma_ctx->post.lagrange_convection + i][I] *
                                    (*goma_ctx->fem.esp->c[w][j]);
                     } else {
-                      vel[i][j] += post_proc_vect[LAGRANGE_CONVECTION + i][I] *
+                      vel[i][j] += post_proc_vect[goma_ctx->post.lagrange_convection + i][I] *
                                    (*goma_ctx->fem.esp->c[w][j]);
                     }
                   }
@@ -5412,13 +5276,13 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
             } else {
               GOMA_EH(GOMA_ERROR, "No flux lines in 3D ");
             }
-            err = correct_stream_fcn(&kountm[w], iel, del_stream_fcn, post_proc_vect[FLUXLINES + w],
-                                     listndm[w]);
+            err = correct_stream_fcn(&kountm[w], iel, del_stream_fcn,
+                                     post_proc_vect[goma_ctx->post.fluxlines + w], listndm[w]);
 
           } /* END of loop over components */
         } /* END of if(FLUXLINES) */
 
-        if (ENERGY_FLUXLINES != -1 &&
+        if (goma_ctx->post.energy_fluxlines != -1 &&
             goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
           /* Go for it -- Calculate the stream function at the nodes of this element */
           if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim == 2) {
@@ -5426,7 +5290,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
               var = TEMPERATURE;
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 I = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[iel] + j];
-                vel[i][j] = post_proc_vect[CONDUCTION_VECTORS + i][I];
+                vel[i][j] = post_proc_vect[goma_ctx->post.conduction_vectors + i][I];
                 if ((check == 1) &&
                     goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
                   vel[i][j] += *goma_ctx->fem.esp->v[i][j] * (*goma_ctx->fem.esp->T[j]);
@@ -5436,11 +5300,11 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
                   I = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[iel] + j];
                   if (goma_ctx->problem.time_integration != STEADY) {
                     printf("\n Need to update Lagrangian convection velocities for transient \n");
-                    vel[i][j] +=
-                        post_proc_vect[LAGRANGE_CONVECTION + i][I] * (*goma_ctx->fem.esp->T[j]);
+                    vel[i][j] += post_proc_vect[goma_ctx->post.lagrange_convection + i][I] *
+                                 (*goma_ctx->fem.esp->T[j]);
                   } else {
-                    vel[i][j] +=
-                        post_proc_vect[LAGRANGE_CONVECTION + i][I] * (*goma_ctx->fem.esp->T[j]);
+                    vel[i][j] += post_proc_vect[goma_ctx->post.lagrange_convection + i][I] *
+                                 (*goma_ctx->fem.esp->T[j]);
                   }
                 }
               }
@@ -5449,8 +5313,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
           } else {
             GOMA_EH(GOMA_ERROR, "No energy flux lines in 3D ");
           }
-          err = correct_stream_fcn(&kounte, iel, del_stream_fcn, post_proc_vect[ENERGY_FLUXLINES],
-                                   listnde);
+          err = correct_stream_fcn(&kounte, iel, del_stream_fcn,
+                                   post_proc_vect[goma_ctx->post.energy_fluxlines], listnde);
         } /* END of if(ENERGY_FLUXLINES) */
 
       } /* END of loop over elements */
@@ -5461,57 +5325,59 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
      * do some last minute processing for special variable types
      */
 
-    if (STREAM != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
+    if (goma_ctx->post.stream != -1 &&
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
       /* First process global vector to recover average value at nodes*/
       for (I = 0; I < num_universe_nodes; I++) {
         ii = listnd[I];
         if (ii != 0) {
-          post_proc_vect[STREAM][I] /= (double)ii;
+          post_proc_vect[goma_ctx->post.stream][I] /= (double)ii;
         }
       }
 
       /* Compute value at midside nodes if these exist */
       if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes == 9) {
-        err = midsid(post_proc_vect[STREAM], exo);
+        err = midsid(post_proc_vect[goma_ctx->post.stream], exo);
       }
 
       free(listnd);
     }
 
-    if (FLUXLINES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+    if (goma_ctx->post.fluxlines != -1 &&
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
       for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
         /* First process global vector to recover average value at nodes*/
         for (I = 0; I < num_universe_nodes; I++) {
           ii = listndm[w][I];
           if (ii != 0) {
-            post_proc_vect[FLUXLINES + w][I] /= (double)ii;
+            post_proc_vect[goma_ctx->post.fluxlines + w][I] /= (double)ii;
           }
         }
 
         /* Then compute value at midside nodes */
 
         if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes == 9) {
-          err = midsid(post_proc_vect[FLUXLINES + w], exo);
+          err = midsid(post_proc_vect[goma_ctx->post.fluxlines + w], exo);
         }
 
         free(listndm[w]);
       }
     }
 
-    if (ENERGY_FLUXLINES != -1 &&
+    if (goma_ctx->post.energy_fluxlines != -1 &&
         goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
       /* First process global vector to recover average value at nodes*/
       for (I = 0; I < num_universe_nodes; I++) {
         ii = listnde[I];
         if (ii != 0) {
-          post_proc_vect[ENERGY_FLUXLINES][I] /= (double)ii;
+          post_proc_vect[goma_ctx->post.energy_fluxlines][I] /= (double)ii;
         }
       }
 
       /* Then compute value at midside nodes */
 
       if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes == 9) {
-        err = midsid(post_proc_vect[ENERGY_FLUXLINES], exo);
+        err = midsid(post_proc_vect[goma_ctx->post.energy_fluxlines], exo);
       }
 
       free(listnde);
@@ -5519,36 +5385,37 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
   } /* end of serial processing block for streamlines */
 
-  if (NS_RESIDUALS != -1 &&
+  if (goma_ctx->post.ns_residuals != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (I = 0; I < num_universe_nodes; I++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; j++) {
         ii = Index_Solution(I, R_MOMENTUM1 + j, 0, 0, -2, goma_ctx->fem.pg->imtrx);
         if (ii != -1) {
-          post_proc_vect[NS_RESIDUALS + j][I] = resid_vector[ii];
+          post_proc_vect[goma_ctx->post.ns_residuals + j][I] = resid_vector[ii];
         }
       }
     }
   }
 
-  if (NS_RESIDUALS != -1 &&
+  if (goma_ctx->post.ns_residuals != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (I = 0; I < num_universe_nodes; I++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; j++) {
         ii = Index_Solution(I, R_MOMENTUM1 + j, 0, 0, -2, goma_ctx->fem.pg->imtrx);
         if (ii != -1) {
-          post_proc_vect[NS_RESIDUALS + j][I] = resid_vector[ii];
+          post_proc_vect[goma_ctx->post.ns_residuals + j][I] = resid_vector[ii];
         }
       }
     }
   }
 
-  if (MM_RESIDUALS != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (goma_ctx->post.mm_residuals != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (I = 0; I < num_universe_nodes; I++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; j++) {
         ii = Index_Solution(I, R_MESH1 + j, 0, 0, -2, goma_ctx->fem.pg->imtrx);
         if (ii != -1) {
-          post_proc_vect[MM_RESIDUALS + j][I] = resid_vector[ii];
+          post_proc_vect[goma_ctx->post.mm_residuals + j][I] = resid_vector[ii];
         }
       }
     }
@@ -5558,48 +5425,49 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
     for (j = 0; j < goma_ctx->fem.efv->Num_external_field; j++) {
       if (goma_ctx->fem.efv->i[j] != I_TABLE) {
         for (I = 0; I < num_universe_nodes; I++) {
-          post_proc_vect[EXTERNAL_POST + j][I] = goma_ctx->fem.efv->ext_fld_ndl_val[j][I];
+          post_proc_vect[goma_ctx->post.external_post + j][I] =
+              goma_ctx->fem.efv->ext_fld_ndl_val[j][I];
         }
       }
     }
   }
 
   /* sum up all stress modes to compute the total stress */
-  if (TOTAL_STRESS11 != -1 &&
+  if (goma_ctx->post.total_stress11 != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
-    sum_total_stress(x, R_STRESS11, 0, post_proc_vect[TOTAL_STRESS11], exo);
+    sum_total_stress(x, R_STRESS11, 0, post_proc_vect[goma_ctx->post.total_stress11], exo);
   }
-  if (TOTAL_STRESS12 != -1 &&
+  if (goma_ctx->post.total_stress12 != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS12]) {
-    sum_total_stress(x, R_STRESS12, 0, post_proc_vect[TOTAL_STRESS12], exo);
+    sum_total_stress(x, R_STRESS12, 0, post_proc_vect[goma_ctx->post.total_stress12], exo);
   }
 
-  if (TOTAL_STRESS13 != -1 &&
+  if (goma_ctx->post.total_stress13 != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS13]) {
-    sum_total_stress(x, R_STRESS13, 0, post_proc_vect[TOTAL_STRESS13], exo);
+    sum_total_stress(x, R_STRESS13, 0, post_proc_vect[goma_ctx->post.total_stress13], exo);
   }
 
-  if (TOTAL_STRESS22 != -1 &&
+  if (goma_ctx->post.total_stress22 != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS22]) {
-    sum_total_stress(x, R_STRESS22, 0, post_proc_vect[TOTAL_STRESS22], exo);
+    sum_total_stress(x, R_STRESS22, 0, post_proc_vect[goma_ctx->post.total_stress22], exo);
   }
 
-  if (TOTAL_STRESS23 != -1 &&
+  if (goma_ctx->post.total_stress23 != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS23]) {
-    sum_total_stress(x, R_STRESS23, 0, post_proc_vect[TOTAL_STRESS23], exo);
+    sum_total_stress(x, R_STRESS23, 0, post_proc_vect[goma_ctx->post.total_stress23], exo);
   }
 
-  if (TOTAL_STRESS33 != -1 &&
+  if (goma_ctx->post.total_stress33 != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS33]) {
-    sum_total_stress(x, R_STRESS33, 0, post_proc_vect[TOTAL_STRESS33], exo);
+    sum_total_stress(x, R_STRESS33, 0, post_proc_vect[goma_ctx->post.total_stress33], exo);
   }
 
-  if (nn_average > 0) {
+  if (goma_ctx->post.nn_average > 0) {
     post_process_average(x, x_old, xdot, xdot_old, resid_vector, exo, dpi, post_proc_vect,
                          *time_ptr);
-    for (int ii = 0; ii < nn_average; ii++) {
-      if (post_process_variable_is_active(pp_average[ii], goma_ctx->fem.pg->imtrx)) {
-        exchange_node(cx[0], dpi, post_proc_vect[pp_average[ii]->index_post]);
+    for (int ii = 0; ii < goma_ctx->post.nn_average; ii++) {
+      if (post_process_variable_is_active(goma_ctx->post.pp_average[ii], goma_ctx->fem.pg->imtrx)) {
+        exchange_node(cx[0], dpi, post_proc_vect[goma_ctx->post.pp_average[ii]->index_post]);
       }
     }
   }
@@ -5630,7 +5498,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
    * Compute particle traces and output to file
    */
 
-  if (nn_particles > 0) {
+  if (goma_ctx->post.nn_particles > 0) {
     double orig_coord[3];
     /* 1) Search Element Database and find originating element
       id for each particle */
@@ -5639,19 +5507,22 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
     p_dim = exo->num_dim;
 
-    for (i = 0; i < nn_particles; i++) {
+    for (i = 0; i < goma_ctx->post.nn_particles; i++) {
 
       for (j = 0; j < p_dim; j++) {
-        orig_coord[j] = pp_particles[i]->coord[j];
+        orig_coord[j] = goma_ctx->post.pp_particles[i]->coord[j];
       }
       if (p_dim == 2) {
-        pp_particles[i]->coord[2] = 0.;
+        goma_ctx->post.pp_particles[i]->coord[2] = 0.;
         p_x[2] = 0.;
       }
-      p_lambda = pp_particles[i]->mass * pp_particles[i]->mobility;
-      p_force[0] = pp_particles[i]->mobility * pp_particles[i]->force[0];
-      p_force[1] = pp_particles[i]->mobility * pp_particles[i]->force[1];
-      p_force[2] = pp_particles[i]->mobility * pp_particles[i]->force[2];
+      p_lambda = goma_ctx->post.pp_particles[i]->mass * goma_ctx->post.pp_particles[i]->mobility;
+      p_force[0] =
+          goma_ctx->post.pp_particles[i]->mobility * goma_ctx->post.pp_particles[i]->force[0];
+      p_force[1] =
+          goma_ctx->post.pp_particles[i]->mobility * goma_ctx->post.pp_particles[i]->force[1];
+      p_force[2] =
+          goma_ctx->post.pp_particles[i]->mobility * goma_ctx->post.pp_particles[i]->force[2];
 
       /*	if the product of the particle mass and mobility is zero or negative
             then the particle will follow the fluid pathlines.  If the product
@@ -5669,11 +5540,11 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
               goma_ctx->fem.tran->init_time + goma_ctx->fem.tran->delta_t) {
         /*   get initial position    */
 
-        pp_particles[i]->Current_element_id =
-            find_id_elem(pp_particles[i]->coord[0], pp_particles[i]->coord[1],
-                         pp_particles[i]->coord[2], x, exo, 0, exo->num_elems);
+        goma_ctx->post.pp_particles[i]->Current_element_id = find_id_elem(
+            goma_ctx->post.pp_particles[i]->coord[0], goma_ctx->post.pp_particles[i]->coord[1],
+            goma_ctx->post.pp_particles[i]->coord[2], x, exo, 0, exo->num_elems);
 
-        if (pp_particles[i]->Current_element_id == -1)
+        if (goma_ctx->post.pp_particles[i]->Current_element_id == -1)
           GOMA_EH(GOMA_ERROR, "Cannot locate one of your particles");
       } /* if steady	*/
 
@@ -5689,12 +5560,13 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
       /*    get initial isoparametric coordinates - initial isopar. coords   */
 
       for (j = 0; j < MAX_PDIM; j++) {
-        pp_particles[i]->xi_coord[j] = 0.;
+        goma_ctx->post.pp_particles[i]->xi_coord[j] = 0.;
       }
 
-      err =
-          invert_isoparametric_map(&pp_particles[i]->Current_element_id, &pp_particles[i]->coord[0],
-                                   &pp_particles[i]->xi_coord[0], exo, x, &velo_interp);
+      err = invert_isoparametric_map(&goma_ctx->post.pp_particles[i]->Current_element_id,
+                                     &goma_ctx->post.pp_particles[i]->coord[0],
+                                     &goma_ctx->post.pp_particles[i]->xi_coord[0], exo, x,
+                                     &velo_interp);
 
       if (err == 0) {
         GOMA_WH(-1, "map inversion for particle path failed");
@@ -5702,15 +5574,17 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
       }
 
       for (j = 0; j < p_dim; j++) {
-        if (fabs(pp_particles[i]->xi_coord[j]) > 2.0) {
+        if (fabs(goma_ctx->post.pp_particles[i]->xi_coord[j]) > 2.0) {
           fprintf(stderr, "particle %d - initial pt outside the domain\n", i);
-          fprintf(stderr, "isoparametric coords  %g %g %g \n", pp_particles[i]->xi_coord[0],
-                  pp_particles[i]->xi_coord[1], pp_particles[i]->xi_coord[2]);
+          fprintf(stderr, "isoparametric coords  %g %g %g \n",
+                  goma_ctx->post.pp_particles[i]->xi_coord[0],
+                  goma_ctx->post.pp_particles[i]->xi_coord[1],
+                  goma_ctx->post.pp_particles[i]->xi_coord[2]);
           goto next_particle;
         }
       }
 
-      err = load_basis_functions(&pp_particles[i]->xi_coord[0], goma_ctx->fem.bfd);
+      err = load_basis_functions(&goma_ctx->post.pp_particles[i]->xi_coord[0], goma_ctx->fem.bfd);
       GOMA_EH(err, "problem from load_basis_functions");
 
       err = beer_belly();
@@ -5735,14 +5609,14 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
           p_x[j] = p_xold[j] = goma_ctx->fem.fv->x[j];
           p_vel[j] = p_velold[j] = goma_ctx->fem.fv->v[j];
           f_vel[j] = f_velold[j] = goma_ctx->fem.fv->v[j];
-          pp_particles[i]->coord[j] = p_x[j];
+          goma_ctx->post.pp_particles[i]->coord[j] = p_x[j];
           vscale += goma_ctx->fem.fv->v[j] * goma_ctx->fem.fv->v[j];
         }
         vscale = sqrt(vscale);
       } else {
         for (j = 0; j < p_dim; j++) {
-          p_xold[j] = pp_particles[i]->coord[j];
-          p_velold[j] = pp_particles[i]->p_velo[j];
+          p_xold[j] = goma_ctx->post.pp_particles[i]->coord[j];
+          p_velold[j] = goma_ctx->post.pp_particles[i]->p_velo[j];
           f_velold[j] = goma_ctx->fem.fv_old->v[j];
         }
       }
@@ -5750,8 +5624,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
       /* 3) Start Time integration loop */
 
       if (goma_ctx->fem.pd->TimeIntegration == STEADY) {
-        p_time = pp_particles[i]->Start_Time;
-        p_step = pp_particles[i]->Delta_s / vscale;
+        p_time = goma_ctx->post.pp_particles[i]->Start_Time;
+        p_step = goma_ctx->post.pp_particles[i]->Delta_s / vscale;
       } else if (goma_ctx->fem.tran->time_value ==
                  goma_ctx->fem.tran->init_time + goma_ctx->fem.tran->delta_t) {
         p_time = goma_ctx->fem.tran->init_time;
@@ -5768,13 +5642,13 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
               goma_ctx->fem.tran->init_time + goma_ctx->fem.tran->delta_t) {
         /**  write file headings  **/
 
-        if ((jfp = fopen(pp_particles[i]->filenm, "a")) != NULL) {
+        if ((jfp = fopen(goma_ctx->post.pp_particles[i]->filenm, "a")) != NULL) {
           err = usr_ptracking(jfp, i + 1, p_x, p_vel, p_xold, p_velold, TRUE, p_time, p_step);
           GOMA_EH(err, "problem with usr_ptracking");
         }
       } /* if steady	*/
       else {
-        jfp = fopen(pp_particles[i]->filenm, "a");
+        jfp = fopen(goma_ctx->post.pp_particles[i]->filenm, "a");
       }
 
       while (!p_done) {
@@ -5782,14 +5656,14 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
         /*  Adjust particle size for droplets  */
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][RESTIME] &&
             goma_ctx->fem.mp->SpeciesSourceModel[0] == DROP_EVAP) {
-          p_lambda =
-              pp_particles[i]->mass * pp_particles[i]->mobility * SQUARE(goma_ctx->fem.fv->restime);
-          p_force[0] = pp_particles[i]->mobility * pp_particles[i]->force[0] *
-                       SQUARE(goma_ctx->fem.fv->restime);
-          p_force[1] = pp_particles[i]->mobility * pp_particles[i]->force[1] *
-                       SQUARE(goma_ctx->fem.fv->restime);
-          p_force[2] = pp_particles[i]->mobility * pp_particles[i]->force[2] *
-                       SQUARE(goma_ctx->fem.fv->restime);
+          p_lambda = goma_ctx->post.pp_particles[i]->mass *
+                     goma_ctx->post.pp_particles[i]->mobility * SQUARE(goma_ctx->fem.fv->restime);
+          p_force[0] = goma_ctx->post.pp_particles[i]->mobility *
+                       goma_ctx->post.pp_particles[i]->force[0] * SQUARE(goma_ctx->fem.fv->restime);
+          p_force[1] = goma_ctx->post.pp_particles[i]->mobility *
+                       goma_ctx->post.pp_particles[i]->force[1] * SQUARE(goma_ctx->fem.fv->restime);
+          p_force[2] = goma_ctx->post.pp_particles[i]->mobility *
+                       goma_ctx->post.pp_particles[i]->force[2] * SQUARE(goma_ctx->fem.fv->restime);
         }
         /*   make Euler predictor step  */
 
@@ -5810,8 +5684,9 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
         inewton = 0;
 
         while (!p_converged && inewton < 6) {
-          err = invert_isoparametric_map(&pp_particles[i]->Current_element_id, p_x,
-                                         &pp_particles[i]->xi_coord[0], exo, x, &velo_interp);
+          err = invert_isoparametric_map(&goma_ctx->post.pp_particles[i]->Current_element_id, p_x,
+                                         &goma_ctx->post.pp_particles[i]->xi_coord[0], exo, x,
+                                         &velo_interp);
 
           if (err == 0) {
             GOMA_WH(-1, "map inversion for particle path failed");
@@ -5819,16 +5694,17 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
           }
 
           for (j = 0; j < p_dim; j++) {
-            if (fabs(pp_particles[i]->xi_coord[j]) > 2.0) {
+            if (fabs(goma_ctx->post.pp_particles[i]->xi_coord[j]) > 2.0) {
               fprintf(stderr, "particle %d has exited the domain\n", i);
-              fprintf(stderr, "element = %d\n", pp_particles[i]->Current_element_id);
+              fprintf(stderr, "element = %d\n", goma_ctx->post.pp_particles[i]->Current_element_id);
               fprintf(stderr, "coords  %g %g %g \n", p_x[0], p_x[1], p_x[2]);
               p_done = TRUE;
               goto next_particle;
             }
           }
 
-          err = load_basis_functions(&pp_particles[i]->xi_coord[0], goma_ctx->fem.bfd);
+          err =
+              load_basis_functions(&goma_ctx->post.pp_particles[i]->xi_coord[0], goma_ctx->fem.bfd);
           GOMA_EH(err, "problem from load_basis_functions");
 
           err = beer_belly();
@@ -5933,7 +5809,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
           p_time -= p_step;
           p_step *= 0.5;
           if ((goma_ctx->fem.pd->TimeIntegration == STEADY &&
-               p_step < 0.0001 * pp_particles[i]->Delta_s / vscale) ||
+               p_step < 0.0001 * goma_ctx->post.pp_particles[i]->Delta_s / vscale) ||
               (goma_ctx->fem.pd->TimeIntegration == TRANSIENT &&
                p_step < goma_ctx->fem.tran->Delta_t_min)) {
             GOMA_WH(-1, "particle timestep below minimum");
@@ -5945,8 +5821,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
           /* update variables */
 
           for (j = 0; j < p_dim; j++) {
-            pp_particles[i]->coord[j] = p_x[j];
-            pp_particles[i]->p_velo[j] = p_vel[j];
+            goma_ctx->post.pp_particles[i]->coord[j] = p_x[j];
+            goma_ctx->post.pp_particles[i]->p_velo[j] = p_vel[j];
           }
 
           /*   call usr_ptracking for computation and output of other quantities
@@ -5965,15 +5841,15 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
           }
           vscale = sqrt(vscale);
           if (goma_ctx->fem.pd->TimeIntegration == STEADY) {
-            p_step = MIN(pp_particles[i]->Delta_s / vscale, 1.2 * p_step);
+            p_step = MIN(goma_ctx->post.pp_particles[i]->Delta_s / vscale, 1.2 * p_step);
           } else {
             p_step = MIN(goma_ctx->fem.tran->delta_t, 1.2 * p_step);
           }
         }
-        p_done =
-            ((goma_ctx->fem.pd->TimeIntegration == STEADY && p_time >= pp_particles[i]->End_Time) ||
-             (goma_ctx->fem.pd->TimeIntegration == TRANSIENT &&
-              p_time >= goma_ctx->fem.tran->time_value));
+        p_done = ((goma_ctx->fem.pd->TimeIntegration == STEADY &&
+                   p_time >= goma_ctx->post.pp_particles[i]->End_Time) ||
+                  (goma_ctx->fem.pd->TimeIntegration == TRANSIENT &&
+                   p_time >= goma_ctx->fem.tran->time_value));
 
       } /*   while loop */
 
@@ -5982,10 +5858,10 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
       fflush(jfp);
       fclose(jfp);
       for (j = 0; j < p_dim; j++) {
-        pp_particles[i]->coord[j] = orig_coord[j];
+        goma_ctx->post.pp_particles[i]->coord[j] = orig_coord[j];
       }
     } /*  particle counter */
-    fprintf(stderr, "  Done tracing %d particles...  \n", nn_particles);
+    fprintf(stderr, "  Done tracing %d particles...  \n", goma_ctx->post.nn_particles);
   }
 
   /*  err = usr_print(time_ptr, delta_t, x, post_proc_vect, -1);  */
@@ -5996,7 +5872,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
         goma_ctx->fem.pd_glob[i]->MeshMotion == DYNAMIC_LAGRANGIAN)
       check = 1;
   }
-  if (PRESSURE_CONT != -1 &&
+  if (goma_ctx->post.pressure_cont != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1] || check)) {
     /*PRS cludge for remeshing guys */
     for (I = 0; I < goma_ctx->mesh.num_internal_elems; I++) {
@@ -6092,7 +5968,7 @@ void post_process_elem(double x[],     /* soln vector */
   int mn, ip_total, ielem, ip, ev_indx_tmp;
   ELEM_BLK_STRUCT *eb_ptr;
 
-  if (Num_Elem_Post_Proc_Var == 0)
+  if (goma_ctx->post.num_elem_post_proc_var == 0)
     return;
 
   /* Initialize  - NOTE ONLY initialize the members that have been malloc'd */
@@ -6115,10 +5991,10 @@ void post_process_elem(double x[],     /* soln vector */
 
   /* Zienkiewicz-Zhu error indicator based on velocity */
 
-  if (ERROR_ZZ_VEL != -1 &&
+  if (goma_ctx->post.error_zz_vel != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     compute_elem_size = 0;
-    if (ERROR_ZZ_VEL_ELSIZE != -1)
+    if (goma_ctx->post.error_zz_vel_elsize != -1)
       compute_elem_size = 1;
     if (calc_zz_error_vel(x, x_old, xdot, xdot_old, resid_vector,
                           ev_indx,   /* Variable index for zz_error  */
@@ -6137,7 +6013,8 @@ void post_process_elem(double x[],     /* soln vector */
     }
   }
 
-  if (SAT_CURVE_TYPE != -1 && CAP_PRESS_SWITCH != -1 && SAT_QP_SWITCH != -1) {
+  if (goma_ctx->post.sat_curve_type != -1 && goma_ctx->post.cap_press_switch != -1 &&
+      goma_ctx->post.sat_qp_switch != -1) {
     ev_indx_tmp = ev_indx;
     if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] ||
         goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN] ||
@@ -6175,7 +6052,7 @@ void post_process_elem(double x[],     /* soln vector */
     }
   }
 
-  for (i = 0; i < Num_Elem_Post_Proc_Var; i++) {
+  for (i = 0; i < goma_ctx->post.num_elem_post_proc_var; i++) {
     /*
      * When we're parallel, this will write out results for boundary
      * elements that are shared by other processors.
@@ -6184,8 +6061,8 @@ void post_process_elem(double x[],     /* soln vector */
   }
 
   /* Release the struct array memory if it exists */
-  if (nn_error_metrics > 0)
-    free(pp_error_data);
+  if (goma_ctx->post.nn_error_metrics > 0)
+    free(goma_ctx->post.pp_error_data);
 }
 /*****************************************************************************/
 
@@ -6194,16 +6071,16 @@ void post_process_global(double *x, /* Solution vector for the current processor
                          Dpi *dpi,
                          double time) {
   int i;
-  for (i = 0; i < nn_global; i++) {
-    switch (pp_global[i]->type) {
+  for (i = 0; i < goma_ctx->post.nn_global; i++) {
+    switch (goma_ctx->post.pp_global[i]->type) {
     case PP_GLOBAL_LS_INTERFACE_PRINT: {
       if (goma_ctx->fem.ls != NULL) {
-        print_ls_interface(x, exo, dpi, time, pp_global[i]->filenm, FALSE);
+        print_ls_interface(x, exo, dpi, time, goma_ctx->post.pp_global[i]->filenm, FALSE);
       }
     } break;
     case PP_GLOBAL_LS_INTERFACE_PRINT_ALL_TIMES: {
       if (goma_ctx->fem.ls != NULL) {
-        print_ls_interface(x, exo, dpi, time, pp_global[i]->filenm, TRUE);
+        print_ls_interface(x, exo, dpi, time, goma_ctx->post.pp_global[i]->filenm, TRUE);
       }
     } break;
     default:
@@ -6837,12 +6714,12 @@ static int calc_zz_error_vel(double x[], /* Solution vector                     
   /* Now compute recommended elem sizes if needed */
   if (compute_elem_size != 0) {
     /* First grab user supplied params */
-    reduction_rate = pp_error_data[0].error_params[0];
-    expansion_rate = pp_error_data[0].error_params[1];
-    elem_size_min = pp_error_data[0].error_params[2];
-    elem_size_max = pp_error_data[0].error_params[3];
-    target_error = pp_error_data[0].error_params[4];
-    pct_over_tolerance = pp_error_data[0].error_params[5];
+    reduction_rate = goma_ctx->post.pp_error_data[0].error_params[0];
+    expansion_rate = goma_ctx->post.pp_error_data[0].error_params[1];
+    elem_size_min = goma_ctx->post.pp_error_data[0].error_params[2];
+    elem_size_max = goma_ctx->post.pp_error_data[0].error_params[3];
+    target_error = goma_ctx->post.pp_error_data[0].error_params[4];
+    pct_over_tolerance = goma_ctx->post.pp_error_data[0].error_params[5];
 
     for (i_elem = 0; i_elem < exo->num_elems; i_elem++) {
       /* Only employ element if it has been deemed worthy from above scoping loop */
@@ -8091,174 +7968,191 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 
   ECHO("\nPost Processing Specifications =\n", echo_file);
 
-  iread = look_for_post_proc(ifp, "Stream Function", &STREAM);
-  iread = look_for_post_proc(ifp, "Streamwise normal stress", &STREAM_NORMAL_STRESS);
-  iread = look_for_post_proc(ifp, "Streamwise shear stress", &STREAM_SHEAR_STRESS);
-  iread = look_for_post_proc(ifp, "Streamwise Stress Difference", &STREAM_TENSION);
-  iread = look_for_post_proc(ifp, "Mean shear rate", &MEAN_SHEAR);
-  iread = look_for_post_proc(ifp, "Mean vorticity", &MEAN_VORTICITY);
-  iread = look_for_post_proc(ifp, "Pressure contours", &PRESSURE_CONT);
-  iread = look_for_post_proc(ifp, "Shell div_s_v contours", &SH_DIV_S_V_CONT);
-  iread = look_for_post_proc(ifp, "Shell curv contours", &SH_CURV_CONT);
-  iread = look_for_post_proc(ifp, "Fill contours", &FILL_CONT);
-  iread = look_for_post_proc(ifp, "Concentration contours", &CONC_CONT);
-  iread = look_for_post_proc(ifp, "Stress contours", &STRESS_CONT);
-  iread = look_for_post_proc(ifp, "EM contours", &EM_CONTOURS);
-  iread = look_for_post_proc(ifp, "Total EM", &TOTAL_EM_CONTOURS);
-  iread = look_for_post_proc(ifp, "Scattered EM", &SCATTERED_EM_CONTOURS);
-  iread = look_for_post_proc(ifp, "First Invariant of Strain", &FIRST_INVAR_STRAIN);
-  iread = look_for_post_proc(ifp, "Second Invariant of Strain", &SEC_INVAR_STRAIN);
-  iread = look_for_post_proc(ifp, "Third Invariant of Strain", &THIRD_INVAR_STRAIN);
-  iread = look_for_post_proc(ifp, "Velocity Divergence", &DIV_VELOCITY);
-  iread = look_for_post_proc(ifp, "Particle Velocity Divergence", &DIV_PVELOCITY);
-  iread = look_for_post_proc(ifp, "Total Velocity Divergence", &DIV_TOTAL);
-  iread = look_for_post_proc(ifp, "Electric Field", &ELECTRIC_FIELD);
-  iread = look_for_post_proc(ifp, "Electric Field Magnitude", &ELECTRIC_FIELD_MAG);
-  iread = look_for_post_proc(ifp, "Viscosity", &PP_Viscosity);
-  iread = look_for_post_proc(ifp, "Diffusivity", &PP_Diffusivity);
-  iread = look_for_post_proc(ifp, "FlowingLiquid Viscosity", &PP_FlowingLiquid_Viscosity);
-  iread = look_for_post_proc(ifp, "Volume Fraction of Gas Phase", &PP_VolumeFractionGas);
-  iread = look_for_post_proc(ifp, "Density", &DENSITY);
-  iread = look_for_post_proc(ifp, "Density Time Derivative", &RHO_DOT);
-  iread = look_for_post_proc(ifp, "Polymer Viscosity", &DENSITY);
-  iread = look_for_post_proc(ifp, "Polymer Viscosity", &POLYMER_VISCOSITY);
-  iread = look_for_post_proc(ifp, "Polymer Time Constant", &POLYMER_TIME_CONST);
-  iread = look_for_post_proc(ifp, "Mobility Parameter", &MOBILITY_PARAMETER);
-  iread = look_for_post_proc(ifp, "PTT Xi parameter", &PTT_XI);
-  iread = look_for_post_proc(ifp, "PTT Epsilon parameter", &PTT_EPSILON);
-  iread = look_for_post_proc(ifp, "Navier Stokes Residuals", &NS_RESIDUALS);
-  iread = look_for_post_proc(ifp, "Moving Mesh Residuals", &MM_RESIDUALS);
-  iread = look_for_post_proc(ifp, "Mass Diffusion Vectors", &DIFFUSION_VECTORS);
-  iread = look_for_post_proc(ifp, "Dielectrophoretic Field", &DIELECTROPHORETIC_FIELD);
-  iread = look_for_post_proc(ifp, "Dielectrophoretic Field Norm", &DIELECTROPHORETIC_FIELD_NORM);
-  iread = look_for_post_proc(ifp, "Enormsq Field", &ENORMSQ_FIELD);
-  iread = look_for_post_proc(ifp, "Enormsq Field Norm", &ENORMSQ_FIELD_NORM);
-  iread = look_for_post_proc(ifp, "Diffusive Mass Flux Vectors", &DIFFUSION_VECTORS);
-  iread = look_for_post_proc(ifp, "Mass Fluxlines", &FLUXLINES);
-  iread = look_for_post_proc(ifp, "Energy Conduction Vectors", &CONDUCTION_VECTORS);
-  iread = look_for_post_proc(ifp, "Energy Fluxlines", &ENERGY_FLUXLINES);
-  iread = look_for_post_proc(ifp, "Time Derivatives", &TIME_DERIVATIVES);
-  iread = look_for_post_proc(ifp, "Mesh Stress Tensor", &STRESS_TENSOR);
-  iread = look_for_post_proc(ifp, "Real Solid Stress Tensor", &REAL_STRESS_TENSOR);
-  iread = look_for_post_proc(ifp, "Mesh Strain Tensor", &STRAIN_TENSOR);
-  iread = look_for_post_proc(ifp, "Viscoplastic Def_Grad Tensor", &EVP_DEF_GRAD_TENSOR);
-  iread = look_for_post_proc(ifp, "Lagrangian Convection", &LAGRANGE_CONVECTION);
-  iread = look_for_post_proc(ifp, "Normal and Tangent Vectors", &SURFACE_VECTORS);
-  iread = look_for_post_proc(ifp, "Shell Normal Vectors", &SHELL_NORMALS);
-  iread = look_for_post_proc(ifp, "Error ZZ velocity", &ERROR_ZZ_VEL);
-  iread = look_for_post_proc(ifp, "Error ZZ heat flux", &ERROR_ZZ_Q);
-  iread = look_for_post_proc(ifp, "Error ZZ pressure", &ERROR_ZZ_P);
-  iread = look_for_post_proc(ifp, "Map Log-Conf Stress", &CONF_MAP);
-  iread = look_for_post_proc(ifp, "Map Conf Stress", &CONF_MAP);
-  iread = look_for_post_proc(ifp, "Velocity Magnitude", &VELO_SPEED);
-  iread = look_for_post_proc(ifp, "Giesekus Criterion", &GIES_CRIT);
-  iread = look_for_post_proc(ifp, "Particle stress flux", &J_FLUX);
-  iread = look_for_post_proc(ifp, "Eigenvalues", &EIG);
-  iread = look_for_post_proc(ifp, "Eigenvector1", &EIG1);
-  iread = look_for_post_proc(ifp, "Eigenvector2", &EIG2);
-  iread = look_for_post_proc(ifp, "Eigenvector3", &EIG3);
-  iread = look_for_post_proc(ifp, "Shear gradient", &GRAD_SH);
-  iread = look_for_post_proc(ifp, "Concentration gradient", &GRAD_Y);
-  iread = look_for_post_proc(ifp, "Vorticity Vector", &CURL_V);
-  iread = look_for_post_proc(ifp, "Helicity Value", &HELICITY);
-  iread = look_for_post_proc(ifp, "Moment Sources", &MOMENT_SOURCES);
-  iread = look_for_post_proc(ifp, "YZbeta Species", &YZBETA);
-  iread = look_for_post_proc(ifp, "Heaviside", &HEAVISIDE);
-  iread = look_for_post_proc(ifp, "Lamb Vector", &LAMB_VECTOR);
-  iread = look_for_post_proc(ifp, "Q Function", &Q_FCN);
-  iread = look_for_post_proc(ifp, "Poynting Vectors", &POYNTING_VECTORS);
-  iread = look_for_post_proc(ifp, "PSPG Post", &PSPG_PP);
-  iread = look_for_post_proc(ifp, "Saramito Yield Coeff", &SARAMITO_YIELD);
-  iread = look_for_post_proc(ifp, "VE Stress Norm", &STRESS_NORM);
-  iread = look_for_post_proc(ifp, "Species Sources", &SPECIES_SOURCES);
-  iread = look_for_post_proc(ifp, "Viscous Stress", &VISCOUS_STRESS);
-  iread = look_for_post_proc(ifp, "Velocity Gradients", &PP_VELOCITY_GRADIENTS);
-  iread = look_for_post_proc(ifp, "Viscous Stress Norm", &VISCOUS_STRESS_NORM);
-  iread = look_for_post_proc(ifp, "Viscous Von Mises Stress", &VISCOUS_VON_MISES_STRESS);
-  iread = look_for_post_proc(ifp, "Orientation Vectors", &ORIENTATION_VECTORS);
-  iread = look_for_post_proc(ifp, "First StrainRate Invariant", &FIRST_STRAINRATE_INVAR);
-  iread = look_for_post_proc(ifp, "Second StrainRate Invariant", &SEC_STRAINRATE_INVAR);
-  iread = look_for_post_proc(ifp, "Third StrainRate Invariant", &THIRD_STRAINRATE_INVAR);
-  iread = look_for_post_proc(ifp, "Wall Distance", &WALL_DISTANCE);
-  iread = look_for_post_proc(ifp, "Contact Distance", &CONTACT_DISTANCE);
-  iread = look_for_post_proc(ifp, "Fluid Stress", &PP_FLUID_STRESS);
-  iread = look_for_post_proc(ifp, "User-Defined Post Processing", &USER_POST);
+  iread = look_for_post_proc(ifp, "Stream Function", &goma_ctx->post.stream);
+  iread = look_for_post_proc(ifp, "Streamwise normal stress", &goma_ctx->post.stream_normal_stress);
+  iread = look_for_post_proc(ifp, "Streamwise shear stress", &goma_ctx->post.stream_shear_stress);
+  iread = look_for_post_proc(ifp, "Streamwise Stress Difference", &goma_ctx->post.stream_tension);
+  iread = look_for_post_proc(ifp, "Mean shear rate", &goma_ctx->post.mean_shear);
+  iread = look_for_post_proc(ifp, "Mean vorticity", &goma_ctx->post.mean_vorticity);
+  iread = look_for_post_proc(ifp, "Pressure contours", &goma_ctx->post.pressure_cont);
+  iread = look_for_post_proc(ifp, "Shell div_s_v contours", &goma_ctx->post.sh_div_s_v_cont);
+  iread = look_for_post_proc(ifp, "Shell curv contours", &goma_ctx->post.sh_curv_cont);
+  iread = look_for_post_proc(ifp, "Fill contours", &goma_ctx->post.fill_cont);
+  iread = look_for_post_proc(ifp, "Concentration contours", &goma_ctx->post.conc_cont);
+  iread = look_for_post_proc(ifp, "Stress contours", &goma_ctx->post.stress_cont);
+  iread = look_for_post_proc(ifp, "EM contours", &goma_ctx->post.em_contours);
+  iread = look_for_post_proc(ifp, "Total EM", &goma_ctx->post.total_em_contours);
+  iread = look_for_post_proc(ifp, "Scattered EM", &goma_ctx->post.scattered_em_contours);
+  iread = look_for_post_proc(ifp, "First Invariant of Strain", &goma_ctx->post.first_invar_strain);
+  iread = look_for_post_proc(ifp, "Second Invariant of Strain", &goma_ctx->post.sec_invar_strain);
+  iread = look_for_post_proc(ifp, "Third Invariant of Strain", &goma_ctx->post.third_invar_strain);
+  iread = look_for_post_proc(ifp, "Velocity Divergence", &goma_ctx->post.div_velocity);
+  iread = look_for_post_proc(ifp, "Particle Velocity Divergence", &goma_ctx->post.div_pvelocity);
+  iread = look_for_post_proc(ifp, "Total Velocity Divergence", &goma_ctx->post.div_total);
+  iread = look_for_post_proc(ifp, "Electric Field", &goma_ctx->post.electric_field);
+  iread = look_for_post_proc(ifp, "Electric Field Magnitude", &goma_ctx->post.electric_field_mag);
+  iread = look_for_post_proc(ifp, "Viscosity", &goma_ctx->post.pp_viscosity);
+  iread = look_for_post_proc(ifp, "Diffusivity", &goma_ctx->post.pp_diffusivity);
+  iread = look_for_post_proc(ifp, "FlowingLiquid Viscosity",
+                             &goma_ctx->post.pp_flowingliquid_viscosity);
+  iread =
+      look_for_post_proc(ifp, "Volume Fraction of Gas Phase", &goma_ctx->post.pp_volumefractiongas);
+  iread = look_for_post_proc(ifp, "Density", &goma_ctx->post.density);
+  iread = look_for_post_proc(ifp, "Density Time Derivative", &goma_ctx->post.rho_dot);
+  iread = look_for_post_proc(ifp, "Polymer Viscosity", &goma_ctx->post.density);
+  iread = look_for_post_proc(ifp, "Polymer Viscosity", &goma_ctx->post.polymer_viscosity);
+  iread = look_for_post_proc(ifp, "Polymer Time Constant", &goma_ctx->post.polymer_time_const);
+  iread = look_for_post_proc(ifp, "Mobility Parameter", &goma_ctx->post.mobility_parameter);
+  iread = look_for_post_proc(ifp, "PTT Xi parameter", &goma_ctx->post.ptt_xi);
+  iread = look_for_post_proc(ifp, "PTT Epsilon parameter", &goma_ctx->post.ptt_epsilon);
+  iread = look_for_post_proc(ifp, "Navier Stokes Residuals", &goma_ctx->post.ns_residuals);
+  iread = look_for_post_proc(ifp, "Moving Mesh Residuals", &goma_ctx->post.mm_residuals);
+  iread = look_for_post_proc(ifp, "Mass Diffusion Vectors", &goma_ctx->post.diffusion_vectors);
+  iread =
+      look_for_post_proc(ifp, "Dielectrophoretic Field", &goma_ctx->post.dielectrophoretic_field);
+  iread = look_for_post_proc(ifp, "Dielectrophoretic Field Norm",
+                             &goma_ctx->post.dielectrophoretic_field_norm);
+  iread = look_for_post_proc(ifp, "Enormsq Field", &goma_ctx->post.enormsq_field);
+  iread = look_for_post_proc(ifp, "Enormsq Field Norm", &goma_ctx->post.enormsq_field_norm);
+  iread = look_for_post_proc(ifp, "Diffusive Mass Flux Vectors", &goma_ctx->post.diffusion_vectors);
+  iread = look_for_post_proc(ifp, "Mass Fluxlines", &goma_ctx->post.fluxlines);
+  iread = look_for_post_proc(ifp, "Energy Conduction Vectors", &goma_ctx->post.conduction_vectors);
+  iread = look_for_post_proc(ifp, "Energy Fluxlines", &goma_ctx->post.energy_fluxlines);
+  iread = look_for_post_proc(ifp, "Time Derivatives", &goma_ctx->post.time_derivatives);
+  iread = look_for_post_proc(ifp, "Mesh Stress Tensor", &goma_ctx->post.stress_tensor);
+  iread = look_for_post_proc(ifp, "Real Solid Stress Tensor", &goma_ctx->post.real_stress_tensor);
+  iread = look_for_post_proc(ifp, "Mesh Strain Tensor", &goma_ctx->post.strain_tensor);
+  iread =
+      look_for_post_proc(ifp, "Viscoplastic Def_Grad Tensor", &goma_ctx->post.evp_def_grad_tensor);
+  iread = look_for_post_proc(ifp, "Lagrangian Convection", &goma_ctx->post.lagrange_convection);
+  iread = look_for_post_proc(ifp, "Normal and Tangent Vectors", &goma_ctx->post.surface_vectors);
+  iread = look_for_post_proc(ifp, "Shell Normal Vectors", &goma_ctx->post.shell_normals);
+  iread = look_for_post_proc(ifp, "Error ZZ velocity", &goma_ctx->post.error_zz_vel);
+  iread = look_for_post_proc(ifp, "Error ZZ heat flux", &goma_ctx->post.error_zz_q);
+  iread = look_for_post_proc(ifp, "Error ZZ pressure", &goma_ctx->post.error_zz_p);
+  iread = look_for_post_proc(ifp, "Map Log-Conf Stress", &goma_ctx->post.conf_map);
+  iread = look_for_post_proc(ifp, "Map Conf Stress", &goma_ctx->post.conf_map);
+  iread = look_for_post_proc(ifp, "Velocity Magnitude", &goma_ctx->post.velo_speed);
+  iread = look_for_post_proc(ifp, "Giesekus Criterion", &goma_ctx->post.gies_crit);
+  iread = look_for_post_proc(ifp, "Particle stress flux", &goma_ctx->post.j_flux);
+  iread = look_for_post_proc(ifp, "Eigenvalues", &goma_ctx->post.eig);
+  iread = look_for_post_proc(ifp, "Eigenvector1", &goma_ctx->post.eig1);
+  iread = look_for_post_proc(ifp, "Eigenvector2", &goma_ctx->post.eig2);
+  iread = look_for_post_proc(ifp, "Eigenvector3", &goma_ctx->post.eig3);
+  iread = look_for_post_proc(ifp, "Shear gradient", &goma_ctx->post.grad_sh);
+  iread = look_for_post_proc(ifp, "Concentration gradient", &goma_ctx->post.grad_y);
+  iread = look_for_post_proc(ifp, "Vorticity Vector", &goma_ctx->post.curl_v);
+  iread = look_for_post_proc(ifp, "Helicity Value", &goma_ctx->post.helicity);
+  iread = look_for_post_proc(ifp, "Moment Sources", &goma_ctx->post.moment_sources);
+  iread = look_for_post_proc(ifp, "YZbeta Species", &goma_ctx->post.yzbeta);
+  iread = look_for_post_proc(ifp, "Heaviside", &goma_ctx->post.heaviside);
+  iread = look_for_post_proc(ifp, "Lamb Vector", &goma_ctx->post.lamb_vector);
+  iread = look_for_post_proc(ifp, "Q Function", &goma_ctx->post.q_fcn);
+  iread = look_for_post_proc(ifp, "Poynting Vectors", &goma_ctx->post.poynting_vectors);
+  iread = look_for_post_proc(ifp, "PSPG Post", &goma_ctx->post.pspg_pp);
+  iread = look_for_post_proc(ifp, "Saramito Yield Coeff", &goma_ctx->post.saramito_yield);
+  iread = look_for_post_proc(ifp, "VE Stress Norm", &goma_ctx->post.stress_norm);
+  iread = look_for_post_proc(ifp, "Species Sources", &goma_ctx->post.species_sources);
+  iread = look_for_post_proc(ifp, "Viscous Stress", &goma_ctx->post.viscous_stress);
+  iread = look_for_post_proc(ifp, "Velocity Gradients", &goma_ctx->post.pp_velocity_gradients);
+  iread = look_for_post_proc(ifp, "Viscous Stress Norm", &goma_ctx->post.viscous_stress_norm);
+  iread =
+      look_for_post_proc(ifp, "Viscous Von Mises Stress", &goma_ctx->post.viscous_von_mises_stress);
+  iread = look_for_post_proc(ifp, "Orientation Vectors", &goma_ctx->post.orientation_vectors);
+  iread =
+      look_for_post_proc(ifp, "First StrainRate Invariant", &goma_ctx->post.first_strainrate_invar);
+  iread =
+      look_for_post_proc(ifp, "Second StrainRate Invariant", &goma_ctx->post.sec_strainrate_invar);
+  iread =
+      look_for_post_proc(ifp, "Third StrainRate Invariant", &goma_ctx->post.third_strainrate_invar);
+  iread = look_for_post_proc(ifp, "Wall Distance", &goma_ctx->post.wall_distance);
+  iread = look_for_post_proc(ifp, "Contact Distance", &goma_ctx->post.contact_distance);
+  iread = look_for_post_proc(ifp, "Fluid Stress", &goma_ctx->post.pp_fluid_stress);
+  iread = look_for_post_proc(ifp, "User-Defined Post Processing", &goma_ctx->post.user_post);
 
   /*
    * Initialize for surety before communication to other processors.
    */
 
-  len_u_post_proc = 0;
+  goma_ctx->post.len_u_post_proc = 0;
 
-  if (USER_POST == 1) /* may need parameters for this option */
+  if (goma_ctx->post.user_post == 1) /* may need parameters for this option */
   {
     if (fgets(line, 81, ifp) != NULL) {
       double dummy[1] = {-1.0};
       strip(line);
-      len_u_post_proc = count_parameters(line);
-      if (len_u_post_proc > 0) {
-        u_post_proc = (dbl *)array_alloc(1, len_u_post_proc, sizeof(dbl));
+      goma_ctx->post.len_u_post_proc = count_parameters(line);
+      if (goma_ctx->post.len_u_post_proc > 0) {
+        goma_ctx->post.u_post_proc =
+            (dbl *)array_alloc(1, goma_ctx->post.len_u_post_proc, sizeof(dbl));
 
         /* parse parameters into little strings */
         tokenize_by_whsp(line, arguments, MAX_NUMBER_PARAMS);
-        for (i = 0; i < len_u_post_proc; i++) {
-          u_post_proc[i] = atof(arguments[i]);
+        for (i = 0; i < goma_ctx->post.len_u_post_proc; i++) {
+          goma_ctx->post.u_post_proc[i] = atof(arguments[i]);
         }
-        SPF_DBL_VEC(endofstring(echo_string), len_u_post_proc, u_post_proc);
+        SPF_DBL_VEC(endofstring(echo_string), goma_ctx->post.len_u_post_proc,
+                    goma_ctx->post.u_post_proc);
       } else {
-        u_post_proc = dummy;
+        goma_ctx->post.u_post_proc = dummy;
       }
       ECHO(echo_string, echo_file);
     }
   }
 
-  iread = look_for_post_proc(ifp, "Acoustic Pressure Magnitude", &ACOUSTIC_PRESSURE);
-  iread = look_for_post_proc(ifp, "Acoustic Phase Angle", &ACOUSTIC_PHASE_ANGLE);
-  iread = look_for_post_proc(ifp, "Acoustic Energy Density", &ACOUSTIC_ENERGY_DENSITY);
-  iread = look_for_post_proc(ifp, "Light Intensity", &LIGHT_INTENSITY);
-  iread = look_for_post_proc(ifp, "Principal Stress", &PRINCIPAL_STRESS);
-  iread = look_for_post_proc(ifp, "Principal Real Stress", &PRINCIPAL_REAL_STRESS);
-  iread = look_for_post_proc(ifp, "Lubrication Height", &LUB_HEIGHT);
-  iread = look_for_post_proc(ifp, "Lubrication Height 2", &LUB_HEIGHT_2);
-  iread = look_for_post_proc(ifp, "Lubrication Upper Velocity", &LUB_VELO_UPPER);
-  iread = look_for_post_proc(ifp, "Lubrication Lower Velocity", &LUB_VELO_LOWER);
-  iread = look_for_post_proc(ifp, "Lubrication Velocity Field", &LUB_VELO_FIELD);
-  iread = look_for_post_proc(ifp, "Lubrication Velocity Field 2", &LUB_VELO_FIELD_2);
-  iread = look_for_post_proc(ifp, "Lubrication Fluid Source", &LUB_FLUID_SOURCE);
-  iread = look_for_post_proc(ifp, "Disjoining Pressure", &DISJ_PRESS);
-  iread = look_for_post_proc(ifp, "Porous Shell Open Saturation", &SH_SAT_OPEN);
-  iread = look_for_post_proc(ifp, "Porous Shell Open Saturation 2", &SH_SAT_OPEN_2);
-  iread = look_for_post_proc(ifp, "Porous Shell Capillary Pressure", &SH_CAP_PRES);
-  iread = look_for_post_proc(ifp, "Porous Shell Inter Layer Flux", &SH_PORE_FLUX);
-  iread = look_for_post_proc(ifp, "Shell Stress Tensor", &SH_STRESS_TENSOR);
-  iread = look_for_post_proc(ifp, "Shell Tangents", &SH_TANG);
-  iread = look_for_post_proc(ifp, "Lame MU", &PP_LAME_MU);
-  iread = look_for_post_proc(ifp, "Lame LAMBDA", &PP_LAME_LAMBDA);
-  iread = look_for_post_proc(ifp, "Von Mises Strain", &VON_MISES_STRAIN);
-  iread = look_for_post_proc(ifp, "Von Mises Stress", &VON_MISES_STRESS);
-  iread = look_for_post_proc(ifp, "Untracked Species", &UNTRACKED_SPEC);
-  iread = look_for_post_proc(ifp, "Porous Saturation", &POROUS_SATURATION);
-  iread = look_for_post_proc(ifp, "Total density of solvents in porous media",
-                             &POROUS_RHO_TOTAL_SOLVENTS);
-  iread = look_for_post_proc(ifp, "Density of solvents in gas phase in porous media",
-                             &POROUS_RHO_GAS_SOLVENTS);
-  iread = look_for_post_proc(ifp, "Density of liquid phase in porous media", &POROUS_RHO_LPHASE);
-  iread = look_for_post_proc(ifp, "Gas phase Darcy velocity in porous media", &DARCY_VELOCITY_GAS);
+  iread = look_for_post_proc(ifp, "Acoustic Pressure Magnitude", &goma_ctx->post.acoustic_pressure);
+  iread = look_for_post_proc(ifp, "Acoustic Phase Angle", &goma_ctx->post.acoustic_phase_angle);
   iread =
-      look_for_post_proc(ifp, "Liquid phase Darcy velocity in porous media", &DARCY_VELOCITY_LIQ);
+      look_for_post_proc(ifp, "Acoustic Energy Density", &goma_ctx->post.acoustic_energy_density);
+  iread = look_for_post_proc(ifp, "Light Intensity", &goma_ctx->post.light_intensity);
+  iread = look_for_post_proc(ifp, "Principal Stress", &goma_ctx->post.principal_stress);
+  iread = look_for_post_proc(ifp, "Principal Real Stress", &goma_ctx->post.principal_real_stress);
+  iread = look_for_post_proc(ifp, "Lubrication Height", &goma_ctx->post.lub_height);
+  iread = look_for_post_proc(ifp, "Lubrication Height 2", &goma_ctx->post.lub_height_2);
+  iread = look_for_post_proc(ifp, "Lubrication Upper Velocity", &goma_ctx->post.lub_velo_upper);
+  iread = look_for_post_proc(ifp, "Lubrication Lower Velocity", &goma_ctx->post.lub_velo_lower);
+  iread = look_for_post_proc(ifp, "Lubrication Velocity Field", &goma_ctx->post.lub_velo_field);
+  iread = look_for_post_proc(ifp, "Lubrication Velocity Field 2", &goma_ctx->post.lub_velo_field_2);
+  iread = look_for_post_proc(ifp, "Lubrication Fluid Source", &goma_ctx->post.lub_fluid_source);
+  iread = look_for_post_proc(ifp, "Disjoining Pressure", &goma_ctx->post.disj_press);
+  iread = look_for_post_proc(ifp, "Porous Shell Open Saturation", &goma_ctx->post.sh_sat_open);
+  iread = look_for_post_proc(ifp, "Porous Shell Open Saturation 2", &goma_ctx->post.sh_sat_open_2);
+  iread = look_for_post_proc(ifp, "Porous Shell Capillary Pressure", &goma_ctx->post.sh_cap_pres);
+  iread = look_for_post_proc(ifp, "Porous Shell Inter Layer Flux", &goma_ctx->post.sh_pore_flux);
+  iread = look_for_post_proc(ifp, "Shell Stress Tensor", &goma_ctx->post.sh_stress_tensor);
+  iread = look_for_post_proc(ifp, "Shell Tangents", &goma_ctx->post.sh_tang);
+  iread = look_for_post_proc(ifp, "Lame MU", &goma_ctx->post.pp_lame_mu);
+  iread = look_for_post_proc(ifp, "Lame LAMBDA", &goma_ctx->post.pp_lame_lambda);
+  iread = look_for_post_proc(ifp, "Von Mises Strain", &goma_ctx->post.von_mises_strain);
+  iread = look_for_post_proc(ifp, "Von Mises Stress", &goma_ctx->post.von_mises_stress);
+  iread = look_for_post_proc(ifp, "Untracked Species", &goma_ctx->post.untracked_spec);
+  iread = look_for_post_proc(ifp, "Porous Saturation", &goma_ctx->post.porous_saturation);
+  iread = look_for_post_proc(ifp, "Total density of solvents in porous media",
+                             &goma_ctx->post.porous_rho_total_solvents);
+  iread = look_for_post_proc(ifp, "Density of solvents in gas phase in porous media",
+                             &goma_ctx->post.porous_rho_gas_solvents);
+  iread = look_for_post_proc(ifp, "Density of liquid phase in porous media",
+                             &goma_ctx->post.porous_rho_lphase);
+  iread = look_for_post_proc(ifp, "Gas phase Darcy velocity in porous media",
+                             &goma_ctx->post.darcy_velocity_gas);
+  iread = look_for_post_proc(ifp, "Liquid phase Darcy velocity in porous media",
+                             &goma_ctx->post.darcy_velocity_liq);
   iread = look_for_post_proc(ifp, "Local liquid accumulation rate in porous media",
-                             &POROUS_LIQUID_ACCUM_RATE);
-  iread = look_for_post_proc(ifp, "Capillary pressure in porous media", &CAPILLARY_PRESSURE);
-  iread = look_for_post_proc(ifp, "Grid Peclet Number in porous media", &POROUS_GRIDPECLET);
-  iread = look_for_post_proc(ifp, "SUPG Velocity in porous media", &POROUS_SUPGVELOCITY);
-  iread = look_for_post_proc(ifp, "Relative Liquid Permeability", &REL_LIQ_PERM);
+                             &goma_ctx->post.porous_liquid_accum_rate);
+  iread = look_for_post_proc(ifp, "Capillary pressure in porous media",
+                             &goma_ctx->post.capillary_pressure);
+  iread = look_for_post_proc(ifp, "Grid Peclet Number in porous media",
+                             &goma_ctx->post.porous_gridpeclet);
+  iread =
+      look_for_post_proc(ifp, "SUPG Velocity in porous media", &goma_ctx->post.porous_supgvelocity);
+  iread = look_for_post_proc(ifp, "Relative Liquid Permeability", &goma_ctx->post.rel_liq_perm);
 
-  iread = look_for_post_proc(ifp, "TFMP_gas_velo", &TFMP_GAS_VELO);
-  iread = look_for_post_proc(ifp, "TFMP_liq_velo", &TFMP_LIQ_VELO);
-  iread = look_for_post_proc(ifp, "TFMP_inverse_Peclet", &TFMP_INV_PECLET);
-  iread = look_for_post_proc(ifp, "TFMP_Krg", &TFMP_KRG);
-  iread = look_for_post_proc(ifp, "Lubrication Convection", &LUB_CONVECTION);
-  iread = look_for_post_proc(ifp, "Mesh Velocity", &PP_MESH_VELOCITY);
+  iread = look_for_post_proc(ifp, "TFMP_gas_velo", &goma_ctx->post.tfmp_gas_velo);
+  iread = look_for_post_proc(ifp, "TFMP_liq_velo", &goma_ctx->post.tfmp_liq_velo);
+  iread = look_for_post_proc(ifp, "TFMP_inverse_Peclet", &goma_ctx->post.tfmp_inv_peclet);
+  iread = look_for_post_proc(ifp, "TFMP_Krg", &goma_ctx->post.tfmp_krg);
+  iread = look_for_post_proc(ifp, "Lubrication Convection", &goma_ctx->post.lub_convection);
+  iread = look_for_post_proc(ifp, "Mesh Velocity", &goma_ctx->post.pp_mesh_velocity);
 
   /* Report count of post-proc vars to be exported */
   /*
@@ -8282,64 +8176,66 @@ void rd_post_process_specs(FILE *ifp, char *input) {
   }
 
   i = 0;
-  nn_error_metrics = 0;
+  goma_ctx->post.nn_error_metrics = 0;
   if (look_for_optional(ifp, "Error ZZ velocity elem size", input, '=') == 1) {
-    if (ERROR_ZZ_VEL == -1) {
+    if (goma_ctx->post.error_zz_vel == -1) {
       GOMA_EH(GOMA_ERROR, "'Error ZZ velocity elem size' card REQUIRES 'Error ZZ "
                           "velocity = yes' card - please add");
     } else {
-      ERROR_ZZ_VEL_ELSIZE = 1;
+      goma_ctx->post.error_zz_vel_elsize = 1;
       error_presence_key[i] = 1;
-      nn_error_metrics++;
+      goma_ctx->post.nn_error_metrics++;
     }
   } else {
-    ERROR_ZZ_VEL_ELSIZE = -1;
+    goma_ctx->post.error_zz_vel_elsize = -1;
   }
   i++;
   if (look_for_optional(ifp, "Error ZZ heat flux elem size", input, '=') == 1) {
-    if (ERROR_ZZ_Q == -1) {
+    if (goma_ctx->post.error_zz_q == -1) {
       GOMA_EH(GOMA_ERROR,
               "'Error ZZ heat flux elem size' card REQUIRES 'Error ZZ heat flux = yes' card - "
               "please add");
     } else {
-      ERROR_ZZ_Q_ELSIZE = 1;
+      goma_ctx->post.error_zz_q_elsize = 1;
       error_presence_key[i] = 1;
-      nn_error_metrics++;
+      goma_ctx->post.nn_error_metrics++;
     }
   } else {
-    ERROR_ZZ_Q_ELSIZE = -1;
+    goma_ctx->post.error_zz_q_elsize = -1;
   }
   i++;
   if (look_for_optional(ifp, "Error ZZ pressure elem size", input, '=') == 1) {
-    if (ERROR_ZZ_P == -1) {
+    if (goma_ctx->post.error_zz_p == -1) {
       GOMA_EH(GOMA_ERROR,
               "'Error ZZ pressure elem size' card REQUIRES 'Error ZZ pressure = yes' card - "
               "please add");
     } else {
-      ERROR_ZZ_P_ELSIZE = 1;
+      goma_ctx->post.error_zz_p_elsize = 1;
       error_presence_key[i] = 1;
-      nn_error_metrics++;
+      goma_ctx->post.nn_error_metrics++;
     }
   } else {
-    ERROR_ZZ_P_ELSIZE = -1;
+    goma_ctx->post.error_zz_p_elsize = -1;
   }
 
   /*
    *  Allocate memory to hold the error information
    */
 
-  if (nn_error_metrics > 0) {
-    pp_error_data = (struct Post_Processing_Error *)smalloc(nn_error_metrics *
-                                                            sizeof(struct Post_Processing_Error));
+  if (goma_ctx->post.nn_error_metrics > 0) {
+    goma_ctx->post.pp_error_data = (struct Post_Processing_Error *)smalloc(
+        goma_ctx->post.nn_error_metrics * sizeof(struct Post_Processing_Error));
 
     i = 0;
     if (error_presence_key[i]) {
       /* Need this line to line up ifp? at the right place I think */
       look_for_optional(ifp, "Error ZZ velocity elem size", input, '=');
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf", &pp_error_data[i].error_params[0],
-                 &pp_error_data[i].error_params[1], &pp_error_data[i].error_params[2],
-                 &pp_error_data[i].error_params[3], &pp_error_data[i].error_params[4],
-                 &pp_error_data[i].error_params[5]) != 6) {
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf", &goma_ctx->post.pp_error_data[i].error_params[0],
+                 &goma_ctx->post.pp_error_data[i].error_params[1],
+                 &goma_ctx->post.pp_error_data[i].error_params[2],
+                 &goma_ctx->post.pp_error_data[i].error_params[3],
+                 &goma_ctx->post.pp_error_data[i].error_params[4],
+                 &goma_ctx->post.pp_error_data[i].error_params[5]) != 6) {
         GOMA_EH(GOMA_ERROR,
                 " Error reading 'Error ZZ velocity elem size' card values - expecting 6 floats");
       }
@@ -8347,25 +8243,33 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 #ifdef DBG_0
       fprintf(stdout,
               "Read params for ZZ vel elem size (%6.4f) (%6.4f) (%6.4f) (%6.4f) (%6.4f) (%6.4f)\n",
-              pp_error_data[i].error_params[0], pp_error_data[i].error_params[1],
-              pp_error_data[i].error_params[2], pp_error_data[i].error_params[3],
-              pp_error_data[i].error_params[4], pp_error_data[i].error_params[5]);
+              goma_ctx->post.pp_error_data[i].error_params[0],
+              goma_ctx->post.pp_error_data[i].error_params[1],
+              goma_ctx->post.pp_error_data[i].error_params[2],
+              goma_ctx->post.pp_error_data[i].error_params[3],
+              goma_ctx->post.pp_error_data[i].error_params[4],
+              goma_ctx->post.pp_error_data[i].error_params[5]);
 #endif
 #endif
       SPF(echo_string, "%s = %.4g %.4g %.4g %.4g %.4g %.4g", input,
-          pp_error_data[i].error_params[0], pp_error_data[i].error_params[1],
-          pp_error_data[i].error_params[2], pp_error_data[i].error_params[3],
-          pp_error_data[i].error_params[4], pp_error_data[i].error_params[5]);
+          goma_ctx->post.pp_error_data[i].error_params[0],
+          goma_ctx->post.pp_error_data[i].error_params[1],
+          goma_ctx->post.pp_error_data[i].error_params[2],
+          goma_ctx->post.pp_error_data[i].error_params[3],
+          goma_ctx->post.pp_error_data[i].error_params[4],
+          goma_ctx->post.pp_error_data[i].error_params[5]);
 
       ECHO(echo_string, echo_file);
     }
     i++;
     if (error_presence_key[i]) {
       look_for(ifp, "Error ZZ heat flux elem size", input, '=');
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf", &pp_error_data[i].error_params[0],
-                 &pp_error_data[i].error_params[1], &pp_error_data[i].error_params[2],
-                 &pp_error_data[i].error_params[3], &pp_error_data[i].error_params[4],
-                 &pp_error_data[i].error_params[5]) != 6) {
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf", &goma_ctx->post.pp_error_data[i].error_params[0],
+                 &goma_ctx->post.pp_error_data[i].error_params[1],
+                 &goma_ctx->post.pp_error_data[i].error_params[2],
+                 &goma_ctx->post.pp_error_data[i].error_params[3],
+                 &goma_ctx->post.pp_error_data[i].error_params[4],
+                 &goma_ctx->post.pp_error_data[i].error_params[5]) != 6) {
         GOMA_EH(GOMA_ERROR,
                 " Error reading 'Error ZZ heat flux elem size' card values - expecting 6 floats");
       }
@@ -8374,25 +8278,33 @@ void rd_post_process_specs(FILE *ifp, char *input) {
       fprintf(stdout,
               "Read params for ZZ heat flux elem size (%6.4f) (%6.4f) (%6.4f) (%6.4f) (%6.4f) "
               "(%6.4f)\n",
-              pp_error_data[i].error_params[0], pp_error_data[i].error_params[1],
-              pp_error_data[i].error_params[2], pp_error_data[i].error_params[3],
-              pp_error_data[i].error_params[4], pp_error_data[i].error_params[5]);
+              goma_ctx->post.pp_error_data[i].error_params[0],
+              goma_ctx->post.pp_error_data[i].error_params[1],
+              goma_ctx->post.pp_error_data[i].error_params[2],
+              goma_ctx->post.pp_error_data[i].error_params[3],
+              goma_ctx->post.pp_error_data[i].error_params[4],
+              goma_ctx->post.pp_error_data[i].error_params[5]);
 #endif
 #endif
       SPF(echo_string, "%s = %.4g %.4g %.4g %.4g %.4g %.4g", input,
-          pp_error_data[i].error_params[0], pp_error_data[i].error_params[1],
-          pp_error_data[i].error_params[2], pp_error_data[i].error_params[3],
-          pp_error_data[i].error_params[4], pp_error_data[i].error_params[5]);
+          goma_ctx->post.pp_error_data[i].error_params[0],
+          goma_ctx->post.pp_error_data[i].error_params[1],
+          goma_ctx->post.pp_error_data[i].error_params[2],
+          goma_ctx->post.pp_error_data[i].error_params[3],
+          goma_ctx->post.pp_error_data[i].error_params[4],
+          goma_ctx->post.pp_error_data[i].error_params[5]);
 
       ECHO(echo_string, echo_file);
     }
     i++;
     if (error_presence_key[i]) {
       look_for(ifp, "Error ZZ pressure elem size", input, '=');
-      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf", &pp_error_data[i].error_params[0],
-                 &pp_error_data[i].error_params[1], &pp_error_data[i].error_params[2],
-                 &pp_error_data[i].error_params[3], &pp_error_data[i].error_params[4],
-                 &pp_error_data[i].error_params[5]) != 6) {
+      if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf", &goma_ctx->post.pp_error_data[i].error_params[0],
+                 &goma_ctx->post.pp_error_data[i].error_params[1],
+                 &goma_ctx->post.pp_error_data[i].error_params[2],
+                 &goma_ctx->post.pp_error_data[i].error_params[3],
+                 &goma_ctx->post.pp_error_data[i].error_params[4],
+                 &goma_ctx->post.pp_error_data[i].error_params[5]) != 6) {
         GOMA_EH(GOMA_ERROR,
                 " Error reading 'Error ZZ pressure elem size' card values - expecting 6 floats");
       }
@@ -8401,15 +8313,21 @@ void rd_post_process_specs(FILE *ifp, char *input) {
       fprintf(
           stdout,
           "Read params for ZZ pressure elem size (%6.4f) (%6.4f) (%6.4f) (%6.4f) (%6.4f) (%6.4f)\n",
-          pp_error_data[i].error_params[0], pp_error_data[i].error_params[1],
-          pp_error_data[i].error_params[2], pp_error_data[i].error_params[3],
-          pp_error_data[i].error_params[4], pp_error_data[i].error_params[5]);
+          goma_ctx->post.pp_error_data[i].error_params[0],
+          goma_ctx->post.pp_error_data[i].error_params[1],
+          goma_ctx->post.pp_error_data[i].error_params[2],
+          goma_ctx->post.pp_error_data[i].error_params[3],
+          goma_ctx->post.pp_error_data[i].error_params[4],
+          goma_ctx->post.pp_error_data[i].error_params[5]);
 #endif
 #endif
       SPF(echo_string, "%s = %.4g %.4g %.4g %.4g %.4g %.4g", input,
-          pp_error_data[i].error_params[0], pp_error_data[i].error_params[1],
-          pp_error_data[i].error_params[2], pp_error_data[i].error_params[3],
-          pp_error_data[i].error_params[4], pp_error_data[i].error_params[5]);
+          goma_ctx->post.pp_error_data[i].error_params[0],
+          goma_ctx->post.pp_error_data[i].error_params[1],
+          goma_ctx->post.pp_error_data[i].error_params[2],
+          goma_ctx->post.pp_error_data[i].error_params[3],
+          goma_ctx->post.pp_error_data[i].error_params[4],
+          goma_ctx->post.pp_error_data[i].error_params[5]);
 
       ECHO(echo_string, echo_file);
     }
@@ -8425,28 +8343,29 @@ void rd_post_process_specs(FILE *ifp, char *input) {
   /* count number of post-processing flux calculation specifications */
 
   if (iread == 1) {
-    nn_post_fluxes = count_list(ifp, "FLUX", input, '=', "END OF FLUX");
+    goma_ctx->post.nn_post_fluxes = count_list(ifp, "FLUX", input, '=', "END OF FLUX");
     ECHO("\nPost Processing Fluxes =\n", echo_file);
   } else {
-    nn_post_fluxes = 0;
+    goma_ctx->post.nn_post_fluxes = 0;
   }
 
   /*
    *  Allocate memory to hold the flux information
    */
 
-  if (nn_post_fluxes > 0) {
+  if (goma_ctx->post.nn_post_fluxes > 0) {
     sz = sizeof(struct Post_Processing_Fluxes *);
-    pp_fluxes = (struct Post_Processing_Fluxes **)array_alloc(1, nn_post_fluxes, sz);
+    goma_ctx->post.pp_fluxes =
+        (struct Post_Processing_Fluxes **)array_alloc(1, goma_ctx->post.nn_post_fluxes, sz);
 
     sz = sizeof(struct Post_Processing_Fluxes);
 
-    for (i = 0; i < nn_post_fluxes; i++) {
-      pp_fluxes[i] = (struct Post_Processing_Fluxes *)array_alloc(1, 1, sz);
+    for (i = 0; i < goma_ctx->post.nn_post_fluxes; i++) {
+      goma_ctx->post.pp_fluxes[i] = (struct Post_Processing_Fluxes *)array_alloc(1, 1, sz);
     }
     /*Now load up information by reading cards */
 
-    for (i = 0; i < nn_post_fluxes; i++) {
+    for (i = 0; i < goma_ctx->post.nn_post_fluxes; i++) {
       look_for(ifp, "FLUX", input, '=');
 
       /* Read FLUX  type: i.e. FORCE_X, HEAT FLUX, etc. */
@@ -8455,40 +8374,41 @@ void rd_post_process_specs(FILE *ifp, char *input) {
         GOMA_EH(GOMA_ERROR, "error reading Post Processing Flux input variable");
       }
 
-      pp_fluxes[i]->flux_type = -1;
+      goma_ctx->post.pp_fluxes[i]->flux_type = -1;
       for (k = 0; k < Num_Flux_Names; k++) {
         if (!strcmp(ts, pp_flux_names[k].name)) {
-          pp_fluxes[i]->flux_type = pp_flux_names[k].Index;
-          strcpy(pp_fluxes[i]->flux_type_name, ts);
+          goma_ctx->post.pp_fluxes[i]->flux_type = pp_flux_names[k].Index;
+          strcpy(goma_ctx->post.pp_fluxes[i]->flux_type_name, ts);
           break;
         }
       }
-      if (pp_fluxes[i]->flux_type == -1) {
+      if (goma_ctx->post.pp_fluxes[i]->flux_type == -1) {
         GOMA_EH(GOMA_ERROR, "Invalid Flux name");
       }
-      SPF(echo_string, "%s = %s", "FLUX", pp_fluxes[i]->flux_type_name);
+      SPF(echo_string, "%s = %s", "FLUX", goma_ctx->post.pp_fluxes[i]->flux_type_name);
 
       /* read ss id */
 
-      if (fscanf(ifp, "%d", &pp_fluxes[i]->ss_id) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_fluxes[i]->ss_id) != 1) {
         fprintf(stderr, "%s:\tError reading flux->ss_id\n", yo);
         exit(-1);
       }
 
       /* read block id */
 
-      if (fscanf(ifp, "%d", &pp_fluxes[i]->blk_id) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_fluxes[i]->blk_id) != 1) {
         fprintf(stderr, "%s:\tError reading flux->blk_id\n", yo);
         exit(-1);
       }
 
-      SPF(endofstring(echo_string), " %d %d", pp_fluxes[i]->ss_id, pp_fluxes[i]->blk_id);
+      SPF(endofstring(echo_string), " %d %d", goma_ctx->post.pp_fluxes[i]->ss_id,
+          goma_ctx->post.pp_fluxes[i]->blk_id);
 
       /*	  pp_fluxes[i]->blk_id--;  */
 
       /* read species id*/
 
-      if (fscanf(ifp, "%d", &pp_fluxes[i]->species_number) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_fluxes[i]->species_number) != 1) {
         fprintf(stderr, "%s:\tError reading flux->species_number\n", yo);
         exit(-1);
       }
@@ -8497,26 +8417,26 @@ void rd_post_process_specs(FILE *ifp, char *input) {
       if (fscanf(ifp, "%s", ts) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Post Processing Flux filename");
       }
-      strcpy(pp_fluxes[i]->flux_filenm, ts);
+      strcpy(goma_ctx->post.pp_fluxes[i]->flux_filenm, ts);
 
-      SPF(endofstring(echo_string), " %d %s", pp_fluxes[i]->species_number,
-          pp_fluxes[i]->flux_filenm);
+      SPF(endofstring(echo_string), " %d %s", goma_ctx->post.pp_fluxes[i]->species_number,
+          goma_ctx->post.pp_fluxes[i]->flux_filenm);
 
       read_string(ifp, first_string, '\n');
       nargs = sscanf(first_string, "%s %d %d %d %d %d", second_string, &pbits[0], &pbits[1],
                      &pbits[2], &pbits[3], &pbits[4]);
       if (nargs > 0 && strcmp(second_string, "profile") == 0) {
-        pp_fluxes[i]->profile_flag = 32;
+        goma_ctx->post.pp_fluxes[i]->profile_flag = 32;
         SPF(endofstring(echo_string), " %s", second_string);
         sz = 1;
         for (j = 1; j < nargs; j++) {
           if (pbits[j - 1])
-            pp_fluxes[i]->profile_flag += sz;
+            goma_ctx->post.pp_fluxes[i]->profile_flag += sz;
           sz *= 2;
         }
-        SPF(endofstring(echo_string), " %d", pp_fluxes[i]->profile_flag);
+        SPF(endofstring(echo_string), " %d", goma_ctx->post.pp_fluxes[i]->profile_flag);
       } else {
-        pp_fluxes[i]->profile_flag = FALSE;
+        goma_ctx->post.pp_fluxes[i]->profile_flag = FALSE;
       }
       ECHO(echo_string, echo_file);
     }
@@ -8535,59 +8455,62 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 
   /* count number of post-processing flux calculation specifications */
   if (iread == 1) {
-    nn_post_fluxes_sens = count_list(ifp, "FLUX_SENS", input, '=', "END OF FLUX_SENS");
+    goma_ctx->post.nn_post_fluxes_sens =
+        count_list(ifp, "FLUX_SENS", input, '=', "END OF FLUX_SENS");
     ECHO("\nPost Processing Flux Sensitivities =\n", echo_file);
   } else {
-    nn_post_fluxes_sens = 0;
+    goma_ctx->post.nn_post_fluxes_sens = 0;
   }
 
   /*
    *  Allocate memory to hold the flux information
    */
 
-  if (nn_post_fluxes_sens > 0) {
+  if (goma_ctx->post.nn_post_fluxes_sens > 0) {
     sz = sizeof(struct Post_Processing_Fluxes_Sens *);
-    pp_fluxes_sens = (struct Post_Processing_Fluxes_Sens **)array_alloc(1, nn_post_fluxes_sens, sz);
+    goma_ctx->post.pp_fluxes_sens = (struct Post_Processing_Fluxes_Sens **)array_alloc(
+        1, goma_ctx->post.nn_post_fluxes_sens, sz);
 
     sz = sizeof(struct Post_Processing_Fluxes_Sens);
 
-    for (i = 0; i < nn_post_fluxes_sens; i++) {
-      pp_fluxes_sens[i] = (struct Post_Processing_Fluxes_Sens *)array_alloc(1, 1, sz);
+    for (i = 0; i < goma_ctx->post.nn_post_fluxes_sens; i++) {
+      goma_ctx->post.pp_fluxes_sens[i] =
+          (struct Post_Processing_Fluxes_Sens *)array_alloc(1, 1, sz);
     }
     /*Now load up information by reading cards */
 
-    for (i = 0; i < nn_post_fluxes_sens; i++) { /* nn_post_fluxes */
+    for (i = 0; i < goma_ctx->post.nn_post_fluxes_sens; i++) { /* nn_post_fluxes */
       look_for(ifp, "FLUX_SENS", input, '=');
       /* Read FLUX  type: i.e. FORCE_X, HEAT FLUX, etc. */
       if (fscanf(ifp, "%s", ts) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading FLUX_SENS name");
       }
 
-      pp_fluxes_sens[i]->flux_type = -1;
+      goma_ctx->post.pp_fluxes_sens[i]->flux_type = -1;
       for (k = 0; k < Num_Flux_Names; k++) {
         if (!strcmp(ts, pp_flux_names[k].name)) {
-          pp_fluxes_sens[i]->flux_type = pp_flux_names[k].Index;
-          strcpy(pp_fluxes_sens[i]->flux_type_name, ts);
+          goma_ctx->post.pp_fluxes_sens[i]->flux_type = pp_flux_names[k].Index;
+          strcpy(goma_ctx->post.pp_fluxes_sens[i]->flux_type_name, ts);
           break;
         }
       }
 
-      if (pp_fluxes_sens[i]->flux_type == -1) {
+      if (goma_ctx->post.pp_fluxes_sens[i]->flux_type == -1) {
         GOMA_EH(GOMA_ERROR, "Invalid Flux name in Flux Sensitivity");
       }
 
-      sprintf(echo_string, "%s = %s", "FLUX", pp_fluxes_sens[i]->flux_type_name);
+      sprintf(echo_string, "%s = %s", "FLUX", goma_ctx->post.pp_fluxes_sens[i]->flux_type_name);
 
       /* read ss id */
 
-      if (fscanf(ifp, "%d", &pp_fluxes_sens[i]->ss_id) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_fluxes_sens[i]->ss_id) != 1) {
         fprintf(stderr, "%s:\tError reading flux_sens->ss_id\n", yo);
         exit(-1);
       }
 
       /* read block id */
 
-      if (fscanf(ifp, "%d", &pp_fluxes_sens[i]->blk_id) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_fluxes_sens[i]->blk_id) != 1) {
         fprintf(stderr, "%s:\tError reading flux_sens->blk_id\n", yo);
         exit(-1);
       }
@@ -8596,12 +8519,13 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 
       /* read species id*/
 
-      if (fscanf(ifp, "%d", &pp_fluxes_sens[i]->species_number) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_fluxes_sens[i]->species_number) != 1) {
         fprintf(stderr, "%s:\tError reading flux_sens->species_number\n", yo);
         exit(-1);
       }
-      sprintf(endofstring(echo_string), " %d %d %d", pp_fluxes_sens[i]->ss_id,
-              pp_fluxes_sens[i]->blk_id, pp_fluxes_sens[i]->species_number);
+      sprintf(endofstring(echo_string), " %d %d %d", goma_ctx->post.pp_fluxes_sens[i]->ss_id,
+              goma_ctx->post.pp_fluxes_sens[i]->blk_id,
+              goma_ctx->post.pp_fluxes_sens[i]->species_number);
 
       /*  read sensitivity variable type */
 
@@ -8611,17 +8535,17 @@ void rd_post_process_specs(FILE *ifp, char *input) {
         exit(-1);
       }
       if (!strcmp(input, "BC")) {
-        pp_fluxes_sens[i]->sens_type = 1;
+        goma_ctx->post.pp_fluxes_sens[i]->sens_type = 1;
       } else if (!strcmp(input, "MT")) {
-        pp_fluxes_sens[i]->sens_type = 2;
+        goma_ctx->post.pp_fluxes_sens[i]->sens_type = 2;
       } else if (!strcmp(input, "AC")) {
-        pp_fluxes_sens[i]->sens_type = 3;
+        goma_ctx->post.pp_fluxes_sens[i]->sens_type = 3;
       } else if (!strcmp(input, "UM")) {
-        pp_fluxes_sens[i]->sens_type = 4;
+        goma_ctx->post.pp_fluxes_sens[i]->sens_type = 4;
       } else if (!strcmp(input, "UF")) {
-        pp_fluxes_sens[i]->sens_type = 5;
+        goma_ctx->post.pp_fluxes_sens[i]->sens_type = 5;
       } else if (!strcmp(input, "AN")) {
-        pp_fluxes_sens[i]->sens_type = 6;
+        goma_ctx->post.pp_fluxes_sens[i]->sens_type = 6;
       } else {
         fprintf(stderr, "%s:\tImproper set_type for flux sensitivity - %s\n", yo, input);
         exit(-1);
@@ -8629,54 +8553,59 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 
       /*  read BC id or material id */
 
-      if (fscanf(ifp, "%d", &pp_fluxes_sens[i]->sens_id) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_fluxes_sens[i]->sens_id) != 1) {
         fprintf(stderr, "%s:\tError reading flux_sens->sens_id\n", yo);
         exit(-1);
       }
 
-      sprintf(endofstring(echo_string), " %s %d", input, pp_fluxes_sens[i]->sens_id);
+      sprintf(endofstring(echo_string), " %s %d", input, goma_ctx->post.pp_fluxes_sens[i]->sens_id);
 
-      if (pp_fluxes_sens[i]->sens_type == 2 || pp_fluxes_sens[i]->sens_type == 4)
-        pp_fluxes_sens[i]->sens_id--;
+      if (goma_ctx->post.pp_fluxes_sens[i]->sens_type == 2 ||
+          goma_ctx->post.pp_fluxes_sens[i]->sens_type == 4)
+        goma_ctx->post.pp_fluxes_sens[i]->sens_id--;
 
       /*  read data float or material property number */
 
-      if (fscanf(ifp, "%d", &pp_fluxes_sens[i]->sens_flt) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_fluxes_sens[i]->sens_flt) != 1) {
         fprintf(stderr, "%s:\tError reading flux_sens->sens_flt\n", yo);
         exit(-1);
       }
 
-      sprintf(endofstring(echo_string), " %4i", pp_fluxes_sens[i]->sens_flt);
+      sprintf(endofstring(echo_string), " %4i", goma_ctx->post.pp_fluxes_sens[i]->sens_flt);
 
-      if (pp_fluxes_sens[i]->sens_type == 4) {
-        if (fscanf(ifp, "%d", &pp_fluxes_sens[i]->sens_flt2) != 1) {
+      if (goma_ctx->post.pp_fluxes_sens[i]->sens_type == 4) {
+        if (fscanf(ifp, "%d", &goma_ctx->post.pp_fluxes_sens[i]->sens_flt2) != 1) {
           fprintf(stderr, "%s:\tError reading flux_sens->sens_flt2\n", yo);
           exit(-1);
         }
-        sprintf(endofstring(echo_string), " %4i", pp_fluxes_sens[i]->sens_flt2);
+        sprintf(endofstring(echo_string), " %4i", goma_ctx->post.pp_fluxes_sens[i]->sens_flt2);
       } else {
-        pp_fluxes_sens[i]->sens_flt2 = -1;
+        goma_ctx->post.pp_fluxes_sens[i]->sens_flt2 = -1;
       }
 
       /*      determine sensitivity vector number  */
       /*   search for same previous sensitivity info */
 
-      pp_fluxes_sens[i]->vector_id = -1;
+      goma_ctx->post.pp_fluxes_sens[i]->vector_id = -1;
 
       for (j = 0; j < i; j++) {
-        if (pp_fluxes_sens[i]->sens_type == pp_fluxes_sens[j]->sens_type &&
-            pp_fluxes_sens[i]->sens_id == pp_fluxes_sens[j]->sens_id &&
-            pp_fluxes_sens[i]->sens_flt == pp_fluxes_sens[j]->sens_flt &&
-            pp_fluxes_sens[i]->sens_flt2 == pp_fluxes_sens[j]->sens_flt2) {
-          pp_fluxes_sens[i]->vector_id = pp_fluxes_sens[j]->vector_id;
+        if (goma_ctx->post.pp_fluxes_sens[i]->sens_type ==
+                goma_ctx->post.pp_fluxes_sens[j]->sens_type &&
+            goma_ctx->post.pp_fluxes_sens[i]->sens_id ==
+                goma_ctx->post.pp_fluxes_sens[j]->sens_id &&
+            goma_ctx->post.pp_fluxes_sens[i]->sens_flt ==
+                goma_ctx->post.pp_fluxes_sens[j]->sens_flt &&
+            goma_ctx->post.pp_fluxes_sens[i]->sens_flt2 ==
+                goma_ctx->post.pp_fluxes_sens[j]->sens_flt2) {
+          goma_ctx->post.pp_fluxes_sens[i]->vector_id = goma_ctx->post.pp_fluxes_sens[j]->vector_id;
         }
       }
 
-      if (pp_fluxes_sens[i]->vector_id == -1) {
-        pp_fluxes_sens[i]->vector_id = sens_vec_ct;
+      if (goma_ctx->post.pp_fluxes_sens[i]->vector_id == -1) {
+        goma_ctx->post.pp_fluxes_sens[i]->vector_id = sens_vec_ct;
 
         if (goma_ctx->problem.continuation == ALC_FIRST) {
-          if (goma_ctx->fem.cont->upType == pp_fluxes_sens[i]->sens_type) {
+          if (goma_ctx->fem.cont->upType == goma_ctx->post.pp_fluxes_sens[i]->sens_type) {
             int id1 = -1, id2 = -1;
             int id3 = -1;
 
@@ -8702,8 +8631,9 @@ void rd_post_process_specs(FILE *ifp, char *input) {
               GOMA_EH(GOMA_ERROR, "sensitivities to AN not done");
               break;
             }
-            if (id1 == pp_fluxes_sens[i]->sens_id && id2 == pp_fluxes_sens[i]->sens_flt &&
-                id3 == pp_fluxes_sens[i]->sens_flt2) {
+            if (id1 == goma_ctx->post.pp_fluxes_sens[i]->sens_id &&
+                id2 == goma_ctx->post.pp_fluxes_sens[i]->sens_flt &&
+                id3 == goma_ctx->post.pp_fluxes_sens[i]->sens_flt2) {
               goma_ctx->fem.cont->sensvec_id = sens_vec_ct;
             }
           }
@@ -8716,15 +8646,15 @@ void rd_post_process_specs(FILE *ifp, char *input) {
       if (fscanf(ifp, "%s", ts) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Post Processing Flux Sens filename");
       }
-      strcpy(pp_fluxes_sens[i]->flux_filenm, ts);
+      strcpy(goma_ctx->post.pp_fluxes_sens[i]->flux_filenm, ts);
 
       read_string(ifp, first_string, '\n');
       nargs = sscanf(first_string, "%s", second_string);
       if (nargs == 1 && strcmp(second_string, "profile") == 0) {
-        pp_fluxes_sens[i]->profile_flag = TRUE;
+        goma_ctx->post.pp_fluxes_sens[i]->profile_flag = TRUE;
         SPF(endofstring(echo_string), " %s", second_string);
       } else {
-        pp_fluxes_sens[i]->profile_flag = FALSE;
+        goma_ctx->post.pp_fluxes_sens[i]->profile_flag = FALSE;
       }
       ECHO(echo_string, echo_file);
     }
@@ -8740,26 +8670,27 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 
   /* count number of Post Processing Data specifications */
   if (iread == 1) {
-    nn_post_data = count_list(ifp, "DATA", input, '=', "END OF DATA");
+    goma_ctx->post.nn_post_data = count_list(ifp, "DATA", input, '=', "END OF DATA");
 
     ECHO("\nPost Processing Data =\n", echo_file);
 
   } else {
-    nn_post_data = 0;
+    goma_ctx->post.nn_post_data = 0;
   }
 
   /*
    *  Allocate memory to hold the data information
    */
 
-  if (nn_post_data > 0) {
+  if (goma_ctx->post.nn_post_data > 0) {
     sz = sizeof(struct Post_Processing_Data *);
-    pp_data = (struct Post_Processing_Data **)array_alloc(1, nn_post_data, sz);
+    goma_ctx->post.pp_data =
+        (struct Post_Processing_Data **)array_alloc(1, goma_ctx->post.nn_post_data, sz);
 
     sz = sizeof(struct Post_Processing_Data);
 
-    for (i = 0; i < nn_post_data; i++) {
-      pp_data[i] = (struct Post_Processing_Data *)array_alloc(1, 1, sz);
+    for (i = 0; i < goma_ctx->post.nn_post_data; i++) {
+      goma_ctx->post.pp_data[i] = (struct Post_Processing_Data *)array_alloc(1, 1, sz);
     }
     /*Now load up information by reading cards */
 
@@ -8775,7 +8706,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
      *         first_time  = FALSE
      */
 
-    for (i = 0; i < nn_post_data; i++) {
+    for (i = 0; i < goma_ctx->post.nn_post_data; i++) {
       char *fgetsretval;
       look_for(ifp, "DATA", input, '=');
 
@@ -8820,66 +8751,67 @@ void rd_post_process_specs(FILE *ifp, char *input) {
       /* 		    pp->data[i]->data_type= -2 */
       /*                            =>Cannot recognize the request. */
 
-      pp_data[i]->data_type = -2; /* initialize first */
+      goma_ctx->post.pp_data[i]->data_type = -2; /* initialize first */
       for (k = 0; k < Num_Var_Names; k++) {
         if (!strncasecmp(input, Var_Name[k].name1, strlen(input)) ||
             !strncasecmp(input, Var_Name[k].name2, strlen(input))) {
-          pp_data[i]->data_type = Var_Name[k].Index;
-          strcpy(pp_data[i]->data_type_name, Var_Name[k].name1);
+          goma_ctx->post.pp_data[i]->data_type = Var_Name[k].Index;
+          strcpy(goma_ctx->post.pp_data[i]->data_type_name, Var_Name[k].name1);
           break;
         }
       }
 
-      if (pp_data[i]->data_type == -2) /*not a primary variable, then try post proc */
+      if (goma_ctx->post.pp_data[i]->data_type ==
+          -2) /*not a primary variable, then try post proc */
       {
         for (k = 0; k < Num_Post_Var_Names; k++) {
           if (!strncasecmp(input, Post_Var_Name[k].name1, strlen(input))) {
-            pp_data[i]->data_type = -1; /* Flag Post var */
-            strcpy(pp_data[i]->data_type_name, input);
+            goma_ctx->post.pp_data[i]->data_type = -1; /* Flag Post var */
+            strcpy(goma_ctx->post.pp_data[i]->data_type_name, input);
             break;
           }
         }
       }
 
-      if (pp_data[i]->data_type == -2) {
+      if (goma_ctx->post.pp_data[i]->data_type == -2) {
         log_err("Invalid DATA print variable \"%s\"; (see mm_names.h)\n", input);
       }
 
       if (node_set_id != -1) {
-        pp_data[i]->ns_id = node_set_id;
+        goma_ctx->post.pp_data[i]->ns_id = node_set_id;
       } else {
         log_err("Problem scanning post processing DATA node set id %s\n",
-                pp_data[i]->data_type_name);
+                goma_ctx->post.pp_data[i]->data_type_name);
       }
 
-      pp_data[i]->mat_num = -1;
-      pp_data[i]->elem_blk_id = elemBlock_id;
+      goma_ctx->post.pp_data[i]->mat_num = -1;
+      goma_ctx->post.pp_data[i]->elem_blk_id = elemBlock_id;
 
       if (species_id != -1) {
-        pp_data[i]->species_number = species_id;
+        goma_ctx->post.pp_data[i]->species_number = species_id;
       } else {
         log_err("Problem scanning post processing DATA species index %s\n",
-                pp_data[i]->data_type_name);
+                goma_ctx->post.pp_data[i]->data_type_name);
       }
 
       if (1 != sscanf(file_name, "%s", filename)) {
         log_err("Problem scanning post processing DATA output filename %s\n",
-                pp_data[i]->data_type_name);
+                goma_ctx->post.pp_data[i]->data_type_name);
       } else {
-        strcpy(pp_data[i]->data_filenm, filename);
+        strcpy(goma_ctx->post.pp_data[i]->data_filenm, filename);
       }
 
       /*
        * Do NOT complain if the optional_format specifier is missing.
        */
 
-      strncpy(pp_data[i]->format_flag, "\0\0\0\0\0\0\0\0", 8);
+      strncpy(goma_ctx->post.pp_data[i]->format_flag, "\0\0\0\0\0\0\0\0", 8);
 
       if (optional_format[0] != '\0') {
-        strcpy(pp_data[i]->format_flag, optional_format);
+        strcpy(goma_ctx->post.pp_data[i]->format_flag, optional_format);
       }
 
-      pp_data[i]->first_time = TRUE;
+      goma_ctx->post.pp_data[i]->first_time = TRUE;
 
       ECHO(echo_string, echo_file);
     }
@@ -8895,27 +8827,28 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 
   /* count number of Post Processing Data specifications */
   if (iread == 1) {
-    nn_post_data_sens = count_list(ifp, "DATA_SENS", input, '=', "END OF DATA_SENS");
+    goma_ctx->post.nn_post_data_sens = count_list(ifp, "DATA_SENS", input, '=', "END OF DATA_SENS");
   } else {
-    nn_post_data_sens = 0;
+    goma_ctx->post.nn_post_data_sens = 0;
   }
 
   /*
    *  Allocate memory to hold the data information
    */
 
-  if (nn_post_data_sens > 0) {
+  if (goma_ctx->post.nn_post_data_sens > 0) {
     sz = sizeof(struct Post_Processing_Data_Sens *);
-    pp_data_sens = (struct Post_Processing_Data_Sens **)array_alloc(1, nn_post_data_sens, sz);
+    goma_ctx->post.pp_data_sens =
+        (struct Post_Processing_Data_Sens **)array_alloc(1, goma_ctx->post.nn_post_data_sens, sz);
 
     sz = sizeof(struct Post_Processing_Data_Sens);
 
-    for (i = 0; i < nn_post_data_sens; i++) {
-      pp_data_sens[i] = (struct Post_Processing_Data_Sens *)array_alloc(1, 1, sz);
+    for (i = 0; i < goma_ctx->post.nn_post_data_sens; i++) {
+      goma_ctx->post.pp_data_sens[i] = (struct Post_Processing_Data_Sens *)array_alloc(1, 1, sz);
     }
     /*Now load up information by reading cards */
 
-    for (i = 0; i < nn_post_data_sens; i++) {
+    for (i = 0; i < goma_ctx->post.nn_post_data_sens; i++) {
       look_for(ifp, "DATA_SENS", input, '=');
       /* Read DATA  type: i.e. VELOCITY1, VOLTAGE, etc. */
       if (fscanf(ifp, "%s", input) != 1) {
@@ -8930,36 +8863,37 @@ void rd_post_process_specs(FILE *ifp, char *input) {
       /*                    pp->data[i]->data_type= -2 */
       /*                            =>Cannot recognize the request. */
 
-      pp_data_sens[i]->data_type = -2; /* initialize first */
+      goma_ctx->post.pp_data_sens[i]->data_type = -2; /* initialize first */
       for (k = 0; k < Num_Var_Names; k++) {
         if (!strcmp(input, Var_Name[k].name1)) {
-          pp_data_sens[i]->data_type = Var_Name[k].Index;
-          strcpy(pp_data_sens[i]->data_type_name, input);
+          goma_ctx->post.pp_data_sens[i]->data_type = Var_Name[k].Index;
+          strcpy(goma_ctx->post.pp_data_sens[i]->data_type_name, input);
           break;
         }
       }
-      if (pp_data_sens[i]->data_type == -2) /*not a primary variable, then try post proc */
+      if (goma_ctx->post.pp_data_sens[i]->data_type ==
+          -2) /*not a primary variable, then try post proc */
       {
         for (k = 0; k < Num_Post_Var_Names; k++) {
           GOMA_EH(GOMA_ERROR, "Unrecognized print variable. ");
           if (!strcmp(input, Post_Var_Name[k].name1))
-            pp_data_sens[i]->data_type = -1; /* Ok this says it is a Post var */
-          strcpy(pp_data_sens[i]->data_type_name, input);
+            goma_ctx->post.pp_data_sens[i]->data_type = -1; /* Ok this says it is a Post var */
+          strcpy(goma_ctx->post.pp_data_sens[i]->data_type_name, input);
         }
       }
-      if (pp_data_sens[i]->data_type == -2)
+      if (goma_ctx->post.pp_data_sens[i]->data_type == -2)
         GOMA_EH(GOMA_ERROR, "Invalid choice of print_sens variable");
 
       /* read ns id */
 
-      if (fscanf(ifp, "%d", &pp_data_sens[i]->ns_id) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_data_sens[i]->ns_id) != 1) {
         fprintf(stderr, "%s:\tError reading data_sens->ns_id\n", yo);
         exit(-1);
       }
 
       /* read the material index number and then decrement its value */
 
-      if (fscanf(ifp, "%d", &pp_data_sens[i]->mat_id) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_data_sens[i]->mat_id) != 1) {
         fprintf(stderr, "%s:\tError reading data_sens->blk_id\n", yo);
         exit(-1);
       }
@@ -8967,7 +8901,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 
       /* read species id*/
 
-      if (fscanf(ifp, "%d", &pp_data_sens[i]->species_number) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_data_sens[i]->species_number) != 1) {
         fprintf(stderr, "%s:\tError reading data_sens->species_number\n", yo);
         exit(-1);
       }
@@ -8980,17 +8914,17 @@ void rd_post_process_specs(FILE *ifp, char *input) {
         exit(-1);
       }
       if (!strcmp(input, "BC")) {
-        pp_data_sens[i]->sens_type = 1;
+        goma_ctx->post.pp_data_sens[i]->sens_type = 1;
       } else if (!strcmp(input, "MT")) {
-        pp_data_sens[i]->sens_type = 2;
+        goma_ctx->post.pp_data_sens[i]->sens_type = 2;
       } else if (!strcmp(input, "AC")) {
-        pp_data_sens[i]->sens_type = 3;
+        goma_ctx->post.pp_data_sens[i]->sens_type = 3;
       } else if (!strcmp(input, "UM")) {
-        pp_data_sens[i]->sens_type = 4;
+        goma_ctx->post.pp_data_sens[i]->sens_type = 4;
       } else if (!strcmp(input, "UF")) {
-        pp_data_sens[i]->sens_type = 5;
+        goma_ctx->post.pp_data_sens[i]->sens_type = 5;
       } else if (!strcmp(input, "AN")) {
-        pp_data_sens[i]->sens_type = 6;
+        goma_ctx->post.pp_data_sens[i]->sens_type = 6;
       } else {
         fprintf(stderr, "%s:\tImproper set_type for data sensitivity - %s\n", yo, input);
         exit(-1);
@@ -8998,27 +8932,28 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 
       /*  read BC id or material id */
 
-      if (fscanf(ifp, "%d", &pp_data_sens[i]->sens_id) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_data_sens[i]->sens_id) != 1) {
         fprintf(stderr, "%s:\tError reading data_sens->sens_id\n", yo);
         exit(-1);
       }
-      if (pp_data_sens[i]->sens_type == 2 || pp_data_sens[i]->sens_type == 4)
-        pp_data_sens[i]->sens_id--;
+      if (goma_ctx->post.pp_data_sens[i]->sens_type == 2 ||
+          goma_ctx->post.pp_data_sens[i]->sens_type == 4)
+        goma_ctx->post.pp_data_sens[i]->sens_id--;
 
       /*  read data float or material property number */
 
-      if (fscanf(ifp, "%d", &pp_data_sens[i]->sens_flt) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->post.pp_data_sens[i]->sens_flt) != 1) {
         fprintf(stderr, "%s:\tError reading data_sens->sens_flt\n", yo);
         exit(-1);
       }
 
-      if (pp_data_sens[i]->sens_type == 4) {
-        if (fscanf(ifp, "%d", &pp_data_sens[i]->sens_flt2) != 1) {
+      if (goma_ctx->post.pp_data_sens[i]->sens_type == 4) {
+        if (fscanf(ifp, "%d", &goma_ctx->post.pp_data_sens[i]->sens_flt2) != 1) {
           fprintf(stderr, "%s:\tError reading data_sens->sens_flt2\n", yo);
           exit(-1);
         }
       } else {
-        pp_data_sens[i]->sens_flt2 = -1;
+        goma_ctx->post.pp_data_sens[i]->sens_flt2 = -1;
       }
       /*
 
@@ -9027,27 +8962,32 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 
       */
 
-      pp_data_sens[i]->vector_id = -1;
+      goma_ctx->post.pp_data_sens[i]->vector_id = -1;
 
       /* first search flux sensitivity info */
-      for (j = 0; j < nn_post_fluxes_sens; j++) {
-        if (pp_data_sens[i]->sens_type == pp_fluxes_sens[j]->sens_type &&
-            pp_data_sens[i]->sens_id == pp_fluxes_sens[j]->sens_id &&
-            pp_data_sens[i]->sens_flt == pp_fluxes_sens[j]->sens_flt &&
-            pp_data_sens[i]->sens_flt2 == pp_fluxes_sens[j]->sens_flt2) {
-          pp_data_sens[i]->vector_id = pp_fluxes_sens[j]->vector_id;
+      for (j = 0; j < goma_ctx->post.nn_post_fluxes_sens; j++) {
+        if (goma_ctx->post.pp_data_sens[i]->sens_type ==
+                goma_ctx->post.pp_fluxes_sens[j]->sens_type &&
+            goma_ctx->post.pp_data_sens[i]->sens_id == goma_ctx->post.pp_fluxes_sens[j]->sens_id &&
+            goma_ctx->post.pp_data_sens[i]->sens_flt ==
+                goma_ctx->post.pp_fluxes_sens[j]->sens_flt &&
+            goma_ctx->post.pp_data_sens[i]->sens_flt2 ==
+                goma_ctx->post.pp_fluxes_sens[j]->sens_flt2) {
+          goma_ctx->post.pp_data_sens[i]->vector_id = goma_ctx->post.pp_fluxes_sens[j]->vector_id;
         }
       }
       for (j = 0; j < i; j++) {
-        if (pp_data_sens[i]->sens_type == pp_data_sens[j]->sens_type &&
-            pp_data_sens[i]->sens_id == pp_data_sens[j]->sens_id &&
-            pp_data_sens[i]->sens_flt == pp_data_sens[j]->sens_flt &&
-            pp_data_sens[i]->sens_flt2 == pp_data_sens[j]->sens_flt2) {
-          pp_data_sens[i]->vector_id = pp_data_sens[j]->vector_id;
+        if (goma_ctx->post.pp_data_sens[i]->sens_type ==
+                goma_ctx->post.pp_data_sens[j]->sens_type &&
+            goma_ctx->post.pp_data_sens[i]->sens_id == goma_ctx->post.pp_data_sens[j]->sens_id &&
+            goma_ctx->post.pp_data_sens[i]->sens_flt == goma_ctx->post.pp_data_sens[j]->sens_flt &&
+            goma_ctx->post.pp_data_sens[i]->sens_flt2 ==
+                goma_ctx->post.pp_data_sens[j]->sens_flt2) {
+          goma_ctx->post.pp_data_sens[i]->vector_id = goma_ctx->post.pp_data_sens[j]->vector_id;
         }
       }
-      if (pp_data_sens[i]->vector_id == -1) {
-        pp_data_sens[i]->vector_id = sens_vec_ct;
+      if (goma_ctx->post.pp_data_sens[i]->vector_id == -1) {
+        goma_ctx->post.pp_data_sens[i]->vector_id = sens_vec_ct;
 
         /*
 
@@ -9056,7 +8996,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
         */
 
         if (goma_ctx->problem.continuation == ALC_FIRST) {
-          if (goma_ctx->fem.cont->upType == pp_data_sens[i]->sens_type) {
+          if (goma_ctx->fem.cont->upType == goma_ctx->post.pp_data_sens[i]->sens_type) {
             int id1 = -1, id2 = -1;
             int id3 = -1;
 
@@ -9082,8 +9022,9 @@ void rd_post_process_specs(FILE *ifp, char *input) {
               GOMA_EH(GOMA_ERROR, "sensitivities to AN not done");
               break;
             }
-            if (id1 == pp_data_sens[i]->sens_id && id2 == pp_data_sens[i]->sens_flt &&
-                id3 == pp_data_sens[i]->sens_flt2) {
+            if (id1 == goma_ctx->post.pp_data_sens[i]->sens_id &&
+                id2 == goma_ctx->post.pp_data_sens[i]->sens_flt &&
+                id3 == goma_ctx->post.pp_data_sens[i]->sens_flt2) {
               goma_ctx->fem.cont->sensvec_id = sens_vec_ct;
             }
           }
@@ -9097,7 +9038,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
       if (nargs == 0) {
         GOMA_EH(GOMA_ERROR, "Found zero arguments for the Data Sensitivity file name");
       }
-      strcpy(pp_data_sens[i]->data_filenm, second_string);
+      strcpy(goma_ctx->post.pp_data_sens[i]->data_filenm, second_string);
     } /*   data card count loop  */
   } /*   if data_sens conditions */
 
@@ -9109,69 +9050,75 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 
   /* count number of Post Processing Particles */
   if (iread == 1) {
-    nn_particles = count_list(ifp, "PARTICLE", input, '=', "END OF PARTICLES");
+    goma_ctx->post.nn_particles = count_list(ifp, "PARTICLE", input, '=', "END OF PARTICLES");
     ECHO("\nPost Processing Particle Traces =\n", echo_file);
   } else {
-    nn_particles = 0;
+    goma_ctx->post.nn_particles = 0;
   }
 
   /*
    *  Allocate memory to hold the particle information
    */
 
-  if (nn_particles > 0) {
+  if (goma_ctx->post.nn_particles > 0) {
     sz = sizeof(struct Post_Processing_Particles *);
-    pp_particles = (struct Post_Processing_Particles **)array_alloc(1, nn_particles, sz);
+    goma_ctx->post.pp_particles =
+        (struct Post_Processing_Particles **)array_alloc(1, goma_ctx->post.nn_particles, sz);
 
     sz = sizeof(struct Post_Processing_Particles);
 
-    for (i = 0; i < nn_particles; i++) {
-      pp_particles[i] = (struct Post_Processing_Particles *)array_alloc(1, 1, sz);
+    for (i = 0; i < goma_ctx->post.nn_particles; i++) {
+      goma_ctx->post.pp_particles[i] = (struct Post_Processing_Particles *)array_alloc(1, 1, sz);
     }
     /*Now load up information by reading cards */
-    for (i = 0; i < nn_particles; i++) {
+    for (i = 0; i < goma_ctx->post.nn_particles; i++) {
       look_for(ifp, "PARTICLE", input, '=');
 
-      if (fscanf(ifp, "%lf %lf %lf", &pp_particles[i]->coord[0], &pp_particles[i]->coord[1],
-                 &pp_particles[i]->coord[2]) != 3) {
+      if (fscanf(ifp, "%lf %lf %lf", &goma_ctx->post.pp_particles[i]->coord[0],
+                 &goma_ctx->post.pp_particles[i]->coord[1],
+                 &goma_ctx->post.pp_particles[i]->coord[2]) != 3) {
         GOMA_EH(GOMA_ERROR,
                 "error reading particle input data (check to make sure you have 3 coord values");
       }
-      SPF(echo_string, "%s = %g %g %g", "PARTICLE", pp_particles[i]->coord[0],
-          pp_particles[i]->coord[1], pp_particles[i]->coord[2]);
+      SPF(echo_string, "%s = %g %g %g", "PARTICLE", goma_ctx->post.pp_particles[i]->coord[0],
+          goma_ctx->post.pp_particles[i]->coord[1], goma_ctx->post.pp_particles[i]->coord[2]);
 
-      if (fscanf(ifp, "%lf %lf %lf", &pp_particles[i]->Start_Time, &pp_particles[i]->End_Time,
-                 &pp_particles[i]->Delta_s) != 3) {
+      if (fscanf(ifp, "%lf %lf %lf", &goma_ctx->post.pp_particles[i]->Start_Time,
+                 &goma_ctx->post.pp_particles[i]->End_Time,
+                 &goma_ctx->post.pp_particles[i]->Delta_s) != 3) {
         GOMA_EH(GOMA_ERROR, "error reading particle time data (Start_time, End_Time, Delta_s)");
       }
-      SPF(endofstring(echo_string), " %g %g %g", pp_particles[i]->Start_Time,
-          pp_particles[i]->End_Time, pp_particles[i]->Delta_s);
-      if (fscanf(ifp, "%lf %lf", &pp_particles[i]->mass, &pp_particles[i]->mobility) != 2) {
+      SPF(endofstring(echo_string), " %g %g %g", goma_ctx->post.pp_particles[i]->Start_Time,
+          goma_ctx->post.pp_particles[i]->End_Time, goma_ctx->post.pp_particles[i]->Delta_s);
+      if (fscanf(ifp, "%lf %lf", &goma_ctx->post.pp_particles[i]->mass,
+                 &goma_ctx->post.pp_particles[i]->mobility) != 2) {
         GOMA_WH(-1, "defaulting to zero mass, mobility");
-        pp_particles[i]->mass = 0.0;
-        pp_particles[i]->mobility = 0.0;
+        goma_ctx->post.pp_particles[i]->mass = 0.0;
+        goma_ctx->post.pp_particles[i]->mobility = 0.0;
       }
-      SPF(endofstring(echo_string), " %g %g", pp_particles[i]->mass, pp_particles[i]->mobility);
+      SPF(endofstring(echo_string), " %g %g", goma_ctx->post.pp_particles[i]->mass,
+          goma_ctx->post.pp_particles[i]->mobility);
 
-      if (fscanf(ifp, "%lf %lf %lf", &pp_particles[i]->force[0], &pp_particles[i]->force[1],
-                 &pp_particles[i]->force[2]) != 3) {
+      if (fscanf(ifp, "%lf %lf %lf", &goma_ctx->post.pp_particles[i]->force[0],
+                 &goma_ctx->post.pp_particles[i]->force[1],
+                 &goma_ctx->post.pp_particles[i]->force[2]) != 3) {
         GOMA_WH(-1, "defaulting to zero external force");
-        pp_particles[i]->force[0] = 0.0;
-        pp_particles[i]->force[1] = 0.0;
-        pp_particles[i]->force[2] = 0.0;
+        goma_ctx->post.pp_particles[i]->force[0] = 0.0;
+        goma_ctx->post.pp_particles[i]->force[1] = 0.0;
+        goma_ctx->post.pp_particles[i]->force[2] = 0.0;
       }
-      SPF(endofstring(echo_string), " %g %g %g", pp_particles[i]->force[0],
-          pp_particles[i]->force[1], pp_particles[i]->force[2]);
+      SPF(endofstring(echo_string), " %g %g %g", goma_ctx->post.pp_particles[i]->force[0],
+          goma_ctx->post.pp_particles[i]->force[1], goma_ctx->post.pp_particles[i]->force[2]);
 
       read_string(ifp, first_string, '\n');
       nargs = sscanf(first_string, "%s", second_string);
       if (nargs == 0) {
         GOMA_EH(GOMA_ERROR, "Found zero arguments for the Particle file name");
       }
-      strcpy(pp_particles[i]->filenm, second_string);
-      SPF(endofstring(echo_string), " %s", pp_particles[i]->filenm);
+      strcpy(goma_ctx->post.pp_particles[i]->filenm, second_string);
+      SPF(endofstring(echo_string), " %s", goma_ctx->post.pp_particles[i]->filenm);
 
-      pp_particles[i]->Current_element_id = -1;
+      goma_ctx->post.pp_particles[i]->Current_element_id = -1;
       ECHO(echo_string, echo_file);
     }
 
@@ -9184,48 +9131,52 @@ void rd_post_process_specs(FILE *ifp, char *input) {
   iread = look_for_optional(ifp, "Post Processing Volumetric Integration", input, '=');
 
   if (iread == 1) {
-    nn_volume = count_list(ifp, "VOLUME_INT", input, '=', "END OF VOLUME_INT");
+    goma_ctx->post.nn_volume = count_list(ifp, "VOLUME_INT", input, '=', "END OF VOLUME_INT");
     ECHO("\nPost Processing Volumetric Integration =\n", echo_file);
   } else {
-    nn_volume = 0;
+    goma_ctx->post.nn_volume = 0;
   }
 
-  if (nn_volume) {
-    ppvi_type = PPVI_VERBOSE; // Default to default output behavior see "Volumetric Integration
-                              // Output Format" for other possible behaviors
+  if (goma_ctx->post.nn_volume) {
+    goma_ctx->post.ppvi_type =
+        PPVI_VERBOSE; // Default to default output behavior see "Volumetric Integration
+                      // Output Format" for other possible behaviors
     sz = sizeof(struct Post_Processing_Volumetric *);
 
-    pp_volume = (struct Post_Processing_Volumetric **)array_alloc(1, nn_volume, sz);
+    goma_ctx->post.pp_volume =
+        (struct Post_Processing_Volumetric **)array_alloc(1, goma_ctx->post.nn_volume, sz);
 
     sz = sizeof(struct Post_Processing_Volumetric);
 
-    for (i = 0; i < nn_volume; i++) {
-      pp_volume[i] = (struct Post_Processing_Volumetric *)array_alloc(1, 1, sz);
+    for (i = 0; i < goma_ctx->post.nn_volume; i++) {
+      goma_ctx->post.pp_volume[i] = (struct Post_Processing_Volumetric *)array_alloc(1, 1, sz);
     }
 
-    for (i = 0; i < nn_volume; i++) {
+    for (i = 0; i < goma_ctx->post.nn_volume; i++) {
       look_for(ifp, "VOLUME_INT", input, '=');
 
       if (fscanf(ifp, "%s", ts) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Post Processing volume integral card \n");
       }
 
-      pp_volume[i]->volume_type = -1;
+      goma_ctx->post.pp_volume[i]->volume_type = -1;
 
       for (k = 0; k < Num_Vol_Names; k++) {
         if (!strcmp(ts, pp_vol_names[k].name)) {
-          pp_volume[i]->volume_type = pp_vol_names[k].Index;
-          strcpy(pp_volume[i]->volume_name, ts);
+          goma_ctx->post.pp_volume[i]->volume_type = pp_vol_names[k].Index;
+          strcpy(goma_ctx->post.pp_volume[i]->volume_name, ts);
         }
       }
-      SPF(echo_string, "%s = %s", "VOLUME_INT", pp_volume[i]->volume_name);
+      SPF(echo_string, "%s = %s", "VOLUME_INT", goma_ctx->post.pp_volume[i]->volume_name);
 
-      if (fscanf(ifp, "%d %d", &(pp_volume[i]->blk_id), &(pp_volume[i]->species_no)) != 2) {
+      if (fscanf(ifp, "%d %d", &(goma_ctx->post.pp_volume[i]->blk_id),
+                 &(goma_ctx->post.pp_volume[i]->species_no)) != 2) {
         fprintf(stderr, "%s:\tError reading blk_id or species number for volume integral\n", yo);
         exit(-1);
       }
 
-      SPF(endofstring(echo_string), " %d %d", pp_volume[i]->blk_id, pp_volume[i]->species_no);
+      SPF(endofstring(echo_string), " %d %d", goma_ctx->post.pp_volume[i]->blk_id,
+          goma_ctx->post.pp_volume[i]->species_no);
 
       /* read file name TAB asks RBS why read the filename this waY ?
          I don't know, I copied it from somewhere - RBS
@@ -9244,28 +9195,29 @@ void rd_post_process_specs(FILE *ifp, char *input) {
         GOMA_EH(GOMA_ERROR, "Found zero arguments for the Volumetric Integration file name");
       }
 
-      strcpy(pp_volume[i]->volume_fname, second_string);
+      strcpy(goma_ctx->post.pp_volume[i]->volume_fname, second_string);
 
-      SPF(endofstring(echo_string), " %s", pp_volume[i]->volume_fname);
+      SPF(endofstring(echo_string), " %s", goma_ctx->post.pp_volume[i]->volume_fname);
 
       {
         int num_const, k;
         char *args[MAX_NUMBER_PARAMS];
 
         if ((num_const = tokenize_by_whsp(first_string, args, MAX_NUMBER_PARAMS)) > 1) {
-          pp_volume[i]->params = alloc_dbl_1(num_const - 1, 0.0);
+          goma_ctx->post.pp_volume[i]->params = alloc_dbl_1(num_const - 1, 0.0);
 
           for (k = 1; k < num_const; k++) {
-            pp_volume[i]->params[k - 1] = atof(args[k]);
+            goma_ctx->post.pp_volume[i]->params[k - 1] = atof(args[k]);
           }
 
-          pp_volume[i]->num_params = num_const - 1;
+          goma_ctx->post.pp_volume[i]->num_params = num_const - 1;
 
-          SPF_DBL_VEC(endofstring(echo_string), num_const - 1, &(pp_volume[i]->params[0]));
+          SPF_DBL_VEC(endofstring(echo_string), num_const - 1,
+                      &(goma_ctx->post.pp_volume[i]->params[0]));
 
         } else {
-          pp_volume[i]->params = NULL;
-          pp_volume[i]->num_params = 0;
+          goma_ctx->post.pp_volume[i]->params = NULL;
+          goma_ctx->post.pp_volume[i]->num_params = 0;
         }
       }
       ECHO(echo_string, echo_file);
@@ -9282,16 +9234,16 @@ void rd_post_process_specs(FILE *ifp, char *input) {
       GOMA_EH(GOMA_ERROR, "error reading Volume Integration Output Format card \n");
     }
     if (!strcasecmp(ts, "Verbose")) {
-      ppvi_type = PPVI_VERBOSE;
+      goma_ctx->post.ppvi_type = PPVI_VERBOSE;
     } else if (!strcasecmp(ts, "CSV")) {
-      ppvi_type = PPVI_CSV;
+      goma_ctx->post.ppvi_type = PPVI_CSV;
 
       /* in order to prepend output file with data type info */
       char ts1[MAX_CHAR_IN_INPUT];
-      for (i = 0; i < nn_volume; i++) {
-        amcfp = fopen(pp_volume[i]->volume_fname, "a");
+      for (i = 0; i < goma_ctx->post.nn_volume; i++) {
+        amcfp = fopen(goma_ctx->post.pp_volume[i]->volume_fname, "a");
         if (amcfp != NULL) {
-          strcpy(ts1, pp_volume[i]->volume_name);
+          strcpy(ts1, goma_ctx->post.pp_volume[i]->volume_name);
           fprintf(amcfp, "Time, %s\n", ts1);
           fflush(amcfp);
           fclose(amcfp);
@@ -9299,7 +9251,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
       }
     } else {
       GOMA_WH(-1, "The Volumetric Integration Output Format was not recognized");
-      ppvi_type = PPVI_VERBOSE;
+      goma_ctx->post.ppvi_type = PPVI_VERBOSE;
     }
   }
 
@@ -9312,29 +9264,30 @@ void rd_post_process_specs(FILE *ifp, char *input) {
   /* count number of post-processing flux calculation specifications */
 
   if (iread == 1) {
-    nn_global = count_list(ifp, "GLOBAL", input, '=', "END OF GLOBAL");
+    goma_ctx->post.nn_global = count_list(ifp, "GLOBAL", input, '=', "END OF GLOBAL");
     ECHO("\nPost Processing Global =\n", echo_file);
   } else {
-    nn_global = 0;
+    goma_ctx->post.nn_global = 0;
   }
 
   /*
    *  Allocate memory to hold the flux information
    */
 
-  if (nn_global > 0) {
+  if (goma_ctx->post.nn_global > 0) {
     sz = sizeof(struct Post_Processing_Global *);
-    pp_global = (struct Post_Processing_Global **)array_alloc(1, nn_global, sz);
+    goma_ctx->post.pp_global =
+        (struct Post_Processing_Global **)array_alloc(1, goma_ctx->post.nn_global, sz);
 
     sz = sizeof(struct Post_Processing_Global);
 
-    for (i = 0; i < nn_global; i++) {
-      pp_global[i] = (struct Post_Processing_Global *)array_alloc(1, 1, sz);
+    for (i = 0; i < goma_ctx->post.nn_global; i++) {
+      goma_ctx->post.pp_global[i] = (struct Post_Processing_Global *)array_alloc(1, 1, sz);
     }
 
     /*Now load up information by reading cards */
 
-    for (i = 0; i < nn_global; i++) {
+    for (i = 0; i < goma_ctx->post.nn_global; i++) {
       look_for(ifp, "GLOBAL", input, '=');
 
       /* Read GLOBAL  type */
@@ -9343,21 +9296,21 @@ void rd_post_process_specs(FILE *ifp, char *input) {
         GOMA_EH(GOMA_ERROR, "error reading Post Processing Global input variable");
       }
 
-      pp_global[i]->type = -1;
+      goma_ctx->post.pp_global[i]->type = -1;
       for (k = 0; k < PP_GLOBAL_COUNT; k++) {
         if (!strcmp(ts, pp_global_names[k].name)) {
-          pp_global[i]->type = pp_global_names[k].Index;
-          strcpy(pp_global[i]->type_name, ts);
+          goma_ctx->post.pp_global[i]->type = pp_global_names[k].Index;
+          strcpy(goma_ctx->post.pp_global[i]->type_name, ts);
           break;
         }
       }
-      if (pp_global[i]->type == -1) {
+      if (goma_ctx->post.pp_global[i]->type == -1) {
         GOMA_EH(GOMA_ERROR, "Invalid Global name");
       }
-      SPF(echo_string, "%s = %s", "GLOBAL", pp_global[i]->type_name);
+      SPF(echo_string, "%s = %s", "GLOBAL", goma_ctx->post.pp_global[i]->type_name);
 
       /* Custom post processing card reading for global */
-      switch (pp_global[i]->type) {
+      switch (goma_ctx->post.pp_global[i]->type) {
         /* Read in a file name */
       case PP_GLOBAL_LS_INTERFACE_PRINT:
       case PP_GLOBAL_LS_INTERFACE_PRINT_ALL_TIMES: {
@@ -9366,8 +9319,8 @@ void rd_post_process_specs(FILE *ifp, char *input) {
         if (fscanf(ifp, "%s", ts) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading Post Processing Global filename");
         }
-        strcpy(pp_global[i]->filenm, ts);
-        SPF(endofstring(echo_string), " %s", pp_global[i]->filenm);
+        strcpy(goma_ctx->post.pp_global[i]->filenm, ts);
+        SPF(endofstring(echo_string), " %s", goma_ctx->post.pp_global[i]->filenm);
       } break;
       default:
         GOMA_EH(GOMA_ERROR, "Unsupported GLOBAL Post Processing Type");
@@ -9384,25 +9337,25 @@ void rd_post_process_specs(FILE *ifp, char *input) {
   /* count number of post-processing flux calculation specifications */
 
   if (iread == 1) {
-    nn_average = count_list(ifp, "AVERAGE", input, '=', "END OF AVERAGES");
+    goma_ctx->post.nn_average = count_list(ifp, "AVERAGE", input, '=', "END OF AVERAGES");
     ECHO("\nPost Processing Averages =\n", echo_file);
   } else {
-    nn_average = 0;
+    goma_ctx->post.nn_average = 0;
   }
 
-  if (nn_average > 0) {
+  if (goma_ctx->post.nn_average > 0) {
     sz = sizeof(pp_Average *);
-    pp_average = (pp_Average **)array_alloc(1, nn_average, sz);
+    goma_ctx->post.pp_average = (pp_Average **)array_alloc(1, goma_ctx->post.nn_average, sz);
 
     sz = sizeof(pp_Average);
 
-    for (i = 0; i < nn_average; i++) {
-      pp_average[i] = (pp_Average *)array_alloc(1, 1, sz);
+    for (i = 0; i < goma_ctx->post.nn_average; i++) {
+      goma_ctx->post.pp_average[i] = (pp_Average *)array_alloc(1, 1, sz);
     }
 
     /*Now load up information by reading cards */
 
-    for (i = 0; i < nn_average; i++) {
+    for (i = 0; i < goma_ctx->post.nn_average; i++) {
       look_for(ifp, "AVERAGE", input, '=');
       save_position = ftell(ifp);
       char *fgetsret = fgets(data_line_buffer, MAX_CHAR_IN_INPUT, ifp);
@@ -9412,11 +9365,11 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 
       fseek(ifp, save_position, SEEK_SET);
 
-      pp_average[i]->type = -1;
-      pp_average[i]->non_variable_type = 0;
+      goma_ctx->post.pp_average[i]->type = -1;
+      goma_ctx->post.pp_average[i]->non_variable_type = 0;
 
-      int read_average_items =
-          sscanf(data_line_buffer, "%s %d", variable_name, &(pp_average[i]->species_index));
+      int read_average_items = sscanf(data_line_buffer, "%s %d", variable_name,
+                                      &(goma_ctx->post.pp_average[i]->species_index));
 
       if (read_average_items < 2) {
         GOMA_EH(GOMA_ERROR, "Error in reading Average post_processing");
@@ -9428,164 +9381,171 @@ void rd_post_process_specs(FILE *ifp, char *input) {
         int st3 = strlen(Var_Name[k].name2);
         if ((st1 == st2 && !strncasecmp(variable_name, Var_Name[k].name1, strlen(variable_name))) ||
             (st1 == st3 && !strncasecmp(variable_name, Var_Name[k].name2, strlen(variable_name)))) {
-          pp_average[i]->type = Var_Name[k].Index;
-          if (pp_average[i]->type == MASS_FRACTION) {
-            int err = snprintf(pp_average[i]->type_name, MAX_VAR_NAME_LNGTH, "%s%d%s",
-                               Var_Name[k].name2, pp_average[i]->species_index, "_AVG");
+          goma_ctx->post.pp_average[i]->type = Var_Name[k].Index;
+          if (goma_ctx->post.pp_average[i]->type == MASS_FRACTION) {
+            int err =
+                snprintf(goma_ctx->post.pp_average[i]->type_name, MAX_VAR_NAME_LNGTH, "%s%d%s",
+                         Var_Name[k].name2, goma_ctx->post.pp_average[i]->species_index, "_AVG");
             if (err < 0 || err >= MAX_VAR_NAME_LNGTH) {
               GOMA_EH(GOMA_ERROR, "Error writing mass fraction variable for average");
             }
           } else {
-            strcpy(pp_average[i]->type_name, Var_Name[k].name2);
-            strcat(pp_average[i]->type_name, "_AVG");
+            strcpy(goma_ctx->post.pp_average[i]->type_name, Var_Name[k].name2);
+            strcat(goma_ctx->post.pp_average[i]->type_name, "_AVG");
           }
           break;
         }
       }
 
-      if (pp_average[i]->type == -1) {
+      if (goma_ctx->post.pp_average[i]->type == -1) {
         if (!strncasecmp(variable_name, "DENSITY_AVG", strlen(variable_name))) {
-          strcpy(pp_average[i]->type_name, "DENSITY_AVG");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_HEAVISIDE;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "DENSITY_AVG");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_HEAVISIDE;
         } else if (!strncasecmp(variable_name, "HEAVISIDE", strlen(variable_name))) {
-          strcpy(pp_average[i]->type_name, "HEAVISIDE_AVG");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_HEAVISIDE;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "HEAVISIDE_AVG");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_HEAVISIDE;
         } else if (!strncasecmp(variable_name, "VISCOSITY", strlen(variable_name))) {
-          strcpy(pp_average[i]->type_name, "VISCOSITY_AVG");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_VISCOSITY;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "VISCOSITY_AVG");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_VISCOSITY;
         } else if (!strncasecmp(variable_name, "SHEARRATE", strlen(variable_name))) {
-          strcpy(pp_average[i]->type_name, "SHEARRATE_AVG");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_SHEAR;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "SHEARRATE_AVG");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_SHEAR;
         } else if (!strncasecmp(variable_name, "EM_SCAT_MAG", strlen(variable_name))) {
-          strcpy(pp_average[i]->type_name, "EM_SCAT_MAG");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EM_SCAT_MAG;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "EM_SCAT_MAG");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EM_SCAT_MAG;
         } else if (!strncasecmp(variable_name, "EM_MAG", strlen(variable_name))) {
-          strcpy(pp_average[i]->type_name, "EM_MAG");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EM_MAG;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "EM_MAG");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EM_MAG;
         } else if (!strncasecmp(variable_name, "EM_INC_MAG", strlen(variable_name))) {
-          strcpy(pp_average[i]->type_name, "EM_INC_MAG");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EM_INC_MAG;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "EM_INC_MAG");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EM_INC_MAG;
         } else if (!strncasecmp(variable_name, "EM", strlen(variable_name))) {
           int new_items = 6 - 1;
-          pp_Average **pp_average_tmp = pp_average;
+          pp_Average **pp_average_tmp = goma_ctx->post.pp_average;
           sz = sizeof(pp_Average *);
-          pp_average = (pp_Average **)array_alloc(1, nn_average + new_items, sz);
-          for (int k = 0; k < nn_average; k++) {
-            pp_average[k] = pp_average_tmp[k];
+          goma_ctx->post.pp_average =
+              (pp_Average **)array_alloc(1, goma_ctx->post.nn_average + new_items, sz);
+          for (int k = 0; k < goma_ctx->post.nn_average; k++) {
+            goma_ctx->post.pp_average[k] = pp_average_tmp[k];
           }
           free(pp_average_tmp);
           sz = sizeof(pp_Average);
-          for (int k = nn_average; k < (new_items + nn_average); k++) {
-            pp_average[k] = (pp_Average *)array_alloc(1, 1, sz);
+          for (int k = goma_ctx->post.nn_average; k < (new_items + goma_ctx->post.nn_average);
+               k++) {
+            goma_ctx->post.pp_average[k] = (pp_Average *)array_alloc(1, 1, sz);
           }
-          nn_average += new_items;
-          strcpy(pp_average[i]->type_name, "PP_EMR_X");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMR_X;
-          pp_average[i]->species_index = 0;
+          goma_ctx->post.nn_average += new_items;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMR_X");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMR_X;
+          goma_ctx->post.pp_average[i]->species_index = 0;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMR_Y");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMR_Y;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMR_Y");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMR_Y;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMR_Z");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMR_Z;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMR_Z");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMR_Z;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMI_X");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMI_X;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMI_X");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMI_X;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMI_Y");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMI_Y;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMI_Y");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMI_Y;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMI_Z");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMI_Z;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMI_Z");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMI_Z;
         } else if (!strncasecmp(variable_name, "EMSCAT", strlen(variable_name))) {
           int new_items = 6 - 1;
-          pp_Average **pp_average_tmp = pp_average;
+          pp_Average **pp_average_tmp = goma_ctx->post.pp_average;
           sz = sizeof(pp_Average *);
-          pp_average = (pp_Average **)array_alloc(1, nn_average + new_items, sz);
-          for (int k = 0; k < nn_average; k++) {
-            pp_average[k] = pp_average_tmp[k];
+          goma_ctx->post.pp_average =
+              (pp_Average **)array_alloc(1, goma_ctx->post.nn_average + new_items, sz);
+          for (int k = 0; k < goma_ctx->post.nn_average; k++) {
+            goma_ctx->post.pp_average[k] = pp_average_tmp[k];
           }
           free(pp_average_tmp);
           sz = sizeof(pp_Average);
-          for (int k = nn_average; k < (new_items + nn_average); k++) {
-            pp_average[k] = (pp_Average *)array_alloc(1, 1, sz);
+          for (int k = goma_ctx->post.nn_average; k < (new_items + goma_ctx->post.nn_average);
+               k++) {
+            goma_ctx->post.pp_average[k] = (pp_Average *)array_alloc(1, 1, sz);
           }
-          nn_average += new_items;
-          strcpy(pp_average[i]->type_name, "PP_EMSCATR_X");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMSCATR_X;
-          pp_average[i]->species_index = 0;
+          goma_ctx->post.nn_average += new_items;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMSCATR_X");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMSCATR_X;
+          goma_ctx->post.pp_average[i]->species_index = 0;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMSCATR_Y");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMSCATR_Y;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMSCATR_Y");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMSCATR_Y;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMSCATR_Z");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMSCATR_Z;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMSCATR_Z");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMSCATR_Z;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMSCATI_X");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMSCATI_X;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMSCATI_X");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMSCATI_X;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMSCATI_Y");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMSCATI_Y;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMSCATI_Y");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMSCATI_Y;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMSCATI_Z");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMSCATI_Z;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMSCATI_Z");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMSCATI_Z;
         } else if (!strncasecmp(variable_name, "EMINC", strlen(variable_name))) {
           int new_items = 6 - 1;
-          pp_Average **pp_average_tmp = pp_average;
+          pp_Average **pp_average_tmp = goma_ctx->post.pp_average;
           sz = sizeof(pp_Average *);
-          pp_average = (pp_Average **)array_alloc(1, nn_average + new_items, sz);
-          for (int k = 0; k < nn_average; k++) {
-            pp_average[k] = pp_average_tmp[k];
+          goma_ctx->post.pp_average =
+              (pp_Average **)array_alloc(1, goma_ctx->post.nn_average + new_items, sz);
+          for (int k = 0; k < goma_ctx->post.nn_average; k++) {
+            goma_ctx->post.pp_average[k] = pp_average_tmp[k];
           }
           free(pp_average_tmp);
           sz = sizeof(pp_Average);
-          for (int k = nn_average; k < (new_items + nn_average); k++) {
-            pp_average[k] = (pp_Average *)array_alloc(1, 1, sz);
+          for (int k = goma_ctx->post.nn_average; k < (new_items + goma_ctx->post.nn_average);
+               k++) {
+            goma_ctx->post.pp_average[k] = (pp_Average *)array_alloc(1, 1, sz);
           }
-          nn_average += new_items;
-          strcpy(pp_average[i]->type_name, "PP_EMINCR_X");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMINCR_X;
-          pp_average[i]->species_index = 0;
+          goma_ctx->post.nn_average += new_items;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMINCR_X");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMINCR_X;
+          goma_ctx->post.pp_average[i]->species_index = 0;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMINCR_Y");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMINCR_Y;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMINCR_Y");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMINCR_Y;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMINCR_Z");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMINCR_Z;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMINCR_Z");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMINCR_Z;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMINCI_X");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMINCI_X;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMINCI_X");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMINCI_X;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMINCI_Y");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMINCI_Y;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMINCI_Y");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMINCI_Y;
           i++;
-          strcpy(pp_average[i]->type_name, "PP_EMINCI_Z");
-          pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_EMINCI_Z;
+          strcpy(goma_ctx->post.pp_average[i]->type_name, "PP_EMINCI_Z");
+          goma_ctx->post.pp_average[i]->non_variable_type = 1;
+          goma_ctx->post.pp_average[i]->type = AVG_EMINCI_Z;
         } else {
           fprintf(stderr, "Error reading unknown variable type: %s\n", variable_name);
           GOMA_EH(GOMA_ERROR, "Unknown variable type for post processing");
@@ -9593,7 +9553,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
       }
 
       SPF(echo_string, "%s = %s", "AVERAGE", variable_name);
-      SPF(endofstring(echo_string), " %d", pp_average[i]->species_index);
+      SPF(endofstring(echo_string), " %d", goma_ctx->post.pp_average[i]->species_index);
       ECHO(echo_string, echo_file);
     }
     ECHO("\nEND OF AVERAGE\n", echo_file);
@@ -9886,18 +9846,19 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
    *  convert to -1 = no and post-processing variable number = yes
    */
 
-  if (STREAM != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
+  if (goma_ctx->post.stream != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
     if (goma_ctx->mesh.num_dim == 3) {
       GOMA_WH(-1, "Cant do stream function in 3D");
-      STREAM = -1;
+      goma_ctx->post.stream = -1;
     } else {
       set_nv_tkud(rd, index, 0, 0, -2, "STREAM", "[1]", "Stream Function", FALSE);
       index++;
-      if (STREAM == 2) {
+      if (goma_ctx->post.stream == 2) {
         goma_ctx->problem.export_xp_id[index_post_export] = index_post;
         index_post_export++;
       }
-      STREAM = index_post;
+      goma_ctx->post.stream = index_post;
       index_post++;
       /* Put the index also in the table.  We should condense STREAM
          and the corresponding entry in Post_Var_Name struct to be the same */
@@ -9908,135 +9869,138 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (STREAM_NORMAL_STRESS != -1 &&
+  if (goma_ctx->post.stream_normal_stress != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "SNS", "[1]", "Streamwise normal stress", FALSE);
     index++;
-    if (STREAM_NORMAL_STRESS == 2) {
+    if (goma_ctx->post.stream_normal_stress == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    STREAM_NORMAL_STRESS = index_post;
+    goma_ctx->post.stream_normal_stress = index_post;
     index_post++;
   }
 
-  if (STREAM_SHEAR_STRESS != -1 &&
+  if (goma_ctx->post.stream_shear_stress != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "SSS", "[1]", "Streamwise shear stress", FALSE);
     index++;
-    if (STREAM_SHEAR_STRESS == 2) {
+    if (goma_ctx->post.stream_shear_stress == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    STREAM_SHEAR_STRESS = index_post;
+    goma_ctx->post.stream_shear_stress = index_post;
     index_post++;
   }
 
-  if (STREAM_TENSION != -1 &&
+  if (goma_ctx->post.stream_tension != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "SSD", "[1]", "Streamwise Stress Difference", FALSE);
     index++;
-    if (STREAM_TENSION == 2) {
+    if (goma_ctx->post.stream_tension == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    STREAM_TENSION = index_post;
+    goma_ctx->post.stream_tension = index_post;
     index_post++;
   }
 
-  if (DIV_VELOCITY != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][PRESSURE]) {
+  if (goma_ctx->post.div_velocity != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][PRESSURE]) {
     set_nv_tkud(rd, index, 0, 0, -2, "DIVV", "[1]", "Divergence of Velocity", FALSE);
     index++;
-    if (DIV_VELOCITY == 2) {
+    if (goma_ctx->post.div_velocity == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    DIV_VELOCITY = index_post;
+    goma_ctx->post.div_velocity = index_post;
     index_post++;
   }
 
-  if (DIV_PVELOCITY != -1 &&
+  if (goma_ctx->post.div_pvelocity != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "DIVPV", "[1]", "Divergence of Particle Velocity", FALSE);
     index++;
-    if (DIV_PVELOCITY == 2) {
+    if (goma_ctx->post.div_pvelocity == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    DIV_PVELOCITY = index_post;
+    goma_ctx->post.div_pvelocity = index_post;
     index_post++;
   }
 
-  if (DIV_TOTAL != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1]) {
+  if (goma_ctx->post.div_total != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "DIVTOTAL", "[1]", "Divergence of Total Velocity", FALSE);
     index++;
-    if (DIV_TOTAL == 2) {
+    if (goma_ctx->post.div_total == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    DIV_TOTAL = index_post;
+    goma_ctx->post.div_total = index_post;
     index_post++;
   }
 
-  if (PP_Viscosity != -1 &&
+  if (goma_ctx->post.pp_viscosity != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
     set_nv_tkud(rd, index, 0, 0, -2, "MU", "[1]", "Viscosity", FALSE);
     index++;
-    if (PP_Viscosity == 2) {
+    if (goma_ctx->post.pp_viscosity == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    PP_Viscosity = index_post;
+    goma_ctx->post.pp_viscosity = index_post;
     index_post++;
   }
 
-  if (PP_FlowingLiquid_Viscosity != -1 &&
+  if (goma_ctx->post.pp_flowingliquid_viscosity != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "FLOW_MU", "[1]", "FlowingLiquid Viscosity", FALSE);
     index++;
-    if (PP_FlowingLiquid_Viscosity == 2) {
+    if (goma_ctx->post.pp_flowingliquid_viscosity == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    PP_FlowingLiquid_Viscosity = index_post;
+    goma_ctx->post.pp_flowingliquid_viscosity = index_post;
     index_post++;
   }
 
-  if (PP_VolumeFractionGas != -1 &&
+  if (goma_ctx->post.pp_volumefractiongas != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "VOLUMEFRACTIONGAS", "[1]", "Volume Fraction of Gas Phase",
                 FALSE);
     index++;
-    if (PP_VolumeFractionGas == 2) {
+    if (goma_ctx->post.pp_volumefractiongas == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    PP_VolumeFractionGas = index_post;
+    goma_ctx->post.pp_volumefractiongas = index_post;
     index_post++;
   }
 
-  if (DENSITY != -1 && ((goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) ||
-                        (goma_ctx->fem.upd->matrix_index[R_MOMENTUM1] == -1 &&
-                         goma_ctx->fem.upd->matrix_index[R_MASS] == goma_ctx->fem.pg->imtrx &&
-                         goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]))) {
+  if (goma_ctx->post.density != -1 &&
+      ((goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) ||
+       (goma_ctx->fem.upd->matrix_index[R_MOMENTUM1] == -1 &&
+        goma_ctx->fem.upd->matrix_index[R_MASS] == goma_ctx->fem.pg->imtrx &&
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]))) {
     set_nv_tkud(rd, index, 0, 0, -2, "RHO", "[1]", "Density", FALSE);
     index++;
-    if (DENSITY == 2) {
+    if (goma_ctx->post.density == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    DENSITY = index_post;
+    goma_ctx->post.density = index_post;
     index_post++;
   }
 
-  if (PP_Diffusivity != -1 &&
+  if (goma_ctx->post.pp_diffusivity != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS])) {
-    if (PP_Diffusivity == 2) {
+    if (goma_ctx->post.pp_diffusivity == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    PP_Diffusivity = index_post;
+    goma_ctx->post.pp_diffusivity = index_post;
     for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
       sprintf(species_name, "D%d", w);
       sprintf(species_desc, "Diffusion Coefficient of %d", w);
@@ -10046,79 +10010,83 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (HEAVISIDE != -1 && goma_ctx->fem.ls != NULL &&
+  if (goma_ctx->post.heaviside != -1 && goma_ctx->fem.ls != NULL &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_FILL]) {
     set_nv_tkud(rd, index, 0, 0, -2, "HEAVISIDE", "[1]", "HEAVISIDE", FALSE);
     index++;
-    if (HEAVISIDE == 2) {
+    if (goma_ctx->post.heaviside == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    HEAVISIDE = index_post;
+    goma_ctx->post.heaviside = index_post;
     index_post++;
   }
 
-  if (RHO_DOT != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.rho_dot != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "RHO_DOT", "[1]", "RHO_DOT", FALSE);
     index++;
-    if (RHO_DOT == 2) {
+    if (goma_ctx->post.rho_dot == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    RHO_DOT = index_post;
+    goma_ctx->post.rho_dot = index_post;
     index_post++;
   }
 
-  if (MEAN_SHEAR != -1 &&
+  if (goma_ctx->post.mean_shear != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
     set_nv_tkud(rd, index, 0, 0, -2, "SHEAR", "[1]", "Mean shear rate", FALSE);
     index++;
-    if (MEAN_SHEAR == 2) {
+    if (goma_ctx->post.mean_shear == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    MEAN_SHEAR = index_post;
+    goma_ctx->post.mean_shear = index_post;
     index_post++;
   }
 
-  if (MEAN_VORTICITY != -1 &&
+  if (goma_ctx->post.mean_vorticity != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "VORT", "[1]", "Mean vorticity", FALSE);
     index++;
-    if (MEAN_VORTICITY == 2) {
+    if (goma_ctx->post.mean_vorticity == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    MEAN_VORTICITY = index_post;
+    goma_ctx->post.mean_vorticity = index_post;
     index_post++;
   }
 
-  if (GIES_CRIT != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.gies_crit != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "GIES", "[1]", "Giesekus Criterion", FALSE);
     index++;
-    if (GIES_CRIT == 2) {
+    if (goma_ctx->post.gies_crit == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    GIES_CRIT = index_post;
+    goma_ctx->post.gies_crit = index_post;
     index_post++;
   }
 
-  if (Q_FCN != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.q_fcn != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "Q_FCN", "[1]", "Q Function", FALSE);
     index++;
-    if (Q_FCN == 2) {
+    if (goma_ctx->post.q_fcn == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    Q_FCN = index_post;
+    goma_ctx->post.q_fcn = index_post;
     index_post++;
   }
 
-  if (PSPG_PP != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    PSPG_PP = index_post;
+  if (goma_ctx->post.pspg_pp != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+    goma_ctx->post.pspg_pp = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "PSPG_X", "[1]", "PSPG PP X", FALSE);
     index++;
     index_post++;
@@ -10132,14 +10100,15 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (VELO_SPEED != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.velo_speed != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "VELO_SPEED", "[1]", "Velocity Magnitude", FALSE);
     index++;
-    if (VELO_SPEED == 2) {
+    if (goma_ctx->post.velo_speed == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    VELO_SPEED = index_post;
+    goma_ctx->post.velo_speed = index_post;
     index_post++;
   }
 
@@ -10149,58 +10118,60 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
         goma_ctx->fem.pd_glob[i]->MeshMotion == DYNAMIC_LAGRANGIAN)
       check = 1;
   }
-  if (PRESSURE_CONT != -1 &&
+  if (goma_ctx->post.pressure_cont != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
     set_nv_tkud(rd, index, 0, 0, -2, "PRESSURE", "[1]", "hydrodynamic pressure", FALSE);
     index++;
-    if (PRESSURE_CONT == 2) {
+    if (goma_ctx->post.pressure_cont == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    PRESSURE_CONT = index_post;
+    goma_ctx->post.pressure_cont = index_post;
     index_post++;
   }
 
-  if (SH_DIV_S_V_CONT != -1 &&
+  if (goma_ctx->post.sh_div_s_v_cont != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1])) {
     set_nv_tkud(rd, index, 0, 0, -2, "SH_DIV_S_V", "[1]", "shell div_s_v", FALSE);
     index++;
-    if (SH_DIV_S_V_CONT == 2) {
+    if (goma_ctx->post.sh_div_s_v_cont == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    SH_DIV_S_V_CONT = index_post;
+    goma_ctx->post.sh_div_s_v_cont = index_post;
     index_post++;
   }
 
-  if (SH_CURV_CONT != -1 &&
+  if (goma_ctx->post.sh_curv_cont != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SURF_CURV])) {
     set_nv_tkud(rd, index, 0, 0, -2, "SH_SURF_CURV", "[1]", "shell curv", FALSE);
     index++;
-    if (SH_CURV_CONT == 2) {
+    if (goma_ctx->post.sh_curv_cont == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    SH_CURV_CONT = index_post;
+    goma_ctx->post.sh_curv_cont = index_post;
     index_post++;
   }
 
-  if (FILL_CONT != -1 && (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_FILL])) {
+  if (goma_ctx->post.fill_cont != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_FILL])) {
     set_nv_tkud(rd, index, 0, 0, -2, "FILL", "[1]", "continuous fill", FALSE);
     index++;
-    if (FILL_CONT == 2) {
+    if (goma_ctx->post.fill_cont == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    FILL_CONT = index_post;
+    goma_ctx->post.fill_cont = index_post;
     index_post++;
   }
 
-  if (CONC_CONT != -1 && (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS])) {
-    if (CONC_CONT == 2) {
+  if (goma_ctx->post.conc_cont != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS])) {
+    if (goma_ctx->post.conc_cont == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    CONC_CONT = index_post;
+    goma_ctx->post.conc_cont = index_post;
     for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
       sprintf(species_name, "YC%d", w);
       sprintf(species_desc, "Concentration of %d", w);
@@ -10210,11 +10181,11 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (STRESS_CONT != -1 &&
+  if (goma_ctx->post.stress_cont != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11])) {
     int index_post_save = index_post;
 
-    if (STRESS_CONT == 2) {
+    if (goma_ctx->post.stress_cont == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
 
@@ -10228,7 +10199,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
               sprintf(species_desc, "Continuous stress %d%d_%d", a + 1, b + 1, mode);
               set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
               index++;
-              if (STRESS_CONT == 2) {
+              if (goma_ctx->post.stress_cont == 2) {
                 goma_ctx->problem.export_xp_id[index_post_export] = index_post;
                 index_post_export++;
               }
@@ -10239,7 +10210,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       }
     }
 
-    STRESS_CONT = index_post_save;
+    goma_ctx->post.stress_cont = index_post_save;
 
     check = 0;
     for (i = 0; i < goma_ctx->fem.upd->Num_Mat; i++) {
@@ -10266,8 +10237,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (EM_CONTOURS != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
-    EM_CONTOURS = index_post;
+  if (goma_ctx->post.em_contours != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
+    goma_ctx->post.em_contours = index_post;
     int dim = DIM;
     if (goma_ctx->fem.pd->gv[EM_E1_REAL]) {
       sprintf(species_name, "EM_REALX");
@@ -10316,9 +10288,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       }
     }
   }
-  if (TOTAL_EM_CONTOURS != -1 &&
+  if (goma_ctx->post.total_em_contours != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
-    TOTAL_EM_CONTOURS = index_post;
+    goma_ctx->post.total_em_contours = index_post;
     int dim = DIM;
     if (goma_ctx->fem.pd->gv[EM_E1_REAL]) {
       sprintf(species_name, "EM_TOT_REALX");
@@ -10367,9 +10339,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       }
     }
   }
-  if (SCATTERED_EM_CONTOURS != -1 &&
+  if (goma_ctx->post.scattered_em_contours != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
-    SCATTERED_EM_CONTOURS = index_post;
+    goma_ctx->post.scattered_em_contours = index_post;
     int dim = DIM;
     if (goma_ctx->fem.pd->gv[EM_E1_REAL]) {
       sprintf(species_name, "EM_SCA_REALX");
@@ -10419,8 +10391,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (MOMENT_SOURCES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][MOMENT0]) {
-    MOMENT_SOURCES = index_post;
+  if (goma_ctx->post.moment_sources != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][MOMENT0]) {
+    goma_ctx->post.moment_sources = index_post;
     for (int mom = 0; mom < MAX_MOMENTS; mom++) {
       if (goma_ctx->fem.pd->gv[MOMENT0 + mom]) {
         sprintf(species_name, "MOMSOURCE%d", mom);
@@ -10432,8 +10405,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (YZBETA != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
-    YZBETA = index_post;
+  if (goma_ctx->post.yzbeta != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+    goma_ctx->post.yzbeta = index_post;
     for (int w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
       sprintf(species_name, "YZBETA_%d", w);
       sprintf(species_desc, "YZbeta %d", w);
@@ -10443,114 +10417,114 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (FIRST_INVAR_STRAIN != -1 &&
+  if (goma_ctx->post.first_invar_strain != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "IE", "[1]", "1st invariant of strain tensor", FALSE);
     index++;
-    if (FIRST_INVAR_STRAIN == 2) {
+    if (goma_ctx->post.first_invar_strain == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    FIRST_INVAR_STRAIN = index_post;
+    goma_ctx->post.first_invar_strain = index_post;
     index_post++;
   }
 
-  if (SEC_INVAR_STRAIN != -1 &&
+  if (goma_ctx->post.sec_invar_strain != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "IIE", "[1]", "2nd invariant of strain tensor", FALSE);
     index++;
-    if (SEC_INVAR_STRAIN == 2) {
+    if (goma_ctx->post.sec_invar_strain == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    SEC_INVAR_STRAIN = index_post;
+    goma_ctx->post.sec_invar_strain = index_post;
     index_post++;
   }
 
-  if (THIRD_INVAR_STRAIN != -1 &&
+  if (goma_ctx->post.third_invar_strain != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "IIIE", "[1]", "3rd invariant of strain tensor", FALSE);
     index++;
-    if (THIRD_INVAR_STRAIN == 2) {
+    if (goma_ctx->post.third_invar_strain == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    THIRD_INVAR_STRAIN = index_post;
+    goma_ctx->post.third_invar_strain = index_post;
     index_post++;
   }
 
-  if (FIRST_STRAINRATE_INVAR != -1 &&
+  if (goma_ctx->post.first_strainrate_invar != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "ISR", "[1]", "1st strain rate invariant", FALSE);
     index++;
-    if (FIRST_STRAINRATE_INVAR == 2) {
+    if (goma_ctx->post.first_strainrate_invar == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    FIRST_STRAINRATE_INVAR = index_post;
+    goma_ctx->post.first_strainrate_invar = index_post;
     index_post++;
   }
 
-  if (SEC_STRAINRATE_INVAR != -1 &&
+  if (goma_ctx->post.sec_strainrate_invar != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "IISR", "[1]", "2nd strain rate invariant", FALSE);
     index++;
-    if (SEC_STRAINRATE_INVAR == 2) {
+    if (goma_ctx->post.sec_strainrate_invar == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    SEC_STRAINRATE_INVAR = index_post;
+    goma_ctx->post.sec_strainrate_invar = index_post;
     index_post++;
   }
 
-  if (THIRD_STRAINRATE_INVAR != -1 &&
+  if (goma_ctx->post.third_strainrate_invar != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "IIISR", "[1]", "3rd strain rate invariant", FALSE);
     index++;
-    if (THIRD_STRAINRATE_INVAR == 2) {
+    if (goma_ctx->post.third_strainrate_invar == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    THIRD_STRAINRATE_INVAR = index_post;
+    goma_ctx->post.third_strainrate_invar = index_post;
     index_post++;
   }
 
-  if (WALL_DISTANCE != -1 &&
+  if (goma_ctx->post.wall_distance != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP])) {
     set_nv_tkud(rd, index, 0, 0, -2, "WALL_DISTANCE", "[1]", "Wall distance", FALSE);
     index++;
-    if (WALL_DISTANCE == 2) {
+    if (goma_ctx->post.wall_distance == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    WALL_DISTANCE = index_post;
+    goma_ctx->post.wall_distance = index_post;
     index_post++;
   }
-  if (CONTACT_DISTANCE != -1 &&
+  if (goma_ctx->post.contact_distance != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1])) {
     set_nv_tkud(rd, index, 0, 0, -2, "CONTACT_DISTANCE", "[1]", "Contact distance", FALSE);
     index++;
-    if (CONTACT_DISTANCE == 2) {
+    if (goma_ctx->post.contact_distance == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    CONTACT_DISTANCE = index_post;
+    goma_ctx->post.contact_distance = index_post;
     index_post++;
   }
 
-  if (DIELECTROPHORETIC_FIELD != -1 &&
+  if (goma_ctx->post.dielectrophoretic_field != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
-    if (DIELECTROPHORETIC_FIELD == 2) {
+    if (goma_ctx->post.dielectrophoretic_field == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    DIELECTROPHORETIC_FIELD = index_post;
+    goma_ctx->post.dielectrophoretic_field = index_post;
     for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "DF%d", i);
       sprintf(ds, "Dielectrophoretic force field component %d", i);
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
       index++;
-      if (DIELECTROPHORETIC_FIELD == 2) {
+      if (goma_ctx->post.dielectrophoretic_field == 2) {
         goma_ctx->problem.export_xp_id[index_post_export] = index_post;
         index_post_export++;
       }
@@ -10558,31 +10532,31 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (DIELECTROPHORETIC_FIELD_NORM != -1 &&
+  if (goma_ctx->post.dielectrophoretic_field_norm != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
     set_nv_tkud(rd, index, 0, 0, -2, "DFN", "[1]", "Dielectrophoretic force norm", FALSE);
     index++;
-    if (DIELECTROPHORETIC_FIELD_NORM == 2) {
+    if (goma_ctx->post.dielectrophoretic_field_norm == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    DIELECTROPHORETIC_FIELD_NORM = index_post;
+    goma_ctx->post.dielectrophoretic_field_norm = index_post;
     index_post++;
   }
 
-  if (ENORMSQ_FIELD != -1 &&
+  if (goma_ctx->post.enormsq_field != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POTENTIAL] &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENORM]) {
-    if (ENORMSQ_FIELD == 2) {
+    if (goma_ctx->post.enormsq_field == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    ENORMSQ_FIELD = index_post;
+    goma_ctx->post.enormsq_field = index_post;
     for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "GENS%d", i);
       sprintf(ds, "grad(|E|^2) field component %d", i);
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
       index++;
-      if (ENORMSQ_FIELD == 2) {
+      if (goma_ctx->post.enormsq_field == 2) {
         goma_ctx->problem.export_xp_id[index_post_export] = index_post;
         index_post_export++;
       }
@@ -10590,27 +10564,27 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (ENORMSQ_FIELD_NORM != -1 &&
+  if (goma_ctx->post.enormsq_field_norm != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POTENTIAL] &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENORM]) {
     set_nv_tkud(rd, index, 0, 0, -2, "GENSNORM", "[1]", "|grad(|E|^2)|", FALSE);
     index++;
-    if (ENORMSQ_FIELD_NORM == 2) {
+    if (goma_ctx->post.enormsq_field_norm == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    ENORMSQ_FIELD_NORM = index_post;
+    goma_ctx->post.enormsq_field_norm = index_post;
     index_post++;
   }
 
-  if (DIFFUSION_VECTORS != -1) {
+  if (goma_ctx->post.diffusion_vectors != -1) {
     char dir_ch[] = "XYZ";
-    if (DIFFUSION_VECTORS == 2) {
+    if (goma_ctx->post.diffusion_vectors == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    DIFFUSION_VECTORS = index_post;
+    goma_ctx->post.diffusion_vectors = index_post;
     if (goma_ctx->fem.upd->Max_Num_Species_Eqn == 0)
-      DIFFUSION_VECTORS = -1;
+      goma_ctx->post.diffusion_vectors = -1;
     for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
       for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
         sprintf(species_name, "Y%dDIF%c", w, dir_ch[i]);
@@ -10620,8 +10594,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
         index_post++;
       }
     }
-    DIFFUSION_VECTORS_POR_LIQ_GPHASE = 1;
-    DIFFUSION_VECTORS_POR_AIR_GPHASE = 1;
+    goma_ctx->post.diffusion_vectors_por_liq_gphase = 1;
+    goma_ctx->post.diffusion_vectors_por_air_gphase = 1;
   }
   /*
    * Check for presence of gas phase diffusion of liquid
@@ -10635,12 +10609,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
   if (!check) {
-    DIFFUSION_VECTORS_POR_LIQ_GPHASE = -1;
-    DIFFUSION_VECTORS_POR_AIR_GPHASE = -1;
+    goma_ctx->post.diffusion_vectors_por_liq_gphase = -1;
+    goma_ctx->post.diffusion_vectors_por_air_gphase = -1;
   }
 
-  if (DIFFUSION_VECTORS_POR_LIQ_GPHASE != -1) {
-    DIFFUSION_VECTORS_POR_LIQ_GPHASE = index_post;
+  if (goma_ctx->post.diffusion_vectors_por_liq_gphase != -1) {
+    goma_ctx->post.diffusion_vectors_por_liq_gphase = index_post;
     for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(species_name, "YDIF_liq_gphase_%d", i);
       sprintf(species_desc, "Diffusion of liq in gas phase in %d direction", i);
@@ -10649,8 +10623,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index_post++;
     }
   }
-  if (DIFFUSION_VECTORS_POR_AIR_GPHASE != -1) {
-    DIFFUSION_VECTORS_POR_AIR_GPHASE = index_post;
+  if (goma_ctx->post.diffusion_vectors_por_air_gphase != -1) {
+    goma_ctx->post.diffusion_vectors_por_air_gphase = index_post;
     for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(species_name, "YDIF_air_gphase_%d", i);
       sprintf(species_desc, "Diffusion of air in gas phase in %d direction", i);
@@ -10660,18 +10634,19 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (FLUXLINES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
-    if (FLUXLINES == 2) {
+  if (goma_ctx->post.fluxlines != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+    if (goma_ctx->post.fluxlines == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
     if (goma_ctx->mesh.num_dim == 3) {
       GOMA_WH(-1, "Cant do flux function in 3D");
-      FLUXLINES = -1;
+      goma_ctx->post.fluxlines = -1;
     } else if (goma_ctx->problem.time_integration != STEADY) {
       GOMA_WH(-1, "Cant do flux function in transient");
-      FLUXLINES = -1;
+      goma_ctx->post.fluxlines = -1;
     } else {
-      FLUXLINES = index_post;
+      goma_ctx->post.fluxlines = index_post;
       for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
         sprintf(species_name, "Y%dFLUX", w);
         sprintf(species_desc, "Fluxfunction of %d", w);
@@ -10682,12 +10657,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (CONDUCTION_VECTORS != -1 &&
+  if (goma_ctx->post.conduction_vectors != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
-    if (CONDUCTION_VECTORS == 2) {
+    if (goma_ctx->post.conduction_vectors == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    CONDUCTION_VECTORS = index_post;
+    goma_ctx->post.conduction_vectors = index_post;
     /* X Component */
     sprintf(nm, "TCONDX");
     sprintf(ds, "Conduction in X direction");
@@ -10710,16 +10685,16 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (POYNTING_VECTORS != -1 &&
+  if (goma_ctx->post.poynting_vectors != -1 &&
       ((goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] ||
         goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG]) ||
        (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL] ||
         goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_EM_E2_REAL] ||
         goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_EM_E3_REAL]))) {
-    if (POYNTING_VECTORS == 2) {
+    if (goma_ctx->post.poynting_vectors == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    POYNTING_VECTORS = index_post;
+    goma_ctx->post.poynting_vectors = index_post;
     /* X Component */
     sprintf(nm, "POYNTX");
     sprintf(ds, "Poynting in X direction");
@@ -10742,12 +10717,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (ORIENTATION_VECTORS != -1 &&
+  if (goma_ctx->post.orientation_vectors != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
-    if (ORIENTATION_VECTORS == 2) {
+    if (goma_ctx->post.orientation_vectors == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    ORIENTATION_VECTORS = index_post;
+    goma_ctx->post.orientation_vectors = index_post;
     /* X Component */
     sprintf(nm, "ORX");
     sprintf(ds, "Orientation in X direction");
@@ -10770,13 +10745,14 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (SPECIES_SOURCES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
-    if (SPECIES_SOURCES == 2) {
+  if (goma_ctx->post.species_sources != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+    if (goma_ctx->post.species_sources == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing species source vectors cannot be exported yet!");
     }
-    SPECIES_SOURCES = index_post;
+    goma_ctx->post.species_sources = index_post;
     if (goma_ctx->fem.upd->Max_Num_Species_Eqn == 0)
-      SPECIES_SOURCES = -1;
+      goma_ctx->post.species_sources = -1;
     for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
       sprintf(species_name, "YSRC%d", w);
       sprintf(species_desc, "Source of %d ", w);
@@ -10786,12 +10762,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (ELECTRIC_FIELD != -1 &&
+  if (goma_ctx->post.electric_field != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
-    if (ELECTRIC_FIELD == 2) {
+    if (goma_ctx->post.electric_field == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    ELECTRIC_FIELD = index_post;
+    goma_ctx->post.electric_field = index_post;
 
     /* X Component */
     sprintf(nm, "EX");
@@ -10815,34 +10791,34 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (ELECTRIC_FIELD_MAG != -1 &&
+  if (goma_ctx->post.electric_field_mag != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
 
     sprintf(nm, "EE");
     sprintf(ds, "Electric field magnitude");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
     index++;
-    if (ELECTRIC_FIELD_MAG == 2) {
+    if (goma_ctx->post.electric_field_mag == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    ELECTRIC_FIELD_MAG = index_post;
+    goma_ctx->post.electric_field_mag = index_post;
     index_post++;
   }
 
-  if (ENERGY_FLUXLINES != -1 &&
+  if (goma_ctx->post.energy_fluxlines != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
     if (goma_ctx->mesh.num_dim == 3) {
       GOMA_WH(-1, "Cant do flux function in 3D");
-      ENERGY_FLUXLINES = -1;
+      goma_ctx->post.energy_fluxlines = -1;
     } else if (goma_ctx->problem.time_integration != STEADY) {
       GOMA_WH(-1, "Cant do flux function in transient");
-      ENERGY_FLUXLINES = -1;
+      goma_ctx->post.energy_fluxlines = -1;
     } else {
-      ENERGY_FLUXLINES = index_post;
+      goma_ctx->post.energy_fluxlines = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "EFLUX", "[1]", "Energy Fluxfunction", FALSE);
       index++;
-      if (ENERGY_FLUXLINES == 2) {
+      if (goma_ctx->post.energy_fluxlines == 2) {
         goma_ctx->problem.export_xp_id[index_post_export] = index_post;
         index_post_export++;
       }
@@ -10851,11 +10827,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
 
   /* there are always 6 entries in the stress tensor (3-D symmetric) */
-  if (STRESS_TENSOR != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    if (STRESS_TENSOR == 2) {
+  if (goma_ctx->post.stress_tensor != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    if (goma_ctx->post.stress_tensor == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing tensors cannot be exported yet!");
     }
-    STRESS_TENSOR = index_post;
+    goma_ctx->post.stress_tensor = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "T11", "[1]", "Mesh stretch stress x", FALSE);
     index++;
     index_post++;
@@ -10879,12 +10856,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
 
   /* there are always 6 entries in the stress tensor (3-D symmetric) */
-  if (REAL_STRESS_TENSOR != -1 &&
+  if (goma_ctx->post.real_stress_tensor != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SOLID1]) {
-    if (REAL_STRESS_TENSOR == 2) {
+    if (goma_ctx->post.real_stress_tensor == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing tensors cannot be exported yet!");
     }
-    REAL_STRESS_TENSOR = index_post;
+    goma_ctx->post.real_stress_tensor = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "T11_RS", "[1]", "Real_solid stretch stress x", FALSE);
     index++;
     index_post++;
@@ -10907,11 +10884,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (STRAIN_TENSOR != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    if (STRAIN_TENSOR == 2) {
+  if (goma_ctx->post.strain_tensor != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    if (goma_ctx->post.strain_tensor == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing tensors cannot be exported yet!");
     }
-    STRAIN_TENSOR = index_post;
+    goma_ctx->post.strain_tensor = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "E11", "[1]", "Mesh stetch strain x", FALSE);
     index++;
     index_post++;
@@ -10934,12 +10912,13 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (goma_ctx->fem.evpl_glob[0]->ConstitutiveEquation == EVP_HYPER && EVP_DEF_GRAD_TENSOR != -1 &&
+  if (goma_ctx->fem.evpl_glob[0]->ConstitutiveEquation == EVP_HYPER &&
+      goma_ctx->post.evp_def_grad_tensor != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    if (EVP_DEF_GRAD_TENSOR == 2) {
+    if (goma_ctx->post.evp_def_grad_tensor == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing tensors cannot be exported yet!");
     }
-    EVP_DEF_GRAD_TENSOR = index_post;
+    goma_ctx->post.evp_def_grad_tensor = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "FVP11", "[1]", "Viscoplastic deformation gradient x", FALSE);
     index++;
     index_post++;
@@ -10973,7 +10952,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index++;
       index_post++;
     }
-    if (STRESS_TENSOR != -1 &&
+    if (goma_ctx->post.stress_tensor != -1 &&
         goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
       set_nv_tkud(rd, index, 0, 0, -2, "TVP11", "[1]", "EVP stretch stress x", FALSE);
       index++;
@@ -11015,11 +10994,11 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       check = 1;
   }
 
-  if (LAGRANGE_CONVECTION != -1 && check) {
-    if (LAGRANGE_CONVECTION == 2) {
+  if (goma_ctx->post.lagrange_convection != -1 && check) {
+    if (goma_ctx->post.lagrange_convection == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    LAGRANGE_CONVECTION = index_post;
+    goma_ctx->post.lagrange_convection = index_post;
     for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "VL%d", i);
       sprintf(ds, "Lagrangian Convection in %d direction", i);
@@ -11029,12 +11008,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (SURFACE_VECTORS != -1 &&
+  if (goma_ctx->post.surface_vectors != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-    if (SURFACE_VECTORS == 2) {
+    if (goma_ctx->post.surface_vectors == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    SURFACE_VECTORS = index_post;
+    goma_ctx->post.surface_vectors = index_post;
 
     for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "N%d", i);
@@ -11064,13 +11043,13 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post += goma_ctx->mesh.num_dim * (goma_ctx->mesh.num_dim - 1);
   }
 
-  if (SHELL_NORMALS != -1 &&
+  if (goma_ctx->post.shell_normals != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][SHELL_ANGLE1] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][LUBP])) {
-    if (SHELL_NORMALS == 2) {
+    if (goma_ctx->post.shell_normals == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    SHELL_NORMALS = index_post;
+    goma_ctx->post.shell_normals = index_post;
 
     /* X Component */
     sprintf(nm, "SH_NX");
@@ -11094,9 +11073,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (CONF_MAP != -1 &&
+  if (goma_ctx->post.conf_map != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
-    CONF_MAP = index_post;
+    goma_ctx->post.conf_map = index_post;
     // Loop over any additional viscoelastic modes
     for (mode = 0; mode < MAX_MODES; mode++) {
       for (a = 0; a < goma_ctx->problem.vim; a++) {
@@ -11115,9 +11094,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (STRESS_NORM != -1 &&
+  if (goma_ctx->post.stress_norm != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
-    STRESS_NORM = index_post;
+    goma_ctx->post.stress_norm = index_post;
     int num_modes = 0;
     for (int i = 0; i < MAX_MODES; i++) {
       if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][v_s[i][0][0]]) {
@@ -11133,9 +11112,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (SARAMITO_YIELD != -1 &&
+  if (goma_ctx->post.saramito_yield != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
-    SARAMITO_YIELD = index_post;
+    goma_ctx->post.saramito_yield = index_post;
     int num_modes = 0;
     for (int i = 0; i < MAX_MODES; i++) {
       if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][v_s[i][0][0]]) {
@@ -11151,10 +11130,10 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (VISCOUS_STRESS != -1 &&
+  if (goma_ctx->post.viscous_stress != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->mesh.num_dim > 2) {
-      VISCOUS_STRESS = index_post;
+      goma_ctx->post.viscous_stress = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "VS11", "[1]", "Viscous stress xx", FALSE);
       index++;
       index_post++;
@@ -11194,7 +11173,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index_post++;
 
     } else {
-      VISCOUS_STRESS = index_post;
+      goma_ctx->post.viscous_stress = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "VS11", "[1]", "Viscous stress xx", FALSE);
       index++;
       index_post++;
@@ -11220,10 +11199,10 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (PP_FLUID_STRESS != -1 &&
+  if (goma_ctx->post.pp_fluid_stress != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->mesh.num_dim > 2) {
-      PP_FLUID_STRESS = index_post;
+      goma_ctx->post.pp_fluid_stress = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "FS11", "[1]", "Viscous stress xx", FALSE);
       index++;
       index_post++;
@@ -11263,7 +11242,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index_post++;
 
     } else {
-      PP_FLUID_STRESS = index_post;
+      goma_ctx->post.pp_fluid_stress = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "FS11", "[1]", "Viscous stress xx", FALSE);
       index++;
       index_post++;
@@ -11289,10 +11268,10 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (PP_VELOCITY_GRADIENTS != -1 &&
+  if (goma_ctx->post.pp_velocity_gradients != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->mesh.num_dim > 2) {
-      PP_VELOCITY_GRADIENTS = index_post;
+      goma_ctx->post.pp_velocity_gradients = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "GRADV11", "[1]", "Velocity gradient xx", FALSE);
       index++;
       index_post++;
@@ -11332,7 +11311,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index_post++;
 
     } else {
-      PP_VELOCITY_GRADIENTS = index_post;
+      goma_ctx->post.pp_velocity_gradients = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "GRADV11", "[1]", "Velocity gradient xx", FALSE);
       index++;
       index_post++;
@@ -11357,18 +11336,18 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (VISCOUS_STRESS_NORM != -1 &&
+  if (goma_ctx->post.viscous_stress_norm != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    SARAMITO_YIELD = -1;
-    VISCOUS_STRESS_NORM = index_post;
+    goma_ctx->post.saramito_yield = -1;
+    goma_ctx->post.viscous_stress_norm = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "VSNORM", "[1]", "Viscous stress norm", FALSE);
     index++;
     index_post++;
   }
 
-  if (VISCOUS_VON_MISES_STRESS != -1 &&
+  if (goma_ctx->post.viscous_von_mises_stress != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    VISCOUS_VON_MISES_STRESS = index_post;
+    goma_ctx->post.viscous_von_mises_stress = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "VVMISSTRESS", "[1]", "Viscous Von Mises stress", FALSE);
     index++;
     index_post++;
@@ -11392,8 +11371,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
     }*/
 
-  if (GRAD_SH != -1) {
-    GRAD_SH = index_post;
+  if (goma_ctx->post.grad_sh != -1) {
+    goma_ctx->post.grad_sh = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "GRAD_SH0", "[1]", "Shear gradient x", FALSE);
     index++;
     index_post++;
@@ -11407,8 +11386,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (GRAD_Y != -1) {
-    GRAD_Y = index_post;
+  if (goma_ctx->post.grad_y != -1) {
+    goma_ctx->post.grad_y = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "GRAD_Y0", "[1]", "Concentration gradient x", FALSE);
     index++;
     index_post++;
@@ -11422,8 +11401,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (EIG != -1) {
-    EIG = index_post;
+  if (goma_ctx->post.eig != -1) {
+    goma_ctx->post.eig = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "EIGEN0", "[1]", "First eigenvalue", FALSE);
     index++;
     index_post++;
@@ -11436,8 +11415,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (EIG1 != -1) {
-    EIG1 = index_post;
+  if (goma_ctx->post.eig1 != -1) {
+    goma_ctx->post.eig1 = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "EIGEN0_0", "[1]", "First eigenvector x", FALSE);
     index++;
     index_post++;
@@ -11450,8 +11429,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (EIG2 != -1) {
-    EIG2 = index_post;
+  if (goma_ctx->post.eig2 != -1) {
+    goma_ctx->post.eig2 = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "EIGEN1_0", "[1]", "Second eigenvector x", FALSE);
     index++;
     index_post++;
@@ -11464,8 +11443,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (EIG3 != -1) {
-    EIG3 = index_post;
+  if (goma_ctx->post.eig3 != -1) {
+    goma_ctx->post.eig3 = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "EIGEN2_0", "[1]", "Third eigenvector x", FALSE);
     index++;
     index_post++;
@@ -11495,24 +11474,24 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   printf("Before porous entries, IP = %d and IPE = %d\n",
   index_post, index_post_export);
   */
-  if (POROUS_SATURATION != -1 &&
+  if (goma_ctx->post.porous_saturation != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     set_nv_tkud(rd, index, 0, 0, -2, "SAT", "[1]", "Saturation", FALSE);
     index++;
-    if (POROUS_SATURATION == 2) {
+    if (goma_ctx->post.porous_saturation == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    POROUS_SATURATION = index_post;
+    goma_ctx->post.porous_saturation = index_post;
     index_post++;
   }
 
-  if (POROUS_RHO_TOTAL_SOLVENTS != -1 &&
+  if (goma_ctx->post.porous_rho_total_solvents != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
-    if (POROUS_RHO_TOTAL_SOLVENTS == 2) {
+    if (goma_ctx->post.porous_rho_total_solvents == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    POROUS_RHO_TOTAL_SOLVENTS = index_post;
+    goma_ctx->post.porous_rho_total_solvents = index_post;
     sprintf(species_name, "Rho_Total_liq");
     sprintf(species_desc, "Total density of liquid solvent");
     set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
@@ -11532,12 +11511,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (POROUS_RHO_GAS_SOLVENTS != -1 &&
+  if (goma_ctx->post.porous_rho_gas_solvents != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
-    if (POROUS_RHO_GAS_SOLVENTS == 2) {
+    if (goma_ctx->post.porous_rho_gas_solvents == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    POROUS_RHO_GAS_SOLVENTS = index_post;
+    goma_ctx->post.porous_rho_gas_solvents = index_post;
     if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES]) {
       sprintf(species_name, "RhoSolv_g_liq");
       sprintf(species_desc, "Gas Phase Density of liq solvent");
@@ -11561,26 +11540,26 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (POROUS_RHO_LPHASE != -1 &&
+  if (goma_ctx->post.porous_rho_lphase != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     sprintf(species_name, "Rho_Liq_Phase");
     sprintf(species_desc, "Density of the Liquid Phase");
     set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
     index++;
-    if (POROUS_RHO_LPHASE == 2) {
+    if (goma_ctx->post.porous_rho_lphase == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    POROUS_RHO_LPHASE = index_post;
+    goma_ctx->post.porous_rho_lphase = index_post;
     index_post++;
   }
 
-  if (DARCY_VELOCITY_GAS != -1 &&
+  if (goma_ctx->post.darcy_velocity_gas != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES] && check) {
-    if (DARCY_VELOCITY_GAS == 2) {
+    if (goma_ctx->post.darcy_velocity_gas == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    DARCY_VELOCITY_GAS = index_post;
+    goma_ctx->post.darcy_velocity_gas = index_post;
     for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "Darcy_Vel_g_%d", i);
       sprintf(ds, "Gas Phase Darcy Velocity in the %d direction", i);
@@ -11590,12 +11569,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (DARCY_VELOCITY_LIQ != -1 &&
+  if (goma_ctx->post.darcy_velocity_liq != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
-    if (DARCY_VELOCITY_LIQ == 2) {
+    if (goma_ctx->post.darcy_velocity_liq == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    DARCY_VELOCITY_LIQ = index_post;
+    goma_ctx->post.darcy_velocity_liq = index_post;
     for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "Darcy_Vel_l_%d", i);
       sprintf(ds, "Liquid Phase Darcy Velocity in the %d direction", i);
@@ -11604,15 +11583,15 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index_post++;
     }
   }
-  if (POROUS_LIQUID_ACCUM_RATE != -1 &&
+  if (goma_ctx->post.porous_liquid_accum_rate != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     set_nv_tkud(rd, index, 0, 0, -2, "Liq_Inv_Dot", "[1]", "Porous Liquid Accumlation Rate", FALSE);
     index++;
-    if (POROUS_LIQUID_ACCUM_RATE == 2) {
+    if (goma_ctx->post.porous_liquid_accum_rate == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    POROUS_LIQUID_ACCUM_RATE = index_post;
+    goma_ctx->post.porous_liquid_accum_rate = index_post;
     index_post++;
   }
 
@@ -11620,36 +11599,36 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   printf(" Before cap. pressure, IP = %d and IPE = %d\n",
   index_post, index_post_export);
   */
-  if (CAPILLARY_PRESSURE != -1 &&
+  if (goma_ctx->post.capillary_pressure != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     set_nv_tkud(rd, index, 0, 0, -2, "PC", "[1]", "Capillary Pressure", FALSE);
     index++;
-    if (CAPILLARY_PRESSURE == 2) {
+    if (goma_ctx->post.capillary_pressure == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    CAPILLARY_PRESSURE = index_post;
+    goma_ctx->post.capillary_pressure = index_post;
     index_post++;
   }
 
-  if (POROUS_GRIDPECLET != -1 &&
+  if (goma_ctx->post.porous_gridpeclet != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     set_nv_tkud(rd, index, 0, 0, -2, "Por_Grid_Peclet", "[1]", "Porous Grid Peclet Number", FALSE);
     index++;
-    if (POROUS_GRIDPECLET == 2) {
+    if (goma_ctx->post.porous_gridpeclet == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    POROUS_GRIDPECLET = index_post;
+    goma_ctx->post.porous_gridpeclet = index_post;
     index_post++;
   }
 
-  if (POROUS_SUPGVELOCITY != -1 &&
+  if (goma_ctx->post.porous_supgvelocity != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
-    if (POROUS_SUPGVELOCITY == 2) {
+    if (goma_ctx->post.porous_supgvelocity == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    POROUS_SUPGVELOCITY = index_post;
+    goma_ctx->post.porous_supgvelocity = index_post;
     for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "U_supg_porous_%d", i);
       sprintf(ds, "Porous SUPG Velocity in the %d direction", i);
@@ -11659,21 +11638,21 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (REL_LIQ_PERM != -1 &&
+  if (goma_ctx->post.rel_liq_perm != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) &&
       check) {
     set_nv_tkud(rd, index, 0, 0, -2, "Rel_liq_perm", "[1]", "Relative Liquid Permeability", FALSE);
     index++;
-    if (REL_LIQ_PERM == 2) {
+    if (goma_ctx->post.rel_liq_perm == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    REL_LIQ_PERM = index_post;
+    goma_ctx->post.rel_liq_perm = index_post;
     index_post++;
   } else {
-    REL_LIQ_PERM = -1;
+    goma_ctx->post.rel_liq_perm = -1;
   }
 
   /*
@@ -11683,14 +11662,15 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
   /* MMH: Output the vorticity vector.
    */
-  if (CURL_V != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.curl_v != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
         goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
         goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D || goma_ctx->mesh.num_dim == 3) {
-      if (CURL_V == 2) {
+      if (goma_ctx->post.curl_v == 2) {
         GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
       }
-      CURL_V = index_post;
+      goma_ctx->post.curl_v = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "VORTX", "[1]", "x-component of vorticity", FALSE);
       index++;
       index_post++;
@@ -11703,42 +11683,42 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     } else if (goma_ctx->mesh.num_dim == 2) {
       set_nv_tkud(rd, index, 0, 0, -2, "VORT", "[1]", "Vorticity (scalar)", FALSE);
       index++;
-      if (CURL_V == 2) {
+      if (goma_ctx->post.curl_v == 2) {
         goma_ctx->problem.export_xp_id[index_post_export] = index_post;
         index_post_export++;
       }
-      CURL_V = index_post;
+      goma_ctx->post.curl_v = index_post;
       index_post++;
     } else {
       GOMA_WH(-1, "Why are you asking for vorticity on a 1D problem?");
-      CURL_V = -1;
+      goma_ctx->post.curl_v = -1;
     }
   }
 
-  if (POLYMER_VISCOSITY != -1 &&
+  if (goma_ctx->post.polymer_viscosity != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     set_nv_tkud(rd, index, 0, 0, -2, "MUP", "[1]", "Polymer Viscosity", FALSE);
     index++;
-    if (POLYMER_VISCOSITY == 2) {
+    if (goma_ctx->post.polymer_viscosity == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    POLYMER_VISCOSITY = index_post;
+    goma_ctx->post.polymer_viscosity = index_post;
     index_post++;
   } else {
-    POLYMER_VISCOSITY = -1;
+    goma_ctx->post.polymer_viscosity = -1;
   }
   /* RBS: Output the Lamb vector.
    */
-  if (LAMB_VECTOR != -1 &&
+  if (goma_ctx->post.lamb_vector != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
         goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
         goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D || goma_ctx->mesh.num_dim == 3) {
-      if (LAMB_VECTOR == 2) {
+      if (goma_ctx->post.lamb_vector == 2) {
         GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
       }
-      LAMB_VECTOR = index_post;
+      goma_ctx->post.lamb_vector = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "LAMBX", "[1]", "x-component of Lamb", FALSE);
       index++;
       index_post++;
@@ -11749,14 +11729,14 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index++;
       index_post++;
     } else if (goma_ctx->mesh.num_dim == 2) {
-      LAMB_VECTOR = index_post;
+      goma_ctx->post.lamb_vector = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "LAMBX", "[1]", "x-component of Lamb", FALSE);
       index++;
       index_post++;
       set_nv_tkud(rd, index, 0, 0, -2, "LAMBY", "[1]", "y-component of Lamb", FALSE);
       index++;
       index_post++;
-      if (LAMB_VECTOR == 2) {
+      if (goma_ctx->post.lamb_vector == 2) {
         goma_ctx->problem.export_xp_id[index_post_export] = index_post;
         index_post_export++;
       }
@@ -11764,149 +11744,153 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
   /* RBS: Helicity quantity (scalar)
    */
-  if (HELICITY != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (goma_ctx->post.helicity != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
         goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
         goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D || goma_ctx->mesh.num_dim == 3) {
-      if (HELICITY == 2) {
+      if (goma_ctx->post.helicity == 2) {
         GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
       }
-      HELICITY = index_post;
+      goma_ctx->post.helicity = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "HELIX", "[1]", "helicity scalar", FALSE);
       index++;
       index_post++;
     } else {
       GOMA_WH(-1, "Why are you asking for Helicity in a 1D or 2D problem?");
-      HELICITY = -1;
+      goma_ctx->post.helicity = -1;
     }
   }
 
-  if (POLYMER_TIME_CONST != -1 &&
+  if (goma_ctx->post.polymer_time_const != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     set_nv_tkud(rd, index, 0, 0, -2, "LAMBDA", "[1]", "Polymer Time Constant", FALSE);
     index++;
-    if (POLYMER_TIME_CONST == 2) {
+    if (goma_ctx->post.polymer_time_const == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    POLYMER_TIME_CONST = index_post;
+    goma_ctx->post.polymer_time_const = index_post;
     index_post++;
   }
 
-  if (MOBILITY_PARAMETER != -1 &&
+  if (goma_ctx->post.mobility_parameter != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     set_nv_tkud(rd, index, 0, 0, -2, "ALPHA", "[1]", "Mobility Parameter", FALSE);
     index++;
-    if (MOBILITY_PARAMETER == 2) {
+    if (goma_ctx->post.mobility_parameter == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    MOBILITY_PARAMETER = index_post;
+    goma_ctx->post.mobility_parameter = index_post;
     index_post++;
   }
 
-  if (PTT_XI != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (goma_ctx->post.ptt_xi != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     set_nv_tkud(rd, index, 0, 0, -2, "XI", "[1]", "PTT Xi parameter", FALSE);
     index++;
-    if (PTT_XI == 2) {
+    if (goma_ctx->post.ptt_xi == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    PTT_XI = index_post;
+    goma_ctx->post.ptt_xi = index_post;
     index_post++;
   }
 
-  if (PTT_EPSILON != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (goma_ctx->post.ptt_epsilon != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     set_nv_tkud(rd, index, 0, 0, -2, "EPSILON", "[1]", "PTT Epsilon parameter", FALSE);
     index++;
-    if (PTT_EPSILON == 2) {
+    if (goma_ctx->post.ptt_epsilon == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    PTT_EPSILON = index_post;
+    goma_ctx->post.ptt_epsilon = index_post;
     index_post++;
   }
 
-  if (USER_POST != -1) {
+  if (goma_ctx->post.user_post != -1) {
     set_nv_tkud(rd, index, 0, 0, -2, "USER", "[1]", "User-Defined", FALSE);
     index++;
-    if (USER_POST == 2) {
+    if (goma_ctx->post.user_post == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    USER_POST = index_post;
+    goma_ctx->post.user_post = index_post;
     index_post++;
   }
 
-  if (ACOUSTIC_PRESSURE != -1 &&
+  if (goma_ctx->post.acoustic_pressure != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] &&
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
     set_nv_tkud(rd, index, 0, 0, -2, "AC_PRES", "[1]", "Acoustic Pressure Magn.", FALSE);
     index++;
-    if (ACOUSTIC_PRESSURE == 2) {
+    if (goma_ctx->post.acoustic_pressure == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    ACOUSTIC_PRESSURE = index_post;
+    goma_ctx->post.acoustic_pressure = index_post;
     index_post++;
   }
 
-  if (ACOUSTIC_PHASE_ANGLE != -1 &&
+  if (goma_ctx->post.acoustic_phase_angle != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] &&
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
     set_nv_tkud(rd, index, 0, 0, -2, "AC_PHASE", "[1]", "Acoustic Phase Angle", FALSE);
     index++;
-    if (ACOUSTIC_PHASE_ANGLE == 2) {
+    if (goma_ctx->post.acoustic_phase_angle == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    ACOUSTIC_PHASE_ANGLE = index_post;
+    goma_ctx->post.acoustic_phase_angle = index_post;
     index_post++;
   }
 
-  if (ACOUSTIC_ENERGY_DENSITY != -1 &&
+  if (goma_ctx->post.acoustic_energy_density != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] &&
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
     set_nv_tkud(rd, index, 0, 0, -2, "AC_ED", "[1]", "Acoustic Energy Density", FALSE);
     index++;
-    if (ACOUSTIC_ENERGY_DENSITY == 2) {
+    if (goma_ctx->post.acoustic_energy_density == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    ACOUSTIC_ENERGY_DENSITY = index_post;
+    goma_ctx->post.acoustic_energy_density = index_post;
     index_post++;
   }
 
-  if (LIGHT_INTENSITY != -1 &&
+  if (goma_ctx->post.light_intensity != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LIGHT_INTP] &&
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LIGHT_INTM])) {
     set_nv_tkud(rd, index, 0, 0, -2, "L_INT", "[1]", "Light Intensity", FALSE);
     index++;
-    if (LIGHT_INTENSITY == 2) {
+    if (goma_ctx->post.light_intensity == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    LIGHT_INTENSITY = index_post;
+    goma_ctx->post.light_intensity = index_post;
     index_post++;
   }
 
-  if (UNTRACKED_SPEC != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+  if (goma_ctx->post.untracked_spec != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
     set_nv_tkud(rd, index, 0, 0, -2, "UNT_SPEC", "[1]", "Untracked Species", FALSE);
     index++;
-    if (UNTRACKED_SPEC == 2) {
+    if (goma_ctx->post.untracked_spec == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    UNTRACKED_SPEC = index_post;
+    goma_ctx->post.untracked_spec = index_post;
     index_post++;
   }
 
-  if (PRINCIPAL_STRESS != -1 &&
+  if (goma_ctx->post.principal_stress != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    if (PRINCIPAL_STRESS == 2) {
+    if (goma_ctx->post.principal_stress == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    PRINCIPAL_STRESS = index_post;
+    goma_ctx->post.principal_stress = index_post;
 
     /* First Principal Stress */
     sprintf(nm, "PS_1");
@@ -11928,12 +11912,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (PRINCIPAL_REAL_STRESS != -1 &&
+  if (goma_ctx->post.principal_real_stress != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SOLID1]) {
-    if (PRINCIPAL_REAL_STRESS == 2) {
+    if (goma_ctx->post.principal_real_stress == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    PRINCIPAL_REAL_STRESS = index_post;
+    goma_ctx->post.principal_real_stress = index_post;
 
     /* First Principal Stress */
     sprintf(nm, "PS_RS_1");
@@ -11955,15 +11939,15 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_HEIGHT != -1 &&
+  if (goma_ctx->post.lub_height != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND])) {
-    if (LUB_HEIGHT == 2) {
+    if (goma_ctx->post.lub_height == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    LUB_HEIGHT = index_post;
+    goma_ctx->post.lub_height = index_post;
     sprintf(nm, "LUB_H");
     sprintf(ds, "Lubrication Height");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -11971,12 +11955,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_HEIGHT_2 != -1 &&
+  if (goma_ctx->post.lub_height_2 != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP_2])) {
-    if (LUB_HEIGHT_2 == 2) {
+    if (goma_ctx->post.lub_height_2 == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    LUB_HEIGHT_2 = index_post;
+    goma_ctx->post.lub_height_2 = index_post;
     sprintf(nm, "LUB_H_2");
     sprintf(ds, "Lubrication Height 2");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -11984,11 +11968,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_VELO_UPPER != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP]) {
-    if (LUB_VELO_UPPER == 2) {
+  if (goma_ctx->post.lub_velo_upper != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP]) {
+    if (goma_ctx->post.lub_velo_upper == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    LUB_VELO_UPPER = index_post;
+    goma_ctx->post.lub_velo_upper = index_post;
     sprintf(nm, "LUB_VUX");
     sprintf(ds, "Lubrication Upper Velocity x-component");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12006,11 +11991,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_VELO_LOWER != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP]) {
-    if (LUB_VELO_LOWER == 2) {
+  if (goma_ctx->post.lub_velo_lower != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP]) {
+    if (goma_ctx->post.lub_velo_lower == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    LUB_VELO_LOWER = index_post;
+    goma_ctx->post.lub_velo_lower = index_post;
     sprintf(nm, "LUB_VLX");
     sprintf(ds, "Lubrication Lower Velocity x-component");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12028,13 +12014,13 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_VELO_FIELD != -1 &&
+  if (goma_ctx->post.lub_velo_field != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
-    if (LUB_VELO_FIELD == 2) {
+    if (goma_ctx->post.lub_velo_field == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    LUB_VELO_FIELD = index_post;
+    goma_ctx->post.lub_velo_field = index_post;
     sprintf(nm, "LUB_VELO_X");
     sprintf(ds, "Lubrication Velocity x-component");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12052,12 +12038,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_VELO_FIELD_2 != -1 &&
+  if (goma_ctx->post.lub_velo_field_2 != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP_2])) {
-    if (LUB_VELO_FIELD_2 == 2) {
+    if (goma_ctx->post.lub_velo_field_2 == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    LUB_VELO_FIELD_2 = index_post;
+    goma_ctx->post.lub_velo_field_2 = index_post;
     sprintf(nm, "LUB_VELO_2_X");
     sprintf(ds, "Lubrication Velocity x-component");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12075,14 +12061,14 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_FLUID_SOURCE != -1 &&
+  if (goma_ctx->post.lub_fluid_source != -1 &&
       ((goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP]) ||
        (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] &&
         goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMH]))) {
-    if (LUB_FLUID_SOURCE == 2) {
+    if (goma_ctx->post.lub_fluid_source == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    LUB_FLUID_SOURCE = index_post;
+    goma_ctx->post.lub_fluid_source = index_post;
     sprintf(nm, "LUB_SOURCE");
     sprintf(ds, "Lubrication Source");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12090,12 +12076,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (DISJ_PRESS != -1 &&
+  if (goma_ctx->post.disj_press != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP]) {
-    if (DISJ_PRESS == 2) {
+    if (goma_ctx->post.disj_press == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    DISJ_PRESS = index_post;
+    goma_ctx->post.disj_press = index_post;
     sprintf(nm, "DISJ_PRESS");
     sprintf(ds, "Disjoining Pressure");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12103,13 +12089,13 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_CONVECTION != -1 &&
+  if (goma_ctx->post.lub_convection != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
-    if (LUB_CONVECTION == 2) {
+    if (goma_ctx->post.lub_convection == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    LUB_CONVECTION = index_post;
+    goma_ctx->post.lub_convection = index_post;
     sprintf(nm, "LUB_CONV_X");
     sprintf(ds, "Lubrication Convection x-component");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12127,12 +12113,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (PP_MESH_VELOCITY != -1 &&
+  if (goma_ctx->post.pp_mesh_velocity != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1])) {
-    if (PP_MESH_VELOCITY == 2) {
+    if (goma_ctx->post.pp_mesh_velocity == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    PP_MESH_VELOCITY = index_post;
+    goma_ctx->post.pp_mesh_velocity = index_post;
     sprintf(nm, "MVX");
     sprintf(ds, "Mesh velocity x-component");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12154,12 +12140,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (SH_SAT_OPEN != -1 &&
+  if (goma_ctx->post.sh_sat_open != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN]) {
-    if (SH_SAT_OPEN == 2) {
+    if (goma_ctx->post.sh_sat_open == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    SH_SAT_OPEN = index_post;
+    goma_ctx->post.sh_sat_open = index_post;
     sprintf(nm, "SH_SAT_OPEN");
     sprintf(ds, "Open Porous Shell Saturation");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12167,12 +12153,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (SH_SAT_OPEN_2 != -1 &&
+  if (goma_ctx->post.sh_sat_open_2 != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) {
-    if (SH_SAT_OPEN_2 == 2) {
+    if (goma_ctx->post.sh_sat_open_2 == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    SH_SAT_OPEN_2 = index_post;
+    goma_ctx->post.sh_sat_open_2 = index_post;
     sprintf(nm, "SH_SAT_OPEN_2");
     sprintf(ds, "Open Porous Shell Saturation 2");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12180,12 +12166,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (SH_CAP_PRES != -1 &&
+  if (goma_ctx->post.sh_cap_pres != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1]) {
-    if (SH_CAP_PRES == 2) {
+    if (goma_ctx->post.sh_cap_pres == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    SH_CAP_PRES = index_post;
+    goma_ctx->post.sh_cap_pres = index_post;
     sprintf(nm, "SH_CAP_PRES_1");
     sprintf(ds, "Porous Shell Capillary Pressure Layer 1");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12207,13 +12193,13 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (SH_PORE_FLUX != -1 &&
+  if (goma_ctx->post.sh_pore_flux != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1] &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_2]) {
-    if (SH_PORE_FLUX == 2) {
+    if (goma_ctx->post.sh_pore_flux == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    SH_PORE_FLUX = index_post;
+    goma_ctx->post.sh_pore_flux = index_post;
     sprintf(nm, "SH_PORE_FLUX_1_2");
     sprintf(ds, "Porous Shell Flux Between Layers 1 and 2");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12229,15 +12215,15 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (SH_STRESS_TENSOR != -1 &&
+  if (goma_ctx->post.sh_stress_tensor != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1] &&
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL2] &&
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL3] &&
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1])) {
-    if (SH_STRESS_TENSOR == 2) {
+    if (goma_ctx->post.sh_stress_tensor == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    SH_STRESS_TENSOR = index_post;
+    goma_ctx->post.sh_stress_tensor = index_post;
     sprintf(nm, "SH_S11");
     sprintf(ds, "Shell stress tensor component 11");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12255,15 +12241,15 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (SH_TANG != -1 &&
+  if (goma_ctx->post.sh_tang != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1] &&
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL2] &&
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL3] &&
        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1])) {
-    if (SH_TANG == 2) {
+    if (goma_ctx->post.sh_tang == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    SH_TANG = index_post;
+    goma_ctx->post.sh_tang = index_post;
 
     sprintf(nm, "SH_T1X");
     sprintf(ds, "Shell tangent 1 x - component");
@@ -12298,11 +12284,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (PP_LAME_MU != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    if (PP_LAME_MU == 2) {
+  if (goma_ctx->post.pp_lame_mu != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    if (goma_ctx->post.pp_lame_mu == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    PP_LAME_MU = index_post;
+    goma_ctx->post.pp_lame_mu = index_post;
     sprintf(nm, "LAME_MU");
     sprintf(ds, "Lame MU Modulus");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12310,11 +12297,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (PP_LAME_LAMBDA != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    if (PP_LAME_LAMBDA == 2) {
+  if (goma_ctx->post.pp_lame_lambda != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    if (goma_ctx->post.pp_lame_lambda == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    PP_LAME_LAMBDA = index_post;
+    goma_ctx->post.pp_lame_lambda = index_post;
     sprintf(nm, "LAME_LAMBDA");
     sprintf(ds, "Lame LAMBDA Modulus");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12322,37 +12310,37 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (VON_MISES_STRAIN != -1 &&
+  if (goma_ctx->post.von_mises_strain != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "VME", "[1]", "Von Mises Strain", FALSE);
     index++;
-    if (VON_MISES_STRAIN == 2) {
+    if (goma_ctx->post.von_mises_strain == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    VON_MISES_STRAIN = index_post;
+    goma_ctx->post.von_mises_strain = index_post;
     index_post++;
   }
 
-  if (VON_MISES_STRESS != -1 &&
+  if (goma_ctx->post.von_mises_stress != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "VMT", "[1]", "Von Mises Stress", FALSE);
     index++;
-    if (VON_MISES_STRESS == 2) {
+    if (goma_ctx->post.von_mises_stress == 2) {
       goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
-    VON_MISES_STRESS = index_post;
+    goma_ctx->post.von_mises_stress = index_post;
     index_post++;
   }
 
-  if (TFMP_GAS_VELO != -1 &&
+  if (goma_ctx->post.tfmp_gas_velo != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
-    if (TFMP_GAS_VELO == 2) {
+    if (goma_ctx->post.tfmp_gas_velo == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    TFMP_GAS_VELO = index_post;
+    goma_ctx->post.tfmp_gas_velo = index_post;
     sprintf(nm, "TFMP_GAS_VX");
     sprintf(ds, "TFMP Gas Velocity x-component");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12369,16 +12357,16 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index++;
     index_post++;
   } else {
-    TFMP_GAS_VELO = -1;
+    goma_ctx->post.tfmp_gas_velo = -1;
   }
 
-  if (TFMP_LIQ_VELO != -1 &&
+  if (goma_ctx->post.tfmp_liq_velo != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
-    if (TFMP_LIQ_VELO == 2) {
+    if (goma_ctx->post.tfmp_liq_velo == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    TFMP_LIQ_VELO = index_post;
+    goma_ctx->post.tfmp_liq_velo = index_post;
     sprintf(nm, "TFMP_LIQ_VX");
     sprintf(ds, "TFMP Liq Velocity x-component");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12395,36 +12383,37 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index++;
     index_post++;
   } else {
-    TFMP_LIQ_VELO = -1;
+    goma_ctx->post.tfmp_liq_velo = -1;
   }
 
-  if (TFMP_INV_PECLET != -1 &&
+  if (goma_ctx->post.tfmp_inv_peclet != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
-    if (TFMP_INV_PECLET == 2) {
+    if (goma_ctx->post.tfmp_inv_peclet == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    TFMP_INV_PECLET = index_post;
+    goma_ctx->post.tfmp_inv_peclet = index_post;
     sprintf(nm, "TFMP_INV_PECLET");
     sprintf(ds, "TFMP Inverted Local Peclet Number");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
     index++;
     index_post++;
   } else {
-    TFMP_INV_PECLET = -1;
+    goma_ctx->post.tfmp_inv_peclet = -1;
   }
-  if (TFMP_KRG != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
-    if (TFMP_KRG == 2) {
+  if (goma_ctx->post.tfmp_krg != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
+    if (goma_ctx->post.tfmp_krg == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    TFMP_KRG = index_post;
+    goma_ctx->post.tfmp_krg = index_post;
     sprintf(nm, "TFMP_KRG");
     sprintf(ds, "TFMP Local Gas Permeability");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
     index++;
     index_post++;
   } else {
-    TFMP_KRG = -1;
+    goma_ctx->post.tfmp_krg = -1;
   }
 
   /* Add external variables if they are present */
@@ -12434,7 +12423,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   index_post, index_post_export);
   */
   if (goma_ctx->fem.efv->ev) {
-    EXTERNAL_POST = index_post;
+    goma_ctx->post.external_post = index_post;
     for (i = 0; i < goma_ctx->fem.efv->Num_external_field; i++) {
       set_nv_tkud(rd, index, 0, 0, -2, goma_ctx->fem.efv->name[i], "[1]", "External-fixed field",
                   FALSE);
@@ -12453,12 +12442,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
    *              post processing options
    */
 
-  if (NS_RESIDUALS != -1 &&
+  if (goma_ctx->post.ns_residuals != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    if (NS_RESIDUALS == 2) {
+    if (goma_ctx->post.ns_residuals == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    NS_RESIDUALS = index_post;
+    goma_ctx->post.ns_residuals = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "RMX", "[1]", "x-component of NS eqns", FALSE);
     index++;
     index_post++;
@@ -12472,11 +12461,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (MM_RESIDUALS != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    if (MM_RESIDUALS == 2) {
+  if (goma_ctx->post.mm_residuals != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    if (goma_ctx->post.mm_residuals == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    MM_RESIDUALS = index_post;
+    goma_ctx->post.mm_residuals = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "RDX", "[1]", "x-component of mesh eqns", FALSE);
     index++;
     index_post++;
@@ -12510,13 +12500,13 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       }
     }
     if (post_flag) {
-      TOTAL_STRESS11 = index_post;
+      goma_ctx->post.total_stress11 = index_post;
       set_nv_tkud(rd, index, var, 0, -2, "ts11", "[1]", "total stress 11", FALSE);
       index++;
       index_post++;
       var = R_STRESS12;
       if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
-        TOTAL_STRESS12 = index_post;
+        goma_ctx->post.total_stress12 = index_post;
         set_nv_tkud(rd, index, var, 0, -2, "ts12", "[1]", "total stress 12", FALSE);
         index++;
         index_post++;
@@ -12524,7 +12514,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
       var = R_STRESS22;
       if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
-        TOTAL_STRESS22 = index_post;
+        goma_ctx->post.total_stress22 = index_post;
         set_nv_tkud(rd, index, var, 0, -2, "ts22", "[1]", "total stress 22", FALSE);
         index++;
         index_post++;
@@ -12532,7 +12522,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
       var = R_STRESS13;
       if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
-        TOTAL_STRESS13 = index_post;
+        goma_ctx->post.total_stress13 = index_post;
         set_nv_tkud(rd, index, var, 0, -2, "ts13", "[1]", "total stress 13", FALSE);
         index++;
         index_post++;
@@ -12540,7 +12530,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
       var = R_STRESS23;
       if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
-        TOTAL_STRESS23 = index_post;
+        goma_ctx->post.total_stress23 = index_post;
         set_nv_tkud(rd, index, var, 0, -2, "ts23", "[1]", "total stress 23", FALSE);
         index++;
         index_post++;
@@ -12548,7 +12538,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
       var = R_STRESS33;
       if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
-        TOTAL_STRESS33 = index_post;
+        goma_ctx->post.total_stress33 = index_post;
         set_nv_tkud(rd, index, var, 0, -2, "ts33", "[1]", "total stress 33", FALSE);
         index++;
         index_post++;
@@ -12556,13 +12546,14 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (nn_average > 0) {
-    for (i = 0; i < nn_average; i++) {
-      if (post_process_variable_is_active(pp_average[i], goma_ctx->fem.pg->imtrx)) {
-        pp_average[i]->index = index;
-        pp_average[i]->index_post = index_post;
+  if (goma_ctx->post.nn_average > 0) {
+    for (i = 0; i < goma_ctx->post.nn_average; i++) {
+      if (post_process_variable_is_active(goma_ctx->post.pp_average[i], goma_ctx->fem.pg->imtrx)) {
+        goma_ctx->post.pp_average[i]->index = index;
+        goma_ctx->post.pp_average[i]->index_post = index_post;
 
-        set_nv_tkud(rd, index, 0, 0, -2, pp_average[i]->type_name, "[1]", "average value", FALSE);
+        set_nv_tkud(rd, index, 0, 0, -2, goma_ctx->post.pp_average[i]->type_name, "[1]",
+                    "average value", FALSE);
         index++;
         index_post++;
       }
@@ -12572,8 +12563,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
   /************************** setup output of time derivatives if requested */
 
-  if (TIME_DERIVATIVES != -1 && (goma_ctx->problem.time_integration != STEADY)) {
-    if (TIME_DERIVATIVES == 2) {
+  if (goma_ctx->post.time_derivatives != -1 && (goma_ctx->problem.time_integration != STEADY)) {
+    if (goma_ctx->post.time_derivatives == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing time derivatives cannot be exported yet!");
     }
     for (var = V_FIRST; var < V_LAST; var++) {
@@ -12641,11 +12632,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   rd->nnv = index;
   *tnv_post = index - *tnv;
 
-  if ((TIME_DERIVATIVES != -1 && goma_ctx->fem.pd_glob[0]->TimeIntegration == TRANSIENT) &&
+  if ((goma_ctx->post.time_derivatives != -1 &&
+       goma_ctx->fem.pd_glob[0]->TimeIntegration == TRANSIENT) &&
       index_post != (*tnv_post - *tnv))
     GOMA_WH(-1, "Bad nodal post process variable count ");
 
-  if (TIME_DERIVATIVES == -1 && index_post != *tnv_post)
+  if (goma_ctx->post.time_derivatives == -1 && index_post != *tnv_post)
     GOMA_WH(-1, "Bad nodal post process variable count ");
 
   return (status);
@@ -12723,39 +12715,40 @@ int load_elem_tkn(struct Results_Description *rd, const Exo_DB *exo, int tev, in
      each be listed separately and painfully */
 
   /* ZZ error based on the fluid shear stress energy norm */
-  if (ERROR_ZZ_VEL != -1 &&
+  if (goma_ctx->post.error_zz_vel != -1 &&
       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_ev_tkud(rd, index, 0, "ERR_ZZ_V", "[1]", "Zienkiewicz-Zhu error from velocity", FALSE);
     index++;
-    ERROR_ZZ_VEL = index_post;
+    goma_ctx->post.error_zz_vel = index_post;
     index_post++;
 
-    if (ERROR_ZZ_VEL_ELSIZE != -1) {
+    if (goma_ctx->post.error_zz_vel_elsize != -1) {
       set_ev_tkud(rd, index, 0, "ERR_ZZ_V_ELSIZE", "[1]",
                   "Target element size from Zienkiewicz-Zhu error from velocity", FALSE);
       index++;
-      ERROR_ZZ_VEL_ELSIZE = index_post;
+      goma_ctx->post.error_zz_vel_elsize = index_post;
       index_post++;
     }
   } else {
-    ERROR_ZZ_VEL = -1;
+    goma_ctx->post.error_zz_vel = -1;
   }
 
   /* ZZ error based on the heat flux energy norm */
-  if (ERROR_ZZ_Q != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
+  if (goma_ctx->post.error_zz_q != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
     set_ev_tkud(rd, index, 0, "ERR_ZZ_Q", "[1]", "Zienkiewicz-Zhu error from heat flux", FALSE);
     index++;
-    ERROR_ZZ_Q = index_post;
+    goma_ctx->post.error_zz_q = index_post;
     index_post++;
-    if (ERROR_ZZ_Q_ELSIZE != -1) {
+    if (goma_ctx->post.error_zz_q_elsize != -1) {
       set_ev_tkud(rd, index, 0, "ERR_ZZ_Q_ELSIZE", "[1]",
                   "Target element size from Zienkiewicz-Zhu error from heat flux", FALSE);
       index++;
-      ERROR_ZZ_Q_ELSIZE = index_post;
+      goma_ctx->post.error_zz_q_elsize = index_post;
       index_post++;
     }
   } else {
-    ERROR_ZZ_Q = -1;
+    goma_ctx->post.error_zz_q = -1;
   }
 
   /* ZZ error based on the pressure energy norm */
@@ -12767,21 +12760,21 @@ int load_elem_tkn(struct Results_Description *rd, const Exo_DB *exo, int tev, in
         goma_ctx->fem.pd_glob[i]->MeshMotion == DYNAMIC_LAGRANGIAN)
       check = 0;
   }
-  if (ERROR_ZZ_P != -1 &&
+  if (goma_ctx->post.error_zz_p != -1 &&
       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
     set_ev_tkud(rd, index, 0, "ERR_ZZ_P", "[1]", "Zienkiewicz-Zhu error from pressure", FALSE);
     index++;
-    ERROR_ZZ_P = index_post;
+    goma_ctx->post.error_zz_p = index_post;
     index_post++;
-    if (ERROR_ZZ_P_ELSIZE != -1) {
+    if (goma_ctx->post.error_zz_p_elsize != -1) {
       set_ev_tkud(rd, index, 0, "ERR_ZZ_P_ELSIZE", "[1]",
                   "Target element size from Zienkiewicz-Zhu error from pressure", FALSE);
       index++;
-      ERROR_ZZ_P_ELSIZE = index_post;
+      goma_ctx->post.error_zz_p_elsize = index_post;
       index_post++;
     }
   } else {
-    ERROR_ZZ_P = -1;
+    goma_ctx->post.error_zz_p = -1;
   }
 
   /* Now, if necessary, cycle through and look for Hysteretic saturation models
@@ -12809,7 +12802,7 @@ int load_elem_tkn(struct Results_Description *rd, const Exo_DB *exo, int tev, in
           goma_ctx->fem.mp->SaturationModel == TANH_HYST && !ipost) {
         ipost = TRUE;
 
-        SAT_CURVE_TYPE = index_post;
+        goma_ctx->post.sat_curve_type = index_post;
         for (j = 0; j < ip_total; j++) {
           /* We just found more element variables */
           /* Append a index suffix onto the var name to differentiate
@@ -12821,7 +12814,7 @@ int load_elem_tkn(struct Results_Description *rd, const Exo_DB *exo, int tev, in
           index_post++;
         }
 
-        SAT_QP_SWITCH = index_post;
+        goma_ctx->post.sat_qp_switch = index_post;
         for (j = 0; j < ip_total; j++) {
           sprintf(appended_name, "sat_switch%d", j);
           set_ev_tkud(rd, index, 0, appended_name, "[1]",
@@ -12830,7 +12823,7 @@ int load_elem_tkn(struct Results_Description *rd, const Exo_DB *exo, int tev, in
           index_post++;
         }
 
-        CAP_PRESS_SWITCH = index_post;
+        goma_ctx->post.cap_press_switch = index_post;
         for (j = 0; j < ip_total; j++) {
           sprintf(appended_name, "pc_switch%d", j);
           set_ev_tkud(rd, index, 0, appended_name, "[1]", "Value of cap press at hysteresis switch",
@@ -12845,13 +12838,14 @@ int load_elem_tkn(struct Results_Description *rd, const Exo_DB *exo, int tev, in
   /* Finally put index into the results description structure */
   rd->nev = index;
   *tev_post = index - tev;
-  Num_Elem_Post_Proc_Var = index_post;
+  goma_ctx->post.num_elem_post_proc_var = index_post;
 
-  if ((TIME_DERIVATIVES != -1 && goma_ctx->fem.pd_glob[0]->TimeIntegration == TRANSIENT) &&
+  if ((goma_ctx->post.time_derivatives != -1 &&
+       goma_ctx->fem.pd_glob[0]->TimeIntegration == TRANSIENT) &&
       index_post != (*tev_post - tev))
     GOMA_WH(-1, "Bad elem post process variable count ");
 
-  if (TIME_DERIVATIVES == -1 && index_post != *tev_post)
+  if (goma_ctx->post.time_derivatives == -1 && index_post != *tev_post)
     GOMA_WH(-1, "Bad elem post process variable count ");
 
   return (status);

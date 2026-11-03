@@ -96,7 +96,7 @@ void write_solution(char output_file[],             /* name EXODUS II file */
     /*
      *  Write out time derivatives if requested
      */
-    if (TIME_DERIVATIVES != -1 && (goma_ctx->problem.time_integration != STEADY)) {
+    if (goma_ctx->post.time_derivatives != -1 && (goma_ctx->problem.time_integration != STEADY)) {
       for (i = 0; i < rd->TotalNVSolnOutput; i++) {
         i_post = rd->TotalNVSolnOutput + rd->TotalNVPostOutput + i;
         extract_nodal_vec(xdot, rd->nvtype[i_post], rd->nvkind[i_post], rd->nvmatID[i], gvec, exo,
@@ -143,7 +143,7 @@ void write_solution(char output_file[],             /* name EXODUS II file */
     post_process_elem(x, x_old, xdot, xdot_old, resid_vector, tev, tev_post, gvec_elem, step,
                       &time_value, delta_t, exo, dpi, rd);
     /* Write out time derivatives if requested */
-    if (TIME_DERIVATIVES != -1 && (goma_ctx->problem.time_integration != STEADY)) {
+    if (goma_ctx->post.time_derivatives != -1 && (goma_ctx->problem.time_integration != STEADY)) {
       for (i = 0; i < tev; i++) {
         i_post = tev_post + i;
         extract_elem_vec(xdot, i_post, rd->evtype[i_post], gvec_elem, exo, 0);
@@ -184,7 +184,7 @@ void write_solution_segregated(char output_file[],
     if (goma_ctx->fem.pg->imtrx > 0) {
       offset += rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVSolnOutput +
                 rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVPostOutput;
-      if (TIME_DERIVATIVES != -1 && (goma_ctx->problem.time_integration != STEADY)) {
+      if (goma_ctx->post.time_derivatives != -1 && (goma_ctx->problem.time_integration != STEADY)) {
         offset += rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVSolnOutput;
       }
     }
@@ -208,7 +208,7 @@ void write_solution_segregated(char output_file[],
     if (goma_ctx->fem.pg->imtrx > 0) {
       offset += rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVSolnOutput +
                 rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVPostOutput;
-      if (TIME_DERIVATIVES != -1 && (goma_ctx->problem.time_integration != STEADY)) {
+      if (goma_ctx->post.time_derivatives != -1 && (goma_ctx->problem.time_integration != STEADY)) {
         offset += rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVSolnOutput;
       }
     }
@@ -234,7 +234,7 @@ void write_solution_segregated(char output_file[],
 
       step = (*nprint) + 1;
 
-      if (TIME_DERIVATIVES != -1 && (goma_ctx->problem.time_integration != STEADY)) {
+      if (goma_ctx->post.time_derivatives != -1 && (goma_ctx->problem.time_integration != STEADY)) {
         if (goma_ctx->fem.pg->imtrx > 0) {
           offset += rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVSolnOutput +
                     rd[goma_ctx->fem.pg->imtrx - 1]->TotalNVPostOutput +

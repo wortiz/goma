@@ -24,6 +24,11 @@ TEST_CASE("goma context create has startup defaults", "[util][goma_context]") {
   REQUIRE(ctx->particles.xi_boundary_tolerances[2] == XI_BOUNDARY_TOLERANCE2);
   REQUIRE(ctx->mesh.coor == nullptr);
   REQUIRE(ctx->particles.element_info == nullptr);
+  // post-processing variable flags are off by default
+  REQUIRE(ctx->post.stream == -1);
+  REQUIRE(ctx->post.density == -1);
+  REQUIRE(ctx->post.user_post == -1);
+  REQUIRE(ctx->post.nn_post_fluxes == 0);
   goma_context_destroy(ctx);
 }
 
@@ -34,6 +39,8 @@ TEST_CASE("goma context default instance matches goma_context_init", "[util][gom
   REQUIRE(goma_ctx->num_requests == fresh->num_requests);
   REQUIRE(goma_ctx->exo_time_plane == fresh->exo_time_plane);
   REQUIRE(goma_ctx->decompose_flag == fresh->decompose_flag);
+  REQUIRE(goma_ctx->post.stream == fresh->post.stream);
+  REQUIRE(goma_ctx->post.pressure_cont == fresh->post.pressure_cont);
   REQUIRE(std::strcmp(goma_ctx->front_scratch_directory, fresh->front_scratch_directory) == 0);
   for (int i = 0; i < 3; i++) {
     REQUIRE(goma_ctx->particles.xi_boundary_tolerances[i] ==

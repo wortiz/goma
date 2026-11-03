@@ -504,6 +504,201 @@ typedef struct GomaBC {
   double pressure_datum_value; /* value of the pressure datum */
 } GomaBC;
 
+struct Post_Processing_Averages;
+struct Post_Processing_Data;
+struct Post_Processing_Data_Sens;
+struct Post_Processing_Error;
+struct Post_Processing_Fluxes;
+struct Post_Processing_Fluxes_Sens;
+struct Post_Processing_Global;
+struct Post_Processing_Particles;
+struct Post_Processing_Volumetric;
+
+/*
+ * Post-processing requests and variable flags, formerly the globals in
+ * mm_post_def.h / mm_post_proc.c.
+ */
+typedef struct GomaPost {
+  /* requested fluxes, data, error metrics, particles, volume integrals, globals, averages */
+  struct Post_Processing_Fluxes **pp_fluxes;
+  struct Post_Processing_Fluxes_Sens **pp_fluxes_sens;
+  struct Post_Processing_Data **pp_data;
+  struct Post_Processing_Data_Sens **pp_data_sens;
+  struct Post_Processing_Error *pp_error_data;
+  struct Post_Processing_Particles **pp_particles;
+  struct Post_Processing_Volumetric **pp_volume;
+  struct Post_Processing_Global **pp_global;
+  struct Post_Processing_Averages **pp_average;
+  /* number of entries in each list above */
+  int nn_post_fluxes;
+  int nn_post_fluxes_sens;
+  int nn_post_data;
+  int nn_post_data_sens;
+  int nn_error_metrics;
+  int nn_particles;
+  int nn_volume;
+  int ppvi_type;
+  int nn_global;
+  int nn_average;
+
+  int num_nodal_post_proc_var;
+  int num_elem_post_proc_var;
+  int len_u_post_proc; /* length of u_post_proc */
+  double *u_post_proc; /* user-provided values for user-defined post processing */
+
+  /* Post-processing variable flags: -1 if not requested, otherwise the id of the
+   * (first) post-processing variable for this quantity, set in load_nodal_tkn. */
+  int capillary_pressure;
+  int conc_cont;
+  int conduction_vectors;
+  int curl_v;
+  int darcy_velocity_gas;
+  int darcy_velocity_liq;
+  int density;
+  int polymer_viscosity;
+  int polymer_time_const;
+  int mobility_parameter;
+  int ptt_xi;
+  int ptt_epsilon;
+  int dielectrophoretic_field;
+  int dielectrophoretic_field_norm;
+  int enormsq_field;
+  int enormsq_field_norm;
+  int diffusion_vectors;
+  int diffusion_vectors_por_liq_gphase;
+  int diffusion_vectors_por_air_gphase;
+  int div_pvelocity;
+  int div_total;
+  int div_velocity;
+  int electric_field;
+  int electric_field_mag;
+  int energy_fluxlines;
+  int error_zz_p;
+  int error_zz_p_elsize;
+  int error_zz_q;
+  int error_zz_q_elsize;
+  int error_zz_vel;
+  int error_zz_vel_elsize;
+  int evp_def_grad_tensor;
+  int external_post;
+  int fill_cont;
+  int first_invar_strain;
+  int fluxlines;
+  int lagrange_convection;
+  int mean_shear;
+  int mm_residuals;
+  int ns_residuals;
+  int porous_rho_gas_solvents;
+  int porous_rho_lphase;
+  int porous_rho_total_solvents;
+  int porous_saturation;
+  int porous_gridpeclet;
+  int porous_supgvelocity;
+  int porous_liquid_accum_rate;
+  int rel_liq_perm;
+  int pressure_cont;
+  int sh_div_s_v_cont;
+  int sh_curv_cont;
+  int real_stress_tensor;
+  int sec_invar_strain;
+  int strain_tensor;
+  int stream;
+  int stream_normal_stress;
+  int stream_shear_stress;
+  int stream_tension;
+  int stress_cont;
+  int stress_tensor;
+  int surface_vectors;
+  int shell_normals;
+  int third_invar_strain;
+  int time_derivatives;
+  int total_stress11;
+  int total_stress12;
+  int total_stress13;
+  int total_stress22;
+  int total_stress23;
+  int total_stress33;
+  int user_post;
+  int pp_viscosity;
+  int pp_flowingliquid_viscosity;
+  int pp_volumefractiongas;
+  int sat_curve_type;
+  int cap_press_switch;
+  int sat_qp_switch;
+  int num_curve_switch;
+  int sat_hyst_min;
+  int sat_hyst_max;
+  int acoustic_pressure;
+  int acoustic_phase_angle;
+  int acoustic_energy_density;
+  int light_intensity;
+  int principal_stress;
+  int principal_real_stress;
+  int lub_height;
+  int lub_height_2;
+  int lub_velo_upper;
+  int lub_velo_lower;
+  int lub_velo_field;
+  int lub_velo_field_2;
+  int disj_press;
+  int sh_sat_open;
+  int sh_sat_open_2;
+  int sh_cap_pres;
+  int sh_pore_flux;
+  int sh_stress_tensor;
+  int sh_tang;
+  int pp_lame_mu;
+  int pp_lame_lambda;
+  int von_mises_strain;
+  int von_mises_stress;
+  int conf_map;
+  int j_flux;
+  int eig;
+  int eig1;
+  int eig2;
+  int eig3;
+  int heaviside;
+  int rho_dot;
+  int moment_sources;
+  int yzbeta;
+  int grad_y;
+  int grad_sh;
+  int untracked_spec;
+  int tfmp_gas_velo;
+  int tfmp_liq_velo;
+  int tfmp_inv_peclet;
+  int tfmp_krg;
+  int velo_speed;
+  int gies_crit;
+  int helicity;
+  int lamb_vector;
+  int q_fcn;
+  int poynting_vectors;
+  int pspg_pp;
+  int saramito_yield;
+  int stress_norm;
+  int species_sources;
+  int viscous_stress;
+  int pp_velocity_gradients;
+  int viscous_stress_norm;
+  int viscous_von_mises_stress;
+  int em_contours;
+  int total_em_contours;
+  int scattered_em_contours;
+  int orientation_vectors;
+  int first_strainrate_invar;
+  int sec_strainrate_invar;
+  int third_strainrate_invar;
+  int wall_distance;
+  int contact_distance;
+  int pp_fluid_stress;
+  int lub_convection;
+  int pp_mesh_velocity;
+  int lub_fluid_source;
+  int mean_vorticity;
+  int pp_diffusivity;
+} GomaPost;
+
 /*
  * GomaContext collects process-wide state that used to live in individual
  * global variables: MPI/parallel information and I/O / run configuration.
@@ -575,6 +770,7 @@ typedef struct GomaContext {
   GomaFem fem;             /* problem description, materials and element working storage */
   GomaProblem problem;     /* problem setup, continuation parameters and unknown maps */
   GomaBC bc;               /* boundary conditions, rotations and data tables */
+  GomaPost post;           /* post-processing requests and variable flags */
 } GomaContext;
 
 /*
@@ -591,7 +787,7 @@ typedef struct GomaContext {
  * All other mesh pointers alias Exo_DB storage and are only cleared.
  */
 
-/* Set every field of ctx to the Goma startup default. Does not free anything. */
+/* Set every field of ctx to the Goma startup default (GOMA_CONTEXT_DEFAULTS). Frees nothing. */
 void goma_context_init(GomaContext *ctx);
 
 /* Allocate a context initialized with goma_context_init(). Returns NULL on failure. */

@@ -4432,12 +4432,12 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
   if (print_flag && goma_ctx->proc_id == 0) {
     FILE *jfp;
     if ((jfp = fopen(filenm, "a")) != NULL) {
-      if (ppvi_type == PPVI_VERBOSE) {
+      if (goma_ctx->post.ppvi_type == PPVI_VERBOSE) {
         fprintf(jfp, "Time/iteration = %e \n", time_value);
         fprintf(jfp, "\t  (%s) Volume Integral for block %d species %d\n", quantity_str, blk_id,
                 species_id);
       }
-      if (ppvi_type == PPVI_CSV) {
+      if (goma_ctx->post.ppvi_type == PPVI_CSV) {
         fprintf(jfp, "%e,", time_value);
       }
       fflush(jfp);
@@ -4705,14 +4705,14 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
     FILE *jfp;
 
     if ((jfp = fopen(filenm, "a")) != NULL) {
-      if (ppvi_type == PPVI_VERBOSE) {
+      if (goma_ctx->post.ppvi_type == PPVI_VERBOSE) {
         if (quantity == I_SPECIES_SOURCE) {
           fprintf(jfp, "   volume= %10.7e \n", goma_ctx->spec_source_inventory[mn][species_id]);
         } else {
           fprintf(jfp, "   volume= %10.7e \n", sum);
         }
       }
-      if (ppvi_type == PPVI_CSV) {
+      if (goma_ctx->post.ppvi_type == PPVI_CSV) {
         fprintf(jfp, "%10.7e\n", sum);
       }
       fclose(jfp);
@@ -8860,7 +8860,7 @@ static int load_fv_grads_sens(void) {
   /* MMH
    * curl(v)
    */
-  if (CURL_V != -1) {
+  if (goma_ctx->post.curl_v != -1) {
     v = VELOCITY1;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {

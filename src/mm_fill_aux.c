@@ -382,7 +382,7 @@ int load_coordinate_scales(const int c, struct Field_Variables *f) {
    * output is of interest.
    */
 
-  if (CURL_V != -1) {
+  if (goma_ctx->post.curl_v != -1) {
 
     /* Note d_curl_e_dq isn't computed in the DO_NOT_UNROLL block
      */

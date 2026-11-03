@@ -18,36 +18,73 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Static storage with the same defaults goma_context_init() applies. */
-static GomaContext goma_context_storage = {
-    .num_proc = 1,
-    .dim = -1,
-    .num_requests = 6,
-    .unlimited_output = 1,
-    .exo_time_plane = INT_MAX,
-    .decompose_flag = 1,
-    .front_scratch_directory = FRONT_SCRATCH_DIRECTORY,
-    .particles = {.xi_boundary_tolerances = {XI_BOUNDARY_TOLERANCE0, XI_BOUNDARY_TOLERANCE1,
-                                             XI_BOUNDARY_TOLERANCE2}}};
+/*
+ * Startup defaults for every context field; anything not listed is zero/NULL.
+ * Used for the built-in default context and by goma_context_init().
+ */
+#define GOMA_CONTEXT_DEFAULTS                                                                  \
+  {                                                                                            \
+      .num_proc = 1,                                                                           \
+      .dim = -1,                                                                               \
+      .num_requests = 6,                                                                       \
+      .unlimited_output = 1,                                                                   \
+      .exo_time_plane = INT_MAX,                                                               \
+      .decompose_flag = 1,                                                                     \
+      .front_scratch_directory = FRONT_SCRATCH_DIRECTORY,                                      \
+      .particles = {.xi_boundary_tolerances = {XI_BOUNDARY_TOLERANCE0, XI_BOUNDARY_TOLERANCE1, \
+                                               XI_BOUNDARY_TOLERANCE2}},                       \
+      .post = {GOMA_POST_DEFAULTS},                                                            \
+  }
+
+/* Post-processing variable flags are off (-1) by default. */
+#define GOMA_POST_DEFAULTS                                                                       \
+  .capillary_pressure = -1, .conc_cont = -1, .conduction_vectors = -1, .curl_v = -1,             \
+  .darcy_velocity_gas = -1, .darcy_velocity_liq = -1, .density = -1, .polymer_viscosity = -1,    \
+  .polymer_time_const = -1, .mobility_parameter = -1, .ptt_xi = -1, .ptt_epsilon = -1,           \
+  .dielectrophoretic_field = -1, .dielectrophoretic_field_norm = -1, .diffusion_vectors = -1,    \
+  .diffusion_vectors_por_liq_gphase = -1, .diffusion_vectors_por_air_gphase = -1,                \
+  .div_pvelocity = -1, .div_total = -1, .div_velocity = -1, .electric_field = -1,                \
+  .electric_field_mag = -1, .energy_fluxlines = -1, .error_zz_p = -1, .error_zz_p_elsize = -1,   \
+  .error_zz_q = -1, .error_zz_q_elsize = -1, .error_zz_vel = -1, .error_zz_vel_elsize = -1,      \
+  .evp_def_grad_tensor = -1, .external_post = -1, .fill_cont = -1, .first_invar_strain = -1,     \
+  .fluxlines = -1, .lagrange_convection = -1, .mean_shear = -1, .mm_residuals = -1,              \
+  .ns_residuals = -1, .porous_rho_gas_solvents = -1, .porous_rho_lphase = -1,                    \
+  .porous_rho_total_solvents = -1, .porous_saturation = -1, .porous_gridpeclet = -1,             \
+  .porous_supgvelocity = -1, .porous_liquid_accum_rate = -1, .rel_liq_perm = -1,                 \
+  .pressure_cont = -1, .sh_div_s_v_cont = -1, .sh_curv_cont = -1, .real_stress_tensor = -1,      \
+  .sec_invar_strain = -1, .strain_tensor = -1, .stream = -1, .stream_normal_stress = -1,         \
+  .stream_shear_stress = -1, .stream_tension = -1, .stress_cont = -1, .stress_tensor = -1,       \
+  .surface_vectors = -1, .shell_normals = -1, .third_invar_strain = -1, .time_derivatives = -1,  \
+  .total_stress11 = -1, .total_stress12 = -1, .total_stress13 = -1, .total_stress22 = -1,        \
+  .total_stress23 = -1, .total_stress33 = -1, .user_post = -1, .pp_viscosity = -1,               \
+  .pp_flowingliquid_viscosity = -1, .pp_volumefractiongas = -1, .sat_curve_type = -1,            \
+  .cap_press_switch = -1, .sat_qp_switch = -1, .num_curve_switch = -1, .sat_hyst_min = -1,       \
+  .sat_hyst_max = -1, .acoustic_pressure = -1, .acoustic_phase_angle = -1,                       \
+  .acoustic_energy_density = -1, .light_intensity = -1, .principal_stress = -1,                  \
+  .principal_real_stress = -1, .lub_height = -1, .lub_height_2 = -1, .lub_velo_upper = -1,       \
+  .lub_velo_lower = -1, .lub_velo_field = -1, .lub_velo_field_2 = -1, .disj_press = -1,          \
+  .sh_sat_open = -1, .sh_sat_open_2 = -1, .sh_cap_pres = -1, .sh_pore_flux = -1,                 \
+  .sh_stress_tensor = -1, .sh_tang = -1, .pp_lame_mu = -1, .pp_lame_lambda = -1,                 \
+  .von_mises_strain = -1, .von_mises_stress = -1, .conf_map = -1, .j_flux = -1, .eig = -1,       \
+  .eig1 = -1, .eig2 = -1, .eig3 = -1, .heaviside = -1, .rho_dot = -1, .moment_sources = -1,      \
+  .yzbeta = -1, .grad_y = -1, .grad_sh = -1, .untracked_spec = -1, .tfmp_gas_velo = -1,          \
+  .tfmp_liq_velo = -1, .tfmp_inv_peclet = -1, .tfmp_krg = -1, .velo_speed = -1, .gies_crit = -1, \
+  .helicity = -1, .lamb_vector = -1, .q_fcn = -1, .poynting_vectors = -1, .pspg_pp = -1,         \
+  .saramito_yield = -1, .stress_norm = -1, .species_sources = -1, .viscous_stress = -1,          \
+  .pp_velocity_gradients = -1, .viscous_stress_norm = -1, .viscous_von_mises_stress = -1,        \
+  .em_contours = -1, .total_em_contours = -1, .scattered_em_contours = -1,                       \
+  .orientation_vectors = -1, .first_strainrate_invar = -1, .sec_strainrate_invar = -1,           \
+  .third_strainrate_invar = -1, .wall_distance = -1, .contact_distance = -1,                     \
+  .pp_fluid_stress = -1, .lub_convection = -1, .pp_mesh_velocity = -1, .lub_fluid_source = -1,   \
+  .mean_vorticity = -1, .pp_diffusivity = -1
+
+static const GomaContext goma_context_defaults = GOMA_CONTEXT_DEFAULTS;
+
+static GomaContext goma_context_storage = GOMA_CONTEXT_DEFAULTS;
 
 GomaContext *goma_ctx = &goma_context_storage;
 
-void goma_context_init(GomaContext *ctx) {
-  memset(ctx, 0, sizeof(*ctx));
-  ctx->num_proc = 1;
-  ctx->proc_id = 0;
-  ctx->dim = -1;
-  ctx->request = NULL;
-  ctx->status = NULL;
-  ctx->num_requests = 6;
-  ctx->unlimited_output = 1;
-  ctx->exo_time_plane = INT_MAX;
-  ctx->decompose_flag = 1;
-  strncpy(ctx->front_scratch_directory, FRONT_SCRATCH_DIRECTORY, MAX_FNL - 1);
-  ctx->particles.xi_boundary_tolerances[0] = XI_BOUNDARY_TOLERANCE0;
-  ctx->particles.xi_boundary_tolerances[1] = XI_BOUNDARY_TOLERANCE1;
-  ctx->particles.xi_boundary_tolerances[2] = XI_BOUNDARY_TOLERANCE2;
-}
+void goma_context_init(GomaContext *ctx) { *ctx = goma_context_defaults; }
 
 GomaContext *goma_context_create(void) {
   GomaContext *ctx = malloc(sizeof(GomaContext));

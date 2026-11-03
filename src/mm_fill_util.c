@@ -2021,7 +2021,7 @@ int load_bf_grad(void)
          * variable.  I had one, but it is not presently being used.
          */
 
-        if (bfv->interpolation != I_N1 && (pd->gv[EM_E1_REAL] || CURL_V != -1)) {
+        if (bfv->interpolation != I_N1 && (pd->gv[EM_E1_REAL] || goma_ctx->post.curl_v != -1)) {
           siz = DIM * DIM * MDE * sizeof(double);
           memset(&(bfv->curl_phi_e[0][0][0]), 0, siz);
 
@@ -3044,8 +3044,9 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
      and continuation */
 
   goma_ctx->solver.save_old_a = FALSE;
-  if (goma_ctx->solver.modified_newton || goma_ctx->problem.n_ac > 0 || nn_post_data_sens > 0 ||
-      nn_post_fluxes_sens > 0 || goma_ctx->problem.continuation > 0) {
+  if (goma_ctx->solver.modified_newton || goma_ctx->problem.n_ac > 0 ||
+      goma_ctx->post.nn_post_data_sens > 0 || goma_ctx->post.nn_post_fluxes_sens > 0 ||
+      goma_ctx->problem.continuation > 0) {
     goma_ctx->solver.save_old_a = TRUE;
   }
 
@@ -3143,8 +3144,9 @@ void alloc_VBR_sparse_arrays(struct GomaLinearSolverData *ams, Exo_DB *exo, Dpi 
      and continuation */
 
   goma_ctx->solver.save_old_a = FALSE;
-  if (goma_ctx->solver.modified_newton || goma_ctx->problem.n_ac > 0 || nn_post_data_sens > 0 ||
-      nn_post_fluxes_sens > 0 || goma_ctx->problem.continuation > 0) {
+  if (goma_ctx->solver.modified_newton || goma_ctx->problem.n_ac > 0 ||
+      goma_ctx->post.nn_post_data_sens > 0 || goma_ctx->post.nn_post_fluxes_sens > 0 ||
+      goma_ctx->problem.continuation > 0) {
     goma_ctx->solver.save_old_a = TRUE;
   }
 

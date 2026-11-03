@@ -519,14 +519,14 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
    *  sensitivity vectors
    */
 
-  for (i = 0; i < nn_post_fluxes_sens; i++) {
-    num_pvector = MAX(num_pvector, pp_fluxes_sens[i]->vector_id);
+  for (i = 0; i < goma_ctx->post.nn_post_fluxes_sens; i++) {
+    num_pvector = MAX(num_pvector, goma_ctx->post.pp_fluxes_sens[i]->vector_id);
   }
-  for (i = 0; i < nn_post_data_sens; i++) {
-    num_pvector = MAX(num_pvector, pp_data_sens[i]->vector_id);
+  for (i = 0; i < goma_ctx->post.nn_post_data_sens; i++) {
+    num_pvector = MAX(num_pvector, goma_ctx->post.pp_data_sens[i]->vector_id);
   }
 
-  if ((nn_post_fluxes_sens + nn_post_data_sens) > 0) {
+  if ((goma_ctx->post.nn_post_fluxes_sens + goma_ctx->post.nn_post_data_sens) > 0) {
     num_pvector++;
     num_pvector = MAX(num_pvector, 2);
     x_sens_p = Dmatrix_birth(num_pvector, numProcUnknowns);
@@ -944,34 +944,43 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
         */
 
-        for (i = 0; i < nn_post_fluxes; i++) {
-          evaluate_flux(exo, dpi, pp_fluxes[i]->ss_id, pp_fluxes[i]->flux_type,
-                        pp_fluxes[i]->flux_type_name, pp_fluxes[i]->blk_id,
-                        pp_fluxes[i]->species_number, pp_fluxes[i]->flux_filenm,
-                        pp_fluxes[i]->profile_flag, x, xdot, NULL, delta_s[0], path1[0], 1);
+        for (i = 0; i < goma_ctx->post.nn_post_fluxes; i++) {
+          evaluate_flux(
+              exo, dpi, goma_ctx->post.pp_fluxes[i]->ss_id, goma_ctx->post.pp_fluxes[i]->flux_type,
+              goma_ctx->post.pp_fluxes[i]->flux_type_name, goma_ctx->post.pp_fluxes[i]->blk_id,
+              goma_ctx->post.pp_fluxes[i]->species_number, goma_ctx->post.pp_fluxes[i]->flux_filenm,
+              goma_ctx->post.pp_fluxes[i]->profile_flag, x, xdot, NULL, delta_s[0], path1[0], 1);
         }
 
         /*
           COMPUTE FLUX, FORCE SENSITIVITIES
         */
 
-        for (i = 0; i < nn_post_fluxes_sens; i++) {
-          evaluate_flux_sens(exo, dpi, pp_fluxes_sens[i]->ss_id, pp_fluxes_sens[i]->flux_type,
-                             pp_fluxes_sens[i]->flux_type_name, pp_fluxes_sens[i]->blk_id,
-                             pp_fluxes_sens[i]->species_number, pp_fluxes_sens[i]->sens_type,
-                             pp_fluxes_sens[i]->sens_id, pp_fluxes_sens[i]->sens_flt,
-                             pp_fluxes_sens[i]->sens_flt2, pp_fluxes_sens[i]->vector_id,
-                             pp_fluxes_sens[i]->flux_filenm, pp_fluxes_sens[i]->profile_flag, x,
-                             xdot, x_sens_p, delta_s[0], path1[0], 1);
+        for (i = 0; i < goma_ctx->post.nn_post_fluxes_sens; i++) {
+          evaluate_flux_sens(exo, dpi, goma_ctx->post.pp_fluxes_sens[i]->ss_id,
+                             goma_ctx->post.pp_fluxes_sens[i]->flux_type,
+                             goma_ctx->post.pp_fluxes_sens[i]->flux_type_name,
+                             goma_ctx->post.pp_fluxes_sens[i]->blk_id,
+                             goma_ctx->post.pp_fluxes_sens[i]->species_number,
+                             goma_ctx->post.pp_fluxes_sens[i]->sens_type,
+                             goma_ctx->post.pp_fluxes_sens[i]->sens_id,
+                             goma_ctx->post.pp_fluxes_sens[i]->sens_flt,
+                             goma_ctx->post.pp_fluxes_sens[i]->sens_flt2,
+                             goma_ctx->post.pp_fluxes_sens[i]->vector_id,
+                             goma_ctx->post.pp_fluxes_sens[i]->flux_filenm,
+                             goma_ctx->post.pp_fluxes_sens[i]->profile_flag, x, xdot, x_sens_p,
+                             delta_s[0], path1[0], 1);
         }
         /*
          * Compute global volumetric quantities
          */
-        for (i = 0; i < nn_volume; i++) {
+        for (i = 0; i < goma_ctx->post.nn_volume; i++) {
           evaluate_volume_integral(
-              exo, dpi, pp_volume[i]->volume_type, pp_volume[i]->volume_name, pp_volume[i]->blk_id,
-              pp_volume[i]->species_no, pp_volume[i]->volume_fname, pp_volume[i]->params,
-              pp_volume[i]->num_params, NULL, x, xdot, delta_s[0], path1[0], 1);
+              exo, dpi, goma_ctx->post.pp_volume[i]->volume_type,
+              goma_ctx->post.pp_volume[i]->volume_name, goma_ctx->post.pp_volume[i]->blk_id,
+              goma_ctx->post.pp_volume[i]->species_no, goma_ctx->post.pp_volume[i]->volume_fname,
+              goma_ctx->post.pp_volume[i]->params, goma_ctx->post.pp_volume[i]->num_params, NULL, x,
+              xdot, delta_s[0], path1[0], 1);
         }
 
       } /* end of if converged block */
@@ -1396,7 +1405,7 @@ free_and_clear:
 
   safer_free((void **)&x_sens);
 
-  if ((nn_post_data_sens + nn_post_fluxes_sens) > 0)
+  if ((goma_ctx->post.nn_post_data_sens + goma_ctx->post.nn_post_fluxes_sens) > 0)
     Dmatrix_death(x_sens_p, num_pvector, numProcUnknowns);
 
   for (i = 0; i < MAX_NUMBER_MATLS; i++) {

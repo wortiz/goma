@@ -1134,12 +1134,14 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
         if (distance < goma_ctx->fem.tran->steady_state_tolerance) {
 
           goma_ctx->fem.pg->imtrx = 0;
-          for (i = 0; i < nn_post_fluxes; i++) {
-            (void)evaluate_flux(exo, dpi, pp_fluxes[i]->ss_id, pp_fluxes[i]->flux_type,
-                                pp_fluxes[i]->flux_type_name, pp_fluxes[i]->blk_id,
-                                pp_fluxes[i]->species_number, pp_fluxes[i]->flux_filenm,
-                                pp_fluxes[i]->profile_flag, x[goma_ctx->fem.pg->imtrx],
-                                xdot[goma_ctx->fem.pg->imtrx], NULL, delta_t_old, time, 1);
+          for (i = 0; i < goma_ctx->post.nn_post_fluxes; i++) {
+            (void)evaluate_flux(
+                exo, dpi, goma_ctx->post.pp_fluxes[i]->ss_id,
+                goma_ctx->post.pp_fluxes[i]->flux_type, goma_ctx->post.pp_fluxes[i]->flux_type_name,
+                goma_ctx->post.pp_fluxes[i]->blk_id, goma_ctx->post.pp_fluxes[i]->species_number,
+                goma_ctx->post.pp_fluxes[i]->flux_filenm, goma_ctx->post.pp_fluxes[i]->profile_flag,
+                x[goma_ctx->fem.pg->imtrx], xdot[goma_ctx->fem.pg->imtrx], NULL, delta_t_old, time,
+                1);
           }
 
           write_solution_segregated(goma_ctx->exo_file_out, resid_vector, x, x_old, xdot, xdot_old,
@@ -2533,20 +2535,22 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
         }
 
         goma_ctx->fem.pg->imtrx = 0;
-        for (i = 0; i < nn_post_fluxes; i++) {
-          (void)evaluate_flux(exo, dpi, pp_fluxes[i]->ss_id, pp_fluxes[i]->flux_type,
-                              pp_fluxes[i]->flux_type_name, pp_fluxes[i]->blk_id,
-                              pp_fluxes[i]->species_number, pp_fluxes[i]->flux_filenm,
-                              pp_fluxes[i]->profile_flag, x[goma_ctx->fem.pg->imtrx],
-                              xdot[goma_ctx->fem.pg->imtrx], NULL, delta_t_old, time, 1);
+        for (i = 0; i < goma_ctx->post.nn_post_fluxes; i++) {
+          (void)evaluate_flux(
+              exo, dpi, goma_ctx->post.pp_fluxes[i]->ss_id, goma_ctx->post.pp_fluxes[i]->flux_type,
+              goma_ctx->post.pp_fluxes[i]->flux_type_name, goma_ctx->post.pp_fluxes[i]->blk_id,
+              goma_ctx->post.pp_fluxes[i]->species_number, goma_ctx->post.pp_fluxes[i]->flux_filenm,
+              goma_ctx->post.pp_fluxes[i]->profile_flag, x[goma_ctx->fem.pg->imtrx],
+              xdot[goma_ctx->fem.pg->imtrx], NULL, delta_t_old, time, 1);
         }
 
-        for (i = 0; i < nn_volume; i++) {
-          evaluate_volume_integral(exo, dpi, pp_volume[i]->volume_type, pp_volume[i]->volume_name,
-                                   pp_volume[i]->blk_id, pp_volume[i]->species_no,
-                                   pp_volume[i]->volume_fname, pp_volume[i]->params,
-                                   pp_volume[i]->num_params, NULL, x[goma_ctx->fem.pg->imtrx],
-                                   xdot[goma_ctx->fem.pg->imtrx], delta_t, time1, 1);
+        for (i = 0; i < goma_ctx->post.nn_volume; i++) {
+          evaluate_volume_integral(
+              exo, dpi, goma_ctx->post.pp_volume[i]->volume_type,
+              goma_ctx->post.pp_volume[i]->volume_name, goma_ctx->post.pp_volume[i]->blk_id,
+              goma_ctx->post.pp_volume[i]->species_no, goma_ctx->post.pp_volume[i]->volume_fname,
+              goma_ctx->post.pp_volume[i]->params, goma_ctx->post.pp_volume[i]->num_params, NULL,
+              x[goma_ctx->fem.pg->imtrx], xdot[goma_ctx->fem.pg->imtrx], delta_t, time1, 1);
         }
 
         if (time1 >= (ROUND_TO_ONE * TimeMax))

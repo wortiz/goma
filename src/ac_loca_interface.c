@@ -529,14 +529,14 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
    *  if computing parameter sensitivities, allocate space for solution
    *  sensitivity vectors
    */
-  for (i = 0; i < nn_post_fluxes_sens; i++) {
-    num_pvector = MAX(num_pvector, pp_fluxes_sens[i]->vector_id);
+  for (i = 0; i < goma_ctx->post.nn_post_fluxes_sens; i++) {
+    num_pvector = MAX(num_pvector, goma_ctx->post.pp_fluxes_sens[i]->vector_id);
   }
-  for (i = 0; i < nn_post_data_sens; i++) {
-    num_pvector = MAX(num_pvector, pp_data_sens[i]->vector_id);
+  for (i = 0; i < goma_ctx->post.nn_post_data_sens; i++) {
+    num_pvector = MAX(num_pvector, goma_ctx->post.pp_data_sens[i]->vector_id);
   }
 
-  if ((nn_post_fluxes_sens + nn_post_data_sens) > 0) {
+  if ((goma_ctx->post.nn_post_fluxes_sens + goma_ctx->post.nn_post_data_sens) > 0) {
     num_pvector++;
     num_pvector = MAX(num_pvector, 2);
     /*x_sens_p = Dmatrix_birth(num_pvector,numProcUnknowns);*/
@@ -1141,7 +1141,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     safer_free((void **)&x_AC_dot);
   }
 
-  if ((nn_post_data_sens + nn_post_fluxes_sens) > 0)
+  if ((goma_ctx->post.nn_post_data_sens + goma_ctx->post.nn_post_fluxes_sens) > 0)
     safer_free((void **)&x_sens_p);
   /*		Dmatrix_death(x_sens_p,num_pvector,numProcUnknowns);*/
 
@@ -1434,22 +1434,29 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
 
     /* INTEGRATE FLUXES, FORCES */
 
-    for (i = 0; i < nn_post_fluxes; i++)
-      evaluate_flux(passdown.exo, passdown.dpi, pp_fluxes[i]->ss_id, pp_fluxes[i]->flux_type,
-                    pp_fluxes[i]->flux_type_name, pp_fluxes[i]->blk_id,
-                    pp_fluxes[i]->species_number, pp_fluxes[i]->flux_filenm,
-                    pp_fluxes[i]->profile_flag, x, passdown.xdot, NULL, delta_s, lambda, 1);
+    for (i = 0; i < goma_ctx->post.nn_post_fluxes; i++)
+      evaluate_flux(
+          passdown.exo, passdown.dpi, goma_ctx->post.pp_fluxes[i]->ss_id,
+          goma_ctx->post.pp_fluxes[i]->flux_type, goma_ctx->post.pp_fluxes[i]->flux_type_name,
+          goma_ctx->post.pp_fluxes[i]->blk_id, goma_ctx->post.pp_fluxes[i]->species_number,
+          goma_ctx->post.pp_fluxes[i]->flux_filenm, goma_ctx->post.pp_fluxes[i]->profile_flag, x,
+          passdown.xdot, NULL, delta_s, lambda, 1);
 
     /* COMPUTE FLUX, FORCE SENSITIVITIES */
 
-    for (i = 0; i < nn_post_fluxes_sens; i++)
+    for (i = 0; i < goma_ctx->post.nn_post_fluxes_sens; i++)
       evaluate_flux_sens(
-          passdown.exo, passdown.dpi, pp_fluxes_sens[i]->ss_id, pp_fluxes_sens[i]->flux_type,
-          pp_fluxes_sens[i]->flux_type_name, pp_fluxes_sens[i]->blk_id,
-          pp_fluxes_sens[i]->species_number, pp_fluxes_sens[i]->sens_type,
-          pp_fluxes_sens[i]->sens_id, pp_fluxes_sens[i]->sens_flt, pp_fluxes_sens[i]->sens_flt2,
-          pp_fluxes_sens[i]->vector_id, pp_fluxes_sens[i]->flux_filenm,
-          pp_fluxes_sens[i]->profile_flag, x, passdown.xdot, passdown.x_sens_p, delta_s, lambda, 1);
+          passdown.exo, passdown.dpi, goma_ctx->post.pp_fluxes_sens[i]->ss_id,
+          goma_ctx->post.pp_fluxes_sens[i]->flux_type,
+          goma_ctx->post.pp_fluxes_sens[i]->flux_type_name,
+          goma_ctx->post.pp_fluxes_sens[i]->blk_id,
+          goma_ctx->post.pp_fluxes_sens[i]->species_number,
+          goma_ctx->post.pp_fluxes_sens[i]->sens_type, goma_ctx->post.pp_fluxes_sens[i]->sens_id,
+          goma_ctx->post.pp_fluxes_sens[i]->sens_flt, goma_ctx->post.pp_fluxes_sens[i]->sens_flt2,
+          goma_ctx->post.pp_fluxes_sens[i]->vector_id,
+          goma_ctx->post.pp_fluxes_sens[i]->flux_filenm,
+          goma_ctx->post.pp_fluxes_sens[i]->profile_flag, x, passdown.xdot, passdown.x_sens_p,
+          delta_s, lambda, 1);
 
   } /*  end of if converged block  */
 

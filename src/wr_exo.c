@@ -939,15 +939,16 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
          - yes, for now they must
          each be listed separately and painfully */
       for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-        if (ERROR_ZZ_VEL != -1 && goma_ctx->problem.num_var_in_type[imtrx][R_MOMENTUM1]) {
+        if (goma_ctx->post.error_zz_vel != -1 &&
+            goma_ctx->problem.num_var_in_type[imtrx][R_MOMENTUM1]) {
           tev++;
-          if (ERROR_ZZ_VEL_ELSIZE != -1) {
+          if (goma_ctx->post.error_zz_vel_elsize != -1) {
             tev++;
           }
         }
-        if (ERROR_ZZ_Q != -1 && goma_ctx->problem.num_var_in_type[imtrx][R_ENERGY]) {
+        if (goma_ctx->post.error_zz_q != -1 && goma_ctx->problem.num_var_in_type[imtrx][R_ENERGY]) {
           tev++;
-          if (ERROR_ZZ_Q_ELSIZE != -1) {
+          if (goma_ctx->post.error_zz_q_elsize != -1) {
             tev++;
           }
         }
@@ -960,9 +961,10 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
       }
 
       for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-        if (ERROR_ZZ_P != -1 && (goma_ctx->problem.num_var_in_type[imtrx][R_MOMENTUM1] || check)) {
+        if (goma_ctx->post.error_zz_p != -1 &&
+            (goma_ctx->problem.num_var_in_type[imtrx][R_MOMENTUM1] || check)) {
           tev++;
-          if (ERROR_ZZ_P_ELSIZE != -1) {
+          if (goma_ctx->post.error_zz_p_elsize != -1) {
             tev++;
           }
         }
@@ -979,11 +981,11 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
            goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) &&
           goma_ctx->fem.mp->SaturationModel == TANH_HYST && !if_ev) {
         for (j = 0; j < ip_total; j++) {
-          if (SAT_CURVE_TYPE != -1)
+          if (goma_ctx->post.sat_curve_type != -1)
             tev++; /*For Sat curve type */
-          if (CAP_PRESS_SWITCH != -1)
+          if (goma_ctx->post.cap_press_switch != -1)
             tev++; /*For saturation switch */
-          if (SAT_QP_SWITCH != -1)
+          if (goma_ctx->post.sat_qp_switch != -1)
             tev++; /*for cap press switch point*/
         }
         if_ev = TRUE;
@@ -1069,7 +1071,8 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
          each be listed separately and painfully */
 
       for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-        if (ERROR_ZZ_VEL != -1 && goma_ctx->problem.num_var_in_type[imtrx][R_MOMENTUM1]) {
+        if (goma_ctx->post.error_zz_vel != -1 &&
+            goma_ctx->problem.num_var_in_type[imtrx][R_MOMENTUM1]) {
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
@@ -1081,7 +1084,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
                this test will prevent that. - RRL */
             asdv(&gvec_elem[eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
           }
-          if (ERROR_ZZ_VEL_ELSIZE != -1) {
+          if (goma_ctx->post.error_zz_vel_elsize != -1) {
             exo->elem_var_tab[i++] = 1;
             ev_indx++;
             /* malloc the entry for this block by number of elems for this block
@@ -1096,7 +1099,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
           }
         }
 
-        if (ERROR_ZZ_Q != -1 && goma_ctx->problem.num_var_in_type[imtrx][R_ENERGY]) {
+        if (goma_ctx->post.error_zz_q != -1 && goma_ctx->problem.num_var_in_type[imtrx][R_ENERGY]) {
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
@@ -1108,7 +1111,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
                this test will prevent that. - RRL */
             asdv(&gvec_elem[eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
           }
-          if (ERROR_ZZ_Q_ELSIZE != -1) {
+          if (goma_ctx->post.error_zz_q_elsize != -1) {
             exo->elem_var_tab[i++] = 1;
             ev_indx++;
             /* malloc the entry for this block by number of elems for this block
@@ -1131,7 +1134,8 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
       }
 
       for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-        if (ERROR_ZZ_P != -1 && (goma_ctx->problem.num_var_in_type[imtrx][R_MOMENTUM1] || check)) {
+        if (goma_ctx->post.error_zz_p != -1 &&
+            (goma_ctx->problem.num_var_in_type[imtrx][R_MOMENTUM1] || check)) {
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
@@ -1143,7 +1147,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
                this test will prevent that. - RRL */
             asdv(&gvec_elem[eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
           }
-          if (ERROR_ZZ_P_ELSIZE != -1) {
+          if (goma_ctx->post.error_zz_p_elsize != -1) {
             exo->elem_var_tab[i++] = 1;
             ev_indx++;
             /* malloc the entry for this block by number of elems for this block
@@ -1160,7 +1164,8 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
         }
       }
       /*Now finally the saturation hysteresis variables */
-      if (SAT_CURVE_TYPE != -1 || CAP_PRESS_SWITCH != -1 || SAT_QP_SWITCH != -1) {
+      if (goma_ctx->post.sat_curve_type != -1 || goma_ctx->post.cap_press_switch != -1 ||
+          goma_ctx->post.sat_qp_switch != -1) {
         eb_ptr = Element_Blocks + eb_indx;
         ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
         for (j = 0; j < ip_total; j++) {
@@ -1281,17 +1286,17 @@ void create_truth_table_segregated(struct Results_Description **rd,
     for (goma_ctx->fem.pg->imtrx = 0;
          goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
          goma_ctx->fem.pg->imtrx++) {
-      if (ERROR_ZZ_VEL != -1 &&
+      if (goma_ctx->post.error_zz_vel != -1 &&
           goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
         tev++;
-        if (ERROR_ZZ_VEL_ELSIZE != -1) {
+        if (goma_ctx->post.error_zz_vel_elsize != -1) {
           tev++;
         }
       }
-      if (ERROR_ZZ_Q != -1 &&
+      if (goma_ctx->post.error_zz_q != -1 &&
           goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
         tev++;
-        if (ERROR_ZZ_Q_ELSIZE != -1) {
+        if (goma_ctx->post.error_zz_q_elsize != -1) {
           tev++;
         }
       }
@@ -1306,10 +1311,10 @@ void create_truth_table_segregated(struct Results_Description **rd,
     for (goma_ctx->fem.pg->imtrx = 0;
          goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
          goma_ctx->fem.pg->imtrx++) {
-      if (ERROR_ZZ_P != -1 &&
+      if (goma_ctx->post.error_zz_p != -1 &&
           (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
         tev++;
-        if (ERROR_ZZ_P_ELSIZE != -1) {
+        if (goma_ctx->post.error_zz_p_elsize != -1) {
           tev++;
         }
       }
@@ -1326,11 +1331,11 @@ void create_truth_table_segregated(struct Results_Description **rd,
          goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) &&
         goma_ctx->fem.mp->SaturationModel == TANH_HYST && !if_ev) {
       for (j = 0; j < ip_total; j++) {
-        if (SAT_CURVE_TYPE != -1)
+        if (goma_ctx->post.sat_curve_type != -1)
           tev++; /*For Sat curve type */
-        if (CAP_PRESS_SWITCH != -1)
+        if (goma_ctx->post.cap_press_switch != -1)
           tev++; /*For saturation switch */
-        if (SAT_QP_SWITCH != -1)
+        if (goma_ctx->post.sat_qp_switch != -1)
           tev++; /*for cap press switch point*/
       }
       if_ev = TRUE;
@@ -1418,7 +1423,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
     for (goma_ctx->fem.pg->imtrx = 0;
          goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
          goma_ctx->fem.pg->imtrx++) {
-      if (ERROR_ZZ_VEL != -1 &&
+      if (goma_ctx->post.error_zz_vel != -1 &&
           goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
@@ -1432,7 +1437,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
           asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
                exo->eb_num_elems[eb_indx]);
         }
-        if (ERROR_ZZ_VEL_ELSIZE != -1) {
+        if (goma_ctx->post.error_zz_vel_elsize != -1) {
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
@@ -1448,7 +1453,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
         }
       }
 
-      if (ERROR_ZZ_Q != -1 &&
+      if (goma_ctx->post.error_zz_q != -1 &&
           goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
@@ -1462,7 +1467,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
           asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
                exo->eb_num_elems[eb_indx]);
         }
-        if (ERROR_ZZ_Q_ELSIZE != -1) {
+        if (goma_ctx->post.error_zz_q_elsize != -1) {
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
@@ -1488,7 +1493,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
     for (goma_ctx->fem.pg->imtrx = 0;
          goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
          goma_ctx->fem.pg->imtrx++) {
-      if (ERROR_ZZ_P != -1 &&
+      if (goma_ctx->post.error_zz_p != -1 &&
           (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
@@ -1502,7 +1507,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
           asdv(&gvec_elem[goma_ctx->fem.pg->imtrx][eb_indx][ev_indx - 1],
                exo->eb_num_elems[eb_indx]);
         }
-        if (ERROR_ZZ_P_ELSIZE != -1) {
+        if (goma_ctx->post.error_zz_p_elsize != -1) {
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
@@ -1520,7 +1525,8 @@ void create_truth_table_segregated(struct Results_Description **rd,
       }
     }
     /*Now finally the saturation hysteresis variables */
-    if (SAT_CURVE_TYPE != -1 || CAP_PRESS_SWITCH != -1 || SAT_QP_SWITCH != -1) {
+    if (goma_ctx->post.sat_curve_type != -1 || goma_ctx->post.cap_press_switch != -1 ||
+        goma_ctx->post.sat_qp_switch != -1) {
       eb_ptr = Element_Blocks + eb_indx;
       ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
       for (j = 0; j < ip_total; j++) {

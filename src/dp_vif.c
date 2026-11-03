@@ -121,7 +121,7 @@ void noahs_raven(void) {
   ddd_add_member(n, &goma_ctx->problem.num_rot, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.num_interpolations, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->problem.coordinate_system, 1, MPI_INT);
-  ddd_add_member(n, &len_u_post_proc, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.len_u_post_proc, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->bc.num_ac_tables, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->bc.num_bc_tables, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->bc.num_mp_tables, 1, MPI_INT);
@@ -136,14 +136,14 @@ void noahs_raven(void) {
   ddd_add_member(n, &goma_ctx->problem.n_eqm, 1, MPI_INT);
   ddd_add_member(n, &Linear_Stability, 1, MPI_INT);
   ddd_add_member(n, &LSA_number_wave_numbers, 1, MPI_INT);
-  ddd_add_member(n, &nn_post_fluxes, 1, MPI_INT);
-  ddd_add_member(n, &nn_post_fluxes_sens, 1, MPI_INT);
-  ddd_add_member(n, &nn_error_metrics, 1, MPI_INT);
-  ddd_add_member(n, &nn_post_data, 1, MPI_INT);
-  ddd_add_member(n, &nn_post_data_sens, 1, MPI_INT);
-  ddd_add_member(n, &nn_volume, 1, MPI_INT);
-  ddd_add_member(n, &nn_global, 1, MPI_INT);
-  ddd_add_member(n, &nn_average, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.nn_post_fluxes, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.nn_post_fluxes_sens, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.nn_error_metrics, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.nn_post_data, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.nn_post_data_sens, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.nn_volume, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.nn_global, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.nn_average, 1, MPI_INT);
   ddd_add_member(n, &Chemkin_Needed, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->fem.efv->ev, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->solver.loca_umf_id, 1, MPI_INT);
@@ -155,10 +155,10 @@ void noahs_raven(void) {
   ddd_add_member(n, &goma_ctx->particles.number_sample_types, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->particles.num_pbcs, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->num_var_ls_init, 1, MPI_INT);
-  ddd_add_member(n, &TFMP_GAS_VELO, 1, MPI_INT);
-  ddd_add_member(n, &TFMP_LIQ_VELO, 1, MPI_INT);
-  ddd_add_member(n, &TFMP_INV_PECLET, 1, MPI_INT);
-  ddd_add_member(n, &TFMP_KRG, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.tfmp_gas_velo, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.tfmp_liq_velo, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.tfmp_inv_peclet, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.tfmp_krg, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->petsc_options_str_len, 1, MPI_INT);
 
   ddd_set_commit(n);
@@ -297,8 +297,8 @@ void raven_landing(void) {
    * constants.
    */
 
-  if (len_u_post_proc > 0) {
-    u_post_proc = (dbl *)array_alloc(1, len_u_post_proc, sizeof(dbl));
+  if (goma_ctx->post.len_u_post_proc > 0) {
+    goma_ctx->post.u_post_proc = (dbl *)array_alloc(1, goma_ctx->post.len_u_post_proc, sizeof(dbl));
   }
 
   /*
@@ -306,40 +306,40 @@ void raven_landing(void) {
    * constants.
    */
 
-  if (nn_post_fluxes > 0) {
-    pp_fluxes = (struct Post_Processing_Fluxes **)array_alloc(
-        1, nn_post_fluxes, sizeof(struct Post_Processing_Fluxes *));
-    for (i = 0; i < nn_post_fluxes; i++) {
-      pp_fluxes[i] =
+  if (goma_ctx->post.nn_post_fluxes > 0) {
+    goma_ctx->post.pp_fluxes = (struct Post_Processing_Fluxes **)array_alloc(
+        1, goma_ctx->post.nn_post_fluxes, sizeof(struct Post_Processing_Fluxes *));
+    for (i = 0; i < goma_ctx->post.nn_post_fluxes; i++) {
+      goma_ctx->post.pp_fluxes[i] =
           (struct Post_Processing_Fluxes *)array_alloc(1, 1, sizeof(struct Post_Processing_Fluxes));
     }
   }
 
-  if (nn_post_fluxes_sens > 0) {
-    pp_fluxes_sens = (struct Post_Processing_Fluxes_Sens **)array_alloc(
-        1, nn_post_fluxes_sens, sizeof(struct Post_Processing_Fluxes_Sens *));
+  if (goma_ctx->post.nn_post_fluxes_sens > 0) {
+    goma_ctx->post.pp_fluxes_sens = (struct Post_Processing_Fluxes_Sens **)array_alloc(
+        1, goma_ctx->post.nn_post_fluxes_sens, sizeof(struct Post_Processing_Fluxes_Sens *));
 
-    for (i = 0; i < nn_post_fluxes_sens; i++) {
-      pp_fluxes_sens[i] = (struct Post_Processing_Fluxes_Sens *)array_alloc(
+    for (i = 0; i < goma_ctx->post.nn_post_fluxes_sens; i++) {
+      goma_ctx->post.pp_fluxes_sens[i] = (struct Post_Processing_Fluxes_Sens *)array_alloc(
           1, 1, sizeof(struct Post_Processing_Fluxes_Sens));
     }
   }
 
-  if (nn_post_data > 0) {
-    pp_data = (struct Post_Processing_Data **)array_alloc(1, nn_post_data,
-                                                          sizeof(struct Post_Processing_Data *));
-    for (i = 0; i < nn_post_data; i++) {
-      pp_data[i] =
+  if (goma_ctx->post.nn_post_data > 0) {
+    goma_ctx->post.pp_data = (struct Post_Processing_Data **)array_alloc(
+        1, goma_ctx->post.nn_post_data, sizeof(struct Post_Processing_Data *));
+    for (i = 0; i < goma_ctx->post.nn_post_data; i++) {
+      goma_ctx->post.pp_data[i] =
           (struct Post_Processing_Data *)array_alloc(1, 1, sizeof(struct Post_Processing_Data));
     }
   }
 
-  if (nn_post_data_sens > 0) {
-    pp_data_sens = (struct Post_Processing_Data_Sens **)array_alloc(
-        1, nn_post_data_sens, sizeof(struct Post_Processing_Data_Sens *));
+  if (goma_ctx->post.nn_post_data_sens > 0) {
+    goma_ctx->post.pp_data_sens = (struct Post_Processing_Data_Sens **)array_alloc(
+        1, goma_ctx->post.nn_post_data_sens, sizeof(struct Post_Processing_Data_Sens *));
 
-    for (i = 0; i < nn_post_data_sens; i++) {
-      pp_data_sens[i] = (struct Post_Processing_Data_Sens *)array_alloc(
+    for (i = 0; i < goma_ctx->post.nn_post_data_sens; i++) {
+      goma_ctx->post.pp_data_sens[i] = (struct Post_Processing_Data_Sens *)array_alloc(
           1, 1, sizeof(struct Post_Processing_Data_Sens));
     }
   }
@@ -347,30 +347,30 @@ void raven_landing(void) {
    * flux post processing sensitivities  with variable number of user provided
    * constants.
    */
-  if (nn_volume > 0) {
-    pp_volume = (struct Post_Processing_Volumetric **)array_alloc(
-        1, nn_volume, sizeof(struct Post_Processing_Volumetric *));
+  if (goma_ctx->post.nn_volume > 0) {
+    goma_ctx->post.pp_volume = (struct Post_Processing_Volumetric **)array_alloc(
+        1, goma_ctx->post.nn_volume, sizeof(struct Post_Processing_Volumetric *));
 
-    for (i = 0; i < nn_volume; i++) {
-      pp_volume[i] = (struct Post_Processing_Volumetric *)array_alloc(
+    for (i = 0; i < goma_ctx->post.nn_volume; i++) {
+      goma_ctx->post.pp_volume[i] = (struct Post_Processing_Volumetric *)array_alloc(
           1, 1, sizeof(struct Post_Processing_Volumetric));
     }
   }
 
-  if (nn_global > 0) {
-    pp_global = (struct Post_Processing_Global **)array_alloc(
-        1, nn_global, sizeof(struct Post_Processing_Global *));
-    for (i = 0; i < nn_global; i++) {
-      pp_global[i] =
+  if (goma_ctx->post.nn_global > 0) {
+    goma_ctx->post.pp_global = (struct Post_Processing_Global **)array_alloc(
+        1, goma_ctx->post.nn_global, sizeof(struct Post_Processing_Global *));
+    for (i = 0; i < goma_ctx->post.nn_global; i++) {
+      goma_ctx->post.pp_global[i] =
           (struct Post_Processing_Global *)array_alloc(1, 1, sizeof(struct Post_Processing_Global));
     }
   }
 
-  if (nn_average > 0) {
-    pp_average = (struct Post_Processing_Averages **)array_alloc(
-        1, nn_average, sizeof(struct Post_Processing_Averages *));
-    for (i = 0; i < nn_average; i++) {
-      pp_average[i] = (struct Post_Processing_Averages *)array_alloc(
+  if (goma_ctx->post.nn_average > 0) {
+    goma_ctx->post.pp_average = (struct Post_Processing_Averages **)array_alloc(
+        1, goma_ctx->post.nn_average, sizeof(struct Post_Processing_Averages *));
+    for (i = 0; i < goma_ctx->post.nn_average; i++) {
+      goma_ctx->post.pp_average[i] = (struct Post_Processing_Averages *)array_alloc(
           1, 1, sizeof(struct Post_Processing_Averages));
     }
   }
@@ -2717,224 +2717,224 @@ void noahs_ark(void) {
    * could be moved with the main body.
    */
 
-  ddd_add_member(n, &STREAM, 1, MPI_INT);
-  ddd_add_member(n, &STREAM_NORMAL_STRESS, 1, MPI_INT);
-  ddd_add_member(n, &STREAM_SHEAR_STRESS, 1, MPI_INT);
-  ddd_add_member(n, &STREAM_TENSION, 1, MPI_INT);
-  ddd_add_member(n, &MEAN_SHEAR, 1, MPI_INT);
-  ddd_add_member(n, &PRESSURE_CONT, 1, MPI_INT);
-  ddd_add_member(n, &SH_DIV_S_V_CONT, 1, MPI_INT);
-  ddd_add_member(n, &SH_CURV_CONT, 1, MPI_INT);
-  ddd_add_member(n, &FILL_CONT, 1, MPI_INT);
-  ddd_add_member(n, &STRESS_CONT, 1, MPI_INT);
-  ddd_add_member(n, &FIRST_INVAR_STRAIN, 1, MPI_INT);
-  ddd_add_member(n, &SEC_INVAR_STRAIN, 1, MPI_INT);
-  ddd_add_member(n, &THIRD_INVAR_STRAIN, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.stream, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.stream_normal_stress, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.stream_shear_stress, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.stream_tension, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.mean_shear, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.pressure_cont, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.sh_div_s_v_cont, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.sh_curv_cont, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.fill_cont, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.stress_cont, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.first_invar_strain, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.sec_invar_strain, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.third_invar_strain, 1, MPI_INT);
 
-  ddd_add_member(n, &CAPILLARY_PRESSURE, 1, MPI_INT);
-  ddd_add_member(n, &CONC_CONT, 1, MPI_INT);
-  ddd_add_member(n, &CONDUCTION_VECTORS, 1, MPI_INT);
-  ddd_add_member(n, &CURL_V, 1, MPI_INT);
-  ddd_add_member(n, &DARCY_VELOCITY_GAS, 1, MPI_INT);
-  ddd_add_member(n, &DARCY_VELOCITY_LIQ, 1, MPI_INT);
-  ddd_add_member(n, &DIELECTROPHORETIC_FIELD, 1, MPI_INT);
-  ddd_add_member(n, &DIELECTROPHORETIC_FIELD_NORM, 1, MPI_INT);
-  ddd_add_member(n, &ENORMSQ_FIELD, 1, MPI_INT);
-  ddd_add_member(n, &ENORMSQ_FIELD_NORM, 1, MPI_INT);
-  ddd_add_member(n, &DIFFUSION_VECTORS, 1, MPI_INT);
-  ddd_add_member(n, &DIFFUSION_VECTORS_POR_LIQ_GPHASE, 1, MPI_INT);
-  ddd_add_member(n, &DIFFUSION_VECTORS_POR_AIR_GPHASE, 1, MPI_INT);
-  ddd_add_member(n, &DIV_PVELOCITY, 1, MPI_INT);
-  ddd_add_member(n, &DIV_VELOCITY, 1, MPI_INT);
-  ddd_add_member(n, &DIV_TOTAL, 1, MPI_INT);
-  ddd_add_member(n, &PP_Viscosity, 1, MPI_INT);
-  ddd_add_member(n, &PP_FlowingLiquid_Viscosity, 1, MPI_INT);
-  ddd_add_member(n, &PP_VolumeFractionGas, 1, MPI_INT);
-  ddd_add_member(n, &DENSITY, 1, MPI_INT);
-  ddd_add_member(n, &POLYMER_VISCOSITY, 1, MPI_INT);
-  ddd_add_member(n, &POLYMER_TIME_CONST, 1, MPI_INT);
-  ddd_add_member(n, &MOBILITY_PARAMETER, 1, MPI_INT);
-  ddd_add_member(n, &PTT_XI, 1, MPI_INT);
-  ddd_add_member(n, &PTT_EPSILON, 1, MPI_INT);
-  ddd_add_member(n, &NS_RESIDUALS, 1, MPI_INT);
-  ddd_add_member(n, &MM_RESIDUALS, 1, MPI_INT);
-  ddd_add_member(n, &FLUXLINES, 1, MPI_INT);
-  ddd_add_member(n, &ENERGY_FLUXLINES, 1, MPI_INT);
-  ddd_add_member(n, &TIME_DERIVATIVES, 1, MPI_INT);
-  ddd_add_member(n, &STRESS_TENSOR, 1, MPI_INT);
-  ddd_add_member(n, &REAL_STRESS_TENSOR, 1, MPI_INT);
-  ddd_add_member(n, &STRAIN_TENSOR, 1, MPI_INT);
-  ddd_add_member(n, &EVP_DEF_GRAD_TENSOR, 1, MPI_INT);
-  ddd_add_member(n, &LAGRANGE_CONVECTION, 1, MPI_INT);
-  ddd_add_member(n, &POROUS_RHO_GAS_SOLVENTS, 1, MPI_INT);
-  ddd_add_member(n, &POROUS_RHO_LPHASE, 1, MPI_INT);
-  ddd_add_member(n, &POROUS_RHO_TOTAL_SOLVENTS, 1, MPI_INT);
-  ddd_add_member(n, &POROUS_SATURATION, 1, MPI_INT);
-  ddd_add_member(n, &REL_LIQ_PERM, 1, MPI_INT);
-  ddd_add_member(n, &ERROR_ZZ_VEL, 1, MPI_INT);
-  ddd_add_member(n, &ERROR_ZZ_VEL_ELSIZE, 1, MPI_INT);
-  ddd_add_member(n, &ERROR_ZZ_Q, 1, MPI_INT);
-  ddd_add_member(n, &ERROR_ZZ_Q_ELSIZE, 1, MPI_INT);
-  ddd_add_member(n, &ERROR_ZZ_P, 1, MPI_INT);
-  ddd_add_member(n, &ERROR_ZZ_P_ELSIZE, 1, MPI_INT);
-  ddd_add_member(n, &USER_POST, 1, MPI_INT);
-  ddd_add_member(n, &ACOUSTIC_PRESSURE, 1, MPI_INT);
-  ddd_add_member(n, &ACOUSTIC_PHASE_ANGLE, 1, MPI_INT);
-  ddd_add_member(n, &ACOUSTIC_ENERGY_DENSITY, 1, MPI_INT);
-  ddd_add_member(n, &LIGHT_INTENSITY, 1, MPI_INT);
-  ddd_add_member(n, &ELECTRIC_FIELD, 1, MPI_INT);
-  ddd_add_member(n, &ELECTRIC_FIELD_MAG, 1, MPI_INT);
-  ddd_add_member(n, &PRINCIPAL_STRESS, 1, MPI_INT);
-  ddd_add_member(n, &PRINCIPAL_REAL_STRESS, 1, MPI_INT);
-  ddd_add_member(n, &LUB_HEIGHT, 1, MPI_INT);
-  ddd_add_member(n, &LUB_HEIGHT_2, 1, MPI_INT);
-  ddd_add_member(n, &LUB_VELO_UPPER, 1, MPI_INT);
-  ddd_add_member(n, &LUB_VELO_LOWER, 1, MPI_INT);
-  ddd_add_member(n, &LUB_VELO_FIELD, 1, MPI_INT);
-  ddd_add_member(n, &LUB_VELO_FIELD_2, 1, MPI_INT);
-  ddd_add_member(n, &DISJ_PRESS, 1, MPI_INT);
-  ddd_add_member(n, &SH_SAT_OPEN, 1, MPI_INT);
-  ddd_add_member(n, &SH_SAT_OPEN_2, 1, MPI_INT);
-  ddd_add_member(n, &SH_CAP_PRES, 1, MPI_INT);
-  ddd_add_member(n, &SH_PORE_FLUX, 1, MPI_INT);
-  ddd_add_member(n, &SH_STRESS_TENSOR, 1, MPI_INT);
-  ddd_add_member(n, &SH_TANG, 1, MPI_INT);
-  ddd_add_member(n, &PP_LAME_MU, 1, MPI_INT);
-  ddd_add_member(n, &PP_LAME_LAMBDA, 1, MPI_INT);
-  ddd_add_member(n, &VON_MISES_STRAIN, 1, MPI_INT);
-  ddd_add_member(n, &VON_MISES_STRESS, 1, MPI_INT);
-  ddd_add_member(n, &UNTRACKED_SPEC, 1, MPI_INT);
-  ddd_add_member(n, &CONF_MAP, 1, MPI_INT);
-  ddd_add_member(n, &VELO_SPEED, 1, MPI_INT);
-  ddd_add_member(n, &GIES_CRIT, 1, MPI_INT);
-  ddd_add_member(n, &J_FLUX, 1, MPI_INT);
-  ddd_add_member(n, &EIG, 1, MPI_INT);
-  ddd_add_member(n, &HEAVISIDE, 1, MPI_INT);
-  ddd_add_member(n, &RHO_DOT, 1, MPI_INT);
-  ddd_add_member(n, &MOMENT_SOURCES, 1, MPI_INT);
-  ddd_add_member(n, &YZBETA, 1, MPI_INT);
-  ddd_add_member(n, &EIG1, 1, MPI_INT);
-  ddd_add_member(n, &EIG2, 1, MPI_INT);
-  ddd_add_member(n, &EIG3, 1, MPI_INT);
-  ddd_add_member(n, &GRAD_SH, 1, MPI_INT);
-  ddd_add_member(n, &GRAD_Y, 1, MPI_INT);
-  ddd_add_member(n, &HELICITY, 1, MPI_INT);
-  ddd_add_member(n, &EXTERNAL_POST, 1, MPI_INT);
-  ddd_add_member(n, &SURFACE_VECTORS, 1, MPI_INT);
-  ddd_add_member(n, &SHELL_NORMALS, 1, MPI_INT);
-  ddd_add_member(n, &LAMB_VECTOR, 1, MPI_INT);
-  ddd_add_member(n, &Q_FCN, 1, MPI_INT);
-  ddd_add_member(n, &POYNTING_VECTORS, 1, MPI_INT);
-  ddd_add_member(n, &SARAMITO_YIELD, 1, MPI_INT);
-  ddd_add_member(n, &STRESS_NORM, 1, MPI_INT);
-  ddd_add_member(n, &SPECIES_SOURCES, 1, MPI_INT);
-  ddd_add_member(n, &VISCOUS_STRESS, 1, MPI_INT);
-  ddd_add_member(n, &PP_VELOCITY_GRADIENTS, 1, MPI_INT);
-  ddd_add_member(n, &VISCOUS_STRESS_NORM, 1, MPI_INT);
-  ddd_add_member(n, &VISCOUS_VON_MISES_STRESS, 1, MPI_INT);
-  ddd_add_member(n, &EM_CONTOURS, 1, MPI_INT);
-  ddd_add_member(n, &TOTAL_EM_CONTOURS, 1, MPI_INT);
-  ddd_add_member(n, &SCATTERED_EM_CONTOURS, 1, MPI_INT);
-  ddd_add_member(n, &PSPG_PP, 1, MPI_INT);
-  ddd_add_member(n, &ORIENTATION_VECTORS, 1, MPI_INT);
-  ddd_add_member(n, &FIRST_STRAINRATE_INVAR, 1, MPI_INT);
-  ddd_add_member(n, &SEC_STRAINRATE_INVAR, 1, MPI_INT);
-  ddd_add_member(n, &THIRD_STRAINRATE_INVAR, 1, MPI_INT);
-  ddd_add_member(n, &WALL_DISTANCE, 1, MPI_INT);
-  ddd_add_member(n, &CONTACT_DISTANCE, 1, MPI_INT);
-  ddd_add_member(n, &PP_FLUID_STRESS, 1, MPI_INT);
-  ddd_add_member(n, &LUB_CONVECTION, 1, MPI_INT);
-  ddd_add_member(n, &PP_MESH_VELOCITY, 1, MPI_INT);
-  ddd_add_member(n, &USER_POST, 1, MPI_INT);
-  if (len_u_post_proc > 0) {
-    ddd_add_member(n, u_post_proc, len_u_post_proc, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->post.capillary_pressure, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.conc_cont, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.conduction_vectors, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.curl_v, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.darcy_velocity_gas, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.darcy_velocity_liq, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.dielectrophoretic_field, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.dielectrophoretic_field_norm, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.enormsq_field, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.enormsq_field_norm, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.diffusion_vectors, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.diffusion_vectors_por_liq_gphase, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.diffusion_vectors_por_air_gphase, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.div_pvelocity, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.div_velocity, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.div_total, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.pp_viscosity, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.pp_flowingliquid_viscosity, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.pp_volumefractiongas, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.density, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.polymer_viscosity, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.polymer_time_const, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.mobility_parameter, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.ptt_xi, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.ptt_epsilon, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.ns_residuals, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.mm_residuals, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.fluxlines, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.energy_fluxlines, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.time_derivatives, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.stress_tensor, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.real_stress_tensor, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.strain_tensor, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.evp_def_grad_tensor, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.lagrange_convection, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.porous_rho_gas_solvents, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.porous_rho_lphase, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.porous_rho_total_solvents, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.porous_saturation, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.rel_liq_perm, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.error_zz_vel, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.error_zz_vel_elsize, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.error_zz_q, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.error_zz_q_elsize, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.error_zz_p, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.error_zz_p_elsize, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.user_post, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.acoustic_pressure, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.acoustic_phase_angle, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.acoustic_energy_density, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.light_intensity, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.electric_field, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.electric_field_mag, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.principal_stress, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.principal_real_stress, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.lub_height, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.lub_height_2, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.lub_velo_upper, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.lub_velo_lower, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.lub_velo_field, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.lub_velo_field_2, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.disj_press, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.sh_sat_open, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.sh_sat_open_2, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.sh_cap_pres, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.sh_pore_flux, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.sh_stress_tensor, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.sh_tang, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.pp_lame_mu, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.pp_lame_lambda, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.von_mises_strain, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.von_mises_stress, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.untracked_spec, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.conf_map, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.velo_speed, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.gies_crit, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.j_flux, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.eig, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.heaviside, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.rho_dot, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.moment_sources, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.yzbeta, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.eig1, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.eig2, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.eig3, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.grad_sh, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.grad_y, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.helicity, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.external_post, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.surface_vectors, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.shell_normals, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.lamb_vector, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.q_fcn, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.poynting_vectors, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.saramito_yield, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.stress_norm, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.species_sources, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.viscous_stress, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.pp_velocity_gradients, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.viscous_stress_norm, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.viscous_von_mises_stress, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.em_contours, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.total_em_contours, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.scattered_em_contours, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.pspg_pp, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.orientation_vectors, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.first_strainrate_invar, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.sec_strainrate_invar, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.third_strainrate_invar, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.wall_distance, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.contact_distance, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.pp_fluid_stress, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.lub_convection, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.pp_mesh_velocity, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->post.user_post, 1, MPI_INT);
+  if (goma_ctx->post.len_u_post_proc > 0) {
+    ddd_add_member(n, goma_ctx->post.u_post_proc, goma_ctx->post.len_u_post_proc, MPI_DOUBLE);
   }
 
-  if (nn_post_fluxes > 0) {
-    for (i = 0; i < nn_post_fluxes; i++) {
-      ddd_add_member(n, &(pp_fluxes[i]->flux_type), 1, MPI_INT);
-      ddd_add_member(n, pp_fluxes[i]->flux_type_name, MAX_DOFNAME, MPI_CHAR);
-      ddd_add_member(n, &(pp_fluxes[i]->species_number), 1, MPI_INT);
-      ddd_add_member(n, &(pp_fluxes[i]->ss_id), 1, MPI_INT);
-      ddd_add_member(n, &(pp_fluxes[i]->blk_id), 1, MPI_INT);
-      ddd_add_member(n, pp_fluxes[i]->flux_filenm, MAX_FNL, MPI_CHAR);
-      ddd_add_member(n, &(pp_fluxes[i]->profile_flag), 1, MPI_INT);
+  if (goma_ctx->post.nn_post_fluxes > 0) {
+    for (i = 0; i < goma_ctx->post.nn_post_fluxes; i++) {
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes[i]->flux_type), 1, MPI_INT);
+      ddd_add_member(n, goma_ctx->post.pp_fluxes[i]->flux_type_name, MAX_DOFNAME, MPI_CHAR);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes[i]->species_number), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes[i]->ss_id), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes[i]->blk_id), 1, MPI_INT);
+      ddd_add_member(n, goma_ctx->post.pp_fluxes[i]->flux_filenm, MAX_FNL, MPI_CHAR);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes[i]->profile_flag), 1, MPI_INT);
     }
   }
 
-  if (nn_post_fluxes_sens > 0) {
-    for (i = 0; i < nn_post_fluxes_sens; i++) {
-      ddd_add_member(n, &(pp_fluxes_sens[i]->flux_type), 1, MPI_INT);
-      ddd_add_member(n, pp_fluxes_sens[i]->flux_type_name, MAX_DOFNAME, MPI_CHAR);
-      ddd_add_member(n, &(pp_fluxes_sens[i]->species_number), 1, MPI_INT);
-      ddd_add_member(n, &(pp_fluxes_sens[i]->ss_id), 1, MPI_INT);
-      ddd_add_member(n, &(pp_fluxes_sens[i]->blk_id), 1, MPI_INT);
-      ddd_add_member(n, &(pp_fluxes_sens[i]->sens_type), 1, MPI_INT);
-      ddd_add_member(n, &(pp_fluxes_sens[i]->sens_id), 1, MPI_INT);
-      ddd_add_member(n, &(pp_fluxes_sens[i]->sens_flt), 1, MPI_INT);
-      ddd_add_member(n, &(pp_fluxes_sens[i]->sens_flt2), 1, MPI_INT);
-      ddd_add_member(n, &(pp_fluxes_sens[i]->vector_id), 1, MPI_INT);
-      ddd_add_member(n, pp_fluxes_sens[i]->flux_filenm, MAX_FNL, MPI_CHAR);
-      ddd_add_member(n, &(pp_fluxes_sens[i]->profile_flag), 1, MPI_INT);
+  if (goma_ctx->post.nn_post_fluxes_sens > 0) {
+    for (i = 0; i < goma_ctx->post.nn_post_fluxes_sens; i++) {
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes_sens[i]->flux_type), 1, MPI_INT);
+      ddd_add_member(n, goma_ctx->post.pp_fluxes_sens[i]->flux_type_name, MAX_DOFNAME, MPI_CHAR);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes_sens[i]->species_number), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes_sens[i]->ss_id), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes_sens[i]->blk_id), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes_sens[i]->sens_type), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes_sens[i]->sens_id), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes_sens[i]->sens_flt), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes_sens[i]->sens_flt2), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes_sens[i]->vector_id), 1, MPI_INT);
+      ddd_add_member(n, goma_ctx->post.pp_fluxes_sens[i]->flux_filenm, MAX_FNL, MPI_CHAR);
+      ddd_add_member(n, &(goma_ctx->post.pp_fluxes_sens[i]->profile_flag), 1, MPI_INT);
     }
   }
 
-  if (nn_post_data > 0) {
-    for (i = 0; i < nn_post_data; i++) {
-      ddd_add_member(n, &(pp_data[i]->data_type), 1, MPI_INT);
-      ddd_add_member(n, pp_data[i]->data_type_name, MAX_DOFNAME, MPI_CHAR);
-      ddd_add_member(n, &(pp_data[i]->species_number), 1, MPI_INT);
-      ddd_add_member(n, &(pp_data[i]->ns_id), 1, MPI_INT);
-      ddd_add_member(n, &(pp_data[i]->mat_num), 1, MPI_INT);
-      ddd_add_member(n, &(pp_data[i]->elem_blk_id), 1, MPI_INT);
-      ddd_add_member(n, pp_data[i]->data_filenm, MAX_FNL, MPI_CHAR);
-      ddd_add_member(n, pp_data[i]->format_flag, 8, MPI_CHAR);
-      ddd_add_member(n, &(pp_data[i]->first_time), 1, MPI_INT);
+  if (goma_ctx->post.nn_post_data > 0) {
+    for (i = 0; i < goma_ctx->post.nn_post_data; i++) {
+      ddd_add_member(n, &(goma_ctx->post.pp_data[i]->data_type), 1, MPI_INT);
+      ddd_add_member(n, goma_ctx->post.pp_data[i]->data_type_name, MAX_DOFNAME, MPI_CHAR);
+      ddd_add_member(n, &(goma_ctx->post.pp_data[i]->species_number), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_data[i]->ns_id), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_data[i]->mat_num), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_data[i]->elem_blk_id), 1, MPI_INT);
+      ddd_add_member(n, goma_ctx->post.pp_data[i]->data_filenm, MAX_FNL, MPI_CHAR);
+      ddd_add_member(n, goma_ctx->post.pp_data[i]->format_flag, 8, MPI_CHAR);
+      ddd_add_member(n, &(goma_ctx->post.pp_data[i]->first_time), 1, MPI_INT);
     }
   }
 
-  if (nn_post_data_sens > 0) {
-    for (i = 0; i < nn_post_data_sens; i++) {
-      ddd_add_member(n, &(pp_data_sens[i]->data_type), 1, MPI_INT);
-      ddd_add_member(n, pp_data_sens[i]->data_type_name, MAX_DOFNAME, MPI_CHAR);
-      ddd_add_member(n, &(pp_data_sens[i]->species_number), 1, MPI_INT);
-      ddd_add_member(n, &(pp_data_sens[i]->ns_id), 1, MPI_INT);
-      ddd_add_member(n, &(pp_data_sens[i]->mat_id), 1, MPI_INT);
-      ddd_add_member(n, &(pp_data_sens[i]->sens_type), 1, MPI_INT);
-      ddd_add_member(n, &(pp_data_sens[i]->sens_id), 1, MPI_INT);
-      ddd_add_member(n, &(pp_data_sens[i]->sens_flt), 1, MPI_INT);
-      ddd_add_member(n, &(pp_data_sens[i]->sens_flt2), 1, MPI_INT);
-      ddd_add_member(n, &(pp_data_sens[i]->vector_id), 1, MPI_INT);
-      ddd_add_member(n, pp_data_sens[i]->data_filenm, MAX_FNL, MPI_CHAR);
+  if (goma_ctx->post.nn_post_data_sens > 0) {
+    for (i = 0; i < goma_ctx->post.nn_post_data_sens; i++) {
+      ddd_add_member(n, &(goma_ctx->post.pp_data_sens[i]->data_type), 1, MPI_INT);
+      ddd_add_member(n, goma_ctx->post.pp_data_sens[i]->data_type_name, MAX_DOFNAME, MPI_CHAR);
+      ddd_add_member(n, &(goma_ctx->post.pp_data_sens[i]->species_number), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_data_sens[i]->ns_id), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_data_sens[i]->mat_id), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_data_sens[i]->sens_type), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_data_sens[i]->sens_id), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_data_sens[i]->sens_flt), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_data_sens[i]->sens_flt2), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_data_sens[i]->vector_id), 1, MPI_INT);
+      ddd_add_member(n, goma_ctx->post.pp_data_sens[i]->data_filenm, MAX_FNL, MPI_CHAR);
     }
   }
 
-  if (nn_volume > 0) {
-    for (i = 0; i < nn_volume; i++) {
-      ddd_add_member(n, &(pp_volume[i]->volume_type), 1, MPI_INT);
-      ddd_add_member(n, pp_volume[i]->volume_name, MAX_DOFNAME, MPI_CHAR);
-      ddd_add_member(n, &(pp_volume[i]->species_no), 1, MPI_INT);
-      ddd_add_member(n, &(pp_volume[i]->blk_id), 1, MPI_INT);
-      ddd_add_member(n, pp_volume[i]->volume_fname, MAX_FNL, MPI_CHAR);
-      ddd_add_member(n, &(pp_volume[i]->num_params), 1, MPI_INT);
+  if (goma_ctx->post.nn_volume > 0) {
+    for (i = 0; i < goma_ctx->post.nn_volume; i++) {
+      ddd_add_member(n, &(goma_ctx->post.pp_volume[i]->volume_type), 1, MPI_INT);
+      ddd_add_member(n, goma_ctx->post.pp_volume[i]->volume_name, MAX_DOFNAME, MPI_CHAR);
+      ddd_add_member(n, &(goma_ctx->post.pp_volume[i]->species_no), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_volume[i]->blk_id), 1, MPI_INT);
+      ddd_add_member(n, goma_ctx->post.pp_volume[i]->volume_fname, MAX_FNL, MPI_CHAR);
+      ddd_add_member(n, &(goma_ctx->post.pp_volume[i]->num_params), 1, MPI_INT);
     }
   }
 
-  if (nn_global > 0) {
-    for (i = 0; i < nn_global; i++) {
-      ddd_add_member(n, &(pp_global[i]->type), 1, MPI_INT);
-      ddd_add_member(n, pp_global[i]->filenm, MAX_FNL, MPI_CHAR);
+  if (goma_ctx->post.nn_global > 0) {
+    for (i = 0; i < goma_ctx->post.nn_global; i++) {
+      ddd_add_member(n, &(goma_ctx->post.pp_global[i]->type), 1, MPI_INT);
+      ddd_add_member(n, goma_ctx->post.pp_global[i]->filenm, MAX_FNL, MPI_CHAR);
     }
   }
 
-  if (nn_average > 0) {
-    for (i = 0; i < nn_average; i++) {
-      ddd_add_member(n, &(pp_average[i]->type), 1, MPI_INT);
-      ddd_add_member(n, &(pp_average[i]->species_index), 1, MPI_INT);
-      ddd_add_member(n, &(pp_average[i]->index), 1, MPI_INT);
-      ddd_add_member(n, &(pp_average[i]->index_post), 1, MPI_INT);
-      ddd_add_member(n, &(pp_average[i]->non_variable_type), 1, MPI_INT);
-      ddd_add_member(n, pp_average[i]->type_name, MAX_VAR_NAME_LNGTH, MPI_CHAR);
+  if (goma_ctx->post.nn_average > 0) {
+    for (i = 0; i < goma_ctx->post.nn_average; i++) {
+      ddd_add_member(n, &(goma_ctx->post.pp_average[i]->type), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_average[i]->species_index), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_average[i]->index), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_average[i]->index_post), 1, MPI_INT);
+      ddd_add_member(n, &(goma_ctx->post.pp_average[i]->non_variable_type), 1, MPI_INT);
+      ddd_add_member(n, goma_ctx->post.pp_average[i]->type_name, MAX_VAR_NAME_LNGTH, MPI_CHAR);
     }
   }
 
@@ -3395,7 +3395,7 @@ void ark_landing(void) {
     }
   }
 
-  dalloc(len_u_post_proc, u_post_proc);
+  dalloc(goma_ctx->post.len_u_post_proc, goma_ctx->post.u_post_proc);
 
   /*   Augmenting condition data tables    */
 
@@ -3407,8 +3407,8 @@ void ark_landing(void) {
     }
   }
 
-  for (i = 0; i < nn_volume; i++) {
-    dalloc(pp_volume[i]->num_params, pp_volume[i]->params);
+  for (i = 0; i < goma_ctx->post.nn_volume; i++) {
+    dalloc(goma_ctx->post.pp_volume[i]->num_params, goma_ctx->post.pp_volume[i]->params);
   }
 
   return;
@@ -3765,8 +3765,8 @@ void noahs_dove(void) {
   }
   /*   Post-processing parameters    */
 
-  for (i = 0; i < nn_volume; i++) {
-    crdv(pp_volume[i]->num_params, pp_volume[i]->params);
+  for (i = 0; i < goma_ctx->post.nn_volume; i++) {
+    crdv(goma_ctx->post.pp_volume[i]->num_params, goma_ctx->post.pp_volume[i]->params);
   }
 
   ddd_set_commit(n);

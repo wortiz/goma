@@ -2724,7 +2724,7 @@ int load_fv_grads(void)
   /*
    * curl(v)
    */
-  if (CURL_V != -1 && !InShellElementWithParentElementCoverage) {
+  if (goma_ctx->post.curl_v != -1 && !InShellElementWithParentElementCoverage) {
     v = VELOCITY1;
     bfn = bf[v];
 

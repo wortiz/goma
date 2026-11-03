@@ -2833,7 +2833,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                            goma_ctx->fem.pg->imtrx);
       }
       /* Write out time derivatives if requested */
-      if (TIME_DERIVATIVES != -1 && (goma_ctx->problem.time_integration != STEADY)) {
+      if (goma_ctx->post.time_derivatives != -1 && (goma_ctx->problem.time_integration != STEADY)) {
         for (i = 0; i < rd->TotalNVSolnOutput; i++) {
           i_post = rd->TotalNVSolnOutput + rd->TotalNVPostOutput + i;
           extract_nodal_vec(xdot, rd->nvtype[i_post], rd->nvkind[i_post], rd->nvmatID[i_post], gvec,
@@ -2876,7 +2876,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                           *nprint + 1, &time_value, delta_t, exo, dpi, rd);
 
         /* Write out time derivatives if requested */
-        if (TIME_DERIVATIVES != -1 && (goma_ctx->problem.time_integration != STEADY)) {
+        if (goma_ctx->post.time_derivatives != -1 &&
+            (goma_ctx->problem.time_integration != STEADY)) {
           for (i = 0; i < tev; i++) {
             i_post = tev_post + i;
             extract_elem_vec(xdot, i_post, rd->evtype[i_post], gvec_elem, exo, 0);
@@ -2902,8 +2903,9 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      * defer this event until after performing the sensitivity calculation
      */
     if (goma_ctx->num_proc > 1 && strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
-      if ((!*converged) && ((goma_ctx->problem.continuation != ALC_NONE) ||
-                            (nn_post_fluxes_sens > 0) || (nn_post_data_sens > 0))) {
+      if ((!*converged) &&
+          ((goma_ctx->problem.continuation != ALC_NONE) ||
+           (goma_ctx->post.nn_post_fluxes_sens > 0) || (goma_ctx->post.nn_post_data_sens > 0))) {
         show_external(goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx],
                       (goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx] -
                        goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx]),
@@ -3082,16 +3084,17 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   iscale = 0;
   scaling_max = 0.;
 
-  for (i = 0; i < nn_post_fluxes_sens; i++) {
-    if (pp_fluxes_sens[i]->vector_id > sens_vec_ct) {
+  for (i = 0; i < goma_ctx->post.nn_post_fluxes_sens; i++) {
+    if (goma_ctx->post.pp_fluxes_sens[i]->vector_id > sens_vec_ct) {
       /*
        *
        *	GET SENSITIVITY PARAMETER VALUE
        *
        */
-      retrieve_parameterS(&param_val, x, xdot, pp_fluxes_sens[i]->sens_type,
-                          pp_fluxes_sens[i]->sens_id, pp_fluxes_sens[i]->sens_flt,
-                          pp_fluxes_sens[i]->sens_flt2, cx, exo, dpi);
+      retrieve_parameterS(&param_val, x, xdot, goma_ctx->post.pp_fluxes_sens[i]->sens_type,
+                          goma_ctx->post.pp_fluxes_sens[i]->sens_id,
+                          goma_ctx->post.pp_fluxes_sens[i]->sens_flt,
+                          goma_ctx->post.pp_fluxes_sens[i]->sens_flt2, cx, exo, dpi);
 
       strcat(sens_caller, "Flux Sensitivity");
 
@@ -3099,10 +3102,11 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           param_val, x, xdot, delta_t, exo, dpi, cx, res_p, numProcUnknowns, ija, a, x_old, x_older,
           xdot_old, x_update, delta_t, theta, time_value, num_total_nodes, res_m, 3, matr_form,
           resid_vector_sens, x_sens, x_sens_p, scale, ams, first_linear_solver_call,
-          Norm_below_tolerance, Rate_above_tolerance, pp_fluxes_sens[i]->vector_id,
-          pp_fluxes_sens[i]->sens_type, pp_fluxes_sens[i]->sens_id, pp_fluxes_sens[i]->sens_flt,
-          pp_fluxes_sens[i]->sens_flt2, &mf_resolve, ncod, bc, &smallpiv, &singpiv, &iautopiv,
-          &iscale, &scaling_max, &h_elem_avg, &U_norm, UMF_system_id, sens_caller);
+          Norm_below_tolerance, Rate_above_tolerance, goma_ctx->post.pp_fluxes_sens[i]->vector_id,
+          goma_ctx->post.pp_fluxes_sens[i]->sens_type, goma_ctx->post.pp_fluxes_sens[i]->sens_id,
+          goma_ctx->post.pp_fluxes_sens[i]->sens_flt, goma_ctx->post.pp_fluxes_sens[i]->sens_flt2,
+          &mf_resolve, ncod, bc, &smallpiv, &singpiv, &iautopiv, &iscale, &scaling_max, &h_elem_avg,
+          &U_norm, UMF_system_id, sens_caller);
       sens_vec_ct++;
     }
   }
@@ -3113,27 +3117,30 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
    *
    */
 
-  for (i = 0; i < nn_post_data_sens; i++) {
-    if (pp_data_sens[i]->vector_id > sens_vec_ct) {
+  for (i = 0; i < goma_ctx->post.nn_post_data_sens; i++) {
+    if (goma_ctx->post.pp_data_sens[i]->vector_id > sens_vec_ct) {
       /*
        *
        *	GET SENSITIVITY PARAMETER VALUE
        *
        */
-      retrieve_parameterS(&param_val, x, xdot, pp_data_sens[i]->sens_type, pp_data_sens[i]->sens_id,
-                          pp_data_sens[i]->sens_flt, pp_data_sens[i]->sens_flt2, cx, exo, dpi);
+      retrieve_parameterS(&param_val, x, xdot, goma_ctx->post.pp_data_sens[i]->sens_type,
+                          goma_ctx->post.pp_data_sens[i]->sens_id,
+                          goma_ctx->post.pp_data_sens[i]->sens_flt,
+                          goma_ctx->post.pp_data_sens[i]->sens_flt2, cx, exo, dpi);
 
       strcat(sens_caller, "Data Sensitivity");
 
-      err = soln_sens(param_val, x, xdot, delta_s, exo, dpi, cx, res_p, numProcUnknowns, ija, a,
-                      x_old, x_older, xdot_old, x_update, delta_t, theta, time_value,
-                      num_total_nodes, res_m, 3, matr_form, resid_vector_sens, x_sens, x_sens_p,
-                      scale, ams, first_linear_solver_call, Norm_below_tolerance,
-                      Rate_above_tolerance, pp_data_sens[i]->vector_id, pp_data_sens[i]->sens_type,
-                      pp_data_sens[i]->sens_id, pp_data_sens[i]->sens_flt,
-                      pp_data_sens[i]->sens_flt2, &mf_resolve, /* frontal solver variables */
-                      ncod, bc, &smallpiv, &singpiv, &iautopiv, &iscale, &scaling_max, &h_elem_avg,
-                      &U_norm, UMF_system_id, sens_caller);
+      err = soln_sens(
+          param_val, x, xdot, delta_s, exo, dpi, cx, res_p, numProcUnknowns, ija, a, x_old, x_older,
+          xdot_old, x_update, delta_t, theta, time_value, num_total_nodes, res_m, 3, matr_form,
+          resid_vector_sens, x_sens, x_sens_p, scale, ams, first_linear_solver_call,
+          Norm_below_tolerance, Rate_above_tolerance, goma_ctx->post.pp_data_sens[i]->vector_id,
+          goma_ctx->post.pp_data_sens[i]->sens_type, goma_ctx->post.pp_data_sens[i]->sens_id,
+          goma_ctx->post.pp_data_sens[i]->sens_flt, goma_ctx->post.pp_data_sens[i]->sens_flt2,
+          &mf_resolve, /* frontal solver variables */
+          ncod, bc, &smallpiv, &singpiv, &iautopiv, &iscale, &scaling_max, &h_elem_avg, &U_norm,
+          UMF_system_id, sens_caller);
 
       sens_vec_ct++;
     }
@@ -3146,15 +3153,15 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
   if (*converged) {
 
-    for (i = 0; i < nn_post_data; i++) {
-      err = ns_data_print(pp_data[i], x, exo, time_value, delta_t);
+    for (i = 0; i < goma_ctx->post.nn_post_data; i++) {
+      err = ns_data_print(goma_ctx->post.pp_data[i], x, exo, time_value, delta_t);
     }
     /*
      *       OUTPUT DATA SENSITIVITY TO FILES
      */
 
-    for (i = 0; i < nn_post_data_sens; i++) {
-      err = ns_data_sens_print(pp_data_sens[i], x, x_sens_p, time_value);
+    for (i = 0; i < goma_ctx->post.nn_post_data_sens; i++) {
+      err = ns_data_sens_print(goma_ctx->post.pp_data_sens[i], x, x_sens_p, time_value);
     }
 
   } /* if converged */
