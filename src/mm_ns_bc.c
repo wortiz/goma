@@ -15624,8 +15624,10 @@ void qrad_surf(double func[DIM],
   *func += heat_tran_coeff * (T_c - goma_ctx->fem.fv->T) +
            epsilon * sigma * (pow(T_c + T_offset, 4.0) - pow(goma_ctx->fem.fv->T + T_offset, 4.0));
 
-  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
+  if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix) {
+    propertyJac_destroy(&densityJac);
     return;
+  }
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
     /* sum the contributions to the global stiffness matrix */

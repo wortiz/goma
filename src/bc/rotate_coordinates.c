@@ -98,10 +98,11 @@ goma_error allocate_rotations(Exo_DB *exo, goma_rotation_node_s **rotations) {
 goma_error free_rotations(Exo_DB *exo, goma_rotation_node_s **rotations) {
   for (int i = 0; i < exo->num_nodes; i++) {
     for (int j = 0; j < DIM; j++) {
-      free((*rotations)[i].rotated_coord[j]);
+      goma_normal_free((*rotations)[i].rotated_coord[j]);
     }
   }
   free(*rotations);
+  *rotations = NULL;
   return GOMA_SUCCESS;
 }
 

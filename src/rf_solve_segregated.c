@@ -790,6 +790,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   }
 
   totalnAC = goma_ctx->problem.n_ac;
+  /* augc and n_ac are switched to per-matrix copies below; restored at the end */
+  struct AC_Information *input_augc = goma_ctx->fem.augc;
   matrix_augc = malloc(sizeof(struct AC_Information *) * goma_ctx->fem.upd->Total_Num_Matrices);
   matrix_nAC = calloc(goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int));
 
@@ -2749,6 +2751,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               if (delta_t_new > fabs(delta_t0))
                 delta_t_new *= goma_ctx->fem.tran->time_step_decelerator;
             }
+            goma_ctx->fem.pg->imtrx = Fill_Matrix; /* the restart loop above moved it */
             exchange_dof(goma_ctx->cx[goma_ctx->fem.pg->imtrx], dpi, x[goma_ctx->fem.pg->imtrx],
                          goma_ctx->fem.pg->imtrx);
             goma_ctx->fem.pg->imtrx = 0;
@@ -2964,6 +2967,8 @@ free_and_clear:
     free(matrix_augc[goma_ctx->fem.pg->imtrx]);
   }
   free(matrix_augc);
+  goma_ctx->fem.augc = input_augc;
+  goma_ctx->problem.n_ac = totalnAC;
   free(gvec);
 
   free(numProcUnknowns);

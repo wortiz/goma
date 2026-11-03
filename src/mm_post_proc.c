@@ -6061,9 +6061,7 @@ void post_process_elem(double x[],     /* soln vector */
     wr_elem_result_exo(exo, goma_ctx->exo_file_out, gvec_elem, tev + i, ts, *time_ptr, rd);
   }
 
-  /* Release the struct array memory if it exists */
-  if (goma_ctx->post.nn_error_metrics > 0)
-    free(goma_ctx->post.pp_error_data);
+  /* pp_error_data is read again by later calls, so it is not freed here */
 }
 /*****************************************************************************/
 
@@ -8095,7 +8093,9 @@ void rd_post_process_specs(FILE *ifp, char *input) {
         SPF_DBL_VEC(endofstring(echo_string), goma_ctx->post.len_u_post_proc,
                     goma_ctx->post.u_post_proc);
       } else {
-        goma_ctx->post.u_post_proc = dummy;
+        goma_ctx->post.len_u_post_proc = 1;
+        goma_ctx->post.u_post_proc = (dbl *)array_alloc(1, 1, sizeof(dbl));
+        goma_ctx->post.u_post_proc[0] = dummy[0];
       }
       ECHO(echo_string, echo_file);
     }
