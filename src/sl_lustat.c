@@ -269,7 +269,7 @@ static void plot_a(int n, int nnz, double a[], int ija[]) {
      * who is what...do all 4 sides of the matrix...
      */
     for (i = 0; i < n; i++) {
-      if (idv[goma_ctx->fem.pg->imtrx][i][0] == PRESSURE) {
+      if (goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0] == PRESSURE) {
         sym = 26101;
       } else {
         sym = 76101;

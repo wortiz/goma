@@ -147,11 +147,11 @@ int cnt_elem_vars(const Exo_DB *exo) {
   /* Put counter here for array cycling over nodal vars and testing for P0 */
   for (i = 0; i < exo->num_elem_blocks; i++) {
     if (exo->eb_num_elems[i] > 0) {
-      int mat_id = Matilda[i];
+      int mat_id = goma_ctx->problem.matilda[i];
       for (j = V_FIRST; j < V_LAST; j++) {
         if (goma_ctx->fem.pd_glob[mat_id]->v[goma_ctx->fem.pg->imtrx][j] != V_NOTHING) {
           if (goma_ctx->fem.pd_glob[mat_id]->i[goma_ctx->fem.pg->imtrx][j] == I_P0) {
-            if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][j] > 1) {
+            if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][j] > 1) {
               fprintf(stderr,
                       "%s: Too many components in variable type for element variable %s (%s)\n", yo,
                       Exo_Var_Names[j].name2, Exo_Var_Names[j].name1);
@@ -159,7 +159,7 @@ int cnt_elem_vars(const Exo_DB *exo) {
             }
             if (ev_var_mask[j - V_FIRST] == 0) {
               /* We just found a candidate for an element variable */
-              tev += Num_Var_In_Type[goma_ctx->fem.pg->imtrx][j];
+              tev += goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][j];
               ev_var_mask[j - V_FIRST] = 1; /* Only count this variable once */
             }
           }
@@ -224,7 +224,7 @@ int goal_post_nodal(const int var) {
     if (var == MASS_FRACTION) {
       value = goma_ctx->fem.upd->Max_Num_Species_Eqn;
     } else {
-      value = Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var];
+      value = goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var];
     }
   } else {
     value = 0;
@@ -246,11 +246,11 @@ int goal_post_elem(const int var) {
   }
 
   if (post_flag) {
-    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var] > 1) {
+    if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var] > 1) {
       fprintf(stderr, "%s: Too many components in variable type for element variable\n", yo);
       exit(-1);
     }
-    value = Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var];
+    value = goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var];
   } else {
     value = 0;
   }
@@ -377,7 +377,7 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
   int mode;
 
   for (eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-    mn = Matilda[eb_index];
+    mn = goma_ctx->problem.matilda[eb_index];
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.vn = goma_ctx->fem.vn_glob[mn];
 
@@ -409,7 +409,7 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
 
       for (i = 0; i < num_local_nodes; i++) {
         I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
-        if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var_no]) {
+        if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var_no]) {
           index = Index_Solution(I, var_no, ktype, 0, mn, goma_ctx->fem.pg->imtrx);
           if (index != -1) {
             nodal_vec[I] = sol_vec[index];
@@ -585,7 +585,7 @@ void extract_nodal_vec(double sol_vec[],
    * Loop backwards through the element blocks
    */
   for (eb_index = exo->num_elem_blocks - 1; eb_index >= 0; eb_index--) {
-    mn = Matilda[eb_index];
+    mn = goma_ctx->problem.matilda[eb_index];
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     /*
      * First check to see whether the variable is defined to be
@@ -670,7 +670,7 @@ void extract_nodal_eb_vec(double sol_vec[],
   /*
    * Find out the material number, mn, from the element block index
    */
-  mn = Matilda[eb_index];
+  mn = goma_ctx->problem.matilda[eb_index];
   matrl = goma_ctx->fem.mp_glob[mn];
 
   /*
@@ -873,7 +873,7 @@ void extract_elem_vec(const double sol_vec[],
 
   for (eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
 
-    mn = Matilda[eb_index];
+    mn = goma_ctx->problem.matilda[eb_index];
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
 
     /*

@@ -115,25 +115,25 @@ void noahs_raven(void) {
   ddd_add_member(n, &goma_ctx->num_var_init, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->num_var_bound, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->num_var_external, 1, MPI_INT);
-  ddd_add_member(n, &TimeIntegration, 1, MPI_INT);
-  ddd_add_member(n, &Num_BC, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.time_integration, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.num_bc, 1, MPI_INT);
   ddd_add_member(n, &num_new_BC_Desc, 1, MPI_INT);
-  ddd_add_member(n, &Num_ROT, 1, MPI_INT);
-  ddd_add_member(n, &Num_Interpolations, 1, MPI_INT);
-  ddd_add_member(n, &CoordinateSystem, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.num_rot, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.num_interpolations, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.coordinate_system, 1, MPI_INT);
   ddd_add_member(n, &len_u_post_proc, 1, MPI_INT);
   ddd_add_member(n, &num_AC_Tables, 1, MPI_INT);
   ddd_add_member(n, &num_BC_Tables, 1, MPI_INT);
   ddd_add_member(n, &num_MP_Tables, 1, MPI_INT);
   ddd_add_member(n, &num_ext_Tables, 1, MPI_INT);
-  ddd_add_member(n, &Continuation, 1, MPI_INT);
-  ddd_add_member(n, &nAC, 1, MPI_INT);
-  ddd_add_member(n, &nCC, 1, MPI_INT);
-  ddd_add_member(n, &nTC, 1, MPI_INT);
-  ddd_add_member(n, &nHC, 1, MPI_INT);
-  ddd_add_member(n, &nUC, 1, MPI_INT);
-  ddd_add_member(n, &nUTC, 1, MPI_INT);
-  ddd_add_member(n, &nEQM, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.continuation, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.n_ac, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.n_cc, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.n_tc, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.n_hc, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.n_uc, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.n_utc, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.n_eqm, 1, MPI_INT);
   ddd_add_member(n, &Linear_Stability, 1, MPI_INT);
   ddd_add_member(n, &LSA_number_wave_numbers, 1, MPI_INT);
   ddd_add_member(n, &nn_post_fluxes, 1, MPI_INT);
@@ -147,10 +147,10 @@ void noahs_raven(void) {
   ddd_add_member(n, &Chemkin_Needed, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->fem.efv->ev, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->solver.loca_umf_id, 1, MPI_INT);
-  ddd_add_member(n, &Use_Level_Set, 1, MPI_INT);
-  ddd_add_member(n, &Use_Phase_Field, 1, MPI_INT);
-  ddd_add_member(n, &Use_DG, 1, MPI_INT);
-  ddd_add_member(n, &Do_Overlap, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.use_level_set, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.use_phase_field, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.use_dg, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->problem.do_overlap, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->particles.dynamics, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->particles.number_sample_types, 1, MPI_INT);
   ddd_add_member(n, &goma_ctx->particles.num_pbcs, 1, MPI_INT);
@@ -207,12 +207,12 @@ void raven_landing(void) {
    */
 
   for (i = 0; i < MAX_NUMBER_MATLS; i++) {
-    goma_ctx->fem.pd_glob[i]->TimeIntegration = TimeIntegration;
+    goma_ctx->fem.pd_glob[i]->TimeIntegration = goma_ctx->problem.time_integration;
   }
 
-  if (Num_BC > 0) {
-    BC_Types =
-        (struct Boundary_Condition *)array_alloc(1, Num_BC, sizeof(struct Boundary_Condition));
+  if (goma_ctx->problem.num_bc > 0) {
+    BC_Types = (struct Boundary_Condition *)array_alloc(1, goma_ctx->problem.num_bc,
+                                                        sizeof(struct Boundary_Condition));
   }
 
   /* Broadcast input wave number array for 3D of 2D LSA */
@@ -278,8 +278,9 @@ void raven_landing(void) {
    * Rotation condition preliminaries...
    */
 
-  if (Num_ROT > 0) {
-    ROT_Types = (struct Rotation_Specs *)calloc(Num_ROT, sizeof(struct Rotation_Specs));
+  if (goma_ctx->problem.num_rot > 0) {
+    ROT_Types =
+        (struct Rotation_Specs *)calloc(goma_ctx->problem.num_rot, sizeof(struct Rotation_Specs));
   }
 
   /*
@@ -287,7 +288,7 @@ void raven_landing(void) {
    */
 
   for (m = 0; m < goma_ctx->fem.upd->Num_Mat; m++) {
-    goma_ctx->fem.pd_glob[m]->CoordinateSystem = CoordinateSystem;
+    goma_ctx->fem.pd_glob[m]->CoordinateSystem = goma_ctx->problem.coordinate_system;
   }
 
   /*
@@ -393,8 +394,8 @@ void raven_landing(void) {
    * Augmenting condition preliminaries...
    */
 
-  if (nAC > 0) {
-    goma_ctx->fem.augc = alloc_struct_1(struct AC_Information, nAC);
+  if (goma_ctx->problem.n_ac > 0) {
+    goma_ctx->fem.augc = alloc_struct_1(struct AC_Information, goma_ctx->problem.n_ac);
   } else {
     goma_ctx->fem.augc = NULL;
   }
@@ -403,8 +404,8 @@ void raven_landing(void) {
    * Continuation condition preliminaries...
    */
 
-  if (nCC > 0) {
-    goma_ctx->fem.cpcc = alloc_struct_1(struct Continuation_Conditions, nCC);
+  if (goma_ctx->problem.n_cc > 0) {
+    goma_ctx->fem.cpcc = alloc_struct_1(struct Continuation_Conditions, goma_ctx->problem.n_cc);
   } else {
     goma_ctx->fem.cpcc = NULL;
   }
@@ -413,9 +414,9 @@ void raven_landing(void) {
    * Turning point continuation condition preliminaries...
    */
 
-  if (nTC > 0) {
+  if (goma_ctx->problem.n_tc > 0) {
     goma_ctx->fem.tpcc = (struct Continuation_Conditions *)array_alloc(
-        1, nTC, sizeof(struct Continuation_Conditions));
+        1, goma_ctx->problem.n_tc, sizeof(struct Continuation_Conditions));
   } else {
     goma_ctx->fem.tpcc = NULL;
   }
@@ -424,9 +425,9 @@ void raven_landing(void) {
    * User continuation condition preliminaries...
    */
 
-  if (nUC > 0) {
-    goma_ctx->fem.cpuc =
-        (struct User_Continuation_Info *)array_alloc(1, nUC, sizeof(struct User_Continuation_Info));
+  if (goma_ctx->problem.n_uc > 0) {
+    goma_ctx->fem.cpuc = (struct User_Continuation_Info *)array_alloc(
+        1, goma_ctx->problem.n_uc, sizeof(struct User_Continuation_Info));
   } else {
     goma_ctx->fem.cpuc = NULL;
   }
@@ -435,9 +436,9 @@ void raven_landing(void) {
    * User turning point continuation condition preliminaries...
    */
 
-  if (nUTC > 0) {
+  if (goma_ctx->problem.n_utc > 0) {
     goma_ctx->fem.tpuc = (struct User_Continuation_Info *)array_alloc(
-        1, nUTC, sizeof(struct User_Continuation_Info));
+        1, goma_ctx->problem.n_utc, sizeof(struct User_Continuation_Info));
   } else {
     goma_ctx->fem.tpuc = NULL;
   }
@@ -446,9 +447,9 @@ void raven_landing(void) {
    * Hunting condition preliminaries...
    */
 
-  if (nHC > 0) {
-    goma_ctx->fem.hunt =
-        (struct HC_Information *)array_alloc(1, nHC, sizeof(struct HC_Information));
+  if (goma_ctx->problem.n_hc > 0) {
+    goma_ctx->fem.hunt = (struct HC_Information *)array_alloc(1, goma_ctx->problem.n_hc,
+                                                              sizeof(struct HC_Information));
   } else {
     goma_ctx->fem.hunt = NULL;
   }
@@ -456,7 +457,7 @@ void raven_landing(void) {
   /*
    * Make the Level Set Structure
    **/
-  if (Use_Level_Set) {
+  if (goma_ctx->problem.use_level_set) {
     goma_ctx->fem.ls = (struct Level_Set_Data *)calloc(1, sizeof(struct Level_Set_Data));
     goma_ctx->fem.ls->embedded_bc = NULL;
     goma_ctx->fem.ls->init_surf_list = NULL;
@@ -477,9 +478,9 @@ void raven_landing(void) {
   /*
    * Make the Phase field Structure
    **/
-  if (Use_Phase_Field) {
+  if (goma_ctx->problem.use_phase_field) {
     goma_ctx->fem.pfd = alloc_struct_1(struct Phase_Function_Data, 1);
-    goma_ctx->fem.pfd->num_phase_funcs = Use_Phase_Field;
+    goma_ctx->fem.pfd->num_phase_funcs = goma_ctx->problem.use_phase_field;
     goma_ctx->fem.pfd->ls =
         (struct Level_Set_Data **)alloc_ptr_1(goma_ctx->fem.pfd->num_phase_funcs);
 
@@ -839,7 +840,7 @@ void noahs_ark(void) {
    * Set up skeleton of the BC_Types...
    */
 
-  for (i = 0; i < Num_BC; i++) {
+  for (i = 0; i < goma_ctx->problem.num_bc; i++) {
     ddd_add_member(n, &BC_Types[i].BC_Name, 1, MPI_INT);
     ddd_add_member(n, BC_Types[i].Set_Type, 3, MPI_CHAR);
     ddd_add_member(n, &BC_Types[i].BC_ID, 1, MPI_INT);
@@ -970,7 +971,7 @@ void noahs_ark(void) {
    * of implementing this.
    */
 
-  for (i = 0; i < Num_ROT; i++) {
+  for (i = 0; i < goma_ctx->problem.num_rot; i++) {
     ddd_add_member(n, &ROT_Types[i].eq_type, 1, MPI_INT);
     ddd_add_member(n, &ROT_Types[i].type, 1, MPI_INT);
     ddd_add_member(n, ROT_Types[i].ss_id, CDIM, MPI_INT);
@@ -1123,7 +1124,7 @@ void noahs_ark(void) {
    * This structure was previously allocated in "raven_landing"
    */
 
-  if (nEQM > 0) {
+  if (goma_ctx->problem.n_eqm > 0) {
     ddd_add_member(n, &goma_ctx->fem.eqm->do_jac, 1, MPI_INT);
     ddd_add_member(n, &goma_ctx->fem.eqm->do_vol, 1, MPI_INT);
     ddd_add_member(n, &goma_ctx->fem.eqm->do_ang, 1, MPI_INT);
@@ -1150,7 +1151,7 @@ void noahs_ark(void) {
    * This structure was previously allocated in "raven_landing"
    */
 
-  for (i = 0; i < nAC; i++) {
+  for (i = 0; i < goma_ctx->problem.n_ac; i++) {
     ddd_add_member(n, &goma_ctx->fem.augc[i].nAC, 1, MPI_INT);
     ddd_add_member(n, &goma_ctx->fem.augc[i].iread, 1, MPI_INT);
     ddd_add_member(n, &goma_ctx->fem.augc[i].theta, 1, MPI_DOUBLE);
@@ -1194,7 +1195,7 @@ void noahs_ark(void) {
    * Include the Continuation information
    */
 
-  if (Continuation != ALC_NONE) {
+  if (goma_ctx->problem.continuation != ALC_NONE) {
     ddd_add_member(n, &goma_ctx->fem.cont->MaxPathSteps, 1, MPI_INT);
     ddd_add_member(n, &goma_ctx->fem.cont->PathIntr, 1, MPI_INT);
     ddd_add_member(n, &goma_ctx->fem.cont->Delta_s0, 1, MPI_DOUBLE);
@@ -1239,7 +1240,7 @@ void noahs_ark(void) {
   /* This one may apply even without continuation! */
   ddd_add_member(n, &goma_ctx->fem.loca_in->Cont_Alg, 1, MPI_INT);
 
-  if (Continuation == LOCA) {
+  if (goma_ctx->problem.continuation == LOCA) {
     ddd_add_member(n, &goma_ctx->fem.loca_in->Cont_Order, 1, MPI_INT);
     ddd_add_member(n, &goma_ctx->fem.loca_in->StepAggr, 1, MPI_DOUBLE);
     ddd_add_member(n, &goma_ctx->fem.loca_in->debug, 1, MPI_INT);
@@ -1269,7 +1270,7 @@ void noahs_ark(void) {
      * Multiple continuation conditions
      */
 
-    for (i = 0; i < nCC; i++) {
+    for (i = 0; i < goma_ctx->problem.n_cc; i++) {
       ddd_add_member(n, &goma_ctx->fem.cpcc[i].nCC, 1, MPI_INT);
       ddd_add_member(n, &goma_ctx->fem.cpcc[i].ratio, 1, MPI_DOUBLE);
       ddd_add_member(n, &goma_ctx->fem.cpcc[i].old_value, 1, MPI_DOUBLE);
@@ -1289,7 +1290,7 @@ void noahs_ark(void) {
       ddd_add_member(n, &goma_ctx->fem.cpcc[i].sensvec_id, 1, MPI_INT);
     }
 
-    for (i = 0; i < nTC; i++) {
+    for (i = 0; i < goma_ctx->problem.n_tc; i++) {
       ddd_add_member(n, &goma_ctx->fem.tpcc[i].nCC, 1, MPI_INT);
       ddd_add_member(n, &goma_ctx->fem.tpcc[i].ratio, 1, MPI_DOUBLE);
       ddd_add_member(n, &goma_ctx->fem.tpcc[i].old_value, 1, MPI_DOUBLE);
@@ -1316,7 +1317,7 @@ void noahs_ark(void) {
    * This structure was previously allocated in "raven_landing"
    */
 
-  for (i = 0; i < nHC; i++) {
+  for (i = 0; i < goma_ctx->problem.n_hc; i++) {
     ddd_add_member(n, &goma_ctx->fem.hunt[i].nHC, 1, MPI_INT);
     ddd_add_member(n, &goma_ctx->fem.hunt[i].theta, 1, MPI_DOUBLE);
     ddd_add_member(n, &goma_ctx->fem.hunt[i].eps, 1, MPI_DOUBLE);
@@ -1344,8 +1345,9 @@ void noahs_ark(void) {
    * Just transport the interpolations that this problem will actually use...
    */
 
-  for (i = 0; i < Num_Interpolations; i++) {
-    ddd_add_member(n, Unique_Interpolations, Num_Interpolations, MPI_INT);
+  for (i = 0; i < goma_ctx->problem.num_interpolations; i++) {
+    ddd_add_member(n, goma_ctx->problem.unique_interpolations, goma_ctx->problem.num_interpolations,
+                   MPI_INT);
   }
 
   if (goma_ctx->fem.ls != NULL) {
@@ -3000,7 +3002,7 @@ void ark_landing(void) {
    * Example: the pointers to BC Descriptions, static. Use the index.
    */
 
-  for (i = 0; i < Num_BC; i++) {
+  for (i = 0; i < goma_ctx->problem.num_bc; i++) {
 
     /*
      * Setup pointers into the static BC Descriptions for most BCs.
@@ -3077,7 +3079,7 @@ void ark_landing(void) {
    * "int index_dad[CDIM]" to the Rotation_Specs structure...)
    */
 
-  for (i = 0; i < Num_ROT; i++) {
+  for (i = 0; i < goma_ctx->problem.num_rot; i++) {
     for (j = 0; j < CDIM; j++) {
       index = ROT_Types[i].BC_desc_index[j];
       if (index > -1) {
@@ -3396,7 +3398,7 @@ void ark_landing(void) {
 
   /*   Augmenting condition data tables    */
 
-  for (i = 0; i < nAC; i++) {
+  for (i = 0; i < goma_ctx->problem.n_ac; i++) {
     dalloc(goma_ctx->fem.augc[i].len_AC, goma_ctx->fem.augc[i].DataFlt);
     if (goma_ctx->fem.augc[i].Aprepro_lib_string_len > 0) {
       goma_ctx->fem.augc[i].Aprepro_lib_string =
@@ -3730,7 +3732,7 @@ void noahs_dove(void) {
                    goma_ctx->fem.upd->n_mesh_corrections, MPI_DOUBLE);
   }
 
-  for (i = 0; i < Num_BC; i++) {
+  for (i = 0; i < goma_ctx->problem.num_bc; i++) {
     crdv(BC_Types[i].len_u_BC, BC_Types[i].u_BC);
   }
 
@@ -3753,7 +3755,7 @@ void noahs_dove(void) {
 
   /*   Augmenting condition data tables    */
 
-  for (i = 0; i < nAC; i++) {
+  for (i = 0; i < goma_ctx->problem.n_ac; i++) {
     crdv(goma_ctx->fem.augc[i].len_AC, goma_ctx->fem.augc[i].DataFlt);
     if (goma_ctx->fem.augc[i].Aprepro_lib_string_len > 0) {
       ddd_add_member(n, goma_ctx->fem.augc[i].Aprepro_lib_string,

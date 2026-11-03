@@ -137,7 +137,7 @@ double power_law_time_const(struct PolymerTimeConstants *lambda_st,
   }
 
   if (d_lambda != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
 
@@ -155,7 +155,7 @@ double power_law_time_const(struct PolymerTimeConstants *lambda_st,
    * d( mu )/dv
    */
   if (d_lambda != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_lambda->v[a][i] = d_lambda->gd * d_gd_dv[a][i];
@@ -232,7 +232,7 @@ double carreau_polymer_time_const(struct PolymerTimeConstants *lambda_st,
    * d( lambda )/dmesh
    */
   if (d_lambda != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_lambda->X[b][j] = d_lambda->gd * d_gd_dmesh[b][j];
@@ -248,7 +248,7 @@ double carreau_polymer_time_const(struct PolymerTimeConstants *lambda_st,
    * d( lambda )/dv
    */
   if (d_lambda != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_lambda->v[a][i] = d_lambda->gd * d_gd_dv[a][i];

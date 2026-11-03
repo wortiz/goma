@@ -413,7 +413,7 @@ int usr_viscosity_gen(dbl *mu,
    * d( mu )/dmesh
    */
   if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (gammadot != 0.0) {
           d_mu_dmesh[b][j] = *d_mu_dgd * d_gd_dmesh[b][j];
@@ -426,7 +426,7 @@ int usr_viscosity_gen(dbl *mu,
    * d( mu )/dv
    */
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     for (i = 0; i < vdofs; i++) {
       if (gammadot != 0.0) {
         d_mu_dv[a][i] = *d_mu_dgd * d_gd_dv[a][i];

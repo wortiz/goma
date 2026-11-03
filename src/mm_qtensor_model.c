@@ -756,8 +756,8 @@ int assemble_vorticity_direction(void) {
   if (goma_ctx->fem.af->Assemble_Residual) {
     /* Compute gammadot, grad(gammadot), gamma_dot[][], d_gd_dG, and d_grad_gd_dG */
 
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
       }
     }
@@ -835,12 +835,12 @@ int assemble_vorticity_direction(void) {
     /* Must calculate numerical Jacobians since analytical are intractable! */
     memset(vv, 0, sizeof(double) * DIM * MDE);
     var = VELOCITY1;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         vv[a][j] = *goma_ctx->fem.esp->v[a][j];
       }
     }
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       var = VELOCITY1 + b;
       pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
@@ -854,9 +854,9 @@ int assemble_vorticity_direction(void) {
 
         vv[b][j] -= eps;
         memset(grad_v, 0, sizeof(double) * DIM * DIM);
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
-            for (r = 0; r < VIM; r++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
+            for (r = 0; r < goma_ctx->problem.vim; r++) {
               for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; k++) {
                 grad_v[p][q] += vv[r][k] * goma_ctx->fem.bf[var]->grad_phi_e[k][r][p][q];
               }
@@ -864,14 +864,14 @@ int assemble_vorticity_direction(void) {
           }
         }
         memset(gamma_dot_pert, 0, sizeof(double) * DIM * DIM);
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             gamma_dot_pert[p][q] = grad_v[p][q] + grad_v[q][p];
           }
         }
 
         /* Get local vorticity direction for least squares projection*/
-        for (p = 0; p < VIM; p++)
+        for (p = 0; p < goma_ctx->problem.vim; p++)
           vort_dir_pert[p] = vort_dir_local[p];
         find_super_special_eigenvector(gamma_dot_pert, vort_dir_pert, v1, v2, v3, &tmp, print);
         bias_eigenvector_to(vort_dir_pert, vort_dir);
@@ -1003,20 +1003,20 @@ int assemble_vorticity_direction(void) {
           }
 
           hh3 = 1.;
-          for (i = 0; i < VIM; i++) {
+          for (i = 0; i < goma_ctx->problem.vim; i++) {
             hh3 *= h[i];
           }
           memset(grad_phi, 0, DIM * MDE * sizeof(double));
           for (k = 0; k < dofs; k++) {
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               grad_phi[k][p] = (d_phi[k][p]) / h[p];
             }
           }
           memset(grad_phi_e, 0, DIM * DIM * DIM * MDE * sizeof(double));
 
           for (k = 0; k < dofs; k++) {
-            for (p = 0; p < VIM; p++) {
-              for (q = 0; q < VIM; q++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
+              for (q = 0; q < goma_ctx->problem.vim; q++) {
                 grad_phi_e[k][q][p][q] = grad_phi[k][p];
               }
             }
@@ -1026,13 +1026,13 @@ int assemble_vorticity_direction(void) {
           if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN &&
               goma_ctx->fem.pd->CoordinateSystem != PROJECTED_CARTESIAN &&
               goma_ctx->fem.pd->CoordinateSystem != CARTESIAN_2pt5D) {
-            for (q = 0; q < VIM; q++) {
-              for (p = 0; p < VIM; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 grad_e[q][p][p] = hq[p][q] / (h[p] * h[q]);
               }
             }
-            for (p = 0; p < VIM; p++) {
-              for (q = 0; q < VIM; q++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
+              for (q = 0; q < goma_ctx->problem.vim; q++) {
                 grad_e[p][p][q] -= hq[p][q] / (h[p] * h[q]);
               }
             }
@@ -1043,8 +1043,8 @@ int assemble_vorticity_direction(void) {
               goma_ctx->fem.pd->CoordinateSystem != CARTESIAN_2pt5D) {
             for (k = 0; k < dofs; k++) {
               for (r = 0; r < WIM; r++) {
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     grad_phi_e[k][r][p][q] += goma_ctx->fem.bf[var]->phi[k] * grad_e[r][p][q];
                   }
                 }
@@ -1053,9 +1053,9 @@ int assemble_vorticity_direction(void) {
           }
 
           memset(grad_v, 0, sizeof(double) * DIM * DIM);
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
-              for (r = 0; r < VIM; r++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
+              for (r = 0; r < goma_ctx->problem.vim; r++) {
                 for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; k++) {
                   grad_v[p][q] += *goma_ctx->fem.esp->v[r][k] * grad_phi_e[k][r][p][q];
                 }
@@ -1063,14 +1063,14 @@ int assemble_vorticity_direction(void) {
             }
           }
           memset(gamma_dot_pert, 0, sizeof(double) * DIM * DIM);
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               gamma_dot_pert[p][q] = grad_v[p][q] + grad_v[q][p];
             }
           }
 
           /* Get local vorticity direction for least squares projection*/
-          for (p = 0; p < VIM; p++)
+          for (p = 0; p < goma_ctx->problem.vim; p++)
             vort_dir_pert[p] = vort_dir_local[p];
           find_super_special_eigenvector(gamma_dot_pert, vort_dir_pert, v1, v2, v3, &tmp, print);
           bias_eigenvector_to(vort_dir_pert, vort_dir);
@@ -1657,17 +1657,17 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
    *         (V Q V^t) . grad(mu)
    */
 
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       qtensor_loc[a][b] =
           (dbl)delta(a, b) - 0.5 * goma_ctx->fem.fv->vd[a] * goma_ctx->fem.fv->vd[b];
     }
   }
 
   memset(div_q, 0, DIM * sizeof(dbl));
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     div_q[a] = -0.5 * goma_ctx->fem.fv->vd[a] * goma_ctx->fem.fv->div_vd;
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       div_q[a] -= 0.5 * goma_ctx->fem.fv->vd[b] * goma_ctx->fem.fv->grad_vd[b][a];
     }
   }
@@ -1754,14 +1754,14 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
      * bf[var]->grad_phi[j] changes).
      */
     memset(grad_phi_Q, 0, DIM * MDE * sizeof(dbl));
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           grad_phi_Q[b][j] += goma_ctx->fem.bf[var]->grad_phi[j][a] * qtensor_loc[a][b];
         }
       }
     }
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         c_term = 0.0;
         mu_term = 0.0;
@@ -1798,13 +1798,13 @@ int hydro_qtensor_flux_new(struct Species_Conservation_Terms *st, int w) /* spec
       for (b = 0; b < DIM; b++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           div_phi_j_e_b = 0.;
-          for (p = 0; p < VIM; p++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             div_phi_j_e_b += goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][p];
           }
 
           d_div_q_dvd[a][b][j] = -0.5 * (phi_j * delta(a, b) * goma_ctx->fem.fv->div_vd +
                                          goma_ctx->fem.fv->vd[a] * div_phi_j_e_b);
-          for (p = 0; p < VIM; p++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             d_div_q_dvd[a][b][j] -=
                 0.5 * phi_j * delta(p, b) * goma_ctx->fem.fv->grad_vd[p][a] +
                 0.5 * goma_ctx->fem.fv->vd[p] * goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][a];
@@ -1924,11 +1924,11 @@ void compute_principle_directions(dbl *v_flow, dbl *v_norm, dbl *v_vort, int pri
 #endif
 
   t1 = 0.0;
-  for (i = 0; i < VIM; i++)
+  for (i = 0; i < goma_ctx->problem.vim; i++)
     t1 += v_vort[i] * v_flow[i];
 
   /* First get a unit vector in the flow direction. */
-  vf_norm = normalize_really_simple_vector(v_flow, VIM);
+  vf_norm = normalize_really_simple_vector(v_flow, goma_ctx->problem.vim);
 
   if (vf_norm != 0.0)
     t1 /= vf_norm;
@@ -1943,7 +1943,7 @@ void compute_principle_directions(dbl *v_flow, dbl *v_norm, dbl *v_vort, int pri
   }
 #endif
 
-  for (i = 0; i < VIM; i++)
+  for (i = 0; i < goma_ctx->problem.vim; i++)
     v_vort[i] -= t1 * v_flow[i];
 
 #ifdef DEBUG_QTENSOR
@@ -1955,11 +1955,11 @@ void compute_principle_directions(dbl *v_flow, dbl *v_norm, dbl *v_vort, int pri
   }
 #endif
 
-  normalize_really_simple_vector(v_vort, VIM);
+  normalize_really_simple_vector(v_vort, goma_ctx->problem.vim);
 
-  for (i = 0; i < VIM; i++)
-    for (j = 0; j < VIM; j++)
-      for (k = 0; k < VIM; k++)
+  for (i = 0; i < goma_ctx->problem.vim; i++)
+    for (j = 0; j < goma_ctx->problem.vim; j++)
+      for (k = 0; k < goma_ctx->problem.vim; k++)
         v_norm[k] += permute(i, j, k) * v_flow[i] * v_vort[j];
 
 #ifdef DEBUG_QTENSOR
@@ -3066,7 +3066,7 @@ void compute_VQVt_directly(dbl T[3][3], dbl VQVt[3][3], int print) {
 
   /* Get the orthogonal transformation that diagonalizes the
      rate-of-deformation tensor, S = [v0 v1 v2]. */
-  for (i = 0; i < VIM; i++) {
+  for (i = 0; i < goma_ctx->problem.vim; i++) {
     S[i][0] = v0[i];
     S[i][1] = v1[i];
     S[i][2] = v2[i];
@@ -3084,8 +3084,8 @@ void compute_VQVt_directly(dbl T[3][3], dbl VQVt[3][3], int print) {
   /* Set number of gauss points for each integral. */
   G1 = G2 = G3 = 2;
 
-  for (i = 0; i < VIM; i++)
-    for (j = 0; j < VIM; j++) {
+  for (i = 0; i < goma_ctx->problem.vim; i++)
+    for (j = 0; j < goma_ctx->problem.vim; j++) {
       sum = 0.0;
       high3 = sqrt(b);
       low3 = -high3;
@@ -3120,10 +3120,10 @@ void compute_VQVt_directly(dbl T[3][3], dbl VQVt[3][3], int print) {
             if (print)
               printf("x3 = %g, x2 = %g, x1 = %g\n", x[2], x[1], x[0]);
 #endif
-            for (k = 0; k < VIM; k++)
-              for (l = 0; l < VIM; l++) {
+            for (k = 0; k < goma_ctx->problem.vim; k++)
+              for (l = 0; l < goma_ctx->problem.vim; l++) {
                 minisum = 0.0;
-                for (m = 0; m < VIM; m++)
+                for (m = 0; m < goma_ctx->problem.vim; m++)
                   minisum += lambda[m] * x[m] * x[m];
                 prod = x[k] * x[l] * minisum * minisum;
                 prod *= S[k][i] * S[l][j];

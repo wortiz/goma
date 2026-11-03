@@ -1839,7 +1839,8 @@ static void get_boundary_xi_newton(const dbl *const coeff,
   int i, si, iter, index1;
   struct Basis_Functions *map_bf;
 
-  si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, Num_Interpolations, Unique_Interpolations);
+  si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, goma_ctx->problem.num_interpolations,
+               goma_ctx->problem.unique_interpolations);
   map_bf = goma_ctx->fem.bfd[si];
   if (mdim == 2) {
     index1 = 1 - fixed_index;
@@ -2134,7 +2135,7 @@ static void initialize_and_create_new_particle(particle_t *p, const int elem_id)
   p->owning_elem_id = elem_id;
   p = create_a_particle(p, elem_id);
   load_field_variables_at_xi(p->owning_elem_id, p->xi);
-  if (TimeIntegration == STEADY)
+  if (goma_ctx->problem.time_integration == STEADY)
     p->time = 0.0;
   else
     p->time = goma_ctx->fem.tran->init_time;
@@ -2744,7 +2745,7 @@ static void load_element_information(const int elem_id) {
   load_ei(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, static_exo, 0, goma_ctx->fem.pg->imtrx);
 
   velo_interp = -1;
-  for (i = 0; i < Num_Basis_Functions; i++)
+  for (i = 0; i < goma_ctx->problem.num_basis_functions; i++)
     if (goma_ctx->fem.pd_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]
             ->i[goma_ctx->fem.pg->imtrx][VELOCITY1] == goma_ctx->fem.bfd[i]->interpolation)
       velo_interp = i;
@@ -2945,7 +2946,7 @@ static void load_field_variables_at_xi(const int elem_id, dbl *const xi) {
 
   err = load_fv();
   GOMA_EH(err, "Error from load_fv()");
-  if (TimeIntegration == STEADY) {
+  if (goma_ctx->problem.time_integration == STEADY) {
     /* The fv_old structures don't even get filled if we're a STEADY run. */
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1])
       memcpy(goma_ctx->fem.fv_old->v, goma_ctx->fem.fv->v, DIM * sizeof(dbl));
@@ -2983,7 +2984,8 @@ static int get_element_xi_newton(const int elem_id, const dbl *const x, dbl *xi)
   int i, j, si, iter;
   struct Basis_Functions *map_bf;
 
-  si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, Num_Interpolations, Unique_Interpolations);
+  si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, goma_ctx->problem.num_interpolations,
+               goma_ctx->problem.unique_interpolations);
   map_bf = goma_ctx->fem.bfd[si];
 
   load_field_variables_at_xi(elem_id, xi);
@@ -3123,9 +3125,9 @@ output_TECPLOT_zone_info(const dbl end_time, const int goma_time_step, const int
   if (!particles_exist && !force)
     return;
 
-  if ((TimeIntegration == TRANSIENT && goma_ctx->particles.output_stride > 0 &&
+  if ((goma_ctx->problem.time_integration == TRANSIENT && goma_ctx->particles.output_stride > 0 &&
        (!((goma_time_step + 1) % goma_ctx->particles.output_stride))) ||
-      (TimeIntegration == STEADY && goma_ctx->particles.output_time_step > 0.0))
+      (goma_ctx->problem.time_integration == STEADY && goma_ctx->particles.output_time_step > 0.0))
     for (i = 0; i < goma_ctx->particles.number_sample_types; i++)
       fprintf(pa_fp[i], "ZONE T=\"%g\"\n", end_time);
 }
@@ -3178,7 +3180,7 @@ static void output_a_particle(particle_t *const p,
   } else if ((output_sample_number = p->output_sample_number) != -1 || force_output) {
     start_n = (int)floor(last_particle_time / goma_ctx->particles.output_time_step);
     end_n = (int)floor(particle_time / goma_ctx->particles.output_time_step);
-    if (TimeIntegration ==
+    if (goma_ctx->problem.time_integration ==
         STEADY) /* Need to take care of the "off by one" errors that can happen with the
                    floating point operations directly above, for post-steady calculations. */
       end_n = start_n = goma_time_step;
@@ -3216,9 +3218,9 @@ static void output_a_particle(particle_t *const p,
    * time step. */
   if (goma_ctx->particles.full_output_stride > 0) {
     strided_output = !((goma_time_step + 1) % goma_ctx->particles.full_output_stride);
-    last_goma_step = ((TimeIntegration == STEADY) &&
+    last_goma_step = ((goma_ctx->problem.time_integration == STEADY) &&
                       (goma_time_step == goma_ctx->particles.max_time_steps - 1)) ||
-                     ((TimeIntegration == TRANSIENT) &&
+                     ((goma_ctx->problem.time_integration == TRANSIENT) &&
                       ((goma_time_step == goma_ctx->fem.tran->MaxTimeSteps - 1) ||
                        (particle_time == goma_ctx->fem.tran->TimeMax)));
 
@@ -4565,7 +4567,7 @@ static void fill_my_fv_old(void) {
 
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VOLTAGE]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VOLTAGE];
-    for (i = 0; i < VIM; i++) {
+    for (i = 0; i < goma_ctx->problem.vim; i++) {
       my_fv_old->grad_V[i] = 0.0;
       for (j = 0; j < dofs; j++)
         my_fv_old->grad_V[i] +=
@@ -4575,7 +4577,7 @@ static void fill_my_fv_old(void) {
 
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][ENORM]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ENORM];
-    for (i = 0; i < VIM; i++) {
+    for (i = 0; i < goma_ctx->problem.vim; i++) {
       my_fv_old->grad_Enorm[i] = 0.0;
       for (j = 0; j < dofs; j++)
         my_fv_old->grad_Enorm[i] +=
@@ -4677,7 +4679,7 @@ static void advance_a_particle(particle_t *p,
     */
 
     output_start_ust = ust();
-    if (TimeIntegration == STEADY) {
+    if (goma_ctx->problem.time_integration == STEADY) {
       if (p->time == global_end_time) /* because end_time is an output time in this case. */
         output_a_particle(p, p->time_old, p->time, n, 1, 0);
     } else

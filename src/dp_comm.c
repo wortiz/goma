@@ -66,7 +66,7 @@ void exchange_dof(Comm_Ex *cx, Dpi *dpi, double *x, int imtrx)
     return;
 
 #ifdef PARALLEL
-  total_num_send_unknowns = ptr_dof_send[imtrx][dpi->num_neighbors];
+  total_num_send_unknowns = goma_ctx->problem.ptr_dof_send[imtrx][dpi->num_neighbors];
   np_base = alloc_struct_1(COMM_NP_STRUCT, dpi->num_neighbors);
   ptrd = (double *)alloc_dbl_1(total_num_send_unknowns, DBL_NOINIT);
   ptr_send_list = ptrd;
@@ -74,7 +74,7 @@ void exchange_dof(Comm_Ex *cx, Dpi *dpi, double *x, int imtrx)
   /*
    * gather up the list of send unknowns
    */
-  ptr_int = list_dof_send[imtrx];
+  ptr_int = goma_ctx->problem.list_dof_send[imtrx];
   for (i = total_num_send_unknowns; i > 0; i--) {
     *ptrd++ = x[*ptr_int++];
   }
@@ -83,12 +83,13 @@ void exchange_dof(Comm_Ex *cx, Dpi *dpi, double *x, int imtrx)
    * store base address for the start of the external degrees of freedom
    * in this vector
    */
-  ptr_recv_list = x + num_internal_dofs[imtrx] + num_boundary_dofs[imtrx];
+  ptr_recv_list =
+      x + goma_ctx->problem.num_internal_dofs[imtrx] + goma_ctx->problem.num_boundary_dofs[imtrx];
 
   np_ptr = np_base;
   for (p = 0; p < dpi->num_neighbors; p++) {
     np_ptr->neighbor_ProcID = cx[p].neighbor_name;
-    np_ptr->send_message_buf = (void *)(ptr_send_list + ptr_dof_send[imtrx][p]);
+    np_ptr->send_message_buf = (void *)(ptr_send_list + goma_ctx->problem.ptr_dof_send[imtrx][p]);
     np_ptr->send_message_length = sizeof(double) * cx[p].num_dofs_send;
     np_ptr->recv_message_buf = (void *)ptr_recv_list;
     np_ptr->recv_message_length = sizeof(double) * cx[p].num_dofs_recv;
@@ -122,7 +123,7 @@ void exchange_dof_int(Comm_Ex *cx, Dpi *dpi, int *x, int imtrx)
     return;
 
 #ifdef PARALLEL
-  total_num_send_unknowns = ptr_dof_send[imtrx][dpi->num_neighbors];
+  total_num_send_unknowns = goma_ctx->problem.ptr_dof_send[imtrx][dpi->num_neighbors];
   np_base = alloc_struct_1(COMM_NP_STRUCT, dpi->num_neighbors);
   ptrd = malloc(total_num_send_unknowns * sizeof(int));
   ptr_send_list = ptrd;
@@ -130,7 +131,7 @@ void exchange_dof_int(Comm_Ex *cx, Dpi *dpi, int *x, int imtrx)
   /*
    * gather up the list of send unknowns
    */
-  ptr_int = list_dof_send[imtrx];
+  ptr_int = goma_ctx->problem.list_dof_send[imtrx];
   for (i = total_num_send_unknowns; i > 0; i--) {
     *ptrd++ = x[*ptr_int++];
   }
@@ -139,12 +140,13 @@ void exchange_dof_int(Comm_Ex *cx, Dpi *dpi, int *x, int imtrx)
    * store base address for the start of the external degrees of freedom
    * in this vector
    */
-  ptr_recv_list = x + num_internal_dofs[imtrx] + num_boundary_dofs[imtrx];
+  ptr_recv_list =
+      x + goma_ctx->problem.num_internal_dofs[imtrx] + goma_ctx->problem.num_boundary_dofs[imtrx];
 
   np_ptr = np_base;
   for (p = 0; p < dpi->num_neighbors; p++) {
     np_ptr->neighbor_ProcID = cx[p].neighbor_name;
-    np_ptr->send_message_buf = (void *)(ptr_send_list + ptr_dof_send[imtrx][p]);
+    np_ptr->send_message_buf = (void *)(ptr_send_list + goma_ctx->problem.ptr_dof_send[imtrx][p]);
     np_ptr->send_message_length = sizeof(int) * cx[p].num_dofs_send;
     np_ptr->recv_message_buf = (void *)ptr_recv_list;
     np_ptr->recv_message_length = sizeof(int) * cx[p].num_dofs_recv;
@@ -218,7 +220,7 @@ void exchange_node(Comm_Ex *cx, Dpi *dpi, double *x)
     return;
 
 #ifdef PARALLEL
-  total_num_send_unknowns = ptr_node_send[dpi->num_neighbors];
+  total_num_send_unknowns = goma_ctx->problem.ptr_node_send[dpi->num_neighbors];
   np_base = alloc_struct_1(COMM_NP_STRUCT, dpi->num_neighbors);
   ptrd = (double *)alloc_dbl_1(total_num_send_unknowns, DBL_NOINIT);
   ptr_send_list = ptrd;
@@ -226,7 +228,7 @@ void exchange_node(Comm_Ex *cx, Dpi *dpi, double *x)
   /*
    * gather up the list of send unknowns
    */
-  ptr_int = list_node_send;
+  ptr_int = goma_ctx->problem.list_node_send;
   for (i = total_num_send_unknowns; i > 0; i--) {
     *ptrd++ = x[*ptr_int++];
   }
@@ -240,7 +242,7 @@ void exchange_node(Comm_Ex *cx, Dpi *dpi, double *x)
   np_ptr = np_base;
   for (p = 0; p < dpi->num_neighbors; p++) {
     np_ptr->neighbor_ProcID = cx[p].neighbor_name;
-    np_ptr->send_message_buf = (void *)(ptr_send_list + ptr_node_send[p]);
+    np_ptr->send_message_buf = (void *)(ptr_send_list + goma_ctx->problem.ptr_node_send[p]);
     np_ptr->send_message_length = sizeof(double) * cx[p].num_nodes_send;
     np_ptr->recv_message_buf = (void *)ptr_recv_list;
     np_ptr->recv_message_length = sizeof(double) * cx[p].num_nodes_recv;
@@ -274,7 +276,7 @@ void exchange_dof_long_long(Comm_Ex *cx, Dpi *dpi, long long *x, int imtrx)
     return;
 
 #ifdef PARALLEL
-  total_num_send_unknowns = ptr_dof_send[imtrx][dpi->num_neighbors];
+  total_num_send_unknowns = goma_ctx->problem.ptr_dof_send[imtrx][dpi->num_neighbors];
   np_base = alloc_struct_1(COMM_NP_STRUCT, dpi->num_neighbors);
   ptrd = malloc(total_num_send_unknowns * sizeof(long long));
   ptr_send_list = ptrd;
@@ -282,7 +284,7 @@ void exchange_dof_long_long(Comm_Ex *cx, Dpi *dpi, long long *x, int imtrx)
   /*
    * gather up the list of send unknowns
    */
-  ptr_int = list_dof_send[imtrx];
+  ptr_int = goma_ctx->problem.list_dof_send[imtrx];
   for (i = total_num_send_unknowns; i > 0; i--) {
     *ptrd++ = x[*ptr_int++];
   }
@@ -291,12 +293,13 @@ void exchange_dof_long_long(Comm_Ex *cx, Dpi *dpi, long long *x, int imtrx)
    * store base address for the start of the external degrees of freedom
    * in this vector
    */
-  ptr_recv_list = x + num_internal_dofs[imtrx] + num_boundary_dofs[imtrx];
+  ptr_recv_list =
+      x + goma_ctx->problem.num_internal_dofs[imtrx] + goma_ctx->problem.num_boundary_dofs[imtrx];
 
   np_ptr = np_base;
   for (p = 0; p < dpi->num_neighbors; p++) {
     np_ptr->neighbor_ProcID = cx[p].neighbor_name;
-    np_ptr->send_message_buf = (void *)(ptr_send_list + ptr_dof_send[imtrx][p]);
+    np_ptr->send_message_buf = (void *)(ptr_send_list + goma_ctx->problem.ptr_dof_send[imtrx][p]);
     np_ptr->send_message_length = sizeof(long long) * cx[p].num_dofs_send;
     np_ptr->recv_message_buf = (void *)ptr_recv_list;
     np_ptr->recv_message_length = sizeof(long long) * cx[p].num_dofs_recv;

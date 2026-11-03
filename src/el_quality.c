@@ -111,7 +111,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
   static int first_call = TRUE;
 
   /* Quick exit if no metrics were specified */
-  if (nEQM == 0)
+  if (goma_ctx->problem.n_eqm == 0)
     return (TRUE);
 
   /* Output table header */
@@ -162,7 +162,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
   /* Combined metric based on each requested method */
   tavg /= wt_sum;
   wt_min /= wt_sum;
-  if (nEQM > 1) {
+  if (goma_ctx->problem.n_eqm > 1) {
     DPRINTF(stderr, "               COMBINED         %8g         %8g     %8g\n", tavg, qmin,
             wt_min);
   }

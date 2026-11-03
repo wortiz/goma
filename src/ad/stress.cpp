@@ -87,7 +87,7 @@ int ad_tensor_dot(ADType t1[DIM][DIM],
 }
 void ad_compute_a_dot_b(ADType b[DIM][DIM], ADType G[DIM][DIM], ADType a_dot_b[DIM][DIM]) {
 
-  if (VIM == 2) {
+  if (goma_ctx->problem.vim == 2) {
 
     ADType a12 =
         ((b[0][1] * G[0][0] - b[0][0] * G[0][1]) + (b[1][1] * G[1][0] - b[1][0] * G[1][1])) /
@@ -95,7 +95,7 @@ void ad_compute_a_dot_b(ADType b[DIM][DIM], ADType G[DIM][DIM], ADType a_dot_b[D
 
     ADType a[DIM][DIM] = {{0., a12, 0.}, {-a12, 0., 0.}, {0., 0., 0.}};
 
-    ad_tensor_dot(a, b, a_dot_b, VIM);
+    ad_tensor_dot(a, b, a_dot_b, goma_ctx->problem.vim);
 
   } else { // VIM = 3
     ADType D =
@@ -146,7 +146,7 @@ void ad_compute_a_dot_b(ADType b[DIM][DIM], ADType G[DIM][DIM], ADType a_dot_b[D
         {-a13, -a23, 0.0},
     };
 
-    ad_tensor_dot(a, b, a_dot_b, VIM);
+    ad_tensor_dot(a, b, a_dot_b, goma_ctx->problem.vim);
   }
 }
 int ad_film_height_stress_source(int mode,
@@ -192,13 +192,13 @@ int ad_film_height_stress_source(int mode,
     ADType dZ_dtrace = 0;
 
     // PTT exponent
-    eps = goma_ctx->fem.ve[mode]->eps;
+    goma_ctx->problem.eps = goma_ctx->fem.ve[mode]->eps;
 
     if (goma_ctx->fem.vn->ptt_type == PTT_LINEAR) {
-      Z = 1 + eps * lambda / mup * trace;
+      Z = 1 + goma_ctx->problem.eps * lambda / mup * trace;
     } else if (goma_ctx->fem.vn->ptt_type == PTT_EXPONENTIAL) {
       const double exp_max = 700;
-      ADType inner = eps * lambda / mup * trace;
+      ADType inner = goma_ctx->problem.eps * lambda / mup * trace;
       if ((inner > exp_max) || (inner < -exp_max)) {
         GOMA_WH_MANY(GOMA_ERROR, "Exponential overflow in PTT_EXPONENTIAL");
         return GOMA_ERROR;
@@ -225,7 +225,7 @@ int ad_film_height_stress_source(int mode,
 int ad_sqrt_conf_source(int mode, ADType b[DIM][DIM], ADType source_term[DIM][DIM]) {
   ADType binv[DIM][DIM];
   ADType d_binv_db[DIM][DIM][DIM][DIM];
-  int sdim = VIM;
+  int sdim = goma_ctx->problem.vim;
   if (goma_ctx->fem.pd->gv[FILM_HEIGHT]) {
     sdim = 3;
   }
@@ -284,18 +284,18 @@ int ad_sqrt_conf_source(int mode, ADType b[DIM][DIM], ADType source_term[DIM][DI
     ADType dZ_dtrace = 0;
 
     // PTT exponent
-    eps = goma_ctx->fem.ve[mode]->eps;
+    goma_ctx->problem.eps = goma_ctx->fem.ve[mode]->eps;
 
     if (goma_ctx->fem.vn->ptt_type == PTT_LINEAR) {
-      Z = 1 + eps * (trace - (double)sdim);
+      Z = 1 + goma_ctx->problem.eps * (trace - (double)sdim);
     } else if (goma_ctx->fem.vn->ptt_type == PTT_EXPONENTIAL) {
       const double exp_max = 700;
-      ADType inner = eps * (trace - (double)sdim);
+      ADType inner = goma_ctx->problem.eps * (trace - (double)sdim);
       if ((inner > exp_max) || (inner < -exp_max)) {
         GOMA_WH_MANY(GOMA_ERROR, "Exponential overflow in PTT_EXPONENTIAL");
         return GOMA_ERROR;
       }
-      Z = exp(eps * (trace - (double)sdim));
+      Z = exp(goma_ctx->problem.eps * (trace - (double)sdim));
     } else {
       GOMA_EH(GOMA_ERROR, "Unrecognized PTT Form %d", goma_ctx->fem.vn->ptt_type);
     }
@@ -326,7 +326,7 @@ void ad_load_modal_pointers(
   /* load up things we need in the assembly routine for each mode in turn*/
 
   /* put stress in a nice working array */
-  int sdim = VIM;
+  int sdim = goma_ctx->problem.vim;
   if (goma_ctx->fem.pd->gv[FILM_HEIGHT])
     sdim = 3;
 
@@ -470,7 +470,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   /*
    * Field variables...
    */
-  for (int a = 0; a < WIM; a++) {
+  for (int a = 0; a < goma_ctx->problem.wim; a++) {
     v[a] = ad_fv->v[a];
 
     /* note, these are zero for steady calculations */
@@ -490,8 +490,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
    *				       d x_a
    */
 
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       grad_v[a][b] = ad_fv->grad_v[a][b];
     }
   }
@@ -499,15 +499,15 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   dbl dgamma[DIM][DIM];
 
   /* load up shearrate tensor based on velocity */
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       gamma[a][b] = ad_fv->grad_v[a][b] + ad_fv->grad_v[b][a];
       dgamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
 
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       if (evss_gradv) {
         g[a][b] = ad_fv->grad_v[a][b];
         gt[a][b] = ad_fv->grad_v[b][a];
@@ -566,11 +566,11 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
     /*
      * Stress tensor...(Note "anti-BSL" sign convention on deviatoric stress)
      */
-    for (int ii = 0; ii < VIM; ii++) {
-      for (int jj = 0; jj < VIM; jj++) {
+    for (int ii = 0; ii < goma_ctx->problem.vim; ii++) {
+      for (int jj = 0; jj < goma_ctx->problem.vim; jj++) {
         v_dot_del_b[ii][jj] = 0.;
         x_dot_del_b[ii][jj] = 0.;
-        for (q = 0; q < WIM; q++) {
+        for (q = 0; q < goma_ctx->problem.wim; q++) {
           v_dot_del_b[ii][jj] += v[q] * grad_b[q][ii][jj];
           x_dot_del_b[ii][jj] += x_dot[q] * grad_b[q][ii][jj];
         }
@@ -627,7 +627,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
       GOMA_EH(GOMA_ERROR, "Unknown PTT Epsilon parameter model");
     }
 
-    (void)ad_tensor_dot(b, g, b_dot_g, VIM);
+    (void)ad_tensor_dot(b, g, b_dot_g, goma_ctx->problem.vim);
 
     ADType a_dot_b[DIM][DIM];
 
@@ -638,10 +638,10 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
     if (err) {
       return 1;
     }
-    std::vector<std::vector<std::vector<ADType>>> resid(VIM);
-    for (int a = 0; a < VIM; a++) {
-      resid[a].resize(VIM);
-      for (int b = 0; b < VIM; b++) {
+    std::vector<std::vector<std::vector<ADType>>> resid(goma_ctx->problem.vim);
+    for (int a = 0; a < goma_ctx->problem.vim; a++) {
+      resid[a].resize(goma_ctx->problem.vim);
+      for (int b = 0; b < goma_ctx->problem.vim; b++) {
         resid[a][b].resize(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v_s[mode][a][b]]);
         for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v_s[mode][a][b]]; i++) {
           resid[a][b][i] = 0;
@@ -656,8 +656,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
       /*
        * Assemble each component "ab" of the polymer stress equation...
        */
-      for (int ii = 0; ii < VIM; ii++) {
-        for (int jj = 0; jj < VIM; jj++) {
+      for (int ii = 0; ii < goma_ctx->problem.vim; ii++) {
+        for (int jj = 0; jj < goma_ctx->problem.vim; jj++) {
 
           if (ii <= jj) /* since the stress tensor is symmetric, only assemble the upper half */
           {
@@ -716,14 +716,14 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   ADType hdc = 0;
                   ADType js = 0;
                   for (int k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; k++) {
-                    for (int p = 0; p < VIM; p++) {
+                    for (int p = 0; p < goma_ctx->problem.vim; p++) {
                       js += fabs(grad_b[p][ii][jj] * ad_fv->basis[eqn].grad_phi[k][p]);
                     }
                   }
                   hdc = 1 / (js + 1e-16);
 
                   ADType inner = 1e-32;
-                  for (int p = 0; p < VIM; p++) {
+                  for (int p = 0; p < goma_ctx->problem.vim; p++) {
                     inner += Y_inv * grad_b[p][ii][jj] * grad_b[p][ii][jj];
                   }
 
@@ -738,7 +738,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                     // kdc += pow(inner, bt / 2 - 1);
                   }
                   kdc *= 0.5;
-                  for (int r = 0; r < VIM; r++) {
+                  for (int r = 0; r < goma_ctx->problem.vim; r++) {
                     diffusion += kdc * grad_b[r][ii][jj] * ad_fv->basis[eqn].grad_phi[i][r];
                   }
 
@@ -784,7 +784,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   ADType hrgn = 1.0 / (tmp + 1e-14);
 
                   ADType magv = 0.0;
-                  for (int q = 0; q < VIM; q++) {
+                  for (int q = 0; q < goma_ctx->problem.vim; q++) {
                     magv += v[q] * v[q];
                   }
                   magv = sqrt(magv + 1e-32);
@@ -865,8 +865,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
      */
 
     if (goma_ctx->fem.af->Assemble_Jacobian) {
-      for (int ii = 0; ii < VIM; ii++) {
-        for (int jj = 0; jj < VIM; jj++) {
+      for (int ii = 0; ii < goma_ctx->problem.vim; ii++) {
+        for (int jj = 0; jj < goma_ctx->problem.vim; jj++) {
           if (ii <= jj) /* since the stress tensor is symmetric, only assemble the upper half */
           {
             eqn = R_s[mode][ii][jj];
@@ -1013,7 +1013,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
   /*
    * Field variables...
    */
-  for (int a = 0; a < WIM; a++) {
+  for (int a = 0; a < goma_ctx->problem.wim; a++) {
     v[a] = ad_fv->v[a];
 
     /* note, these are zero for steady calculations */
@@ -1103,7 +1103,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
       for (int jj = 0; jj < 3; jj++) {
         v_dot_del_S[ii][jj] = 0.;
         x_dot_del_S[ii][jj] = 0.;
-        for (q = 0; q < WIM; q++) {
+        for (q = 0; q < goma_ctx->problem.wim; q++) {
           v_dot_del_S[ii][jj] += v[q] * grad_S[q][ii][jj];
           x_dot_del_S[ii][jj] += x_dot[q] * grad_S[q][ii][jj];
         }
@@ -1435,7 +1435,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
   /*
    * Field variables...
    */
-  for (int a = 0; a < WIM; a++) {
+  for (int a = 0; a < goma_ctx->problem.wim; a++) {
     v[a] = ad_fv->v[a];
 
     /* note, these are zero for steady calculations */
@@ -1537,7 +1537,7 @@ ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integ
       for (int jj = 0; jj < 3; jj++) {
         v_dot_del_b[ii][jj] = 0.;
         x_dot_del_b[ii][jj] = 0.;
-        for (q = 0; q < WIM; q++) {
+        for (q = 0; q < goma_ctx->problem.wim; q++) {
           v_dot_del_b[ii][jj] += v[q] * grad_b[q][ii][jj];
           x_dot_del_b[ii][jj] += x_dot[q] * grad_b[q][ii][jj];
         }

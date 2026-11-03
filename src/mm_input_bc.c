@@ -143,36 +143,36 @@ void rd_bc_specs(FILE *ifp, char *input) {
   iread = look_for_optional(ifp, "Boundary Condition Specifications", input, '=');
 
   look_for(ifp, "Number of BC", input, '=');
-  if (fscanf(ifp, "%d", &Num_BC) != 1) {
+  if (fscanf(ifp, "%d", &goma_ctx->problem.num_bc) != 1) {
     fprintf(stderr, "error reading number of boundary conditions try to read list");
-    Num_BC = -1;
+    goma_ctx->problem.num_bc = -1;
   }
   /*
    * Count boundary conditions if Num_BC is set to -1
    */
-  if (Num_BC == -1) {
-    Num_BC = count_list(ifp, "BC", input, '=', "END OF BC");
+  if (goma_ctx->problem.num_bc == -1) {
+    goma_ctx->problem.num_bc = count_list(ifp, "BC", input, '=', "END OF BC");
   }
 
   /*
    *  Allocate space for the vector, BC_Types.
    */
-  BC_Types = alloc_struct_1(struct Boundary_Condition, Num_BC);
+  BC_Types = alloc_struct_1(struct Boundary_Condition, goma_ctx->problem.num_bc);
 
   if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
-    printf("%s:\tallocated %d copies of the %lu sized\n", yo, Num_BC,
+    printf("%s:\tallocated %d copies of the %lu sized\n", yo, goma_ctx->problem.num_bc,
            (unsigned long int)sizeof(struct Boundary_Condition));
     printf("%s:\tBoundary_Condition structure.\n", yo);
   }
 
   ECHO("\n***Boundary Condition Specifications***\n", echo_file);
 
-  SPF(echo_string, "%s = %d", "Number of BC", Num_BC);
+  SPF(echo_string, "%s = %d", "Number of BC", goma_ctx->problem.num_bc);
   ECHO(echo_string, echo_file);
 
   /* initialize number of interface sources*/
-  Num_Interface_Srcs = 0;
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  goma_ctx->problem.num_interface_srcs = 0;
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
 
     /*
      *   Initialize the boundary condition to its
@@ -2503,8 +2503,8 @@ void rd_bc_specs(FILE *ifp, char *input) {
       }
       if (BC_Types[ibc].species_eq == 0 && (BC_Types[ibc].BC_Name == IS_EQUIL_PRXN_BC ||
                                             BC_Types[ibc].BC_Name == VL_EQUIL_PRXN_BC)) {
-        IntSrc_BCID[Num_Interface_Srcs] = BC_Types[ibc].BC_ID;
-        Num_Interface_Srcs++;
+        goma_ctx->problem.int_src_bc_id[goma_ctx->problem.num_interface_srcs] = BC_Types[ibc].BC_ID;
+        goma_ctx->problem.num_interface_srcs++;
       }
 
       for (i = 0; i < 3; i++)
@@ -3125,33 +3125,36 @@ void rd_bc_specs(FILE *ifp, char *input) {
 
       if (goma_ctx->fem.augc == NULL) {
         goma_ctx->fem.augc = alloc_struct_1(struct AC_Information, 1);
-        nAC = 1;
+        goma_ctx->problem.n_ac = 1;
       } else {
-        goma_ctx->fem.augc =
-            realloc_struct_1(goma_ctx->fem.augc, struct AC_Information, nAC + 1, nAC);
-        nAC++;
+        goma_ctx->fem.augc = realloc_struct_1(goma_ctx->fem.augc, struct AC_Information,
+                                              goma_ctx->problem.n_ac + 1, goma_ctx->problem.n_ac);
+        goma_ctx->problem.n_ac++;
       }
 
       /* Record the index of the attached AC in the BC_Types structure */
 
-      BC_Types[ibc].BC_Data_Int[0] = nAC - 1;
+      BC_Types[ibc].BC_Data_Int[0] = goma_ctx->problem.n_ac - 1;
 
       /*
        * Next up...fill in the pieces of the AC structure with the appropriate info.
        */
-      goma_ctx->fem.augc[nAC - 1].Type =
-          AC_LGRM;                           /* Attached AC is a Lagrange multiplier constraint */
-      goma_ctx->fem.augc[nAC - 1].MTID = -1; /* this integrates over all blocks sharing sideset */
-      goma_ctx->fem.augc[nAC - 1].MFID = VOLUME_FLUX; /* This flux type used in evaluate_flux */
-      goma_ctx->fem.augc[nAC - 1].COMPID = 0.0;
-      goma_ctx->fem.augc[nAC - 1].SSID = BC_Types[ibc].BC_ID; /* Sideset set id */
-      goma_ctx->fem.augc[nAC - 1].CONSTV =
+      goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].Type =
+          AC_LGRM; /* Attached AC is a Lagrange multiplier constraint */
+      goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].MTID =
+          -1; /* this integrates over all blocks sharing sideset */
+      goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].MFID =
+          VOLUME_FLUX; /* This flux type used in evaluate_flux */
+      goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].COMPID = 0.0;
+      goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].SSID =
+          BC_Types[ibc].BC_ID; /* Sideset set id */
+      goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].CONSTV =
           -BC_Types[ibc].BC_Data_Float[0]; /* Store the flow rate value */
-      goma_ctx->fem.augc[nAC - 1].BCID =
+      goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].BCID =
           ibc; /* record which boundary condition AC is attached to */
-      goma_ctx->fem.augc[nAC - 1].DFID =
+      goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].DFID =
           0; /* record index of flow rate parameter (for continuation */
-      goma_ctx->fem.augc[nAC - 1].iread = 0;
+      goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].iread = 0;
 
       /*
        * Now check the BC card again to see if we are suppose to
@@ -3159,20 +3162,21 @@ void rd_bc_specs(FILE *ifp, char *input) {
        */
 
       if (!strcmp(input, "read"))
-        goma_ctx->fem.augc[nAC - 1].iread = 1;
+        goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].iread = 1;
 
       /*
        * Lastly,  DataFlt[0] gets the starting LM guess from BC_Data_Float[1]
        *
        */
 
-      goma_ctx->fem.augc[nAC - 1].DataFlt = alloc_dbl_1(1, -BC_Types[ibc].BC_Data_Float[1]);
-      goma_ctx->fem.augc[nAC - 1].len_AC = 1;
+      goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].DataFlt =
+          alloc_dbl_1(1, -BC_Types[ibc].BC_Data_Float[1]);
+      goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].len_AC = 1;
 
       /* Oh, one more thing..reset the nAC value in all the AC's */
 
-      for (i = 0; i < nAC; i++)
-        goma_ctx->fem.augc[i].nAC = nAC;
+      for (i = 0; i < goma_ctx->problem.n_ac; i++)
+        goma_ctx->fem.augc[i].nAC = goma_ctx->problem.n_ac;
 
       break;
 
@@ -3190,8 +3194,8 @@ void rd_bc_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
 
     /* check hunting BC data floats for out-of-bounds*/
-    if (nHC) {
-      for (i = 0; i < nHC; i++) {
+    if (goma_ctx->problem.n_hc) {
+      for (i = 0; i < goma_ctx->problem.n_hc; i++) {
         if (goma_ctx->fem.hunt[i].Type == 1 && goma_ctx->fem.hunt[i].BCID == ibc) {
           if (goma_ctx->fem.hunt[i].DFID >= BC_Types[ibc].max_DFlt) {
             GOMA_WH(-1, "Whoa.... hunting data float outside range\n");
@@ -3202,8 +3206,8 @@ void rd_bc_specs(FILE *ifp, char *input) {
       }
     }
     /* check loca BC data floats for out-of-bounds*/
-    if (nCC) {
-      for (i = 0; i < nCC; i++) {
+    if (goma_ctx->problem.n_cc) {
+      for (i = 0; i < goma_ctx->problem.n_cc; i++) {
         if (goma_ctx->fem.cpcc[i].Type == 1 && goma_ctx->fem.cpcc[i].BCID == ibc) {
           if (goma_ctx->fem.cpcc[i].DFID >= BC_Types[ibc].max_DFlt)
             GOMA_WH(-1, "Whoa.... loca data float outside range\n");
@@ -3215,7 +3219,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
   ECHO("END OF BC", echo_file);
 
   /* Check for overlap AC with no relevant boundary conditions */
-  if (Do_Overlap && !overlap_bc) {
+  if (goma_ctx->problem.do_overlap && !overlap_bc) {
     GOMA_EH(GOMA_ERROR, "Overlap AC requested with no embedded or contact BC's!");
   }
 
@@ -3255,19 +3259,20 @@ void rd_bc_specs(FILE *ifp, char *input) {
     SPF(echo_string, "\n%s =\n", "Rotation Specifications");
     ECHO(echo_string, echo_file);
 
-    Num_ROT = count_list(ifp, "ROT", input, '=', "END OF ROT");
+    goma_ctx->problem.num_rot = count_list(ifp, "ROT", input, '=', "END OF ROT");
   } else {
-    Num_ROT = 0;
+    goma_ctx->problem.num_rot = 0;
   }
 
-  SPF(echo_string, "%s = %d", "Number of rotation conditions", Num_ROT);
+  SPF(echo_string, "%s = %d", "Number of rotation conditions", goma_ctx->problem.num_rot);
   ECHO(echo_string, echo_file);
 
   /*
    *  Allocate space for the vector, ROT_Types.
    */
-  if (Num_ROT != 0) {
-    ROT_Types = (struct Rotation_Specs *)smalloc(Num_ROT * sizeof(struct Rotation_Specs));
+  if (goma_ctx->problem.num_rot != 0) {
+    ROT_Types =
+        (struct Rotation_Specs *)smalloc(goma_ctx->problem.num_rot * sizeof(struct Rotation_Specs));
 
     /*
      * When they are "-1", these indeces mean a corresponding NULL pointer
@@ -3280,13 +3285,13 @@ void rd_bc_specs(FILE *ifp, char *input) {
 #define CDIM 3
 #endif
 
-    for (i = 0; i < Num_ROT; i++) {
+    for (i = 0; i < goma_ctx->problem.num_rot; i++) {
       for (j = 0; j < CDIM; j++) {
         ROT_Types[i].BC_desc_index[j] = -1;
       }
     }
 
-    for (irc = 0; irc < Num_ROT; irc++) {
+    for (irc = 0; irc < goma_ctx->problem.num_rot; irc++) {
 
       /*
        * Handy quick pointer for *this* ROT_Type.
@@ -3760,7 +3765,7 @@ static int detect_BC(int BC_name, int BC_ID)
 
   int k = 0, found = FALSE;
 
-  while (k < Num_BC && !found) {
+  while (k < goma_ctx->problem.num_bc && !found) {
     found = (BC_Types[k].BC_Name == BC_name) && (BC_Types[k].BC_ID == BC_ID);
 
     k++;

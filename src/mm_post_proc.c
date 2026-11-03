@@ -695,14 +695,14 @@ static int calc_standard_fields(double **post_proc_vect,
     velo_sqrd = 0.;
     stream_grad = 0.;
 
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
       }
     }
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       velo_sqrd += goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->v[a];
-      for (b = 0; b < VIM; b++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         /* vv:gamma */
         stream_grad += goma_ctx->fem.fv->v[a] * gamma[a][b] * goma_ctx->fem.fv->v[b];
       }
@@ -723,8 +723,8 @@ static int calc_standard_fields(double **post_proc_vect,
       if (goma_ctx->fem.vn->evssModel == LOG_CONF ||
           goma_ctx->fem.vn->evssModel == LOG_CONF_GRADV) {
         for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
-          for (p = 0; p < VIM; p++) {
-            for (r = 0; r < VIM; r++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (r = 0; r < goma_ctx->problem.vim; r++) {
               log_c[p][r] = goma_ctx->fem.fv->S[ve_mode][p][r];
             }
           }
@@ -735,23 +735,23 @@ static int calc_standard_fields(double **post_proc_vect,
 #endif
           mup = viscosity(goma_ctx->fem.ve[ve_mode]->gn, gamma, NULL);
           lambda = polymer_time_const(goma_ctx->fem.ve[ve_mode]->time_const_st, gamma, NULL);
-          for (a = 0; a < VIM; a++) {
-            for (b = 0; b < VIM; b++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               ves[a][b] += mup / lambda * (exp_s[a][b] - (double)delta(a, b));
             }
           }
         }
       } else {
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
               ves[a][b] += goma_ctx->fem.fv->S[ve_mode][a][b];
             }
           }
         }
       }
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           stream_grad += goma_ctx->fem.fv->v[a] * ves[a][b] * goma_ctx->fem.fv->v[b];
         }
       }
@@ -771,8 +771,8 @@ static int calc_standard_fields(double **post_proc_vect,
     velo_sqrd = 0.;
     stream_grad = 0.;
 
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
       }
     }
@@ -799,8 +799,8 @@ static int calc_standard_fields(double **post_proc_vect,
       if (goma_ctx->fem.vn->evssModel == LOG_CONF ||
           goma_ctx->fem.vn->evssModel == LOG_CONF_GRADV) {
         for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
-          for (p = 0; p < VIM; p++) {
-            for (r = 0; r < VIM; r++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (r = 0; r < goma_ctx->problem.vim; r++) {
               log_c[p][r] = goma_ctx->fem.fv->S[ve_mode][p][r];
             }
           }
@@ -811,23 +811,23 @@ static int calc_standard_fields(double **post_proc_vect,
 #endif
           mup = viscosity(goma_ctx->fem.ve[ve_mode]->gn, gamma, NULL);
           lambda = polymer_time_const(goma_ctx->fem.ve[ve_mode]->time_const_st, gamma, NULL);
-          for (a = 0; a < VIM; a++) {
-            for (b = 0; b < VIM; b++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               ves[a][b] += mup / lambda * (exp_s[a][b] - (double)delta(a, b));
             }
           }
         }
       } else {
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
               ves[a][b] += goma_ctx->fem.fv->S[ve_mode][a][b];
             }
           }
         }
       }
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           stream_grad += goma_ctx->fem.fv->v[a] * ves[a][b] * nv[b];
         }
       }
@@ -846,8 +846,8 @@ static int calc_standard_fields(double **post_proc_vect,
     stream_grad = 0.;
     curv = 0.;
 
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
       }
     }
@@ -892,8 +892,8 @@ static int calc_standard_fields(double **post_proc_vect,
       if (goma_ctx->fem.vn->evssModel == LOG_CONF ||
           goma_ctx->fem.vn->evssModel == LOG_CONF_GRADV) {
         for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
-          for (p = 0; p < VIM; p++) {
-            for (r = 0; r < VIM; r++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (r = 0; r < goma_ctx->problem.vim; r++) {
               log_c[p][r] = goma_ctx->fem.fv->S[ve_mode][p][r];
             }
           }
@@ -904,23 +904,23 @@ static int calc_standard_fields(double **post_proc_vect,
 #endif
           mup = viscosity(goma_ctx->fem.ve[ve_mode]->gn, gamma, NULL);
           lambda = polymer_time_const(goma_ctx->fem.ve[ve_mode]->time_const_st, gamma, NULL);
-          for (a = 0; a < VIM; a++) {
-            for (b = 0; b < VIM; b++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               ves[a][b] += mup / lambda * (exp_s[a][b] - (double)delta(a, b));
             }
           }
         }
       } else {
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
               ves[a][b] += goma_ctx->fem.fv->S[ve_mode][a][b];
             }
           }
         }
       }
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           stream_grad +=
               (2. * goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->v[b] - delta(a, b) * velo_sqrd) *
               ves[a][b];
@@ -982,8 +982,8 @@ static int calc_standard_fields(double **post_proc_vect,
       GOMA_EH(GOMA_ERROR, "AutoDiff assembly enabled but Goma not compiled with Sacado support");
 #endif
     } else {
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
         }
       }
@@ -1028,8 +1028,8 @@ static int calc_standard_fields(double **post_proc_vect,
   }
 #else
   if (PP_Viscosity != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
       }
     }
@@ -1064,8 +1064,8 @@ static int calc_standard_fields(double **post_proc_vect,
     if (goma_ctx->fem.gn->ConstitutiveEquation == BINGHAM_MIXED) {
 
       dbl gamma[DIM][DIM];
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
         }
       }
@@ -1309,8 +1309,8 @@ static int calc_standard_fields(double **post_proc_vect,
   if (MEAN_SHEAR != -1) {
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
       double gammadot, gamma[DIM][DIM];
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
         }
       }
@@ -1344,8 +1344,8 @@ static int calc_standard_fields(double **post_proc_vect,
 
   if (MEAN_VORTICITY != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     double vorticity, omega[DIM][DIM];
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         omega[a][b] = goma_ctx->fem.fv->grad_v[a][b] - goma_ctx->fem.fv->grad_v[b][a];
       }
     }
@@ -1359,8 +1359,8 @@ static int calc_standard_fields(double **post_proc_vect,
   if (GIES_CRIT != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     double gammadot, gamma[DIM][DIM];
     double vorticity, omega[DIM][DIM];
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
         omega[a][b] = goma_ctx->fem.fv->grad_v[a][b] - goma_ctx->fem.fv->grad_v[b][a];
       }
@@ -1374,8 +1374,8 @@ static int calc_standard_fields(double **post_proc_vect,
 
   if (Q_FCN != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     double gammadot, del_v[DIM][DIM];
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         del_v[a][b] = goma_ctx->fem.fv->grad_v[a][b];
       }
     }
@@ -1389,7 +1389,7 @@ static int calc_standard_fields(double **post_proc_vect,
   if (PSPG_PP != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     dbl pspg[DIM];
     calc_pspg(pspg, NULL, time, theta, delta_t, pg_data);
-    for (int i = 0; i < VIM; i++) {
+    for (int i = 0; i < goma_ctx->problem.vim; i++) {
       local_post[PSPG_PP + i] = pspg[i];
       local_lumped[PSPG_PP + i] = 1.;
     }
@@ -1397,7 +1397,7 @@ static int calc_standard_fields(double **post_proc_vect,
 
   if (VELO_SPEED != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     velo_sqrd = 0.;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       velo_sqrd += SQUARE(goma_ctx->fem.fv->v[a]);
     }
     local_post[VELO_SPEED] = sqrt(velo_sqrd);
@@ -1536,8 +1536,8 @@ static int calc_standard_fields(double **post_proc_vect,
     index = 0;
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v_s[mode][0][0]]) {
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             /* since the stress tensor is symmetric,
                only assemble the upper half */
             if (a <= b) {
@@ -1554,8 +1554,8 @@ static int calc_standard_fields(double **post_proc_vect,
 
     /* Get total stress tensor for multi mode calculations */
     if (goma_ctx->fem.vn->modes > 1) {
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           /* since the stress tensor is symmetric, only assemble the
              upper half */
           if (a <= b) {
@@ -1608,7 +1608,7 @@ static int calc_standard_fields(double **post_proc_vect,
     for (int w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
       dbl strong_residual = 0;
       strong_residual = goma_ctx->fem.fv_dot->c[w];
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         strong_residual += goma_ctx->fem.fv->v[p] * goma_ctx->fem.fv->grad_c[w][p];
       }
       // strong_residual -= s_terms.MassSource[w];
@@ -1830,7 +1830,7 @@ static int calc_standard_fields(double **post_proc_vect,
   if (DIFFUSION_VECTORS_POR_LIQ_GPHASE != -1 &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][POR_LIQ_PRES] &&
       goma_ctx->fem.mp->PorousMediaType != POROUS_SATURATED) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       /*
        * First do the diffusive flux of solvent in the gas phase
        * UMR
@@ -1850,7 +1850,7 @@ static int calc_standard_fields(double **post_proc_vect,
   if (DIFFUSION_VECTORS_POR_AIR_GPHASE != -1 &&
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][POR_LIQ_PRES] &&
       goma_ctx->fem.mp->PorousMediaType != POROUS_SATURATED) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       /*
        * First do the diffusive flux of air in the gas phase
        * UMR
@@ -1936,10 +1936,10 @@ static int calc_standard_fields(double **post_proc_vect,
       }
     } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
       double velo_sqrd = 0.;
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         velo_sqrd += SQUARE(goma_ctx->fem.fv->v[a]);
       }
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         local_post[ORIENTATION_VECTORS + a] = goma_ctx->fem.fv->v[a] / sqrt(velo_sqrd);
         local_lumped[ORIENTATION_VECTORS + a] = 1.;
       }
@@ -2072,8 +2072,8 @@ static int calc_standard_fields(double **post_proc_vect,
       goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     /*even though I changed this to VIM, I noticed that FVPs
       are not transmitted to restart file.....PRS 6/7/2002 */
-    for (i = 0; i < VIM; i++) {
-      for (j = 0; j < VIM; j++) {
+    for (i = 0; i < goma_ctx->problem.vim; i++) {
+      for (j = 0; j < goma_ctx->problem.vim; j++) {
         FVP[i][j] = goma_ctx->fem.evpl_glob[0]->F_vp_glob[ielem][ip][i][j];
       }
     }
@@ -2167,7 +2167,7 @@ static int calc_standard_fields(double **post_proc_vect,
       local_lumped[POROUS_RHO_TOTAL_SOLVENTS] = 1.;
     }
     w++;
-    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES]) {
+    if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES]) {
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_GAS_PRES]) {
         local_post[POROUS_RHO_TOTAL_SOLVENTS + w] = goma_ctx->fem.pmv->bulk_density[i_pg];
         local_lumped[POROUS_RHO_TOTAL_SOLVENTS + w] = 1.;
@@ -2185,21 +2185,21 @@ static int calc_standard_fields(double **post_proc_vect,
         goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE ||
         goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED) {
       w = 0;
-      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES]) {
+      if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES]) {
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_LIQ_PRES]) {
           local_post[POROUS_RHO_GAS_SOLVENTS] = goma_ctx->fem.pmv->gas_density_solvents[i_pl];
           local_lumped[POROUS_RHO_GAS_SOLVENTS] = 1.;
         }
         w++;
       }
-      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES]) {
+      if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES]) {
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_GAS_PRES]) {
           local_post[POROUS_RHO_GAS_SOLVENTS + w] = goma_ctx->fem.pmv->gas_density_solvents[i_pg];
           local_lumped[POROUS_RHO_GAS_SOLVENTS + w] = 1.;
         }
         w++;
       }
-      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_POROSITY]) {
+      if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_POROSITY]) {
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_POROSITY]) {
           local_post[POROUS_RHO_GAS_SOLVENTS + w] = goma_ctx->fem.pmv->gas_density_solvents[i_pore];
           local_lumped[POROUS_RHO_GAS_SOLVENTS + w] = 1.;
@@ -2289,7 +2289,8 @@ static int calc_standard_fields(double **post_proc_vect,
     local_lumped[LIGHT_INTENSITY] = 1.0;
   } /* end of LIGHT_INTENSITY */
 
-  if (PP_FLUID_STRESS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (PP_FLUID_STRESS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     dbl Pi[DIM][DIM];
     fluid_stress(Pi, NULL);
     for (a = 0; a < goma_ctx->mesh.num_dim; a++) {
@@ -2299,7 +2300,7 @@ static int calc_standard_fields(double **post_proc_vect,
         local_lumped[PP_FLUID_STRESS + a * goma_ctx->mesh.num_dim + b] = 1.;
       }
     }
-    if (goma_ctx->mesh.num_dim == 2 && VIM == 3) {
+    if (goma_ctx->mesh.num_dim == 2 && goma_ctx->problem.vim == 3) {
       local_post[PP_FLUID_STRESS + 4] = Pi[2][2] + goma_ctx->fem.fv->P * delta(a, b);
       local_lumped[PP_FLUID_STRESS + 4] = 1.;
     }
@@ -2566,7 +2567,7 @@ static int calc_standard_fields(double **post_proc_vect,
     if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
         goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
         goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D || dim == 3) {
-      for (j = 0; j < VIM; j++) {
+      for (j = 0; j < goma_ctx->problem.vim; j++) {
         local_post[CURL_V + j] = goma_ctx->fem.fv->curl_v[j];
         local_lumped[CURL_V + j] = 1.0;
       }
@@ -2591,7 +2592,7 @@ static int calc_standard_fields(double **post_proc_vect,
         goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
         goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D || dim == 3) {
       local_post[HELICITY] = 0.0;
-      for (j = 0; j < VIM; j++) {
+      for (j = 0; j < goma_ctx->problem.vim; j++) {
         local_post[HELICITY] += goma_ctx->fem.fv->v[j] * goma_ctx->fem.fv->curl_v[j];
       }
       local_lumped[HELICITY] = 1.0;
@@ -2599,10 +2600,10 @@ static int calc_standard_fields(double **post_proc_vect,
   }
 
   if (LAMB_VECTOR != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (j = 0; j < VIM; j++) {
+    for (j = 0; j < goma_ctx->problem.vim; j++) {
       local_post[LAMB_VECTOR + j] = 0;
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           local_post[LAMB_VECTOR + j] +=
               permute(a, b, j) * goma_ctx->fem.fv->curl_v[a] * goma_ctx->fem.fv->v[b];
         }
@@ -2612,8 +2613,9 @@ static int calc_standard_fields(double **post_proc_vect,
   }
 
   /* calculate poynting vectors for EM calculations here !!  */
-  if (POYNTING_VECTORS != -1 && ((Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] ||
-                                  Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG]))) {
+  if (POYNTING_VECTORS != -1 &&
+      ((goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] ||
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG]))) {
     double poynt[DIM];
     memset(poynt, 0, sizeof(double) * DIM);
     /*  Acoustic analogy -- scalar version  */
@@ -2648,18 +2650,18 @@ static int calc_standard_fields(double **post_proc_vect,
     for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
 
       dbl traceOverVim = 0;
-      for (int i = 0; i < VIM; i++) {
+      for (int i = 0; i < goma_ctx->problem.vim; i++) {
         traceOverVim += goma_ctx->fem.fv->S[mode][i][i];
       }
 
-      traceOverVim /= VIM;
+      traceOverVim /= goma_ctx->problem.vim;
 
       // square of the deviatoric sress norm
       dbl normOfStressDSqr = 0;
-      for (int i = 0; i < VIM; i++) {
+      for (int i = 0; i < goma_ctx->problem.vim; i++) {
         normOfStressDSqr += pow(goma_ctx->fem.fv->S[mode][i][i] - traceOverVim, 2) / 2.;
 
-        for (int j = i + 1; j < VIM; j++) {
+        for (int j = i + 1; j < goma_ctx->problem.vim; j++) {
           normOfStressDSqr += pow(goma_ctx->fem.fv->S[mode][i][j], 2);
         }
       }
@@ -2681,8 +2683,8 @@ static int calc_standard_fields(double **post_proc_vect,
   }
 
   if (VISCOUS_STRESS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
       }
     }
@@ -2695,7 +2697,7 @@ static int calc_standard_fields(double **post_proc_vect,
         local_lumped[VISCOUS_STRESS + a * goma_ctx->mesh.num_dim + b] = 1.;
       }
     }
-    if (goma_ctx->mesh.num_dim == 2 && VIM == 3) {
+    if (goma_ctx->mesh.num_dim == 2 && goma_ctx->problem.vim == 3) {
       local_post[VISCOUS_STRESS + 4] = mu * gamma[2][2];
       local_lumped[VISCOUS_STRESS + 4] = 1.;
     }
@@ -2709,15 +2711,15 @@ static int calc_standard_fields(double **post_proc_vect,
         local_lumped[PP_VELOCITY_GRADIENTS + a * goma_ctx->mesh.num_dim + b] = 1.;
       }
     }
-    if (goma_ctx->mesh.num_dim == 2 && VIM == 3) {
+    if (goma_ctx->mesh.num_dim == 2 && goma_ctx->problem.vim == 3) {
       local_post[PP_VELOCITY_GRADIENTS + 4] = goma_ctx->fem.fv->grad_v[2][2];
       local_lumped[PP_VELOCITY_GRADIENTS + 4] = 1.;
     }
   }
 
   if (VISCOUS_STRESS_NORM != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
       }
     }
@@ -2725,21 +2727,21 @@ static int calc_standard_fields(double **post_proc_vect,
     mu = viscosity(goma_ctx->fem.gn, gamma, NULL);
 
     dbl traceOverVim = 0;
-    for (int i = 0; i < VIM; i++) {
+    for (int i = 0; i < goma_ctx->problem.vim; i++) {
       traceOverVim += mu * (goma_ctx->fem.fv->grad_v[i][i] + goma_ctx->fem.fv->grad_v[i][i]);
     }
 
-    traceOverVim /= VIM;
+    traceOverVim /= goma_ctx->problem.vim;
 
     // square of the deviatoric sress norm
     dbl normOfStressDSqr = 0;
-    for (int i = 0; i < VIM; i++) {
+    for (int i = 0; i < goma_ctx->problem.vim; i++) {
       normOfStressDSqr +=
           pow(mu * (goma_ctx->fem.fv->grad_v[i][i] + goma_ctx->fem.fv->grad_v[i][i]) - traceOverVim,
               2) /
           2.;
 
-      for (int j = i + 1; j < VIM; j++) {
+      for (int j = i + 1; j < goma_ctx->problem.vim; j++) {
         normOfStressDSqr +=
             pow(mu * (goma_ctx->fem.fv->grad_v[i][j] + goma_ctx->fem.fv->grad_v[j][i]), 2);
       }
@@ -2751,8 +2753,8 @@ static int calc_standard_fields(double **post_proc_vect,
   }
 
   if (VISCOUS_VON_MISES_STRESS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
       }
     }
@@ -2877,20 +2879,20 @@ static int calc_standard_fields(double **post_proc_vect,
     } else {
       memset(TT, 0, sizeof(dbl) * DIM * DIM);
       memset(gamma, 0, sizeof(dbl) * DIM * DIM);
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
         }
       }
       mu = viscosity(goma_ctx->fem.gn, gamma, NULL);
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           TT[a][b] = mu * gamma[a][b] - goma_ctx->fem.fv->P * delta(a, b);
         }
       }
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
               TT[a][b] += goma_ctx->fem.fv->S[mode][a][b];
             }
@@ -3279,7 +3281,7 @@ static int calc_standard_fields(double **post_proc_vect,
     /* Calculate convective forces  */
     memset(cvect, 0.0, sizeof(double) * DIM);
     for (i = 0; i < dim; i++) {
-      for (j = 0; j < VIM; j++) {
+      for (j = 0; j < goma_ctx->problem.vim; j++) {
         cvect[i] +=
             goma_ctx->fem.mp->density * goma_ctx->fem.fv->v[j] * goma_ctx->fem.fv->grad_v[j][i];
       }
@@ -3655,8 +3657,8 @@ static int calc_standard_fields(double **post_proc_vect,
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       if (goma_ctx->fem.vn->evssModel == CONF) {
 
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             exp_s[a][b] = goma_ctx->fem.fv->S[mode][a][b];
           }
         }
@@ -3678,8 +3680,8 @@ static int calc_standard_fields(double **post_proc_vect,
       }
 
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v_s[mode][0][0]]) {
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             /* since the stress tensor is symmetric,
                only assemble the upper half */
             if (a <= b) {
@@ -3704,8 +3706,8 @@ static int calc_standard_fields(double **post_proc_vect,
 
       dbl b_dot_b[DIM][DIM];
       dbl cb[DIM][DIM];
-      for (int ii = 0; ii < VIM; ii++) {
-        for (int jj = 0; jj < VIM; jj++) {
+      for (int ii = 0; ii < goma_ctx->problem.vim; ii++) {
+        for (int jj = 0; jj < goma_ctx->problem.vim; jj++) {
           if (ii <= jj) {
             cb[ii][jj] = goma_ctx->fem.fv->S[mode][ii][jj];
             cb[jj][ii] = cb[ii][jj];
@@ -3713,7 +3715,7 @@ static int calc_standard_fields(double **post_proc_vect,
         }
       }
 
-      tensor_dot(cb, cb, b_dot_b, VIM);
+      tensor_dot(cb, cb, b_dot_b, goma_ctx->problem.vim);
       // Polymer time constant
       lambda = polymer_time_const(goma_ctx->fem.ve[mode]->time_const_st, gamma, NULL);
       if (lambda == 0.0) {
@@ -3724,8 +3726,8 @@ static int calc_standard_fields(double **post_proc_vect,
       }
 
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v_s[mode][0][0]]) {
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             /* since the stress tensor is symmetric,
                only assemble the upper half */
             if (a <= b) {
@@ -4004,7 +4006,7 @@ void post_process_average(double x[],            /* Solution vector for the curr
 
   for (ielem = e_start, ebn = 0; ielem < e_end; ielem++) {
     ebn = find_elemblock_index(ielem, exo);
-    int mn = Matilda[ebn];
+    int mn = goma_ctx->problem.matilda[ebn];
     if (mn < 0) {
       continue;
     }
@@ -4159,8 +4161,8 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         double gamma[DIM][DIM];
         int a;
         int b;
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
           }
         }
@@ -4169,8 +4171,8 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         if (goma_ctx->fem.gn->ConstitutiveEquation == BINGHAM_MIXED) {
 
           dbl gamma[DIM][DIM];
-          for (a = 0; a < VIM; a++) {
-            for (b = 0; b < VIM; b++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
             }
           }
@@ -4189,8 +4191,8 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         double gamma[DIM][DIM];
         int a;
         int b;
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
           }
         }
@@ -4682,7 +4684,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   }
 
   if (goma_ctx->num_proc == 1) {
-    if (STREAM != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+    if (STREAM != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
       listnd = (int *)smalloc(num_universe_nodes * sizeof(int));
     }
   }
@@ -4694,13 +4696,14 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
     if (goma_ctx->fem.pd_glob[i]->MeshMotion == DYNAMIC_LAGRANGIAN)
       check = 1;
   }
-  if (PRESSURE_CONT != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
+  if (PRESSURE_CONT != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
     /* PRS Cludge for remeshing guys */
     pressure_elem_vect = (double *)smalloc(goma_ctx->mesh.num_internal_elems * sizeof(double));
   }
 
   if (goma_ctx->num_proc == 1) {
-    if (FLUXLINES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+    if (FLUXLINES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
       for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
         listndm[w] = (int *)smalloc(num_universe_nodes * sizeof(int));
         kountm[w] = 0;
@@ -4717,7 +4720,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   }
 
   if (goma_ctx->num_proc == 1) {
-    if (ENERGY_FLUXLINES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
+    if (ENERGY_FLUXLINES != -1 &&
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
       listnde = (int *)smalloc(num_universe_nodes * sizeof(int));
       if (CONDUCTION_VECTORS == -1)
         GOMA_EH(GOMA_ERROR, "Need conduction vectors for flux-function");
@@ -4739,17 +4743,18 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
   /*Initialize */
   if (goma_ctx->num_proc == 1) {
-    if (STREAM != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+    if (STREAM != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
       for (I = 0; I < num_universe_nodes; I++) {
         listnd[I] = 0;
       }
     }
-    if (ENERGY_FLUXLINES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
+    if (ENERGY_FLUXLINES != -1 &&
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
       for (I = 0; I < num_universe_nodes; I++) {
         listnde[I] = 0;
       }
     }
-    if (FLUXLINES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+    if (FLUXLINES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
       for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
         for (I = 0; I < num_universe_nodes; I++) {
           listndm[w][I] = 0;
@@ -4796,7 +4801,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
    */
 
   for (eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-    mn = Matilda[eb_index];
+    mn = goma_ctx->problem.matilda[eb_index];
 
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
@@ -5018,7 +5023,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   /*     Evaluate Post-Processing Variables that are only defined on surfaces   */
   /******************************************************************************/
   if (SURFACE_VECTORS != -1 && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] &&
-      Num_ROT == 0) {
+      goma_ctx->problem.num_rot == 0) {
 
     /* loop over side-sets and find surface vectors for all elements on each
      * side-set */
@@ -5220,7 +5225,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
   /* if ROTATION conditions are defined, determine these tangents separately
    * and plug them directly into the post_proc_vect */
-  if (SURFACE_VECTORS != -1 && Num_ROT > 0) {
+  if (SURFACE_VECTORS != -1 && goma_ctx->problem.num_rot > 0) {
     dim = goma_ctx->fem.pd_glob[0]->Num_Dim;
     /*
      * NORMAL, TANGENT and OTHER Vectors required for ROTATION are calculated
@@ -5331,7 +5336,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
         /* get convection velocity at the nodal points */
 
-        if (STREAM != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][VELOCITY1] &&
+        if (STREAM != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1] &&
             goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim == 2) {
           /* Go for it -- Calculate the stream function at the nodes
            * of this element
@@ -5368,7 +5373,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
             check = 2;
         }
 
-        if (FLUXLINES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+        if (FLUXLINES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
           for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
             /* Go for it -- Calculate the flux function at the nodes
              *  of this element
@@ -5384,14 +5389,15 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
                       post_proc_vect[DIFFUSION_VECTORS +
                                      w * goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim + i]
                                     [I];
-                  if ((check == 1) && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
+                  if ((check == 1) &&
+                      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
                     vel[i][j] += ((*goma_ctx->fem.esp->v[i][j]) * (*goma_ctx->fem.esp->c[w][j]));
                   } else if (check == 2)
                   /* use convection velocity for lagrangian
                      mesh motion */
                   {
                     I = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[iel] + j];
-                    if (TimeIntegration != STEADY) {
+                    if (goma_ctx->problem.time_integration != STEADY) {
                       printf("\n Need to update Lagrangian convection velocities for transient \n");
                       vel[i][j] += post_proc_vect[LAGRANGE_CONVECTION + i][I] *
                                    (*goma_ctx->fem.esp->c[w][j]);
@@ -5412,7 +5418,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
           } /* END of loop over components */
         } /* END of if(FLUXLINES) */
 
-        if (ENERGY_FLUXLINES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
+        if (ENERGY_FLUXLINES != -1 &&
+            goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
           /* Go for it -- Calculate the stream function at the nodes of this element */
           if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim == 2) {
             for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; i++) {
@@ -5420,13 +5427,14 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 I = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[iel] + j];
                 vel[i][j] = post_proc_vect[CONDUCTION_VECTORS + i][I];
-                if ((check == 1) && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
+                if ((check == 1) &&
+                    goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
                   vel[i][j] += *goma_ctx->fem.esp->v[i][j] * (*goma_ctx->fem.esp->T[j]);
                 } else if (check == 2)
                 /* use convection velocity for lagrangian mesh motion */
                 {
                   I = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[iel] + j];
-                  if (TimeIntegration != STEADY) {
+                  if (goma_ctx->problem.time_integration != STEADY) {
                     printf("\n Need to update Lagrangian convection velocities for transient \n");
                     vel[i][j] +=
                         post_proc_vect[LAGRANGE_CONVECTION + i][I] * (*goma_ctx->fem.esp->T[j]);
@@ -5453,7 +5461,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
      * do some last minute processing for special variable types
      */
 
-    if (STREAM != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
+    if (STREAM != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
       /* First process global vector to recover average value at nodes*/
       for (I = 0; I < num_universe_nodes; I++) {
         ii = listnd[I];
@@ -5470,7 +5478,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
       free(listnd);
     }
 
-    if (FLUXLINES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+    if (FLUXLINES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
       for (w = 0; w < goma_ctx->fem.upd->Max_Num_Species_Eqn; w++) {
         /* First process global vector to recover average value at nodes*/
         for (I = 0; I < num_universe_nodes; I++) {
@@ -5490,7 +5498,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
       }
     }
 
-    if (ENERGY_FLUXLINES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
+    if (ENERGY_FLUXLINES != -1 &&
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
       /* First process global vector to recover average value at nodes*/
       for (I = 0; I < num_universe_nodes; I++) {
         ii = listnde[I];
@@ -5510,7 +5519,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
   } /* end of serial processing block for streamlines */
 
-  if (NS_RESIDUALS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (NS_RESIDUALS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (I = 0; I < num_universe_nodes; I++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; j++) {
         ii = Index_Solution(I, R_MOMENTUM1 + j, 0, 0, -2, goma_ctx->fem.pg->imtrx);
@@ -5521,7 +5531,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
     }
   }
 
-  if (NS_RESIDUALS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (NS_RESIDUALS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     for (I = 0; I < num_universe_nodes; I++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; j++) {
         ii = Index_Solution(I, R_MOMENTUM1 + j, 0, 0, -2, goma_ctx->fem.pg->imtrx);
@@ -5532,7 +5543,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
     }
   }
 
-  if (MM_RESIDUALS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (MM_RESIDUALS != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     for (I = 0; I < num_universe_nodes; I++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; j++) {
         ii = Index_Solution(I, R_MESH1 + j, 0, 0, -2, goma_ctx->fem.pg->imtrx);
@@ -5554,26 +5565,32 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   }
 
   /* sum up all stress modes to compute the total stress */
-  if (TOTAL_STRESS11 != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (TOTAL_STRESS11 != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     sum_total_stress(x, R_STRESS11, 0, post_proc_vect[TOTAL_STRESS11], exo);
   }
-  if (TOTAL_STRESS12 != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_STRESS12]) {
+  if (TOTAL_STRESS12 != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS12]) {
     sum_total_stress(x, R_STRESS12, 0, post_proc_vect[TOTAL_STRESS12], exo);
   }
 
-  if (TOTAL_STRESS13 != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_STRESS13]) {
+  if (TOTAL_STRESS13 != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS13]) {
     sum_total_stress(x, R_STRESS13, 0, post_proc_vect[TOTAL_STRESS13], exo);
   }
 
-  if (TOTAL_STRESS22 != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_STRESS22]) {
+  if (TOTAL_STRESS22 != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS22]) {
     sum_total_stress(x, R_STRESS22, 0, post_proc_vect[TOTAL_STRESS22], exo);
   }
 
-  if (TOTAL_STRESS23 != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_STRESS23]) {
+  if (TOTAL_STRESS23 != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS23]) {
     sum_total_stress(x, R_STRESS23, 0, post_proc_vect[TOTAL_STRESS23], exo);
   }
 
-  if (TOTAL_STRESS33 != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_STRESS33]) {
+  if (TOTAL_STRESS33 != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS33]) {
     sum_total_stress(x, R_STRESS33, 0, post_proc_vect[TOTAL_STRESS33], exo);
   }
 
@@ -5662,7 +5679,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
       /* find basis functions associated with velocity variables */
 
-      for (j = 0; j < Num_Basis_Functions; j++) {
+      for (j = 0; j < goma_ctx->problem.num_basis_functions; j++) {
         if (goma_ctx->fem.pd_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]
                 ->i[goma_ctx->fem.pg->imtrx][VELOCITY1] == goma_ctx->fem.bfd[j]->interpolation) {
           velo_interp = j;
@@ -5979,7 +5996,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
         goma_ctx->fem.pd_glob[i]->MeshMotion == DYNAMIC_LAGRANGIAN)
       check = 1;
   }
-  if (PRESSURE_CONT != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][VELOCITY1] || check)) {
+  if (PRESSURE_CONT != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1] || check)) {
     /*PRS cludge for remeshing guys */
     for (I = 0; I < goma_ctx->mesh.num_internal_elems; I++) {
       pressure_elem_vect[I] = (dbl)I;
@@ -6006,11 +6024,11 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
       }
   */
 
-  if (Num_Export_XP > 0 && x_pp != NULL) {
+  if (goma_ctx->problem.num_export_xp > 0 && x_pp != NULL) {
     idex = 0;
-    for (j = 0; j < Num_Export_XP; j++) {
+    for (j = 0; j < goma_ctx->problem.num_export_xp; j++) {
       for (I = 0; I < exo->num_nodes; I++) {
-        x_pp[idex] = post_proc_vect[Export_XP_ID[j]][I];
+        x_pp[idex] = post_proc_vect[goma_ctx->problem.export_xp_id[j]][I];
         idex++;
       }
     }
@@ -6097,7 +6115,8 @@ void post_process_elem(double x[],     /* soln vector */
 
   /* Zienkiewicz-Zhu error indicator based on velocity */
 
-  if (ERROR_ZZ_VEL != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (ERROR_ZZ_VEL != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     compute_elem_size = 0;
     if (ERROR_ZZ_VEL_ELSIZE != -1)
       compute_elem_size = 1;
@@ -6120,12 +6139,12 @@ void post_process_elem(double x[],     /* soln vector */
 
   if (SAT_CURVE_TYPE != -1 && CAP_PRESS_SWITCH != -1 && SAT_QP_SWITCH != -1) {
     ev_indx_tmp = ev_indx;
-    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] ||
-        Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN] ||
-        Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) {
+    if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] ||
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN] ||
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) {
       for (eb_indx = 0; eb_indx < exo->num_elem_blocks; eb_indx++) {
         ev_indx = ev_indx_tmp;
-        mn = Matilda[eb_indx];
+        mn = goma_ctx->problem.matilda[eb_indx];
         goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mn];
         eb_ptr = Element_Blocks + eb_indx;
         ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
@@ -6265,10 +6284,10 @@ static int calc_zz_error_vel(double x[], /* Solution vector                     
    * SWIRLING in this respect, too.
    */
 
-  tau_lsp = (double ***)smalloc(VIM * sizeof(double **));
-  for (i = 0; i < VIM; i++) {
-    tau_lsp[i] = (double **)smalloc(VIM * sizeof(double *));
-    for (j = 0; j < VIM; j++) {
+  tau_lsp = (double ***)smalloc(goma_ctx->problem.vim * sizeof(double **));
+  for (i = 0; i < goma_ctx->problem.vim; i++) {
+    tau_lsp[i] = (double **)smalloc(goma_ctx->problem.vim * sizeof(double *));
+    for (j = 0; j < goma_ctx->problem.vim; j++) {
       if (j < i) {
         tau_lsp[i][j] = tau_lsp[j][i];
       } else {
@@ -6348,7 +6367,7 @@ static int calc_zz_error_vel(double x[], /* Solution vector                     
       }
 
       i_eb_indx = exo->elem_eb[elem_id];
-      mat_num = Matilda[i_eb_indx];
+      mat_num = goma_ctx->problem.matilda[i_eb_indx];
       goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mat_num];
 
       /* Confirm momentum is being solved in this material & velocity is
@@ -6447,10 +6466,10 @@ static int calc_zz_error_vel(double x[], /* Solution vector                     
      * SWIRLING in this respect, too.
      */
 
-    tau_gp_ptch = (double ****)smalloc(VIM * sizeof(double ***));
-    for (i = 0; i < VIM; i++) {
-      tau_gp_ptch[i] = (double ***)smalloc(VIM * sizeof(double **));
-      for (j = 0; j < VIM; j++) {
+    tau_gp_ptch = (double ****)smalloc(goma_ctx->problem.vim * sizeof(double ***));
+    for (i = 0; i < goma_ctx->problem.vim; i++) {
+      tau_gp_ptch[i] = (double ***)smalloc(goma_ctx->problem.vim * sizeof(double **));
+      for (j = 0; j < goma_ctx->problem.vim; j++) {
         if (j < i) {
           tau_gp_ptch[i][j] = tau_gp_ptch[j][i];
         } else {
@@ -6517,8 +6536,8 @@ static int calc_zz_error_vel(double x[], /* Solution vector                     
      */
     do_the_lu_decomp = 1;
     indx = (int *)smalloc(max_terms * sizeof(int));
-    for (i = 0; i < VIM; i++) {
-      for (j = 0; j < VIM; j++) {
+    for (i = 0; i < goma_ctx->problem.vim; i++) {
+      for (j = 0; j < goma_ctx->problem.vim; j++) {
         if (j < i) {
           tau_lsp[i][j][i_node] = tau_lsp[j][i][i_node];
         } else {
@@ -6653,8 +6672,8 @@ static int calc_zz_error_vel(double x[], /* Solution vector                     
     free(rhs);
     free(indx);
 
-    for (i = 0; i < VIM; i++) {
-      for (j = 0; j < VIM; j++) {
+    for (i = 0; i < goma_ctx->problem.vim; i++) {
+      for (j = 0; j < goma_ctx->problem.vim; j++) {
         /* Only the upper tri diag members were malloc'd, so only free those */
         if (j >= i) {
           for (k = 0; k < num_elems_in_patch; k++) {
@@ -6696,7 +6715,7 @@ static int calc_zz_error_vel(double x[], /* Solution vector                     
     i_elem_gp = elem_info(NQUAD, i_elem_type); /* number of quadrature points */
     i_elem_dim = elem_info(NDIM, i_elem_type); /* element dimension  */
     i_eb_indx = exo->elem_eb[i_elem];
-    mat_num = Matilda[i_eb_indx];
+    mat_num = goma_ctx->problem.matilda[i_eb_indx];
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mat_num];
 
     /* Confirm momentum is being solved in this material & velocity is
@@ -6913,8 +6932,8 @@ static int calc_zz_error_vel(double x[], /* Solution vector                     
   }
 
   /* Final memory cleanup */
-  for (i = 0; i < VIM; i++) {
-    for (j = 0; j < VIM; j++) {
+  for (i = 0; i < goma_ctx->problem.vim; i++) {
+    for (j = 0; j < goma_ctx->problem.vim; j++) {
       /* Only the upper tri diag members were malloc'd, so only free those */
       if (j >= i) {
         free(tau_lsp[i][j]);
@@ -6965,14 +6984,14 @@ static int abs_error_at_elem(int i_elem,
 
   /* Grab memory to hold the fem & lsp values of tau, only malloc the upper tri-diag
      portion of these symetric tensors */
-  tau_gp_fem = (double ***)smalloc(VIM * sizeof(double **));
-  tau_gp_lsp = (double ***)smalloc(VIM * sizeof(double **));
-  tau_gp_ext = (double ***)smalloc(VIM * sizeof(double **));
-  for (i = 0; i < VIM; i++) {
-    tau_gp_fem[i] = (double **)smalloc(VIM * sizeof(double *));
-    tau_gp_lsp[i] = (double **)smalloc(VIM * sizeof(double *));
-    tau_gp_ext[i] = (double **)smalloc(VIM * sizeof(double *));
-    for (j = 0; j < VIM; j++) {
+  tau_gp_fem = (double ***)smalloc(goma_ctx->problem.vim * sizeof(double **));
+  tau_gp_lsp = (double ***)smalloc(goma_ctx->problem.vim * sizeof(double **));
+  tau_gp_ext = (double ***)smalloc(goma_ctx->problem.vim * sizeof(double **));
+  for (i = 0; i < goma_ctx->problem.vim; i++) {
+    tau_gp_fem[i] = (double **)smalloc(goma_ctx->problem.vim * sizeof(double *));
+    tau_gp_lsp[i] = (double **)smalloc(goma_ctx->problem.vim * sizeof(double *));
+    tau_gp_ext[i] = (double **)smalloc(goma_ctx->problem.vim * sizeof(double *));
+    for (j = 0; j < goma_ctx->problem.vim; j++) {
       if (j < i) {
         tau_gp_fem[i][j] = tau_gp_fem[j][i];
         tau_gp_lsp[i][j] = tau_gp_lsp[j][i];
@@ -6994,8 +7013,9 @@ static int abs_error_at_elem(int i_elem,
     find_stu(i, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type, &xi[0], &xi[1],
              &xi[2]); /* find quadrature point */
 
-    goma_ctx->fem.fv->wt = Gq_weight(i, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type); /* find
-                                              quadrature weights for current ip */
+    goma_ctx->fem.fv->wt =
+        Gq_weight(i, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type); /* find
+                           quadrature weights for current ip */
     wt = goma_ctx->fem.fv->wt;
 
     err = load_basis_functions(xi, goma_ctx->fem.bfd);
@@ -7037,8 +7057,8 @@ static int abs_error_at_elem(int i_elem,
                                        -----
                                        d x_a                         */
 
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
       }
     }
@@ -7051,8 +7071,8 @@ static int abs_error_at_elem(int i_elem,
       mu = mu + mup;
     }
 
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         tau_gp_fem[a][b][i] = mu * gamma[a][b];
       }
     }
@@ -7061,8 +7081,8 @@ static int abs_error_at_elem(int i_elem,
 
     /* Now have all fem tau components for this elem, and gauss point i.
        Now interpolate the tau_lsp values back to gauss point i as well. */
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         /* Calculate this symetrically (that's how its being stored) */
         if (b >= a) {
           sum_tau = 0.;
@@ -7100,8 +7120,8 @@ static int abs_error_at_elem(int i_elem,
 
     error_norm_tmp = 0.;
     velocity_norm_tmp = 0.;
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         if (b > a) { /* Off axis symmetric term (upper tri only) */
           error_norm_tmp += 2 * ((tau_gp_lsp[a][b][i] - tau_gp_fem[a][b][i]) *
                                  (tau_gp_lsp[a][b][i] - tau_gp_fem[a][b][i]));
@@ -7186,8 +7206,8 @@ static int abs_error_at_elem(int i_elem,
 #endif
 #endif
 
-  for (i = 0; i < VIM; i++) {
-    for (j = 0; j < VIM; j++) {
+  for (i = 0; i < goma_ctx->problem.vim; i++) {
+    for (j = 0; j < goma_ctx->problem.vim; j++) {
       /* Only the upper tri diag members were malloc'd, so only free those */
       if (j >= i) {
         free(tau_gp_fem[i][j]);
@@ -7307,8 +7327,8 @@ static int fill_lhs_lspatch(double *i_node_coords,
      *				       -----
      *				       d x_a
      */
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
       }
     }
@@ -7320,8 +7340,8 @@ static int fill_lhs_lspatch(double *i_node_coords,
       mu = mu + mup;
     }
 
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         tau_gp_ptch[a][b][elem][i] = mu * gamma[a][b];
       }
     }
@@ -8065,7 +8085,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
   /*
    * Initialize count of post proc vars to be exported
    */
-  Num_Export_XP = 0;
+  goma_ctx->problem.num_export_xp = 0;
 
   look_for(ifp, "Post Processing Specifications", input, '=');
 
@@ -8655,7 +8675,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
       if (pp_fluxes_sens[i]->vector_id == -1) {
         pp_fluxes_sens[i]->vector_id = sens_vec_ct;
 
-        if (Continuation == ALC_FIRST) {
+        if (goma_ctx->problem.continuation == ALC_FIRST) {
           if (goma_ctx->fem.cont->upType == pp_fluxes_sens[i]->sens_type) {
             int id1 = -1, id2 = -1;
             int id3 = -1;
@@ -9035,7 +9055,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
 
         */
 
-        if (Continuation == ALC_FIRST) {
+        if (goma_ctx->problem.continuation == ALC_FIRST) {
           if (goma_ctx->fem.cont->upType == pp_data_sens[i]->sens_type) {
             int id1 = -1, id2 = -1;
             int id3 = -1;
@@ -9616,7 +9636,7 @@ static int look_for_post_proc(FILE *ifp,           /* pointer to file           
       *flag_variable = 1;
     } else if (strcmp(input, "exp") == 0) {
       *flag_variable = 2;
-      Num_Export_XP++;
+      goma_ctx->problem.num_export_xp++;
     } else if (strcmp(input, "no") == 0) {
       *flag_variable = -1;
     } else {
@@ -9627,9 +9647,9 @@ static int look_for_post_proc(FILE *ifp,           /* pointer to file           
   }
 
 #ifndef LIBRARY_MODE
-  if (Num_Export_XP > 0) {
+  if (goma_ctx->problem.num_export_xp > 0) {
     GOMA_WH(-1, "Post-process exp option only available in LIBRARY_MODE!");
-    Num_Export_XP = 0;
+    goma_ctx->problem.num_export_xp = 0;
   }
 #endif
   return iread;
@@ -9866,7 +9886,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
    *  convert to -1 = no and post-processing variable number = yes
    */
 
-  if (STREAM != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
+  if (STREAM != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
     if (goma_ctx->mesh.num_dim == 3) {
       GOMA_WH(-1, "Cant do stream function in 3D");
       STREAM = -1;
@@ -9874,7 +9894,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       set_nv_tkud(rd, index, 0, 0, -2, "STREAM", "[1]", "Stream Function", FALSE);
       index++;
       if (STREAM == 2) {
-        Export_XP_ID[index_post_export] = index_post;
+        goma_ctx->problem.export_xp_id[index_post_export] = index_post;
         index_post_export++;
       }
       STREAM = index_post;
@@ -9888,123 +9908,131 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (STREAM_NORMAL_STRESS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (STREAM_NORMAL_STRESS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "SNS", "[1]", "Streamwise normal stress", FALSE);
     index++;
     if (STREAM_NORMAL_STRESS == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     STREAM_NORMAL_STRESS = index_post;
     index_post++;
   }
 
-  if (STREAM_SHEAR_STRESS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (STREAM_SHEAR_STRESS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "SSS", "[1]", "Streamwise shear stress", FALSE);
     index++;
     if (STREAM_SHEAR_STRESS == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     STREAM_SHEAR_STRESS = index_post;
     index_post++;
   }
 
-  if (STREAM_TENSION != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (STREAM_TENSION != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "SSD", "[1]", "Streamwise Stress Difference", FALSE);
     index++;
     if (STREAM_TENSION == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     STREAM_TENSION = index_post;
     index_post++;
   }
 
-  if (DIV_VELOCITY != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][PRESSURE]) {
+  if (DIV_VELOCITY != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][PRESSURE]) {
     set_nv_tkud(rd, index, 0, 0, -2, "DIVV", "[1]", "Divergence of Velocity", FALSE);
     index++;
     if (DIV_VELOCITY == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     DIV_VELOCITY = index_post;
     index_post++;
   }
 
-  if (DIV_PVELOCITY != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1]) {
+  if (DIV_PVELOCITY != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "DIVPV", "[1]", "Divergence of Particle Velocity", FALSE);
     index++;
     if (DIV_PVELOCITY == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     DIV_PVELOCITY = index_post;
     index_post++;
   }
 
-  if (DIV_TOTAL != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1]) {
+  if (DIV_TOTAL != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_PMOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "DIVTOTAL", "[1]", "Divergence of Total Velocity", FALSE);
     index++;
     if (DIV_TOTAL == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     DIV_TOTAL = index_post;
     index_post++;
   }
 
-  if (PP_Viscosity != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] ||
-                             Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
-                             Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
+  if (PP_Viscosity != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
     set_nv_tkud(rd, index, 0, 0, -2, "MU", "[1]", "Viscosity", FALSE);
     index++;
     if (PP_Viscosity == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     PP_Viscosity = index_post;
     index_post++;
   }
 
-  if (PP_FlowingLiquid_Viscosity != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (PP_FlowingLiquid_Viscosity != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "FLOW_MU", "[1]", "FlowingLiquid Viscosity", FALSE);
     index++;
     if (PP_FlowingLiquid_Viscosity == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     PP_FlowingLiquid_Viscosity = index_post;
     index_post++;
   }
 
-  if (PP_VolumeFractionGas != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (PP_VolumeFractionGas != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "VOLUMEFRACTIONGAS", "[1]", "Volume Fraction of Gas Phase",
                 FALSE);
     index++;
     if (PP_VolumeFractionGas == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     PP_VolumeFractionGas = index_post;
     index_post++;
   }
 
-  if (DENSITY != -1 && ((Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) ||
+  if (DENSITY != -1 && ((goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) ||
                         (goma_ctx->fem.upd->matrix_index[R_MOMENTUM1] == -1 &&
                          goma_ctx->fem.upd->matrix_index[R_MASS] == goma_ctx->fem.pg->imtrx &&
-                         Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MASS]))) {
+                         goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]))) {
     set_nv_tkud(rd, index, 0, 0, -2, "RHO", "[1]", "Density", FALSE);
     index++;
     if (DENSITY == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     DENSITY = index_post;
     index_post++;
   }
 
-  if (PP_Diffusivity != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MASS])) {
+  if (PP_Diffusivity != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS])) {
     if (PP_Diffusivity == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -10019,75 +10047,77 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
 
   if (HEAVISIDE != -1 && goma_ctx->fem.ls != NULL &&
-      Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_FILL]) {
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_FILL]) {
     set_nv_tkud(rd, index, 0, 0, -2, "HEAVISIDE", "[1]", "HEAVISIDE", FALSE);
     index++;
     if (HEAVISIDE == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     HEAVISIDE = index_post;
     index_post++;
   }
 
-  if (RHO_DOT != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (RHO_DOT != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "RHO_DOT", "[1]", "RHO_DOT", FALSE);
     index++;
     if (RHO_DOT == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     RHO_DOT = index_post;
     index_post++;
   }
 
-  if (MEAN_SHEAR != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] ||
-                           Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
-                           Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
+  if (MEAN_SHEAR != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
     set_nv_tkud(rd, index, 0, 0, -2, "SHEAR", "[1]", "Mean shear rate", FALSE);
     index++;
     if (MEAN_SHEAR == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     MEAN_SHEAR = index_post;
     index_post++;
   }
 
-  if (MEAN_VORTICITY != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (MEAN_VORTICITY != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "VORT", "[1]", "Mean vorticity", FALSE);
     index++;
     if (MEAN_VORTICITY == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     MEAN_VORTICITY = index_post;
     index_post++;
   }
 
-  if (GIES_CRIT != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (GIES_CRIT != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "GIES", "[1]", "Giesekus Criterion", FALSE);
     index++;
     if (GIES_CRIT == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     GIES_CRIT = index_post;
     index_post++;
   }
 
-  if (Q_FCN != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (Q_FCN != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "Q_FCN", "[1]", "Q Function", FALSE);
     index++;
     if (Q_FCN == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     Q_FCN = index_post;
     index_post++;
   }
 
-  if (PSPG_PP != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (PSPG_PP != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     PSPG_PP = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "PSPG_X", "[1]", "PSPG PP X", FALSE);
     index++;
@@ -10095,18 +10125,18 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     set_nv_tkud(rd, index, 0, 0, -2, "PSPG_Y", "[1]", "PSPG PP Y", FALSE);
     index++;
     index_post++;
-    if (VIM > 2) {
+    if (goma_ctx->problem.vim > 2) {
       set_nv_tkud(rd, index, 0, 0, -2, "PSPG_Z", "[1]", "PSPG PP Z", FALSE);
       index++;
       index_post++;
     }
   }
 
-  if (VELO_SPEED != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (VELO_SPEED != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "VELO_SPEED", "[1]", "Velocity Magnitude", FALSE);
     index++;
     if (VELO_SPEED == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     VELO_SPEED = index_post;
@@ -10119,51 +10149,54 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
         goma_ctx->fem.pd_glob[i]->MeshMotion == DYNAMIC_LAGRANGIAN)
       check = 1;
   }
-  if (PRESSURE_CONT != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
+  if (PRESSURE_CONT != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
     set_nv_tkud(rd, index, 0, 0, -2, "PRESSURE", "[1]", "hydrodynamic pressure", FALSE);
     index++;
     if (PRESSURE_CONT == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     PRESSURE_CONT = index_post;
     index_post++;
   }
 
-  if (SH_DIV_S_V_CONT != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1])) {
+  if (SH_DIV_S_V_CONT != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1])) {
     set_nv_tkud(rd, index, 0, 0, -2, "SH_DIV_S_V", "[1]", "shell div_s_v", FALSE);
     index++;
     if (SH_DIV_S_V_CONT == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     SH_DIV_S_V_CONT = index_post;
     index_post++;
   }
 
-  if (SH_CURV_CONT != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SURF_CURV])) {
+  if (SH_CURV_CONT != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SURF_CURV])) {
     set_nv_tkud(rd, index, 0, 0, -2, "SH_SURF_CURV", "[1]", "shell curv", FALSE);
     index++;
     if (SH_CURV_CONT == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     SH_CURV_CONT = index_post;
     index_post++;
   }
 
-  if (FILL_CONT != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_FILL])) {
+  if (FILL_CONT != -1 && (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_FILL])) {
     set_nv_tkud(rd, index, 0, 0, -2, "FILL", "[1]", "continuous fill", FALSE);
     index++;
     if (FILL_CONT == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     FILL_CONT = index_post;
     index_post++;
   }
 
-  if (CONC_CONT != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MASS])) {
+  if (CONC_CONT != -1 && (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS])) {
     if (CONC_CONT == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -10177,7 +10210,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (STRESS_CONT != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11])) {
+  if (STRESS_CONT != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11])) {
     int index_post_save = index_post;
 
     if (STRESS_CONT == 2) {
@@ -10185,17 +10219,17 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
 
     for (mode = 0; mode < MAX_MODES; mode++) {
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           /* stress tensor is symmetric */
           if (a <= b) {
-            if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][v_s[mode][a][b]]) {
+            if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][v_s[mode][a][b]]) {
               sprintf(species_name, "cs%d%d_%d", a + 1, b + 1, mode);
               sprintf(species_desc, "Continuous stress %d%d_%d", a + 1, b + 1, mode);
               set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
               index++;
               if (STRESS_CONT == 2) {
-                Export_XP_ID[index_post_export] = index_post;
+                goma_ctx->problem.export_xp_id[index_post_export] = index_post;
                 index_post_export++;
               }
               index_post++;
@@ -10215,11 +10249,11 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
     /* write out total stress if we have more than one mode */
     if (check) {
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           /* stress tensor is symmetric */
           if (a <= b) {
-            if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][v_s[0][a][b]]) {
+            if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][v_s[0][a][b]]) {
               sprintf(species_name, "tcs%d%d", a + 1, b + 1);
               sprintf(species_desc, "Total continuous stress %d%d", a + 1, b + 1);
               set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
@@ -10232,7 +10266,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (EM_CONTOURS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
+  if (EM_CONTOURS != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
     EM_CONTOURS = index_post;
     int dim = DIM;
     if (goma_ctx->fem.pd->gv[EM_E1_REAL]) {
@@ -10282,7 +10316,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       }
     }
   }
-  if (TOTAL_EM_CONTOURS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
+  if (TOTAL_EM_CONTOURS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
     TOTAL_EM_CONTOURS = index_post;
     int dim = DIM;
     if (goma_ctx->fem.pd->gv[EM_E1_REAL]) {
@@ -10332,7 +10367,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       }
     }
   }
-  if (SCATTERED_EM_CONTOURS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
+  if (SCATTERED_EM_CONTOURS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][EM_E1_REAL]) {
     SCATTERED_EM_CONTOURS = index_post;
     int dim = DIM;
     if (goma_ctx->fem.pd->gv[EM_E1_REAL]) {
@@ -10383,7 +10419,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (MOMENT_SOURCES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][MOMENT0]) {
+  if (MOMENT_SOURCES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][MOMENT0]) {
     MOMENT_SOURCES = index_post;
     for (int mom = 0; mom < MAX_MOMENTS; mom++) {
       if (goma_ctx->fem.pd->gv[MOMENT0 + mom]) {
@@ -10396,7 +10432,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (YZBETA != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+  if (YZBETA != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
     YZBETA = index_post;
     for (int w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
       sprintf(species_name, "YZBETA_%d", w);
@@ -10407,95 +10443,104 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (FIRST_INVAR_STRAIN != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (FIRST_INVAR_STRAIN != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "IE", "[1]", "1st invariant of strain tensor", FALSE);
     index++;
     if (FIRST_INVAR_STRAIN == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     FIRST_INVAR_STRAIN = index_post;
     index_post++;
   }
 
-  if (SEC_INVAR_STRAIN != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (SEC_INVAR_STRAIN != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "IIE", "[1]", "2nd invariant of strain tensor", FALSE);
     index++;
     if (SEC_INVAR_STRAIN == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     SEC_INVAR_STRAIN = index_post;
     index_post++;
   }
 
-  if (THIRD_INVAR_STRAIN != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (THIRD_INVAR_STRAIN != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "IIIE", "[1]", "3rd invariant of strain tensor", FALSE);
     index++;
     if (THIRD_INVAR_STRAIN == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     THIRD_INVAR_STRAIN = index_post;
     index_post++;
   }
 
-  if (FIRST_STRAINRATE_INVAR != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (FIRST_STRAINRATE_INVAR != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "ISR", "[1]", "1st strain rate invariant", FALSE);
     index++;
     if (FIRST_STRAINRATE_INVAR == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     FIRST_STRAINRATE_INVAR = index_post;
     index_post++;
   }
 
-  if (SEC_STRAINRATE_INVAR != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (SEC_STRAINRATE_INVAR != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "IISR", "[1]", "2nd strain rate invariant", FALSE);
     index++;
     if (SEC_STRAINRATE_INVAR == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     SEC_STRAINRATE_INVAR = index_post;
     index_post++;
   }
 
-  if (THIRD_STRAINRATE_INVAR != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (THIRD_STRAINRATE_INVAR != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "IIISR", "[1]", "3rd strain rate invariant", FALSE);
     index++;
     if (THIRD_STRAINRATE_INVAR == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     THIRD_STRAINRATE_INVAR = index_post;
     index_post++;
   }
 
-  if (WALL_DISTANCE != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][VELOCITY1] ||
-                              Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LUBP])) {
+  if (WALL_DISTANCE != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP])) {
     set_nv_tkud(rd, index, 0, 0, -2, "WALL_DISTANCE", "[1]", "Wall distance", FALSE);
     index++;
     if (WALL_DISTANCE == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     WALL_DISTANCE = index_post;
     index_post++;
   }
-  if (CONTACT_DISTANCE != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1])) {
+  if (CONTACT_DISTANCE != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1])) {
     set_nv_tkud(rd, index, 0, 0, -2, "CONTACT_DISTANCE", "[1]", "Contact distance", FALSE);
     index++;
     if (CONTACT_DISTANCE == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     CONTACT_DISTANCE = index_post;
     index_post++;
   }
 
-  if (DIELECTROPHORETIC_FIELD != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
+  if (DIELECTROPHORETIC_FIELD != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
     if (DIELECTROPHORETIC_FIELD == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -10506,26 +10551,28 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
       index++;
       if (DIELECTROPHORETIC_FIELD == 2) {
-        Export_XP_ID[index_post_export] = index_post;
+        goma_ctx->problem.export_xp_id[index_post_export] = index_post;
         index_post_export++;
       }
       index_post++;
     }
   }
 
-  if (DIELECTROPHORETIC_FIELD_NORM != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
+  if (DIELECTROPHORETIC_FIELD_NORM != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
     set_nv_tkud(rd, index, 0, 0, -2, "DFN", "[1]", "Dielectrophoretic force norm", FALSE);
     index++;
     if (DIELECTROPHORETIC_FIELD_NORM == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     DIELECTROPHORETIC_FIELD_NORM = index_post;
     index_post++;
   }
 
-  if (ENORMSQ_FIELD != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POTENTIAL] &&
-      Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENORM]) {
+  if (ENORMSQ_FIELD != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POTENTIAL] &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENORM]) {
     if (ENORMSQ_FIELD == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -10536,19 +10583,20 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
       index++;
       if (ENORMSQ_FIELD == 2) {
-        Export_XP_ID[index_post_export] = index_post;
+        goma_ctx->problem.export_xp_id[index_post_export] = index_post;
         index_post_export++;
       }
       index_post++;
     }
   }
 
-  if (ENORMSQ_FIELD_NORM != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POTENTIAL] &&
-      Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENORM]) {
+  if (ENORMSQ_FIELD_NORM != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POTENTIAL] &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENORM]) {
     set_nv_tkud(rd, index, 0, 0, -2, "GENSNORM", "[1]", "|grad(|E|^2)|", FALSE);
     index++;
     if (ENORMSQ_FIELD_NORM == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     ENORMSQ_FIELD_NORM = index_post;
@@ -10612,14 +10660,14 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (FLUXLINES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+  if (FLUXLINES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
     if (FLUXLINES == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
     if (goma_ctx->mesh.num_dim == 3) {
       GOMA_WH(-1, "Cant do flux function in 3D");
       FLUXLINES = -1;
-    } else if (TimeIntegration != STEADY) {
+    } else if (goma_ctx->problem.time_integration != STEADY) {
       GOMA_WH(-1, "Cant do flux function in transient");
       FLUXLINES = -1;
     } else {
@@ -10634,7 +10682,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (CONDUCTION_VECTORS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
+  if (CONDUCTION_VECTORS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
     if (CONDUCTION_VECTORS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -10661,11 +10710,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (POYNTING_VECTORS != -1 && ((Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] ||
-                                  Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG]) ||
-                                 (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL] ||
-                                  Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_EM_E2_REAL] ||
-                                  Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_EM_E3_REAL]))) {
+  if (POYNTING_VECTORS != -1 &&
+      ((goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] ||
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG]) ||
+       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_EM_E1_REAL] ||
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_EM_E2_REAL] ||
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_EM_E3_REAL]))) {
     if (POYNTING_VECTORS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -10692,7 +10742,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (ORIENTATION_VECTORS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
+  if (ORIENTATION_VECTORS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
     if (ORIENTATION_VECTORS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -10719,7 +10770,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (SPECIES_SOURCES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+  if (SPECIES_SOURCES != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
     if (SPECIES_SOURCES == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing species source vectors cannot be exported yet!");
     }
@@ -10735,7 +10786,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (ELECTRIC_FIELD != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
+  if (ELECTRIC_FIELD != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
     if (ELECTRIC_FIELD == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -10763,25 +10815,27 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (ELECTRIC_FIELD_MAG != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
+  if (ELECTRIC_FIELD_MAG != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
 
     sprintf(nm, "EE");
     sprintf(ds, "Electric field magnitude");
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
     index++;
     if (ELECTRIC_FIELD_MAG == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     ELECTRIC_FIELD_MAG = index_post;
     index_post++;
   }
 
-  if (ENERGY_FLUXLINES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
+  if (ENERGY_FLUXLINES != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
     if (goma_ctx->mesh.num_dim == 3) {
       GOMA_WH(-1, "Cant do flux function in 3D");
       ENERGY_FLUXLINES = -1;
-    } else if (TimeIntegration != STEADY) {
+    } else if (goma_ctx->problem.time_integration != STEADY) {
       GOMA_WH(-1, "Cant do flux function in transient");
       ENERGY_FLUXLINES = -1;
     } else {
@@ -10789,7 +10843,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       set_nv_tkud(rd, index, 0, 0, -2, "EFLUX", "[1]", "Energy Fluxfunction", FALSE);
       index++;
       if (ENERGY_FLUXLINES == 2) {
-        Export_XP_ID[index_post_export] = index_post;
+        goma_ctx->problem.export_xp_id[index_post_export] = index_post;
         index_post_export++;
       }
       index_post++;
@@ -10797,7 +10851,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
 
   /* there are always 6 entries in the stress tensor (3-D symmetric) */
-  if (STRESS_TENSOR != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (STRESS_TENSOR != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     if (STRESS_TENSOR == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing tensors cannot be exported yet!");
     }
@@ -10825,7 +10879,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
 
   /* there are always 6 entries in the stress tensor (3-D symmetric) */
-  if (REAL_STRESS_TENSOR != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SOLID1]) {
+  if (REAL_STRESS_TENSOR != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SOLID1]) {
     if (REAL_STRESS_TENSOR == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing tensors cannot be exported yet!");
     }
@@ -10852,7 +10907,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (STRAIN_TENSOR != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (STRAIN_TENSOR != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     if (STRAIN_TENSOR == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing tensors cannot be exported yet!");
     }
@@ -10880,7 +10935,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
 
   if (goma_ctx->fem.evpl_glob[0]->ConstitutiveEquation == EVP_HYPER && EVP_DEF_GRAD_TENSOR != -1 &&
-      Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     if (EVP_DEF_GRAD_TENSOR == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing tensors cannot be exported yet!");
     }
@@ -10918,7 +10973,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index++;
       index_post++;
     }
-    if (STRESS_TENSOR != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+    if (STRESS_TENSOR != -1 &&
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
       set_nv_tkud(rd, index, 0, 0, -2, "TVP11", "[1]", "EVP stretch stress x", FALSE);
       index++;
       index_post++;
@@ -10973,7 +11029,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (SURFACE_VECTORS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
+  if (SURFACE_VECTORS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
     if (SURFACE_VECTORS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11007,8 +11064,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post += goma_ctx->mesh.num_dim * (goma_ctx->mesh.num_dim - 1);
   }
 
-  if (SHELL_NORMALS != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][SHELL_ANGLE1] ||
-                              Num_Var_In_Type[goma_ctx->fem.pg->imtrx][LUBP])) {
+  if (SHELL_NORMALS != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][SHELL_ANGLE1] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][LUBP])) {
     if (SHELL_NORMALS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11036,14 +11094,15 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (CONF_MAP != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
+  if (CONF_MAP != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
     CONF_MAP = index_post;
     // Loop over any additional viscoelastic modes
     for (mode = 0; mode < MAX_MODES; mode++) {
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           if (a <= b) {
-            if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][v_s[mode][a][b]]) {
+            if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][v_s[mode][a][b]]) {
               sprintf(species_name, "MS%d%d_%d", a + 1, b + 1, mode);
               sprintf(species_desc, "log conf stress %d%d_%d", a + 1, b + 1, mode);
               set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
@@ -11056,11 +11115,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (STRESS_NORM != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
+  if (STRESS_NORM != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
     STRESS_NORM = index_post;
     int num_modes = 0;
     for (int i = 0; i < MAX_MODES; i++) {
-      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][v_s[i][0][0]]) {
+      if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][v_s[i][0][0]]) {
         num_modes++;
       }
     }
@@ -11073,11 +11133,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (SARAMITO_YIELD != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
+  if (SARAMITO_YIELD != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
     SARAMITO_YIELD = index_post;
     int num_modes = 0;
     for (int i = 0; i < MAX_MODES; i++) {
-      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][v_s[i][0][0]]) {
+      if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][v_s[i][0][0]]) {
         num_modes++;
       }
     }
@@ -11090,7 +11151,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (VISCOUS_STRESS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (VISCOUS_STRESS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->mesh.num_dim > 2) {
       VISCOUS_STRESS = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "VS11", "[1]", "Viscous stress xx", FALSE);
@@ -11150,7 +11212,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index++;
       index_post++;
 
-      if (VIM == 3) {
+      if (goma_ctx->problem.vim == 3) {
         set_nv_tkud(rd, index, 0, 0, -2, "VS33", "[1]", "Viscous stress zz", FALSE);
         index++;
         index_post++;
@@ -11158,7 +11220,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (PP_FLUID_STRESS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (PP_FLUID_STRESS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->mesh.num_dim > 2) {
       PP_FLUID_STRESS = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "FS11", "[1]", "Viscous stress xx", FALSE);
@@ -11218,7 +11281,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index++;
       index_post++;
 
-      if (VIM == 3) {
+      if (goma_ctx->problem.vim == 3) {
         set_nv_tkud(rd, index, 0, 0, -2, "FS33", "[1]", "Viscous stress zz", FALSE);
         index++;
         index_post++;
@@ -11226,7 +11289,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (PP_VELOCITY_GRADIENTS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (PP_VELOCITY_GRADIENTS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->mesh.num_dim > 2) {
       PP_VELOCITY_GRADIENTS = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "GRADV11", "[1]", "Velocity gradient xx", FALSE);
@@ -11285,7 +11349,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       set_nv_tkud(rd, index, 0, 0, -2, "GRADV22", "[1]", "Velocity gradient yy", FALSE);
       index++;
       index_post++;
-      if (VIM == 3) {
+      if (goma_ctx->problem.vim == 3) {
         set_nv_tkud(rd, index, 0, 0, -2, "GRADV33", "[1]", "Velocity gradient zz", FALSE);
         index++;
         index_post++;
@@ -11293,7 +11357,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (VISCOUS_STRESS_NORM != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (VISCOUS_STRESS_NORM != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     SARAMITO_YIELD = -1;
     VISCOUS_STRESS_NORM = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "VSNORM", "[1]", "Viscous stress norm", FALSE);
@@ -11301,7 +11366,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (VISCOUS_VON_MISES_STRESS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (VISCOUS_VON_MISES_STRESS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     VISCOUS_VON_MISES_STRESS = index_post;
     set_nv_tkud(rd, index, 0, 0, -2, "VVMISSTRESS", "[1]", "Viscous Von Mises stress", FALSE);
     index++;
@@ -11429,20 +11495,20 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   printf("Before porous entries, IP = %d and IPE = %d\n",
   index_post, index_post_export);
   */
-  if (POROUS_SATURATION != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] &&
-      check) {
+  if (POROUS_SATURATION != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     set_nv_tkud(rd, index, 0, 0, -2, "SAT", "[1]", "Saturation", FALSE);
     index++;
     if (POROUS_SATURATION == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     POROUS_SATURATION = index_post;
     index_post++;
   }
 
-  if (POROUS_RHO_TOTAL_SOLVENTS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] &&
-      check) {
+  if (POROUS_RHO_TOTAL_SOLVENTS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     if (POROUS_RHO_TOTAL_SOLVENTS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11457,7 +11523,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
     index++;
     index_post++;
-    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_POROSITY]) {
+    if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_POROSITY]) {
       sprintf(species_name, "Rho_Total_solid");
       sprintf(species_desc, "Total density of solid solvent");
       set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
@@ -11466,27 +11532,27 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (POROUS_RHO_GAS_SOLVENTS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] &&
-      check) {
+  if (POROUS_RHO_GAS_SOLVENTS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     if (POROUS_RHO_GAS_SOLVENTS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
     POROUS_RHO_GAS_SOLVENTS = index_post;
-    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES]) {
+    if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES]) {
       sprintf(species_name, "RhoSolv_g_liq");
       sprintf(species_desc, "Gas Phase Density of liq solvent");
       set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
       index++;
       index_post++;
     }
-    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES]) {
+    if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES]) {
       sprintf(species_name, "RhoSolv_g_air");
       sprintf(species_desc, "Gas Phase Density of gas solvent");
       set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
       index++;
       index_post++;
     }
-    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_POROSITY]) {
+    if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_POROSITY]) {
       sprintf(species_name, "RhoSolv_g_solid");
       sprintf(species_desc, "Gas Phase Density of solid solvent");
       set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
@@ -11495,22 +11561,22 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (POROUS_RHO_LPHASE != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] &&
-      check) {
+  if (POROUS_RHO_LPHASE != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     sprintf(species_name, "Rho_Liq_Phase");
     sprintf(species_desc, "Density of the Liquid Phase");
     set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
     index++;
     if (POROUS_RHO_LPHASE == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     POROUS_RHO_LPHASE = index_post;
     index_post++;
   }
 
-  if (DARCY_VELOCITY_GAS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES] &&
-      check) {
+  if (DARCY_VELOCITY_GAS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES] && check) {
     if (DARCY_VELOCITY_GAS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11524,8 +11590,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (DARCY_VELOCITY_LIQ != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] &&
-      check) {
+  if (DARCY_VELOCITY_LIQ != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     if (DARCY_VELOCITY_LIQ == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11538,12 +11604,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index_post++;
     }
   }
-  if (POROUS_LIQUID_ACCUM_RATE != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] &&
-      check) {
+  if (POROUS_LIQUID_ACCUM_RATE != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     set_nv_tkud(rd, index, 0, 0, -2, "Liq_Inv_Dot", "[1]", "Porous Liquid Accumlation Rate", FALSE);
     index++;
     if (POROUS_LIQUID_ACCUM_RATE == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     POROUS_LIQUID_ACCUM_RATE = index_post;
@@ -11554,32 +11620,32 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   printf(" Before cap. pressure, IP = %d and IPE = %d\n",
   index_post, index_post_export);
   */
-  if (CAPILLARY_PRESSURE != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] &&
-      check) {
+  if (CAPILLARY_PRESSURE != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     set_nv_tkud(rd, index, 0, 0, -2, "PC", "[1]", "Capillary Pressure", FALSE);
     index++;
     if (CAPILLARY_PRESSURE == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     CAPILLARY_PRESSURE = index_post;
     index_post++;
   }
 
-  if (POROUS_GRIDPECLET != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] &&
-      check) {
+  if (POROUS_GRIDPECLET != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     set_nv_tkud(rd, index, 0, 0, -2, "Por_Grid_Peclet", "[1]", "Porous Grid Peclet Number", FALSE);
     index++;
     if (POROUS_GRIDPECLET == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     POROUS_GRIDPECLET = index_post;
     index_post++;
   }
 
-  if (POROUS_SUPGVELOCITY != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] &&
-      check) {
+  if (POROUS_SUPGVELOCITY != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] && check) {
     if (POROUS_SUPGVELOCITY == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11594,14 +11660,14 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
 
   if (REL_LIQ_PERM != -1 &&
-      (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] ||
-       Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN] ||
-       Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_POR_LIQ_PRES] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) &&
       check) {
     set_nv_tkud(rd, index, 0, 0, -2, "Rel_liq_perm", "[1]", "Relative Liquid Permeability", FALSE);
     index++;
     if (REL_LIQ_PERM == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     REL_LIQ_PERM = index_post;
@@ -11617,7 +11683,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
   /* MMH: Output the vorticity vector.
    */
-  if (CURL_V != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (CURL_V != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
         goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
         goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D || goma_ctx->mesh.num_dim == 3) {
@@ -11638,7 +11704,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       set_nv_tkud(rd, index, 0, 0, -2, "VORT", "[1]", "Vorticity (scalar)", FALSE);
       index++;
       if (CURL_V == 2) {
-        Export_XP_ID[index_post_export] = index_post;
+        goma_ctx->problem.export_xp_id[index_post_export] = index_post;
         index_post_export++;
       }
       CURL_V = index_post;
@@ -11649,11 +11715,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (POLYMER_VISCOSITY != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (POLYMER_VISCOSITY != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     set_nv_tkud(rd, index, 0, 0, -2, "MUP", "[1]", "Polymer Viscosity", FALSE);
     index++;
     if (POLYMER_VISCOSITY == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     POLYMER_VISCOSITY = index_post;
@@ -11663,7 +11730,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
   /* RBS: Output the Lamb vector.
    */
-  if (LAMB_VECTOR != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (LAMB_VECTOR != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
         goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
         goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D || goma_ctx->mesh.num_dim == 3) {
@@ -11689,14 +11757,14 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index++;
       index_post++;
       if (LAMB_VECTOR == 2) {
-        Export_XP_ID[index_post_export] = index_post;
+        goma_ctx->problem.export_xp_id[index_post_export] = index_post;
         index_post_export++;
       }
     }
   }
   /* RBS: Helicity quantity (scalar)
    */
-  if (HELICITY != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (HELICITY != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
         goma_ctx->fem.pd->CoordinateSystem == PROJECTED_CARTESIAN ||
         goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D || goma_ctx->mesh.num_dim == 3) {
@@ -11713,44 +11781,46 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (POLYMER_TIME_CONST != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (POLYMER_TIME_CONST != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     set_nv_tkud(rd, index, 0, 0, -2, "LAMBDA", "[1]", "Polymer Time Constant", FALSE);
     index++;
     if (POLYMER_TIME_CONST == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     POLYMER_TIME_CONST = index_post;
     index_post++;
   }
 
-  if (MOBILITY_PARAMETER != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (MOBILITY_PARAMETER != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     set_nv_tkud(rd, index, 0, 0, -2, "ALPHA", "[1]", "Mobility Parameter", FALSE);
     index++;
     if (MOBILITY_PARAMETER == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     MOBILITY_PARAMETER = index_post;
     index_post++;
   }
 
-  if (PTT_XI != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (PTT_XI != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     set_nv_tkud(rd, index, 0, 0, -2, "XI", "[1]", "PTT Xi parameter", FALSE);
     index++;
     if (PTT_XI == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     PTT_XI = index_post;
     index_post++;
   }
 
-  if (PTT_EPSILON != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
+  if (PTT_EPSILON != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_STRESS11]) {
     set_nv_tkud(rd, index, 0, 0, -2, "EPSILON", "[1]", "PTT Epsilon parameter", FALSE);
     index++;
     if (PTT_EPSILON == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     PTT_EPSILON = index_post;
@@ -11761,73 +11831,78 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     set_nv_tkud(rd, index, 0, 0, -2, "USER", "[1]", "User-Defined", FALSE);
     index++;
     if (USER_POST == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     USER_POST = index_post;
     index_post++;
   }
 
-  if (ACOUSTIC_PRESSURE != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] &&
-                                  Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
+  if (ACOUSTIC_PRESSURE != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] &&
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
     set_nv_tkud(rd, index, 0, 0, -2, "AC_PRES", "[1]", "Acoustic Pressure Magn.", FALSE);
     index++;
     if (ACOUSTIC_PRESSURE == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     ACOUSTIC_PRESSURE = index_post;
     index_post++;
   }
 
-  if (ACOUSTIC_PHASE_ANGLE != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] &&
-                                     Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
+  if (ACOUSTIC_PHASE_ANGLE != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] &&
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
     set_nv_tkud(rd, index, 0, 0, -2, "AC_PHASE", "[1]", "Acoustic Phase Angle", FALSE);
     index++;
     if (ACOUSTIC_PHASE_ANGLE == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     ACOUSTIC_PHASE_ANGLE = index_post;
     index_post++;
   }
 
-  if (ACOUSTIC_ENERGY_DENSITY != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] &&
-                                        Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
+  if (ACOUSTIC_ENERGY_DENSITY != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PREAL] &&
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ACOUS_PIMAG])) {
     set_nv_tkud(rd, index, 0, 0, -2, "AC_ED", "[1]", "Acoustic Energy Density", FALSE);
     index++;
     if (ACOUSTIC_ENERGY_DENSITY == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     ACOUSTIC_ENERGY_DENSITY = index_post;
     index_post++;
   }
 
-  if (LIGHT_INTENSITY != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LIGHT_INTP] &&
-                                Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LIGHT_INTM])) {
+  if (LIGHT_INTENSITY != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LIGHT_INTP] &&
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LIGHT_INTM])) {
     set_nv_tkud(rd, index, 0, 0, -2, "L_INT", "[1]", "Light Intensity", FALSE);
     index++;
     if (LIGHT_INTENSITY == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     LIGHT_INTENSITY = index_post;
     index_post++;
   }
 
-  if (UNTRACKED_SPEC != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MASS]) {
+  if (UNTRACKED_SPEC != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MASS]) {
     set_nv_tkud(rd, index, 0, 0, -2, "UNT_SPEC", "[1]", "Untracked Species", FALSE);
     index++;
     if (UNTRACKED_SPEC == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     UNTRACKED_SPEC = index_post;
     index_post++;
   }
 
-  if (PRINCIPAL_STRESS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (PRINCIPAL_STRESS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     if (PRINCIPAL_STRESS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11853,7 +11928,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (PRINCIPAL_REAL_STRESS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SOLID1]) {
+  if (PRINCIPAL_REAL_STRESS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SOLID1]) {
     if (PRINCIPAL_REAL_STRESS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11879,10 +11955,11 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_HEIGHT != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
-                           Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] ||
-                           Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] ||
-                           Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND])) {
+  if (LUB_HEIGHT != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND])) {
     if (LUB_HEIGHT == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11894,7 +11971,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_HEIGHT_2 != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LUBP_2])) {
+  if (LUB_HEIGHT_2 != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP_2])) {
     if (LUB_HEIGHT_2 == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11906,7 +11984,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_VELO_UPPER != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LUBP]) {
+  if (LUB_VELO_UPPER != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP]) {
     if (LUB_VELO_UPPER == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11928,7 +12006,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_VELO_LOWER != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LUBP]) {
+  if (LUB_VELO_LOWER != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP]) {
     if (LUB_VELO_LOWER == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11950,8 +12028,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_VELO_FIELD != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
-                               Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
+  if (LUB_VELO_FIELD != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
     if (LUB_VELO_FIELD == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11973,7 +12052,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_VELO_FIELD_2 != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LUBP_2])) {
+  if (LUB_VELO_FIELD_2 != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP_2])) {
     if (LUB_VELO_FIELD_2 == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -11995,9 +12075,10 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_FLUID_SOURCE != -1 && ((Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LUBP]) ||
-                                 (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] &&
-                                  Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMH]))) {
+  if (LUB_FLUID_SOURCE != -1 &&
+      ((goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP]) ||
+       (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP] &&
+        goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMH]))) {
     if (LUB_FLUID_SOURCE == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12009,7 +12090,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (DISJ_PRESS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP]) {
+  if (DISJ_PRESS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP]) {
     if (DISJ_PRESS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12021,8 +12103,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (LUB_CONVECTION != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
-                               Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
+  if (LUB_CONVECTION != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_LUBP] ||
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_FILMP])) {
     if (LUB_CONVECTION == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12044,7 +12127,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (PP_MESH_VELOCITY != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1])) {
+  if (PP_MESH_VELOCITY != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1])) {
     if (PP_MESH_VELOCITY == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12070,7 +12154,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (SH_SAT_OPEN != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN]) {
+  if (SH_SAT_OPEN != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN]) {
     if (SH_SAT_OPEN == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12082,7 +12167,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (SH_SAT_OPEN_2 != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) {
+  if (SH_SAT_OPEN_2 != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_OPEN_2]) {
     if (SH_SAT_OPEN_2 == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12094,7 +12180,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (SH_CAP_PRES != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1]) {
+  if (SH_CAP_PRES != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1]) {
     if (SH_CAP_PRES == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12104,14 +12191,14 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
     index++;
     index_post++;
-    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_2]) {
+    if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_2]) {
       sprintf(nm, "SH_CAP_PRES_2");
       sprintf(ds, "Porous Shell Capillary Pressure Layer 2");
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
       index++;
       index_post++;
     }
-    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3]) {
+    if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3]) {
       sprintf(nm, "SH_CAP_PRES_3");
       sprintf(ds, "Porous Shell Capillary Pressure Layer 3");
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12120,8 +12207,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (SH_PORE_FLUX != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1] &&
-      Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_2]) {
+  if (SH_PORE_FLUX != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_1] &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_2]) {
     if (SH_PORE_FLUX == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12132,7 +12220,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index++;
     index_post++;
 
-    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3]) {
+    if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_SAT_3]) {
       sprintf(nm, "SH_PORE_FLUX_2_3");
       sprintf(ds, "Porous Shell Flux Between Layers 2 and 3");
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -12141,10 +12229,11 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (SH_STRESS_TENSOR != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1] &&
-                                 Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL2] &&
-                                 Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL3] &&
-                                 Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1])) {
+  if (SH_STRESS_TENSOR != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1] &&
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL2] &&
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL3] &&
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1])) {
     if (SH_STRESS_TENSOR == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12166,10 +12255,11 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (SH_TANG != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1] &&
-                        Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL2] &&
-                        Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL3] &&
-                        Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1])) {
+  if (SH_TANG != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL1] &&
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL2] &&
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_SHELL_NORMAL3] &&
+       goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1])) {
     if (SH_TANG == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12208,7 +12298,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (PP_LAME_MU != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (PP_LAME_MU != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     if (PP_LAME_MU == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12220,7 +12310,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (PP_LAME_LAMBDA != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (PP_LAME_LAMBDA != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     if (PP_LAME_LAMBDA == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12232,30 +12322,33 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index_post++;
   }
 
-  if (VON_MISES_STRAIN != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (VON_MISES_STRAIN != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "VME", "[1]", "Von Mises Strain", FALSE);
     index++;
     if (VON_MISES_STRAIN == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     VON_MISES_STRAIN = index_post;
     index_post++;
   }
 
-  if (VON_MISES_STRESS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (VON_MISES_STRESS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     set_nv_tkud(rd, index, 0, 0, -2, "VMT", "[1]", "Von Mises Stress", FALSE);
     index++;
     if (VON_MISES_STRESS == 2) {
-      Export_XP_ID[index_post_export] = index_post;
+      goma_ctx->problem.export_xp_id[index_post_export] = index_post;
       index_post_export++;
     }
     VON_MISES_STRESS = index_post;
     index_post++;
   }
 
-  if (TFMP_GAS_VELO != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] &&
-      Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
+  if (TFMP_GAS_VELO != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
     if (TFMP_GAS_VELO == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12279,8 +12372,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     TFMP_GAS_VELO = -1;
   }
 
-  if (TFMP_LIQ_VELO != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] &&
-      Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
+  if (TFMP_LIQ_VELO != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
     if (TFMP_LIQ_VELO == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12304,8 +12398,9 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     TFMP_LIQ_VELO = -1;
   }
 
-  if (TFMP_INV_PECLET != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] &&
-      Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
+  if (TFMP_INV_PECLET != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_MASS] &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
     if (TFMP_INV_PECLET == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12318,7 +12413,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   } else {
     TFMP_INV_PECLET = -1;
   }
-  if (TFMP_KRG != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
+  if (TFMP_KRG != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_TFMP_BOUND]) {
     if (TFMP_KRG == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12358,7 +12453,8 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
    *              post processing options
    */
 
-  if (NS_RESIDUALS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (NS_RESIDUALS != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     if (NS_RESIDUALS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12376,7 +12472,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
   }
 
-  if (MM_RESIDUALS != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
+  if (MM_RESIDUALS != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MESH1]) {
     if (MM_RESIDUALS == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
@@ -12396,7 +12492,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
   /* write out total stress */
   var = R_STRESS11;
-  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
+  if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
     post_flag = 0;
     for (i = 0; i < goma_ctx->fem.upd->Num_Mat; i++) {
       if (goma_ctx->fem.pd_glob[i]->i[goma_ctx->fem.pg->imtrx][var] == I_Q1 ||
@@ -12419,7 +12515,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       index++;
       index_post++;
       var = R_STRESS12;
-      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
+      if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
         TOTAL_STRESS12 = index_post;
         set_nv_tkud(rd, index, var, 0, -2, "ts12", "[1]", "total stress 12", FALSE);
         index++;
@@ -12427,7 +12523,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       }
 
       var = R_STRESS22;
-      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
+      if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
         TOTAL_STRESS22 = index_post;
         set_nv_tkud(rd, index, var, 0, -2, "ts22", "[1]", "total stress 22", FALSE);
         index++;
@@ -12435,7 +12531,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       }
 
       var = R_STRESS13;
-      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
+      if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
         TOTAL_STRESS13 = index_post;
         set_nv_tkud(rd, index, var, 0, -2, "ts13", "[1]", "total stress 13", FALSE);
         index++;
@@ -12443,7 +12539,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       }
 
       var = R_STRESS23;
-      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
+      if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
         TOTAL_STRESS23 = index_post;
         set_nv_tkud(rd, index, var, 0, -2, "ts23", "[1]", "total stress 23", FALSE);
         index++;
@@ -12451,7 +12547,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       }
 
       var = R_STRESS33;
-      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
+      if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
         TOTAL_STRESS33 = index_post;
         set_nv_tkud(rd, index, var, 0, -2, "ts33", "[1]", "total stress 33", FALSE);
         index++;
@@ -12476,12 +12572,12 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
   /************************** setup output of time derivatives if requested */
 
-  if (TIME_DERIVATIVES != -1 && (TimeIntegration != STEADY)) {
+  if (TIME_DERIVATIVES != -1 && (goma_ctx->problem.time_integration != STEADY)) {
     if (TIME_DERIVATIVES == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing time derivatives cannot be exported yet!");
     }
     for (var = V_FIRST; var < V_LAST; var++) {
-      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
+      if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
         if (variable_type_nodalInterp(var)) {
           if (var == MASS_FRACTION) {
             for (mn = -1; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
@@ -12579,13 +12675,13 @@ int load_elem_tkn(struct Results_Description *rd, const Exo_DB *exo, int tev, in
   /* First cycle through all the primary variables that are nodal looking
      for element variable candidates (currently must be interpolated with I_P0 */
   for (i = 0; i < exo->num_elem_blocks; i++) {
-    int mat_id = Matilda[i];
+    int mat_id = goma_ctx->problem.matilda[i];
     if (exo->eb_num_elems[i] <= 0)
       continue;
     for (j = V_FIRST; j < V_LAST; j++) {
       if (goma_ctx->fem.pd_glob[mat_id]->v[goma_ctx->fem.pg->imtrx][j] != V_NOTHING) {
         if (goma_ctx->fem.pd_glob[mat_id]->i[goma_ctx->fem.pg->imtrx][j] == I_P0) {
-          if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][j] > 1) {
+          if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][j] > 1) {
             fprintf(stderr,
                     "%s: Too many components in variable type (%s - %s) for element variable\n", yo,
                     Exo_Var_Names[j].name2, Exo_Var_Names[j].name1);
@@ -12627,7 +12723,8 @@ int load_elem_tkn(struct Results_Description *rd, const Exo_DB *exo, int tev, in
      each be listed separately and painfully */
 
   /* ZZ error based on the fluid shear stress energy norm */
-  if (ERROR_ZZ_VEL != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+  if (ERROR_ZZ_VEL != -1 &&
+      goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
     set_ev_tkud(rd, index, 0, "ERR_ZZ_V", "[1]", "Zienkiewicz-Zhu error from velocity", FALSE);
     index++;
     ERROR_ZZ_VEL = index_post;
@@ -12645,7 +12742,7 @@ int load_elem_tkn(struct Results_Description *rd, const Exo_DB *exo, int tev, in
   }
 
   /* ZZ error based on the heat flux energy norm */
-  if (ERROR_ZZ_Q != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
+  if (ERROR_ZZ_Q != -1 && goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
     set_ev_tkud(rd, index, 0, "ERR_ZZ_Q", "[1]", "Zienkiewicz-Zhu error from heat flux", FALSE);
     index++;
     ERROR_ZZ_Q = index_post;
@@ -12670,7 +12767,8 @@ int load_elem_tkn(struct Results_Description *rd, const Exo_DB *exo, int tev, in
         goma_ctx->fem.pd_glob[i]->MeshMotion == DYNAMIC_LAGRANGIAN)
       check = 0;
   }
-  if (ERROR_ZZ_P != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
+  if (ERROR_ZZ_P != -1 &&
+      (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
     set_ev_tkud(rd, index, 0, "ERR_ZZ_P", "[1]", "Zienkiewicz-Zhu error from pressure", FALSE);
     index++;
     ERROR_ZZ_P = index_post;
@@ -12698,7 +12796,7 @@ int load_elem_tkn(struct Results_Description *rd, const Exo_DB *exo, int tev, in
   ipost = FALSE;
   for (eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
     if (exo->eb_num_elems[eb_index] > 0) {
-      mn = Matilda[eb_index];
+      mn = goma_ctx->problem.matilda[eb_index];
       if (mn < 0) {
         continue;
       }
@@ -13300,7 +13398,8 @@ int check_elem_order(const int *listel, const Exo_DB *exo)
 
 static bool post_process_variable_is_active(pp_Average *pp_average, int matrix_index) {
   if ((pp_average->non_variable_type && matrix_index == 0) ||
-      (!pp_average->non_variable_type && Num_Var_In_Type[matrix_index][pp_average->type])) {
+      (!pp_average->non_variable_type &&
+       goma_ctx->problem.num_var_in_type[matrix_index][pp_average->type])) {
     return true;
   }
   return false;

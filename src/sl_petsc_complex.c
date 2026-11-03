@@ -112,8 +112,9 @@ static void create_complex_mapping(struct GomaLinearSolverData *ams,
      * Fill the vector list which points to the unknowns defined at this
      * node...
      */
-    int inode_varType[MaxVarPerNode], inode_matID[MaxVarPerNode];
-    int inode_varIndex[MaxVarPerNode];
+    int inode_varType[goma_ctx->problem.max_var_per_node],
+        inode_matID[goma_ctx->problem.max_var_per_node];
+    int inode_varIndex[goma_ctx->problem.max_var_per_node];
     int row_num_unknowns = fill_variable_vector(inode, inode_varType, inode_matID);
     /*
      * Do a check against the number of unknowns at this
@@ -171,7 +172,7 @@ static void create_complex_mapping(struct GomaLinearSolverData *ams,
   }
   exchange_dof(cx[goma_ctx->fem.pg->imtrx], dpi, dblColGIDs, goma_ctx->fem.pg->imtrx);
   matrix_data->local_to_global_complex =
-      malloc(sizeof(PetscInt) * num_universe_dofs[goma_ctx->fem.pg->imtrx]);
+      malloc(sizeof(PetscInt) * goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx]);
   // convert back to Int
   int offset = 0;
   for (int i = 0; i < num_cols; i++) {
@@ -217,7 +218,8 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
      * Fill the vector list which points to the unknowns defined at this
      * node...
      */
-    int inode_varType[MaxVarPerNode], inode_matID[MaxVarPerNode];
+    int inode_varType[goma_ctx->problem.max_var_per_node],
+        inode_matID[goma_ctx->problem.max_var_per_node];
     int row_num_unknowns = fill_variable_vector(inode, inode_varType, inode_matID);
     /*
      * Do a check against the number of unknowns at this
@@ -253,7 +255,8 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
            * fill the vector list which points to the unknowns
            * defined at this interaction node
            */
-          int inter_node_varType[MaxVarPerNode], inter_node_matID[MaxVarPerNode];
+          int inter_node_varType[goma_ctx->problem.max_var_per_node],
+              inter_node_matID[goma_ctx->problem.max_var_per_node];
           int col_num_unknowns =
               fill_variable_vector(inter_node, inter_node_varType, inter_node_matID);
           if (col_num_unknowns != nvCol->Num_Unknowns) {
@@ -292,11 +295,11 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
                   exo->centroid_list[inter_node] != -1) {
                 int eb1 = exo->elem_eb[exo->centroid_list[inode]];
 
-                if (goma_ctx->fem.vn_glob[Matilda[eb1]]->dg_J_model == FULL_DG) {
-                  int i1 =
-                      goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][rowVarType];
-                  int i2 =
-                      goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][colVarType];
+                if (goma_ctx->fem.vn_glob[goma_ctx->problem.matilda[eb1]]->dg_J_model == FULL_DG) {
+                  int i1 = goma_ctx->fem.pd_glob[goma_ctx->problem.matilda[eb1]]
+                               ->i[goma_ctx->fem.pg->imtrx][rowVarType];
+                  int i2 = goma_ctx->fem.pd_glob[goma_ctx->problem.matilda[eb1]]
+                               ->i[goma_ctx->fem.pg->imtrx][colVarType];
 
                   if ((rowVarType == colVarType) &&
                       (i1 == I_P0 || i1 == I_P1 || i1 == I_PQ1 || i1 == I_PQ2) &&
@@ -357,12 +360,12 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
   ;
   ams->npn_plus = dpi->num_universe_nodes;
 
-  ams->npu =
-      num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
-  ams->npu_plus = num_universe_dofs[goma_ctx->fem.pg->imtrx];
+  ams->npu = goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+             goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+  ams->npu_plus = goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx];
 
-  size_t local_dofs = num_universe_dofs[goma_ctx->fem.pg->imtrx];
-  size_t global_dofs = num_universe_dofs[goma_ctx->fem.pg->imtrx];
+  size_t local_dofs = goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx];
+  size_t global_dofs = goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx];
   size_t local_nnz = nnz;
   size_t global_nnz = nnz;
 

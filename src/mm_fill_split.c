@@ -61,8 +61,8 @@ int assemble_ustar(dbl time_value, /* current time */
   MOMENTUM_SOURCE_DEPENDENCE_STRUCT df_struct; /* Body force dependence */
   MOMENTUM_SOURCE_DEPENDENCE_STRUCT *df = &df_struct;
 
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
@@ -80,7 +80,7 @@ int assemble_ustar(dbl time_value, /* current time */
     /*
      * Assemble each component "a" of the momentum equation...
      */
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = USTAR + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
@@ -98,7 +98,7 @@ int assemble_ustar(dbl time_value, /* current time */
           resid *= -goma_ctx->fem.bf[eqn]->phi[i] * d_area;
 
           double adv = 0;
-          for (int p = 0; p < VIM; p++) {
+          for (int p = 0; p < goma_ctx->problem.vim; p++) {
             adv += rho * goma_ctx->fem.fv_old->v_star[p] * goma_ctx->fem.fv->grad_v_star[p][a];
           }
 
@@ -110,8 +110,8 @@ int assemble_ustar(dbl time_value, /* current time */
           pres *= -d_area;
 
           double diff = 0;
-          for (int p = 0; p < VIM; p++) {
-            for (int q = 0; q < VIM; q++) {
+          for (int p = 0; p < goma_ctx->problem.vim; p++) {
+            for (int q = 0; q < goma_ctx->problem.vim; q++) {
               diff += mu * (goma_ctx->fem.fv->grad_v_star[p][q]) *
                       goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q];
             }
@@ -134,7 +134,7 @@ int assemble_ustar(dbl time_value, /* current time */
    */
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = USTAR + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
@@ -151,7 +151,7 @@ int assemble_ustar(dbl time_value, /* current time */
            */
           ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-          for (b = 0; b < WIM; b++) {
+          for (b = 0; b < goma_ctx->problem.wim; b++) {
             var = USTAR + b;
             if (pdv[var]) {
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -160,7 +160,7 @@ int assemble_ustar(dbl time_value, /* current time */
                 resid *= -delta(a, b) * goma_ctx->fem.bf[eqn]->phi[i] * d_area;
 
                 double adv = 0; // bf[var]->phi[j] * fv->grad_v[b][a];
-                for (int p = 0; p < VIM; p++) {
+                for (int p = 0; p < goma_ctx->problem.vim; p++) {
                   adv += rho * goma_ctx->fem.fv_old->v_star[p] *
                          goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][a];
                 }
@@ -174,8 +174,8 @@ int assemble_ustar(dbl time_value, /* current time */
                 adv *= -goma_ctx->fem.bf[eqn]->phi[i] * d_area;
 
                 double diff = 0;
-                for (int p = 0; p < VIM; p++) {
-                  for (int q = 0; q < VIM; q++) {
+                for (int p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (int q = 0; q < goma_ctx->problem.vim; q++) {
                     diff += mu * (goma_ctx->fem.bf[VELOCITY1 + q]->grad_phi_e[j][b][p][q]) *
                             goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q];
                   }
@@ -282,7 +282,7 @@ int assemble_pstar(dbl time_value, /* current time */
        *  Mass Terms: drhodt terms (usually though problem dependent)
        */
       mass = 0;
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         mass += (goma_ctx->fem.fv->grad_P_star[a] - goma_ctx->fem.fv_old->grad_P_star[a]) / rho *
                 goma_ctx->fem.bf[eqn]->grad_phi[i][a];
       }
@@ -310,7 +310,7 @@ int assemble_pstar(dbl time_value, /* current time */
 
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           mass = 0;
-          for (a = 0; a < WIM; a++) {
+          for (a = 0; a < goma_ctx->problem.wim; a++) {
             mass += (goma_ctx->fem.bf[var]->grad_phi[j][a] / rho) *
                     goma_ctx->fem.bf[eqn]->grad_phi[i][a];
           }
@@ -447,7 +447,7 @@ int assemble_momentum_segregated(dbl time, /* current time */
     /*
      * Assemble each component "a" of the momentum equation...
      */
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
@@ -485,7 +485,7 @@ int assemble_momentum_segregated(dbl time, /* current time */
    */
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
       for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
@@ -501,7 +501,7 @@ int assemble_momentum_segregated(dbl time, /* current time */
            */
           ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-          for (b = 0; b < WIM; b++) {
+          for (b = 0; b < goma_ctx->problem.wim; b++) {
             var = VELOCITY1 + b;
             if (pdv[var]) {
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];

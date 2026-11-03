@@ -259,7 +259,7 @@ int assemble_emwave(double time, /* present time value */
     conj_coeff_dn = -omega * creal(cpx_permittivity) / n;
     conj_coeff_dk = -omega * creal(cpx_permittivity) / k;
     cross_field_var = EM_H1_REAL;
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       cross_field[p] = goma_ctx->fem.fv->em_hr[p];
     }
     em_stab.stabilization_field_var = EM_E1_REAL;
@@ -277,7 +277,7 @@ int assemble_emwave(double time, /* present time value */
     conj_coeff_dn = omega * creal(cpx_permittivity) / n;
     conj_coeff_dk = omega * creal(cpx_permittivity) / k;
     cross_field_var = EM_H1_IMAG;
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       cross_field[p] = goma_ctx->fem.fv->em_hi[p];
     }
     em_stab.stabilization_field_var = EM_E1_IMAG;
@@ -294,7 +294,7 @@ int assemble_emwave(double time, /* present time value */
     conj_coeff_dn = 0;
     conj_coeff_dk = 0;
     cross_field_var = EM_E1_REAL;
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       cross_field[p] = goma_ctx->fem.fv->em_er[p];
     }
     em_stab.stabilization_field_var = EM_H1_REAL;
@@ -311,7 +311,7 @@ int assemble_emwave(double time, /* present time value */
     conj_coeff_dn = 0;
     conj_coeff_dk = 0;
     cross_field_var = EM_E1_IMAG;
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       cross_field[p] = goma_ctx->fem.fv->em_ei[p];
     }
     em_stab.stabilization_field_var = EM_H1_IMAG;
@@ -353,12 +353,12 @@ int assemble_emwave(double time, /* present time value */
 
       diffusion = 0.;
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
         }
 
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             diffusion -= permute(p, q, dir) * grad_phi_i[p] * cross_field[q];
           }
         }
@@ -400,7 +400,7 @@ int assemble_emwave(double time, /* present time value */
        * equation for bunches of (b,j) column variables...
        */
 
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
       }
 
@@ -458,12 +458,12 @@ int assemble_emwave(double time, /* present time value */
 
             diffusion = 0.;
             if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
               }
 
-              for (p = 0; p < VIM; p++) {
-                for (q = 0; q < VIM; q++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
+                for (q = 0; q < goma_ctx->problem.vim; q++) {
                   diffusion -= permute(p, q, dir) * grad_phi_i[p] * delta(q, b) * phi_j;
                 }
               }
@@ -568,7 +568,7 @@ int assemble_emwave(double time, /* present time value */
               diff_a *= det_J * h3 * wt;
 
               diff_b = 0.;
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 diff_b += grad_phi_i[p];
               }
               diff_b *= det_J * h3 * wt;
@@ -798,12 +798,12 @@ int assemble_ewave(double time,      // present time
       }
       diffusion = 0.;
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-        for (int p = 0; p < VIM; p++) {
+        for (int p = 0; p < goma_ctx->problem.vim; p++) {
           grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
         }
 
-        for (int p = 0; p < VIM; p++) {
-          for (int q = 0; q < VIM; q++) {
+        for (int p = 0; p < goma_ctx->problem.vim; p++) {
+          for (int q = 0; q < goma_ctx->problem.vim; q++) {
             diffusion -=
                 delta(field_index, p) * permute(field_index, p, q) * grad_phi_i[p] * curl_field[q];
           }
@@ -1666,29 +1666,29 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
   case EM_STAB_DIVPHI_DIV:
     switch (em_stab->stabilization_field_var) {
     case EM_E1_REAL:
-      for (int p = 0; p < VIM; p++) {
-        for (int q = 0; q < VIM; q++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
+        for (int q = 0; q < goma_ctx->problem.vim; q++) {
           grad_stabilization_field[p][q] = goma_ctx->fem.fv->grad_em_er[p][q];
         }
       }
       break;
     case EM_E1_IMAG:
-      for (int p = 0; p < VIM; p++) {
-        for (int q = 0; q < VIM; q++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
+        for (int q = 0; q < goma_ctx->problem.vim; q++) {
           grad_stabilization_field[p][q] = goma_ctx->fem.fv->grad_em_ei[p][q];
         }
       }
       break;
     case EM_H1_REAL:
-      for (int p = 0; p < VIM; p++) {
-        for (int q = 0; q < VIM; q++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
+        for (int q = 0; q < goma_ctx->problem.vim; q++) {
           grad_stabilization_field[p][q] = goma_ctx->fem.fv->grad_em_hr[p][q];
         }
       }
       break;
     case EM_H1_IMAG:
-      for (int p = 0; p < VIM; p++) {
-        for (int q = 0; q < VIM; q++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
+        for (int q = 0; q < goma_ctx->problem.vim; q++) {
           grad_stabilization_field[p][q] = goma_ctx->fem.fv->grad_em_hi[p][q];
         }
       }
@@ -1704,8 +1704,8 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
     switch (em_stab->stabilization_field_var) {
     case EM_H1_REAL:
     case EM_H1_IMAG:
-      for (int p = 0; p < VIM; p++) {
-        for (int q = 0; q < VIM; q++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
+        for (int q = 0; q < goma_ctx->problem.vim; q++) {
           grad_stabilization_field[p][q] =
               goma_ctx->fem.fv->grad_em_er[p][q] + _Complex_I * goma_ctx->fem.fv->grad_em_ei[p][q];
         }
@@ -1713,8 +1713,8 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
       break;
     case EM_E1_REAL:
     case EM_E1_IMAG:
-      for (int p = 0; p < VIM; p++) {
-        for (int q = 0; q < VIM; q++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
+        for (int q = 0; q < goma_ctx->problem.vim; q++) {
           grad_stabilization_field[p][q] =
               goma_ctx->fem.fv->grad_em_hr[p][q] + _Complex_I * goma_ctx->fem.fv->grad_em_hi[p][q];
         }
@@ -1738,7 +1738,7 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
 
     div_stabilization_field = 0.0;
 
-    for (int p = 0; p < VIM; p++) {
+    for (int p = 0; p < goma_ctx->problem.vim; p++) {
       div_stabilization_field += grad_stabilization_field[p][p];
     }
 
@@ -1752,7 +1752,7 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
     // of the current residual
     cartesian_index = (em_stab->em_eqn - R_EM_E1_REAL) % 3;
 
-    for (int p = 0; p < VIM; p++) {
+    for (int p = 0; p < goma_ctx->problem.vim; p++) {
       div_stabilization_field += grad_stabilization_field[p][p];
     }
 
@@ -1776,7 +1776,7 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
 
     double div_phi[MDE] = {0.0};
 
-    for (int p = 0; p < VIM; p++) {
+    for (int p = 0; p < goma_ctx->problem.vim; p++) {
       div_stabilization_field += grad_stabilization_field[p][p];
     }
     for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[em_stab->em_eqn]; i++) {
@@ -1802,7 +1802,7 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
   case EM_STAB_PHI_DIVSQUARED:
     div_stabilization_field = 0.0;
 
-    for (int p = 0; p < VIM; p++) {
+    for (int p = 0; p < goma_ctx->problem.vim; p++) {
       div_stabilization_field += grad_stabilization_field[p][p];
     }
     div_stabilization_field_squared = div_stabilization_field * div_stabilization_field;
@@ -1889,7 +1889,7 @@ void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
     // of the current residual
     cartesian_index = (em_stab->em_eqn - R_EM_E1_REAL) % 3;
 
-    for (int p = 0; p < VIM; p++) {
+    for (int p = 0; p < goma_ctx->problem.vim; p++) {
       div_stabilization_field += grad_stabilization_field[p][p];
     }
     div_stabilization_field_squared = div_stabilization_field * div_stabilization_field;

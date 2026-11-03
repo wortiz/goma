@@ -328,7 +328,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
         return (status);
     }
 
-    if (TimeIntegration != STEADY &&
+    if (goma_ctx->problem.time_integration != STEADY &&
         goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (icount = 0; icount < ielem_dim; icount++) {
         x_dot[icount] = goma_ctx->fem.fv_dot->x[icount];
@@ -337,7 +337,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
       }
 
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][SOLID_DISPLACEMENT1]) {
-        for (icount = 0; icount < VIM; icount++)
+        for (icount = 0; icount < goma_ctx->problem.vim; icount++)
           x_rs_dot[icount] = 0.;
         for (icount = 0; icount < ielem_dim; icount++) {
           /* Notice how I use here fv->d_rs instead of fv->x_rs
@@ -384,8 +384,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           bc->BC_Name == YFLUX_DISC_RXN_BC || bc->BC_Name == SDC_STEFANFLOW_BC ||
           bc->BC_Name == SDC_KIN_SF_BC) {
         new_way = TRUE;
-        for (icount = 0; icount < Num_Interface_Srcs; icount++) {
-          if (bc->BC_ID == IntSrc_BCID[icount]) {
+        for (icount = 0; icount < goma_ctx->problem.num_interface_srcs; icount++) {
+          if (bc->BC_ID == goma_ctx->problem.int_src_bc_id[icount]) {
             interface_id = icount;
           }
         }
@@ -1716,7 +1716,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           wall_velo[0] = BC_Types[bc_input_id].BC_Data_Float[5];
           wall_velo[1] = BC_Types[bc_input_id].BC_Data_Float[6];
           wall_velo[2] = BC_Types[bc_input_id].BC_Data_Float[7];
-          for (i1 = 0; i1 < Num_BC; i1++) {
+          for (i1 = 0; i1 < goma_ctx->problem.num_bc; i1++) {
             if (BC_Types[i1].BC_ID == bc->BC_ID) {
               switch (BC_Types[i1].BC_Name) {
               case VELO_TANGENT_BC:
@@ -1914,7 +1914,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                BC_Types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC ||
                BC_Types[bc_input_id].BC_Name == ELEC_TRACTION_BC ||
                BC_Types[bc_input_id].BC_Name == CAPILLARY_SHEAR_VISC_BC) &&
-              (Dolphin[goma_ctx->fem.pg->imtrx][I][VELOCITY1] >
+              (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][VELOCITY1] >
                0)) { /* DRN: getting segfault for Q1P0 on Q2 mesh, does this fix it? */
             for (p = 0; p < bc_desc->vector; p++) {
               /* assuming momentum and species have same interpolation, for now */
@@ -1966,7 +1966,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           //          }
 
           if ((BC_Types[bc_input_id].BC_Name == TENSION_SHEET_BC) &&
-              (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0)) {
+              (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0)) {
             func[0] =
                 cfunc[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[R_MESH1][id]][0];
             for (k = 0; k < MAX_VARIABLE_TYPES + MAX_CONC; k++) {
@@ -1979,7 +1979,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           }
 
           if ((BC_Types[bc_input_id].BC_Name == SHEAR_TO_SHELL_BC) &&
-              (Dolphin[goma_ctx->fem.pg->imtrx][I][R_SHELL_TENSION] > 0)) {
+              (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][R_SHELL_TENSION] > 0)) {
             func[0] = cfunc[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
                                 ->ln_to_first_dof[R_SHELL_TENSION][id]][0];
             for (k = 0; k < MAX_VARIABLE_TYPES + MAX_CONC; k++) {

@@ -79,22 +79,23 @@ int setup_pd(void) {
   CoordinateSystem = goma_ctx->fem.pd_glob[0]->CoordinateSystem;
 
   for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
-    goma_ctx->fem.pd_glob[mn]->Num_Dim = goma_ctx->mesh.num_dim;  /* from "el_geom.h" */
-    goma_ctx->fem.pd_glob[mn]->TimeIntegration = TimeIntegration; /* from "rf_fem.h" */
+    goma_ctx->fem.pd_glob[mn]->Num_Dim = goma_ctx->mesh.num_dim; /* from "el_geom.h" */
+    goma_ctx->fem.pd_glob[mn]->TimeIntegration =
+        goma_ctx->problem.time_integration; /* from "rf_fem.h" */
     if (goma_ctx->fem.pd_glob[mn]->CoordinateSystem != CoordinateSystem)
       GOMA_EH(GOMA_ERROR, "Not all materials have the same coordinate system!");
   }
 
   if (CoordinateSystem == CYLINDRICAL) {
-    VIM = 3;
-    WIM = goma_ctx->mesh.num_dim;
+    goma_ctx->problem.vim = 3;
+    goma_ctx->problem.wim = goma_ctx->mesh.num_dim;
   } else if (CoordinateSystem == SWIRLING || CoordinateSystem == PROJECTED_CARTESIAN ||
              CoordinateSystem == CARTESIAN_2pt5D) {
-    VIM = 3;
-    WIM = 3;
+    goma_ctx->problem.vim = 3;
+    goma_ctx->problem.wim = 3;
   } else {
-    VIM = goma_ctx->mesh.num_dim;
-    WIM = goma_ctx->mesh.num_dim;
+    goma_ctx->problem.vim = goma_ctx->mesh.num_dim;
+    goma_ctx->problem.wim = goma_ctx->mesh.num_dim;
   }
   if (goma_ctx->fem.pd_glob[0]->Num_Dim == 3 &&
       (CoordinateSystem == CYLINDRICAL || CoordinateSystem == SWIRLING ||
@@ -378,7 +379,7 @@ int setup_pd(void) {
 
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (v = V_FIRST; v < V_LAST; v++) {
-      Num_Var_In_Type[imtrx][v] = 0;
+      goma_ctx->problem.num_var_in_type[imtrx][v] = 0;
     }
   }
   for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
@@ -392,13 +393,13 @@ int setup_pd(void) {
 
       for (v = V_FIRST; v < V_LAST; v++) {
         if (v == MASS_FRACTION) {
-          Num_Var_In_Type[imtrx][MASS_FRACTION] |=
+          goma_ctx->problem.num_var_in_type[imtrx][MASS_FRACTION] |=
               (goma_ctx->fem.pd->e[imtrx][R_MASS]) ? goma_ctx->fem.upd->Max_Num_Species_Eqn : 0;
         } else if (v == SURFACE) {
-          Num_Var_In_Type[imtrx][SURFACE] |=
+          goma_ctx->problem.num_var_in_type[imtrx][SURFACE] |=
               (goma_ctx->fem.pd->e[imtrx][R_MASS_SURF]) ? (kkSurf + kkBulk) : 0;
         } else {
-          Num_Var_In_Type[imtrx][v] |= (goma_ctx->fem.pd->e[imtrx][v]) ? 1 : 0;
+          goma_ctx->problem.num_var_in_type[imtrx][v] |= (goma_ctx->fem.pd->e[imtrx][v]) ? 1 : 0;
         }
       }
     }

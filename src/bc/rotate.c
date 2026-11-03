@@ -378,8 +378,8 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
     for (id = 0; id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ShapeVar]; id++) {
       Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-      if (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-          Dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
+      if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+          goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
         dsvector_dx[0][0][0][ldof] = dsnormal_dx[0][0][ldof];
       }
     }
@@ -393,8 +393,8 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
         for (id = 0; id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ShapeVar]; id++) {
           Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-          if (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-              Dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
+          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+              goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
             dsvector_dx[0][kdir][ldir][ldof] = dsnormal_dx[kdir][ldir][ldof];
             dsvector_dx[1][kdir][ldir][ldof] = sign * dstangent_dx[0][kdir][ldir][ldof];
           }
@@ -412,8 +412,8 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
         for (id = 0; id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ShapeVar]; id++) {
           Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-          if (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-              Dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
+          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+              goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
 
             dsvector_dx[0][kdir][ldir][ldof] = dsnormal_dx[kdir][ldir][ldof];
             dsvector_dx[1][kdir][ldir][ldof] = sign * dstangent_dx[0][kdir][ldir][ldof];
@@ -479,8 +479,8 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
         for (id = 0; id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ShapeVar]; id++) {
           Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-          if (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-              Dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
+          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+              goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
 
             for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
               rotated_jacobian_vector[kdir][j][ldof] +=
@@ -762,8 +762,8 @@ void rotate_mesh_eqn(int id,           /* Elemental stiffness matrix row index *
              */
             for (j = 0; j < rot->d_vector_n; j++) {
               J = rot->d_vector_J[j];
-              if (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-                  Dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
+              if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+                  goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
                 /*
                  * find entry in global matrix - note that the sensitivities of the
                  * rotation vector may be in a different element than the current
@@ -792,8 +792,8 @@ void rotate_mesh_eqn(int id,           /* Elemental stiffness matrix row index *
             row_dofs = rpntr[I + 1] - rpntr[I];
             for (j = 0; j < rot->d_vector_n; j++) {
               J = rot->d_vector_J[j];
-              if (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-                  Dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
+              if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+                  goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
                 K = in_list(J, bpntr[I], bpntr[I + 1], bindx);
                 nv = Nodes[J]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
                 blk_col = get_nv_offset_idof(nv, var, 0, 0, NULL);
@@ -827,8 +827,8 @@ void rotate_mesh_eqn(int id,           /* Elemental stiffness matrix row index *
                 GomaGlobalOrdinal global_col;
 
                 J = rot->d_vector_J[j];
-                if (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-                    Dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
+                if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+                    goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
                   /*
                    * find entry in global matrix - note that the sensitivities of the
                    * rotation vector may be in a different element than the current
@@ -1106,8 +1106,8 @@ void rotate_momentum_eqn(int id,           /* Elemental stiffness matrix row ind
             for (j = 0; j < goma_ctx->fem.rotation[I][eq][kdir]->d_vector_n; j++) {
               int ktype, ndof, index_eqn, index_var;
               J = goma_ctx->fem.rotation[I][eq][kdir]->d_vector_J[j];
-              if (Dolphin[goma_ctx->fem.pg->imtrx][I][R_MOMENTUM1] > 0 &&
-                  Dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
+              if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][R_MOMENTUM1] > 0 &&
+                  goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
                 /* find entry in global matrix - note that the sensitivities of the
                  * rotation vector may be in a different element than the current
                  * element */
@@ -1154,8 +1154,8 @@ void rotate_momentum_eqn(int id,           /* Elemental stiffness matrix row ind
             for (j = 0; j < goma_ctx->fem.rotation[I][eq][kdir]->d_vector_n; j++) {
               J = goma_ctx->fem.rotation[I][eq][kdir]->d_vector_J[j];
 
-              if (Dolphin[goma_ctx->fem.pg->imtrx][I][R_MOMENTUM1] > 0 &&
-                  Dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
+              if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][R_MOMENTUM1] > 0 &&
+                  goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
 
                 K = in_list(J, bpntr[I], bpntr[I + 1], bindx); /* K is the block index */
                 nv = Nodes[J]->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
@@ -1183,8 +1183,8 @@ void rotate_momentum_eqn(int id,           /* Elemental stiffness matrix row ind
                 GomaGlobalOrdinal global_col;
                 int ktype, ndof, index_eqn, index_var;
                 J = goma_ctx->fem.rotation[I][eq][kdir]->d_vector_J[j];
-                if (Dolphin[goma_ctx->fem.pg->imtrx][I][R_MOMENTUM1] > 0 &&
-                    Dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
+                if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][R_MOMENTUM1] > 0 &&
+                    goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][MESH_DISPLACEMENT1] > 0) {
                   /* find entry in global matrix - note that the sensitivities of the
                    * rotation vector may be in a different element than the current
                    * element */
@@ -1299,8 +1299,8 @@ void rotate_momentum_eqn(int id,           /* Elemental stiffness matrix row ind
     var = POLYMER_STRESS11;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-        for (int p = 0; p < VIM; p++) {
-          for (int q = 0; q < VIM; q++) {
+        for (int p = 0; p < goma_ctx->problem.vim; p++) {
+          for (int q = 0; q < goma_ctx->problem.vim; q++) {
             if (q >= p) {
               var = v_s[mode][p][q];
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -1345,8 +1345,8 @@ void rotate_momentum_eqn(int id,           /* Elemental stiffness matrix row ind
 
     var = VELOCITY_GRADIENT11;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (int p = 0; p < VIM; p++) {
-        for (int q = 0; q < VIM; q++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
+        for (int q = 0; q < goma_ctx->problem.vim; q++) {
           var = v_g[p][q];
           pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
           for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; n++) {
@@ -1657,8 +1657,8 @@ void rotate_res_jac_mom(int irow_index,           /* Elemental stiffness matrix 
     for (id = 0; id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ShapeVar]; id++) {
       Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-      if (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-          Dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
+      if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+          goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
         dsvector_dx[0][0][0][ldof] = dsnormal_dx[0][0][ldof];
       } /*end of Baby_Dolphin[pg->imtrx] */
     }
@@ -1672,8 +1672,8 @@ void rotate_res_jac_mom(int irow_index,           /* Elemental stiffness matrix 
         for (id = 0; id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ShapeVar]; id++) {
           Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-          if (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-              Dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
+          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+              goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
             dsvector_dx[0][kdir][ldir][ldof] = dsnormal_dx[kdir][ldir][ldof];
             dsvector_dx[1][kdir][ldir][ldof] = sign * dstangent_dx[0][kdir][ldir][ldof];
           } /*end of Baby_Dolphin[pg->imtrx] */
@@ -1691,8 +1691,8 @@ void rotate_res_jac_mom(int irow_index,           /* Elemental stiffness matrix 
         for (id = 0; id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ShapeVar]; id++) {
           Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-          if (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-              Dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
+          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+              goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
 
             dsvector_dx[0][kdir][ldir][ldof] = dsnormal_dx[kdir][ldir][ldof];
             dsvector_dx[1][kdir][ldir][ldof] = sign * dstangent_dx[0][kdir][ldir][ldof];
@@ -1756,8 +1756,8 @@ void rotate_res_jac_mom(int irow_index,           /* Elemental stiffness matrix 
           for (id = 0; id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ShapeVar]; id++) {
             Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
             ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-            if (Dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-                Dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
+            if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+                goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
 
               for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
                 rotated_jacobian_vector[kdir][j][ldof] +=
@@ -1817,8 +1817,8 @@ void rotate_res_jac_mom(int irow_index,           /* Elemental stiffness matrix 
     var = POLYMER_STRESS11;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-        for (int p = 0; p < VIM; p++) {
-          for (int q = 0; q < VIM; q++) {
+        for (int p = 0; p < goma_ctx->problem.vim; p++) {
+          for (int q = 0; q < goma_ctx->problem.vim; q++) {
             if (q >= p) {
               var = v_s[mode][p][q];
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -1851,8 +1851,8 @@ void rotate_res_jac_mom(int irow_index,           /* Elemental stiffness matrix 
 
     var = VELOCITY_GRADIENT11;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (int p = 0; p < VIM; p++) {
-        for (int q = 0; q < VIM; q++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
+        for (int q = 0; q < goma_ctx->problem.vim; q++) {
           var = v_g[p][q];
           pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
           for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; n++) {
@@ -2101,7 +2101,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
   } /* end of INITIALIZATION */
 
   /* LOOP over rotation conditions in input deck */
-  for (irc = 0; irc < Num_ROT; irc++) {
+  for (irc = 0; irc < goma_ctx->problem.num_rot; irc++) {
     if (ROT_Types[irc].eq_type == R_MESH1)
       eq = VECT_EQ_MESH;
     if (ROT_Types[irc].eq_type == R_MOMENTUM1)

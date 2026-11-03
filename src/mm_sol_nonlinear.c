@@ -314,7 +314,7 @@ static void update_problem_unknowns_dot(int line_search_type,
                                         double xdot_save[],
                                         int numProcUnknowns) {
   if (line_search_type == NLS_BACKTRACK_MESH) {
-    for (int j = 0; j < NumUnknowns[goma_ctx->fem.pg->imtrx]; j++) {
+    for (int j = 0; j < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; j++) {
       switch (variable_types[j]) {
       case MESH_DISPLACEMENT1:
       case MESH_DISPLACEMENT2:
@@ -327,7 +327,7 @@ static void update_problem_unknowns_dot(int line_search_type,
       }
     }
   } else {
-    for (int j = 0; j < NumUnknowns[goma_ctx->fem.pg->imtrx]; j++) {
+    for (int j = 0; j < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; j++) {
       xdot[j] = xdot_save[j] - damp * delta_x[j] * (1.0 + 2 * (*theta)) / (*delta_t);
     }
   }
@@ -375,7 +375,7 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
 
   if (line_search_type == NLS_BACKTRACK_MESH) {
     variable_types = calloc(numProcUnknowns, sizeof(int));
-    for (int j = 0; j < NumUnknowns[goma_ctx->fem.pg->imtrx]; j++) {
+    for (int j = 0; j < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; j++) {
       int guess = 0;
       int idof = 0;
       VARIABLE_DESCRIPTION_STRUCT *vd =
@@ -402,13 +402,14 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
   int save_residual = goma_ctx->fem.af->Assemble_Residual;
   goma_ctx->fem.af->Assemble_Jacobian = FALSE;
   goma_ctx->fem.af->Assemble_Residual = TRUE;
-  dbl r_check = L2_norm(resid_vector, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+  dbl r_check = L2_norm(resid_vector, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
   dbl g_check_mesh = 0.0;
   dbl *mesh_corrections = NULL;
   dbl *mesh_correction_tolerances = NULL;
   int n_mesh_corrections = 0;
   if (line_search_type == NLS_BACKTRACK_MESH) {
-    g_check_mesh = L2_norm_mesh(resid_vector, variable_types, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+    g_check_mesh = L2_norm_mesh(resid_vector, variable_types,
+                                goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
     g_check_mesh = MAX(g_check_mesh, r_check);
     mesh_corrections = goma_ctx->fem.upd->mesh_correction_damping;
     mesh_correction_tolerances = goma_ctx->fem.upd->mesh_correction_tolerances;
@@ -425,11 +426,11 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
     }
   }
   update_problem_unknowns(line_search_type, dpi, cx, variable_types, delta_x, damp, mesh_damp, x,
-                          x_save, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+                          x_save, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
   if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
     update_problem_unknowns_dot(line_search_type, delta_t, theta, dpi, cx, variable_types, delta_x,
                                 damp, mesh_damp, xdot, xdot_save,
-                                NumUnknowns[goma_ctx->fem.pg->imtrx]);
+                                goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
   }
 
   exchange_dof(cx, dpi, R, goma_ctx->fem.pg->imtrx);
@@ -437,8 +438,8 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
                              First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], time_value, exo,
                              dpi, num_total_nodes, h_elem_avg, U_norm, NULL);
 
-  vector_scaling(NumUnknowns[goma_ctx->fem.pg->imtrx], R, scale);
-  dbl g_check = L2_norm(R, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+  vector_scaling(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], R, scale);
+  dbl g_check = L2_norm(R, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
   dbl best_damp = damp;
   dbl best_norm = g_check;
   r_check = 0.5 * (r_check * r_check);
@@ -506,21 +507,22 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
     }
     init_vec_value(R, 0.0, numProcUnknowns);
     update_problem_unknowns(line_search_type, dpi, cx, variable_types, delta_x, damp, mesh_damp, x,
-                            x_save, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+                            x_save, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
     if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
       update_problem_unknowns_dot(line_search_type, delta_t, theta, dpi, cx, variable_types,
                                   delta_x, damp, mesh_damp, xdot, xdot_save,
-                                  NumUnknowns[goma_ctx->fem.pg->imtrx]);
+                                  goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
     }
     err = matrix_fill_full(ams, x, R, x_old, x_older, xdot, xdot_old, x_update, delta_t, theta,
                            First_Elem_Side_BC_Array[goma_ctx->fem.pg->imtrx], time_value, exo, dpi,
                            num_total_nodes, h_elem_avg, U_norm, NULL);
     exchange_dof(cx, dpi, R, goma_ctx->fem.pg->imtrx);
-    vector_scaling(NumUnknowns[goma_ctx->fem.pg->imtrx], R, scale);
+    vector_scaling(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], R, scale);
 
-    g_check = L2_norm(R, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+    g_check = L2_norm(R, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
     if (line_search_type == NLS_BACKTRACK_MESH) {
-      g_check_mesh = L2_norm_mesh(R, variable_types, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+      g_check_mesh =
+          L2_norm_mesh(R, variable_types, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
     }
     // mesh_damp = MIN(mesh_damp, damp);
     last = curr;
@@ -571,11 +573,12 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
   }
   fflush(stdout);
   update_problem_unknowns(line_search_type, dpi, cx, variable_types, delta_x, best_damp,
-                          best_mesh_damp, x, x_save, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+                          best_mesh_damp, x, x_save,
+                          goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
   if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
     update_problem_unknowns_dot(line_search_type, delta_t, theta, dpi, cx, variable_types, delta_x,
                                 best_damp, best_mesh_damp, xdot, xdot_save,
-                                NumUnknowns[goma_ctx->fem.pg->imtrx]);
+                                goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
   }
 
   *damp_factor = best_damp;
@@ -884,7 +887,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
    * watch out to use the bigger ija[] for assembly purposes, but the
    * smaller one for Aztec (after processing via hide_external()).
    */
-  numProcUnknowns = NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
+  numProcUnknowns = goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx] +
+                    goma_ctx->problem.num_ext_unknowns[goma_ctx->fem.pg->imtrx];
   if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     local_order = ams->npn;
     local_order_plus = ams->npn_plus;
@@ -903,7 +907,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
     if (goma_ctx->debug_flag) {
       DPRINTF(stderr, "%s: At matrix %d, NumUnknowns  = %d\n", yo, (goma_ctx->fem.pg->imtrx + 1),
-              NumUnknowns[goma_ctx->fem.pg->imtrx]);
+              goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
       DPRINTF(stderr, "%s: NZeros       = %d\n", yo, goma_ctx->solver.nzeros);
       DPRINTF(stderr, "%s: GNZeros      = %d\n", yo, goma_ctx->solver.gnzeros);
       DPRINTF(stderr, "%s: GNumUnknowns = %d\n", yo, GNumUnknowns);
@@ -921,7 +925,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   /*
    * Initialize augmenting condition arrays if needed
    */
-  if (nAC > 0) {
+  if (goma_ctx->problem.n_ac > 0) {
 
     /*
      * Set alc_with_acs flag
@@ -930,7 +934,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     if (goma_ctx->fem.loca_in->Cont_Order == 2) {
       alc_with_acs = TRUE;
       if (con->private_info.step_num == 0)
-        nAC--;
+        goma_ctx->problem.n_ac--;
     }
 
     asdv(&gAC, numProcUnknowns);
@@ -939,13 +943,13 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     asdv(&yAC, numProcUnknowns);
     asdv(&tempAC, numProcUnknowns);
 
-    bAC = Dmatrix_birth(nAC, numProcUnknowns);
-    cAC = Dmatrix_birth(nAC, numProcUnknowns);
-    dAC = Dmatrix_birth(nAC, nAC);
-    sAC = Dmatrix_birth(nAC, nAC);
-    wAC = Dmatrix_birth(nAC, numProcUnknowns);
+    bAC = Dmatrix_birth(goma_ctx->problem.n_ac, numProcUnknowns);
+    cAC = Dmatrix_birth(goma_ctx->problem.n_ac, numProcUnknowns);
+    dAC = Dmatrix_birth(goma_ctx->problem.n_ac, goma_ctx->problem.n_ac);
+    sAC = Dmatrix_birth(goma_ctx->problem.n_ac, goma_ctx->problem.n_ac);
+    wAC = Dmatrix_birth(goma_ctx->problem.n_ac, numProcUnknowns);
 
-    ordAC = Ivector_birth(nAC);
+    ordAC = Ivector_birth(goma_ctx->problem.n_ac);
   }
 
   /*
@@ -1004,7 +1008,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   fflush(stdout);
   fflush(stderr);
 
-  if (TimeIntegration == STEADY) {
+  if (goma_ctx->problem.time_integration == STEADY) {
 
     DPRINTF(stdout, "\n\n");
     if (goma_ctx->solver.solver_output_format & 1)
@@ -1108,8 +1112,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   }
 
   // 3D Automatic rotation setup
-  if (Num_ROT == 0 /*&& inewton == 0*/ && exo->num_dim == 3) {
-    setup_rotated_bc_nodes(exo, dpi, BC_Types, Num_BC, x);
+  if (goma_ctx->problem.num_rot == 0 /*&& inewton == 0*/ && exo->num_dim == 3) {
+    setup_rotated_bc_nodes(exo, dpi, BC_Types, goma_ctx->problem.num_bc, x);
   }
 
   /*********************************************************************************
@@ -1159,23 +1163,23 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      */
     if (goma_ctx->num_proc > 1 && strcmp(goma_ctx->solver.matrix_format, "msr") == 0 &&
         dofs_hidden) {
-      show_external(
-          num_universe_dofs[goma_ctx->fem.pg->imtrx],
-          (num_universe_dofs[goma_ctx->fem.pg->imtrx] - num_external_dofs[goma_ctx->fem.pg->imtrx]),
-          ija, ija_save, a);
+      show_external(goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx],
+                    (goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx] -
+                     goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx]),
+                    ija, ija_save, a);
       dofs_hidden = FALSE;
     }
 
     /* For Overlap AC algorithm, reset kinematic AC residuals here */
-    if (Do_Overlap && nAC > 0) {
+    if (goma_ctx->problem.do_overlap && goma_ctx->problem.n_ac > 0) {
       err = assign_overlap_acs(x, exo);
       if (err == -1) {
         /* error can be caused by neg_elem_volume or from insufficient AC's
          * check for neg_elem_volume and if so, return, otherwise must abort
          */
-        check_for_neg_elem_volume(goma_ctx->fem.augc[nAC - 1].solid_eb + 1, x, resid_vector, x_old,
-                                  x_older, xdot, xdot_old, x_update, &delta_t, &theta, &time_value,
-                                  exo);
+        check_for_neg_elem_volume(goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].solid_eb + 1, x,
+                                  resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
+                                  &theta, &time_value, exo);
         if (neg_elem_volume) {
           return_value = -1;
           goto free_and_clear;
@@ -1183,7 +1187,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           GOMA_EH(GOMA_ERROR, "Insufficient number of AC's set aside for overlap");
         }
       }
-      for (iAC = 0; iAC < nAC; iAC++)
+      for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++)
         goma_ctx->fem.augc[iAC].lm_resid = 0.0;
     }
 
@@ -1197,8 +1201,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
     /* get global element size and velocity norm if needed for PSPG or Cont_GLS */
     if (goma_ctx->fem.upd->matrix_index[VELOCITY1] == goma_ctx->fem.pg->imtrx &&
-        ((goma_ctx->solver.pspg && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][PRESSURE]) ||
-         (goma_ctx->solver.cont_gls && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][VELOCITY1]))) {
+        ((goma_ctx->solver.pspg &&
+          goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][PRESSURE]) ||
+         (goma_ctx->solver.cont_gls &&
+          goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][VELOCITY1]))) {
       h_elem_avg = global_h_elem_siz(x, x_old, xdot, resid_vector, exo, dpi);
       U_norm = global_velocity_norm(x, exo, dpi);
     } else {
@@ -1217,7 +1223,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
        * elements, junction points, . . .
        */
 
-      if (Num_ROT > 0)
+      if (goma_ctx->problem.num_rot > 0)
         calculate_all_rotation_vectors(exo, x);
       else if (Use_2D_Rotation_Vectors == TRUE)
         calculate_2D_rotation_vectors(exo, x);
@@ -1253,7 +1259,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       num_total_nodes = dpi->num_universe_nodes;
 
       /* If using volume change metric for element quality, reset here */
-      if (nEQM > 0 && goma_ctx->fem.eqm->do_vol && goma_ctx->fem.af->Assemble_Residual) {
+      if (goma_ctx->problem.n_eqm > 0 && goma_ctx->fem.eqm->do_vol &&
+          goma_ctx->fem.af->Assemble_Residual) {
         goma_ctx->fem.eqm->vol_sum = 0.0;
         goma_ctx->fem.eqm->vol_low = 9999.9;
         goma_ctx->fem.eqm->vol_count = 0;
@@ -1264,18 +1271,18 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
        * ahead of time so we don't run into anomolous behavior due to neclaced
        * elements, junction points, . . .
        */
-      if (Num_ROT > 0)
+      if (goma_ctx->problem.num_rot > 0)
         calculate_all_rotation_vectors(exo, x);
       else if (Use_2D_Rotation_Vectors == TRUE)
         calculate_2D_rotation_vectors(exo, x);
 
       /* Initialize volume constraint, not the most efficient way. */
 
-      numProcUnknowns =
-          NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
-      if (nAC > 0) {
+      numProcUnknowns = goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx] +
+                        goma_ctx->problem.num_ext_unknowns[goma_ctx->fem.pg->imtrx];
+      if (goma_ctx->problem.n_ac > 0) {
 
-        for (iAC = 0; iAC < nAC; iAC++) {
+        for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
           init_vec_value(goma_ctx->fem.augc[iAC].d_evol_dx, 0.0, numProcUnknowns);
           init_vec_value(goma_ctx->fem.augc[iAC].d_lsvel_dx, 0.0, numProcUnknowns);
           init_vec_value(goma_ctx->fem.augc[iAC].d_lsvol_dx, 0.0, numProcUnknowns);
@@ -1335,7 +1342,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       if (!Norm_below_tolerance || !Rate_above_tolerance) {
         row_sum_scaling_scale(ams, resid_vector, scale);
       } else {
-        vector_scaling(NumUnknowns[goma_ctx->fem.pg->imtrx], resid_vector, scale);
+        vector_scaling(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], resid_vector,
+                       scale);
       }
 
       if (err == -1) {
@@ -1350,7 +1358,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      *
      */
 
-    if (nAC > 0) {
+    if (goma_ctx->problem.n_ac > 0) {
       MF_Args mf_args;
 
       /* OK, copy all the data into the mf_args structure.  A pointer
@@ -1378,18 +1386,18 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
       ac_start = ut();
 
-      for (iAC = 0; iAC < nAC; iAC++) {
+      for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
         memset(cAC[iAC], 0, sizeof(double) * numProcUnknowns);
         memset(bAC[iAC], 0, sizeof(double) * numProcUnknowns);
       }
       memset(gAC, 0, sizeof(double) * numProcUnknowns);
 
-      for (iAC = 0; iAC < nAC; iAC++) {
+      for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
         switch (goma_ctx->fem.augc[iAC].Type) {
         case AC_USERBC:
         case AC_USERMAT:
-          user_aug_cond(iAC, nAC, x_AC, bAC, cAC, dAC, gAC, numProcUnknowns, x_sens_p, cx,
-                        &mf_args);
+          user_aug_cond(iAC, goma_ctx->problem.n_ac, x_AC, bAC, cAC, dAC, gAC, numProcUnknowns,
+                        x_sens_p, cx, &mf_args);
           break;
 
         case AC_FLUX:
@@ -1399,7 +1407,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         case AC_POSITION:
         case AC_POSITION_MT:
         case AC_ANGLE:
-          std_aug_cond(iAC, nAC, x_AC, bAC, cAC, dAC, gAC, numProcUnknowns, cx, &mf_args);
+          std_aug_cond(iAC, goma_ctx->problem.n_ac, x_AC, bAC, cAC, dAC, gAC, numProcUnknowns, cx,
+                       &mf_args);
           break;
 
         case AC_OVERLAP:
@@ -1408,18 +1417,18 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
         case AC_LGRM:
         case AC_PF_CONSTRAINT:
-          std_lgr_cond(iAC, nAC, x_AC, bAC, cAC, dAC, gAC, resid_vector, scale, numProcUnknowns, cx,
-                       &mf_args);
+          std_lgr_cond(iAC, goma_ctx->problem.n_ac, x_AC, bAC, cAC, dAC, gAC, resid_vector, scale,
+                       numProcUnknowns, cx, &mf_args);
           break;
 
         case AC_PERIODIC:
-          periodic_bc_cond(iAC, nAC, x_AC, bAC, cAC, dAC, gAC, resid_vector, scale, numProcUnknowns,
-                           cx, &mf_args);
+          periodic_bc_cond(iAC, goma_ctx->problem.n_ac, x_AC, bAC, cAC, dAC, gAC, resid_vector,
+                           scale, numProcUnknowns, cx, &mf_args);
           break;
 
         case AC_ARC_LENGTH:
-          alc_aug_cond(iAC, nAC, x_AC, bAC, cAC, dAC, gAC, &equation_ALC, numProcUnknowns, cx,
-                       con_ptr, &mf_args);
+          alc_aug_cond(iAC, goma_ctx->problem.n_ac, x_AC, bAC, cAC, dAC, gAC, &equation_ALC,
+                       numProcUnknowns, cx, con_ptr, &mf_args);
           break;
 
         default:
@@ -1432,7 +1441,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
        * This function is called just once per iteration to fill in all OVERLAP
        * type AC constraints for fluid/solid problems with overlapping grids
        */
-      if (goma_ctx->fem.augc[nAC - 1].Type == AC_OVERLAP) {
+      if (goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].Type == AC_OVERLAP) {
         /* as of 3/23/05 this routine must use pfd[0] struct */
         ls_old = goma_ctx->fem.ls;
         if (goma_ctx->fem.pfd->ls[0] != NULL) {
@@ -1442,8 +1451,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         }
       }
 
-      for (iAC = 0; iAC < nAC; iAC++) {
-        for (j = 0; j < NumUnknowns[goma_ctx->fem.pg->imtrx]; j++) {
+      for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
+        for (j = 0; j < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; j++) {
           bAC[iAC][j] /= scale[j];
         }
       }
@@ -1452,12 +1461,12 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
 #if 1
       /* row sum scale AC equations */
-      row_sum_scaling_scale_AC(cAC, dAC, gAC, nAC);
+      row_sum_scaling_scale_AC(cAC, dAC, gAC, goma_ctx->problem.n_ac);
 #endif
 
-      Norm[2][0] = Loo_norm_1p(gAC, nAC, &num_unk_g, dofname_g);
-      Norm[2][1] = L1_norm_1p(gAC, nAC);
-      Norm[2][2] = L2_norm_1p(gAC, nAC);
+      Norm[2][0] = Loo_norm_1p(gAC, goma_ctx->problem.n_ac, &num_unk_g, dofname_g);
+      Norm[2][1] = L1_norm_1p(gAC, goma_ctx->problem.n_ac);
+      Norm[2][2] = L2_norm_1p(gAC, goma_ctx->problem.n_ac);
     }
 
     /*
@@ -1467,10 +1476,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
     print_damp_factor = FALSE;
     print_visc_sens = FALSE;
-    Norm[0][0] =
-        Loo_norm(resid_vector, NumUnknowns[goma_ctx->fem.pg->imtrx], &num_unk_r, dofname_r);
-    Norm[0][1] = L1_norm(resid_vector, NumUnknowns[goma_ctx->fem.pg->imtrx]);
-    Norm[0][2] = L2_norm(resid_vector, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+    Norm[0][0] = Loo_norm(resid_vector, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                          &num_unk_r, dofname_r);
+    Norm[0][1] = L1_norm(resid_vector, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
+    Norm[0][2] = L2_norm(resid_vector, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
 
     log_msg("%-38s = %23.16e", "residual norm (L_oo)", Norm[0][0]);
     log_msg("%-38s = %23.16e", "residual norm (L_1)", Norm[0][1]);
@@ -1514,8 +1523,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 #ifdef DEBUG_NORM
     if (fabs(resid_vector[num_unk_r]) == fabs(Norm[0][0])) {
       printf("P_%d: dofname[%d] = ", goma_ctx->proc_id, num_unk_r);
-      if (dofname)
-        printf("%s", dofname[num_unk_r]);
+      if (goma_ctx->problem.dofname)
+        printf("%s", goma_ctx->problem.dofname[num_unk_r]);
       else
         printf(" (unk)");
       printf(", resid = %g\n", resid_vector[num_unk_r]);
@@ -1529,20 +1538,20 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      * step.
      */
     if (goma_ctx->num_proc > 1 && strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
-      hide_external(num_universe_dofs[goma_ctx->fem.pg->imtrx],
-                    NumUnknowns[goma_ctx->fem.pg->imtrx], ija, ija_save, a);
+      hide_external(goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx],
+                    goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], ija, ija_save, a);
       dofs_hidden = TRUE;
     }
 
 #ifdef DEBUG_JACOBIAN
     if (inewton < 2) {
       if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
-        print_msr_matrix(num_internal_dofs[goma_ctx->fem.pg->imtrx] +
-                             num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+        print_msr_matrix(goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                             goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx],
                          ija, a, x);
         print_array(ija, ija[ija[0] - 1], "ija", type_int, goma_ctx->proc_id);
       } else {
-        print_vbr_matrix(ams, exo, dpi, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+        print_vbr_matrix(ams, exo, dpi, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
       }
     }
 #endif /* DEBUG_JACOBIAN */
@@ -1580,7 +1589,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       Resid_Norm_stack[0] = Resid_Norm_stack[1];
       Resid_Norm_stack[1] = Resid_Norm_stack[2];
       Resid_Norm_stack[2] = Norm[0][2] / BIG_PENALTY;
-      if (nAC) {
+      if (goma_ctx->problem.n_ac) {
         AC_Resid_Norm_stack[0] = AC_Resid_Norm_stack[1];
         AC_Resid_Norm_stack[1] = AC_Resid_Norm_stack[2];
         AC_Resid_Norm_stack[2] = Norm[2][2] / BIG_PENALTY;
@@ -1605,8 +1614,9 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 #endif
       }
 
-      if (nAC && inewton && (AC_Resid_Norm_stack[2] > 0) && (AC_Resid_Norm_stack[2] != 1) &&
-          (AC_Resid_Norm_stack[1] > 0) && (AC_Resid_Norm_stack[1] != 1) &&
+      if (goma_ctx->problem.n_ac && inewton && (AC_Resid_Norm_stack[2] > 0) &&
+          (AC_Resid_Norm_stack[2] != 1) && (AC_Resid_Norm_stack[1] > 0) &&
+          (AC_Resid_Norm_stack[1] != 1) &&
           (inewton <= 1 || ((AC_Resid_Norm_stack[0] > 0) && (AC_Resid_Norm_stack[0] != 1)))) {
 #if 1
         if (inewton <= 1) {
@@ -1634,7 +1644,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         glob_var_vals[4] = Conv_rate;
         total_mesh_volume = 0;
 
-        for (i = 0; nAC > 0 && i < nAC; i++) {
+        for (i = 0; goma_ctx->problem.n_ac > 0 && i < goma_ctx->problem.n_ac; i++) {
           total_mesh_volume += goma_ctx->fem.augc[i].evol;
           glob_var_vals[6 + i] = x_AC[i];
         }
@@ -1667,9 +1677,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
       matr_form = 1;
 
-      UMF_system_id = SL_UMF(UMF_system_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
-                             &NumUnknowns[goma_ctx->fem.pg->imtrx], &goma_ctx->solver.nzeros,
-                             &ija[0], &ija[0], &a[0], &resid_vector[0], &delta_x[0]);
+      UMF_system_id =
+          SL_UMF(UMF_system_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
+                 &goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], &goma_ctx->solver.nzeros,
+                 &ija[0], &ija[0], &a[0], &resid_vector[0], &delta_x[0]);
 
       first_linear_solver_call = FALSE;
 
@@ -1686,14 +1697,16 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       if (strcmp(goma_ctx->solver.matrix_format, "msr")) {
         GOMA_EH(GOMA_ERROR, "ERROR: lu solver needs msr matrix format");
       }
-      dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], resid_vector, delta_x);
+      dcopy1(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], resid_vector, delta_x);
       if (!Norm_below_tolerance || !Rate_above_tolerance) {
-        lu(NumUnknowns[goma_ctx->fem.pg->imtrx], NumExtUnknowns[goma_ctx->fem.pg->imtrx],
-           goma_ctx->solver.nzeros, a, ija, delta_x, (first_linear_solver_call ? 1 : 2));
+        lu(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+           goma_ctx->problem.num_ext_unknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros, a,
+           ija, delta_x, (first_linear_solver_call ? 1 : 2));
         first_linear_solver_call = FALSE;
       } else {
-        lu(NumUnknowns[goma_ctx->fem.pg->imtrx], NumExtUnknowns[goma_ctx->fem.pg->imtrx],
-           goma_ctx->solver.nzeros, a, ija, delta_x, 3);
+        lu(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+           goma_ctx->problem.num_ext_unknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros, a,
+           ija, delta_x, 3);
         first_linear_solver_call = FALSE;
       }
       /*
@@ -1929,13 +1942,13 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      *
      */
 
-    if (nAC > 0) {
+    if (goma_ctx->problem.n_ac > 0) {
       sc_start = ut();
 
       /*
        * LOOP OVER NUMBER OF AUGMENTING CONDITIONS
        */
-      for (iAC = 0; iAC < nAC; iAC++) {
+      for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
 
         switch (goma_ctx->solver.linear_solver) {
         case UMFPACK2:
@@ -1960,9 +1973,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           printf("%s: entering SL_UMF for augmenting conditions solve\n", yo);
           fflush(stdout);
 #endif /* DEBUG_SL_UMF */
-          UMF_system_id = SL_UMF(UMF_system_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
-                                 &NumUnknowns[goma_ctx->fem.pg->imtrx], &goma_ctx->solver.nzeros,
-                                 &ija[0], &ija[0], &a[0], &bAC[iAC][0], &wAC[iAC][0]);
+          UMF_system_id =
+              SL_UMF(UMF_system_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
+                     &goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                     &goma_ctx->solver.nzeros, &ija[0], &ija[0], &a[0], &bAC[iAC][0], &wAC[iAC][0]);
 #ifdef DEBUG_SL_UMF
           printf("%s: returning from SL_UMF\n", yo);
           fflush(stdout);
@@ -1974,10 +1988,11 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           break;
 
         case SPARSE13a:
-          dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], &bAC[iAC][0], &tAC[0]);
-          lu(NumUnknowns[goma_ctx->fem.pg->imtrx], NumExtUnknowns[goma_ctx->fem.pg->imtrx],
-             goma_ctx->solver.nzeros, a, ija, &tAC[0], 3);
-          dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], &tAC[0], &wAC[iAC][0]);
+          dcopy1(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], &bAC[iAC][0], &tAC[0]);
+          lu(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+             goma_ctx->problem.num_ext_unknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros,
+             a, ija, &tAC[0], 3);
+          dcopy1(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], &tAC[0], &wAC[iAC][0]);
           strcpy(stringer_AC, " 1 ");
           break;
 
@@ -2155,25 +2170,26 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
        *
        */
 
-      for (iAC = 0; iAC < nAC; iAC++) {
-        for (jAC = 0; jAC < nAC; jAC++) {
-          sAC[iAC][jAC] =
-              dot_product(NumUnknowns[goma_ctx->fem.pg->imtrx], &cAC[iAC][0], &wAC[jAC][0]);
+      for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
+        for (jAC = 0; jAC < goma_ctx->problem.n_ac; jAC++) {
+          sAC[iAC][jAC] = dot_product(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                                      &cAC[iAC][0], &wAC[jAC][0]);
         }
       }
 
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
-        for (iAC = 0; iAC < nAC; iAC++) {
-          for (jAC = 0; jAC < nAC; jAC++)
+        for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
+          for (jAC = 0; jAC < goma_ctx->problem.n_ac; jAC++)
             tempAC[jAC] = sAC[iAC][jAC];
-          MPI_Allreduce(tempAC, sAC[iAC], nAC, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+          MPI_Allreduce(tempAC, sAC[iAC], goma_ctx->problem.n_ac, MPI_DOUBLE, MPI_SUM,
+                        MPI_COMM_WORLD);
         }
       }
 #endif /* PARALLEL */
 
-      for (iAC = 0; iAC < nAC; iAC++) {
-        for (jAC = 0; jAC < nAC; jAC++) {
+      for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
+        for (jAC = 0; jAC < goma_ctx->problem.n_ac; jAC++) {
           sAC[iAC][jAC] = dAC[iAC][jAC] - sAC[iAC][jAC];
         }
       }
@@ -2183,25 +2199,26 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
        *    GET UPDATE ON AC's
        *
        */
-      for (iAC = 0; iAC < nAC; iAC++) {
-        tAC[iAC] = dot_product(NumUnknowns[goma_ctx->fem.pg->imtrx], &cAC[iAC][0], &delta_x[0]);
+      for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
+        tAC[iAC] = dot_product(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                               &cAC[iAC][0], &delta_x[0]);
       }
 #ifdef PARALLEL
       if (goma_ctx->num_proc > 1) {
-        for (jAC = 0; jAC < nAC; jAC++)
+        for (jAC = 0; jAC < goma_ctx->problem.n_ac; jAC++)
           tempAC[jAC] = tAC[jAC];
-        MPI_Allreduce(tempAC, tAC, nAC, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(tempAC, tAC, goma_ctx->problem.n_ac, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       }
 #endif /* PARALLEL */
 
-      v2sum(nAC, &yAC[0], 1.0, &gAC[0], -1.0, &tAC[0]);
+      v2sum(goma_ctx->problem.n_ac, &yAC[0], 1.0, &gAC[0], -1.0, &tAC[0]);
 
-      for (iAC = 0; iAC < nAC; iAC++) {
+      for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
         ordAC[iAC] = iAC;
       }
-      for (i = 0; i < nAC; i++) {
+      for (i = 0; i < goma_ctx->problem.n_ac; i++) {
         bigAC = 0.0;
-        for (j = 0; j < nAC; j++) {
+        for (j = 0; j < goma_ctx->problem.n_ac; j++) {
           if (fabs(sAC[i][j]) > bigAC) {
             bigAC = fabs(sAC[i][j]);
           }
@@ -2213,7 +2230,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         }
         hAC[i] = 1.0 / bigAC;
       }
-      for (j = 0; j < nAC; j++) {
+      for (j = 0; j < goma_ctx->problem.n_ac; j++) {
         for (i = 0; i < j; i++) {
           sumAC = sAC[i][j];
           for (k = 0; k < i; k++) {
@@ -2222,7 +2239,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           sAC[i][j] = sumAC;
         }
         bigAC = 0.0;
-        for (i = j; i < nAC; i++) {
+        for (i = j; i < goma_ctx->problem.n_ac; i++) {
           sumAC = sAC[i][j];
           for (k = 0; k < j; k++) {
             sumAC -= sAC[i][k] * sAC[k][j];
@@ -2235,7 +2252,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           }
         }
         if (j != imaxAC) {
-          for (k = 0; k < nAC; k++) {
+          for (k = 0; k < goma_ctx->problem.n_ac; k++) {
             dumAC = sAC[imaxAC][k];
             sAC[imaxAC][k] = sAC[j][k];
             sAC[j][k] = dumAC;
@@ -2248,12 +2265,12 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         }
 
         dumAC = 1.0 / sAC[j][j];
-        for (i = j + 1; i < nAC; i++) {
+        for (i = j + 1; i < goma_ctx->problem.n_ac; i++) {
           sAC[i][j] *= dumAC;
         }
       }
       iiAC = -1;
-      for (i = 0; i < nAC; i++) {
+      for (i = 0; i < goma_ctx->problem.n_ac; i++) {
         k = ordAC[i];
         sumAC = yAC[k];
         yAC[k] = yAC[i];
@@ -2266,10 +2283,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         }
         yAC[i] = sumAC;
       }
-      for (i = (nAC - 1); i >= 0; i--) {
+      for (i = (goma_ctx->problem.n_ac - 1); i >= 0; i--) {
         sumAC = yAC[i];
-        if (i < (nAC - 1)) {
-          for (j = i + 1; j < nAC; j++) {
+        if (i < (goma_ctx->problem.n_ac - 1)) {
+          for (j = i + 1; j < goma_ctx->problem.n_ac; j++) {
             sumAC -= sAC[i][j] * yAC[j];
           }
         }
@@ -2282,9 +2299,9 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
       */
 
-      for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+      for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
         tAC[i] = 0.0;
-        for (iAC = 0; iAC < nAC; iAC++) {
+        for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
           tAC[i] += wAC[iAC][i] * yAC[iAC];
         }
       }
@@ -2296,35 +2313,36 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
        *   UPDATE GOMA UNKNOWNS DUE TO CHANGES IN AUGMENTED CONDITIONS
        *
        */
-      for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+      for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
         delta_x[i] -= tAC[i];
       }
       sc_end = ut();
 
       /* Set arc length parameter update */
       if (alc_with_acs)
-        delta_y_ALC = yAC[nAC - 1];
+        delta_y_ALC = yAC[goma_ctx->problem.n_ac - 1];
 
     } /* END OF if (nAC > 0) */
     /**************************************************************************
      *         END OF AUGMENTED SYSTEM SOLVE SECTION
      **************************************************************************/
 
-    Norm[1][0] = Loo_norm(delta_x, NumUnknowns[goma_ctx->fem.pg->imtrx], &num_unk_x, dofname_x);
-    Norm[1][1] = L1_norm(delta_x, NumUnknowns[goma_ctx->fem.pg->imtrx]);
-    Norm[1][2] = L2_norm(delta_x, NumUnknowns[goma_ctx->fem.pg->imtrx]);
-    Norm_r[0][0] =
-        Loo_norm_r(delta_x, x, NumUnknowns[goma_ctx->fem.pg->imtrx], &num_unk_x, dofname_nr);
-    Norm_r[0][1] = L1_norm_r(delta_x, x, NumUnknowns[goma_ctx->fem.pg->imtrx]);
-    Norm_r[0][2] = L2_norm_r(delta_x, x, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+    Norm[1][0] = Loo_norm(delta_x, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                          &num_unk_x, dofname_x);
+    Norm[1][1] = L1_norm(delta_x, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
+    Norm[1][2] = L2_norm(delta_x, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
+    Norm_r[0][0] = Loo_norm_r(delta_x, x, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                              &num_unk_x, dofname_nr);
+    Norm_r[0][1] = L1_norm_r(delta_x, x, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
+    Norm_r[0][2] = L2_norm_r(delta_x, x, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
 
-    if (nAC > 0) {
-      Norm[3][0] = Loo_norm_1p(yAC, nAC, &num_unk_y, dofname_y);
-      Norm[3][1] = L1_norm_1p(yAC, nAC);
-      Norm[3][2] = L2_norm_1p(yAC, nAC);
-      Norm_r[1][0] = Loo_norm_r_1p(yAC, x_AC, nAC, &num_unk_y, dofname_ry);
-      Norm_r[1][1] = L1_norm_r_1p(yAC, x_AC, nAC);
-      Norm_r[1][2] = L2_norm_r_1p(yAC, x_AC, nAC);
+    if (goma_ctx->problem.n_ac > 0) {
+      Norm[3][0] = Loo_norm_1p(yAC, goma_ctx->problem.n_ac, &num_unk_y, dofname_y);
+      Norm[3][1] = L1_norm_1p(yAC, goma_ctx->problem.n_ac);
+      Norm[3][2] = L2_norm_1p(yAC, goma_ctx->problem.n_ac);
+      Norm_r[1][0] = Loo_norm_r_1p(yAC, x_AC, goma_ctx->problem.n_ac, &num_unk_y, dofname_ry);
+      Norm_r[1][1] = L1_norm_r_1p(yAC, x_AC, goma_ctx->problem.n_ac);
+      Norm_r[1][2] = L2_norm_r_1p(yAC, x_AC, goma_ctx->problem.n_ac);
       AC_Resid_Norm_stack[0] = AC_Resid_Norm_stack[1];
       AC_Resid_Norm_stack[1] = AC_Resid_Norm_stack[2];
       AC_Resid_Norm_stack[2] = Norm[2][2] / BIG_PENALTY;
@@ -2378,9 +2396,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       Soln_rate = log10(Soln_Norm_stack[1]) - log10(Soln_Norm_stack[2]);
 #endif
     }
-    if (nAC && inewton && (AC_Resid_Norm_stack[2] > 0) && (AC_Resid_Norm_stack[2] != 1) &&
-        (AC_Resid_Norm_stack[1] > 0) && (AC_Resid_Norm_stack[0] != 1) &&
-        (AC_Soln_Norm_stack[2] > 0) && (AC_Soln_Norm_stack[1] != 1) &&
+    if (goma_ctx->problem.n_ac && inewton && (AC_Resid_Norm_stack[2] > 0) &&
+        (AC_Resid_Norm_stack[2] != 1) && (AC_Resid_Norm_stack[1] > 0) &&
+        (AC_Resid_Norm_stack[0] != 1) && (AC_Soln_Norm_stack[2] > 0) &&
+        (AC_Soln_Norm_stack[1] != 1) &&
         (inewton <= 1 || ((AC_Resid_Norm_stack[0] > 0) && (AC_Resid_Norm_stack[0] != 1)))) {
 #if 1
       if (inewton <= 1 && DOUBLE_NONZERO(log10(AC_Resid_Norm_stack[1]))) {
@@ -2465,7 +2484,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      */
 
     if (goma_ctx->write_intermediate_solutions && goma_ctx->unlimited_output) {
-      error = wr_soln_vec(x, resid_vector, NumUnknowns[goma_ctx->fem.pg->imtrx], inewton);
+      error = wr_soln_vec(x, resid_vector, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                          inewton);
       GOMA_EH(error, "problem from wr_soln_vec");
     }
 
@@ -2591,16 +2611,18 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         print_damp_factor = TRUE;
       }
     } else if (goma_ctx->solver.newton_line_search_type == NLS_FULL_STEP) {
-      for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+      for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
         x[i] -= goma_ctx->solver.damp_factor *
-                goma_ctx->solver.var_damp[idv[goma_ctx->fem.pg->imtrx][i][0]] * delta_x[i];
+                goma_ctx->solver.var_damp[goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0]] *
+                delta_x[i];
       }
       exchange_dof(cx, dpi, x, goma_ctx->fem.pg->imtrx);
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-        for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
-          xdot[i] -= goma_ctx->solver.damp_factor *
-                     goma_ctx->solver.var_damp[idv[goma_ctx->fem.pg->imtrx][i][0]] * delta_x[i] *
-                     (1.0 + 2 * theta) / delta_t;
+        for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
+          xdot[i] -=
+              goma_ctx->solver.damp_factor *
+              goma_ctx->solver.var_damp[goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0]] *
+              delta_x[i] * (1.0 + 2 * theta) / delta_t;
         }
         exchange_dof(cx, dpi, xdot, goma_ctx->fem.pg->imtrx);
       }
@@ -2681,13 +2703,13 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      *   UPDATE THE AUGMENTED UNKNOWNS
      *
      */
-    if (nAC > 0) {
+    if (goma_ctx->problem.n_ac > 0) {
       if (goma_ctx->debug_flag > 0) {
         DPRINTF(stdout, "\n------------------------------\n");
-        DPRINTF(stdout, "Augmenting Conditions:    %4d\n", nAC);
-        DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
+        DPRINTF(stdout, "Augmenting Conditions:    %4d\n", goma_ctx->problem.n_ac);
+        DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", goma_ctx->problem.n_ac);
       }
-      for (iAC = 0; iAC < nAC; iAC++) {
+      for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
         x_AC[iAC] -= goma_ctx->solver.damp_factor * yAC[iAC];
         if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
           x_AC_dot[iAC] -= goma_ctx->solver.damp_factor * yAC[iAC] * (1.0 + 2 * theta) / delta_t;
@@ -2775,7 +2797,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       glob_var_vals[4] = Conv_rate;
       total_mesh_volume = 0;
 
-      for (i = 0; nAC > 0 && i < nAC; i++) {
+      for (i = 0; goma_ctx->problem.n_ac > 0 && i < goma_ctx->problem.n_ac; i++) {
         total_mesh_volume += goma_ctx->fem.augc[i].evol;
         glob_var_vals[6 + i] = x_AC[i];
       }
@@ -2793,7 +2815,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   skip_solve:
 
     if (goma_ctx->write_intermediate_solutions) {
-      if (TimeIntegration == STEADY) {
+      if (goma_ctx->problem.time_integration == STEADY) {
         time_value = (double)*nprint + 1.;
       }
 
@@ -2810,7 +2832,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                            goma_ctx->fem.pg->imtrx);
       }
       /* Write out time derivatives if requested */
-      if (TIME_DERIVATIVES != -1 && (TimeIntegration != STEADY)) {
+      if (TIME_DERIVATIVES != -1 && (goma_ctx->problem.time_integration != STEADY)) {
         for (i = 0; i < rd->TotalNVSolnOutput; i++) {
           i_post = rd->TotalNVSolnOutput + rd->TotalNVPostOutput + i;
           extract_nodal_vec(xdot, rd->nvtype[i_post], rd->nvkind[i_post], rd->nvmatID[i_post], gvec,
@@ -2825,7 +2847,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         bool is_P1 = FALSE;
         int dof = 0;
         for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-          int mn = Matilda[eb_index];
+          int mn = goma_ctx->problem.matilda[eb_index];
           if (exo->eb_num_elems[eb_index] > 0) {
             if (goma_ctx->fem.pd_glob[mn]
                     ->i[goma_ctx->fem.upd->matrix_index[rd->evtype[i]]][rd->evtype[i]] == I_P1) {
@@ -2853,7 +2875,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                           *nprint + 1, &time_value, delta_t, exo, dpi, rd);
 
         /* Write out time derivatives if requested */
-        if (TIME_DERIVATIVES != -1 && (TimeIntegration != STEADY)) {
+        if (TIME_DERIVATIVES != -1 && (goma_ctx->problem.time_integration != STEADY)) {
           for (i = 0; i < tev; i++) {
             i_post = tev_post + i;
             extract_elem_vec(xdot, i_post, rd->evtype[i_post], gvec_elem, exo, 0);
@@ -2864,7 +2886,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
 
       /* and global variables.  The case glob_var_vals == NULL is caught in the function */
-      wr_global_result_exo(exo, goma_ctx->exo_file_out, *nprint + 1, 6 + nAC, glob_var_vals);
+      wr_global_result_exo(exo, goma_ctx->exo_file_out, *nprint + 1, 6 + goma_ctx->problem.n_ac,
+                           glob_var_vals);
 
       *nprint = *nprint + 1;
     }
@@ -2878,11 +2901,11 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      * defer this event until after performing the sensitivity calculation
      */
     if (goma_ctx->num_proc > 1 && strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
-      if ((!*converged) &&
-          ((Continuation != ALC_NONE) || (nn_post_fluxes_sens > 0) || (nn_post_data_sens > 0))) {
-        show_external(num_universe_dofs[goma_ctx->fem.pg->imtrx],
-                      (num_universe_dofs[goma_ctx->fem.pg->imtrx] -
-                       num_external_dofs[goma_ctx->fem.pg->imtrx]),
+      if ((!*converged) && ((goma_ctx->problem.continuation != ALC_NONE) ||
+                            (nn_post_fluxes_sens > 0) || (nn_post_data_sens > 0))) {
+        show_external(goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx],
+                      (goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx] -
+                       goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx]),
                       ija, ija_save, a);
         dofs_hidden = FALSE;
       }
@@ -2927,7 +2950,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     if (print_visc_sens)
       DPRINTF(stdout, " Invoking Viscosity Sensitivities\n");
 
-    if (nAC > 0) {
+    if (goma_ctx->problem.n_ac > 0) {
       if (goma_ctx->solver.solver_output_format & 1)
         DPRINTF(stdout, "         ");
       if (goma_ctx->solver.solver_output_format & 2)
@@ -3003,11 +3026,12 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   /**
    *     Solution vector norms for detecting turning points
    */
-  Norm[4][0] = Loo_norm(x, NumUnknowns[goma_ctx->fem.pg->imtrx], &num_unk_x, dofname_x);
-  Norm[4][1] = L1_norm(x, NumUnknowns[goma_ctx->fem.pg->imtrx]) /
-               ((double)NumUnknowns[goma_ctx->fem.pg->imtrx]);
-  Norm[4][2] = L2_norm(x, NumUnknowns[goma_ctx->fem.pg->imtrx]) /
-               sqrt((double)NumUnknowns[goma_ctx->fem.pg->imtrx]);
+  Norm[4][0] =
+      Loo_norm(x, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], &num_unk_x, dofname_x);
+  Norm[4][1] = L1_norm(x, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]) /
+               ((double)goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
+  Norm[4][2] = L2_norm(x, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]) /
+               sqrt((double)goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
 
   if (goma_ctx->solver.solver_output_format & 1)
     DPRINTF(stdout, "-------- ");
@@ -3150,9 +3174,9 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
   /*  only if converged */
 
-  if (Continuation > 0 && *converged) {
+  if (goma_ctx->problem.continuation > 0 && *converged) {
 
-    switch (Continuation) {
+    switch (goma_ctx->problem.continuation) {
     case ALC_FIRST:
 
       if (goma_ctx->fem.cont->sensvec_id != -1) {
@@ -3215,11 +3239,11 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
 free_and_clear:
   if (goma_ctx->num_proc > 1 && strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
-    if (Continuation != LOCA && dofs_hidden) {
-      show_external(
-          num_universe_dofs[goma_ctx->fem.pg->imtrx],
-          (num_universe_dofs[goma_ctx->fem.pg->imtrx] - num_external_dofs[goma_ctx->fem.pg->imtrx]),
-          ija, ija_save, a);
+    if (goma_ctx->problem.continuation != LOCA && dofs_hidden) {
+      show_external(goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx],
+                    (goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx] -
+                     goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx]),
+                    ija, ija_save, a);
       dofs_hidden = FALSE;
     }
   }
@@ -3228,24 +3252,24 @@ free_and_clear:
   safe_free((void *)res_p);
   safe_free((void *)res_m);
 
-  if (nAC > 0) {
+  if (goma_ctx->problem.n_ac > 0) {
     safe_free((void *)gAC);
     safe_free((void *)hAC);
     safe_free((void *)tAC);
     safe_free((void *)yAC);
     safe_free((void *)tempAC);
 
-    Dmatrix_death(bAC, nAC, numProcUnknowns);
-    Dmatrix_death(cAC, nAC, numProcUnknowns);
-    Dmatrix_death(dAC, nAC, nAC);
-    Dmatrix_death(sAC, nAC, nAC);
-    Dmatrix_death(wAC, nAC, numProcUnknowns);
+    Dmatrix_death(bAC, goma_ctx->problem.n_ac, numProcUnknowns);
+    Dmatrix_death(cAC, goma_ctx->problem.n_ac, numProcUnknowns);
+    Dmatrix_death(dAC, goma_ctx->problem.n_ac, goma_ctx->problem.n_ac);
+    Dmatrix_death(sAC, goma_ctx->problem.n_ac, goma_ctx->problem.n_ac);
+    Dmatrix_death(wAC, goma_ctx->problem.n_ac, numProcUnknowns);
 
-    Ivector_death(ordAC, nAC);
+    Ivector_death(ordAC, goma_ctx->problem.n_ac);
 
     /* Restore arc length equation AC at end of first step. */
     if (alc_with_acs && con->private_info.step_num == 0)
-      nAC++;
+      goma_ctx->problem.n_ac++;
   }
 
   return (return_value);
@@ -3795,12 +3819,12 @@ static int soln_sens(double lambda,  /*  parameter */
   lambda_tmp = lambda + dlambda;
 
   if (vector_id == -1) {
-    switch (Continuation) {
+    switch (goma_ctx->problem.continuation) {
     case ALC_FIRST:
       update_parameterC(0, lambda_tmp, x, xdot, NULL, delta_s, cx, exo, dpi);
       break;
     case HUN_FIRST:
-      for (iHC = 0; iHC < nHC; iHC++) {
+      for (iHC = 0; iHC < goma_ctx->problem.n_hc; iHC++) {
         if (abs(goma_ctx->fem.hunt[iHC].ramp) == 2) {
           hunt_val = goma_ctx->fem.hunt[iHC].BegParameterValue *
                      pow(goma_ctx->fem.hunt[iHC].EndParameterValue /
@@ -3824,8 +3848,8 @@ static int soln_sens(double lambda,  /*  parameter */
   goma_ctx->fem.af->Assemble_Jacobian = FALSE;
   goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix = FALSE;
   goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
-  if (nAC > 0) {
-    for (iAC = 0; iAC < nAC; iAC++) {
+  if (goma_ctx->problem.n_ac > 0) {
+    for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
       goma_ctx->fem.augc[iAC].evol = 0.0;
     }
   }
@@ -3842,12 +3866,12 @@ static int soln_sens(double lambda,  /*  parameter */
 
   lambda_tmp = lambda - dlambda;
   if (vector_id == -1) {
-    switch (Continuation) {
+    switch (goma_ctx->problem.continuation) {
     case ALC_FIRST:
       update_parameterC(0, lambda_tmp, x, xdot, NULL, delta_s, cx, exo, dpi);
       break;
     case HUN_FIRST:
-      for (iHC = 0; iHC < nHC; iHC++) {
+      for (iHC = 0; iHC < goma_ctx->problem.n_hc; iHC++) {
         if (abs(goma_ctx->fem.hunt[iHC].ramp) == 2) {
           hunt_val = goma_ctx->fem.hunt[iHC].BegParameterValue *
                      pow(goma_ctx->fem.hunt[iHC].EndParameterValue /
@@ -3871,8 +3895,8 @@ static int soln_sens(double lambda,  /*  parameter */
   goma_ctx->fem.af->Assemble_Jacobian = FALSE;
   goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix = FALSE;
   goma_ctx->fem.af->Assemble_LSA_Mass_Matrix = FALSE;
-  if (nAC > 0) {
-    for (iAC = 0; iAC < nAC; iAC++) {
+  if (goma_ctx->problem.n_ac > 0) {
+    for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
       goma_ctx->fem.augc[iAC].evol = 0.0;
     }
   }
@@ -3892,12 +3916,12 @@ static int soln_sens(double lambda,  /*  parameter */
    */
 
   if (vector_id == -1) {
-    switch (Continuation) {
+    switch (goma_ctx->problem.continuation) {
     case ALC_FIRST:
       update_parameterC(0, lambda, x, xdot, NULL, delta_s, cx, exo, dpi);
       break;
     case HUN_FIRST:
-      for (iHC = 0; iHC < nHC; iHC++) {
+      for (iHC = 0; iHC < goma_ctx->problem.n_hc; iHC++) {
         if (abs(goma_ctx->fem.hunt[iHC].ramp) == 2) {
           hunt_val = goma_ctx->fem.hunt[iHC].BegParameterValue *
                      pow(goma_ctx->fem.hunt[iHC].EndParameterValue /
@@ -3939,7 +3963,7 @@ static int soln_sens(double lambda,  /*  parameter */
   }
 #endif
 
-  vector_scaling(NumUnknowns[goma_ctx->fem.pg->imtrx], resid_vector_sens, scale);
+  vector_scaling(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], resid_vector_sens, scale);
 
   switch (goma_ctx->solver.linear_solver) {
   case UMFPACK2:
@@ -3971,13 +3995,14 @@ static int soln_sens(double lambda,  /*  parameter */
     printf("%s: entering SL_UMF for soln_sens solve\n", y0);
     fflush(stdout);
 #endif
-    UMF_system_id = SL_UMF(UMF_system_id,
-                           /*
-                           &first_soln_sens_linear_solver_call,
-                           */
-                           &first_linear_solver_call, &Factor_Flag, &matr_form,
-                           &NumUnknowns[goma_ctx->fem.pg->imtrx], &goma_ctx->solver.nzeros, &ija[0],
-                           &ija[0], &a[0], &resid_vector_sens[0], &x_sens[0]);
+    UMF_system_id =
+        SL_UMF(UMF_system_id,
+               /*
+               &first_soln_sens_linear_solver_call,
+               */
+               &first_linear_solver_call, &Factor_Flag, &matr_form,
+               &goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], &goma_ctx->solver.nzeros,
+               &ija[0], &ija[0], &a[0], &resid_vector_sens[0], &x_sens[0]);
 #ifdef DEBUG_SL_UMF
     printf("%s: returning from SL_UMF\n", y0);
     fflush(stdout);
@@ -3990,9 +4015,10 @@ static int soln_sens(double lambda,  /*  parameter */
     break;
 
   case SPARSE13a:
-    dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], resid_vector_sens, x_sens);
-    lu(NumUnknowns[goma_ctx->fem.pg->imtrx], NumExtUnknowns[goma_ctx->fem.pg->imtrx],
-       goma_ctx->solver.nzeros, a, ija, x_sens, 3);
+    dcopy1(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], resid_vector_sens, x_sens);
+    lu(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+       goma_ctx->problem.num_ext_unknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros, a, ija,
+       x_sens, 3);
     first_linear_solver_call = FALSE;
     /*
      * Note that sl_lu has static variables to keep track of
@@ -4133,8 +4159,8 @@ static int soln_sens(double lambda,  /*  parameter */
      * it is the first call or not.
      */
 #ifdef HARWELL
-    err = cmsr_ma28(NumUnknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros, a, ija, x_sens,
-                    resid_vector_sens);
+    err = cmsr_ma28(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                    goma_ctx->solver.nzeros, a, ija, x_sens, resid_vector_sens);
 #endif
 #ifndef HARWELL
     GOMA_EH(GOMA_ERROR, "That linear solver package is not implemented.");

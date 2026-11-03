@@ -1948,7 +1948,7 @@ double PBEVolumeSource(double time,
   rho = rho_bubble * (goma_ctx->fem.fv->moment[1] * inv_mom_frac) + rho_foam * inv_mom_frac;
   d_rho_dt =
       (rho_bubble - rho_foam) * (goma_ctx->fem.fv_dot->moment[1] * inv_mom_frac * inv_mom_frac);
-  for (a = 0; a < WIM; a++) {
+  for (a = 0; a < goma_ctx->problem.wim; a++) {
     grad_rho[a] = (rho_bubble - rho_foam) *
                   (goma_ctx->fem.fv->grad_moment[1][a] * inv_mom_frac * inv_mom_frac);
   }
@@ -1957,7 +1957,7 @@ double PBEVolumeSource(double time,
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
     d_rho_dt_dT = (-rho_bubble) / goma_ctx->fem.fv->T *
                   (goma_ctx->fem.fv_dot->moment[1] * inv_mom_frac * inv_mom_frac);
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       d_grad_rho_dT[a] = (-rho_bubble) / goma_ctx->fem.fv->T *
                          (goma_ctx->fem.fv->grad_moment[1][a] * inv_mom_frac * inv_mom_frac);
     }
@@ -1970,7 +1970,7 @@ double PBEVolumeSource(double time,
                       2 * goma_ctx->fem.fv_dot->moment[1]) *
                      inv_mom_frac * inv_mom_frac * inv_mom_frac;
     for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         d_grad_rho_dMOM1[a][j] =
             (rho_bubble - rho_foam) *
             ((1 + goma_ctx->fem.fv->moment[1]) * (goma_ctx->fem.bf[var]->grad_phi[j][a]) -
@@ -1998,7 +1998,7 @@ double PBEVolumeSource(double time,
           ((goma_ctx->fem.fv->c[species_CO2_g] + goma_ctx->fem.fv->c[species_BA_g]) *
            (goma_ctx->fem.fv->c[species_CO2_g] + goma_ctx->fem.fv->c[species_BA_g]));
 
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         d_grad_rho_dC[species_BA_g][a] =
             (goma_ctx->fem.fv->grad_moment[1][a] * inv_mom_frac * inv_mom_frac) *
             (ref_press / (Rgas_const * goma_ctx->fem.fv->T)) *
@@ -2016,7 +2016,7 @@ double PBEVolumeSource(double time,
     } else {
       d_rho_dt_dC[species_BA_g] = 0;
       d_rho_dt_dC[species_CO2_g] = 0;
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         d_grad_rho_dC[species_BA_g][a] = 0;
 
         d_grad_rho_dC[species_CO2_g][a] = 0;
@@ -2025,7 +2025,7 @@ double PBEVolumeSource(double time,
   }
 
   source = 0;
-  for (a = 0; a < WIM; a++) {
+  for (a = 0; a < goma_ctx->problem.wim; a++) {
     source += vconv[a] * grad_rho[a];
   }
 
@@ -2033,14 +2033,14 @@ double PBEVolumeSource(double time,
   source *= (1 / rho);
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (b = 0; b < WIM; b++) {
+    for (b = 0; b < goma_ctx->problem.wim; b++) {
       var = VELOCITY1 + b;
 
       for (j = 0; goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] &&
                   j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
            j++) {
         dFVS_dv[b][j] = 0.0;
-        for (a = 0; a < WIM; a++) {
+        for (a = 0; a < goma_ctx->problem.wim; a++) {
           dFVS_dv[b][j] += d_vconv->v[a][b][j] * grad_rho[a];
         }
 
@@ -2056,7 +2056,7 @@ double PBEVolumeSource(double time,
       dFVS_dT[j] = 0.;
       phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         dFVS_dT[j] += d_vconv->T[a][j] * grad_rho[a] + vconv[a] * d_grad_rho_dT[a] * phi_j;
       }
 
@@ -2073,7 +2073,7 @@ double PBEVolumeSource(double time,
                   j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
            j++) {
         dFVS_dx[b][j] = 0.0;
-        for (a = 0; a < WIM; a++) {
+        for (a = 0; a < goma_ctx->problem.wim; a++) {
           dFVS_dx[b][j] +=
               d_vconv->X[a][b][j] * grad_rho[a] +
               (rho_bubble - rho_foam) *
@@ -2092,7 +2092,7 @@ double PBEVolumeSource(double time,
       dFVS_dMOM[1][j] = 0.0;
       phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         dFVS_dMOM[1][j] += vconv[a] * d_grad_rho_dMOM1[a][j];
       }
 
@@ -2111,7 +2111,7 @@ double PBEVolumeSource(double time,
       dFVS_dC[species_BA_g][j] = 0.0;
       dFVS_dC[species_CO2_g][j] = 0.0;
       phi_j = goma_ctx->fem.bf[var]->phi[j];
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         dFVS_dC[species_BA_g][j] += d_vconv->C[a][species_BA_g][j] * grad_rho[a] +
                                     vconv[a] * d_grad_rho_dC[species_BA_g][a] * phi_j;
         dFVS_dC[species_CO2_g][j] += d_vconv->C[a][species_CO2_g][j] * grad_rho[a] +
@@ -2156,7 +2156,7 @@ double PBEVolumeSource_rhoeqn(double time, double dt, double tt, double dFVS_drh
   source = 0;
 
   if (goma_ctx->fem.fv->rho > 0) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       source += vconv[a] * goma_ctx->fem.fv->grad_rho[a];
     }
 
@@ -2176,7 +2176,7 @@ double PBEVolumeSource_rhoeqn(double time, double dt, double tt, double dFVS_drh
       dFVS_drho[j] = 0.0;
       phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         dFVS_drho[j] += vconv[a] * goma_ctx->fem.bf[var]->grad_phi[j][a];
       }
 
@@ -2326,7 +2326,7 @@ int assemble_moments(double time, /* present time value */
     int a;
     double vnorm = 0;
 
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       vnorm += goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->v[a];
     }
     vnorm = sqrt(vnorm);
@@ -2357,14 +2357,14 @@ int assemble_moments(double time, /* present time value */
       supg_tau = 0.5 * hk * eta / vnorm;
 
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pd->mi[VELOCITY1]]->dof[VELOCITY1]; j++) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           // d_supg_tau_dv[a][j] =
         }
       }
     } else {
       supg_tau = 0;
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pd->mi[VELOCITY1]]->dof[VELOCITY1]; j++) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           // d_supg_tau_dv[a][j] = 0.0;
         }
       }
@@ -2394,7 +2394,7 @@ int assemble_moments(double time, /* present time value */
       if (peqn > -1) {
         dbl strong_residual = 0;
         strong_residual = goma_ctx->fem.fv_dot_old->moment[mom];
-        for (int p = 0; p < VIM; p++) {
+        for (int p = 0; p < goma_ctx->problem.vim; p++) {
           strong_residual += goma_ctx->fem.fv->v[p] * goma_ctx->fem.fv_old->grad_moment[mom][p];
         }
         // strong_residual -= msource[mom];
@@ -2493,12 +2493,12 @@ int assemble_moments(double time, /* present time value */
             //             for (a = 0; a < VIM; a++) {
             //   st->taylor_flux_wt[j] += conv[a] * bf[eqn]->grad_phi[j][a];
             // }
-            for (int p = 0; p < VIM; p++) {
+            for (int p = 0; p < goma_ctx->problem.vim; p++) {
               taylor_flux_wt += vconv[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
             }
 
             dbl advection_a = 0;
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               // st->conv_flux
               advection_a +=
                   (c_new * vconv[p] + c_old * vconv_old[p]) * goma_ctx->fem.fv->grad_moment[mom][p];
@@ -2506,7 +2506,7 @@ int assemble_moments(double time, /* present time value */
             advection_a *= wt_func;
 
             dbl advection_b = 0;
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               // st->taylor_flux
               advection_b += vconv[p] * goma_ctx->fem.fv->grad_moment[mom][p];
             }
@@ -2514,7 +2514,7 @@ int assemble_moments(double time, /* present time value */
             advection = advection_a + advection_b;
 
           } else {
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               advection += vconv[p] * goma_ctx->fem.fv->grad_moment[mom][p];
             }
             advection *= wt_func;
@@ -2536,7 +2536,7 @@ int assemble_moments(double time, /* present time value */
 
         diffusion = 0.;
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-          for (p = 0; p < VIM; p++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             diffusion +=
                 goma_ctx->fem.bf[eqn]->grad_phi[i][p] * goma_ctx->fem.fv->grad_moment[mom][p];
           }
@@ -2603,7 +2603,7 @@ int assemble_moments(double time, /* present time value */
          * equation for bunches of (b,j) column variables...
          */
 
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
         }
 
@@ -2637,7 +2637,7 @@ int assemble_moments(double time, /* present time value */
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 grad_phi_j[p] = goma_ctx->fem.bf[var]->grad_phi[j][p];
               }
 
@@ -2672,19 +2672,19 @@ int assemble_moments(double time, /* present time value */
                     //             for (a = 0; a < VIM; a++) {
                     //   st->taylor_flux_wt[j] += conv[a] * bf[eqn]->grad_phi[j][a];
                     // }
-                    for (int p = 0; p < VIM; p++) {
+                    for (int p = 0; p < goma_ctx->problem.vim; p++) {
                       taylor_flux_wt += vconv[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
                     }
 
                     dbl advection_a = 0;
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       // st->conv_flux
                       advection_a += (c_new * vconv[p] + c_old * vconv_old[p]) * grad_phi_j[p];
                     }
                     advection_a *= wt_func;
 
                     dbl advection_b = 0;
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       // st->taylor_flux
                       advection_b += vconv[p] * grad_phi_j[p];
                     }
@@ -2692,7 +2692,7 @@ int assemble_moments(double time, /* present time value */
                     advection = advection_a + advection_b;
 
                   } else {
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       advection += vconv[p] * grad_phi_j[p];
                     }
                     advection *= wt_func;
@@ -2717,7 +2717,7 @@ int assemble_moments(double time, /* present time value */
               diffusion = 0.;
               if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
                 if (mom == b) {
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     diffusion += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * grad_phi_j[p];
                   }
 
@@ -2754,7 +2754,7 @@ int assemble_moments(double time, /* present time value */
         /*
          * J_e_v
          */
-        for (b = 0; b < VIM; b++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           var = VELOCITY1 + b;
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -2779,13 +2779,13 @@ int assemble_moments(double time, /* present time value */
                   //             for (a = 0; a < VIM; a++) {
                   //   st->taylor_flux_wt[j] += conv[a] * bf[eqn]->grad_phi[j][a];
                   // }
-                  for (int p = 0; p < VIM; p++) {
+                  for (int p = 0; p < goma_ctx->problem.vim; p++) {
                     taylor_flux_wt += vconv[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
                     d_taylor_flux_wt += d_vconv->v[p][b][j] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
                   }
 
                   dbl advection_a = 0;
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     // st->conv_flux
                     advection_a +=
                         (c_new * d_vconv->v[p][b][j]) * goma_ctx->fem.fv->grad_moment[mom][p];
@@ -2794,7 +2794,7 @@ int assemble_moments(double time, /* present time value */
 
                   dbl advection_b = 0;
                   dbl advection_c = 0;
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     // st->taylor_flux
                     // F = v dot grad M * W
                     // dF = dv dot grad M * W + v dot grad M * dW
@@ -2806,7 +2806,7 @@ int assemble_moments(double time, /* present time value */
                   advection = advection_a + advection_b + advection_c;
 
                 } else {
-                  for (int p = 0; p < VIM; p++) {
+                  for (int p = 0; p < goma_ctx->problem.vim; p++) {
                     advection_a +=
                         wt_func * d_vconv->v[p][b][j] * goma_ctx->fem.fv->grad_moment[mom][p];
                   }
@@ -2845,7 +2845,7 @@ int assemble_moments(double time, /* present time value */
               double divergence = 0.;
               if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIVERGENCE) {
                 double div_phi_j_e_b = 0.;
-                for (p = 0; p < VIM; p++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
                   div_phi_j_e_b += goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][p];
                 }
                 double divergence_a = div_phi_j_e_b * goma_ctx->fem.fv->moment[mom];
@@ -2951,7 +2951,7 @@ int assemble_moments(double time, /* present time value */
                   //             for (a = 0; a < VIM; a++) {
                   //   st->taylor_flux_wt[j] += conv[a] * bf[eqn]->grad_phi[j][a];
                   // }
-                  for (int p = 0; p < VIM; p++) {
+                  for (int p = 0; p < goma_ctx->problem.vim; p++) {
                     taylor_flux_wt += vconv[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
                     d_taylor_flux_wt +=
                         d_vconv->X[p][b][j] * goma_ctx->fem.bf[eqn]->grad_phi[i][p] +
@@ -2960,7 +2960,7 @@ int assemble_moments(double time, /* present time value */
 
                   dbl advection_a = 0;
                   dbl advection_d = 0;
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     // st->conv_flux
                     advection_a +=
                         (c_new * d_vconv->X[p][b][j]) * goma_ctx->fem.fv->grad_moment[mom][p] +
@@ -2975,7 +2975,7 @@ int assemble_moments(double time, /* present time value */
                   dbl advection_b = 0;
                   dbl advection_c = 0;
                   dbl advection_e = 0;
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     // st->taylor_flux
                     advection_b += d_vconv->X[p][b][j] * goma_ctx->fem.fv->grad_moment[mom][p] +
                                    vconv[p] * goma_ctx->fem.fv->d_grad_moment_dmesh[mom][p][b][j];

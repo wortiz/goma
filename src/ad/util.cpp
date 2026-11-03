@@ -31,7 +31,7 @@ AD_Field_Variables *ad_fv = NULL;
 int ad_calc_shearrate(ADType &gammadot,             /* strain rate invariant */
                       ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
   gammadot = 0.;
-  int vdim = VIM;
+  int vdim = goma_ctx->problem.vim;
   if (goma_ctx->fem.pd->gv[FILM_HEIGHT])
     vdim = 3;
   /* get gamma_dot invariant for viscosity calculations */
@@ -81,8 +81,8 @@ int ad_beer_belly(void) {
     DeformingMesh = goma_ctx->fem.ei[imtrx]->deforming_mesh;
   }
 
-  if ((si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, Num_Interpolations,
-                    Unique_Interpolations)) == -1) {
+  if ((si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, goma_ctx->problem.num_interpolations,
+                    goma_ctx->problem.unique_interpolations)) == -1) {
     GOMA_EH(GOMA_ERROR, "Seems to be a problem finding the IntegrationMap interpolation.");
   }
   MapBf = goma_ctx->fem.bfd[si];
@@ -115,7 +115,7 @@ int ad_beer_belly(void) {
    * for position, depending on whether the shapes are mapped sub/iso/super
    * parametrically...
    */
-  for (i = 0; i < VIM; i++) {
+  for (i = 0; i < goma_ctx->problem.vim; i++) {
     ad_fv->x[i] = 0.;
   }
 
@@ -299,8 +299,10 @@ int ad_load_bf_grad(void) {
       (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL)) {
     WIM = goma_ctx->fem.pd->Num_Dim;
   } else {
-    WIM = VIM;
+    WIM = goma_ctx->problem.vim;
   }
+#else
+  int WIM = goma_ctx->problem.wim;
 #endif
 
   status = 0;
@@ -377,9 +379,9 @@ int ad_load_bf_grad(void) {
       }
 
       for (i = 0; i < dofs; i++) {
-        for (p = 0; p < VIM; p++) {
-          for (a = 0; a < VIM; a++) {
-            for (int q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
+            for (int q = 0; q < goma_ctx->problem.vim; q++) {
               if (q == a)
                 ad_fv->basis[v].grad_phi_e[i][a][p][a] = ad_fv->basis[v].grad_phi[i][p];
               else
@@ -420,11 +422,11 @@ extern "C" void fill_ad_field_variables() {
 
   ad_beer_belly();
   ad_load_bf_grad();
-  for (int p = 0; p < WIM; p++) {
+  for (int p = 0; p < goma_ctx->problem.wim; p++) {
     ad_fv->x_dot[p] = 0;
   }
   if (goma_ctx->fem.pd->gv[R_MESH1]) {
-    for (int p = 0; p < WIM; p++) {
+    for (int p = 0; p < goma_ctx->problem.wim; p++) {
       for (int i = 0;
            i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1 + p]]->dof[R_MESH1 + p];
            i++) {
@@ -445,7 +447,7 @@ extern "C" void fill_ad_field_variables() {
   }
 
   if (goma_ctx->fem.pd->gv[VELOCITY1]) {
-    for (int p = 0; p < WIM; p++) {
+    for (int p = 0; p < goma_ctx->problem.wim; p++) {
       ad_fv->v[p] = 0;
       ad_fv->v_dot[p] = 0;
       for (int i = 0;
@@ -465,11 +467,11 @@ extern "C" void fill_ad_field_variables() {
         }
       }
     }
-    for (int p = 0; p < VIM; p++) {
-      for (int q = 0; q < VIM; q++) {
+    for (int p = 0; p < goma_ctx->problem.vim; p++) {
+      for (int q = 0; q < goma_ctx->problem.vim; q++) {
         ad_fv->grad_v[p][q] = 0;
 
-        for (int r = 0; r < WIM; r++) {
+        for (int r = 0; r < goma_ctx->problem.wim; r++) {
           for (int i = 0;
                i <
                goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[VELOCITY1 + r]]->dof[VELOCITY1 + r];
@@ -734,7 +736,7 @@ extern "C" void fill_ad_field_variables() {
   if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
     int v_s[MAX_MODES][DIM][DIM];
     stress_eqn_pointer(v_s);
-    int sdim = VIM;
+    int sdim = goma_ctx->problem.vim;
     if (goma_ctx->fem.pd->gv[FILM_HEIGHT])
       sdim = 3;
     for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
@@ -827,7 +829,7 @@ extern "C" void fill_ad_field_variables() {
     for (int p = 0; p < 3; p++) {
       for (int q = 0; q < 3; q++) {
         int v = v_g[p][q];
-        for (int r = 0; r < VIM; r++) {
+        for (int r = 0; r < goma_ctx->problem.vim; r++) {
           ad_fv->grad_G[r][p][q] = 0.0;
           if (goma_ctx->fem.pd->gv[v]) {
             int dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
@@ -858,11 +860,11 @@ extern "C" void fill_ad_field_variables() {
 
 #if 0
   // check field variables
-  for (int p = 0; p < VIM; p++) {
+  for (int p = 0; p < goma_ctx->problem.vim; p++) {
     if (fabs(ad_fv->v[p].val() - goma_ctx->fem.fv->v[p]) > 1e-14) {
       printf("diff in fv->v[%d] %.12f != %.12f\n", p, ad_fv->v[p].val(), goma_ctx->fem.fv->v[p]);
     }
-    for (int q = 0; q < VIM; q++) {
+    for (int q = 0; q < goma_ctx->problem.vim; q++) {
       if (fabs(ad_fv->grad_v[p][q].val() - goma_ctx->fem.fv->grad_v[p][q]) > 1e-12) {
         printf("diff in fv->grad_v[%d][%d] %.12f != %.12f\n", p, q, ad_fv->grad_v[p][q].val(),
                goma_ctx->fem.fv->grad_v[p][q]);

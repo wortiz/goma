@@ -104,8 +104,8 @@ double raoults_law_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
    */
   ebIndex_liq = ebID_to_ebIndex(ebID_mat_liq);
   ebIndex_gas = ebID_to_ebIndex(bc->BC_Data_Int[2]);
-  mp_liq = goma_ctx->fem.mp_glob[Matilda[ebIndex_liq]];
-  mp_gas = goma_ctx->fem.mp_glob[Matilda[ebIndex_gas]];
+  mp_liq = goma_ctx->fem.mp_glob[goma_ctx->problem.matilda[ebIndex_liq]];
+  mp_gas = goma_ctx->fem.mp_glob[goma_ctx->problem.matilda[ebIndex_gas]];
   have_T = (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TEMPERATURE] != -1);
 
   /*
@@ -472,8 +472,8 @@ double is_equil_prxn(JACOBIAN_VAR_DESC_STRUCT *func_jac,
    */
   ebIndex_a = ebID_to_ebIndex(ebID_mat_a);
   ebIndex_b = ebID_to_ebIndex(bc->BC_Data_Int[2]);
-  mp_a = goma_ctx->fem.mp_glob[Matilda[ebIndex_a]];
-  mp_b = goma_ctx->fem.mp_glob[Matilda[ebIndex_b]];
+  mp_a = goma_ctx->fem.mp_glob[goma_ctx->problem.matilda[ebIndex_a]];
+  mp_b = goma_ctx->fem.mp_glob[goma_ctx->problem.matilda[ebIndex_b]];
   have_T = (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TEMPERATURE] != -1);
 
   /*
@@ -832,7 +832,7 @@ is_masstemp_create(MATRL_PROP_STRUCT *mp_1, MATRL_PROP_STRUCT *mp_2, int do_Jac)
   if (have_T)
     num_terms++;
   is = interface_source_alloc(num_terms, 0, do_Jac);
-  for (i = 0; i < Num_Interface_Srcs; i++) {
+  for (i = 0; i < goma_ctx->problem.num_interface_srcs; i++) {
     for (k = 0; k < mp_1->Num_Species; k++) {
       vd = find_or_create_vd(MASS_FRACTION, 1, mp_1->MatID, k, goma_ctx->fem.pg->imtrx);
       is[i].Var_List[k] = vd;

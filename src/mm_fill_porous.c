@@ -335,7 +335,7 @@ int assemble_porous_transport(double time, /* present time valuel; KSC          
              */
             diffusion = 0.0;
             if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 diffusion += grad_phi_i[p] * pm_terms.diff_flux[w][p];
               }
               diffusion *=
@@ -521,7 +521,7 @@ int assemble_porous_transport(double time, /* present time valuel; KSC          
 
                   diffusion = 0.0;
                   if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       diffusion += grad_phi_i[p] * pm_terms.d_diff_flux_dpmv[w][p][w1][j];
                     }
                     diffusion *=
@@ -585,7 +585,7 @@ int assemble_porous_transport(double time, /* present time valuel; KSC          
                     advection_a *= -wt_func * h3 * det_J * wt;
 
                     advection_b = 0.0;
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       advection_b += pm_terms.conv_flux[w][p];
                     }
                     advection_b *= -wt_func;
@@ -609,21 +609,21 @@ int assemble_porous_transport(double time, /* present time valuel; KSC          
                      */
 
                     diff_a = 0.0;
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       dgrad_phi_i_dmesh[p] = goma_ctx->fem.bf[eqn]->d_grad_phi_dmesh[i][p][b][j];
                       diff_a += dgrad_phi_i_dmesh[p] * pm_terms.diff_flux[w][p];
                     }
                     diff_a *= h3 * det_J * wt;
 
                     diff_b = 0.0;
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       diff_b += goma_ctx->fem.bf[eqn]->grad_phi[i][p] *
                                 pm_terms.d_diff_flux_dmesh[w][p][b][j];
                     }
                     diff_b *= h3 * det_J * wt;
 
                     diff_c = 0.0;
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       diff_c += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * pm_terms.diff_flux[w][p];
                     }
                     diff_c *= (h3 * d_det_J_dmeshbj + dh3dmesh_bj * det_J) * wt;
@@ -664,7 +664,7 @@ int assemble_porous_transport(double time, /* present time valuel; KSC          
 
                 advection = 0.0;
                 if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     advection += pm_terms.d_conv_flux_dT[w][p][j];
                   }
                   advection *= -wt_func;
@@ -676,7 +676,7 @@ int assemble_porous_transport(double time, /* present time valuel; KSC          
 
                 diffusion = 0.0;
                 if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     diffusion += grad_phi_i[p] * pm_terms.d_diff_flux_dT[w][p][j];
                   }
                   diffusion *=
@@ -717,7 +717,7 @@ int assemble_porous_transport(double time, /* present time valuel; KSC          
 
                 for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   advection = 0.0;
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     advection += pm_terms.d_conv_flux_dSM[w][p][j];
                   }
                   advection *= -wt_func;
@@ -733,7 +733,7 @@ int assemble_porous_transport(double time, /* present time valuel; KSC          
 
                 for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   diffusion = 0.0;
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     diffusion += pm_terms.d_diff_flux_dSM[w][p][j];
                   }
                   diffusion *= -wt_func;
@@ -1189,14 +1189,14 @@ int load_porous_properties(void)
         goma_ctx->fem.mp->PermeabilityModel != SM_TENSOR) {
 
       if (goma_ctx->fem.cr->PorousFluxModel == DARCY_FICKIAN) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           goma_ctx->fem.pmv->liq_darcy_velocity[a] =
               -goma_ctx->fem.mp->permeability / goma_ctx->fem.mp->viscosity *
               (goma_ctx->fem.fv->grad_p_liq[a] - goma_ctx->fem.mp->momentum_source[a]);
         }
       } else if (goma_ctx->fem.cr->PorousFluxModel == POWERLAW_DARCY_FICKIAN) {
         n_pow = 1. / 0.5;
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           goma_ctx->fem.pmv->liq_darcy_velocity[a] =
               -goma_ctx->fem.mp->permeability / goma_ctx->fem.mp->viscosity *
               (pow(goma_ctx->fem.fv->grad_p_liq[a], n_pow) - goma_ctx->fem.mp->momentum_source[a]);
@@ -1204,9 +1204,9 @@ int load_porous_properties(void)
       }
     } else {
       if (goma_ctx->fem.cr->PorousFluxModel == DARCY_FICKIAN) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           goma_ctx->fem.pmv->liq_darcy_velocity[a] = 0.0;
-          for (b = 0; b < VIM; b++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             goma_ctx->fem.pmv->liq_darcy_velocity[a] -=
                 goma_ctx->fem.mp->perm_tensor[a][b] / goma_ctx->fem.mp->viscosity *
                 (goma_ctx->fem.fv->grad_p_liq[b] - goma_ctx->fem.mp->momentum_source[b]);
@@ -2427,7 +2427,7 @@ int get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
      *  rel_mass_flux[][] contains both the Darcy flux and the diffusive
      *  flux components.
      */
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       pmt->diff_flux[i_pl][a] = (goma_ctx->fem.pmv->rel_mass_flux[i_pl][a] +
                                  vconv[a] * goma_ctx->fem.pmv->bulk_density[i_pl]);
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_GAS_PRES]) {
@@ -2453,7 +2453,7 @@ int get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 
   /* memset(pmt->conv_flux, 0, sizeof(double)*MAX_PMV*DIM); */
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       pmt->conv_flux[i_pl][a] =
           goma_ctx->fem.pmv->bulk_density[i_pl] * goma_ctx->fem.fv->grad_d_dot[a][a];
 
@@ -2589,7 +2589,7 @@ int get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
     var = POR_LIQ_PRES;
 
     for (w = 0; w < MAX_PMV; w++) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (w1 = 0; w1 < MAX_PMV; w1++) {
             pmt->d_diff_flux_dpmv[w][a][w1][j] = 0.;
@@ -2600,7 +2600,7 @@ int get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 
     if (goma_ctx->fem.cr->PorousFluxModel == DARCY_FICKIAN ||
         goma_ctx->fem.cr->PorousFluxModel == POWERLAW_DARCY_FICKIAN) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (w1 = 0; w1 < MAX_PMV; w1++) {
             pmt->d_diff_flux_dpmv[i_pl][a][w1][j] =
@@ -2629,7 +2629,7 @@ int get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
 
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (w = 0; w < MAX_PMV; w++) {
               pmt->d_diff_flux_dmesh[w][a][b][j] = 0.0;
             }
@@ -2637,7 +2637,7 @@ int get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
           if (goma_ctx->fem.cr->PorousFluxModel == DARCY ||
               goma_ctx->fem.cr->PorousFluxModel == DARCY_FICKIAN ||
               goma_ctx->fem.cr->PorousFluxModel == POWERLAW_DARCY_FICKIAN) {
-            for (a = 0; a < VIM; a++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
               pmt->d_diff_flux_dmesh[i_pl][a][b][j] +=
                   goma_ctx->fem.pmv->d_rel_mass_flux_dmesh[i_pl][a][b][j] +
                   d_vconv->X[a][b][j] * goma_ctx->fem.pmv->bulk_density[i_pl];
@@ -2663,7 +2663,7 @@ int get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
         !goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_ENERGY]) {
       if (goma_ctx->fem.cr->PorousFluxModel == DARCY_FICKIAN ||
           goma_ctx->fem.cr->PorousFluxModel == POWERLAW_DARCY_FICKIAN) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             pmt->d_diff_flux_dT[i_pl][a][j] = 0.;
             pmt->d_diff_flux_dT[i_pg][a][j] = 0.;
@@ -2671,7 +2671,7 @@ int get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
         }
       }
       /* NOTE - the gas concentrations, etc should also be functions of temperature */
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           pmt->d_diff_flux_dT[i_pl][a][j] = -goma_ctx->fem.pmv->d_rel_mass_flux_dT[i_pl][a][j];
           pmt->d_diff_flux_dT[i_pg][a][j] = -goma_ctx->fem.pmv->d_rel_mass_flux_dT[i_pg][a][j];
@@ -2684,7 +2684,7 @@ int get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
      */
 
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         var = POR_LIQ_PRES;
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           pmt->d_conv_flux_dpmv[i_pl][a][i_pl][j] =
@@ -2769,12 +2769,12 @@ int get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
       var = MESH_DISPLACEMENT1 + b;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (w = 0; w < MAX_PMV; w++) {
               pmt->d_conv_flux_dmesh[w][a][b][j] = 0.0;
             }
           }
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             pmt->d_conv_flux_dmesh[i_pl][a][b][j] =
                 goma_ctx->fem.pmv->bulk_density[i_pl] *
                 goma_ctx->fem.fv->d_grad_d_dot_dmesh[a][a][b][j];
@@ -3137,7 +3137,7 @@ int get_porous_part_sat_terms_decoupled(struct Porous_Media_Terms *pmt,
    *
    *  Basically all lumped together with the capacitance term.
    */
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     /* old pmt->conv_flux[i_pl][a] =  0.; */
   }
   pmt->conv_flux[i_pl][0] = goma_ctx->fem.pmv_old->bulk_density[i_pl] *
@@ -3162,7 +3162,7 @@ int get_porous_part_sat_terms_decoupled(struct Porous_Media_Terms *pmt,
      *  rel_mass_flux[][] contains both the Darcy flux and the diffusive
      *  flux components.
      */
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       pmt->diff_flux[i_pl][a] = (goma_ctx->fem.pmv->rel_mass_flux[i_pl][a]);
     }
   } else {
@@ -3244,7 +3244,7 @@ int get_porous_part_sat_terms_decoupled(struct Porous_Media_Terms *pmt,
      */
     var = POR_LIQ_PRES;
     for (w = 0; w < MAX_PMV; w++) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (w1 = 0; w1 < MAX_PMV; w1++) {
             pmt->d_diff_flux_dpmv[w][a][w1][j] = 0.;
@@ -3254,7 +3254,7 @@ int get_porous_part_sat_terms_decoupled(struct Porous_Media_Terms *pmt,
     }
     if (goma_ctx->fem.cr->PorousFluxModel == DARCY_FICKIAN ||
         goma_ctx->fem.cr->PorousFluxModel == POWERLAW_DARCY_FICKIAN) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (w1 = 0; w1 < MAX_PMV; w1++) {
             pmt->d_diff_flux_dpmv[i_pl][a][w1][j] +=
@@ -3273,7 +3273,7 @@ int get_porous_part_sat_terms_decoupled(struct Porous_Media_Terms *pmt,
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       if (goma_ctx->fem.cr->PorousFluxModel == DARCY_FICKIAN ||
           goma_ctx->fem.cr->PorousFluxModel == POWERLAW_DARCY_FICKIAN) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             pmt->d_diff_flux_dT[i_pl][a][j] = 0.;
             pmt->d_diff_flux_dT[i_pg][a][j] = 0.;
@@ -3281,7 +3281,7 @@ int get_porous_part_sat_terms_decoupled(struct Porous_Media_Terms *pmt,
         }
       }
       /* NOTE - the gas concentrations, etc should also be functions of temperature */
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           pmt->d_diff_flux_dT[i_pl][a][j] -= goma_ctx->fem.pmv->d_rel_mass_flux_dT[i_pl][a][j];
           pmt->d_diff_flux_dT[i_pg][a][j] -= goma_ctx->fem.pmv->d_rel_mass_flux_dT[i_pg][a][j];
@@ -3531,7 +3531,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
                               goma_ctx->fem.fv->external_field[goma_ctx->fem.efv->ev_dpordt_index] /
                               (1. - goma_ctx->fem.fv->porosity);
 
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       /* pmt->conv_flux[i_pl][a] = 0.; */
     }
   }
@@ -3607,7 +3607,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
      */
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_LIQ_PRES] &&
         goma_ctx->fem.pd->TimeIntegration != STEADY) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         pmt->conv_flux[i_pl][a] = goma_ctx->fem.mp->density * goma_ctx->fem.mp->porosity *
                                   goma_ctx->fem.fv->grad_d_dot[a][a];
       }
@@ -3640,7 +3640,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
      *   V_sfs*F + x_dot
      *   (where V_sfs comes from the Advective Lagrangian Velocity Card)
      */
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       pmt->diff_flux[i_pl][a] =
           goma_ctx->fem.mp->density *
           (goma_ctx->fem.pmv->liq_darcy_velocity[a] + vconv[a] * goma_ctx->fem.mp->porosity);
@@ -3662,7 +3662,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
      *   - replace first mass-flux piece with the relationship
      *     between porosity and deformation
      **/
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       pmt->conv_flux[i_pore][a] = 0.0;
     }
 
@@ -3682,7 +3682,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
            (1.0 - goma_ctx->fem.mp->u_porosity[0]) / (1.0 - goma_ctx->fem.fv->porosity));
     }
   } else {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       pmt->conv_flux[i_pore][a] = 0.0;
     }
   }
@@ -3774,7 +3774,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_POROSITY]) {
       var = POR_POROSITY;
       phi_ptr = goma_ctx->fem.bf[var]->phi;
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           pmt->d_diff_flux_dpmv[i_pl][a][i_pore][j] = goma_ctx->fem.mp->density * vconv[a] *
                                                       goma_ctx->fem.mp->d_porosity[POR_POROSITY] *
@@ -3791,7 +3791,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
         goma_ctx->fem.mp->PermeabilityModel != ORTHOTROPIC &&
         goma_ctx->fem.mp->PermeabilityModel != SM_TENSOR &&
         goma_ctx->fem.mp->PermeabilityModel != KC_TENSOR) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         var = POR_POROSITY;
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
           phi_ptr = goma_ctx->fem.bf[var]->phi;
@@ -3851,8 +3851,8 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
       }
 
       var = POR_LIQ_PRES;
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             /*
              * dependence of liq darcy flux on the liquid pressure gradient
@@ -3866,8 +3866,8 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
 
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_POROSITY]) {
         var = POR_POROSITY;
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               /*
                * dependence of liq darcy flux on the liquid pressure gradient
@@ -3887,7 +3887,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
       phi_ptr = goma_ctx->fem.bf[var]->phi;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             /*
              * Dependence of vconv on mesh position
              */
@@ -3904,7 +3904,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
                   goma_ctx->fem.mp->density * goma_ctx->fem.mp->permeability /
                   goma_ctx->fem.mp->viscosity * goma_ctx->fem.fv->d_grad_p_liq_dmesh[a][b][j];
             } else {
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 pmt->d_diff_flux_dmesh[i_pl][a][b][j] -=
                     goma_ctx->fem.mp->density * goma_ctx->fem.mp->perm_tensor[a][p] /
                     goma_ctx->fem.mp->viscosity * goma_ctx->fem.fv->d_grad_p_liq_dmesh[p][b][j];
@@ -3971,7 +3971,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
     var = POR_POROSITY;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] &&
         goma_ctx->fem.pd->TimeIntegration != STEADY) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           pmt->d_conv_flux_dpmv[i_pl][a][i_pore][j] += goma_ctx->fem.mp->density *
                                                        goma_ctx->fem.fv->grad_d_dot[a][a] *
@@ -3992,7 +3992,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
         phi_ptr = goma_ctx->fem.bf[var]->phi;
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-            for (a = 0; a < VIM; a++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
               /*
                * Dependence of rho*porosity*div_d_dot on the mesh position and
                * note that d_grad_dot_dmesh trace is incomplete. See load_fv_mesh_derivs
@@ -4074,7 +4074,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
       var = POR_LIQ_PRES;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             pmt->d_MassSource_dpmv[i_pl][i_pl][j] =
                 goma_ctx->fem.fv_dot->x[a] * goma_ctx->fem.mp->density *
                 (goma_ctx->fem.mp->porosity * goma_ctx->fem.mp->d_saturation[POR_LIQ_PRES] *
@@ -4086,7 +4086,7 @@ int get_porous_fully_sat_terms(struct Porous_Media_Terms *pmt, double tt, double
       var = POR_POROSITY;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             pmt->d_MassSource_dpmv[i_pl][i_pore][j] += goma_ctx->fem.fv_dot->x[a] *
                                                        goma_ctx->fem.mp->density *
                                                        (goma_ctx->fem.bf[var]->grad_phi[j][a]);
@@ -4416,7 +4416,7 @@ void porous_normal_velocity_bc(double func[],
   if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
     /* add convection fluxes into the total diffusion flux term
      * here vconv is the velocity of the solid phase */
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       *func = goma_ctx->fem.pmv->rel_mass_flux[i_pl][a] / dens_vap * goma_ctx->fem.fv->snormal[a];
     }
 
@@ -4429,7 +4429,7 @@ void porous_normal_velocity_bc(double func[],
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
           phi_j = goma_ctx->fem.bf[var]->phi[j_id];
           /*     d( )/dx        */
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             d_func[0][var][j_id] -= goma_ctx->fem.pmv->d_rel_mass_flux_dT[i_pl][a][j_id] /
                                     dens_vap * goma_ctx->fem.fv->snormal[a];
           }
@@ -4440,7 +4440,7 @@ void porous_normal_velocity_bc(double func[],
       for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
           phi_j = goma_ctx->fem.bf[var]->phi[j_id];
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (w = 0; w < goma_ctx->fem.pd->Num_Porous_Eqn; w++) {
               /*     d( )/dx        */
               d_func[0][POR_LIQ_PRES + w][j_id] -=
@@ -4456,7 +4456,7 @@ void porous_normal_velocity_bc(double func[],
         for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             phi_j = goma_ctx->fem.bf[var]->phi[j_id];
-            for (a = 0; a < VIM; a++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
               /*     d( )/dx        */
               d_func[0][var][j_id] -= goma_ctx->fem.pmv->d_rel_mass_flux_dpmv[i_pl][a][jvar][j_id] /
                                           dens_vap * goma_ctx->fem.fv->snormal[a] +
@@ -4477,7 +4477,7 @@ void porous_normal_velocity_bc(double func[],
   else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
     /* Calculate the residual contribution from the velocity */
     *func = 0;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       *func += goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a];
     }
 
@@ -4552,7 +4552,7 @@ void put_gas_flux_in_pores(double func[],
   if (Current_EB_ptr->Elem_Blk_Id == eb_mat_solid) {
     /* add convection fluxes into the total diffusion flux term
      * here vconv is the velocity of the solid phase */
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       *func = goma_ctx->fem.pmv->rel_mass_flux[wspec][a] / dens_vap * goma_ctx->fem.fv->snormal[a];
     }
 
@@ -4562,7 +4562,7 @@ void put_gas_flux_in_pores(double func[],
       var = POR_LIQ_PRES;
       for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (w = 0; w < goma_ctx->fem.pd->Num_Porous_Eqn; w++) {
               d_func[0][POR_LIQ_PRES + w][j_id] +=
                   goma_ctx->fem.pmv->d_rel_mass_flux_dpmv[wspec][a][w][j_id] / dens_vap *
@@ -4576,7 +4576,7 @@ void put_gas_flux_in_pores(double func[],
         var = MESH_DISPLACEMENT1 + jvar;
         for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-            for (a = 0; a < VIM; a++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
               /*     d( )/dx        */
               d_func[0][var][j_id] +=
                   goma_ctx->fem.pmv->d_rel_mass_flux_dmesh[wspec][a][jvar][j_id] / dens_vap *
@@ -4598,7 +4598,7 @@ void put_gas_flux_in_pores(double func[],
   else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
     /* Calculate the residual contribution from the velocity */
     *func = 0;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       *func += goma_ctx->fem.fv->snormal[a] *
                (-goma_ctx->fem.mp->thermal_conductivity * goma_ctx->fem.fv->grad_T[a]) /
                (1 - vapor_recoil * goma_ctx->fem.fv->T);
@@ -5117,16 +5117,16 @@ void load_permeability_tensor(void)
     }
   } else if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1] &&
              !goma_ctx->fem.efv->ev_porous_decouple) {
-    for (aa = 0; aa < VIM; aa++) {
-      for (bb = 0; bb < VIM; bb++) {
-        for (cc = 0; cc < VIM; cc++) {
+    for (aa = 0; aa < goma_ctx->problem.vim; aa++) {
+      for (bb = 0; bb < goma_ctx->problem.vim; bb++) {
+        for (cc = 0; cc < goma_ctx->problem.vim; cc++) {
           a1_dot_F[cc] += a[0][aa] * goma_ctx->fem.fv->deform_grad[bb][cc] * delta(aa, bb);
           a2_dot_F[cc] += a[1][aa] * goma_ctx->fem.fv->deform_grad[bb][cc] * delta(aa, bb);
           a3_dot_F[cc] += a[2][aa] * goma_ctx->fem.fv->deform_grad[bb][cc] * delta(aa, bb);
 
           if (goma_ctx->fem.af->Assemble_Jacobian) {
 
-            for (dd = 0; dd < VIM; dd++) {
+            for (dd = 0; dd < goma_ctx->problem.vim; dd++) {
               var = MESH_DISPLACEMENT1 + dd;
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 d_a1_dot_F_dx[cc][dd][j] +=
@@ -5152,7 +5152,7 @@ void load_permeability_tensor(void)
     if (goma_ctx->fem.af->Assemble_Jacobian) {
       for (aa = 0; aa < DIM; aa++) {
         for (bb = 0; bb < DIM; bb++) {
-          for (dd = 0; dd < VIM; dd++) {
+          for (dd = 0; dd < goma_ctx->problem.vim; dd++) {
             var = MESH_DISPLACEMENT1 + dd;
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               goma_ctx->fem.mp->d_perm_tensor_dx[aa][bb][dd][j] =
@@ -9781,7 +9781,7 @@ void load_MandE_flux(double porosity, double cap_pres, double saturation, double
       goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D) {
     WIM = goma_ctx->fem.pd->Num_Dim;
   } else {
-    WIM = VIM;
+    WIM = goma_ctx->problem.vim;
   }
 
   /*
@@ -9795,7 +9795,7 @@ void load_MandE_flux(double porosity, double cap_pres, double saturation, double
    *    5) diffusion in liquid phase (relative to liquid convection) - currently this is neglected
    */
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     goma_ctx->fem.pmv->rel_mass_flux[i_pl][a] = 0.0;
     goma_ctx->fem.pmv->rel_mass_flux[i_pg][a] = 0.0;
     goma_ctx->fem.pmv->rel_mass_flux[i_pe][a] = 0.0;
@@ -10241,7 +10241,7 @@ void calc_grad_Ywg(int var, double *grad_Ywg) {
   double rho_wg_sat, drho_wgsat_dT, d_drho_wgsat_dT;
 
   dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
-  for (p = 0; p < VIM; p++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
     grad_Ywg[p] = 0.;
     for (i = 0; i < dofs; i++) {
 
@@ -10285,7 +10285,7 @@ void calc_darcy_velocity() {
       goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D) {
     WIM = goma_ctx->fem.pd->Num_Dim;
   } else {
-    WIM = VIM;
+    WIM = goma_ctx->problem.vim;
   }
 
   /*
@@ -10532,7 +10532,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
         goma_ctx->fem.mp->PermeabilityModel != ORTHOTROPIC &&
         goma_ctx->fem.mp->PermeabilityModel != SM_TENSOR &&
         goma_ctx->fem.mp->PermeabilityModel != KC_TENSOR) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         goma_ctx->fem.pmv->liq_darcy_velocity[a] =
             -goma_ctx->fem.mp->permeability * goma_ctx->fem.mp->rel_liq_perm *
             (goma_ctx->fem.fv->grad_p_liq[a] - goma_ctx->fem.mp->momentum_source[a]);
@@ -10546,10 +10546,10 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
         /* neglect gravitational effect in gas, for now */
       }
     } else {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         goma_ctx->fem.pmv->liq_darcy_velocity[a] = 0.0;
         goma_ctx->fem.pmv->gas_darcy_velocity[a] = 0.0;
-        for (b = 0; b < VIM; b++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           goma_ctx->fem.pmv->liq_darcy_velocity[a] -=
               goma_ctx->fem.mp->perm_tensor[a][b] * goma_ctx->fem.mp->rel_liq_perm *
               (goma_ctx->fem.fv->grad_p_liq[b] - goma_ctx->fem.mp->momentum_source[b]);
@@ -10564,13 +10564,13 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
     }
     /* add convection fluxes into the total diffusion flux term
      * here vconv is the velocity of the solid phase */
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       goma_ctx->fem.pmv->rel_mass_flux[i_pl][a] = 0.0;
       goma_ctx->fem.pmv->rel_mass_flux[i_pg][a] = 0.0;
       goma_ctx->fem.pmv->rel_mass_flux[i_pe][a] = 0.0;
     }
 
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       goma_ctx->fem.pmv->rel_mass_flux[i_pl][a] =
           goma_ctx->fem.pmv->gas_darcy_velocity[a] * goma_ctx->fem.pmv->gas_density_solvents[i_pl] +
           goma_ctx->fem.pmv->liq_darcy_velocity[a] * goma_ctx->fem.pmv->liq_Xvol_solvents[i_pl] *
@@ -10609,7 +10609,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
         goma_ctx->fem.mp->PermeabilityModel != ORTHOTROPIC &&
         goma_ctx->fem.mp->PermeabilityModel != SM_TENSOR &&
         goma_ctx->fem.mp->PermeabilityModel != KC_TENSOR) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         goma_ctx->fem.pmv->liq_darcy_velocity[a] =
             -goma_ctx->fem.mp->permeability * goma_ctx->fem.mp->rel_liq_perm *
             (pow(goma_ctx->fem.fv->grad_p_liq[a], n_pow) - goma_ctx->fem.mp->momentum_source[a]);
@@ -10623,10 +10623,10 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
         /* neglect gravitational effect in gas, for now */
       }
     } else {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         goma_ctx->fem.pmv->liq_darcy_velocity[a] = 0.0;
         goma_ctx->fem.pmv->gas_darcy_velocity[a] = 0.0;
-        for (b = 0; b < VIM; b++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           goma_ctx->fem.pmv->liq_darcy_velocity[a] -=
               goma_ctx->fem.mp->perm_tensor[a][b] * goma_ctx->fem.mp->rel_liq_perm *
               (pow(goma_ctx->fem.fv->grad_p_liq[b], n_pow) - goma_ctx->fem.mp->momentum_source[b]);
@@ -10641,12 +10641,12 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
     }
     /* add convection fluxes into the total diffusion flux term
      * here vconv is the velocity of the solid phase */
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       goma_ctx->fem.pmv->rel_mass_flux[i_pl][a] = 0.0;
       goma_ctx->fem.pmv->rel_mass_flux[i_pg][a] = 0.0;
     }
 
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       goma_ctx->fem.pmv->rel_mass_flux[i_pl][a] =
           goma_ctx->fem.pmv->gas_darcy_velocity[a] * goma_ctx->fem.pmv->gas_density_solvents[i_pl] +
           goma_ctx->fem.pmv->liq_darcy_velocity[a] * goma_ctx->fem.pmv->liq_Xvol_solvents[i_pl] *
@@ -10669,7 +10669,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
      */
     for (w = 0; w < MAX_PMV; w++) {
       if (w != i_pore) { /* no capacity term for solid phase */
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           /*
            * convert pressure and porosity gradients into gradients
            * of gas phase concentration
@@ -10711,7 +10711,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
      *    if (w != i_pore && w != i_pe) {
      */
     w = 0;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       /*
        * convert pressure and porosity gradients into gradients
        * of gas phase concentration
@@ -10741,7 +10741,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = POR_LIQ_PRES;
     for (w = 0; w < MAX_PMV; w++) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (w1 = 0; w1 < MAX_PMV; w1++) {
             goma_ctx->fem.pmv->d_rel_mass_flux_dpmv[w][a][w1][j] = 0.;
@@ -10753,7 +10753,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
       for (w = 0; w < MAX_PMV; w++) {
         if (w != i_pore) { /* no diffusion term for solid phase */
 
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               for (w1 = 0; w1 < MAX_PMV; w1++) {
                 goma_ctx->fem.pmv->d_rel_mass_flux_dpmv[w][a][w1][j] +=
@@ -10771,7 +10771,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
               goma_ctx->fem.mp->PermeabilityModel != ORTHOTROPIC &&
               goma_ctx->fem.mp->PermeabilityModel != SM_TENSOR &&
               goma_ctx->fem.mp->PermeabilityModel != KC_TENSOR) {
-            for (a = 0; a < VIM; a++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 for (w1 = 0; w1 < MAX_PMV; w1++) {
                   goma_ctx->fem.pmv->d_rel_mass_flux_dpmv[w][a][w1][j] -=
@@ -10808,8 +10808,8 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
               }
             }
           } else { /* Permeability is a tensor, and it is constant */
-            for (a = 0; a < VIM; a++) {
-              for (b = 0; b < VIM; b++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
+              for (b = 0; b < goma_ctx->problem.vim; b++) {
                 for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   for (w1 = 0; w1 < MAX_PMV; w1++) {
                     goma_ctx->fem.pmv->d_rel_mass_flux_dpmv[w][a][w1][j] -=
@@ -10864,7 +10864,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
       for (w = 0; w < MAX_PMV; w++) {
         if (w != i_pore) { /* no diffusion term for solid phase */
 
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               for (w1 = 0; w1 < MAX_PMV; w1++) {
                 goma_ctx->fem.pmv->d_rel_mass_flux_dpmv[w][a][w1][j] +=
@@ -10878,7 +10878,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
               goma_ctx->fem.mp->PermeabilityModel != ORTHOTROPIC &&
               goma_ctx->fem.mp->PermeabilityModel != SM_TENSOR &&
               goma_ctx->fem.mp->PermeabilityModel != KC_TENSOR) {
-            for (a = 0; a < VIM; a++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 for (w1 = 0; w1 < MAX_PMV; w1++) {
                   goma_ctx->fem.pmv->d_rel_mass_flux_dpmv[w][a][w1][j] -=
@@ -10917,8 +10917,8 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
               }
             }
           } else { /* Permeability is a tensor, and it is constant */
-            for (a = 0; a < VIM; a++) {
-              for (b = 0; b < VIM; b++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
+              for (b = 0; b < goma_ctx->problem.vim; b++) {
                 for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   for (w1 = 0; w1 < MAX_PMV; w1++) {
                     goma_ctx->fem.pmv->d_rel_mass_flux_dpmv[w][a][w1][j] -=
@@ -10978,7 +10978,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
     if (goma_ctx->fem.cr->PorousFluxModel == DARCY_FICKIAN) {
       for (w = 0; w < MAX_PMV; w++) {
         if (w != i_pore) { /* no diffusion term for solid phase */
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               difflux_term = goma_ctx->fem.pmv->d_gas_density_solvents[w][POR_LIQ_PRES] *
                              goma_ctx->fem.mp->porous_diffusivity[w] *
@@ -11065,7 +11065,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
     else if (goma_ctx->fem.cr->PorousFluxModel == POWERLAW_DARCY_FICKIAN) {
       for (w = 0; w < MAX_PMV; w++) {
         if (w != i_pore) { /* no diffusion term for solid phase */
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               goma_ctx->fem.pmv->d_rel_mass_flux_dpmv[w][a][i_pl][j] -=
                   goma_ctx->fem.pmv->d_gas_density_solvents[w][POR_LIQ_PRES] *
@@ -11127,12 +11127,12 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
       var = MESH_DISPLACEMENT1 + b;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (w = 0; w < MAX_PMV; w++) {
               goma_ctx->fem.pmv->d_rel_mass_flux_dmesh[w][a][b][j] = 0.;
             }
           }
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             if (goma_ctx->fem.cr->PorousFluxModel == DARCY_FICKIAN) {
               for (w = 0; w < MAX_PMV; w++) {
                 if (w != i_pore) { /* no diffusion term for solid phase */
@@ -11151,7 +11151,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
                           goma_ctx->fem.fv->d_grad_p_gas_dmesh[a][b][j];
                     }
                   } else {
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       goma_ctx->fem.pmv->d_rel_mass_flux_dmesh[w][a][b][j] +=
                           -goma_ctx->fem.mp->perm_tensor[a][p] * goma_ctx->fem.mp->rel_liq_perm *
                           goma_ctx->fem.pmv->liq_Xvol_solvents[w] *
@@ -11210,7 +11210,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
                           goma_ctx->fem.fv->d_grad_p_gas_dmesh[a][b][j];
                     }
                   } else {
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       goma_ctx->fem.pmv->d_rel_mass_flux_dmesh[w][a][b][j] +=
                           -goma_ctx->fem.mp->perm_tensor[a][p] * goma_ctx->fem.mp->rel_liq_perm *
                           goma_ctx->fem.pmv->liq_Xvol_solvents[w] * n_pow *
@@ -11273,7 +11273,7 @@ void load_mass_flux(double porosity, double cap_pres, double saturation, double 
         /* NOTE - the gas concentrations, etc should also be functions of temperature */
         for (w = 0; w < MAX_PMV; w++) {
           if (w != i_pore) { /* no diffusion term for solid phase */
-            for (a = 0; a < VIM; a++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 goma_ctx->fem.pmv->d_rel_mass_flux_dT[w][a][j] = 0.;
                 goma_ctx->fem.pmv->d_rel_mass_flux_dT[w][a][j] -=
@@ -11527,15 +11527,15 @@ void sat_darcy_continuous_bc(double func[],
         goma_ctx->fem.mp->PermeabilityModel != ORTHOTROPIC &&
         goma_ctx->fem.mp->PermeabilityModel != SM_TENSOR &&
         goma_ctx->fem.mp->PermeabilityModel != KC_TENSOR) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         goma_ctx->fem.pmv->liq_darcy_velocity[a] =
             -factor * goma_ctx->fem.mp->permeability *
             (goma_ctx->fem.fv->grad_p_liq[a] - goma_ctx->fem.mp->momentum_source[a]);
       }
     } else {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         goma_ctx->fem.pmv->liq_darcy_velocity[a] = 0.0;
-        for (b = 0; b < VIM; b++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           goma_ctx->fem.pmv->liq_darcy_velocity[a] +=
               -factor * goma_ctx->fem.mp->perm_tensor[a][b] *
               (goma_ctx->fem.fv->grad_p_liq[b] - goma_ctx->fem.mp->momentum_source[b]);
@@ -11543,7 +11543,7 @@ void sat_darcy_continuous_bc(double func[],
       }
     }
     *func = 0.0;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       *func += attached * goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.mp->density *
                (vconv[a] * goma_ctx->fem.mp->porosity + goma_ctx->fem.pmv->liq_darcy_velocity[a]);
     }
@@ -11574,7 +11574,7 @@ void sat_darcy_continuous_bc(double func[],
             goma_ctx->fem.mp->PermeabilityModel != ORTHOTROPIC &&
             goma_ctx->fem.mp->PermeabilityModel != SM_TENSOR &&
             goma_ctx->fem.mp->PermeabilityModel != KC_TENSOR) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             d_func[0][var][j_id] -=
                 attached * goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.mp->density * factor *
                 goma_ctx->fem.mp->permeability * goma_ctx->fem.bf[var]->grad_phi[j_id][a];
@@ -11584,8 +11584,8 @@ void sat_darcy_continuous_bc(double func[],
                 goma_ctx->fem.fv->grad_p_liq[a];
           }
         } else {
-          for (a = 0; a < VIM; a++) {
-            for (b = 0; b < VIM; b++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               d_func[0][var][j_id] -=
                   attached * goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.mp->density * factor *
                   goma_ctx->fem.mp->perm_tensor[a][b] * goma_ctx->fem.bf[var]->grad_phi[j_id][b];
@@ -11604,14 +11604,14 @@ void sat_darcy_continuous_bc(double func[],
             goma_ctx->fem.mp->PermeabilityModel != ORTHOTROPIC &&
             goma_ctx->fem.mp->PermeabilityModel != SM_TENSOR &&
             goma_ctx->fem.mp->PermeabilityModel != KC_TENSOR) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             d_func[0][var][j_id] -=
                 attached * goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.mp->density * factor *
                 goma_ctx->fem.mp->d_permeability[POR_POROSITY] * goma_ctx->fem.fv->grad_p_liq[a];
           }
         } else {
-          for (a = 0; a < VIM; a++) {
-            for (b = 0; b < VIM; b++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               d_func[0][var][j_id] -= attached * goma_ctx->fem.fv->snormal[a] *
                                       goma_ctx->fem.mp->density * factor *
                                       goma_ctx->fem.mp->d_perm_tensor[a][b][POR_POROSITY] *
@@ -11643,15 +11643,15 @@ void sat_darcy_continuous_bc(double func[],
                 goma_ctx->fem.mp->PermeabilityModel != ORTHOTROPIC &&
                 goma_ctx->fem.mp->PermeabilityModel != SM_TENSOR &&
                 goma_ctx->fem.mp->PermeabilityModel != KC_TENSOR) {
-              for (b = 0; b < VIM; b++) {
+              for (b = 0; b < goma_ctx->problem.vim; b++) {
                 d_func[0][var][j_id] -= attached * goma_ctx->fem.fv->snormal[b] *
                                         goma_ctx->fem.mp->density * factor *
                                         goma_ctx->fem.mp->permeability *
                                         goma_ctx->fem.fv->d_grad_p_liq_dmesh[b][a][j_id];
               }
             } else {
-              for (b = 0; b < VIM; b++) {
-                for (p = 0; p < VIM; p++) {
+              for (b = 0; b < goma_ctx->problem.vim; b++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
                   d_func[0][var][j_id] -= attached * goma_ctx->fem.fv->snormal[b] *
                                           goma_ctx->fem.mp->density * factor *
                                           goma_ctx->fem.mp->perm_tensor[b][p] *
@@ -11699,11 +11699,11 @@ void sat_darcy_continuous_bc(double func[],
       near = 0.0;
     }
 
-    for (a = 0; a < VIM; a++)
+    for (a = 0; a < goma_ctx->problem.vim; a++)
       x_dot[a] = 0.0;
     if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           x_dot[a] = goma_ctx->fem.fv_dot->x[a];
         }
       }
@@ -11711,7 +11711,7 @@ void sat_darcy_continuous_bc(double func[],
 
     /* Calculate the residual contribution from the velocity */
     *func = 0;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       *func += goma_ctx->fem.fv->snormal[a] * rho_liq * (goma_ctx->fem.fv->v[a] - x_dot[a]);
     }
 

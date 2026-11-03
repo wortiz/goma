@@ -495,7 +495,7 @@ void shell_n_dot_curv_bc(double func[DIM],
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       double div1 = 0.0, diff1 = 0.0;
       if (curv_near || !goma_ctx->fem.mp->Lub_Curv_Modulation) {
-        for (ii = 0; ii < VIM; ii++) {
+        for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
           div1 += LSnormal[ii] * grad_II_phi_i[ii];
           diff1 += hsquared[ii] * gradII_kappa[ii] * grad_II_phi_i[ii];
         }
@@ -1333,7 +1333,7 @@ void shell_n_dot_gradh_bc(double func[DIM],
 
   /* Save the boundary normal vector */
 
-  for (ii = 0; ii < VIM; ii++) {
+  for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
     grad_II_H[ii] = 0.;
     bound_normal[ii] = goma_ctx->fem.fv->snormal[ii];
   }
@@ -1345,14 +1345,14 @@ void shell_n_dot_gradh_bc(double func[DIM],
                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim, 1);
 
-  for (ii = 0; ii < VIM; ii++) {
+  for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
     shell_normal[ii] = goma_ctx->fem.fv->snormal[ii];
   }
 
   /* grad H = (I - nn) dot grad sh fh */
 
-  for (ii = 0; ii < VIM; ii++) {
-    for (jj = 0; jj < VIM; jj++) {
+  for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
+    for (jj = 0; jj < goma_ctx->problem.vim; jj++) {
       grad_II_H[ii] += (delta(ii, jj) * goma_ctx->fem.fv->grad_sh_fh[jj] -
                         shell_normal[ii] * shell_normal[jj] * goma_ctx->fem.fv->grad_sh_fh[jj]);
     }
@@ -1366,17 +1366,17 @@ void shell_n_dot_gradh_bc(double func[DIM],
     var = SHELL_FILMH;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-        for (ii = 0; ii < VIM; ii++) {
+        for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
           grad_phi_j[ii] = goma_ctx->fem.bf[var]->grad_phi[j][ii];
           grad_II_phi_j[ii] = 0.0;
         }
-        for (ii = 0; ii < VIM; ii++) {
-          for (jj = 0; jj < VIM; jj++) {
+        for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
+          for (jj = 0; jj < goma_ctx->problem.vim; jj++) {
             grad_II_phi_j[ii] += (delta(ii, jj) * grad_phi_j[jj] -
                                   shell_normal[ii] * shell_normal[jj] * grad_phi_j[jj]);
           }
         }
-        for (ii = 0; ii < VIM; ii++) {
+        for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
           d_func[0][var][j] += grad_II_phi_j[ii] * bound_normal[ii];
         }
       }
@@ -1385,7 +1385,7 @@ void shell_n_dot_gradh_bc(double func[DIM],
 
   /* Calculate the residual contribution	*/
   func[0] = -slope;
-  for (ii = 0; ii < VIM; ii++) {
+  for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
     func[0] += bound_normal[ii] * grad_II_H[ii];
   }
 
@@ -1457,7 +1457,7 @@ void shell_n_dot_pflux_bc(double func[DIM],
 
   /* Save the boundary normal vector */
 
-  for (ii = 0; ii < VIM; ii++) {
+  for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
     grad_C[ii] = 0.0;
     bound_normal[ii] = goma_ctx->fem.fv->snormal[ii];
   }
@@ -1467,14 +1467,14 @@ void shell_n_dot_pflux_bc(double func[DIM],
                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim, 1);
 
-  for (ii = 0; ii < VIM; ii++) {
+  for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
     shell_normal[ii] = goma_ctx->fem.fv->snormal[ii];
   }
 
   /* Peform I- nn to gradient operator */
 
-  for (ii = 0; ii < VIM; ii++) {
-    for (jj = 0; jj < VIM; jj++) {
+  for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
+    for (jj = 0; jj < goma_ctx->problem.vim; jj++) {
       grad_C[ii] += (delta(ii, jj) * goma_ctx->fem.fv->grad_sh_pc[jj] -
                      shell_normal[ii] * shell_normal[jj] * goma_ctx->fem.fv->grad_sh_pc[jj]);
     }
@@ -1494,7 +1494,7 @@ void shell_n_dot_pflux_bc(double func[DIM],
         if (fabs(flux) < 1.0e-10) {
           d_func[0][var][j] += 0.0;
         } else {
-          for (ii = 0; ii < VIM; ii++) {
+          for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
             d_func[0][var][j] += phi_j * diff_coeff * grad_C[ii] * bound_normal[ii];
           }
         }
@@ -1506,22 +1506,22 @@ void shell_n_dot_pflux_bc(double func[DIM],
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-        for (ii = 0; ii < VIM; ii++) {
+        for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
           grad_phi_j[ii] = goma_ctx->fem.bf[var]->grad_phi[j][ii];
           grad_phi_j_corrected[ii] = 0.0;
         }
-        for (ii = 0; ii < VIM; ii++) {
-          for (jj = 0; jj < VIM; jj++) {
+        for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
+          for (jj = 0; jj < goma_ctx->problem.vim; jj++) {
             grad_phi_j_corrected[ii] += (delta(ii, jj) * grad_phi_j[jj] -
                                          shell_normal[ii] * shell_normal[jj] * grad_phi_j[jj]);
           }
         }
         if (fabs(flux) == 0.0) {
-          for (ii = 0; ii < VIM; ii++) {
+          for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
             d_func[0][var][j] += grad_phi_j_corrected[ii] * bound_normal[ii];
           }
         } else {
-          for (ii = 0; ii < VIM; ii++) {
+          for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
             d_func[0][var][j] += H * ddiff_dc * grad_C[ii] * bound_normal[ii];
             d_func[0][var][j] += H * diff_coeff * grad_phi_j_corrected[ii] * bound_normal[ii];
           }
@@ -1535,11 +1535,11 @@ void shell_n_dot_pflux_bc(double func[DIM],
 
   func[0] = -flux;
   if (fabs(flux) == 0.) {
-    for (ii = 0; ii < VIM; ii++) {
+    for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
       func[0] += bound_normal[ii] * grad_C[ii];
     }
   } else {
-    for (ii = 0; ii < VIM; ii++) {
+    for (ii = 0; ii < goma_ctx->problem.vim; ii++) {
       func[0] += bound_normal[ii] * H * diff_coeff * grad_C[ii];
     }
   }
@@ -1830,9 +1830,9 @@ void put_lub_flux_in_film(int id,                   /* local element node number
    * check to make sure that both lubp dof and sh_fp
    * dof exist at this node
    */
-  if (Dolphin[goma_ctx->fem.pg->imtrx][I][R_LUBP] <= 0)
+  if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][R_LUBP] <= 0)
     return;
-  if (Dolphin[goma_ctx->fem.pg->imtrx][I][R_SHELL_FILMP] <= 0)
+  if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][R_SHELL_FILMP] <= 0)
     return;
 
   /*

@@ -66,7 +66,7 @@ int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * Find the global maximum number of unknowns located at any one
    * node on any processor
    */
-  MaxVarPerNode = find_MaxUnknownNode();
+  goma_ctx->problem.max_var_per_node = find_MaxUnknownNode();
 
   /*
    * Exchange my idea of what materials I have at each node with
@@ -105,11 +105,14 @@ int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * I extracted this from setup_fill_comm_map because some of the
    * renormalization routines make use of them.
    */
-  num_fill_unknowns = count_vardofs(FILL, dpi->num_universe_nodes);
-  internal_fill_unknowns = count_vardofs(FILL, dpi->num_internal_nodes);
-  owned_fill_unknowns = count_vardofs(FILL, (dpi->num_internal_nodes + dpi->num_boundary_nodes));
-  boundary_fill_unknowns = owned_fill_unknowns - internal_fill_unknowns;
-  external_fill_unknowns = num_fill_unknowns - owned_fill_unknowns;
+  goma_ctx->problem.num_fill_unknowns = count_vardofs(FILL, dpi->num_universe_nodes);
+  goma_ctx->problem.internal_fill_unknowns = count_vardofs(FILL, dpi->num_internal_nodes);
+  goma_ctx->problem.owned_fill_unknowns =
+      count_vardofs(FILL, (dpi->num_internal_nodes + dpi->num_boundary_nodes));
+  goma_ctx->problem.boundary_fill_unknowns =
+      goma_ctx->problem.owned_fill_unknowns - goma_ctx->problem.internal_fill_unknowns;
+  goma_ctx->problem.external_fill_unknowns =
+      goma_ctx->problem.num_fill_unknowns - goma_ctx->problem.owned_fill_unknowns;
 
   /*
    *  Possibly increase the number of variable descriptions to include
@@ -200,9 +203,10 @@ int resetup_matrix(struct GomaLinearSolverData **ams, Exo_DB *exo, Dpi *dpi) {
       ams[goma_ctx->fem.pg->imtrx]->GomaMatrixData = goma_matrix;
       int local_nodes = exo->num_nodes;
       GomaSparseMatrix_SetProblemGraph(
-          goma_matrix, num_internal_dofs[goma_ctx->fem.pg->imtrx],
-          num_boundary_dofs[goma_ctx->fem.pg->imtrx], num_external_dofs[goma_ctx->fem.pg->imtrx],
-          local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo, dpi,
+          goma_matrix, goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx],
+          goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+          goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes, Nodes,
+          goma_ctx->problem.max_var_per_node, goma_ctx->problem.matilda, Inter_Mask, exo, dpi,
           cx[goma_ctx->fem.pg->imtrx], goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
     }
     goma_ctx->fem.pg->imtrx = 0;

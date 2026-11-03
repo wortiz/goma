@@ -150,15 +150,18 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
   int num_dofs;
 
   /* Determine if Lagrange multiplier unknowns are in augmenting conditions */
-  if (Do_Overlap && goma_ctx->fem.augc[nAC - 1].lm_eb == goma_ctx->fem.augc[nAC - 1].solid_eb)
+  if (goma_ctx->problem.do_overlap && goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].lm_eb ==
+                                          goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].solid_eb)
     ac_lm = 1;
-  else if (Do_Overlap && goma_ctx->fem.augc[nAC - 1].lm_eb == goma_ctx->fem.augc[nAC - 1].fluid_eb)
+  else if (goma_ctx->problem.do_overlap &&
+           goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].lm_eb ==
+               goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].fluid_eb)
     ac_lm = 2;
   else
     ac_lm = 0;
 
   /* Determine if this is the augmenting condition pass */
-  pass = ((Do_Overlap && oAC >= 0) ? 2 : 1);
+  pass = ((goma_ctx->problem.do_overlap && oAC >= 0) ? 2 : 1);
 
   /***************************************************************************/
   /*     START OF SURFACE LOOPS THAT REQUIRE INTEGRATION (WEAK SENSE)        */
@@ -176,14 +179,14 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
 
   id_side = elem_side_bc->id_side;
 
-  if (Do_Overlap && goma_ctx->fem.ls->CrossMeshQuadPoints > 0)
+  if (goma_ctx->problem.do_overlap && goma_ctx->fem.ls->CrossMeshQuadPoints > 0)
     ip_total = goma_ctx->fem.ls->CrossMeshQuadPoints;
   else
     ip_total = elem_info(NQUAD_SURF, ielem_type);
 
   for (ip = 0; ip < ip_total; ip++) {
 
-    if (Do_Overlap && goma_ctx->fem.ls->CrossMeshQuadPoints > 0) {
+    if (goma_ctx->problem.do_overlap && goma_ctx->fem.ls->CrossMeshQuadPoints > 0) {
       find_subsurf_st_wt(ip, goma_ctx->fem.ls->CrossMeshQuadPoints, ielem_type, id_side,
                          goma_ctx->fem.pd->Num_Dim, xi, &wt);
     } else {
@@ -245,7 +248,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
       GOMA_EH(err, "load_porous_properties");
     }
 
-    if (TimeIntegration != STEADY &&
+    if (goma_ctx->problem.time_integration != STEADY &&
         goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (icount = 0; icount < ielem_dim; icount++) {
         x_dot[icount] = (1 + 2. * theta) *
@@ -908,7 +911,7 @@ int jump_down_to_fluid(const Exo_DB *exo, /* Ptr to Exodus database */
   }
 
   /* Find basis functions associated with velocity variables */
-  for (j = 0; j < Num_Basis_Functions; j++) {
+  for (j = 0; j < goma_ctx->problem.num_basis_functions; j++) {
     if (goma_ctx->fem.pd_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]
             ->i[goma_ctx->fem.pg->imtrx][VELOCITY1] == goma_ctx->fem.bfd[j]->interpolation) {
       velo_interp = j;
@@ -1479,15 +1482,18 @@ int assemble_embedded_bc(int ielem,    /* element number */
   }
 
   /* Determine if Lagrange multiplier unknowns are in augmenting conditions */
-  if (Do_Overlap && goma_ctx->fem.augc[nAC - 1].lm_eb == goma_ctx->fem.augc[nAC - 1].solid_eb)
+  if (goma_ctx->problem.do_overlap && goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].lm_eb ==
+                                          goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].solid_eb)
     ac_lm = 1;
-  else if (Do_Overlap && goma_ctx->fem.augc[nAC - 1].lm_eb == goma_ctx->fem.augc[nAC - 1].fluid_eb)
+  else if (goma_ctx->problem.do_overlap &&
+           goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].lm_eb ==
+               goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].fluid_eb)
     ac_lm = 2;
   else
     ac_lm = 0;
 
   /* Determine if this is the augmenting condition pass */
-  pass = ((Do_Overlap && oAC >= 0) ? 2 : 1);
+  pass = ((goma_ctx->problem.do_overlap && oAC >= 0) ? 2 : 1);
 
   if (goma_ctx->fem.ls->var == FILL) {
     bcref = goma_ctx->fem.ls->embedded_bc;
@@ -2069,7 +2075,7 @@ int apply_embedded_colloc_bc(int ielem,    /* element number */
 #if 0
         case LS_CONT_TRACTION_BC:
           {
-            for ( a=0; a<VIM; a++ )
+            for ( a=0; a<goma_ctx->problem.vim; a++ )
               {
                 eqn = R_MOMENTUM1 + a;
                 peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
@@ -2339,9 +2345,10 @@ void gnn_distance(const int I,
   if (Fold != NULL)
     *Fold = xold[ie];
   if (Fprev != NULL)
-    *Fprev = x[ie] + goma_ctx->solver.damp_factor *
-                         goma_ctx->solver.var_damp[idv[goma_ctx->fem.pg->imtrx][ie][0]] *
-                         delta_x[ie];
+    *Fprev = x[ie] +
+             goma_ctx->solver.damp_factor *
+                 goma_ctx->solver.var_damp[goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][ie][0]] *
+                 delta_x[ie];
 }
 
 int find_2d_side_id(double x0, double x1)
@@ -2409,7 +2416,7 @@ int first_overlap_ac(int ielem, int side)
 {
   int i = 0, iAC = -1;
 
-  while (iAC == -1 && i < nAC) {
+  while (iAC == -1 && i < goma_ctx->problem.n_ac) {
     if (goma_ctx->fem.augc[i].Type == AC_OVERLAP && goma_ctx->fem.augc[i].lm_elem == ielem &&
         (side == -1 || goma_ctx->fem.augc[i].lm_side == side))
       iAC = i;

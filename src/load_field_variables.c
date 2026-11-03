@@ -77,7 +77,7 @@ void grad_scalar_fv_fill(double **base, double (*grad_phiv)[DIM], int dofs, doub
   for (i = 0; i < dofs; i++) {
     grad_val[0] += *(base[i]) * grad_phiv[i][0];
     grad_val[1] += *(base[i]) * grad_phiv[i][1];
-    if (VIM == 3)
+    if (goma_ctx->problem.vim == 3)
       grad_val[2] += *(base[i]) * grad_phiv[i][2];
   }
 }
@@ -93,7 +93,7 @@ void grad_vector_fv_fill(double ***base,
 
   memset(grad_val, 0, DIM * DIM * sizeof(double));
 
-  for (r = 0; r < VIM; r++) {
+  for (r = 0; r < goma_ctx->problem.vim; r++) {
     for (i = 0; i < dofs; i++) {
       base_off = *base[r][i];
       grad_phiv_off = grad_phiv[i][r];
@@ -103,7 +103,7 @@ void grad_vector_fv_fill(double ***base,
       grad_val[0][1] += base_off * grad_phiv_off[0][1];
       grad_val[1][0] += base_off * grad_phiv_off[1][0];
 
-      if (VIM == 3) {
+      if (goma_ctx->problem.vim == 3) {
         grad_val[2][2] += base_off * grad_phiv_off[2][2];
         grad_val[2][1] += base_off * grad_phiv_off[2][1];
         grad_val[2][0] += base_off * grad_phiv_off[2][0];
@@ -1282,7 +1282,7 @@ int load_fv(void)
   /*
    * Default: all velocities are zero...
    */
-  for (p = 0; p < WIM; p++) {
+  for (p = 0; p < goma_ctx->problem.wim; p++) {
     v = VELOCITY1 + p;
     if (pdgv[v]) {
       dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
@@ -1302,7 +1302,7 @@ int load_fv(void)
     stateVector[VELOCITY1 + p] = goma_ctx->fem.fv->v[p];
   }
 
-  for (p = 0; p < WIM; p++) {
+  for (p = 0; p < goma_ctx->problem.wim; p++) {
     v = USTAR + p;
     if (pdgv[v]) {
       dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
@@ -1341,7 +1341,7 @@ int load_fv(void)
       }
       } */
 
-  for (p = 0; pdgv[PVELOCITY1] && p < WIM; p++) {
+  for (p = 0; pdgv[PVELOCITY1] && p < goma_ctx->problem.wim; p++) {
     v = PVELOCITY1 + p;
     if (pdgv[v]) {
       goma_ctx->fem.fv->pv[p] = 0.0;
@@ -1378,7 +1378,7 @@ int load_fv(void)
   /*
    * Default: all velocities are zero...
    */
-  for (p = 0; pdgv[EFIELD1] && p < WIM; p++) {
+  for (p = 0; pdgv[EFIELD1] && p < goma_ctx->problem.wim; p++) {
     v = EFIELD1 + p;
 
     if (pdgv[v]) {
@@ -1410,8 +1410,8 @@ int load_fv(void)
    */
 
   for (mode = 0; pdgv[POLYMER_STRESS11] && mode < goma_ctx->fem.vn->modes; mode++) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         v = v_s[mode][p][q];
         if (pdgv[v] || (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v] == -1)) {
           /* good default behavior */
@@ -1424,8 +1424,8 @@ int load_fv(void)
   }
 
   for (mode = 0; pdgv[POLYMER_STRESS11] && mode < goma_ctx->fem.vn->modes; mode++) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         if (p <= q) {
           v = v_s[mode][p][q];
           if (pdgv[v]) {
@@ -1454,9 +1454,9 @@ int load_fv(void)
    * Velocity Gradient (tensor)...
    */
 
-  for (p = 0; pdgv[VELOCITY_GRADIENT11] && p < VIM; p++) {
+  for (p = 0; pdgv[VELOCITY_GRADIENT11] && p < goma_ctx->problem.vim; p++) {
     if (goma_ctx->fem.gn->ConstitutiveEquation == BINGHAM_MIXED) {
-      for (q = 0; q < VIM; q++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         if (q >= p) {
           v = v_g[p][q];
           if (pdgv[v]) {
@@ -1487,7 +1487,7 @@ int load_fv(void)
         }
       }
     } else {
-      for (q = 0; q < VIM; q++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         v = v_g[p][q];
         if (pdgv[v]) {
           goma_ctx->fem.fv->G[p][q] = goma_ctx->fem.fv_old->G[p][q] =
@@ -2389,10 +2389,10 @@ int load_fv_grads(void)
    */
   if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
     v = TEMPERATURE;
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_T[p] = 0.0;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_T[p] +=
             *goma_ctx->fem.esp->T[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
@@ -2400,16 +2400,16 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TEMPERATURE] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_T[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[FILM_HEIGHT]) {
     v = FILM_HEIGHT;
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_film_height[p] = 0.0;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_film_height[p] +=
             *goma_ctx->fem.esp->film_height[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
@@ -2417,7 +2417,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][FILM_HEIGHT] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_film_height[p] = 0.0;
   }
 
@@ -2429,7 +2429,7 @@ int load_fv_grads(void)
     v = PRESSURE;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_P[p] = 0.0;
 
       for (i = 0; i < dofs; i++) {
@@ -2448,7 +2448,7 @@ int load_fv_grads(void)
 #endif
 
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][PRESSURE] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_P[p] = 0.0;
       // if(transient_run && segregated)
       if (transient_run) {
@@ -2461,7 +2461,7 @@ int load_fv_grads(void)
     v = PSTAR;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_P[p] = 0.0;
 
       for (i = 0; i < dofs; i++) {
@@ -2480,7 +2480,7 @@ int load_fv_grads(void)
 #endif
 
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][PSTAR] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_P[p] = 0.0;
       // if(transient_run && segregated)
       if (transient_run) {
@@ -2496,7 +2496,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[BOND_EVOLUTION]) {
     v = BOND_EVOLUTION;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_nn[p] = 0.;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_nn[p] +=
@@ -2513,7 +2513,7 @@ int load_fv_grads(void)
     v = FILL;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_F[p] = 0.0;
       goma_ctx->fem.fv_old->grad_F[p] = 0.0;
       goma_ctx->fem.fv_dot->grad_F[p] = 0.0;
@@ -2544,7 +2544,7 @@ int load_fv_grads(void)
 #endif
 
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][FILL] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_F[p] = 0.0;
       goma_ctx->fem.fv_old->grad_F[p] = 0.0;
       goma_ctx->fem.fv_dot->grad_F[p] = 0.0;
@@ -2557,7 +2557,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[CURVATURE]) {
     v = CURVATURE;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_H[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_H[p] +=
@@ -2565,7 +2565,7 @@ int load_fv_grads(void)
       }
     }
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][CURVATURE] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_H[p] = 0.0;
     }
   }
@@ -2576,7 +2576,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[VOLTAGE]) {
     v = VOLTAGE;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_V[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_V[p] +=
@@ -2584,7 +2584,7 @@ int load_fv_grads(void)
       }
     }
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VOLTAGE] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_V[p] = 0.0;
   }
 
@@ -2594,7 +2594,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[ENORM]) {
     v = ENORM;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_Enorm[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_Enorm[p] +=
@@ -2609,7 +2609,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[SURF_CHARGE]) {
     v = SURF_CHARGE;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_qs[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         // HKM -> I changed dphidxi to grad_phi below. There didn't seem
@@ -2623,7 +2623,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SURF_CHARGE] == -1) {
-    for (p = 0; p < VIM - 1; p++) {
+    for (p = 0; p < goma_ctx->problem.vim - 1; p++) {
       goma_ctx->fem.fv->grad_qs[p] = 0.0;
     }
   }
@@ -2635,7 +2635,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[SHEAR_RATE]) {
     v = SHEAR_RATE;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_SH[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_SH[p] +=
@@ -2644,7 +2644,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHEAR_RATE] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_SH[p] = 0.0;
   }
 
@@ -2656,11 +2656,11 @@ int load_fv_grads(void)
       !ShellElementParentElementCoverageForVariable[MESH_DISPLACEMENT1]) {
     v = MESH_DISPLACEMENT1;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_d[p][q] = 0.0;
         goma_ctx->fem.fv_old->grad_d[p][q] = 0.0;
-        for (r = 0; r < VIM; r++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv->grad_d[p][q] +=
                 *goma_ctx->fem.esp->d[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
@@ -2671,8 +2671,8 @@ int load_fv_grads(void)
       }
     }
   } else {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_d[p][q] = 0.0;
         goma_ctx->fem.fv_old->grad_d[p][q] = 0.0;
         goma_ctx->fem.fv->grad_d_dot[p][q] = 0.0;
@@ -2685,8 +2685,8 @@ int load_fv_grads(void)
    */
   if (goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1] &&
       !ShellElementParentElementCoverageForVariable[MESH_DISPLACEMENT1]) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         v = MESH_DISPLACEMENT1 + p;
         if (goma_ctx->fem.pd->gv[v]) {
           dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
@@ -2706,8 +2706,8 @@ int load_fv_grads(void)
    * grad(d_rs)
    */
   if (goma_ctx->fem.pd->gv[SOLID_DISPLACEMENT1]) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         v = SOLID_DISPLACEMENT1 + p;
 
         if (goma_ctx->fem.pd->gv[v]) {
@@ -2724,7 +2724,8 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SOLID_DISPLACEMENT1] == -1) {
-    memset(goma_ctx->fem.fv->grad_d_rs, 0, sizeof(double) * VIM * VIM);
+    memset(goma_ctx->fem.fv->grad_d_rs, 0,
+           sizeof(double) * goma_ctx->problem.vim * goma_ctx->problem.vim);
   }
 
   /*
@@ -2741,7 +2742,7 @@ int load_fv_grads(void)
     goma_ctx->fem.fv->div_d_dot = 0.0;
     goma_ctx->fem.fv->div_d = 0.0;
 
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->div_d_dot += goma_ctx->fem.fv->grad_d_dot[p][p];
       goma_ctx->fem.fv->div_d += goma_ctx->fem.fv->grad_d[p][p];
     }
@@ -2756,7 +2757,7 @@ int load_fv_grads(void)
    */
 
   if (goma_ctx->fem.pd->gv[SOLID_DISPLACEMENT1]) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->div_d_rs += goma_ctx->fem.fv->grad_d_rs[p][p];
     }
   } else if (zero_unused_grads &&
@@ -2771,11 +2772,11 @@ int load_fv_grads(void)
     v = VELOCITY1;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
 
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_v[p][q] = 0.0;
         goma_ctx->fem.fv_old->grad_v[p][q] = 0.0;
-        for (r = 0; r < WIM; r++) {
+        for (r = 0; r < goma_ctx->problem.wim; r++) {
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv->grad_v[p][q] +=
                 (*goma_ctx->fem.esp->v[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
@@ -2788,8 +2789,8 @@ int load_fv_grads(void)
       }
     }
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VELOCITY1] == -1) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_v[p][q] = 0.0;
 
         // if(segregated)
@@ -2802,10 +2803,10 @@ int load_fv_grads(void)
     v = USTAR;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
 
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_v_star[p][q] = 0.0;
-        for (r = 0; r < WIM; r++) {
+        for (r = 0; r < goma_ctx->problem.wim; r++) {
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv->grad_v_star[p][q] +=
                 (*goma_ctx->fem.esp->v_star[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
@@ -2814,8 +2815,8 @@ int load_fv_grads(void)
       }
     }
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][USTAR] == -1) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_v_star[p][q] = 0.0;
       }
     }
@@ -2827,9 +2828,9 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[PVELOCITY1]) {
     v = PVELOCITY1;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
-        for (r = 0; r < WIM; r++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (r = 0; r < goma_ctx->problem.wim; r++) {
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv->grad_pv[p][q] +=
                 *goma_ctx->fem.esp->pv[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
@@ -2839,8 +2840,8 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][PVELOCITY1] == -1) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_pv[p][q] = 0.0;
       }
     }
@@ -2853,7 +2854,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[EXT_VELOCITY]) {
     v = EXT_VELOCITY;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_ext_v[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_ext_v[p] +=
@@ -2862,7 +2863,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EXT_VELOCITY] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_ext_v[p] = 0.0;
     }
   }
@@ -2876,8 +2877,8 @@ int load_fv_grads(void)
     if (goma_ctx->fem.pd->gv[SHELL_NORMAL1])
       v = SHELL_NORMAL1;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_n[p][q] = 0.0;
         goma_ctx->fem.fv_old->grad_n[p][q] = 0.0;
         for (r = 0; r < dim; r++) {
@@ -2892,8 +2893,8 @@ int load_fv_grads(void)
     }
   } else if ((zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][NORMAL1] == -1) ||
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_NORMAL1] == -1) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_n[p][q] = 0.0;
         goma_ctx->fem.fv_old->grad_n[p][q] = 0.0;
       }
@@ -2906,7 +2907,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[NORMAL1] || goma_ctx->fem.pd->gv[SHELL_NORMAL1]) {
     goma_ctx->fem.fv->div_n = 0.0;
     goma_ctx->fem.fv_old->div_n = 0.0;
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->div_n += goma_ctx->fem.fv->grad_n[p][p];
       goma_ctx->fem.fv_old->div_n += goma_ctx->fem.fv_old->grad_n[p][p];
     }
@@ -2917,8 +2918,8 @@ int load_fv_grads(void)
    */
   if (goma_ctx->fem.pd->gv[NORMAL1] || goma_ctx->fem.pd->gv[SHELL_NORMAL1]) {
     goma_ctx->fem.fv->div_s_n = 0.0;
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->div_s_n +=
             (delta(p, q) * goma_ctx->fem.fv->grad_n[p][q] -
              goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->n[q] * goma_ctx->fem.fv->grad_n[q][p]);
@@ -2929,10 +2930,10 @@ int load_fv_grads(void)
   // Calculation of the surface curvature dyadic
   //             = - del_s (n)  = - (I - n n ) grad n
   if (goma_ctx->fem.pd->gv[SHELL_NORMAL1]) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->surfCurvatureDyadic[p][q] = -goma_ctx->fem.fv->grad_n[p][q];
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           goma_ctx->fem.fv->surfCurvatureDyadic[p][q] +=
               goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->n[a] * goma_ctx->fem.fv->grad_n[a][q];
         }
@@ -2948,10 +2949,10 @@ int load_fv_grads(void)
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
     v = EFIELD1;
 
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_E_field[p][q] = 0.0;
-        for (r = 0; r < WIM; r++) {
+        for (r = 0; r < goma_ctx->problem.wim; r++) {
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv->grad_E_field[p][q] +=
                 *goma_ctx->fem.esp->E_field[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
@@ -2960,8 +2961,8 @@ int load_fv_grads(void)
       }
     }
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EFIELD1] != -1) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_E_field[p][q] = 0.0;
       }
     }
@@ -2974,7 +2975,7 @@ int load_fv_grads(void)
       v = PHASE1 + r;
       dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
 
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         goma_ctx->fem.fv->grad_pF[r][p] = 0.0;
 
         for (i = 0; i < dofs; i++) {
@@ -3005,7 +3006,7 @@ int load_fv_grads(void)
       dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[VELOCITY1];
       for (p = 0; p < DIM; p++) {
         for (i = 0; i < dofs; i++) {
-          for (a = 0; a < VIM; a++) /* VIM */
+          for (a = 0; a < goma_ctx->problem.vim; a++) /* VIM */
           {
             goma_ctx->fem.fv->curl_v[p] += *goma_ctx->fem.esp->v[a][i] * bfn->curl_phi_e[i][a][p];
           }
@@ -3069,9 +3070,9 @@ int load_fv_grads(void)
 
   if (goma_ctx->fem.pd->gv[VELOCITY1]) {
     goma_ctx->fem.fv->div_v = 0.0;
-    if (VIM == 3 && goma_ctx->fem.pd->CoordinateSystem != CARTESIAN_2pt5D)
+    if (goma_ctx->problem.vim == 3 && goma_ctx->fem.pd->CoordinateSystem != CARTESIAN_2pt5D)
       goma_ctx->fem.fv_old->div_v = 0.0;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       goma_ctx->fem.fv->div_v += goma_ctx->fem.fv->grad_v[a][a];
       // if(segregated)
       goma_ctx->fem.fv_old->div_v += goma_ctx->fem.fv_old->grad_v[a][a];
@@ -3083,7 +3084,7 @@ int load_fv_grads(void)
 
   if (goma_ctx->fem.pd->gv[USTAR]) {
     goma_ctx->fem.fv->div_v_star = 0.0;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       goma_ctx->fem.fv->div_v_star += goma_ctx->fem.fv->grad_v_star[a][a];
     }
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][USTAR] == -1) {
@@ -3097,7 +3098,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[PVELOCITY1]) {
     v = PVELOCITY1;
     goma_ctx->fem.fv->div_pv = 0.0;
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->div_pv += goma_ctx->fem.fv->grad_pv[p][p];
     }
   } else if (zero_unused_grads &&
@@ -3113,7 +3114,7 @@ int load_fv_grads(void)
     for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
       v = MASS_FRACTION;
       dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         goma_ctx->fem.fv->grad_c[w][p] = 0.;
         goma_ctx->fem.fv_old->grad_c[w][p] = 0.;
 
@@ -3131,7 +3132,7 @@ int load_fv_grads(void)
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][MASS_FRACTION] == -1) {
     for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         goma_ctx->fem.fv->grad_c[w][p] = 0.;
         goma_ctx->fem.fv_old->grad_c[w][p] = 0.;
       }
@@ -3145,7 +3146,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[POR_LIQ_PRES]) {
     v = POR_LIQ_PRES;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_p_liq[p] = 0.0;
       goma_ctx->fem.fv_old->grad_p_liq[p] = 0.0;
 
@@ -3161,7 +3162,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][POR_LIQ_PRES] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_p_liq[p] = 0.0;
       goma_ctx->fem.fv_old->grad_p_liq[p] = 0.0;
     }
@@ -3170,7 +3171,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[POR_GAS_PRES]) {
     v = POR_GAS_PRES;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_p_gas[p] = 0.0;
       goma_ctx->fem.fv_old->grad_p_gas[p] = 0.0;
       for (i = 0; i < dofs; i++) {
@@ -3185,7 +3186,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][POR_GAS_PRES] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_p_gas[p] = 0.0;
       goma_ctx->fem.fv_old->grad_p_gas[p] = 0.0;
     }
@@ -3194,7 +3195,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[POR_POROSITY]) {
     v = POR_POROSITY;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_porosity[p] = 0.0;
       goma_ctx->fem.fv_old->grad_porosity[p] = 0.0;
       for (i = 0; i < dofs; i++) {
@@ -3209,7 +3210,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][POR_POROSITY] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_porosity[p] = 0.0;
       goma_ctx->fem.fv_old->grad_porosity[p] = 0.0;
     }
@@ -3218,7 +3219,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[POR_TEMP]) {
     v = POR_TEMP;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_T[p] = 0.;
       goma_ctx->fem.fv_old->grad_T[p] = 0.;
       for (i = 0; i < dofs; i++) {
@@ -3241,9 +3242,9 @@ int load_fv_grads(void)
     v = POLYMER_STRESS11;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
-          for (r = 0; r < VIM; r++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
+          for (r = 0; r < goma_ctx->problem.vim; r++) {
             goma_ctx->fem.fv->grad_S[mode][r][p][q] = 0.;
 
             for (i = 0; i < dofs; i++) {
@@ -3275,17 +3276,17 @@ int load_fv_grads(void)
 
     if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
       for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-        for (s = 0; s < VIM; s++) {
-          for (r = 0; r < VIM; r++) {
-            for (p = 0; p < VIM; p++) {
+        for (s = 0; s < goma_ctx->problem.vim; s++) {
+          for (r = 0; r < goma_ctx->problem.vim; r++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               goma_ctx->fem.fv->div_S[mode][s] +=
                   goma_ctx->fem.fv->S[mode][p][s] * goma_ctx->fem.fv->grad_e[p][r][s];
             }
           }
         }
-        for (s = 0; s < VIM; s++) {
-          for (r = 0; r < VIM; r++) {
-            for (q = 0; q < VIM; q++) {
+        for (s = 0; s < goma_ctx->problem.vim; s++) {
+          for (r = 0; r < goma_ctx->problem.vim; r++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               goma_ctx->fem.fv->div_S[mode][s] +=
                   goma_ctx->fem.fv->S[mode][r][q] * goma_ctx->fem.fv->grad_e[q][r][s];
             }
@@ -3297,10 +3298,10 @@ int load_fv_grads(void)
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11] == -1) {
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         goma_ctx->fem.fv->div_S[mode][p] = 0.0;
-        for (q = 0; q < VIM; q++) {
-          for (r = 0; r < VIM; r++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
+          for (r = 0; r < goma_ctx->problem.vim; r++) {
             goma_ctx->fem.fv->grad_S[mode][r][p][q] = 0.;
           }
         }
@@ -3315,9 +3316,9 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[VELOCITY_GRADIENT11]) {
     v = VELOCITY_GRADIENT11;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
-        for (r = 0; r < VIM; r++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
           goma_ctx->fem.fv->grad_G[r][p][q] = 0.0;
           goma_ctx->fem.fv->grad_Gt[r][p][q] = 0.0;
 
@@ -3342,18 +3343,18 @@ int load_fv_grads(void)
     }
 
     if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-      for (s = 0; s < VIM; s++) {
-        for (r = 0; r < VIM; r++) {
-          for (p = 0; p < VIM; p++) {
+      for (s = 0; s < goma_ctx->problem.vim; s++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             goma_ctx->fem.fv->div_G[s] +=
                 goma_ctx->fem.fv->G[p][s] * goma_ctx->fem.fv->grad_e[p][r][s];
           }
         }
       }
 
-      for (s = 0; s < VIM; s++) {
-        for (r = 0; r < VIM; r++) {
-          for (q = 0; q < VIM; q++) {
+      for (s = 0; s < goma_ctx->problem.vim; s++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             goma_ctx->fem.fv->div_G[s] +=
                 goma_ctx->fem.fv->G[r][q] * goma_ctx->fem.fv->grad_e[q][r][s];
           }
@@ -3373,18 +3374,18 @@ int load_fv_grads(void)
     }
 
     if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-      for (s = 0; s < VIM; s++) {
-        for (r = 0; r < VIM; r++) {
-          for (p = 0; p < VIM; p++) {
+      for (s = 0; s < goma_ctx->problem.vim; s++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             goma_ctx->fem.fv->div_Gt[s] +=
                 goma_ctx->fem.fv->G[s][p] * goma_ctx->fem.fv->grad_e[p][r][s];
           }
         }
       }
 
-      for (s = 0; s < VIM; s++) {
-        for (r = 0; r < VIM; r++) {
-          for (q = 0; q < VIM; q++) {
+      for (s = 0; s < goma_ctx->problem.vim; s++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             goma_ctx->fem.fv->div_Gt[s] +=
                 goma_ctx->fem.fv->G[q][r] * goma_ctx->fem.fv->grad_e[q][r][s];
           }
@@ -3394,11 +3395,11 @@ int load_fv_grads(void)
 
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VELOCITY_GRADIENT11] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->div_G[p] = 0.0;
       goma_ctx->fem.fv->div_Gt[p] = 0.0;
-      for (q = 0; q < VIM; q++) {
-        for (r = 0; r < VIM; r++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
           goma_ctx->fem.fv->grad_G[r][p][q] = 0.;
         }
       }
@@ -3437,7 +3438,7 @@ int load_fv_grads(void)
 
   if (goma_ctx->fem.pd->gv[VORT_DIR1]) {
     goma_ctx->fem.fv->div_vd = 0.0;
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->div_vd += goma_ctx->fem.fv->grad_vd[p][p];
     }
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VORT_DIR1] == -1)
@@ -3451,7 +3452,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_CURVATURE]) {
     v = SHELL_CURVATURE;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_K[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_sh_K[p] +=
@@ -3460,14 +3461,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_CURVATURE] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_K[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_CURVATURE2]) {
     v = SHELL_CURVATURE2;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_K2[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_sh_K2[p] +=
@@ -3476,7 +3477,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_CURVATURE2] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_K2[p] = 0.0;
   }
 
@@ -3488,7 +3489,7 @@ int load_fv_grads(void)
     v = N_DOT_CURL_V;
     bfn = goma_ctx->fem.bf[v];
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_n_dot_curl_s_v[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_n_dot_curl_s_v[p] +=
@@ -3497,7 +3498,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][N_DOT_CURL_V] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_n_dot_curl_s_v[p] = 0.0;
     }
   }
@@ -3511,7 +3512,7 @@ int load_fv_grads(void)
     v = SHELL_SURF_DIV_V;
     bfn = goma_ctx->fem.bf[v];
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_div_s_v[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_div_s_v[p] += *goma_ctx->fem.esp->div_s_v[i] * bfn->grad_phi[i][p];
@@ -3519,7 +3520,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_SURF_DIV_V] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_div_s_v[p] = 0.0;
     }
   }
@@ -3533,7 +3534,7 @@ int load_fv_grads(void)
     v = SHELL_SURF_CURV;
     bfn = goma_ctx->fem.bf[v];
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_curv[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_curv[p] += *goma_ctx->fem.esp->curv[i] * bfn->grad_phi[i][p];
@@ -3541,7 +3542,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_SURF_CURV] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_curv[p] = 0.0;
     }
   }
@@ -3556,7 +3557,7 @@ int load_fv_grads(void)
       v = GRAD_S_V_DOT_N1 + r;
       bfn = goma_ctx->fem.bf[v];
       dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         goma_ctx->fem.fv->serialgrad_grad_s_v_dot_n[r][p] = 0.0;
         for (i = 0; i < dofs; i++) {
           goma_ctx->fem.fv->serialgrad_grad_s_v_dot_n[r][p] +=
@@ -3567,7 +3568,7 @@ int load_fv_grads(void)
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][GRAD_S_V_DOT_N1] == -1) {
     for (r = 0; r < dim; r++) {
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         goma_ctx->fem.fv->serialgrad_grad_s_v_dot_n[r][p] = 0.0;
       }
     }
@@ -3579,7 +3580,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.pd->gv[SHELL_DIFF_FLUX]) {
     v = SHELL_DIFF_FLUX;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_J[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         // HKM -> I changed dphidxi to grad_phi below. There didn't seem
@@ -3593,7 +3594,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_DIFF_FLUX] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_J[p] = 0.0;
   }
 
@@ -3604,14 +3605,14 @@ int load_fv_grads(void)
     v = EDDY_NU;
     bfn = goma_ctx->fem.bf[v];
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_eddy_nu[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_eddy_nu[p] += *goma_ctx->fem.esp->eddy_nu[i] * bfn->grad_phi[i][p];
       }
     }
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EDDY_NU] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_eddy_nu[p] = 0.0;
     }
   }
@@ -3620,7 +3621,7 @@ int load_fv_grads(void)
     v = TURB_K;
     bfn = goma_ctx->fem.bf[v];
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_turb_k[p] = 0.0;
       goma_ctx->fem.fv_old->grad_turb_k[p] = 0.0;
       for (i = 0; i < dofs; i++) {
@@ -3630,7 +3631,7 @@ int load_fv_grads(void)
       }
     }
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TURB_K] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_turb_k[p] = 0.0;
     }
   }
@@ -3639,7 +3640,7 @@ int load_fv_grads(void)
     v = TURB_OMEGA;
     bfn = goma_ctx->fem.bf[v];
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_turb_omega[p] = 0.0;
       goma_ctx->fem.fv_old->grad_turb_omega[p] = 0.0;
       for (i = 0; i < dofs; i++) {
@@ -3651,7 +3652,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TURB_OMEGA] == -1) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_turb_omega[p] = 0.0;
     }
   }
@@ -3664,7 +3665,7 @@ int load_fv_grads(void)
     v = ACOUS_PREAL;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
 
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_apr[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_apr[p] +=
@@ -3673,14 +3674,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][ACOUS_PREAL] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_apr[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[ACOUS_PIMAG]) {
     v = ACOUS_PIMAG;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_api[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_api[p] +=
@@ -3689,14 +3690,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][ACOUS_PIMAG] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_api[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[ACOUS_REYN_STRESS]) {
     v = ACOUS_REYN_STRESS;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_ars[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_ars[p] +=
@@ -3705,14 +3706,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][ACOUS_REYN_STRESS] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_ars[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_BDYVELO]) {
     v = SHELL_BDYVELO;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_bv[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_sh_bv[p] +=
@@ -3721,14 +3722,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_BDYVELO] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_bv[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_LUBP]) {
     v = SHELL_LUBP;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_p[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_sh_p[p] +=
@@ -3737,14 +3738,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_LUBP] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_p[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[LUBP]) {
     v = LUBP;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_lubp[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_lubp[p] +=
@@ -3754,14 +3755,14 @@ int load_fv_grads(void)
       }
     }
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LUBP] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_lubp[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[LUBP_2]) {
     v = LUBP_2;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_lubp_2[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_lubp_2[p] +=
@@ -3771,14 +3772,14 @@ int load_fv_grads(void)
       }
     }
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LUBP_2] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_lubp_2[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_LUB_CURV]) {
     v = SHELL_LUB_CURV;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_l_curv[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_sh_l_curv[p] +=
@@ -3787,14 +3788,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_LUB_CURV] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_l_curv[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_LUB_CURV_2]) {
     v = SHELL_LUB_CURV_2;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_l_curv_2[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_sh_l_curv_2[p] +=
@@ -3803,14 +3804,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_LUB_CURV_2] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_l_curv_2[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_PRESS_OPEN]) {
     v = SHELL_PRESS_OPEN;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_p_open[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_sh_p_open[p] +=
@@ -3821,14 +3822,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_PRESS_OPEN] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_p_open[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_PRESS_OPEN_2]) {
     v = SHELL_PRESS_OPEN_2;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_p_open_2[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_sh_p_open_2[p] +=
@@ -3839,14 +3840,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_PRESS_OPEN_2] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_p_open_2[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_SAT_1]) {
     v = SHELL_SAT_1;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_sat_1[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_sh_sat_1[p] +=
@@ -3855,13 +3856,13 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_SAT_1] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_sat_1[p] = 0.0;
   }
   if (goma_ctx->fem.pd->gv[SHELL_FILMP]) {
     v = SHELL_FILMP;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_fp[p] = 0.0;
       goma_ctx->fem.fv_old->grad_sh_fp[p] = 0.0;
       for (i = 0; i < dofs; i++) {
@@ -3873,14 +3874,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_FILMP] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_fp[p] = goma_ctx->fem.fv_old->grad_sh_fp[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_FILMH]) {
     v = SHELL_FILMH;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_fh[p] = 0.0;
       goma_ctx->fem.fv_old->grad_sh_fh[p] = 0.0;
       for (i = 0; i < dofs; i++) {
@@ -3892,14 +3893,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_FILMH] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_fh[p] = goma_ctx->fem.fv_old->grad_sh_fh[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_PARTC]) {
     v = SHELL_PARTC;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_pc[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_sh_pc[p] +=
@@ -3908,14 +3909,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_PARTC] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_pc[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[SHELL_TEMPERATURE]) {
     v = SHELL_TEMPERATURE;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_sh_t[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_sh_t[p] +=
@@ -3924,14 +3925,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_TEMPERATURE] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_sh_t[p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[LIGHT_INTP]) {
     v = LIGHT_INTP;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_poynt[0][p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_poynt[0][p] +=
@@ -3940,14 +3941,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LIGHT_INTP] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_poynt[0][p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[LIGHT_INTM]) {
     v = LIGHT_INTM;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_poynt[1][p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_poynt[1][p] +=
@@ -3956,14 +3957,14 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LIGHT_INTM] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_poynt[1][p] = 0.0;
   }
 
   if (goma_ctx->fem.pd->gv[LIGHT_INTD]) {
     v = LIGHT_INTD;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_poynt[2][p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv->grad_poynt[2][p] +=
@@ -3972,7 +3973,7 @@ int load_fv_grads(void)
     }
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LIGHT_INTD] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_poynt[2][p] = 0.0;
   }
 
@@ -3981,7 +3982,7 @@ int load_fv_grads(void)
       v = MOMENT0 + r;
       dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
 
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         goma_ctx->fem.fv->grad_moment[r][p] = 0.0;
         goma_ctx->fem.fv_old->grad_moment[r][p] = 0.0;
 
@@ -3999,7 +4000,7 @@ int load_fv_grads(void)
     v = DENSITY_EQN;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_rho[p] = 0.0;
 
       for (i = 0; i < dofs; i++) {
@@ -4013,7 +4014,7 @@ int load_fv_grads(void)
 #endif
   } else if (zero_unused_grads &&
              goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][DENSITY_EQN] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_rho[p] = 0.0;
   }
 
@@ -4021,7 +4022,7 @@ int load_fv_grads(void)
     v = TFMP_PRES;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_tfmp_pres[p] = 0.0;
 
       for (i = 0; i < dofs; i++) {
@@ -4036,7 +4037,7 @@ int load_fv_grads(void)
                         goma_ctx->fem.fv->grad_tfmp_pres);
 #endif
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TFMP_PRES] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_tfmp_pres[p] = 0.0;
   }
 
@@ -4044,7 +4045,7 @@ int load_fv_grads(void)
     v = TFMP_SAT;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_tfmp_sat[p] = 0.0;
 
       for (i = 0; i < dofs; i++) {
@@ -4059,7 +4060,7 @@ int load_fv_grads(void)
                         goma_ctx->fem.fv->grad_tfmp_sat);
 #endif
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TFMP_SAT] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_tfmp_sat[p] = 0.0;
   }
 
@@ -4067,7 +4068,7 @@ int load_fv_grads(void)
     v = RESTIME;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_restime[p] = 0.0;
       goma_ctx->fem.fv_old->grad_restime[p] = 0.0;
       for (i = 0; i < dofs; i++) {
@@ -4082,7 +4083,7 @@ int load_fv_grads(void)
                         goma_ctx->fem.fv->grad_restime);
 #endif
   } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][RESTIME] == -1) {
-    for (p = 0; p < VIM; p++)
+    for (p = 0; p < goma_ctx->problem.vim; p++)
       goma_ctx->fem.fv->grad_restime[p] = 0.0;
   }
 
@@ -4166,11 +4167,11 @@ int load_fv_grads(void)
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
 
     // grad_vector_fv_fill(esp->em_hr, bf[v]->grad_phi_e, dofs, fv->grad_em_hr);
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_em_hr[p][q] = 0.0;
         goma_ctx->fem.fv_old->grad_em_hr[p][q] = 0.0;
-        for (r = 0; r < WIM; r++) {
+        for (r = 0; r < goma_ctx->problem.wim; r++) {
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv->grad_em_hr[p][q] +=
                 (*goma_ctx->fem.esp->em_hr[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
@@ -4198,11 +4199,11 @@ int load_fv_grads(void)
     dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
 
     // grad_vector_fv_fill(esp->em_hi, bf[v]->grad_phi_e, dofs, fv->grad_em_hi);
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->grad_em_hi[p][q] = 0.0;
         goma_ctx->fem.fv_old->grad_em_hi[p][q] = 0.0;
-        for (r = 0; r < WIM; r++) {
+        for (r = 0; r < goma_ctx->problem.wim; r++) {
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv->grad_em_hi[p][q] +=
                 (*goma_ctx->fem.esp->em_hi[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
@@ -4231,7 +4232,7 @@ int load_fv_grads(void)
   if (goma_ctx->fem.upd->turbulent_info->use_internal_wall_distance) {
     if (goma_ctx->fem.pd->gv[goma_ctx->fem.pd->ShapeVar]) {
       dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[goma_ctx->fem.pd->ShapeVar];
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         goma_ctx->fem.fv->grad_wall_distance[p] = 0.0;
         for (i = 0; i < dofs; i++) {
           goma_ctx->fem.fv->grad_wall_distance[p] +=
@@ -4243,7 +4244,7 @@ int load_fv_grads(void)
       }
     }
   } else if (zero_unused_grads && !goma_ctx->fem.upd->turbulent_info->use_internal_wall_distance) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->grad_wall_distance[p] = 0.0;
     }
   }
@@ -4265,7 +4266,7 @@ int load_fv_grads(void)
           grad_scalar_fv_fill(goma_ctx->fem.evp->external_field[w], goma_ctx->fem.bfex[v]->grad_phi,
                               dofs, goma_ctx->fem.fv->grad_pF[0]);
         } else {
-          for (p = 0; p < VIM; p++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             goma_ctx->fem.fv->grad_ext_field[w][p] = 0.0;
             for (i = 0; i < dofs; i++) {
               goma_ctx->fem.fv->grad_ext_field[w][p] +=
@@ -4405,7 +4406,7 @@ int load_fv_mesh_derivs(int okToZero)
 
   status = 0;
 
-  VIMis3 = (VIM == 3) ? TRUE : FALSE;
+  VIMis3 = (goma_ctx->problem.vim == 3) ? TRUE : FALSE;
 
   /*
    * If this is not a deforming mesh problem, then
@@ -6629,14 +6630,14 @@ int load_fv_mesh_derivs(int okToZero)
     vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
 
 #ifdef DO_NO_UNROLL
-    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
     memset(goma_ctx->fem.fv->d_grad_v_dmesh, 0, siz);
 
-    for (r = 0; r < WIM; r++) {
+    for (r = 0; r < goma_ctx->problem.wim; r++) {
       for (i = 0; i < vdofs; i++) {
         v_ri = *goma_ctx->fem.esp->v[r][i];
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
                 goma_ctx->fem.fv->d_grad_v_dmesh[p][q][b][j] +=
@@ -6667,7 +6668,7 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
 
-    for (r = 0; r < WIM; r++) {
+    for (r = 0; r < goma_ctx->problem.wim; r++) {
       for (i = 0; i < vdofs; i++) {
         v_ri = *goma_ctx->fem.esp->v[r][i];
         for (b = 0; b < dim; b++) {
@@ -6709,7 +6710,7 @@ int load_fv_mesh_derivs(int okToZero)
 
     for (b = 0; b < dim; b++) {
       for (j = 0; j < mdofs; j++) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           goma_ctx->fem.fv->d_div_v_dmesh[b][j] += goma_ctx->fem.fv->d_grad_v_dmesh[p][p][b][j];
         }
       }
@@ -6731,11 +6732,11 @@ int load_fv_mesh_derivs(int okToZero)
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
     memset(goma_ctx->fem.fv->d_grad_pv_dmesh, 0, siz);
 
-    for (r = 0; r < WIM; r++) {
+    for (r = 0; r < goma_ctx->problem.wim; r++) {
       for (i = 0; i < vdofs; i++) {
         v_ri = *goma_ctx->fem.esp->pv[r][i];
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
                 goma_ctx->fem.fv->d_grad_pv_dmesh[p][q][b][j] +=
@@ -6763,7 +6764,7 @@ int load_fv_mesh_derivs(int okToZero)
 
     for (i = 0; i < vdofs; i++) {
       v_ri = *goma_ctx->fem.esp->ext_v[i];
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
             goma_ctx->fem.fv->d_grad_ext_v_dmesh[p][b][j] +=
@@ -6805,8 +6806,8 @@ int load_fv_mesh_derivs(int okToZero)
 
     if (v == NORMAL1) {
       // HKM -> looks good according to d_grad_v_dmesh[][][][]
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           for (b = 0; b < dim; b++) {
             for (j = 0; j < mdofs; j++) {
               for (r = 0; r < dim; r++) {
@@ -6826,7 +6827,7 @@ int load_fv_mesh_derivs(int okToZero)
       for (r = 0; r < dim; r++) {
         for (i = 0; i < vdofs; i++) {
           v_ri = *goma_ctx->fem.esp->n[r][i];
-          for (p = 0; p < VIM; p++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
                 goma_ctx->fem.fv->d_grad_n_dmesh[p][r][b][j] +=
@@ -6840,7 +6841,7 @@ int load_fv_mesh_derivs(int okToZero)
 
     for (b = 0; b < dim; b++) {
       for (j = 0; j < mdofs; j++) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           goma_ctx->fem.fv->d_div_n_dmesh[b][j] += goma_ctx->fem.fv->d_grad_n_dmesh[p][p][b][j];
         }
       }
@@ -6848,7 +6849,7 @@ int load_fv_mesh_derivs(int okToZero)
   } else if (((goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][NORMAL1] != -1) &&
               (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_NORMAL1] != -1)) &&
              (okToZero)) {
-    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
     memset(goma_ctx->fem.fv->d_grad_n_dmesh, 0, siz);
     siz = sizeof(double) * DIM * MDE;
     memset(goma_ctx->fem.fv->d_div_n_dmesh, 0, siz);
@@ -6866,11 +6867,11 @@ int load_fv_mesh_derivs(int okToZero)
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
     memset(goma_ctx->fem.fv->d_grad_E_field_dmesh, 0, siz);
 
-    for (r = 0; r < WIM; r++) {
+    for (r = 0; r < goma_ctx->problem.wim; r++) {
       for (i = 0; i < vdofs; i++) {
         v_ri = *goma_ctx->fem.esp->E_field[r][i];
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
                 goma_ctx->fem.fv->d_grad_E_field_dmesh[p][q][b][j] +=
@@ -6882,7 +6883,7 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
   } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EFIELD1] != -1 && okToZero) {
-    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
     memset(goma_ctx->fem.fv->d_grad_E_field_dmesh, 0, siz);
   }
 
@@ -6897,14 +6898,14 @@ int load_fv_mesh_derivs(int okToZero)
     vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
 
 #ifdef DO_NO_UNROLL
-    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
     memset(goma_ctx->fem.fv->d_grad_em_er_dmesh, 0, siz);
 
-    for (r = 0; r < WIM; r++) {
+    for (r = 0; r < goma_ctx->problem.wim; r++) {
       for (i = 0; i < vdofs; i++) {
         em_er_ri = *goma_ctx->fem.esp->em_er[r][i];
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
                 goma_ctx->fem.fv->d_grad_em_er_dmesh[p][q][b][j] +=
@@ -6935,7 +6936,7 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
 
-    for (r = 0; r < WIM; r++) {
+    for (r = 0; r < goma_ctx->problem.wim; r++) {
       for (i = 0; i < vdofs; i++) {
         em_er_ri = *goma_ctx->fem.esp->em_er[r][i];
         for (b = 0; b < dim; b++) {
@@ -6985,14 +6986,14 @@ int load_fv_mesh_derivs(int okToZero)
     vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
 
 #ifdef DO_NO_UNROLL
-    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
     memset(goma_ctx->fem.fv->d_grad_em_ei_dmesh, 0, siz);
 
-    for (r = 0; r < WIM; r++) {
+    for (r = 0; r < goma_ctx->problem.wim; r++) {
       for (i = 0; i < vdofs; i++) {
         em_ei_ri = *goma_ctx->fem.esp->em_ei[r][i];
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
                 goma_ctx->fem.fv->d_grad_em_ei_dmesh[p][q][b][j] +=
@@ -7023,7 +7024,7 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
 
-    for (r = 0; r < WIM; r++) {
+    for (r = 0; r < goma_ctx->problem.wim; r++) {
       for (i = 0; i < vdofs; i++) {
         em_ei_ri = *goma_ctx->fem.esp->em_ei[r][i];
         for (b = 0; b < dim; b++) {
@@ -7073,14 +7074,14 @@ int load_fv_mesh_derivs(int okToZero)
     vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
 
 #ifdef DO_NO_UNROLL
-    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
     memset(goma_ctx->fem.fv->d_grad_em_hr_dmesh, 0, siz);
 
-    for (r = 0; r < WIM; r++) {
+    for (r = 0; r < goma_ctx->problem.wim; r++) {
       for (i = 0; i < vdofs; i++) {
         em_hr_ri = *goma_ctx->fem.esp->em_hr[r][i];
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
                 goma_ctx->fem.fv->d_grad_em_hr_dmesh[p][q][b][j] +=
@@ -7111,7 +7112,7 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
 
-    for (r = 0; r < WIM; r++) {
+    for (r = 0; r < goma_ctx->problem.wim; r++) {
       for (i = 0; i < vdofs; i++) {
         em_hr_ri = *goma_ctx->fem.esp->em_hr[r][i];
         for (b = 0; b < dim; b++) {
@@ -7161,14 +7162,14 @@ int load_fv_mesh_derivs(int okToZero)
     vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
 
 #ifdef DO_NO_UNROLL
-    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
     memset(goma_ctx->fem.fv->d_grad_em_hi_dmesh, 0, siz);
 
-    for (r = 0; r < WIM; r++) {
+    for (r = 0; r < goma_ctx->problem.wim; r++) {
       for (i = 0; i < vdofs; i++) {
         em_hi_ri = *goma_ctx->fem.esp->em_hi[r][i];
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
                 goma_ctx->fem.fv->d_grad_em_hi_dmesh[p][q][b][j] +=
@@ -7199,7 +7200,7 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
 
-    for (r = 0; r < WIM; r++) {
+    for (r = 0; r < goma_ctx->problem.wim; r++) {
       for (i = 0; i < vdofs; i++) {
         em_hi_ri = *goma_ctx->fem.esp->em_hi[r][i];
         for (b = 0; b < dim; b++) {
@@ -7261,8 +7262,8 @@ int load_fv_mesh_derivs(int okToZero)
     for (r = 0; r < dim; r++) {
       for (i = 0; i < vdofs; i++) {
         d_ri = *goma_ctx->fem.esp->d[r][i];
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
                 /*  fv->d_grad_d_dmesh[p][q] [b][j] = 0.; */
@@ -7401,8 +7402,8 @@ int load_fv_mesh_derivs(int okToZero)
 #endif
 
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
             /*
@@ -7490,7 +7491,7 @@ int load_fv_mesh_derivs(int okToZero)
 #ifdef DO_NO_UNROLL
     for (b = 0; b < dim; b++) {
       for (j = 0; j < mdofs; j++) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           goma_ctx->fem.fv->d_div_d_dmesh[b][j] += goma_ctx->fem.fv->d_grad_d_dmesh[p][p][b][j];
         }
       }
@@ -7556,8 +7557,8 @@ int load_fv_mesh_derivs(int okToZero)
     siz = sizeof(double) * DIM * MDE;
     memset(goma_ctx->fem.fv->d_div_d_rs_dmesh, 0, siz);
 
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
             /*  fv->d_grad_d_rs_dmesh[p][q] [b][j] = 0.; */
@@ -7575,9 +7576,9 @@ int load_fv_mesh_derivs(int okToZero)
     /*
      * d( div(d_rs) )/dmesh [ just trace(grad(d_rs)) ]
      */
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           goma_ctx->fem.fv->d_div_d_rs_dmesh[b][j] +=
               goma_ctx->fem.fv->d_grad_d_rs_dmesh[p][p][b][j];
         }
@@ -7605,10 +7606,10 @@ int load_fv_mesh_derivs(int okToZero)
     memset(goma_ctx->fem.fv->d_div_S_dmesh, 0, siz);
 
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
-          for (r = 0; r < VIM; r++) {
-            for (b = 0; b < VIM; b++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
+          for (r = 0; r < goma_ctx->problem.vim; r++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               for (j = 0; j < mdofs; j++) {
                 for (i = 0; i < vdofs; i++) {
                   if (p <= q) {
@@ -7625,9 +7626,9 @@ int load_fv_mesh_derivs(int okToZero)
         }
       }
 
-      for (r = 0; r < VIM; r++) {
-        for (q = 0; q < VIM; q++) {
-          for (b = 0; b < VIM; b++) {
+      for (r = 0; r < goma_ctx->problem.vim; r++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             for (j = 0; j < mdofs; j++) {
               goma_ctx->fem.fv->d_div_S_dmesh[mode][r][b][j] +=
                   goma_ctx->fem.fv->d_grad_S_dmesh[mode][q][q][r][b][j];
@@ -7637,11 +7638,11 @@ int load_fv_mesh_derivs(int okToZero)
       }
 
       if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-        for (s = 0; s < VIM; s++) {
-          for (r = 0; r < VIM; r++) {
-            for (p = 0; p < VIM; p++) {
-              for (q = 0; q < VIM; q++) {
-                for (b = 0; b < VIM; b++) {
+        for (s = 0; s < goma_ctx->problem.vim; s++) {
+          for (r = 0; r < goma_ctx->problem.vim; r++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
+              for (q = 0; q < goma_ctx->problem.vim; q++) {
+                for (b = 0; b < goma_ctx->problem.vim; b++) {
                   for (j = 0; j < mdofs; j++) {
                     goma_ctx->fem.fv->d_div_S_dmesh[mode][s][b][j] +=
                         goma_ctx->fem.fv->S[mode][p][q] *
@@ -7679,10 +7680,10 @@ int load_fv_mesh_derivs(int okToZero)
     memset(goma_ctx->fem.fv->d_div_G_dmesh, 0, siz);
     memset(goma_ctx->fem.fv->d_div_Gt_dmesh, 0, siz);
 
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
-        for (r = 0; r < VIM; r++) {
-          for (b = 0; b < VIM; b++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             for (j = 0; j < mdofs; j++) {
               for (i = 0; i < vdofs; i++) {
                 goma_ctx->fem.fv->d_grad_G_dmesh[r][p][q][b][j] +=
@@ -7694,9 +7695,9 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
 
-    for (r = 0; r < VIM; r++) {
-      for (q = 0; q < VIM; q++) {
-        for (b = 0; b < VIM; b++) {
+    for (r = 0; r < goma_ctx->problem.vim; r++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           for (j = 0; j < mdofs; j++) {
             goma_ctx->fem.fv->d_div_G_dmesh[r][b][j] +=
                 goma_ctx->fem.fv->d_grad_G_dmesh[q][q][r][b][j];
@@ -7706,10 +7707,10 @@ int load_fv_mesh_derivs(int okToZero)
     }
 
     if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-      for (s = 0; s < VIM; s++) {
-        for (r = 0; r < VIM; r++) {
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
+      for (s = 0; s < goma_ctx->problem.vim; s++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               for (b = 0; b < dim; b++) {
                 for (j = 0; j < mdofs; j++) {
                   goma_ctx->fem.fv->d_div_G_dmesh[s][b][j] +=
@@ -7725,9 +7726,9 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
 
-    for (r = 0; r < VIM; r++) {
-      for (q = 0; q < VIM; q++) {
-        for (b = 0; b < VIM; b++) {
+    for (r = 0; r < goma_ctx->problem.vim; r++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           for (j = 0; j < mdofs; j++) {
             goma_ctx->fem.fv->d_div_Gt_dmesh[r][b][j] +=
                 goma_ctx->fem.fv->d_grad_G_dmesh[q][r][q][b][j];
@@ -7737,11 +7738,11 @@ int load_fv_mesh_derivs(int okToZero)
     }
 
     if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-      for (s = 0; s < VIM; s++) {
-        for (r = 0; r < VIM; r++) {
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
-              for (b = 0; b < VIM; b++) {
+      for (s = 0; s < goma_ctx->problem.vim; s++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
+              for (b = 0; b < goma_ctx->problem.vim; b++) {
                 for (j = 0; j < mdofs; j++) {
                   goma_ctx->fem.fv->d_div_G_dmesh[s][b][j] +=
                       goma_ctx->fem.fv->G[q][p] * (goma_ctx->fem.fv->d_grad_e_dq[p][r][q][b] *
@@ -7781,7 +7782,7 @@ int load_fv_mesh_derivs(int okToZero)
         v_ri = *goma_ctx->fem.esp->vd[r][i];
         for (p = 0; p < DIM; p++) {
           for (q = 0; q < DIM; q++) {
-            for (b = 0; b < VIM; b++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               for (j = 0; j < mdofs; j++) {
                 goma_ctx->fem.fv->d_grad_vd_dmesh[p][q][b][j] +=
                     v_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
@@ -7796,7 +7797,7 @@ int load_fv_mesh_derivs(int okToZero)
      * d( div(vd) )/dmesh
      */
 
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         for (p = 0; p < DIM; p++) {
           goma_ctx->fem.fv->d_div_vd_dmesh[b][j] += goma_ctx->fem.fv->d_grad_vd_dmesh[p][p][b][j];
@@ -7818,7 +7819,7 @@ int load_fv_mesh_derivs(int okToZero)
     vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
     memset(goma_ctx->fem.fv->d_grad_n_dot_curl_s_v_dmesh, 0, siz);
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
@@ -7843,7 +7844,7 @@ int load_fv_mesh_derivs(int okToZero)
     vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
     memset(goma_ctx->fem.fv->d_grad_div_s_v_dmesh, 0, siz);
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
@@ -7868,7 +7869,7 @@ int load_fv_mesh_derivs(int okToZero)
     vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
     memset(goma_ctx->fem.fv->d_grad_curv_dmesh, 0, siz);
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
@@ -7894,7 +7895,7 @@ int load_fv_mesh_derivs(int okToZero)
       vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
       siz = sizeof(double) * DIM * DIM * DIM * MDE;
       memset(goma_ctx->fem.fv->d_serialgrad_grad_s_v_dot_n_dmesh, 0, siz);
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
             for (i = 0; i < vdofs; i++) {
@@ -7921,7 +7922,7 @@ int load_fv_mesh_derivs(int okToZero)
     siz = sizeof(double) * DIM * DIM * MDE;
     memset(&(goma_ctx->fem.fv->d_grad_sh_J_dmesh[0][0][0]), 0, siz);
 
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
@@ -7943,7 +7944,7 @@ int load_fv_mesh_derivs(int okToZero)
    * d ( h3 ) / d ( mesh_bj )
    */
   if (goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1] == 1) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         goma_ctx->fem.fv->dh3dmesh[b][j] = goma_ctx->fem.fv->dh3dq[b] * bfm->phi[j];
       }

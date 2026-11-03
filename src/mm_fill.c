@@ -229,7 +229,7 @@ int matrix_fill_full(struct GomaLinearSolverData *ams,
      *number so as to be compatible with the ElemStorage struct
      */
     ebn = find_elemblock_index(ielem, exo);
-    int mn = Matilda[ebn];
+    int mn = goma_ctx->problem.matilda[ebn];
     if (mn < 0) {
       continue;
     }
@@ -540,7 +540,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     memset(CA_sselem, -1, sizeof(int) * MAX_CA);
     memset(CA_id, -1, sizeof(int) * MAX_CA);
     memset(CA_proc, -1, sizeof(int) * MAX_CA);
-    for (j = 0; j < Num_BC; j++) {
+    for (j = 0; j < goma_ctx->problem.num_bc; j++) {
       switch (BC_Types[j].BC_Name) {
       case CA_BC:
       case CA_MOMENTUM_BC:
@@ -2920,7 +2920,7 @@ Revised:         Summer 1998, SY Tam (UNM)
   /*First apply BCS to embedded primary level-set surface. */
   if (goma_ctx->fem.ls != NULL) {
     if (goma_ctx->fem.pd->gv[goma_ctx->fem.ls->var] && goma_ctx->fem.ls->elem_overlap_state) {
-      if (goma_ctx->fem.ls->Length_Scale == 0. || Do_Overlap) {
+      if (goma_ctx->fem.ls->Length_Scale == 0. || goma_ctx->problem.do_overlap) {
         apply_embedded_bc(ielem, x, delta_t, theta, time_value, &pg_data, -1, NULL, NULL, NULL,
                           exo);
 #ifdef CHECK_FINITE
@@ -2948,7 +2948,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 
     {
       if (goma_ctx->fem.pd->gv[goma_ctx->fem.ls->var] && goma_ctx->fem.ls->elem_overlap_state) {
-        if (goma_ctx->fem.ls->Length_Scale == 0. || Do_Overlap) {
+        if (goma_ctx->fem.ls->Length_Scale == 0. || goma_ctx->problem.do_overlap) {
           apply_embedded_bc(ielem, x, delta_t, theta, time_value, &pg_data, -1, NULL, NULL, NULL,
                             exo);
 #ifdef CHECK_FINITE
@@ -3258,7 +3258,7 @@ Revised:         Summer 1998, SY Tam (UNM)
    * Make sure there are BC's at this node and that we have vector equations
    */
   /*if (  first_elem_side_BC_array[ielem] != NULL && */
-  if ((pde[R_MOMENTUM1] || pde[R_MESH1]) && Num_ROT == 0) {
+  if ((pde[R_MOMENTUM1] || pde[R_MESH1]) && goma_ctx->problem.num_rot == 0) {
     if (ielem_dim == 2) {
       call_rotate = 0;
       /* determine if rotation is needed */
@@ -3299,7 +3299,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
   }
 
-  if ((pde[R_MOMENTUM1] || pde[R_MESH1]) && Num_ROT > 0) {
+  if ((pde[R_MOMENTUM1] || pde[R_MESH1]) && goma_ctx->problem.num_rot > 0) {
     int id_mesh, id_mom; /* local temporary things */
 
     /* Make sure there are BC's at this node and that we have vector equations*/
@@ -4066,7 +4066,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
     memset(CA_sselem, -1, sizeof(int) * MAX_CA);
     memset(CA_id, -1, sizeof(int) * MAX_CA);
     memset(CA_proc, -1, sizeof(int) * MAX_CA);
-    for (j = 0; j < Num_BC; j++) {
+    for (j = 0; j < goma_ctx->problem.num_bc; j++) {
       switch (BC_Types[j].BC_Name) {
       case CA_BC:
       case CA_MOMENTUM_BC:
@@ -4843,7 +4843,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
    * Make sure there are BC's at this node and that we have vector equations
    */
   /*if (  first_elem_side_BC_array[ielem] != NULL && */
-  if ((pde[R_MOMENTUM1] || pde[R_MESH1]) && Num_ROT == 0) {
+  if ((pde[R_MOMENTUM1] || pde[R_MESH1]) && goma_ctx->problem.num_rot == 0) {
     if (ielem_dim == 2) {
       call_rotate = 0;
       /* determine if rotation is needed */
@@ -4884,7 +4884,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
     }
   }
 
-  if ((pde[R_MOMENTUM1] || pde[R_MESH1]) && Num_ROT > 0) {
+  if ((pde[R_MOMENTUM1] || pde[R_MESH1]) && goma_ctx->problem.num_rot > 0) {
     int id_mesh, id_mom; /* local temporary things */
 
     /* Make sure there are BC's at this node and that we have vector equations*/
@@ -5668,10 +5668,11 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
               if (e == R_MASS) {
                 for (ke = 0; ke < goma_ctx->fem.upd->Max_Num_Species_Eqn; ke++) {
                   pe = MAX_PROB_VAR + ke;
-                  blk_row = Local_Offset[goma_ctx->fem.pg->imtrx][I][e] +
-                            ke * Dolphin[goma_ctx->fem.pg->imtrx][I][e];
+                  blk_row = goma_ctx->problem.local_offset[goma_ctx->fem.pg->imtrx][I][e] +
+                            ke * goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][e];
                   lec_row = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[e][i];
-                  for (idofs = 0; idofs < Dolphin[goma_ctx->fem.pg->imtrx][I][e]; idofs++) {
+                  for (idofs = 0; idofs < goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][e];
+                       idofs++) {
                     *(resid_vector + rpntr[I] + blk_row + idofs) +=
                         goma_ctx->fem.lec->R[LEC_R_INDEX(pe, lec_row + idofs)];
 
@@ -5706,10 +5707,13 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                             if (v == MASS_FRACTION) {
                               for (kv = 0; kv < goma_ctx->fem.upd->Max_Num_Species_Eqn; kv++) {
                                 pv = MAX_PROB_VAR + kv;
-                                blk_col = Local_Offset[goma_ctx->fem.pg->imtrx][J][v] +
-                                          kv * Dolphin[goma_ctx->fem.pg->imtrx][J][v];
+                                blk_col =
+                                    goma_ctx->problem.local_offset[goma_ctx->fem.pg->imtrx][J][v] +
+                                    kv * goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][v];
                                 lec_col = ei_ptr->ln_to_first_dof[v][j];
-                                for (jdofs = 0; jdofs < Dolphin[goma_ctx->fem.pg->imtrx][J][v];
+                                for (jdofs = 0;
+                                     jdofs <
+                                     goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][v];
                                      jdofs++) {
                                   *(a_ptr + row_dofs * (blk_col + jdofs) + blk_row + idofs) +=
                                       goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, lec_row + idofs,
@@ -5717,9 +5721,11 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                                 }
                               }
                             } else {
-                              blk_col = Local_Offset[goma_ctx->fem.pg->imtrx][J][v];
+                              blk_col =
+                                  goma_ctx->problem.local_offset[goma_ctx->fem.pg->imtrx][J][v];
                               lec_col = ei_ptr->ln_to_first_dof[v][j];
-                              for (jdofs = 0; jdofs < Dolphin[goma_ctx->fem.pg->imtrx][J][v];
+                              for (jdofs = 0;
+                                   jdofs < goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][v];
                                    jdofs++) {
                                 *(a_ptr + row_dofs * (blk_col + jdofs) + blk_row + idofs) +=
                                     goma_ctx->fem.lec
@@ -5733,9 +5739,10 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                   }
                 }
               } else {
-                blk_row = Local_Offset[goma_ctx->fem.pg->imtrx][I][e];
+                blk_row = goma_ctx->problem.local_offset[goma_ctx->fem.pg->imtrx][I][e];
                 lec_row = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[e][i];
-                for (idofs = 0; idofs < Dolphin[goma_ctx->fem.pg->imtrx][I][e]; idofs++) {
+                for (idofs = 0; idofs < goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][e];
+                     idofs++) {
                   *(resid_vector + rpntr[I] + blk_row + idofs) +=
                       goma_ctx->fem.lec->R[LEC_R_INDEX(pe, lec_row + idofs)];
                   if (goma_ctx->fem.af->Assemble_Jacobian) {
@@ -5767,10 +5774,12 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                           if (v == MASS_FRACTION) {
                             for (kv = 0; kv < goma_ctx->fem.upd->Max_Num_Species_Eqn; kv++) {
                               pv = MAX_PROB_VAR + kv;
-                              blk_col = Local_Offset[goma_ctx->fem.pg->imtrx][J][v] +
-                                        kv * Dolphin[goma_ctx->fem.pg->imtrx][J][v];
+                              blk_col =
+                                  goma_ctx->problem.local_offset[goma_ctx->fem.pg->imtrx][J][v] +
+                                  kv * goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][v];
                               lec_col = ei_ptr->ln_to_first_dof[v][j];
-                              for (jdofs = 0; jdofs < Dolphin[goma_ctx->fem.pg->imtrx][J][v];
+                              for (jdofs = 0;
+                                   jdofs < goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][v];
                                    jdofs++) {
                                 *(a_ptr + row_dofs * (blk_col + jdofs) + blk_row + idofs) +=
                                     goma_ctx->fem.lec
@@ -5782,7 +5791,7 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                              *  contiguous within the solution vector.
                              *  Find the local offset first
                              */
-                            blk_col = Local_Offset[goma_ctx->fem.pg->imtrx][J][v];
+                            blk_col = goma_ctx->problem.local_offset[goma_ctx->fem.pg->imtrx][J][v];
                             /*  For the current node, j, find the index for the
                              *  first dof of type v in the LESM.
                              */
@@ -5790,7 +5799,8 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                             /*  Dolphin contains the number of dofs of type v at the
                              *  global node J
                              */
-                            for (jdofs = 0; jdofs < Dolphin[goma_ctx->fem.pg->imtrx][J][v];
+                            for (jdofs = 0;
+                                 jdofs < goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][v];
                                  jdofs++) {
                               *(a_ptr + row_dofs * (blk_col + jdofs) + blk_row + idofs) +=
                                   goma_ctx->fem.lec

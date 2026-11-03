@@ -904,7 +904,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
     /* First test for all the potential elem vars from primary nodal vars
        for this block */
     if (exo->eb_num_elems[eb_indx] > 0) {
-      mat_num = Matilda[eb_indx];
+      mat_num = goma_ctx->problem.matilda[eb_indx];
       if (mat_num < 0) {
         continue;
       }
@@ -912,7 +912,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
         for (j = V_FIRST; j < V_LAST; j++) {
           if (goma_ctx->fem.pd_glob[mat_num]->v[imtrx][j] != V_NOTHING) {
             if (goma_ctx->fem.pd_glob[mat_num]->i[imtrx][j] == I_P0) {
-              if (Num_Var_In_Type[imtrx][j] > 1) {
+              if (goma_ctx->problem.num_var_in_type[imtrx][j] > 1) {
                 fprintf(stderr,
                         "%s: Too many components in variable type for element variable %s (%s)\n",
                         yo, Exo_Var_Names[j].name2, Exo_Var_Names[j].name1);
@@ -920,7 +920,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
               }
               if (exo->truth_table_existance_key[j - V_FIRST] == 0) {
                 /* We just found a candidate for an element variable */
-                tev += Num_Var_In_Type[imtrx][j];
+                tev += goma_ctx->problem.num_var_in_type[imtrx][j];
                 exo->truth_table_existance_key[j - V_FIRST] = 1;
               }
             }
@@ -939,13 +939,13 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
          - yes, for now they must
          each be listed separately and painfully */
       for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-        if (ERROR_ZZ_VEL != -1 && Num_Var_In_Type[imtrx][R_MOMENTUM1]) {
+        if (ERROR_ZZ_VEL != -1 && goma_ctx->problem.num_var_in_type[imtrx][R_MOMENTUM1]) {
           tev++;
           if (ERROR_ZZ_VEL_ELSIZE != -1) {
             tev++;
           }
         }
-        if (ERROR_ZZ_Q != -1 && Num_Var_In_Type[imtrx][R_ENERGY]) {
+        if (ERROR_ZZ_Q != -1 && goma_ctx->problem.num_var_in_type[imtrx][R_ENERGY]) {
           tev++;
           if (ERROR_ZZ_Q_ELSIZE != -1) {
             tev++;
@@ -960,7 +960,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
       }
 
       for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-        if (ERROR_ZZ_P != -1 && (Num_Var_In_Type[imtrx][R_MOMENTUM1] || check)) {
+        if (ERROR_ZZ_P != -1 && (goma_ctx->problem.num_var_in_type[imtrx][R_MOMENTUM1] || check)) {
           tev++;
           if (ERROR_ZZ_P_ELSIZE != -1) {
             tev++;
@@ -970,7 +970,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
       /* Finally pick up all of the element-level-storage continuation
        * variables, e.g. for saturation hysteresis function
        */
-      mat_num = Matilda[eb_indx];
+      mat_num = goma_ctx->problem.matilda[eb_indx];
       goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mat_num];
       eb_ptr = Element_Blocks + eb_indx;
       ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
@@ -1009,14 +1009,14 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
     if (exo->eb_num_elems[eb_indx] > 0) {
       /* First test for all the potential elem vars from primary nodal vars
          for this block */
-      mat_num = Matilda[eb_indx];
+      mat_num = goma_ctx->problem.matilda[eb_indx];
       ev_indx = 0;
       for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
         for (j = V_FIRST; j < V_LAST; j++) {
           found_match = FALSE;
           if (goma_ctx->fem.pd_glob[mat_num]->v[imtrx][j] != V_NOTHING) {
             if (goma_ctx->fem.pd_glob[mat_num]->i[imtrx][j] == I_P0) {
-              if (Num_Var_In_Type[imtrx][j] > 1) {
+              if (goma_ctx->problem.num_var_in_type[imtrx][j] > 1) {
                 fprintf(stderr,
                         "%s: Too many components in variable type for element variable %s (%s)\n",
                         yo, Exo_Var_Names[j].name2, Exo_Var_Names[j].name1);
@@ -1069,7 +1069,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
          each be listed separately and painfully */
 
       for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-        if (ERROR_ZZ_VEL != -1 && Num_Var_In_Type[imtrx][R_MOMENTUM1]) {
+        if (ERROR_ZZ_VEL != -1 && goma_ctx->problem.num_var_in_type[imtrx][R_MOMENTUM1]) {
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
@@ -1096,7 +1096,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
           }
         }
 
-        if (ERROR_ZZ_Q != -1 && Num_Var_In_Type[imtrx][R_ENERGY]) {
+        if (ERROR_ZZ_Q != -1 && goma_ctx->problem.num_var_in_type[imtrx][R_ENERGY]) {
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
@@ -1131,7 +1131,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
       }
 
       for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-        if (ERROR_ZZ_P != -1 && (Num_Var_In_Type[imtrx][R_MOMENTUM1] || check)) {
+        if (ERROR_ZZ_P != -1 && (goma_ctx->problem.num_var_in_type[imtrx][R_MOMENTUM1] || check)) {
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
@@ -1243,7 +1243,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
   for (eb_indx = 0; eb_indx < exo->num_elem_blocks; eb_indx++) {
     /* First test for all the potential elem vars from primary nodal vars
        for this block */
-    mat_num = Matilda[eb_indx];
+    mat_num = goma_ctx->problem.matilda[eb_indx];
     if (mat_num < 0) {
       continue;
     }
@@ -1253,7 +1253,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
       for (j = V_FIRST; j < V_LAST; j++) {
         if (goma_ctx->fem.pd_glob[mat_num]->v[goma_ctx->fem.pg->imtrx][j] != V_NOTHING) {
           if (goma_ctx->fem.pd_glob[mat_num]->i[goma_ctx->fem.pg->imtrx][j] == I_P0) {
-            if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][j] > 1) {
+            if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][j] > 1) {
               fprintf(stderr,
                       "%s: Too many components in variable type for element variable %s (%s)\n", yo,
                       Exo_Var_Names[j].name2, Exo_Var_Names[j].name1);
@@ -1261,7 +1261,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
             }
             if (exo->truth_table_existance_key[j - V_FIRST] == 0) {
               /* We just found a candidate for an element variable */
-              tev += Num_Var_In_Type[goma_ctx->fem.pg->imtrx][j];
+              tev += goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][j];
               exo->truth_table_existance_key[j - V_FIRST] = 1;
             }
           } else if (goma_ctx->fem.pd_glob[mat_num]->i[goma_ctx->fem.pg->imtrx][j] == I_P1) {
@@ -1281,13 +1281,15 @@ void create_truth_table_segregated(struct Results_Description **rd,
     for (goma_ctx->fem.pg->imtrx = 0;
          goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
          goma_ctx->fem.pg->imtrx++) {
-      if (ERROR_ZZ_VEL != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+      if (ERROR_ZZ_VEL != -1 &&
+          goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
         tev++;
         if (ERROR_ZZ_VEL_ELSIZE != -1) {
           tev++;
         }
       }
-      if (ERROR_ZZ_Q != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
+      if (ERROR_ZZ_Q != -1 &&
+          goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
         tev++;
         if (ERROR_ZZ_Q_ELSIZE != -1) {
           tev++;
@@ -1304,7 +1306,8 @@ void create_truth_table_segregated(struct Results_Description **rd,
     for (goma_ctx->fem.pg->imtrx = 0;
          goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
          goma_ctx->fem.pg->imtrx++) {
-      if (ERROR_ZZ_P != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
+      if (ERROR_ZZ_P != -1 &&
+          (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
         tev++;
         if (ERROR_ZZ_P_ELSIZE != -1) {
           tev++;
@@ -1314,7 +1317,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
     /* Finally pick up all of the element-level-storage continuation
      * variables, e.g. for saturation hysteresis function
      */
-    mat_num = Matilda[eb_indx];
+    mat_num = goma_ctx->problem.matilda[eb_indx];
     goma_ctx->fem.mp = goma_ctx->fem.mp_glob[mat_num];
     eb_ptr = Element_Blocks + eb_indx;
     ip_total = elem_info(NQUAD, eb_ptr->Elem_Type);
@@ -1352,7 +1355,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
   for (eb_indx = 0; eb_indx < exo->num_elem_blocks; eb_indx++) {
     /* First test for all the potential elem vars from primary nodal vars
        for this block */
-    mat_num = Matilda[eb_indx];
+    mat_num = goma_ctx->problem.matilda[eb_indx];
     ev_indx = 0;
     for (goma_ctx->fem.pg->imtrx = 0;
          goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
@@ -1361,7 +1364,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
         found_match = FALSE;
         if (goma_ctx->fem.pd_glob[mat_num]->v[goma_ctx->fem.pg->imtrx][j] != V_NOTHING) {
           if (goma_ctx->fem.pd_glob[mat_num]->i[goma_ctx->fem.pg->imtrx][j] == I_P0) {
-            if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][j] > 1) {
+            if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][j] > 1) {
               fprintf(stderr,
                       "%s: Too many components in variable type for element variable %s (%s)\n", yo,
                       Exo_Var_Names[j].name2, Exo_Var_Names[j].name1);
@@ -1415,7 +1418,8 @@ void create_truth_table_segregated(struct Results_Description **rd,
     for (goma_ctx->fem.pg->imtrx = 0;
          goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
          goma_ctx->fem.pg->imtrx++) {
-      if (ERROR_ZZ_VEL != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
+      if (ERROR_ZZ_VEL != -1 &&
+          goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
         /* malloc the entry for this block by number of elems for this block
@@ -1444,7 +1448,8 @@ void create_truth_table_segregated(struct Results_Description **rd,
         }
       }
 
-      if (ERROR_ZZ_Q != -1 && Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
+      if (ERROR_ZZ_Q != -1 &&
+          goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
         /* malloc the entry for this block by number of elems for this block
@@ -1483,7 +1488,8 @@ void create_truth_table_segregated(struct Results_Description **rd,
     for (goma_ctx->fem.pg->imtrx = 0;
          goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
          goma_ctx->fem.pg->imtrx++) {
-      if (ERROR_ZZ_P != -1 && (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
+      if (ERROR_ZZ_P != -1 &&
+          (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][R_MOMENTUM1] || check)) {
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
         /* malloc the entry for this block by number of elems for this block

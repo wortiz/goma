@@ -208,7 +208,7 @@ int apply_integrated_curve_bc(
         return (status);
     }
 
-    if (TimeIntegration != STEADY &&
+    if (goma_ctx->problem.time_integration != STEADY &&
         goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
       for (icount = 0; icount < ielem_dim; icount++) {
         x_dot[icount] = goma_ctx->fem.fv_dot->x[icount];
@@ -696,7 +696,7 @@ int apply_point_colloc_edge_bc(
           return (status);
       }
 
-      if (TimeIntegration != STEADY) {
+      if (goma_ctx->problem.time_integration != STEADY) {
         for (icount = 0; icount < ielem_dim; icount++) {
           x_dot[icount] = goma_ctx->fem.fv_dot->x[icount];
         }

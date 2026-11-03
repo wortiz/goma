@@ -182,7 +182,7 @@ void modify_basis_and_weight_functions_for_LSA_3D_of_2D(void) {
            LSA_3D_of_2D_pass, ei[pg->imtrx]->ielem, cosine_value, sine_value, N);
   */
 
-  for (bf_index = 0; bf_index < Num_Basis_Functions; bf_index++) {
+  for (bf_index = 0; bf_index < goma_ctx->problem.num_basis_functions; bf_index++) {
     bf_ptr = goma_ctx->fem.bfd[bf_index];
     var = bf_ptr->Var_Type_MatID[mn];
     if (var != -1) {
@@ -201,8 +201,8 @@ void modify_basis_and_weight_functions_for_LSA_3D_of_2D(void) {
           /* Luckily, in CARTESIAN (and therefore,
            * PROJECTED_CARTESIAN), grad_phi_e[i][a][p][a] =
            * grad_phi[i][p] */
-          for (a = 0; a < VIM; a++)
-            for (b = 0; b < VIM; b++)
+          for (a = 0; a < goma_ctx->problem.vim; a++)
+            for (b = 0; b < goma_ctx->problem.vim; b++)
               bf_ptr->grad_phi_e[i][a][b][a] = bf_ptr->grad_phi[i][b];
           /* These next derivatives are ONLY used in the
            * assemble_* routines for the mesh equations
@@ -221,7 +221,7 @@ void modify_basis_and_weight_functions_for_LSA_3D_of_2D(void) {
                 bf_ptr->d_d_phi_dmesh[i][0][b][j] *= cosine_value;
                 bf_ptr->d_d_phi_dmesh[i][1][b][j] *= cosine_value;
                 bf_ptr->d_d_phi_dmesh[i][2][b][j] *= -N * sine_value;
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   bf_ptr->d_grad_phi_e_dmesh[i][a][0][a][b][j] *= cosine_value;
                   bf_ptr->d_grad_phi_e_dmesh[i][a][1][a][b][j] *= cosine_value;
                   bf_ptr->d_grad_phi_e_dmesh[i][a][2][a][b][j] *= -N * sine_value;
@@ -240,8 +240,8 @@ void modify_basis_and_weight_functions_for_LSA_3D_of_2D(void) {
           bf_ptr->grad_phi[i][0] *= sine_value;
           bf_ptr->grad_phi[i][1] *= sine_value;
           bf_ptr->grad_phi[i][2] = N * cosine_value * orig_phi;
-          for (a = 0; a < VIM; a++)
-            for (b = 0; b < VIM; b++)
+          for (a = 0; a < goma_ctx->problem.vim; a++)
+            for (b = 0; b < goma_ctx->problem.vim; b++)
               bf_ptr->grad_phi_e[i][a][b][a] = bf_ptr->grad_phi[i][b];
           /* These next derivatives are ONLY used in the
            * assemble_* routines for the mesh equations
@@ -307,7 +307,7 @@ void modify_bf_mesh_derivs_for_LSA_3D_of_2D(void)
 
   bfx = goma_ctx->fem.bf[R_MESH1];
   mdof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
-  for (k = 0; k < Num_Basis_Functions; k++) {
+  for (k = 0; k < goma_ctx->problem.num_basis_functions; k++) {
     bfv = goma_ctx->fem.bf[k];
     var = bfv->Var_Type_MatID[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn];
     if (var != -1) {
@@ -316,7 +316,7 @@ void modify_bf_mesh_derivs_for_LSA_3D_of_2D(void)
         for (b = 0; b < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; b++) {
           for (j = 0; j < mdof; j++) {
             bfv->d_grad_phi_dmesh[i][2][b][j] = -bfv->grad_phi[i][b] * bfx->grad_phi[j][2];
-            for (q = 0; q < VIM; q++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               bfv->d_grad_phi_e_dmesh[i][q][2][q][b][j] = bfv->d_grad_phi_dmesh[i][2][b][j];
             }
           }
@@ -655,7 +655,7 @@ void modify_fv_mesh_derivs_for_LSA_3D_of_2D(void)
   /* d(grad(v))/dmesh */
   v = VELOCITY1;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
-    for (q = 0; q < VIM; q++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdof; j++) {
           goma_ctx->fem.fv->d_grad_v_dmesh[p][q][b][j] =
@@ -679,7 +679,7 @@ void modify_fv_mesh_derivs_for_LSA_3D_of_2D(void)
   /* d(grad(E_field))/dmesh */
   v = EFIELD1;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
-    for (q = 0; q < VIM; q++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdof; j++) {
           goma_ctx->fem.fv->d_grad_E_field_dmesh[p][q][b][j] =
@@ -692,7 +692,7 @@ void modify_fv_mesh_derivs_for_LSA_3D_of_2D(void)
   /* d(grad(pv))/dmesh */
   v = PVELOCITY1;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
-    for (q = 0; q < VIM; q++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdof; j++) {
           goma_ctx->fem.fv->d_grad_pv_dmesh[p][q][b][j] =
@@ -705,7 +705,7 @@ void modify_fv_mesh_derivs_for_LSA_3D_of_2D(void)
   /* d(grad(d))/dmesh */
   v = MESH_DISPLACEMENT1;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
-    for (q = 0; q < VIM; q++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdof; j++) {
           goma_ctx->fem.fv->d_grad_d_dmesh[p][q][b][j] =
@@ -718,7 +718,7 @@ void modify_fv_mesh_derivs_for_LSA_3D_of_2D(void)
   /* d(grad(d_rs))/dmesh */
   v = SOLID_DISPLACEMENT1;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
-    for (q = 0; q < VIM; q++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdof; j++) {
           goma_ctx->fem.fv->d_grad_d_rs_dmesh[p][q][b][j] =
@@ -732,8 +732,8 @@ void modify_fv_mesh_derivs_for_LSA_3D_of_2D(void)
   v = POLYMER_STRESS11;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     for (m = 0; m < goma_ctx->fem.vn->modes; m++) {
-      for (q = 0; q < VIM; q++) {
-        for (r = 0; r < VIM; r++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
           for (b = 0; b < dim; b++) {
             for (j = 0; j < mdof; j++) {
               goma_ctx->fem.fv->d_grad_S_dmesh[m][p][q][r][b][j] =
@@ -748,8 +748,8 @@ void modify_fv_mesh_derivs_for_LSA_3D_of_2D(void)
   /* d(grad(G))/dmesh */
   v = VELOCITY_GRADIENT11;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
-    for (q = 0; q < VIM; q++) {
-      for (r = 0; r < VIM; r++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
+      for (r = 0; r < goma_ctx->problem.vim; r++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdof; j++) {
             goma_ctx->fem.fv->d_grad_G_dmesh[p][q][r][b][j] =

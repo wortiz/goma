@@ -243,7 +243,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
    * Obtain the material index from the previously calculated
    * element block to material index array, Matilda
    */
-  mn = Matilda[ei_ptr->elem_blk_index];
+  mn = goma_ctx->problem.matilda[ei_ptr->elem_blk_index];
   if (mn < 0) {
     fprintf(stderr, "Negative material index for eb block %d \n", ei_ptr->elem_blk_index);
     GOMA_EH(GOMA_ERROR, "Ignore element block logic error");
@@ -306,7 +306,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
   } else if (is_shell_element(ei_ptr->ielem, exo)) {
     for (i = 0; i < num_elem_friends[ei_ptr->ielem]; i++) {
       n_eb = find_elemblock_index(elem_friends[ei_ptr->ielem][i], exo);
-      n_mn = Matilda[n_eb];
+      n_mn = goma_ctx->problem.matilda[n_eb];
       if (goma_ctx->fem.pd_glob[n_mn]->e[imtrx][R_MESH1]) {
         ei_ptr->deforming_mesh = TRUE;
       }
@@ -339,7 +339,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
     }
   } else {
     for (v = V_FIRST; v < V_LAST; v++) {
-      if (Num_Var_In_Type[imtrx][v]) {
+      if (goma_ctx->problem.num_var_in_type[imtrx][v]) {
         ei_ptr->dof[v] = 0;
         for (lvdof = 0; lvdof < MDE; lvdof++) {
           ei_ptr->Baby_Dolphin[v][lvdof] = -1;
@@ -377,7 +377,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
     ei_ptr->owningElementForColVar[v] = -1;
     ei_ptr->owningElement_ei_ptr[v] = NULL;
 
-    if (Num_Var_In_Type[imtrx][v]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][v]) {
       iLv_start = iLvdesc;
       iLv_found = 0;
       for (ln = 0; ln < nnodes; ln++) {
@@ -509,7 +509,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
    */
   for (v = V_FIRST; v < V_LAST; v++) {
     ei_ptr->owningElementForColVar[v] = -1;
-    if (Num_Var_In_Type[imtrx][v]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][v]) {
       lvdof = 0;
       for (ln = 0; ln < nnodes; ln++) {
         /*
@@ -900,7 +900,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
         /* Get the element block number of the parent */
         n_eb_Parent = find_elemblock_index(elem_Parent, exo);
         /* Get the material number of the parent element */
-        n_mn_Parent = Matilda[n_eb_Parent];
+        n_mn_Parent = goma_ctx->problem.matilda[n_eb_Parent];
         PROBLEM_DESCRIPTION_STRUCT *pd_Parent = goma_ctx->fem.pd_glob[n_mn_Parent];
 
         /* Get the element type of the parent */
@@ -914,7 +914,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
         // ei_ptr->num_sides	      = shape2sides(ei_ptr->ielem_shape);
 
         for (v = V_FIRST; v < V_LAST; v++) {
-          if (Num_Var_In_Type[imtrx][v]) {
+          if (goma_ctx->problem.num_var_in_type[imtrx][v]) {
             lvdof = 0;
             for (ln = 0; ln < num_local_nodes_Parent; ln++) {
               /*
@@ -980,7 +980,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
         /* Get the element block number of the parent */
         n_eb_Parent = find_elemblock_index(elem_Parent, exo);
         /* Get the material number of the parent element */
-        n_mn_Parent = Matilda[n_eb_Parent];
+        n_mn_Parent = goma_ctx->problem.matilda[n_eb_Parent];
 
         PROBLEM_DESCRIPTION_STRUCT *pd_Parent = goma_ctx->fem.pd_glob[n_mn_Parent];
 
@@ -996,7 +996,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
         // ei_ptr->num_sides	      = shape2sides(ei_ptr->ielem_shape);
 
         for (v = V_FIRST; v < V_LAST; v++) {
-          if (Num_Var_In_Type[imtrx][v]) {
+          if (goma_ctx->problem.num_var_in_type[imtrx][v]) {
             lvdof = 0;
             for (ln = 0; ln < num_local_nodes_Parent; ln++) {
               /*
@@ -1037,7 +1037,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
     if (is_shell_element(elem, exo)) {
       for (i = 0; i < num_elem_friends[elem]; i++) {
         n_eb = find_elemblock_index(elem_friends[elem][i], exo);
-        n_mn = Matilda[n_eb];
+        n_mn = goma_ctx->problem.matilda[n_eb];
         if (goma_ctx->fem.pd_glob[n_mn]->e[imtrx][R_MESH1]) {
           ei_ptr->deforming_mesh = TRUE;
         }
@@ -2022,7 +2022,7 @@ int load_elem_dofptr(const int ielem,
     /* This should loop through all the stress variables
      * for all the modes.
      */
-    int sdim = VIM;
+    int sdim = goma_ctx->problem.vim;
     if (goma_ctx->fem.pd->gv[FILM_HEIGHT])
       sdim = 3;
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
@@ -2060,7 +2060,7 @@ int load_elem_dofptr(const int ielem,
     /* This should loop through all the velocity gradient
      * components of the tensor
      */
-    int sdim = VIM;
+    int sdim = goma_ctx->problem.vim;
     if (goma_ctx->fem.pd->gv[FILM_HEIGHT])
       sdim = 3;
     for (b = 0; b < sdim; b++) {
@@ -3065,7 +3065,7 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
       /* This should loop through all the stress variables
        * for all the modes.
        */
-      int sdim = VIM;
+      int sdim = goma_ctx->problem.vim;
       if (goma_ctx->fem.pd->gv[FILM_HEIGHT])
         sdim = 3;
       for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
@@ -3102,8 +3102,8 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
       /* This should loop through all the velocity gradient
        * components of the tensor
        */
-      for (b = 0; b < VIM; b++) {
-        for (c = 0; c < VIM; c++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
+        for (c = 0; c < goma_ctx->problem.vim; c++) {
           eqn = R_g[b][c];
           if (goma_ctx->fem.upd->ep[imtrx][eqn] >= 0) {
             load_varType_Interpolation_ptrs_mat(imtrx, eqn, goma_ctx->fem.esp->G[b][c],

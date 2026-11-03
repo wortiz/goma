@@ -1084,6 +1084,11 @@
 #define MAX_EXTERNAL_FIELD 7 /* Maximum number of external fields */
 #endif
 
+/*   max number of Interface Sources */
+#ifndef MAX_INTERFACE
+#define MAX_INTERFACE 5
+#endif
+
 #define MAX_EQNS MAX_VARIABLE_TYPES
 
 #ifndef MAX_GEOMETRY_PARMS

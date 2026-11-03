@@ -294,12 +294,12 @@ int assemble_real_solid(double time_value, double tt, double dt) {
         goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)]) {
       for (a = 0; a < dim; a++) {
         vconv[a] = goma_ctx->fem.fv_dot->d_rs[a];
-        for (b = 0; b < VIM; b++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           vconv[a] -= goma_ctx->fem.fv_dot->d_rs[b] * goma_ctx->fem.fv->grad_d_rs[b][a];
         }
       }
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           var = SOLID_DISPLACEMENT1 + b;
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             phi_j = goma_ctx->fem.bf[var]->phi[j];
@@ -308,7 +308,7 @@ int assemble_real_solid(double time_value, double tt, double dt) {
 
             d_vconv->rs[a][b][j] -= (1. + 2. * tt) * phi_j * dt * goma_ctx->fem.fv->grad_d_rs[b][a];
 
-            for (c = 0; c < VIM; c++) {
+            for (c = 0; c < goma_ctx->problem.vim; c++) {
               /*grad_phi_e[i][j][k][l] = e_k e_l : grad(phi_i e_j )*/
               d_vconv->rs[a][b][j] -=
                   goma_ctx->fem.fv_dot->d_rs[c] * goma_ctx->fem.bf[var]->grad_phi_e[j][b][c][a];
@@ -376,8 +376,8 @@ int assemble_real_solid(double time_value, double tt, double dt) {
 
         diffusion = 0.;
         if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-          for (q = 0; q < VIM; q++) {
-            for (p = 0; p < VIM; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               grad_phi_i_e_a[p][q] = goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q];
               diffusion += grad_phi_i_e_a[p][q] * TT[q][p];
             }
@@ -438,8 +438,8 @@ int assemble_real_solid(double time_value, double tt, double dt) {
          * Set up some preliminaries that are needed for the (a,i)
          * equation for bunches of (b,j) column variables...
          */
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             grad_phi_i_e_a[p][q] = goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q];
           }
         }
@@ -475,16 +475,16 @@ int assemble_real_solid(double time_value, double tt, double dt) {
               if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
 
                 /* LAGRANGIAN MESH - Solve in curvilinear coordinates */
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     dgradphi_i_e_a_dmeshbj[p][q] =
                         goma_ctx->fem.bf[eqn]->d_grad_phi_e_dmesh[i][a][p][q][b][j];
                   }
                 }
 
                 diff_a = 0.;
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     diff_a += dgradphi_i_e_a_dmeshbj[p][q] * TT[q][p];
                   }
                 }
@@ -492,8 +492,8 @@ int assemble_real_solid(double time_value, double tt, double dt) {
                 diff_a *= h3;
 
                 diff_b = 0.;
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     diff_b += grad_phi_i_e_a[p][q] * dTT_dx[q][p][b][j];
                   }
                 }
@@ -502,7 +502,7 @@ int assemble_real_solid(double time_value, double tt, double dt) {
 
                 diff_c = 0.;
                 for (q = 0; q < dim; q++) {
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     diff_c += grad_phi_i_e_a[p][q] * TT[q][p];
                   }
                 }
@@ -582,8 +582,8 @@ int assemble_real_solid(double time_value, double tt, double dt) {
               if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
 
                 diff_b = 0.;
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     diff_b += grad_phi_i_e_a[p][q] * dTT_drs[q][p][b][j];
                   }
                 }
@@ -1817,7 +1817,7 @@ int get_convection_velocity_rs(
 
   dim = goma_ctx->fem.pd->Num_Dim;
 
-  for (p = 0; p < VIM; p++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
     vconv[p] = 0.;
   }
 

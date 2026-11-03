@@ -334,7 +334,7 @@ void user_aug_cond_volume_residuals(const int iAC,
     cAC[iAC][i] = goma_ctx->fem.augc[iAC].d_evol_dx[i];
   }
 
-  for (jAC = 0; jAC < nAC; jAC++) {
+  for (jAC = 0; jAC < goma_ctx->problem.n_ac; jAC++) {
     dAC[iAC][jAC] = 0.0;
   }
 

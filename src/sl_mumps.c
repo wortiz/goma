@@ -68,13 +68,15 @@ void free_solver_data(struct GomaLinearSolverData *data) {
 static void msr_to_triplet(struct GomaLinearSolverData *data) {
   struct MUMPS_data *mumps_data = (struct MUMPS_data *)data->SolverData;
 
-  int N = num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+  int N = goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+          goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx];
   int local_nnz = data->nnz;
 
   int RowOffset;
   MPI_Scan(&N, &RowOffset, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   RowOffset -= N;
-  int *colgids = (int *)malloc((N + num_external_dofs[goma_ctx->fem.pg->imtrx]) * sizeof(int));
+  int *colgids = (int *)malloc((N + goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx]) *
+                               sizeof(int));
   for (int i = 0; i < N; i++) {
     colgids[i] = RowOffset + i + 1;
   }

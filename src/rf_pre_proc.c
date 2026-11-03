@@ -76,9 +76,9 @@ static void build_elem_type_list(Exo_DB *exo) {
   int i;
   int ielem_type;
 
-  Num_Element_Types = 0;
+  goma_ctx->problem.num_element_types = 0;
   for (i = 0; i < MAX_ELEMENT_TYPES; i++) {
-    Unique_Element_Types[i] = -1;
+    goma_ctx->problem.unique_element_types[i] = -1;
   }
 
   /* loop through all the element blocks on the processor, setting the element
@@ -92,9 +92,10 @@ static void build_elem_type_list(Exo_DB *exo) {
      * add it to our list of unique element types...
      */
 
-    if (in_list(ielem_type, 0, Num_Element_Types, Unique_Element_Types) == -1) {
-      Unique_Element_Types[Num_Element_Types] = ielem_type;
-      Num_Element_Types++;
+    if (in_list(ielem_type, 0, goma_ctx->problem.num_element_types,
+                goma_ctx->problem.unique_element_types) == -1) {
+      goma_ctx->problem.unique_element_types[goma_ctx->problem.num_element_types] = ielem_type;
+      goma_ctx->problem.num_element_types++;
     }
   }
 

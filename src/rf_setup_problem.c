@@ -53,7 +53,7 @@ static void associate_bc_to_matrix(void);
 static void set_bc_equation(void) {
   int ibc;
 
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     /*
      *  Create a couple of pointers to cut down on the
      *  amount of indirect addressing
@@ -113,12 +113,12 @@ static void associate_bc_to_matrix(void) {
 
   if (goma_ctx->fem.upd->Total_Num_Matrices == 1) {
     /* Preserve legacy behavior */
-    for (ibc = 0; ibc < Num_BC; ibc++) {
+    for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
 
       BC_Types[ibc].matrix = 0;
     }
   } else {
-    for (ibc = 0; ibc < Num_BC; ibc++) {
+    for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
       /*
        *  Create a couple of pointers to cut down on the
        *  amount of indirect addressing
@@ -277,7 +277,7 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * Find the global maximum number of unknowns located at any one
    * node on any processor
    */
-  MaxVarPerNode = find_MaxUnknownNode();
+  goma_ctx->problem.max_var_per_node = find_MaxUnknownNode();
 
   /*
    * Exchange my idea of what materials I have at each node with
@@ -316,11 +316,14 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    * I extracted this from setup_fill_comm_map because some of the
    * renormalization routines make use of them.
    */
-  num_fill_unknowns = count_vardofs(FILL, dpi->num_universe_nodes);
-  internal_fill_unknowns = count_vardofs(FILL, dpi->num_internal_nodes);
-  owned_fill_unknowns = count_vardofs(FILL, (dpi->num_internal_nodes + dpi->num_boundary_nodes));
-  boundary_fill_unknowns = owned_fill_unknowns - internal_fill_unknowns;
-  external_fill_unknowns = num_fill_unknowns - owned_fill_unknowns;
+  goma_ctx->problem.num_fill_unknowns = count_vardofs(FILL, dpi->num_universe_nodes);
+  goma_ctx->problem.internal_fill_unknowns = count_vardofs(FILL, dpi->num_internal_nodes);
+  goma_ctx->problem.owned_fill_unknowns =
+      count_vardofs(FILL, (dpi->num_internal_nodes + dpi->num_boundary_nodes));
+  goma_ctx->problem.boundary_fill_unknowns =
+      goma_ctx->problem.owned_fill_unknowns - goma_ctx->problem.internal_fill_unknowns;
+  goma_ctx->problem.external_fill_unknowns =
+      goma_ctx->problem.num_fill_unknowns - goma_ctx->problem.owned_fill_unknowns;
 
   /*
    *  Possibly increase the number of variable descriptions to include
@@ -547,7 +550,7 @@ int coordinate_discontinuous_variables(Exo_DB *exo, Dpi *dpi)
    *  interface to denote a discontinuous interpolation at the
    *  interface.
    */
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     if (BC_Types[ibc].desc->i_apply == CROSS_PHASE_DISCONTINUOUS) {
       eqn_type = BC_Types[ibc].desc->equation;
       /*
@@ -772,7 +775,7 @@ void bc_set_index(Exo_DB *exo)
 {
   int ibc, ss_index;
   struct Boundary_Condition *bc_ptr;
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     bc_ptr = BC_Types + ibc;
     bc_ptr->Set_Index = -1;
     /*
@@ -838,7 +841,7 @@ void bc_internal_boundary(Exo_DB *exo)
 {
   int ibc, ss_index;
   struct Boundary_Condition *bc_ptr;
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     bc_ptr = BC_Types + ibc;
     bc_ptr->Internal_Boundary = FALSE;
     if (!strcmp(bc_ptr->Set_Type, "SS")) {
@@ -912,7 +915,7 @@ void bc_matrl_index(Exo_DB *exo)
   bin_matrl_elem = ind_matrl + goma_ctx->fem.upd->Num_Mat;
   node_flag_1ss = alloc_int_1(exo->num_nodes, INT_NOINIT);
 
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     bc_ptr = BC_Types + ibc;
     found = FALSE;
     /*
@@ -1191,7 +1194,7 @@ void determine_dvi_index(void)
   int ibc;
   struct Boundary_Condition *bc_ptr;
   struct BC_descriptions *bc_desc;
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     bc_ptr = BC_Types + ibc;
     bc_desc = bc_ptr->desc;
 
@@ -1360,11 +1363,11 @@ void setup_external_nodal_matrls(Exo_DB *exo, Dpi *dpi, Comm_Ex *cx)
    */
 
   if (dpi->num_neighbors > 0) {
-    mesg_send = alloc_int_1(ptr_node_send[dpi->num_neighbors] * max_Matrl, -1);
-    mesg_recv = alloc_int_1(ptr_node_recv[dpi->num_neighbors] * max_Matrl, -1);
+    mesg_send = alloc_int_1(goma_ctx->problem.ptr_node_send[dpi->num_neighbors] * max_Matrl, -1);
+    mesg_recv = alloc_int_1(goma_ctx->problem.ptr_node_recv[dpi->num_neighbors] * max_Matrl, -1);
 
-    for (i = 0; i < ptr_node_send[dpi->num_neighbors]; i++) {
-      node_num = list_node_send[i];
+    for (i = 0; i < goma_ctx->problem.ptr_node_send[dpi->num_neighbors]; i++) {
+      node_num = goma_ctx->problem.list_node_send[i];
       node = Nodes[node_num];
       istart = mesg_send + i * max_Matrl;
       for (k = 0; k < node->Mat_List.Length; k++) {
@@ -1377,9 +1380,9 @@ void setup_external_nodal_matrls(Exo_DB *exo, Dpi *dpi, Comm_Ex *cx)
   np_ptr = np_base;
   for (p = 0; p < dpi->num_neighbors; p++) {
     np_ptr->neighbor_ProcID = cx[p].neighbor_name;
-    np_ptr->send_message_buf = (void *)(mesg_send + ptr_node_send[p] * max_Matrl);
+    np_ptr->send_message_buf = (void *)(mesg_send + goma_ctx->problem.ptr_node_send[p] * max_Matrl);
     np_ptr->send_message_length = sizeof(int) * cx[p].num_nodes_send * max_Matrl;
-    np_ptr->recv_message_buf = (void *)(mesg_recv + ptr_node_recv[p] * max_Matrl);
+    np_ptr->recv_message_buf = (void *)(mesg_recv + goma_ctx->problem.ptr_node_recv[p] * max_Matrl);
     np_ptr->recv_message_length = sizeof(int) * cx[p].num_nodes_recv * max_Matrl;
     np_ptr++;
   }

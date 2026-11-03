@@ -82,7 +82,7 @@ int find_id_elem(const double x, /* x-coordinate */
       GOMA_EH( err,"load_ei" );
       */
       ebn = find_elemblock_index(i_elem, exo);
-      mn = Matilda[ebn];
+      mn = goma_ctx->problem.matilda[ebn];
       iconn_ptr = exo->elem_ptr[i_elem];
       ielem_type = Elem_Type(exo, i_elem);
       num_local_nodes = elem_info(NNODES, ielem_type);

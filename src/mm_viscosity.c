@@ -733,14 +733,14 @@ double viscosity(struct Generalized_Newtonian *gn_local,
         }
       }
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-        for (i = 0; i < VIM; i++) {
+        for (i = 0; i < goma_ctx->problem.vim; i++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1]; j++) {
             d_mu->X[i][j] *= thixotropic;
           }
         }
       }
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; i++) {
             d_mu->v[a][i] *= thixotropic;
           }
@@ -881,7 +881,7 @@ double power_law_viscosity(struct Generalized_Newtonian *gn_local,
   }
 
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
 
@@ -899,7 +899,7 @@ double power_law_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dv
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
@@ -1032,7 +1032,7 @@ double herschel_bulkley_viscosity(struct Generalized_Newtonian *gn_local,
    */
 
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
 
@@ -1053,7 +1053,7 @@ double herschel_bulkley_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dv
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
@@ -1177,7 +1177,7 @@ double carreau_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dmesh
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
@@ -1193,7 +1193,7 @@ double carreau_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dv
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
@@ -1359,7 +1359,7 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dmesh
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
@@ -1375,7 +1375,7 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dv
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
@@ -1581,7 +1581,7 @@ double bingham_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dmesh
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
@@ -1597,7 +1597,7 @@ double bingham_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dv
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
@@ -1745,7 +1745,7 @@ double bingham_wlf_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dmesh
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
@@ -1761,7 +1761,7 @@ double bingham_wlf_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dv
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
@@ -1951,7 +1951,7 @@ double carreau_wlf_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dmesh
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
@@ -1967,7 +1967,7 @@ double carreau_wlf_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dv
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
@@ -2274,7 +2274,7 @@ double carreau_suspension_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dmesh
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
@@ -2290,7 +2290,7 @@ double carreau_suspension_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dv
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
@@ -2379,7 +2379,7 @@ double power_law_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   }
 
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
 
@@ -2397,7 +2397,7 @@ double power_law_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dv
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
@@ -2520,7 +2520,7 @@ double powerlaw_suspension_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dmesh
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
@@ -2536,7 +2536,7 @@ double powerlaw_suspension_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dv
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
@@ -2982,7 +2982,7 @@ int filled_epoxy_viscosity(int species_sus, /* species num, solid volume fractio
 
   /* dmu_dT */
   var = TEMPERATURE;
-  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
+  if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
     if (T <= 0.) {
       goma_ctx->fem.mp->d_viscosity[var] = 0.;
       deriv_t = 0.;
@@ -3000,7 +3000,7 @@ int filled_epoxy_viscosity(int species_sus, /* species num, solid volume fractio
 
   /* dmu/dc */
   var = MASS_FRACTION;
-  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
+  if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
     if (alpha < alpha_g) {
       deriv = 8. / 3. * alpha / (alpha_g2 - alpha2) - duu_dT * (A * T_g / (1. - A * alpha));
 
@@ -3109,19 +3109,19 @@ int foam_epoxy_viscosity(int species_fluor, int species_cur, dbl mu0, dbl alpha_
   mu = muL * volFac;
 
   /* dmu/dc */
-  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+  if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
     goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_fluor] = 0.0;
     goma_ctx->fem.mp->d_FlowingLiquid_viscosity[MAX_VARIABLE_TYPES + species_fluor] = 0.0;
   }
 
   /* dmu_dT */
-  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
+  if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
     goma_ctx->fem.mp->d_viscosity[TEMPERATURE] = -mu * Aexp / (T * T);
     goma_ctx->fem.mp->d_FlowingLiquid_viscosity[TEMPERATURE] = -muL * Aexp / (T * T);
   }
 
   /* dmu/dc */
-  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
+  if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]) {
     if (alpha < alpha_g) {
       deriv = 2. * exponent * alpha / (alpha_g2 - alpha * alpha);
       goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + species_cur] = mu * deriv;
@@ -3133,7 +3133,8 @@ int foam_epoxy_viscosity(int species_fluor, int species_cur, dbl mu0, dbl alpha_
 
     if (goma_ctx->fem.mp->volumeFractionGas >= 0.0 && goma_ctx->fem.mp->volumeFractionGas <= 0.99) {
       dbl volFacDeriv = mu / ((1 - cVolFrac) * (1 - cVolFrac));
-      for (j = 0; j < Num_Var_In_Type[goma_ctx->fem.pg->imtrx][MASS_FRACTION]; j++) {
+      for (j = 0; j < goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][MASS_FRACTION];
+           j++) {
         goma_ctx->fem.mp->d_viscosity[MAX_VARIABLE_TYPES + j] +=
             volFacDeriv * goma_ctx->fem.mp->d_volumeFractionGas[MAX_VARIABLE_TYPES + j];
       }
@@ -3415,7 +3416,7 @@ double bond_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dmesh
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
@@ -3431,7 +3432,7 @@ double bond_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dv
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
@@ -3678,7 +3679,7 @@ double carreau_wlf_conc_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dmesh
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       for (j = 0; j < mdofs; j++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
@@ -3694,7 +3695,7 @@ double carreau_wlf_conc_viscosity(struct Generalized_Newtonian *gn_local,
    * d( mu )/dv
    */
   if (d_mu != NULL && goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];

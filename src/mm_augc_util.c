@@ -870,7 +870,7 @@ void update_parameterAC(
   if (goma_ctx->fem.augc[iAC].Type == AC_ARC_LENGTH) {
     delta = lambda - goma_ctx->fem.cont->BegParameterValue;
 
-    for (iCC = 0; iCC < nCC; iCC++) {
+    for (iCC = 0; iCC < goma_ctx->problem.n_cc; iCC++) {
       value = goma_ctx->fem.cpcc[iCC].Beg_CC_Value + goma_ctx->fem.cpcc[iCC].ratio * delta;
       update_parameterC(iCC, value, x, xdot, xa, goma_ctx->fem.cont->Delta_s0, cx, exo, dpi);
     }
@@ -2094,7 +2094,7 @@ int alc_aug_cond(int iAC,
   alceq_p = dp_ds * (lambda - lambda_old);
 
   /* Solution contribution:  dx_ds * (x - x_old) with scale factor */
-  for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+  for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
     alceq_s += sv[i] * sv[i] * dx[i] * (x[i] - x_old[i]);
   }
   if (goma_ctx->num_proc > 1) {
@@ -2113,7 +2113,7 @@ int alc_aug_cond(int iAC,
   estimate_bAC(iAC, x_AC, bAC, numProcUnknowns, cx, mf_args);
 
   /* cAC is solution sensitivity from LOCA */
-  for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+  for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
     cAC[iAC][i] = dx[i] * sv[i] * sv[i];
   }
 
@@ -2158,15 +2158,15 @@ void overlap_aug_cond(int ija[],
   int ac_lm = -1;
 
   /* Get element block indices for solid, fluid, and Lagrange surface material */
-  solid_eb = goma_ctx->fem.augc[nAC - 1].solid_eb + 1;
-  fluid_eb = goma_ctx->fem.augc[nAC - 1].fluid_eb + 1;
-  lm_eb = goma_ctx->fem.augc[nAC - 1].lm_eb + 1;
+  solid_eb = goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].solid_eb + 1;
+  fluid_eb = goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].fluid_eb + 1;
+  lm_eb = goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].lm_eb + 1;
   if (solid_eb == fluid_eb)
     GOMA_EH(GOMA_ERROR, "Solid and fluid must be on different blocks!");
 
-  if (Do_Overlap && lm_eb == solid_eb)
+  if (goma_ctx->problem.do_overlap && lm_eb == solid_eb)
     ac_lm = 1;
-  else if (Do_Overlap && lm_eb == fluid_eb)
+  else if (goma_ctx->problem.do_overlap && lm_eb == fluid_eb)
     ac_lm = 2;
   else
     GOMA_EH(GOMA_ERROR, "Shouldn't be here.");
@@ -2219,7 +2219,7 @@ void overlap_aug_cond(int ija[],
     jelem = -1;
     jside = -1;
 
-    for (jAC = 0; jAC < nAC; jAC++) {
+    for (jAC = 0; jAC < goma_ctx->problem.n_ac; jAC++) {
       if (goma_ctx->fem.augc[jAC].Type == AC_OVERLAP) {
         ielem = goma_ctx->fem.augc[jAC].lm_elem;
         iside = goma_ctx->fem.augc[jAC].lm_side;
@@ -2262,7 +2262,7 @@ void overlap_aug_cond(int ija[],
     jelem = -1;
     jside = -1;
 
-    for (jAC = 0; jAC < nAC; jAC++) {
+    for (jAC = 0; jAC < goma_ctx->problem.n_ac; jAC++) {
       if (goma_ctx->fem.augc[jAC].Type == AC_OVERLAP) {
         ielem = goma_ctx->fem.augc[jAC].lm_elem;
         iside = goma_ctx->fem.augc[jAC].lm_side;
@@ -2338,14 +2338,14 @@ void overlap_aug_cond(int ija[],
 #if 0
    {
      int index;
-     int numProcUnknowns = NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
-     for (jAC = 0; jAC < nAC; jAC++)
+     int numProcUnknowns = goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx] + goma_ctx->problem.num_ext_unknowns[goma_ctx->fem.pg->imtrx];
+     for (jAC = 0; jAC < goma_ctx->problem.n_ac; jAC++)
        {
          printf("jAC=%d, LM=%g, gAC=%g, dAC[%d][%d]=%g\n",jAC,goma_ctx->fem.augc[jAC].lm_value,gAC[jAC],jAC,jAC,dAC[jAC][jAC]);
          for ( index = 0; index<numProcUnknowns; index++)
            {
-             if (bAC[jAC][index] != 0. ) printf(" eqntype=%d, N=%d, bAC[jAC][%d]=%g\n",idv[goma_ctx->fem.pg->imtrx][index][0],idv[goma_ctx->fem.pg->imtrx][index][2],index,bAC[jAC][index]);
-             if (cAC[jAC][index] != 0. ) printf(" vartype=%d, N=%d, cAC[jAC][%d]=%g\n",idv[goma_ctx->fem.pg->imtrx][index][0],idv[goma_ctx->fem.pg->imtrx][index][2],index,cAC[jAC][index]);
+             if (bAC[jAC][index] != 0. ) printf(" eqntype=%d, N=%d, bAC[jAC][%d]=%g\n",goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][index][0],goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][index][2],index,bAC[jAC][index]);
+             if (cAC[jAC][index] != 0. ) printf(" vartype=%d, N=%d, cAC[jAC][%d]=%g\n",goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][index][0],goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][index][2],index,cAC[jAC][index]);
            }
        }
    }
@@ -2463,7 +2463,7 @@ static int estimate_dAC_LSvel(
 
   int jAC = 0, chosen_vel = 0;
 
-  for (jAC = 0; jAC < nAC; jAC++) {
+  for (jAC = 0; jAC < goma_ctx->problem.n_ac; jAC++) {
     if (goma_ctx->fem.augc[jAC].Type == AC_LS_VEL && iAC == jAC) {
 
       chosen_vel = goma_ctx->fem.augc[jAC].DIR;
@@ -2531,8 +2531,8 @@ static int estimate_dAC_ALC(
 #endif
 
   /* Initialize perturbed AC residual arrays */
-  asdv(&res_p, nAC);
-  asdv(&res_m, nAC);
+  asdv(&res_p, goma_ctx->problem.n_ac);
+  asdv(&res_m, goma_ctx->problem.n_ac);
 
   /* Set perturbation to continuation parameter (in x_AC) */
   p_save = x_AC[iAC];
@@ -2987,7 +2987,7 @@ int create_overlap_acs(Exo_DB *exo, int iAC)
   FILE *ac_id;
 
   /* Save old nAC value */
-  old_nAC = nAC;
+  old_nAC = goma_ctx->problem.n_ac;
   ac_count = old_nAC - 1;
 
   /* Read inputs from overlap AC card */
@@ -3136,7 +3136,7 @@ int create_overlap_acs(Exo_DB *exo, int iAC)
 
   /* Change nAC and return */
   if (ac_count == new_nAC) {
-    nAC = new_nAC;
+    goma_ctx->problem.n_ac = new_nAC;
     return 0;
   } else
     return -1;
@@ -3153,7 +3153,7 @@ int assign_overlap_acs(double x[], Exo_DB *exo)
   int e_start, e_end;
   int ibf = -1, ib;
 
-  for (iAC = 0; iAC < nAC; iAC++) {
+  for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
     if (goma_ctx->fem.augc[iAC].Type == AC_OVERLAP)
       break;
   }
@@ -3184,7 +3184,7 @@ int assign_overlap_acs(double x[], Exo_DB *exo)
     /* Check for level set going through element (fill unknown sign change) */
     if (elem_overlaps_interface(e, x, exo, goma_ctx->fem.ls->Length_Scale)) {
       for (k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
-        if (iAC >= nAC || (goma_ctx->fem.augc[iAC].Type != AC_OVERLAP)) {
+        if (iAC >= goma_ctx->problem.n_ac || (goma_ctx->fem.augc[iAC].Type != AC_OVERLAP)) {
           /* Sometimes we get here cuz there is a defgrad.  In this
            * case, we want the time step to fail so that we can
            * continue and not abort.
@@ -3197,8 +3197,9 @@ int assign_overlap_acs(double x[], Exo_DB *exo)
       }
     }
   }
-  printf("Overlap AC: %d of the available %d ACs are currently assigned\n", iAC, nAC);
-  for (; iAC < nAC; iAC++) {
+  printf("Overlap AC: %d of the available %d ACs are currently assigned\n", iAC,
+         goma_ctx->problem.n_ac);
+  for (; iAC < goma_ctx->problem.n_ac; iAC++) {
     if (goma_ctx->fem.augc[iAC].Type == AC_OVERLAP)
       goma_ctx->fem.augc[iAC].lm_elem = -1;
   }
@@ -3230,7 +3231,7 @@ int create_periodic_acs(Exo_DB *exo)
   double scale;
 
   /* Save old nAC value */
-  old_nAC = nAC;
+  old_nAC = goma_ctx->problem.n_ac;
 
   for (iAC = 0; iAC < old_nAC; iAC++) {
     if (goma_ctx->fem.augc[iAC].Type == AC_PERIODIC) {
@@ -3353,7 +3354,7 @@ int create_periodic_acs(Exo_DB *exo)
       }
 
       new_ACs = count2;
-      new_nAC = nAC + new_ACs;
+      new_nAC = goma_ctx->problem.n_ac + new_ACs;
 
       /* See if MAX_NGV will allow this number of AC's */
       if (new_nAC > (MAX_NGV)) {
@@ -3363,12 +3364,12 @@ int create_periodic_acs(Exo_DB *exo)
 
       /* Now, expand augc to make room for them */
       goma_ctx->fem.augc = (struct AC_Information *)realloc_struct_1(
-          goma_ctx->fem.augc, struct AC_Information, new_nAC, nAC);
+          goma_ctx->fem.augc, struct AC_Information, new_nAC, goma_ctx->problem.n_ac);
 
       /*
        * Now fill in data for each new AC constraint.
        */
-      ac_count = nAC;
+      ac_count = goma_ctx->problem.n_ac;
       for (i = 0; (i < count1) && (ac_count < new_nAC); i++) {
         goma_ctx->fem.augc[ac_count].Type = AC_PERIODIC;
         goma_ctx->fem.augc[ac_count].VAR = var;
@@ -3397,7 +3398,7 @@ int create_periodic_acs(Exo_DB *exo)
       for (i = 0; i < new_nAC; i++) {
         goma_ctx->fem.augc[i].nAC = new_nAC;
       }
-      nAC = new_nAC;
+      goma_ctx->problem.n_ac = new_nAC;
       DPRINTF(stderr, "\tCreated %d new AC's for periodic bc.\n", new_ACs);
 
       safe_free(node_list1);

@@ -349,7 +349,7 @@ int assemble_energy(
       advection = 0.;
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
 
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           advection += vconv[p] * grad_T[p];
         }
 
@@ -360,11 +360,11 @@ int assemble_energy(
 
       diffusion = 0.;
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
         }
 
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           diffusion += grad_phi_i[p] * q[p];
         }
         diffusion *= det_J * wt;
@@ -425,7 +425,7 @@ int assemble_energy(
        * equation for bunches of (b,j) column variables...
        */
 
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
       }
 
@@ -438,7 +438,7 @@ int assemble_energy(
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-          for (p = 0; p < VIM; p++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             grad_phi_j[p] = goma_ctx->fem.bf[var]->grad_phi[j][p];
           }
 
@@ -455,7 +455,7 @@ int assemble_energy(
 
           advection = 0.;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               advection += rho * d_Cp->T[j] * vconv[p] * grad_T[p] +
                            d_rho->T[j] * Cp * vconv[p] * grad_T[p] +
                            rho * Cp * vconv[p] * grad_phi_j[p] +
@@ -468,7 +468,7 @@ int assemble_energy(
 
           diffusion = 0.;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               diffusion += d_q->T[p][j] * grad_phi_i[p];
             }
             diffusion *= det_J * wt;
@@ -506,7 +506,7 @@ int assemble_energy(
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               grad_phi_j[p] = goma_ctx->fem.bf[var]->grad_phi[j][p];
             }
 
@@ -522,7 +522,7 @@ int assemble_energy(
 
             advection = 0.;
             if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 advection += d_rho->moment[b][j] * Cp * vconv[p] * grad_T[p];
               }
               advection *= -wt_func * det_J * wt;
@@ -532,7 +532,7 @@ int assemble_energy(
 
             diffusion = 0.;
             if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 diffusion += d_q->moment[b][p][j] * grad_phi_i[p];
               }
               diffusion *= det_J * wt;
@@ -559,7 +559,7 @@ int assemble_energy(
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           phi_j = goma_ctx->fem.bf[var]->phi[j];
 
-          for (p = 0; p < VIM; p++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             grad_phi_j[p] = goma_ctx->fem.bf[var]->grad_phi[j][p];
           }
 
@@ -575,7 +575,7 @@ int assemble_energy(
 
           advection = 0.;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               advection += d_rho->rho[j] * Cp * vconv[p] * grad_T[p];
             }
             advection *= -wt_func * det_J * wt;
@@ -585,7 +585,7 @@ int assemble_energy(
 
           diffusion = 0.;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               // diffusion += d_q->rho[p][j] * grad_phi_i[p];
             }
             diffusion *= det_J * wt;
@@ -639,7 +639,7 @@ int assemble_energy(
       /*
        * J_e_v
        */
-      for (b = 0; b < VIM; b++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         var = VELOCITY1 + b;
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
           pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -683,7 +683,7 @@ int assemble_energy(
             dbl divergence = 0;
             if (enable_divergence) {
               dbl div_phi_j_e_b = 0.;
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 div_phi_j_e_b += goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][p];
               }
               divergence += rho * Cp * goma_ctx->fem.fv->T * div_phi_j_e_b;
@@ -909,7 +909,7 @@ int assemble_energy(
               diff_a *= det_J * h3 * wt;
 
               diff_b = 0.;
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 diff_b += d_q->X[p][b][j] * grad_phi_i[p];
               }
               diff_b *= det_J * h3 * wt;
@@ -1068,8 +1068,8 @@ int assemble_energy(
        * J_e_S
        */
       for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             var = v_s[mode][a][b];
             if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -1716,18 +1716,18 @@ void heat_flux(double q[DIM], HEAT_FLUX_DEPENDENCE_STRUCT *d_q, double time) {
 
   k = conductivity(d_k, time);
 
-  for (p = 0; p < VIM; p++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
     grad_T[p] = goma_ctx->fem.fv->grad_T[p];
   }
 
   if (goma_ctx->fem.cr->HeatFluxModel == CR_HF_FOURIER_0) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       q[p] = -k * grad_T[p];
     }
 
     var = TEMPERATURE;
     if (d_q != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_q->T[p][j] = -k * goma_ctx->fem.bf[var]->grad_phi[j][p] - d_k->T[j] * grad_T[p];
         }
@@ -1737,7 +1737,7 @@ void heat_flux(double q[DIM], HEAT_FLUX_DEPENDENCE_STRUCT *d_q, double time) {
     var = MASS_FRACTION;
     if (d_q != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             d_q->C[p][w][j] = -d_k->C[w][j] * grad_T[p];
           }
@@ -1747,7 +1747,7 @@ void heat_flux(double q[DIM], HEAT_FLUX_DEPENDENCE_STRUCT *d_q, double time) {
 
     var = FILL;
     if (d_q != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_q->F[p][j] = -d_k->F[j] * grad_T[p];
         }
@@ -1755,8 +1755,8 @@ void heat_flux(double q[DIM], HEAT_FLUX_DEPENDENCE_STRUCT *d_q, double time) {
     }
 
     if (d_q != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-      for (p = 0; p < VIM; p++) {
-        for (b = 0; b < WIM; b++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (b = 0; b < goma_ctx->problem.wim; b++) {
           var = MESH_DISPLACEMENT1 + b;
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             d_q->X[p][b][j] =
@@ -1771,21 +1771,21 @@ void heat_flux(double q[DIM], HEAT_FLUX_DEPENDENCE_STRUCT *d_q, double time) {
 
     var = TEMPERATURE;
     if (d_q != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_q->T[p][j] = 0.0;
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             d_q->T[p][j] += dq_gradT[p][a] * goma_ctx->fem.bf[var]->grad_phi[j][a];
           }
         }
       }
     }
-    for (b = 0; b < WIM; b++) {
+    for (b = 0; b < goma_ctx->problem.wim; b++) {
       var = MESH_DISPLACEMENT1 + b;
       if (d_q != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           d_q->X[p][b][j] = dq_dX[p][b] * goma_ctx->fem.bf[var]->phi[j];
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             d_q->X[p][b][j] += dq_gradT[p][a] * goma_ctx->fem.fv->d_grad_T_dmesh[a][b][j];
           }
         }
@@ -1856,7 +1856,7 @@ double heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
     }
 
     if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         var = VELOCITY1 + a;
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_h->v[a][j] = goma_ctx->fem.mp->d_heat_source[var] * goma_ctx->fem.bf[var]->phi[j];
@@ -1865,7 +1865,7 @@ double heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
     }
 
     if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         var = MESH_DISPLACEMENT1 + a;
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_h->X[a][j] = goma_ctx->fem.mp->d_heat_source[var] * goma_ctx->fem.bf[var]->phi[j];
@@ -2548,7 +2548,7 @@ int assemble_ls_latent_heat_source(double iso_therm,
         /*
          * J_W_v
          */
-        for (b = 0; b < WIM; b++) {
+        for (b = 0; b < goma_ctx->problem.wim; b++) {
           var = VELOCITY1 + b;
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];

@@ -136,8 +136,8 @@ ADType ad_numerical_viscosity(ADType s[DIM][DIM], /* total stress */
   }
 
   g_dbl_dot_g = 0.;
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       g_dbl_dot_g += gamma_cont[a][b] * gamma_cont[a][b];
     }
   }

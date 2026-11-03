@@ -65,7 +65,7 @@ void setup_element_storage(void)
   goma_ctx->fem.pg->imtrx = 0; // TODO: UCK
   for (eb_index = 0; eb_index < EXO_ptr->num_elem_blocks; eb_index++) {
     do_malloc = FALSE;
-    mn = Matilda[eb_index];
+    mn = goma_ctx->problem.matilda[eb_index];
     if (mn < 0) {
       continue;
     }

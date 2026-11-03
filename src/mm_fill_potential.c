@@ -297,7 +297,7 @@ int assemble_potential(double time, /* present time value */
              ELECTRODE_KINETICS) /* KSC: 10/21/98; modified, KSC: 8/30/00 */
   {
     n_species = goma_ctx->fem.pd->Num_Species_Eqn + 1;
-    n = n_species * VIM;
+    n = n_species * goma_ctx->problem.vim;
 
     if (goma_ctx->fem.mp->SolutionTemperatureModel == CONSTANT) /* constant solution temperature */
     {
@@ -458,11 +458,11 @@ int assemble_potential(double time, /* present time value */
       goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_VOLUME) /* added by RSL 9/14/00 */
   {
     for (i = 0; i < n_species - 1; i++) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         grad_x[i][a] = goma_ctx->fem.fv->grad_c[i][a];
       }
     }
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       sumdelx = 0.0;
       for (i = 0; i < n_species - 1; i++) {
         sumdelx += grad_x[i][a];
@@ -470,12 +470,12 @@ int assemble_potential(double time, /* present time value */
       grad_x[n_species - 1][a] = -sumdelx;
     }
 
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       ii2[a] = 0.0;
-      for (i = 0; i < n; i += VIM) {
-        l = i / VIM;
-        for (j = VIM; j < n; j += VIM) {
-          m = j / VIM;
+      for (i = 0; i < n; i += goma_ctx->problem.vim) {
+        l = i / goma_ctx->problem.vim;
+        for (j = goma_ctx->problem.vim; j < n; j += goma_ctx->problem.vim) {
+          m = j / goma_ctx->problem.vim;
           ii2[a] += z[l] * A_inv[i][j] * grad_x[m][a];
         }
       }
@@ -496,16 +496,19 @@ int assemble_potential(double time, /* present time value */
             sum1 = 0.0;
             for (l = 0; l < n_species; l++) {
               if (w == 0) {
-                sum1 -= z[l] * A_inv[VIM * l][n - VIM];
+                sum1 -= z[l] * A_inv[goma_ctx->problem.vim * l][n - goma_ctx->problem.vim];
               } else {
-                sum1 += z[l] * (A_inv[VIM * l][VIM * w] - A_inv[VIM * l][n - VIM]);
+                sum1 += z[l] * (A_inv[goma_ctx->problem.vim * l][goma_ctx->problem.vim * w] -
+                                A_inv[goma_ctx->problem.vim * l][n - goma_ctx->problem.vim]);
               }
             }
             sum2 = 0.0;
             for (l = 0; l < n_species; l++) {
               sum3 = 0.0;
               for (kk = 1; kk < n_species; kk++) {
-                sum3 += goma_ctx->fem.fv->giant_C_matrix[w][j][VIM * l][VIM * kk] * grad_x[kk][a];
+                sum3 += goma_ctx->fem.fv->giant_C_matrix[w][j][goma_ctx->problem.vim * l]
+                                                        [goma_ctx->problem.vim * kk] *
+                        grad_x[kk][a];
               }
               sum2 += z[l] * sum3;
             }
@@ -526,7 +529,7 @@ int assemble_potential(double time, /* present time value */
    */
   else if (goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED) {
     if (z[n_species - 1] != 0.0) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         sumdelx = 0.0;
         for (i = 0; i < n_species - 1; i++) {
           sumdelx += goma_ctx->fem.fv->grad_c[i][a];
@@ -535,7 +538,7 @@ int assemble_potential(double time, /* present time value */
       }
     }
 
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       ii2[a] = 0.0;
       for (i = 0; i < n_species; i++) {
         ii2[a] -= z[i] * D[i] * goma_ctx->fem.fv->grad_c[i][a];
@@ -568,12 +571,12 @@ int assemble_potential(double time, /* present time value */
   else if (goma_ctx->fem.cr->MassFluxModel == FICKIAN_CHARGED_X) /* RSL 9/18/00 */
   {
     for (i = 0; i < n_species - 1; i++) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         grad_x[i][a] = goma_ctx->fem.fv->grad_c[i][a];
       }
     }
 
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       ii2[a] = 0.0;
       for (i = 0; i < n_species - 1; i++) {
         ii2[a] -= z[i] * D[i] * grad_x[i][a];
@@ -1041,7 +1044,7 @@ void current_BV_surf(double func[DIM],
     fprintf(stderr, "Warning!: a default electrolyte temperature of 298 K is being used!");
   }
 
-  if (nAC) {                                   /* if augmenting condition card is active, then */
+  if (goma_ctx->problem.n_ac) {                /* if augmenting condition card is active, then */
     V = goma_ctx->fem.mp->electrode_potential; /* get electrode potential from AC calculation */
   }
 
@@ -1554,7 +1557,7 @@ int assemble_electric_field(void) /* Least square equation Efield = grad (voltag
 
   /* Gradient of voltage equation */
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     grad_V[a] = goma_ctx->fem.fv->grad_V[a];
     Efield[a] = goma_ctx->fem.fv->E_field[a];
   }
@@ -1567,7 +1570,7 @@ int assemble_electric_field(void) /* Least square equation Efield = grad (voltag
     /*
      * Assemble each component "ab" of the velocity gradient equation...
      */
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       eqn = R_EFIELD1 + a;
       /*
        * In the element, there will be contributions to this many equations
@@ -1609,7 +1612,7 @@ int assemble_electric_field(void) /* Least square equation Efield = grad (voltag
    */
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       eqn = R_EFIELD1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
@@ -1774,7 +1777,7 @@ Parameters:
 */
   perm = electrical_conductivity(d_p_dT, d_p_dV, d_p_dC, d_p_dX, time, dt);
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     efield[a] = -goma_ctx->fem.fv->grad_V[a];
   }
 
@@ -1783,7 +1786,7 @@ Parameters:
     var = VOLTAGE;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           grad_phi_j = goma_ctx->fem.bf[var]->grad_phi[j][p];
           d_func[0][var][j] +=
               goma_ctx->fem.fv->snormal[p] * (perm * grad_phi_j - d_p_dV[j] * efield[p]);
@@ -1794,7 +1797,7 @@ Parameters:
     var = TEMPERATURE;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           grad_phi_j = goma_ctx->fem.bf[var]->grad_phi[j][p];
           d_func[0][var][j] += goma_ctx->fem.fv->snormal[p] * (-d_p_dT[j] * efield[p]);
         }
@@ -1802,10 +1805,10 @@ Parameters:
     }
 
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-      for (b = 0; b < VIM; b++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         var = MESH_DISPLACEMENT1 + b;
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          for (q = 0; q < VIM; q++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             d_func[0][var][j] +=
                 goma_ctx->fem.fv->snormal[q] *
                     (perm * goma_ctx->fem.fv->d_grad_V_dmesh[q][b][j] - d_p_dX[b][j] * efield[q]) -
@@ -1818,7 +1821,7 @@ Parameters:
 
   /* Calculate the residual contribution                                       */
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     *func += -perm * goma_ctx->fem.fv->snormal[a] * efield[a];
   }
 
@@ -1906,7 +1909,7 @@ double electrical_conductivity(double dkdT[MDE],
            goma_ctx->fem.mp->Elec_ConductivityModel == ELECTRODE_KINETICS) {
     if (goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
         goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_VOLUME) {
-      n = n_species * VIM;
+      n = n_species * goma_ctx->problem.vim;
 
       if (goma_ctx->fem.mp->SolutionTemperatureModel == CONSTANT) {
         T = goma_ctx->fem.mp->solution_temperature;
@@ -1958,10 +1961,10 @@ double electrical_conductivity(double dkdT[MDE],
       }
 
       sumk = 0.0;
-      for (i = 0; i < n; i += VIM) {
-        l = i / VIM;
-        for (j = VIM; j < n; j += VIM) {
-          m = j / VIM;
+      for (i = 0; i < n; i += goma_ctx->problem.vim) {
+        l = i / goma_ctx->problem.vim;
+        for (j = goma_ctx->problem.vim; j < n; j += goma_ctx->problem.vim) {
+          m = j / goma_ctx->problem.vim;
           /* sumk -= FRT*z[l]*z[m]*A_inv[i][j]*x[m]; */
           sumk -= F * FRT * z[l] * z[m] * A_inv[i][j] * x[m]; /* KSC: 7-29-04 */
         }
@@ -2000,17 +2003,21 @@ double electrical_conductivity(double dkdT[MDE],
             sum1 = 0.0;
             for (l = 0; l < n_species; l++) {
               if (w == 0) {
-                sum1 -= z[l] * z[n_species - 1] * A_inv[VIM * l][n - VIM];
+                sum1 -= z[l] * z[n_species - 1] *
+                        A_inv[goma_ctx->problem.vim * l][n - goma_ctx->problem.vim];
               } else {
-                sum1 += z[l] * (z[w] * A_inv[VIM * l][VIM * w] -
-                                z[n_species - 1] * A_inv[VIM * l][n - VIM]);
+                sum1 += z[l] * (z[w] * A_inv[goma_ctx->problem.vim * l][goma_ctx->problem.vim * w] -
+                                z[n_species - 1] *
+                                    A_inv[goma_ctx->problem.vim * l][n - goma_ctx->problem.vim]);
               }
             }
             sum2 = 0.0;
             for (l = 0; l < n_species; l++) {
               sum3 = 0.0;
               for (kk = 1; kk < n_species; kk++) {
-                sum3 += z[kk] * x[kk] * goma_ctx->fem.fv->giant_C_matrix[w][j][VIM * l][VIM * kk];
+                sum3 += z[kk] * x[kk] *
+                        goma_ctx->fem.fv->giant_C_matrix[w][j][goma_ctx->problem.vim * l]
+                                                        [goma_ctx->problem.vim * kk];
               }
               sum2 += z[l] * sum3;
             }

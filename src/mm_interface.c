@@ -50,8 +50,8 @@ INTERFACE_SOURCE_STRUCT *interface_source_alloc(int num_terms, int is_type, int 
 {
   int i;
   INTERFACE_SOURCE_STRUCT *is;
-  is = alloc_struct_1(INTERFACE_SOURCE_STRUCT, Num_Interface_Srcs);
-  for (i = 0; i < Num_Interface_Srcs; i++) {
+  is = alloc_struct_1(INTERFACE_SOURCE_STRUCT, goma_ctx->problem.num_interface_srcs);
+  for (i = 0; i < goma_ctx->problem.num_interface_srcs; i++) {
     is[i].Num_Terms = num_terms;
     is[i].SpeciesVT = SPECIES_UNDEFINED_FORM;
     is[i].IS_Type = is_type;
@@ -88,7 +88,7 @@ void interface_source_free(INTERFACE_SOURCE_STRUCT *is)
    *  Free underlying memory assocated with the state of the surface,
    *  If there is any. IS_Type tells us what to do.
    */
-  for (i = 0; i < Num_Interface_Srcs; i++) {
+  for (i = 0; i < goma_ctx->problem.num_interface_srcs; i++) {
     if (is[i].StateInterface) {
     }
     if (is[i].StateInterfaceOld) {

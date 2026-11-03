@@ -93,11 +93,6 @@ extern "C" {
 #include "wr_dpi.h"
 #include "wr_exo.h"
 
-extern int ***Local_Offset;
-extern int ***Dolphin;
-extern int *NumUnknowns;    /* Number of unknown variables updated by this   */
-extern int *NumExtUnknowns; /* Number of unknown variables updated by this   */
-extern int ***idv;
 extern int **local_ROT_list;
 extern int rotation_allocated;
 extern Comm_Ex **cx;
@@ -1111,10 +1106,10 @@ void convert_omega_h_to_goma(
   CALL(ex_close(exoid));
 
   for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    free(idv[imtrx]);
+    free(goma_ctx->problem.idv[imtrx]);
   }
-  free(idv);
-  idv = NULL;
+  free(goma_ctx->problem.idv);
+  goma_ctx->problem.idv = NULL;
 
   free_Surf_BC(First_Elem_Side_BC_Array, exo);
   free_Edge_BC(First_Elem_Edge_BC_Array, exo, dpi);
@@ -1168,14 +1163,14 @@ void convert_omega_h_to_goma(
 
   for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (int i = 0; i < num_total_nodes; i++) {
-      free(Local_Offset[imtrx][i]);
-      free(Dolphin[imtrx][i]);
+      free(goma_ctx->problem.local_offset[imtrx][i]);
+      free(goma_ctx->problem.dolphin[imtrx][i]);
     }
-    free(Dolphin[imtrx]);
-    free(Local_Offset[imtrx]);
+    free(goma_ctx->problem.dolphin[imtrx]);
+    free(goma_ctx->problem.local_offset[imtrx]);
   }
-  safer_free((void **)&Local_Offset);
-  safer_free((void **)&Dolphin);
+  safer_free((void **)&goma_ctx->problem.local_offset);
+  safer_free((void **)&goma_ctx->problem.dolphin);
 
   read_mesh_exoII(exo, dpi);
   one_base(exo, goma_ctx->num_proc);
@@ -1376,7 +1371,8 @@ void adapt_mesh_omega_h(struct GomaLinearSolverData **ams,
   resetup_problem(exo, dpi);
 
   for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    int numProcUnknowns = NumUnknowns[imtrx] + NumExtUnknowns[imtrx];
+    int numProcUnknowns =
+        goma_ctx->problem.num_unknowns[imtrx] + goma_ctx->problem.num_ext_unknowns[imtrx];
     realloc_dbl_1(&x[imtrx], numProcUnknowns, 0);
     realloc_dbl_1(&x_old[imtrx], numProcUnknowns, 0);
     realloc_dbl_1(&x_older[imtrx], numProcUnknowns, 0);

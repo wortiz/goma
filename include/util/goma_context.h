@@ -327,6 +327,128 @@ typedef struct GomaFem {
 } GomaFem;
 
 /*
+ * Problem setup: interpolation choices, time integration and continuation
+ * parameters, augmenting condition counts, basis function inventory and the
+ * unknown/DOF maps. Formerly the globals in rf_fem.h.
+ */
+typedef struct GomaProblem {
+  int coordinate_system; /* type of coordinate system (see rf_fem_const.h) */
+
+  /* FEM interpolation parameters (see rf_fem_const.h) */
+  int velocity_pressure; /* element type for velocity and pressure interpolation */
+  int velocity;          /* interpolation for velocity (set from velocity_pressure) */
+  int pressure;          /* interpolation for pressure (set from velocity_pressure) */
+  int temperature;       /* interpolation for temperature */
+  int mesh_displacement; /* element type for mesh displacement interpolation */
+  int mass_fraction;     /* interpolation for mass fraction and density */
+  int n_eqm;             /* one or more element quality metrics are computed */
+  int use_dg;            /* discontinuous Galerkin interpolation is in use */
+  int do_overlap;        /* overlap augmenting conditions are used */
+  int problem_type;      /* type of problem to be solved */
+
+  /* extra terms in axisymmetric or swirling flow problems; set in setup_pd */
+  int vim;
+  int wim;
+
+  /* boundary conditions, rotations and interface sources */
+  int num_bc;
+  int num_interface_srcs;
+  int int_src_bc_id[MAX_INTERFACE];
+  int num_rot;
+
+  /* import / export field counts (coupled mode) */
+  int num_import_nv;
+  int num_import_ev;
+  int num_export_xs;
+  int num_export_xp;
+  int export_xs_id[MAX_EXTERNAL_FIELD];
+  int export_xp_id[MAX_EXTERNAL_FIELD];
+
+  /* unique basis functions, element types, interpolations and shapes */
+  int num_basis_functions;
+  int unique_basis_functions[MAX_BASIS_FUNCTIONS];
+  int num_element_types;
+  int unique_element_types[MAX_ELEMENT_TYPES];
+  int num_interpolations;
+  int unique_interpolations[MAX_INTERPOLATIONS];
+  int highest_interpolation;
+  int num_shapes;
+  int unique_shapes[MAX_ELEMENT_SHAPES];
+
+  /* time integration */
+  int time_integration;
+  int use_level_set;
+  int use_phase_field;
+  double eps; /* time step error */
+  int print_freq;
+  double print_delt;
+  double print_delt2_time;
+  double print_delt2;
+
+  /* continuation */
+  int continuation;
+  int cont_type;
+  int bdy_cond_id;
+  int data_flt_id;
+  int mat_id;
+  int mat_prop_id;
+  int mat_prop_si_id;
+  int max_path_steps;
+  double delta_s0;
+  double delta_s_min;
+  double delta_s_max;
+  double path_max;
+  double print_delt2_path;
+  double beg_parameter_value;
+  double end_parameter_value;
+
+  /* augmenting, continuation and hunting condition counts */
+  int n_ac;
+  int n_cc;
+  int n_tc;
+  int n_uc;
+  int n_utc;
+  int n_hc;
+
+  int *matilda; /* material index for each element block; filled in rd_mesh.c */
+
+  /* DOF counts by ownership: internal (mine only), boundary (mine, others want),
+   * external (theirs, I want), universe (all known to this processor) */
+  int *num_internal_dofs;
+  int *num_boundary_dofs;
+  int *num_external_dofs;
+  int *num_universe_dofs;
+  int num_personal_elems;
+
+  /* communication lists for nodes and DOFs (dp_map_comm_vec.c) */
+  int *ptr_node_recv;
+  int *ptr_fill_node_recv;
+  int **ptr_dof_send;
+  int **list_dof_send;
+  int *ptr_node_send;
+  int *list_node_send;
+  int *ptr_fill_node_send;
+  int *list_fill_node_send;
+
+  int *num_unknowns;     /* unknowns updated by this processor, per matrix */
+  int *num_ext_unknowns; /* external unknowns stored on this processor, per matrix */
+  int max_var_per_node;  /* maximum number of unknowns at any node on any processor */
+  int num_var_in_type[MAX_NUM_MATRICES][MAX_VARIABLE_TYPES];
+
+  int num_fill_unknowns;
+  int owned_fill_unknowns;
+  int internal_fill_unknowns;
+  int boundary_fill_unknowns;
+  int external_fill_unknowns;
+
+  int ***local_offset; /* [matrix][node][variable] offset from the node's first unknown */
+  int ***dolphin;      /* [matrix][node][variable] degrees of freedom (mm_unknown_map.c) */
+  int ***idv;          /* [matrix][dof][0..2]: variable, nodal dof, global node */
+  char ***dofname;     /* variable names for each dof */
+  char ***resname;     /* residual equation names for each dof */
+} GomaProblem;
+
+/*
  * GomaContext collects process-wide state that used to live in individual
  * global variables: MPI/parallel information and I/O / run configuration.
  *
@@ -395,6 +517,7 @@ typedef struct GomaContext {
   GomaParticles particles; /* particle tracking */
   GomaSolver solver;       /* linear and nonlinear solver options */
   GomaFem fem;             /* problem description, materials and element working storage */
+  GomaProblem problem;     /* problem setup, continuation parameters and unknown maps */
 } GomaContext;
 
 /*

@@ -73,7 +73,7 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
   int index_pres = 0;
   int index_vel = 0;
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-    int mn = Matilda[eb_index];
+    int mn = goma_ctx->problem.matilda[eb_index];
 
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
@@ -147,7 +147,7 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
   index_pres = 0;
   index_vel = 0;
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-    int mn = Matilda[eb_index];
+    int mn = goma_ctx->problem.matilda[eb_index];
 
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
@@ -246,7 +246,7 @@ goma_error count_pressure_nodes(PetscMatrixData *matrix_data,
 
   int index = 0;
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-    int mn = Matilda[eb_index];
+    int mn = goma_ctx->problem.matilda[eb_index];
 
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
@@ -336,7 +336,7 @@ static goma_error initialize_petsc_pressure_matrix(PetscMatrixData *matrix_data,
   PetscInt *o_nnz = (PetscInt *)calloc(num_rows, sizeof(PetscInt));
 
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-    int mn = Matilda[eb_index];
+    int mn = goma_ctx->problem.matilda[eb_index];
 
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
@@ -411,7 +411,7 @@ static goma_error set_pcd_matrices(PetscMatrixData *matrix_data,
                                    dbl *xdot,
                                    dbl *xdot_old) {
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-    int mn = Matilda[eb_index];
+    int mn = goma_ctx->problem.matilda[eb_index];
 
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
@@ -480,8 +480,8 @@ static goma_error set_pcd_matrices(PetscMatrixData *matrix_data,
         GOMA_EH(err, "load_fv_grads");
 
         double gamma[DIM][DIM];
-        for (int a = 0; a < VIM; a++) {
-          for (int b = 0; b < VIM; b++) {
+        for (int a = 0; a < goma_ctx->problem.vim; a++) {
+          for (int b = 0; b < goma_ctx->problem.vim; b++) {
             gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
           }
         }
@@ -696,7 +696,7 @@ static goma_error set_petsc_pressure_matrix(PetscMatrixData *matrix_data,
                                             dbl *xdot,
                                             dbl *xdot_old) {
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-    int mn = Matilda[eb_index];
+    int mn = goma_ctx->problem.matilda[eb_index];
 
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
@@ -765,8 +765,8 @@ static goma_error set_petsc_pressure_matrix(PetscMatrixData *matrix_data,
         GOMA_EH(err, "load_fv_grads");
 
         double gamma[DIM][DIM];
-        for (int a = 0; a < VIM; a++) {
-          for (int b = 0; b < VIM; b++) {
+        for (int a = 0; a < goma_ctx->problem.vim; a++) {
+          for (int b = 0; b < goma_ctx->problem.vim; b++) {
             gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
           }
         }
@@ -841,7 +841,7 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
   }
   free(dblColGIDs);
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-    int mn = Matilda[eb_index];
+    int mn = goma_ctx->problem.matilda[eb_index];
 
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
@@ -926,7 +926,7 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
   }
 
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-    int mn = Matilda[eb_index];
+    int mn = goma_ctx->problem.matilda[eb_index];
 
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];
@@ -1182,7 +1182,8 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
      * Fill the vector list which points to the unknowns defined at this
      * node...
      */
-    int inode_varType[MaxVarPerNode], inode_matID[MaxVarPerNode];
+    int inode_varType[goma_ctx->problem.max_var_per_node],
+        inode_matID[goma_ctx->problem.max_var_per_node];
     int row_num_unknowns = fill_variable_vector(inode, inode_varType, inode_matID);
     /*
      * Do a check against the number of unknowns at this
@@ -1216,7 +1217,8 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
          * fill the vector list which points to the unknowns
          * defined at this interaction node
          */
-        int inter_node_varType[MaxVarPerNode], inter_node_matID[MaxVarPerNode];
+        int inter_node_varType[goma_ctx->problem.max_var_per_node],
+            inter_node_matID[goma_ctx->problem.max_var_per_node];
         int col_num_unknowns =
             fill_variable_vector(inter_node, inter_node_varType, inter_node_matID);
         if (col_num_unknowns != nvCol->Num_Unknowns) {
@@ -1253,9 +1255,11 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
               exo->centroid_list[inter_node] != -1) {
             int eb1 = exo->elem_eb[exo->centroid_list[inode]];
 
-            if (goma_ctx->fem.vn_glob[Matilda[eb1]]->dg_J_model == FULL_DG) {
-              int i1 = goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][rowVarType];
-              int i2 = goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][colVarType];
+            if (goma_ctx->fem.vn_glob[goma_ctx->problem.matilda[eb1]]->dg_J_model == FULL_DG) {
+              int i1 = goma_ctx->fem.pd_glob[goma_ctx->problem.matilda[eb1]]
+                           ->i[goma_ctx->fem.pg->imtrx][rowVarType];
+              int i2 = goma_ctx->fem.pd_glob[goma_ctx->problem.matilda[eb1]]
+                           ->i[goma_ctx->fem.pg->imtrx][colVarType];
 
               if ((rowVarType == colVarType) &&
                   (i1 == I_P0 || i1 == I_P1 || i1 == I_PQ1 || i1 == I_PQ2) &&
@@ -1311,12 +1315,12 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
   ;
   ams->npn_plus = dpi->num_universe_nodes;
 
-  ams->npu =
-      num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
-  ams->npu_plus = num_universe_dofs[goma_ctx->fem.pg->imtrx];
+  ams->npu = goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+             goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+  ams->npu_plus = goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx];
 
-  size_t local_dofs = num_universe_dofs[goma_ctx->fem.pg->imtrx];
-  size_t global_dofs = num_universe_dofs[goma_ctx->fem.pg->imtrx];
+  size_t local_dofs = goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx];
+  size_t global_dofs = goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx];
   size_t local_nnz = nnz;
   size_t global_nnz = nnz;
 
@@ -1756,8 +1760,8 @@ goma_error petsc_scale_matrix(struct GomaLinearSolverData *ams, double *b_, doub
 
   CHKERRQ(MatCreateVecs(matrix_data->mat, &row_sums, NULL));
   VecZeroEntries(row_sums);
-  for (int i = 0;
-       i < num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+  for (int i = 0; i < goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                          goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx];
        i++) {
     PetscInt ncols;
     const PetscScalar *vals;
@@ -1770,12 +1774,12 @@ goma_error petsc_scale_matrix(struct GomaLinearSolverData *ams, double *b_, doub
     scale[i] = 1.0 / sum;
   }
   VecSetValues(row_sums,
-               num_internal_dofs[goma_ctx->fem.pg->imtrx] +
-                   num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+               goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                   goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx],
                matrix_data->local_to_global, scale, INSERT_VALUES);
   MatDiagonalScale(matrix_data->mat, row_sums, NULL);
-  for (int i = 0;
-       i < num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+  for (int i = 0; i < goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                          goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx];
        i++) {
     b_[i] *= scale[i];
     scale[i] = 1.0 / scale[i];
@@ -1843,8 +1847,8 @@ int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *i
     MatAssemblyBegin(matrix_data->pcd_data->Ap, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(matrix_data->pcd_data->Ap, MAT_FINAL_ASSEMBLY);
   }
-  for (PetscInt i = 0;
-       i < num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+  for (PetscInt i = 0; i < goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                               goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx];
        i++) {
     VecSetValue(matrix_data->residual, matrix_data->local_to_global[i], b_[i], INSERT_VALUES);
     VecSetValue(matrix_data->update, matrix_data->local_to_global[i], x_[i], INSERT_VALUES);
@@ -1859,8 +1863,8 @@ int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *i
   KSPGetIterationNumber(matrix_data->ksp, &pits);
   *its = pits;
   VecGetValues(matrix_data->update,
-               num_internal_dofs[goma_ctx->fem.pg->imtrx] +
-                   num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+               goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                   goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx],
                matrix_data->local_to_global, x_);
   return 0;
 }

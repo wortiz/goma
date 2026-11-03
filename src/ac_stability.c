@@ -126,8 +126,8 @@ int solve_stability_problem(struct GomaLinearSolverData *ams,
    * amount (a few nodes with < 1% difference, say).  But this small
    * difference caused large errors in the eigenvalues (10%).  I fixed
    * this 11/28/00. */
-  dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], x, x_old);
-  dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], x, x_older);
+  dcopy1(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], x, x_old);
+  dcopy1(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], x, x_older);
 
   if (!(Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE))
     res = solve_full_stability_problem(ams, x, delta_t, theta, resid_vector, x_old, x_older, xdot,
@@ -187,11 +187,11 @@ int solve_full_stability_problem(struct GomaLinearSolverData *ams,
   int *ija = ams->bindx; /* This structure is the same for ALL matrices... */
 
   /* Initialize... */
-  zero = calloc(NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
-  init_vec_value(&zero[0], 0.0, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+  zero = calloc(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
+  init_vec_value(&zero[0], 0.0, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
 
-  scale = calloc(NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
-  init_vec_value(scale, 0.0, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+  scale = calloc(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
+  init_vec_value(scale, 0.0, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
 
   mass_matrix = mass_matrix_tmpA = mass_matrix_tmpB = NULL;
   jacobian_matrix = NULL;
@@ -242,7 +242,7 @@ int solve_full_stability_problem(struct GomaLinearSolverData *ams,
     init_vec_value(&mass_matrix_tmpA[0], 0.0, (goma_ctx->solver.nzeros + 1));
     init_vec_value(&mass_matrix_tmpB[0], 0.0, (goma_ctx->solver.nzeros + 1));
 
-    TimeIntegration = TRANSIENT;
+    goma_ctx->problem.time_integration = TRANSIENT;
     for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
       goma_ctx->fem.pd_glob[mn]->TimeIntegration = TRANSIENT;
       for (i = 0; i < MAX_EQNS; i++)
@@ -340,13 +340,14 @@ for(i = 0; i < NZeros+1; i++)
     matrix_scaling(ams, mass_matrix_tmpA, -1.0, scale);
 
     compare_mass_matrices(jacobian_matrix, mass_matrix, mass_matrix_tmpA, ija,
-                          NumUnknowns[goma_ctx->fem.pg->imtrx]);
+                          goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
   }
 
   /* Print jacobian and mass matrices */
   if (Linear_Stability == LSA_SAVE || goma_ctx->fem.eigen->Eigen_Matrix_Output)
     output_stability_matrices(mass_matrix, jacobian_matrix, ija, num_total_nodes,
-                              NumUnknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros);
+                              goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                              goma_ctx->solver.nzeros);
 
   if (Linear_Stability != LSA_SAVE) {
     /* Call eggroll initiator */
@@ -354,14 +355,14 @@ for(i = 0; i < NZeros+1; i++)
       istuff[i] = -1;
       dstuff[i] = -1.0;
     }
-    eggroll_init(NumUnknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros, &istuff[0],
-                 &dstuff[0]);
+    eggroll_init(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros,
+                 &istuff[0], &dstuff[0]);
 
     /* Call eggroll solver */
     eggrollwrap(istuff, dstuff, ija, jacobian_matrix, mass_matrix, x, goma_ctx->exo_file_out,
-                ProblemType, delta_t, theta, x_old, xdot, xdot_old, resid_vector, converged, nprint,
-                tnv, tnv_post, tev, tev_post, rd, gindex, p_gsize, gvec, gvec_elem, time_value, exo,
-                goma_ctx->num_proc, dpi);
+                goma_ctx->problem.problem_type, delta_t, theta, x_old, xdot, xdot_old, resid_vector,
+                converged, nprint, tnv, tnv_post, tev, tev_post, rd, gindex, p_gsize, gvec,
+                gvec_elem, time_value, exo, goma_ctx->num_proc, dpi);
   }
 
   /* Free space, and return ams->val to what it was when we came
@@ -425,11 +426,11 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
   dbl ***etm_save;
 
   /* Initialize... */
-  zero = calloc(NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
-  init_vec_value(&zero[0], 0.0, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+  zero = calloc(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
+  init_vec_value(&zero[0], 0.0, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
 
-  scale = calloc(NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
-  init_vec_value(scale, 0.0, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+  scale = calloc(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
+  init_vec_value(scale, 0.0, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
 
   mass_matrix = mass_matrix_1 = mass_matrix_2 = mass_matrix_1_tmpA = mass_matrix_1_tmpB =
       mass_matrix_2_tmpA = mass_matrix_2_tmpB = NULL;
@@ -473,7 +474,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
 
     /* Get the original pd_glob[mn]->e[pg->imtrx][i] and pd_glob[mn]->etm[pg->imtrx][i][*]
      * values back. */
-    TimeIntegration = STEADY;
+    goma_ctx->problem.time_integration = STEADY;
     theta = 0.0;
     for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++)
       for (i = 0; i < MAX_EQNS; i++) {
@@ -547,7 +548,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
      * should have the mass etm = 0, so it wouldn't matter...). */
     theta = 0.0;
 
-    TimeIntegration = TRANSIENT;
+    goma_ctx->problem.time_integration = TRANSIENT;
     for (mn = 0; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
       goma_ctx->fem.pd_glob[mn]->TimeIntegration = TRANSIENT;
       for (i = 0; i < MAX_EQNS; i++)
@@ -666,7 +667,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
     /* Scale all of the preliminary pieces for comparison, if we're
      * doing one.  Otherwise, just scale the above mass_matrix... */
     if (LSA_COMPARE) {
-      for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+      for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
         mass_matrix_1_tmpA[i] /= scale[i];
         mass_matrix_2_tmpA[i] /= scale[i];
         mass_matrix_1[i] /= scale[i];
@@ -683,12 +684,12 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
       /* Compare 1st pass results. */
       printf("Comparing pass 1 of mass matrix with Subtractionism method...");
       compare_mass_matrices(jacobian_matrix, mass_matrix_1, mass_matrix_1_tmpA, ija,
-                            NumUnknowns[goma_ctx->fem.pg->imtrx]);
+                            goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
 
       /* Comapre 2nd pass results. */
       printf("Comparing pass 2 of mass matrix with Subtractionism method...");
       compare_mass_matrices(jacobian_matrix, mass_matrix_2, mass_matrix_2_tmpA, ija,
-                            NumUnknowns[goma_ctx->fem.pg->imtrx]);
+                            goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
 
       /* Get the sum of passes for Subtractionism method.  This
        * was already done above for my regular method. */
@@ -698,9 +699,9 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
       /* Compare sum of passes results. */
       printf("Comparing sum of passes of mass matrix with Subtractionism method...");
       compare_mass_matrices(jacobian_matrix, mass_matrix, mass_matrix_1_tmpA, ija,
-                            NumUnknowns[goma_ctx->fem.pg->imtrx]);
+                            goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
     } else
-      for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+      for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
         mass_matrix[i] /= scale[i];
         for (j = ija[i]; j < ija[i + 1]; j++)
           mass_matrix[j] /= scale[i];
@@ -709,7 +710,8 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
     /* Print Jacobian and mass matrices */
     if (Linear_Stability == LSA_3D_OF_2D_SAVE || goma_ctx->fem.eigen->Eigen_Matrix_Output)
       output_stability_matrices(mass_matrix, jacobian_matrix, ija, num_total_nodes,
-                                NumUnknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros);
+                                goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                                goma_ctx->solver.nzeros);
 
     if (Linear_Stability != LSA_3D_OF_2D_SAVE) {
       /* Call eggroll initiator */
@@ -719,16 +721,16 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
       }
       printf("Entering eggrollinit...\n");
       fflush(stdout);
-      eggroll_init(NumUnknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros, &istuff[0],
-                   &dstuff[0]);
+      eggroll_init(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros,
+                   &istuff[0], &dstuff[0]);
 
       /* Call eggroll solver */
       printf("Entering eggrollwrap...\n");
       fflush(stdout);
       eggrollwrap(istuff, dstuff, ija, jacobian_matrix, mass_matrix, x, goma_ctx->exo_file_out,
-                  ProblemType, delta_t, theta, x_old, xdot, xdot_old, resid_vector, converged,
-                  nprint, tnv, tnv_post, tev, tev_post, rd, gindex, p_gsize, gvec, gvec_elem,
-                  time_value, exo, goma_ctx->num_proc, dpi);
+                  goma_ctx->problem.problem_type, delta_t, theta, x_old, xdot, xdot_old,
+                  resid_vector, converged, nprint, tnv, tnv_post, tev, tev_post, rd, gindex,
+                  p_gsize, gvec, gvec_elem, time_value, exo, goma_ctx->num_proc, dpi);
     }
   } /* for(wn = 0; wn < LSA_num_wave_numbers; wn++) */
 
@@ -911,8 +913,9 @@ void compare_mass_matrices(double *jacobian_matrix,
     for (j = ija[i]; j < ija[i + 1]; j++) {
       if (fabs(mass_matrix[j] - mass_matrix_cmp[j]) > 1e-6 * row_max_vector[i]) {
         printf("\nRow %d (0-based), column %d (0-based)\n", i, j);
-        printf("residual equation = %s\n", resname[goma_ctx->fem.pg->imtrx][i]);
-        printf("unknown column = %s\n", dofname[goma_ctx->fem.pg->imtrx][ija[NumUnknowns + 1 + k]]);
+        printf("residual equation = %s\n", goma_ctx->problem.resname[goma_ctx->fem.pg->imtrx][i]);
+        printf("unknown column = %s\n",
+               goma_ctx->problem.dofname[goma_ctx->fem.pg->imtrx][ija[NumUnknowns + 1 + k]]);
         printf("mass_matrix = %g, mass_matrix_cmp = %g, row_max = %g\n", mass_matrix[j],
                mass_matrix_cmp[j], row_max_vector[i]);
       }

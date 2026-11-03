@@ -576,13 +576,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             err = load_fv_mesh_derivs(1);
             GOMA_EH(err, "load_fv_mesh_derivs");
 
-            if (TimeIntegration != STEADY &&
+            if (goma_ctx->problem.time_integration != STEADY &&
                 goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-              for (j = 0; j < VIM; j++) {
+              for (j = 0; j < goma_ctx->problem.vim; j++) {
                 x_dot[j] = goma_ctx->fem.fv_dot->x[j];
               }
             } else {
-              for (j = 0; j < VIM; j++) {
+              for (j = 0; j < goma_ctx->problem.vim; j++) {
                 x_dot[j] = 0.;
               }
             }
@@ -762,8 +762,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
              */
             memset(ves, 0, sizeof(dbl) * DIM * DIM);
             if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
-              for (a = 0; a < WIM; a++) {
-                for (b = 0; b < WIM; b++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
+                for (b = 0; b < goma_ctx->problem.wim; b++) {
                   gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
                 }
               }
@@ -777,16 +777,16 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             memset(vs, 0, sizeof(dbl) * DIM * DIM);
             memset(gamma, 0, sizeof(dbl) * DIM * DIM);
             if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-              for (a = 0; a < WIM; a++) {
-                for (b = 0; b < WIM; b++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
+                for (b = 0; b < goma_ctx->problem.wim; b++) {
                   gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
                 }
               }
 
               mu = viscosity(goma_ctx->fem.gn, gamma, d_mu);
 
-              for (a = 0; a < WIM; a++) {
-                for (b = 0; b < WIM; b++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
+                for (b = 0; b < goma_ctx->problem.wim; b++) {
                   vs[a][b] = mu * gamma[a][b] - goma_ctx->fem.fv->P * delta(a, b);
                 }
               }
@@ -795,8 +795,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               }
               if (profile_flag & 2) {
                 memset(TT, 0, sizeof(dbl) * DIM * DIM);
-                for (a = 0; a < VIM; a++) {
-                  for (b = 0; b < VIM; b++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
+                  for (b = 0; b < goma_ctx->problem.vim; b++) {
                     TT[a][b] = vs[a][b] + ves[a][b];
                   }
                 }
@@ -841,13 +841,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             memset(es, 0, sizeof(dbl) * DIM * DIM);
             if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
               efield_sqr = 0.0;
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 efield[a] = -goma_ctx->fem.fv->grad_V[a];
                 efield_sqr += efield[a] * efield[a];
               }
 
-              for (a = 0; a < VIM; a++) {
-                for (b = 0; b < VIM; b++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
+                for (b = 0; b < goma_ctx->problem.vim; b++) {
                   es[a][b] = efield[a] * efield[b] - 0.5 * efield_sqr * delta(a, b);
                 }
               }
@@ -918,7 +918,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               Cp = heat_capacity(d_Cp, time_value);
 
               if (goma_ctx->fem.cr->HeatFluxModel == CR_HF_FOURIER_0) {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += -k * goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_T[a];
                   local_qconv += rho * Cp * goma_ctx->fem.fv->T * goma_ctx->fem.fv->snormal[a] *
                                  (goma_ctx->fem.fv->v[a] - x_dot[a]);
@@ -928,9 +928,9 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 printf("untested\n");
                 exit(-1);
 
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += goma_ctx->fem.fv->snormal[a] * q[a];
-                  for (b = 0; b < VIM; b++) {
+                  for (b = 0; b < goma_ctx->problem.vim; b++) {
                     local_qconv += goma_ctx->fem.fv->snormal[a] * dq_gradT[a][b] *
                                    goma_ctx->fem.fv->snormal[b];
                   }
@@ -1027,7 +1027,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN_2pt5D) {
                 local_q += goma_ctx->fem.fv->v[2] - x_dot[2];
               } else {
-                for (a = 0; a < WIM; a++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
                   if (goma_ctx->fem.cr->MeshMotion == ARBITRARY)
                     local_q += goma_ctx->fem.fv->snormal[a] * (goma_ctx->fem.fv->v[a] - x_dot[a]);
                   else if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1])
@@ -1047,7 +1047,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               //         ei[pg->imtrx]->ielem_dim, 1);
 
               /* First save local normal to edge because lubrication_shell_init changes it */
-              for (a = 0; a < VIM; a++)
+              for (a = 0; a < goma_ctx->problem.vim; a++)
                 base_normal[a] = goma_ctx->fem.fv->snormal[a];
 
               n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
@@ -1057,7 +1057,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
               calculate_lub_q_v(R_LUBP, time_value, 0, xi, exo);
 
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 local_q += base_normal[a] * goma_ctx->fem.lub_aux->q[a];
               }
               local_flux += weight * det * local_q;
@@ -1086,7 +1086,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             case PVELOCITY1:
             case PVELOCITY2:
             case PVELOCITY3:
-              for (a = 0; a < WIM; a++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
                 local_q += goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->pv[a];
               }
               local_flux += weight * det * local_q;
@@ -1100,14 +1100,14 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             case EFIELD1:
             case EFIELD2:
             case EFIELD3:
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 local_q += goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->E_field[a];
               }
               local_flux += weight * det * local_q;
               break;
 
             case SPECIES_FLUX:
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 if (goma_ctx->fem.cr->MassFluxModel == FICKIAN ||
                     goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL ||
                     goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
@@ -1152,7 +1152,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
               Diffusivity();
 
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 local_q += (-goma_ctx->fem.mp->diffusivity[species_id] *
                             goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_c[species_id][a]);
                 local_qconv += (goma_ctx->fem.fv->snormal[a] * (goma_ctx->fem.fv->v[a] - x_dot[a]) *
@@ -1191,11 +1191,11 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               d_kapta_dT[species_id] = (-FRT / T) * z[species_id] *
                                        goma_ctx->fem.mp->diffusivity[species_id] *
                                        goma_ctx->fem.fv->c[species_id];
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 d_kapta_dx[species_id][a] = 0.0;
               }
 
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 local_q +=
                     (-goma_ctx->fem.mp->diffusivity[species_id] * goma_ctx->fem.fv->snormal[a] *
                          goma_ctx->fem.fv->grad_c[species_id][a] -
@@ -1236,11 +1236,11 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               d_kapta_dT[species_id] = (-FRT / T) * z[species_id] *
                                        goma_ctx->fem.mp->diffusivity[species_id] *
                                        goma_ctx->fem.fv->c[species_id];
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 d_kapta_dx[species_id][a] = 0.0;
               }
 
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 local_q +=
                     (-goma_ctx->fem.mp->diffusivity[species_id] * goma_ctx->fem.fv->snormal[a] *
                          goma_ctx->fem.fv->grad_c[species_id][a] -
@@ -1261,7 +1261,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 memset(dkdX, 0, sizeof(double) * MDE * DIM);
                 memset(dkdC, 0, sizeof(double) * MAX_CONC * MDE);
               }
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 local_q += -k * goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_V[a];
               }
               local_flux += weight * det * local_q;
@@ -1269,8 +1269,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
 
             case ELEC_FORCE_NORMAL:
-              for (a = 0; a < VIM; a++) {
-                for (b = 0; b < VIM; b++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
+                for (b = 0; b < goma_ctx->problem.vim; b++) {
                   local_q += (goma_ctx->fem.fv->snormal[a] * perm * es[a][b] *
                               goma_ctx->fem.fv->snormal[b]);
                 }
@@ -1278,8 +1278,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               local_flux += weight * det * local_q;
               break;
             case ELEC_FORCE_TANGENT1:
-              for (a = 0; a < VIM; a++) {
-                for (b = 0; b < VIM; b++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
+                for (b = 0; b < goma_ctx->problem.vim; b++) {
                   local_q += (goma_ctx->fem.fv->stangent[0][a] * perm * es[a][b] *
                               goma_ctx->fem.fv->snormal[b]);
                 }
@@ -1288,8 +1288,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
             case ELEC_FORCE_TANGENT2:
               if (goma_ctx->fem.pd->Num_Dim == 3) {
-                for (a = 0; a < VIM; a++) {
-                  for (b = 0; b < VIM; b++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
+                  for (b = 0; b < goma_ctx->problem.vim; b++) {
                     local_q += (goma_ctx->fem.fv->stangent[1][a] * perm * es[a][b] *
                                 goma_ctx->fem.fv->snormal[b]);
                   }
@@ -1300,20 +1300,20 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               local_flux += weight * det * local_q;
               break;
             case ELEC_FORCE_X:
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 local_q += (perm * es[0][a] * goma_ctx->fem.fv->snormal[a]);
               }
               local_flux += weight * det * local_q;
               break;
             case ELEC_FORCE_Y:
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 local_q += (perm * es[1][a] * goma_ctx->fem.fv->snormal[a]);
               }
               local_flux += weight * det * local_q;
               break;
             case ELEC_FORCE_Z:
               if (goma_ctx->fem.pd->Num_Dim == 3) {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (perm * es[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
               } else {
@@ -1322,7 +1322,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               local_flux += weight * det * local_q;
               break;
             case NET_SURF_CHARGE:
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 local_q += (-perm * goma_ctx->fem.fv->snormal[a] * efield[a]);
               }
               local_flux += weight * det * local_q;
@@ -1338,8 +1338,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
                   goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL) {
                 if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                  for (a = 0; a < WIM; a++) {
-                    for (b = 0; b < WIM; b++) {
+                  for (a = 0; a < goma_ctx->problem.wim; a++) {
+                    for (b = 0; b < goma_ctx->problem.wim; b++) {
                       /*
                        *  note that for CYLINDRICAL and SWIRLING coordinate systems
                        * the h3 factor has been incorporated already into sdet
@@ -1354,8 +1354,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                     }
                   }
                 } else {
-                  for (a = 0; a < WIM; a++) {
-                    for (b = 0; b < WIM; b++) {
+                  for (a = 0; a < goma_ctx->problem.wim; a++) {
+                    for (b = 0; b < goma_ctx->problem.wim; b++) {
                       local_q += goma_ctx->fem.fv->x[1] * e_theta[a] * TT[a][b] *
                                  goma_ctx->fem.fv->snormal[b];
                     }
@@ -1364,7 +1364,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN) {
-                if (WIM == 2) {
+                if (goma_ctx->problem.wim == 2) {
                   goma_ctx->fem.fv->x[2] = 0.0;
                   goma_ctx->fem.fv->snormal[2] = 0.0;
                 }
@@ -1409,7 +1409,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
               if (goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED) {
 
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_flux += weight * det * goma_ctx->fem.mp->density *
                                 goma_ctx->fem.pmv->liq_darcy_velocity[a] *
                                 goma_ctx->fem.fv->snormal[a];
@@ -1418,7 +1418,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               } else if (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
                          goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) {
 
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_flux += weight * det * goma_ctx->fem.pmv->rel_mass_flux[0][a] *
                                 goma_ctx->fem.fv->snormal[a];
                   local_flux_conv += 0.;
@@ -1430,8 +1430,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case FORCE_NORMAL:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < WIM; a++) {
-                  for (b = 0; b < WIM; b++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
+                  for (b = 0; b < goma_ctx->problem.wim; b++) {
                     local_q += (goma_ctx->fem.fv->snormal[a] * (vs[a][b] + ves[a][b]) *
                                 goma_ctx->fem.fv->snormal[b]);
 
@@ -1443,8 +1443,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else {
-                for (a = 0; a < VIM; a++) {
-                  for (b = 0; b < VIM; b++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
+                  for (b = 0; b < goma_ctx->problem.vim; b++) {
                     local_q +=
                         (goma_ctx->fem.fv->snormal[a] * TT[a][b] * goma_ctx->fem.fv->snormal[b]);
                   }
@@ -1456,8 +1456,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             case FORCE_TANGENT1:
 
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < WIM; a++) {
-                  for (b = 0; b < WIM; b++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
+                  for (b = 0; b < goma_ctx->problem.wim; b++) {
                     local_q += (goma_ctx->fem.fv->stangent[0][a] * (vs[a][b] + ves[a][b]) *
                                 goma_ctx->fem.fv->snormal[b]);
                     local_qconv += (-rho * goma_ctx->fem.fv->stangent[0][a] *
@@ -1468,8 +1468,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else {
-                for (a = 0; a < VIM; a++) {
-                  for (b = 0; b < VIM; b++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
+                  for (b = 0; b < goma_ctx->problem.vim; b++) {
                     local_q += (goma_ctx->fem.fv->stangent[0][a] * TT[a][b] *
                                 goma_ctx->fem.fv->snormal[b]);
                   }
@@ -1483,8 +1483,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 if (goma_ctx->fem.pd->Num_Dim == 3 ||
                     goma_ctx->fem.upd->CoordinateSystem == SWIRLING) {
-                  for (a = 0; a < WIM; a++) {
-                    for (b = 0; b < WIM; b++) {
+                  for (a = 0; a < goma_ctx->problem.wim; a++) {
+                    for (b = 0; b < goma_ctx->problem.wim; b++) {
                       local_q += (goma_ctx->fem.fv->stangent[1][a] * (vs[a][b] + ves[a][b]) *
                                   goma_ctx->fem.fv->snormal[b]);
                       local_qconv += (-rho * goma_ctx->fem.fv->stangent[1][a] *
@@ -1498,8 +1498,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   GOMA_EH(GOMA_ERROR, "Illegal flux type");
                 }
               } else {
-                for (a = 0; a < VIM; a++) {
-                  for (b = 0; b < VIM; b++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
+                  for (b = 0; b < goma_ctx->problem.vim; b++) {
                     local_q += (goma_ctx->fem.fv->stangent[1][a] * TT[a][b] *
                                 goma_ctx->fem.fv->snormal[b]);
                   }
@@ -1510,7 +1510,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case SHELL_FORCE_NORMAL:
               /* First save local normal to edge because lubrication_shell_init changes it */
-              for (a = 0; a < VIM; a++)
+              for (a = 0; a < goma_ctx->problem.vim; a++)
                 base_normal[a] = goma_ctx->fem.fv->snormal[a];
 
               n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
@@ -1520,8 +1520,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
               calculate_lub_q_v(R_LUBP, time_value, 0, xi, exo);
 
-              for (a = 0; a < WIM; a++) {
-                for (b = 0; b < WIM; b++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
+                for (b = 0; b < goma_ctx->problem.wim; b++) {
                   local_q += goma_ctx->fem.fv->lubp;
 
                   local_qconv += (-rho * base_normal[a] * (goma_ctx->fem.lub_aux->q[a] - x_dot[a]) *
@@ -1536,7 +1536,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case FORCE_X:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < WIM; a++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
                   local_q += ((vs[0][a] + ves[0][a]) * goma_ctx->fem.fv->snormal[a]);
                   local_qconv += (-rho * (goma_ctx->fem.fv->v[0] - x_dot[0]) *
                                   goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
@@ -1544,7 +1544,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT[0][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
@@ -1553,7 +1553,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case FORCE_X_POS:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < WIM; a++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
                   local_q += ((vs[0][a] + ves[0][a]) * goma_ctx->fem.fv->snormal[a]);
                   local_qconv += (-rho * (goma_ctx->fem.fv->v[0] - x_dot[0]) *
                                   goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
@@ -1564,7 +1564,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT[0][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
@@ -1576,7 +1576,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case FORCE_X_NEG:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < WIM; a++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
                   local_q += ((vs[0][a] + ves[0][a]) * goma_ctx->fem.fv->snormal[a]);
                   local_qconv += (-rho * (goma_ctx->fem.fv->v[0] - x_dot[0]) *
                                   goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
@@ -1587,7 +1587,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT[0][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
@@ -1599,7 +1599,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case FORCE_Y:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < WIM; a++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
                   local_q += ((vs[1][a] + ves[1][a]) * goma_ctx->fem.fv->snormal[a]);
                   local_qconv += (-rho * (goma_ctx->fem.fv->v[1] - x_dot[1]) *
                                   goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
@@ -1607,7 +1607,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT[1][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
@@ -1616,7 +1616,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case FORCE_Y_POS:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < WIM; a++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
                   local_q += ((vs[1][a] + ves[1][a]) * goma_ctx->fem.fv->snormal[a]);
                   local_qconv += (-rho * (goma_ctx->fem.fv->v[1] - x_dot[1]) *
                                   goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
@@ -1627,7 +1627,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT[1][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
@@ -1639,7 +1639,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             case FORCE_Y_NEG:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < WIM; a++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
                   local_q += ((vs[1][a] + ves[1][a]) * goma_ctx->fem.fv->snormal[a]);
                   local_qconv += (-rho * (goma_ctx->fem.fv->v[1] - x_dot[1]) *
                                   goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->snormal[a]);
@@ -1650,7 +1650,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_flux += weight * det * local_q;
                 local_flux_conv += weight * det * local_qconv;
               } else {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT[1][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
@@ -1663,7 +1663,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             case FORCE_Z:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 if (goma_ctx->fem.pd->Num_Dim == 3) {
-                  for (a = 0; a < WIM; a++) {
+                  for (a = 0; a < goma_ctx->problem.wim; a++) {
                     local_q += ((vs[2][a] + ves[2][a]) * goma_ctx->fem.fv->snormal[a]);
 
                     local_qconv += (-rho * (goma_ctx->fem.fv->v[2] - x_dot[2]) *
@@ -1675,7 +1675,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   GOMA_EH(GOMA_ERROR, "Illegal flux type");
                 }
               } else {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
@@ -1686,7 +1686,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             case FORCE_Z_POS:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 if (goma_ctx->fem.pd->Num_Dim == 3) {
-                  for (a = 0; a < WIM; a++) {
+                  for (a = 0; a < goma_ctx->problem.wim; a++) {
                     local_q += ((vs[2][a] + ves[2][a]) * goma_ctx->fem.fv->snormal[a]);
 
                     local_qconv += (-rho * (goma_ctx->fem.fv->v[2] - x_dot[2]) *
@@ -1701,7 +1701,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   GOMA_EH(GOMA_ERROR, "Illegal flux type");
                 }
               } else {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
@@ -1715,7 +1715,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             case FORCE_Z_NEG:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 if (goma_ctx->fem.pd->Num_Dim == 3) {
-                  for (a = 0; a < WIM; a++) {
+                  for (a = 0; a < goma_ctx->problem.wim; a++) {
                     local_q += ((vs[2][a] + ves[2][a]) * goma_ctx->fem.fv->snormal[a]);
 
                     local_qconv += (-rho * (goma_ctx->fem.fv->v[2] - x_dot[2]) *
@@ -1730,7 +1730,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   GOMA_EH(GOMA_ERROR, "Illegal flux type");
                 }
               } else {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
@@ -1749,7 +1749,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
 
             case REPULSIVE_FORCE:
-              for (a = 0; a < Num_BC; a++) {
+              for (a = 0; a < goma_ctx->problem.num_bc; a++) {
                 if (BC_Types[a].BC_ID != side_set_id || BC_Types[a].BC_Name < CAP_REPULSE_BC ||
                     BC_Types[a].BC_Name > CAP_REPULSE_TABLE_BC) {
                   continue;
@@ -1821,7 +1821,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                     coord[b] = goma_ctx->fem.fv->x[b];
                   }
 
-                  for (b = 0; b < Num_BC; b++) {
+                  for (b = 0; b < goma_ctx->problem.num_bc; b++) {
                     if (BC_Types[b].BC_Name == GD_TABLE_BC) {
                       bc_table_id = b;
                     }
@@ -1898,8 +1898,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               /* This is the energy dissipated at the surface due to surface tension
                *  See Batchelor, JFM, 1970 for details
                */
-              for (a = 0; a < WIM; a++) {
-                for (b = 0; b < WIM; b++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
+                for (b = 0; b < goma_ctx->problem.wim; b++) {
                   local_q +=
                       goma_ctx->fem.mp->surface_tension *
                       (goma_ctx->fem.fv->grad_v[a][b] *
@@ -1933,8 +1933,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
                   goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL) {
                 GOMA_EH(GOMA_ERROR, "POYNTING has not been checked for CYLINDRICAL yet.");
-                for (a = 0; a < VIM; a++) {
-                  for (b = 0; b < VIM; b++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
+                  for (b = 0; b < goma_ctx->problem.vim; b++) {
                     /*
                      *  note that for CYLINDRICAL and SWIRLING coordinate systems
                      * the h3 factor has been incorporated already into sdet
@@ -2107,13 +2107,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 err = load_fv_mesh_derivs(1);
                 GOMA_EH(err, "load_fv_mesh_derivs");
 
-                if (TimeIntegration != STEADY &&
+                if (goma_ctx->problem.time_integration != STEADY &&
                     goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-                  for (j = 0; j < VIM; j++) {
+                  for (j = 0; j < goma_ctx->problem.vim; j++) {
                     x_dot[j] = goma_ctx->fem.fv_dot->x[j];
                   }
                 } else {
-                  for (j = 0; j < VIM; j++) {
+                  for (j = 0; j < goma_ctx->problem.vim; j++) {
                     x_dot[j] = 0.;
                   }
                 }
@@ -2157,7 +2157,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   }
                 }
 
-                for (a = 0; a < WIM; a++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
                   local_q -= goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.lsi->normal[a];
                   local_qconv += SQUARE(goma_ctx->fem.fv->v[a] - x_dot[a]);
                 }
@@ -2382,7 +2382,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
                     for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
-                      for (b = 0; b < WIM; b++) {
+                      for (b = 0; b < goma_ctx->problem.wim; b++) {
                         var = v_s[ve_mode][dir][b];
                         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                           d_term = weight * det * goma_ctx->fem.fv->snormal[b] *
@@ -2495,8 +2495,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = d_term1 = 0.0;
 
-                        for (a = 0; a < WIM; a++) {
-                          for (b = 0; b < WIM; b++) {
+                        for (a = 0; a < goma_ctx->problem.wim; a++) {
+                          for (b = 0; b < goma_ctx->problem.wim; b++) {
                             d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
                                       goma_ctx->fem.fv->snormal[b] *
                                       (mu * (goma_ctx->fem.bf[var]->grad_phi_e[j][p][a][b] +
@@ -2539,8 +2539,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = d_term1 = d_term2 = d_term3 = 0.0;
 
-                        for (a = 0; a < WIM; a++) {
-                          for (b = 0; b < WIM; b++) {
+                        for (a = 0; a < goma_ctx->problem.wim; a++) {
+                          for (b = 0; b < goma_ctx->problem.wim; b++) {
                             d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
                                       goma_ctx->fem.fv->snormal[b] *
                                       (mu * (goma_ctx->fem.fv->d_grad_v_dmesh[a][b][p][j] +
@@ -2615,7 +2615,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
                     for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
-                      for (b = 0; b < WIM; b++) {
+                      for (b = 0; b < goma_ctx->problem.wim; b++) {
                         for (a = 0; a < dim; a++) {
                           var = v_s[ve_mode][a][b];
                           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
@@ -2653,8 +2653,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = d_term1 = d_term2 = 0.0;
 
-                        for (a = 0; a < VIM; a++) {
-                          for (b = 0; b < VIM; b++) {
+                        for (a = 0; a < goma_ctx->problem.vim; a++) {
+                          for (b = 0; b < goma_ctx->problem.vim; b++) {
                             d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
                                       goma_ctx->fem.fv->snormal[b] * dTT_dx[a][b][p][j];
                             d_term1 += weight * goma_ctx->fem.fv->snormal[a] * TT[a][b] *
@@ -2680,8 +2680,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = 0.0;
 
-                        for (a = 0; a < VIM; a++) {
-                          for (b = 0; b < VIM; b++) {
+                        for (a = 0; a < goma_ctx->problem.vim; a++) {
+                          for (b = 0; b < goma_ctx->problem.vim; b++) {
                             d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
                                       goma_ctx->fem.fv->snormal[b] * dTT_drs[a][b][p][j];
                           }
@@ -2751,8 +2751,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                         d_term = d_term1 = 0.0;
 
-                        for (a = 0; a < WIM; a++) {
-                          for (b = 0; b < WIM; b++) {
+                        for (a = 0; a < goma_ctx->problem.wim; a++) {
+                          for (b = 0; b < goma_ctx->problem.wim; b++) {
                             d_term += weight * det * goma_ctx->fem.fv->stangent[dir][a] *
                                       goma_ctx->fem.fv->snormal[b] *
                                       (mu * (goma_ctx->fem.bf[var]->grad_phi_e[j][p][a][b] +
@@ -2855,7 +2855,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
                     for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
-                      for (b = 0; b < WIM; b++) {
+                      for (b = 0; b < goma_ctx->problem.wim; b++) {
                         for (a = 0; a < dim; a++) {
                           var = v_s[ve_mode][a][b];
                           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
@@ -2964,7 +2964,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                     for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = 0.0;
 
-                      for (a = 0; a < WIM; a++) {
+                      for (a = 0; a < goma_ctx->problem.wim; a++) {
                         d_term += weight * det * goma_ctx->fem.fv->snormal[a] *
                                   (goma_ctx->fem.bf[var]->phi[j] * delta(p, a));
                       }
@@ -3147,7 +3147,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                     for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = d_term2 = 0.0;
 
-                      for (a = 0; a < VIM; a++) {
+                      for (a = 0; a < goma_ctx->problem.vim; a++) {
                         d_term +=
                             -weight *
                             (goma_ctx->fem.fv->dsurfdet_dx[p][j] *
@@ -3178,7 +3178,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     d_term = 0;
 
-                    for (a = 0; a < VIM; a++) {
+                    for (a = 0; a < goma_ctx->problem.vim; a++) {
                       d_term += -weight * det * d_diff[sp][var] * goma_ctx->fem.bf[var]->phi[j] *
                                 goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_c[sp][a];
                     }
@@ -3244,7 +3244,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                     for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = d_term2 = 0.0;
 
-                      for (a = 0; a < VIM; a++) {
+                      for (a = 0; a < goma_ctx->problem.vim; a++) {
                         d_term +=
                             -weight *
                             (goma_ctx->fem.fv->dsurfdet_dx[p][j] * goma_ctx->fem.fv->snormal[a] *
@@ -3284,7 +3284,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     d_term = 0;
 
-                    for (a = 0; a < VIM; a++) {
+                    for (a = 0; a < goma_ctx->problem.vim; a++) {
                       d_term += -weight * det * goma_ctx->fem.bf[var]->phi[j] *
                                 goma_ctx->fem.fv->snormal[a] *
                                 (d_diff[sp][var] * goma_ctx->fem.fv->grad_c[sp][a] +
@@ -3300,7 +3300,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     d_term = 0;
 
-                    for (a = 0; a < VIM; a++) {
+                    for (a = 0; a < goma_ctx->problem.vim; a++) {
                       d_term += -weight * det * kapta[species_id] *
                                 goma_ctx->fem.bf[var]->grad_phi[j][a] *
                                 goma_ctx->fem.fv->snormal[a];
@@ -3366,7 +3366,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                     for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                       d_term = d_term1 = d_term2 = 0.0;
 
-                      for (a = 0; a < VIM; a++) {
+                      for (a = 0; a < goma_ctx->problem.vim; a++) {
                         d_term +=
                             -weight *
                             (goma_ctx->fem.fv->dsurfdet_dx[p][j] * goma_ctx->fem.fv->snormal[a] *
@@ -3406,7 +3406,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     d_term = 0;
 
-                    for (a = 0; a < VIM; a++) {
+                    for (a = 0; a < goma_ctx->problem.vim; a++) {
                       d_term += -weight * det * goma_ctx->fem.bf[var]->phi[j] *
                                 goma_ctx->fem.fv->snormal[a] *
                                 (d_diff[sp][var] * goma_ctx->fem.fv->grad_c[sp][a] +
@@ -3422,7 +3422,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     d_term = 0;
 
-                    for (a = 0; a < VIM; a++) {
+                    for (a = 0; a < goma_ctx->problem.vim; a++) {
                       d_term += -weight * det * kapta[species_id] *
                                 goma_ctx->fem.bf[var]->grad_phi[j][a] *
                                 goma_ctx->fem.fv->snormal[a];
@@ -4866,28 +4866,28 @@ int compute_volume_integrand(const int quantity,
   } break;
   case I_VORTICITY: {
     double vsq = 0;
-    for (a = 0; a < VIM; a++)
+    for (a = 0; a < goma_ctx->problem.vim; a++)
       vsq += goma_ctx->fem.fv->curl_v[a] * goma_ctx->fem.fv->curl_v[a];
     *sum += sqrt(vsq) * weight * det;
   } break;
 
   case I_HELICITY: {
     double vsq = 0;
-    for (a = 0; a < VIM; a++)
+    for (a = 0; a < goma_ctx->problem.vim; a++)
       vsq += SQUARE(goma_ctx->fem.fv->v[a] * goma_ctx->fem.fv->curl_v[a]);
     *sum += sqrt(vsq) * weight * det;
   } break;
 
   case I_LAMB_MAG: {
     double vsq = 0, lamb_v[DIM] = {0., 0., 0.};
-    for (a = 0; a < VIM; a++) {
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           lamb_v[a] += permute(p, q, a) * goma_ctx->fem.fv->curl_v[p] * goma_ctx->fem.fv->v[q];
         }
       }
     }
-    for (a = 0; a < VIM; a++)
+    for (a = 0; a < goma_ctx->problem.vim; a++)
       vsq += lamb_v[a] * lamb_v[a];
     *sum += sqrt(vsq) * weight * det;
   } break;
@@ -4895,8 +4895,8 @@ int compute_volume_integrand(const int quantity,
   case I_GIESEKUS: {
     double gammadot, gamma[DIM][DIM];
     double vorticity, omega[DIM][DIM];
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
         omega[a][b] = goma_ctx->fem.fv->grad_v[a][b] - goma_ctx->fem.fv->grad_v[b][a];
       }
@@ -4909,8 +4909,8 @@ int compute_volume_integrand(const int quantity,
 
   case I_Q_FCN: {
     double gammadot, del_v[DIM][DIM];
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         del_v[a][b] = goma_ctx->fem.fv->grad_v[a][b];
       }
     }
@@ -4945,15 +4945,15 @@ int compute_volume_integrand(const int quantity,
               em_diss_e_curlcurl_source(NULL, goma_ctx->fem.mp->u_heat_source,
                                         goma_ctx->fem.mp->len_u_heat_source);
     } else {
-      for (p = 0; p < WIM; p++) {
-        for (q = 0; q < WIM; q++) {
+      for (p = 0; p < goma_ctx->problem.wim; p++) {
+        for (q = 0; q < goma_ctx->problem.wim; q++) {
           gamma_dot[p][q] = goma_ctx->fem.fv->grad_v[p][q] + goma_ctx->fem.fv->grad_v[q][p];
         }
       }
 
       mu = viscosity(goma_ctx->fem.gn, gamma_dot, NULL);
-      for (p = 0; p < WIM; p++) {
-        for (q = 0; q < WIM; q++) {
+      for (p = 0; p < goma_ctx->problem.wim; p++) {
+        for (q = 0; q < goma_ctx->problem.wim; q++) {
           vs[p][q] = mu * gamma_dot[p][q] - goma_ctx->fem.fv->P * delta(p, q);
         }
       }
@@ -4963,8 +4963,8 @@ int compute_volume_integrand(const int quantity,
        */
       memset(ves, 0, sizeof(dbl) * DIM * DIM);
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
-        for (p = 0; p < WIM; p++) {
-          for (q = 0; q < WIM; q++) {
+        for (p = 0; p < goma_ctx->problem.wim; p++) {
+          for (q = 0; q < goma_ctx->problem.wim; q++) {
             for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
               ves[p][q] += goma_ctx->fem.fv->S[ve_mode][p][q];
             }
@@ -4972,8 +4972,8 @@ int compute_volume_integrand(const int quantity,
         }
       }
 
-      for (p = 0; p < WIM; p++) {
-        for (q = 0; q < WIM; q++) {
+      for (p = 0; p < goma_ctx->problem.wim; p++) {
+        for (q = 0; q < goma_ctx->problem.wim; q++) {
           *sum += weight * ((vs[q][p] + ves[q][p]) * goma_ctx->fem.fv->grad_v[p][q]) * det;
         }
       }
@@ -5019,14 +5019,14 @@ int compute_volume_integrand(const int quantity,
 
       double gamma_dot[DIM][DIM], II = 0.0;
 
-      for (p = 0; p < WIM; p++) {
-        for (q = 0; q < WIM; q++) {
+      for (p = 0; p < goma_ctx->problem.wim; p++) {
+        for (q = 0; q < goma_ctx->problem.wim; q++) {
           gamma_dot[p][q] = goma_ctx->fem.fv->grad_v[p][q] + goma_ctx->fem.fv->grad_v[q][p];
         }
       }
 
-      for (p = 0; p < WIM; p++) {
-        for (q = 0; q < WIM; q++) {
+      for (p = 0; p < goma_ctx->problem.wim; p++) {
+        for (q = 0; q < goma_ctx->problem.wim; q++) {
           II += gamma_dot[p][q] * gamma_dot[q][p];
         }
       }
@@ -5449,8 +5449,8 @@ int compute_volume_integrand(const int quantity,
               "Computation of stress integral for POLYMER models currently no supported.\n");
     }
 
-    for (p = 0; p < WIM; p++) {
-      for (q = 0; q < WIM; q++) {
+    for (p = 0; p < goma_ctx->problem.wim; p++) {
+      for (q = 0; q < goma_ctx->problem.wim; q++) {
         gamma_dot[p][q] = goma_ctx->fem.fv->grad_v[p][q] + goma_ctx->fem.fv->grad_v[q][p];
       }
     }
@@ -6497,7 +6497,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             err = load_fv_mesh_derivs(1);
             GOMA_EH(err, "load_fv_mesh_derivs");
 
-            if (TimeIntegration != STEADY &&
+            if (goma_ctx->problem.time_integration != STEADY &&
                 goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
               for (j = 0; j < ielem_dim; j++) {
                 x_dot[j] = goma_ctx->fem.fv_dot->x[j];
@@ -6644,8 +6644,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             memset(ves_sens, 0, sizeof(dbl) * DIM * DIM);
             memset(ves, 0, sizeof(dbl) * DIM * DIM);
             if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
-              for (a = 0; a < WIM; a++) {
-                for (b = 0; b < VIM; b++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
+                for (b = 0; b < goma_ctx->problem.vim; b++) {
                   for (ve_mode = 0; ve_mode < goma_ctx->fem.vn->modes; ve_mode++) {
                     ves_sens[a][b] += goma_ctx->fem.fv_sens->S[ve_mode][a][b];
                     ves[a][b] += goma_ctx->fem.fv->S[ve_mode][a][b];
@@ -6659,8 +6659,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
              * stress tensor upfront.
              */
             if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-              for (a = 0; a < WIM; a++) {
-                for (b = 0; b < VIM; b++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
+                for (b = 0; b < goma_ctx->problem.vim; b++) {
                   gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
                   gamma_sens[a][b] =
                       goma_ctx->fem.fv_sens->grad_v[a][b] + goma_ctx->fem.fv_sens->grad_v[b][a];
@@ -6681,7 +6681,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
               /*  velocity  */
 
-              for (a = 0; a < WIM; a++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
                 v = VELOCITY1 + a;
                 if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
                   dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
@@ -6738,8 +6738,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                *      end of material property sensitivity pre-calcs
                */
 
-              for (a = 0; a < WIM; a++) {
-                for (b = 0; b < VIM; b++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
+                for (b = 0; b < goma_ctx->problem.vim; b++) {
                   vs_sens[a][b] = mu * gamma_sens[a][b] - goma_ctx->fem.fv_sens->P * delta(a, b) +
                                   gamma[a][b] * mu_sens;
                   vs[a][b] = mu * gamma[a][b] - goma_ctx->fem.fv->P * delta(a, b);
@@ -6755,15 +6755,15 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POTENTIAL]) {
               efield_sqr = 0.0;
               efield_sqr_sens = 0.0;
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 efield[a] = -goma_ctx->fem.fv->grad_V[a];
                 efield_sens[a] = -goma_ctx->fem.fv_sens->grad_V[a];
                 efield_sqr += efield[a] * efield[a];
                 efield_sqr_sens += 2. * efield[a] * efield_sens[a];
               }
 
-              for (a = 0; a < VIM; a++) {
-                for (b = 0; b < VIM; b++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
+                for (b = 0; b < goma_ctx->problem.vim; b++) {
                   es[a][b] = efield[a] * efield[b] - 0.5 * efield_sqr * delta(a, b);
                   es_sens[a][b] = efield[a] * efield_sens[b] + efield_sens[a] * efield[b] -
                                   0.5 * efield_sqr_sens * delta(a, b);
@@ -6815,7 +6815,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               }
 
               if (goma_ctx->fem.cr->HeatFluxModel == CR_HF_FOURIER_0) {
-                for (j = 0; j < VIM; j++) {
+                for (j = 0; j < goma_ctx->problem.vim; j++) {
                   local_q += (goma_ctx->fem.mp->thermal_conductivity *
                               goma_ctx->fem.fv->snormal[j] * goma_ctx->fem.fv_sens->grad_T[j]);
                   local_qconv += (rho * Cp * goma_ctx->fem.fv->T * goma_ctx->fem.fv->snormal[j] *
@@ -6826,8 +6826,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 usr_heat_flux(goma_ctx->fem.fv->grad_T, q, dq_gradT, dq_dX, time_value);
                 printf("untested\n");
                 exit(-1);
-                for (j = 0; j < VIM; j++) {
-                  for (a = 0; a < VIM; a++) {
+                for (j = 0; j < goma_ctx->problem.vim; j++) {
+                  for (a = 0; a < goma_ctx->problem.vim; a++) {
                     local_q += goma_ctx->fem.fv->snormal[j] * dq_gradT[j][a] *
                                goma_ctx->fem.fv_sens->grad_T[a];
                   }
@@ -6839,7 +6839,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               break;
 
             case VOLUME_FLUX:
-              for (j = 0; j < WIM; j++) {
+              for (j = 0; j < goma_ctx->problem.wim; j++) {
                 if (goma_ctx->fem.cr->MeshMotion == ARBITRARY)
                   local_q +=
                       (goma_ctx->fem.fv->snormal[j] * (goma_ctx->fem.fv_sens->v[j] - x_dot[j]) +
@@ -6857,7 +6857,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             case PVELOCITY1:
             case PVELOCITY2:
             case PVELOCITY3:
-              for (j = 0; j < WIM; j++) {
+              for (j = 0; j < goma_ctx->problem.wim; j++) {
                 local_q += goma_ctx->fem.fv->snormal[j] * goma_ctx->fem.fv_sens->pv[j] +
                            normal_sens[j] * goma_ctx->fem.fv->pv[j];
               }
@@ -6873,7 +6873,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             case EFIELD1:
             case EFIELD2:
             case EFIELD3:
-              for (j = 0; j < VIM; j++) {
+              for (j = 0; j < goma_ctx->problem.vim; j++) {
                 local_q += goma_ctx->fem.fv->snormal[j] * goma_ctx->fem.fv_sens->E_field[j] +
                            normal_sens[j] * goma_ctx->fem.fv->E_field[j];
               }
@@ -6881,7 +6881,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               break;
 
             case SPECIES_FLUX:
-              for (j = 0; j < WIM; j++) {
+              for (j = 0; j < goma_ctx->problem.wim; j++) {
                 local_q +=
                     (goma_ctx->fem.mp->diffusivity[species_id] *
                      (goma_ctx->fem.fv->snormal[j] * goma_ctx->fem.fv_sens->grad_c[species_id][j] +
@@ -6908,8 +6908,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
               if (goma_ctx->fem.pd->CoordinateSystem == SWIRLING ||
                   goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL) {
-                for (a = 0; a < WIM; a++) {
-                  for (b = 0; b < WIM; b++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
+                  for (b = 0; b < goma_ctx->problem.wim; b++) {
                     /*
                      *  note that for CYLINDRICAL and SWIRLING coordinate systems
                      * the h3 factor has been incorporated already into sdet
@@ -6924,7 +6924,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 }
                 local_flux += weight * det * local_q;
               } else if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN) {
-                if (WIM == 2) {
+                if (goma_ctx->problem.wim == 2) {
                   goma_ctx->fem.fv->x[2] = 0.0;
                   goma_ctx->fem.fv->snormal[2] = 0.0;
                   normal_sens[2] = 0.0;
@@ -6966,8 +6966,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
             case FORCE_NORMAL:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < WIM; a++) {
-                  for (b = 0; b < WIM; b++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
+                  for (b = 0; b < goma_ctx->problem.wim; b++) {
                     local_q +=
                         (goma_ctx->fem.fv->snormal[a] * (vs_sens[a][b] + ves_sens[a][b]) *
                              goma_ctx->fem.fv->snormal[b] +
@@ -6988,8 +6988,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
-                for (a = 0; a < VIM; a++) {
-                  for (b = 0; b < VIM; b++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
+                  for (b = 0; b < goma_ctx->problem.vim; b++) {
                     local_q += (goma_ctx->fem.fv->snormal[a] * TT_sens[a][b] *
                                     goma_ctx->fem.fv->snormal[b] +
                                 TT[a][b] * (goma_ctx->fem.fv->snormal[a] * normal_sens[b] +
@@ -7003,8 +7003,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             case FORCE_TANGENT1:
 
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < WIM; a++) {
-                  for (b = 0; b < WIM; b++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
+                  for (b = 0; b < goma_ctx->problem.wim; b++) {
                     local_q += (goma_ctx->fem.fv->stangent[0][a] *
                                 (vs_sens[a][b] + ves_sens[a][b]) * goma_ctx->fem.fv->snormal[b]);
                     local_qconv +=
@@ -7018,8 +7018,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
-                for (a = 0; a < VIM; a++) {
-                  for (b = 0; b < VIM; b++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
+                  for (b = 0; b < goma_ctx->problem.vim; b++) {
                     local_q += (goma_ctx->fem.fv->stangent[0][a] * TT_sens[a][b] *
                                 goma_ctx->fem.fv->snormal[b]);
                   }
@@ -7033,8 +7033,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 if (goma_ctx->fem.pd->Num_Dim == 3 ||
                     goma_ctx->fem.upd->CoordinateSystem == SWIRLING) {
-                  for (a = 0; a < WIM; a++) {
-                    for (b = 0; b < WIM; b++) {
+                  for (a = 0; a < goma_ctx->problem.wim; a++) {
+                    for (b = 0; b < goma_ctx->problem.wim; b++) {
                       local_q += (goma_ctx->fem.fv->stangent[1][a] *
                                   (vs_sens[a][b] + ves_sens[a][b]) * goma_ctx->fem.fv->snormal[b]);
                       local_qconv +=
@@ -7051,8 +7051,8 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 }
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
-                for (a = 0; a < VIM; a++) {
-                  for (b = 0; b < VIM; b++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
+                  for (b = 0; b < goma_ctx->problem.vim; b++) {
                     local_q += (goma_ctx->fem.fv->stangent[1][a] * TT_sens[a][b] *
                                 goma_ctx->fem.fv->snormal[b]);
                   }
@@ -7063,7 +7063,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
             case FORCE_X:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += ((vs_sens[0][a] + ves_sens[0][a]) * goma_ctx->fem.fv->snormal[a] +
                               normal_sens[a] * (vs[0][a] + ves[0][a]));
 
@@ -7078,7 +7078,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q +=
                       (TT_sens[0][a] * goma_ctx->fem.fv->snormal[a] + TT[0][a] * normal_sens[a]);
                 }
@@ -7088,7 +7088,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
             case FORCE_X_POS:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += ((vs_sens[0][a] + ves_sens[0][a]) * goma_ctx->fem.fv->snormal[a]);
 
                   local_qconv +=
@@ -7104,7 +7104,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT_sens[0][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
@@ -7116,7 +7116,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
             case FORCE_X_NEG:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += ((vs_sens[0][a] + ves_sens[0][a]) * goma_ctx->fem.fv->snormal[a]);
 
                   local_qconv +=
@@ -7132,7 +7132,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT_sens[0][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
@@ -7144,7 +7144,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
             case FORCE_Y:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += ((vs_sens[1][a] + ves_sens[1][a]) * goma_ctx->fem.fv->snormal[a]);
 
                   local_qconv +=
@@ -7157,7 +7157,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT_sens[1][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
@@ -7166,7 +7166,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
             case FORCE_Y_POS:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += ((vs_sens[1][a] + ves_sens[1][a]) * goma_ctx->fem.fv->snormal[a]);
 
                   local_qconv +=
@@ -7182,7 +7182,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT_sens[1][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
@@ -7194,7 +7194,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
             case FORCE_Y_NEG:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += ((vs_sens[1][a] + ves_sens[1][a]) * goma_ctx->fem.fv->snormal[a]);
 
                   local_qconv +=
@@ -7210,7 +7210,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 local_flux_conv += weight * det * local_qconv;
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT_sens[1][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
@@ -7223,7 +7223,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             case FORCE_Z:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 if (goma_ctx->fem.pd->Num_Dim == 3) {
-                  for (a = 0; a < VIM; a++) {
+                  for (a = 0; a < goma_ctx->problem.vim; a++) {
                     local_q += ((vs_sens[2][a] + ves_sens[2][a]) * goma_ctx->fem.fv->snormal[a]);
 
                     local_qconv +=
@@ -7239,7 +7239,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 }
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT_sens[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 local_flux += weight * det * local_q;
@@ -7249,7 +7249,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             case FORCE_Z_POS:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 if (goma_ctx->fem.pd->Num_Dim == 3) {
-                  for (a = 0; a < VIM; a++) {
+                  for (a = 0; a < goma_ctx->problem.vim; a++) {
                     local_q += ((vs_sens[2][a] + ves_sens[2][a]) * goma_ctx->fem.fv->snormal[a]);
 
                     local_qconv +=
@@ -7268,7 +7268,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 }
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT_sens[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q < 0) {
@@ -7281,7 +7281,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             case FORCE_Z_NEG:
               if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
                 if (goma_ctx->fem.pd->Num_Dim == 3) {
-                  for (a = 0; a < VIM; a++) {
+                  for (a = 0; a < goma_ctx->problem.vim; a++) {
                     local_q += ((vs_sens[2][a] + ves_sens[2][a]) * goma_ctx->fem.fv->snormal[a]);
 
                     local_qconv +=
@@ -7300,7 +7300,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
                 }
               } else {
                 GOMA_EH(GOMA_ERROR, "Force Sensitivity Calculation for Solids  not Available");
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   local_q += (TT_sens[2][a] * goma_ctx->fem.fv->snormal[a]);
                 }
                 if (local_q > 0) {
@@ -8363,8 +8363,8 @@ static int load_fv_sens(void) {
    * Polymer Stress (tensor)...
    */
   for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         if (p <= q) {
           /* good default behavior */
           goma_ctx->fem.fv_sens->S[mode][p][q] = 0.;
@@ -8388,8 +8388,8 @@ static int load_fv_sens(void) {
    * Velocity Gradient (tensor)...
    */
 
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       /* good default behavior */
       goma_ctx->fem.fv_sens->G[p][q] = 0.;
 
@@ -8598,7 +8598,7 @@ static int load_fv_grads_sens(void) {
   v = TEMPERATURE;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv_sens->grad_T[p] = 0.;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv_sens->grad_T[p] +=
@@ -8613,7 +8613,7 @@ static int load_fv_grads_sens(void) {
   v = PRESSURE;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv_sens->grad_P[p] = 0.;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv_sens->grad_P[p] +=
@@ -8628,7 +8628,7 @@ static int load_fv_grads_sens(void) {
   v = FILL;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv_sens->grad_F[p] = 0.;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv_sens->grad_F[p] +=
@@ -8643,7 +8643,7 @@ static int load_fv_grads_sens(void) {
   v = VOLTAGE;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv_sens->grad_V[p] = 0.;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv_sens->grad_V[p] +=
@@ -8672,13 +8672,13 @@ static int load_fv_grads_sens(void) {
   /*
    * grad(d)
    */
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       goma_ctx->fem.fv_sens->grad_d[p][q] = 0.;
       v = MESH_DISPLACEMENT1 + p;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
         dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-        for (r = 0; r < VIM; r++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv_sens->grad_d[p][q] +=
                 *goma_ctx->fem.esp_old->d[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
@@ -8691,13 +8691,13 @@ static int load_fv_grads_sens(void) {
   /*
    * grad(d_rs)
    */
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       goma_ctx->fem.fv_sens->grad_d_rs[p][q] = 0.;
       v = SOLID_DISPLACEMENT1 + p;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
         dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-        for (r = 0; r < VIM; r++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv_sens->grad_d_rs[p][q] +=
                 *goma_ctx->fem.esp_old->d_rs[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
@@ -8711,7 +8711,7 @@ static int load_fv_grads_sens(void) {
    * div(d)
    */
   goma_ctx->fem.fv_sens->div_d = 0.;
-  for (p = 0; p < VIM; p++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
     goma_ctx->fem.fv_sens->div_d += goma_ctx->fem.fv_sens->grad_d[p][p];
   }
 
@@ -8719,7 +8719,7 @@ static int load_fv_grads_sens(void) {
    * div(d_rs)
    */
   goma_ctx->fem.fv_sens->div_d_rs = 0.;
-  for (p = 0; p < VIM; p++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
     goma_ctx->fem.fv_sens->div_d_rs += goma_ctx->fem.fv_sens->grad_d_rs[p][p];
   }
 
@@ -8729,10 +8729,10 @@ static int load_fv_grads_sens(void) {
   dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
   v = VELOCITY1;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv_sens->grad_v[p][q] = 0.;
-        for (r = 0; r < WIM; r++) {
+        for (r = 0; r < goma_ctx->problem.wim; r++) {
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv_sens->grad_v[p][q] +=
                 *goma_ctx->fem.esp_old->v[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
@@ -8748,10 +8748,10 @@ static int load_fv_grads_sens(void) {
   dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[PVELOCITY1];
   v = PVELOCITY1;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv_sens->grad_pv[p][q] = 0.0;
-        for (r = 0; r < WIM; r++) {
+        for (r = 0; r < goma_ctx->problem.wim; r++) {
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv_sens->grad_pv[p][q] +=
                 *goma_ctx->fem.esp_old->pv[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
@@ -8767,7 +8767,7 @@ static int load_fv_grads_sens(void) {
   dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[EXT_VELOCITY];
   v = EXT_VELOCITY;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv_sens->grad_ext_v[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv_sens->grad_ext_v[p] +=
@@ -8782,10 +8782,10 @@ static int load_fv_grads_sens(void) {
   v = EFIELD1;
   dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv_sens->grad_E_field[p][q] = 0.0;
-        for (r = 0; r < VIM; r++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv_sens->grad_E_field[p][q] +=
                 *goma_ctx->fem.esp_old->E_field[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
@@ -8801,7 +8801,7 @@ static int load_fv_grads_sens(void) {
   v = ACOUS_PREAL;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv_sens->grad_apr[p] = 0.;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv_sens->grad_apr[p] +=
@@ -8812,7 +8812,7 @@ static int load_fv_grads_sens(void) {
   v = ACOUS_PIMAG;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv_sens->grad_api[p] = 0.;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv_sens->grad_api[p] +=
@@ -8823,7 +8823,7 @@ static int load_fv_grads_sens(void) {
   v = ACOUS_REYN_STRESS;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv_sens->grad_ars[p] = 0.;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv_sens->grad_ars[p] +=
@@ -8835,7 +8835,7 @@ static int load_fv_grads_sens(void) {
   v = SHELL_BDYVELO;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv_sens->grad_sh_bv[p] = 0.;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv_sens->grad_sh_bv[p] +=
@@ -8847,7 +8847,7 @@ static int load_fv_grads_sens(void) {
   v = SHELL_LUBP;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv_sens->grad_sh_p[p] = 0.;
       for (i = 0; i < dofs; i++) {
         goma_ctx->fem.fv_sens->grad_sh_p[p] +=
@@ -8863,10 +8863,10 @@ static int load_fv_grads_sens(void) {
     v = VELOCITY1;
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
-      for (p = 0; p < WIM; p++) {
+      for (p = 0; p < goma_ctx->problem.wim; p++) {
         goma_ctx->fem.fv_sens->curl_v[p] = 0.0;
         for (i = 0; i < dofs; i++)
-          for (a = 0; a < WIM; a++)
+          for (a = 0; a < goma_ctx->problem.wim; a++)
             goma_ctx->fem.fv_sens->curl_v[p] +=
                 *goma_ctx->fem.esp_old->v[a][i] * goma_ctx->fem.bf[v]->curl_phi_e[i][a][p];
       }
@@ -8880,7 +8880,7 @@ static int load_fv_grads_sens(void) {
   v = VELOCITY1;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
 
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv_sens->div_v += goma_ctx->fem.fv_sens->grad_v[p][p];
     }
   }
@@ -8891,7 +8891,7 @@ static int load_fv_grads_sens(void) {
   goma_ctx->fem.fv_sens->div_pv = 0.;
   v = PVELOCITY1;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv_sens->div_pv += goma_ctx->fem.fv_sens->grad_pv[p][p];
     }
   }
@@ -8904,7 +8904,7 @@ static int load_fv_grads_sens(void) {
     v = MASS_FRACTION;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
       dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         goma_ctx->fem.fv_sens->grad_c[w][p] = 0.;
         for (i = 0; i < dofs; i++) {
           goma_ctx->fem.fv_sens->grad_c[w][p] +=
@@ -8921,9 +8921,9 @@ static int load_fv_grads_sens(void) {
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
-          for (r = 0; r < VIM; r++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
+          for (r = 0; r < goma_ctx->problem.vim; r++) {
             goma_ctx->fem.fv_sens->grad_S[mode][r][p][q] = 0.;
             for (i = 0; i < dofs; i++) {
               if (p <= q) {
@@ -8941,7 +8941,7 @@ static int load_fv_grads_sens(void) {
       /*
        * div(S) - this is a vector!
        */
-      for (r = 0; r < VIM; r++) {
+      for (r = 0; r < goma_ctx->problem.vim; r++) {
         goma_ctx->fem.fv_sens->div_S[mode][r] = 0.;
       }
 
@@ -8952,18 +8952,18 @@ static int load_fv_grads_sens(void) {
       }
 
       if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-        for (s = 0; s < VIM; s++) {
-          for (r = 0; r < VIM; r++) {
-            for (p = 0; p < VIM; p++) {
+        for (s = 0; s < goma_ctx->problem.vim; s++) {
+          for (r = 0; r < goma_ctx->problem.vim; r++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               goma_ctx->fem.fv_sens->div_S[mode][s] +=
                   goma_ctx->fem.fv_sens->S[mode][p][s] * goma_ctx->fem.fv_sens->grad_e[p][r][s];
             }
           }
         }
 
-        for (s = 0; s < VIM; s++) {
-          for (r = 0; r < VIM; r++) {
-            for (q = 0; q < VIM; q++) {
+        for (s = 0; s < goma_ctx->problem.vim; s++) {
+          for (r = 0; r < goma_ctx->problem.vim; r++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               goma_ctx->fem.fv_sens->div_S[mode][s] +=
                   goma_ctx->fem.fv_sens->S[mode][r][q] * goma_ctx->fem.fv_sens->grad_e[q][r][s];
             }
@@ -8980,9 +8980,9 @@ static int load_fv_grads_sens(void) {
   v = VELOCITY_GRADIENT11;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
-        for (r = 0; r < VIM; r++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
           goma_ctx->fem.fv_sens->grad_G[r][p][q] = 0.;
           for (i = 0; i < dofs; i++) {
             goma_ctx->fem.fv_sens->grad_G[r][p][q] +=
@@ -8995,7 +8995,7 @@ static int load_fv_grads_sens(void) {
     /*
      * div(G) - this is a vector!
      */
-    for (r = 0; r < VIM; r++) {
+    for (r = 0; r < goma_ctx->problem.vim; r++) {
       goma_ctx->fem.fv_sens->div_G[r] = 0.;
     }
 
@@ -9006,18 +9006,18 @@ static int load_fv_grads_sens(void) {
     }
 
     if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-      for (s = 0; s < VIM; s++) {
-        for (r = 0; r < VIM; r++) {
-          for (p = 0; p < VIM; p++) {
+      for (s = 0; s < goma_ctx->problem.vim; s++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             goma_ctx->fem.fv_sens->div_G[s] +=
                 goma_ctx->fem.fv_sens->G[p][s] * goma_ctx->fem.fv_sens->grad_e[p][r][s];
           }
         }
       }
 
-      for (s = 0; s < VIM; s++) {
-        for (r = 0; r < VIM; r++) {
-          for (q = 0; q < VIM; q++) {
+      for (s = 0; s < goma_ctx->problem.vim; s++) {
+        for (r = 0; r < goma_ctx->problem.vim; r++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             goma_ctx->fem.fv_sens->div_G[s] +=
                 goma_ctx->fem.fv_sens->G[r][q] * goma_ctx->fem.fv_sens->grad_e[q][r][s];
           }
@@ -10059,7 +10059,7 @@ void surfdet_chev_coeff_2DQ(const int interface_type,
 
   /*  find basis function for level-set field - maybe it should be mesh? */
 
-  for (j = 0; j < Num_Basis_Functions; j++) {
+  for (j = 0; j < goma_ctx->problem.num_basis_functions; j++) {
     if (goma_ctx->fem.pd_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]
             ->i[goma_ctx->fem.pg->imtrx][FILL] == goma_ctx->fem.bfd[j]->interpolation) {
       fill_interp = j;

@@ -62,28 +62,6 @@
 
 int *node_index_fill = NULL;
 int *fill_node_list = NULL;
-int num_fill_unknowns = 0;
-int owned_fill_unknowns = 0;
-int internal_fill_unknowns = 0;
-int boundary_fill_unknowns = 0;
-int external_fill_unknowns = 0;
-
-/*
- *      more singly defined pointers
- *
- *  Pointers to array lists being transported,
- *  and the lists of integers to be transported,
- *  likewise declared extern for global use in rf_fem.h
- */
-
-int *ptr_node_recv = NULL;
-int *ptr_fill_node_recv = NULL;
-int **ptr_dof_send = NULL;
-int **list_dof_send = NULL;
-int *ptr_node_send = NULL;
-int *list_node_send = NULL;
-int *ptr_fill_node_send = NULL;
-int *list_fill_node_send = NULL;
 
 static void build_node_recv_indeces /* dp_map_comm_vec.c */
     (Exo_DB *,                      /* exo */
@@ -130,7 +108,8 @@ void setup_nodal_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
     /*
      * num_nodes_recv: The number of nodes to receive from this processor
      */
-    cx[0][p].num_nodes_recv = (ptr_node_recv[p + 1] - ptr_node_recv[p]);
+    cx[0][p].num_nodes_recv =
+        (goma_ctx->problem.ptr_node_recv[p + 1] - goma_ctx->problem.ptr_node_recv[p]);
   }
 
   /*
@@ -173,12 +152,14 @@ void setup_nodal_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    *  denote the start of each neighboring processor's section,
    *  int ptr_node_send[]
    */
-  ptr_node_send = alloc_int_1(dpi->num_neighbors + 1, 0);
+  goma_ctx->problem.ptr_node_send = alloc_int_1(dpi->num_neighbors + 1, 0);
   for (p = 0; p < dpi->num_neighbors; p++) {
-    ptr_node_send[p + 1] = ptr_node_send[p] + cx[0][p].num_nodes_send;
+    goma_ctx->problem.ptr_node_send[p + 1] =
+        goma_ctx->problem.ptr_node_send[p] + cx[0][p].num_nodes_send;
   }
-  if (ptr_node_send[dpi->num_neighbors] > 0) {
-    list_node_send = alloc_int_1(ptr_node_send[dpi->num_neighbors], -1);
+  if (goma_ctx->problem.ptr_node_send[dpi->num_neighbors] > 0) {
+    goma_ctx->problem.list_node_send =
+        alloc_int_1(goma_ctx->problem.ptr_node_send[dpi->num_neighbors], -1);
   }
   /*
    * Fill in the address of the location in list_node_send for each
@@ -186,7 +167,8 @@ void setup_nodal_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    * cx[p].local_nodeces_send
    */
   for (p = 0; p < dpi->num_neighbors; p++) {
-    cx[0][p].local_nodeces_send = list_node_send + ptr_node_send[p];
+    cx[0][p].local_nodeces_send =
+        goma_ctx->problem.list_node_send + goma_ctx->problem.ptr_node_send[p];
   }
 
   /*
@@ -212,7 +194,7 @@ void setup_nodal_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    */
   np_ptr = np_base;
   for (p = 0; p < dpi->num_neighbors; p++) {
-    np_ptr->send_message_buf = (void *)(list_gnode_recv + ptr_node_recv[p]);
+    np_ptr->send_message_buf = (void *)(list_gnode_recv + goma_ctx->problem.ptr_node_recv[p]);
     np_ptr->send_message_length = sizeof(int) * cx[0][p].num_nodes_recv;
     np_ptr->recv_message_buf = (void *)cx[0][p].local_nodeces_send;
     np_ptr->recv_message_length = sizeof(int) * cx[0][p].num_nodes_send;
@@ -226,14 +208,14 @@ void setup_nodal_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    *   -> Note, this is an o(N^2) search algorithm. It may be very
    *            slow as the number of nodes increase.
    */
-  for (i = 0; i < ptr_node_send[dpi->num_neighbors]; i++) {
-    gnn = list_node_send[i];
+  for (i = 0; i < goma_ctx->problem.ptr_node_send[dpi->num_neighbors]; i++) {
+    gnn = goma_ctx->problem.list_node_send[i];
     lnn = in_list(gnn, dpi->num_internal_nodes, exo->num_nodes, dpi->node_index_global);
     if (lnn == -1) {
       fprintf(stderr, "%s %d: couldn't find gnn = %d\n", yo, goma_ctx->proc_id, gnn);
       GOMA_EH(GOMA_ERROR, "failed dp mapping");
     }
-    list_node_send[i] = lnn;
+    goma_ctx->problem.list_node_send[i] = lnn;
   }
 
   /*
@@ -370,8 +352,9 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
   for (p = 0; p < dpi->num_neighbors; p++) {
     for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       cx[imtrx][p].num_dofs_send = 0;
-      for (i = ptr_node_send[p]; i < ptr_node_send[p + 1]; i++) {
-        local_node_number = list_node_send[i];
+      for (i = goma_ctx->problem.ptr_node_send[p]; i < goma_ctx->problem.ptr_node_send[p + 1];
+           i++) {
+        local_node_number = goma_ctx->problem.list_node_send[i];
         cx[imtrx][p].num_dofs_send +=
             Nodes[local_node_number]->Nodal_Vars_Info[imtrx]->Num_Unknowns;
       }
@@ -384,11 +367,12 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    *
    *    ptr_dof_send[] gets allocated here, and is never freed.
    */
-  ptr_dof_send = malloc(sizeof(int *) * goma_ctx->fem.upd->Total_Num_Matrices);
+  goma_ctx->problem.ptr_dof_send = malloc(sizeof(int *) * goma_ctx->fem.upd->Total_Num_Matrices);
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    ptr_dof_send[imtrx] = alloc_int_1(dpi->num_neighbors + 1, 0);
+    goma_ctx->problem.ptr_dof_send[imtrx] = alloc_int_1(dpi->num_neighbors + 1, 0);
     for (p = 0; p < dpi->num_neighbors; p++) {
-      ptr_dof_send[imtrx][p + 1] = ptr_dof_send[imtrx][p] + cx[imtrx][p].num_dofs_send;
+      goma_ctx->problem.ptr_dof_send[imtrx][p + 1] =
+          goma_ctx->problem.ptr_dof_send[imtrx][p] + cx[imtrx][p].num_dofs_send;
     }
   }
 
@@ -401,20 +385,21 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    *
    *     list_dof_send[] is allocated here, and is never freed.
    */
-  list_dof_send = malloc(sizeof(int *) * goma_ctx->fem.upd->Total_Num_Matrices);
+  goma_ctx->problem.list_dof_send = malloc(sizeof(int *) * goma_ctx->fem.upd->Total_Num_Matrices);
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    if (ptr_dof_send[imtrx][dpi->num_neighbors] > 0) {
-      list_dof_send[imtrx] = alloc_int_1(ptr_dof_send[imtrx][dpi->num_neighbors], -1);
+    if (goma_ctx->problem.ptr_dof_send[imtrx][dpi->num_neighbors] > 0) {
+      goma_ctx->problem.list_dof_send[imtrx] =
+          alloc_int_1(goma_ctx->problem.ptr_dof_send[imtrx][dpi->num_neighbors], -1);
     }
   }
 
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     index = 0;
-    for (i = 0; i < ptr_node_send[dpi->num_neighbors]; i++) {
-      local_node_number = list_node_send[i];
+    for (i = 0; i < goma_ctx->problem.ptr_node_send[dpi->num_neighbors]; i++) {
+      local_node_number = goma_ctx->problem.list_node_send[i];
       base = Nodes[local_node_number]->First_Unknown[imtrx];
       for (p = 0; p < Nodes[local_node_number]->Nodal_Vars_Info[imtrx]->Num_Unknowns; p++) {
-        list_dof_send[imtrx][index] = base + p;
+        goma_ctx->problem.list_dof_send[imtrx][index] = base + p;
         index++;
       }
     }
@@ -447,7 +432,7 @@ static void build_node_recv_indeces(Exo_DB *exo, Dpi *dpi)
   int i, local_node_number, index_owner, owner, prev_owner, num_owner_changes;
   NODE_INFO_STRUCT *node_ptr;
 
-  ptr_node_recv = alloc_int_1(dpi->num_neighbors + 1, 0);
+  goma_ctx->problem.ptr_node_recv = alloc_int_1(dpi->num_neighbors + 1, 0);
 
   /*
    * Gather the frequency profile for each processor among the external
@@ -461,7 +446,7 @@ static void build_node_recv_indeces(Exo_DB *exo, Dpi *dpi)
     owner = dpi->node_owner[local_node_number];
     node_ptr->Proc = owner;
     index_owner = in_list(owner, 0, dpi->num_neighbors, dpi->neighbor);
-    ptr_node_recv[index_owner + 1]++;
+    goma_ctx->problem.ptr_node_recv[index_owner + 1]++;
 
     if (prev_owner != owner)
       num_owner_changes++;
@@ -486,9 +471,9 @@ static void build_node_recv_indeces(Exo_DB *exo, Dpi *dpi)
    * Convert frequency into pointer list.
    */
   for (i = 0; i < dpi->num_neighbors; i++) {
-    ptr_node_recv[i + 1] += ptr_node_recv[i];
+    goma_ctx->problem.ptr_node_recv[i + 1] += goma_ctx->problem.ptr_node_recv[i];
   }
-  if (ptr_node_recv[dpi->num_neighbors] != dpi->num_external_nodes) {
+  if (goma_ctx->problem.ptr_node_recv[dpi->num_neighbors] != dpi->num_external_nodes) {
     GOMA_EH(GOMA_ERROR, "Mismatch in external node ownership.");
   }
 

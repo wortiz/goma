@@ -141,7 +141,7 @@ void usr_out_hkm(int status MAYBE_UNUSED,
     return;
 
   /* Number of unknowns owned by this processor -- rf_fem.h */
-  num_owned_unknowns = NumUnknowns[goma_ctx->fem.pg->imtrx];
+  num_owned_unknowns = goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx];
 
 #ifdef PARALLEL
   (void)MPI_Barrier(MPI_COMM_WORLD);
@@ -402,7 +402,7 @@ static void SOLN_VALUES(int var_type,
   i_been_there = alloc_int_1(num_owned_nodes, 0);
 
   for (ebi = 0; ebi < EXO_ptr->num_elem_blocks; ebi++) {
-    if (Matilda[ebi] == mn) {
+    if (goma_ctx->problem.matilda[ebi] == mn) {
       e_start = EXO_ptr->eb_ptr[ebi];
       e_end = EXO_ptr->eb_ptr[ebi + 1];
       for (ielem = e_start; ielem < e_end; ielem++) {

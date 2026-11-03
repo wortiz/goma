@@ -60,7 +60,7 @@ void update_parameterC(int iCC,        /* CONDITION NUMBER */
   int ibc, idf;
 
   /* Calls from ac_conti.c (nCC=0) */
-  if (nCC == 0) {
+  if (goma_ctx->problem.n_cc == 0) {
     if (goma_ctx->fem.cont->upType == 1) { /* BC */
       ibc = goma_ctx->fem.cont->upBCID;
       idf = goma_ctx->fem.cont->upDFID;

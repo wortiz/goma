@@ -121,7 +121,7 @@ int ns_data_print(pp_Data *p,
         GOMA_EH(GOMA_ERROR, err_msg);
       }
     }
-    mat_num = Matilda[ebIndex_first];
+    mat_num = goma_ctx->problem.matilda[ebIndex_first];
     p->mat_num = mat_num;
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mat_num];
   } else {
@@ -172,8 +172,8 @@ int ns_data_print(pp_Data *p,
 
     for (j = 0; j < goma_ctx->mesh.proc_ns_count[nsp]; j++) {
       node = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp] + j];
-      if (node <
-          num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx]) {
+      if (node < goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                     goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx]) {
         idx = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, -1, goma_ctx->fem.pg->imtrx);
         if (idx == -1) {
           x_pos = goma_ctx->mesh.coor[0][node];
@@ -409,7 +409,7 @@ int ns_data_print(pp_Data *p,
           ordinate = SQUARE(x[id_var]);
           id_var = Index_Solution(node, VELOCITY2, 0, 0, mat_num, goma_ctx->fem.pg->imtrx);
           ordinate += SQUARE(x[id_var]);
-          if (VIM == 3) {
+          if (goma_ctx->problem.vim == 3) {
             id_var = Index_Solution(node, VELOCITY3, 0, 0, mat_num, goma_ctx->fem.pg->imtrx);
             ordinate += SQUARE(x[id_var]);
           }
@@ -611,8 +611,8 @@ int ns_data_sens_print(const struct Post_Processing_Data_Sens *p,
 
     for (j = 0; j < goma_ctx->mesh.proc_ns_count[nsp]; j++) {
       node = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp] + j];
-      if (node <
-          num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx]) {
+      if (node < goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                     goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx]) {
         idx = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, -1, goma_ctx->fem.pg->imtrx);
         if (idx == -1) {
           x_pos = goma_ctx->mesh.coor[0][node];

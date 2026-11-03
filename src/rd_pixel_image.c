@@ -145,8 +145,8 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
     GOMA_EH(GOMA_ERROR, "Trouble in rd_pixel_image: cannot find blkid");
 
   /* Sort out interpolations */
-  if ((si = in_list(goma_ctx->fem.efv->i[N_ext], 0, Num_Interpolations, Unique_Interpolations)) ==
-      -1) {
+  if ((si = in_list(goma_ctx->fem.efv->i[N_ext], 0, goma_ctx->problem.num_interpolations,
+                    goma_ctx->problem.unique_interpolations)) == -1) {
     GOMA_EH(GOMA_ERROR, "Seems to be a problem finding IntegrationMap interpolation for pixels.");
   }
 

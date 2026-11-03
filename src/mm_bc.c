@@ -168,7 +168,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
   /* Loop over Num_BC, the number of boundary conditions defined in the
      input file */
 
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
 
     /*****************************************************************************/
     /*                             BLOCK 1                                       */
@@ -274,7 +274,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
                */
               ielem = exo->ss_elem_list[exo->ss_elem_index[ins] + side_index];
               elem_block_index = find_elemblock_index(ielem, exo);
-              matID = Matilda[elem_block_index];
+              matID = goma_ctx->problem.matilda[elem_block_index];
               if (BC_Types[ibc].BC_EBID_Apply != -1) {
                 if (Element_Blocks[elem_block_index].Elem_Blk_Id != BC_Types[ibc].BC_EBID_Apply) {
                   continue;
@@ -325,7 +325,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
           /*
            *  Identify the materials id with the element block
            */
-          mn = Matilda[eb_index];
+          mn = goma_ctx->problem.matilda[eb_index];
           if (mn < 0) {
             continue;
           }
@@ -432,7 +432,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
       inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + n];
       node = Nodes[inode];
       nv = node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx];
-      if (Dolphin[goma_ctx->fem.pg->imtrx][inode][PRESSURE] > 0 && datum_set) {
+      if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][PRESSURE] > 0 && datum_set) {
         datum_set = 0;
         if (!node->DBC[goma_ctx->fem.pg->imtrx]) {
           node->DBC[goma_ctx->fem.pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
@@ -878,7 +878,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
    *  Loop over Num_BC, the number of boundary conditions defined in the
    *  input file
    */
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     /******************************************************************************/
     /*                              BLOCK 1                                       */
     /*      SURFACE INTEGRAL BOUNDARY CONDITIONS SPECIFIED BY NODE SETS           */
@@ -1070,13 +1070,13 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
   /*    CHECK FOR LEAKY BOUNDARY CONDITIONS AND CONNECTION TO FLUX CONDITIONS  */
   /*****************************************************************************/
 
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     bc = BC_Types + ibc;
     if (bc->BC_Name == SDC_STEFANFLOW_BC) {
       ibc_id = bc->BC_ID;
       bc->BC_Data_Int[1] = 0;
       ibc1 = 2;
-      for (ibc2 = 0; ibc2 < Num_BC; ibc2++) {
+      for (ibc2 = 0; ibc2 < goma_ctx->problem.num_bc; ibc2++) {
         bc2 = BC_Types + ibc2;
         if ((bc2->BC_ID == ibc_id) && (bc2->BC_Name == VL_EQUIL_PRXN_BC)) {
           bc->BC_Data_Int[1]++;
@@ -1095,7 +1095,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
    * conditions by latent heat of vaporization etc.
    */
   DPRINTF(stdout, "\n");
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     if (BC_Types[ibc].BC_Name == KIN_LEAK_BC || BC_Types[ibc].BC_Name == KIN_CHEM_BC ||
         BC_Types[ibc].BC_Name == KIN_ELECTRODEPOSITION_BC ||   /*  RSL 5/27/02  */
         BC_Types[ibc].BC_Name == VNORM_ELECTRODEPOSITION_BC || /*  RSL 5/30/02  */
@@ -1118,7 +1118,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
       DPRINTF(stdout, "Leaky %s BC found on %2s %d\n", BC_Desc[ibc_desc].name1,
               BC_Types[ibc].Set_Type, ibc_id);
 
-      for (ibc2 = 0; ibc2 < Num_BC; ibc2++) {
+      for (ibc2 = 0; ibc2 < goma_ctx->problem.num_bc; ibc2++) {
         /*
          * Assume grouping for either of the 3 cases.
          */
@@ -1167,7 +1167,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
      line. Replace the poinbc number in BC_Types[ibc].BC_Data_Int[0] with the
      global node number                                                        */
 
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     if (BC_Types[ibc].BC_Name == VELO_TANGENT_BC || BC_Types[ibc].BC_Name == VELO_TANGENT_USER_BC ||
         BC_Types[ibc].BC_Name == VELO_SLIP_BC || BC_Types[ibc].BC_Name == VELO_SLIP_ROT_BC ||
         BC_Types[ibc].BC_Name == VELO_SLIP_FILL_BC ||
@@ -1216,9 +1216,9 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
       }
     }
   }
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     if (BC_Types[ibc].BC_Name == ROLL_FLUID_BC) {
-      for (ibc2 = 0; ibc2 < Num_BC; ibc2++) {
+      for (ibc2 = 0; ibc2 < goma_ctx->problem.num_bc; ibc2++) {
         if (BC_Types[ibc2].BC_Name == VELO_SLIP_ROT_FLUID_BC) {
           BC_Types[ibc].BC_Data_Int[2] = ibc2;
         }
@@ -1235,7 +1235,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
      the corresponding VELO_SLIP or VELO_SLIP_ROT conditions */
 
   DPRINTF(stdout, "\n");
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     if (BC_Types[ibc].BC_Name == Q_VELO_SLIP_BC)
 
     {
@@ -1250,7 +1250,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
 
       /* now search for corresponding slip condition */
       BC_Types[ibc].BC_Data_Int[0] = -1;
-      for (ibc2 = 0; ibc2 < Num_BC; ibc2++) {
+      for (ibc2 = 0; ibc2 < goma_ctx->problem.num_bc; ibc2++) {
         if ((BC_Types[ibc2].BC_ID == ibc_id) &&
             ((BC_Types[ibc2].BC_Name == VELO_SLIP_BC) ||
              (BC_Types[ibc2].BC_Name == VELO_SLIP_ROT_BC) ||
@@ -1283,11 +1283,11 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
   mom_rotate_ss = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
   num_mom_rotate = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int));
 
-  if (Num_ROT == 0 && exo->num_dim < 3) {
+  if (goma_ctx->problem.num_rot == 0 && exo->num_dim < 3) {
     check_for_bc_conflicts2D(exo, dpi);
-  } else if (Num_ROT == 0 && exo->num_dim == 3) {
+  } else if (goma_ctx->problem.num_rot == 0 && exo->num_dim == 3) {
     check_for_bc_conflicts3D(exo, dpi);
-  } else if (Num_ROT > 0) {
+  } else if (goma_ctx->problem.num_rot > 0) {
     check_for_bc_conflicts3D(exo, dpi);
   }
 
@@ -1377,7 +1377,7 @@ void setup_Point_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[],
                        * * * * * * * * * * * * * * * * * * */
   // struct elem_side_bc_struct *this_side_bc = NULL;
 
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     /* First check to see if this boundary condition is a nodeset         */
     if (!strcmp(BC_Types[ibc].Set_Type, "NS")) {
       /* Make sure the condition is Neumann type (necessary?) */
@@ -1483,7 +1483,7 @@ void set_up_Edge_BC(struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[],
   /* Loop over Num_BC, the number of boundary conditions defined in the
      input file */
 
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
 
     /* First check to see if this boundary condition is a side set 	      */
     if (!strcmp(BC_Types[ibc].Set_Type, "SS")) {
@@ -1783,7 +1783,7 @@ void set_up_Embedded_BC(void)
     }
   }
 
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
 
     if (!strcmp(BC_Types[ibc].Set_Type, "LS")) {
 
@@ -2667,7 +2667,7 @@ static void vcrr_determination(struct elem_side_bc_struct *side,
        * Find the current material
        */
       ebn = find_elemblock_index(ielem, EXO_ptr);
-      mn = Matilda[ebn];
+      mn = goma_ctx->problem.matilda[ebn];
       mn_low = MIN(bc->BC_matrl_index_1, bc->BC_matrl_index_2);
       if (mn_low != mn) {
         for (i = 0, nf = TRUE; i < side->Num_MatID && nf; i++) {
@@ -2725,12 +2725,12 @@ void set_up_BC_connectivity(void)
   int ibc, jbc, ifound = TRUE;
   BOUNDARY_CONDITION_STRUCT *bc, *bc2;
   struct BC_descriptions *bc_desc, *bc_desc2;
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     bc = BC_Types + ibc;
     bc_desc = bc->desc;
     switch (bc_desc->BC_Name) {
     case SDC_KIN_SF_BC:
-      for (jbc = 0, ifound = FALSE; jbc < Num_BC && !ifound; jbc++) {
+      for (jbc = 0, ifound = FALSE; jbc < goma_ctx->problem.num_bc && !ifound; jbc++) {
         bc2 = BC_Types + jbc;
         bc_desc2 = bc2->desc;
         if (bc2->BC_ID == bc->BC_ID) {
@@ -2772,7 +2772,7 @@ int exchange_bc_info(void) {
   int error = 0;
 
   /* loop over boundary conditions */
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     /* check if BC needs special exchange information */
     switch (BC_Types[ibc].BC_Name) {
     case VELO_SLIP_BC:

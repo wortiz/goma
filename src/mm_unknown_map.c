@@ -68,15 +68,10 @@
 /*****************************************************************************/
 
 /*
- * Definitions. These variables are used many other places via the
- * extern declarations in rf_fem.h
+ * The unknown map variables described below (num_*_dofs, Local_Offset,
+ * Dolphin, NumUnknowns, Num_Var_In_Type, idv, dofname, resname, ...) now
+ * live in goma_ctx->problem; they are filled in by the routines in this file.
  */
-
-int *num_internal_dofs;
-int *num_boundary_dofs;
-int *num_external_dofs;
-int *num_universe_dofs;
-int num_personal_elems = 0;
 
 /*
  * Local_Offset:
@@ -97,7 +92,6 @@ int num_personal_elems = 0;
  *	is getting lumped together with other unknowns at a node.
  *
  */
-int ***Local_Offset = NULL;
 
 /*
  * Dolphin:  The scheme above is fine except for cases that occur when
@@ -129,18 +123,7 @@ int ***Local_Offset = NULL;
  *			 species concentrations must be multiplied by the
  * 			 total number of concentrations that are active, too!
  */
-int ***Dolphin = NULL;
 
-/*
- * Other Globally Defined Variables
- */
-int *NumUnknowns;      /* Number of unknown variables updated by this   */
-                       /* processor (internal plus boundary)            */
-int *NumExtUnknowns;   /* Number of external variables which are        */
-                       /* copied and stored on the local processor      */
-int MaxVarPerNode = 0; /* Global Maximum number of unknowns at any      */
-                       /* node on any processor                         */
-int Num_Var_In_Type[MAX_NUM_MATRICES][MAX_VARIABLE_TYPES];
 /*
  * First_Unknown:
  *     Index to start of the first unknown in the processor
@@ -159,9 +142,6 @@ int **First_Unknown = NULL;
  *      idv[dof][1] = local nodal dof (0, except pressure& conc., for example)
  *	idv[dof][2] = associated global node number (0-based)
  */
-int ***idv = NULL;      /* Integer variable name, nodal dof, node. */
-char ***dofname = NULL; /* Names of variables. */
-char ***resname = NULL; /* Names of residual equations. */
 
 /*
  * Definitions of variables which are declared in
@@ -284,21 +264,23 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
    *
    */
 
-  Dolphin = (int ***)malloc((goma_ctx->fem.upd->Total_Num_Matrices) * sizeof(int **));
-  Local_Offset = (int ***)malloc((goma_ctx->fem.upd->Total_Num_Matrices) * sizeof(int **));
+  goma_ctx->problem.dolphin =
+      (int ***)malloc((goma_ctx->fem.upd->Total_Num_Matrices) * sizeof(int **));
+  goma_ctx->problem.local_offset =
+      (int ***)malloc((goma_ctx->fem.upd->Total_Num_Matrices) * sizeof(int **));
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    Dolphin[imtrx] = (int **)malloc(total_nodes * sizeof(int *));
-    Local_Offset[imtrx] = (int **)malloc(total_nodes * sizeof(int *));
+    goma_ctx->problem.dolphin[imtrx] = (int **)malloc(total_nodes * sizeof(int *));
+    goma_ctx->problem.local_offset[imtrx] = (int **)malloc(total_nodes * sizeof(int *));
     for (i = 0; i < total_nodes; i++) {
-      Dolphin[imtrx][i] = (int *)malloc(MAX_VARIABLE_TYPES * sizeof(int));
-      Local_Offset[imtrx][i] = (int *)malloc(MAX_VARIABLE_TYPES * sizeof(int));
+      goma_ctx->problem.dolphin[imtrx][i] = (int *)malloc(MAX_VARIABLE_TYPES * sizeof(int));
+      goma_ctx->problem.local_offset[imtrx][i] = (int *)malloc(MAX_VARIABLE_TYPES * sizeof(int));
     }
   }
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (i = 0; i < total_nodes; i++) {
       for (var_type = V_FIRST; var_type < V_LAST; var_type++) {
-        Dolphin[imtrx][i][var_type] = -1;
-        Local_Offset[imtrx][i][var_type] = -1;
+        goma_ctx->problem.dolphin[imtrx][i][var_type] = -1;
+        goma_ctx->problem.local_offset[imtrx][i][var_type] = -1;
       }
     }
   }
@@ -340,7 +322,7 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
      * Determine the material index for this particular element block
      * (if Matilda[ebi] is negative, then the element block is not in the goma problem)
      */
-    mn = Matilda[ebi];
+    mn = goma_ctx->problem.matilda[ebi];
     if (mn < 0) {
       continue;
     }
@@ -472,7 +454,7 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
          *    is the same.
          */
         if (ebi > 0)
-          Dolphin[imtrx][i][var_type] = ebi;
+          goma_ctx->problem.dolphin[imtrx][i][var_type] = ebi;
       }
     }
   }
@@ -613,10 +595,12 @@ void setup_external_nodal_vars(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
 
     for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       nvp_send[imtrx] =
-          alloc_struct_1(struct nv_packed, ptr_node_send[dpi->num_neighbors] * MaxVarPerNode);
+          alloc_struct_1(struct nv_packed, goma_ctx->problem.ptr_node_send[dpi->num_neighbors] *
+                                               goma_ctx->problem.max_var_per_node);
 
       nvp_recv[imtrx] =
-          alloc_struct_1(struct nv_packed, ptr_node_recv[dpi->num_neighbors] * MaxVarPerNode);
+          alloc_struct_1(struct nv_packed, goma_ctx->problem.ptr_node_recv[dpi->num_neighbors] *
+                                               goma_ctx->problem.max_var_per_node);
       //         nvp[imtrx] = alloc_struct_1(struct nv_packed,
       //			             ptr_node_recv[dpi->num_neighbors] * MaxVarPerNode);
     }
@@ -627,28 +611,32 @@ void setup_external_nodal_vars(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
     }
 
     for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-      for (i = 0; i < ptr_node_send[dpi->num_neighbors]; i++) {
-        node_num = list_node_send[i];
-        nvp[imtrx] = nvp_send[imtrx] + i * MaxVarPerNode;
+      for (i = 0; i < goma_ctx->problem.ptr_node_send[dpi->num_neighbors]; i++) {
+        node_num = goma_ctx->problem.list_node_send[i];
+        nvp[imtrx] = nvp_send[imtrx] + i * goma_ctx->problem.max_var_per_node;
         pack_nv(nvp[imtrx], Nodes[node_num]->Nodal_Vars_Info[imtrx]);
       }
 
       np_ptr = np_base[imtrx];
       for (p = 0; p < dpi->num_neighbors; p++) {
         np_ptr->neighbor_ProcID = cx[imtrx][p].neighbor_name;
-        np_ptr->send_message_buf = (void *)(nvp_send[imtrx] + ptr_node_send[p] * MaxVarPerNode);
-        np_ptr->send_message_length =
-            sizeof(struct nv_packed) * cx[imtrx][p].num_nodes_send * MaxVarPerNode;
-        np_ptr->recv_message_buf = (void *)(nvp_recv[imtrx] + ptr_node_recv[p] * MaxVarPerNode);
-        np_ptr->recv_message_length =
-            sizeof(struct nv_packed) * cx[imtrx][p].num_nodes_recv * MaxVarPerNode;
+        np_ptr->send_message_buf =
+            (void *)(nvp_send[imtrx] +
+                     goma_ctx->problem.ptr_node_send[p] * goma_ctx->problem.max_var_per_node);
+        np_ptr->send_message_length = sizeof(struct nv_packed) * cx[imtrx][p].num_nodes_send *
+                                      goma_ctx->problem.max_var_per_node;
+        np_ptr->recv_message_buf =
+            (void *)(nvp_recv[imtrx] +
+                     goma_ctx->problem.ptr_node_recv[p] * goma_ctx->problem.max_var_per_node);
+        np_ptr->recv_message_length = sizeof(struct nv_packed) * cx[imtrx][p].num_nodes_recv *
+                                      goma_ctx->problem.max_var_per_node;
         np_ptr++;
       }
       exchange_neighbor_proc_info(dpi->num_neighbors, np_base[imtrx]);
 
       for (i = 0; i < dpi->num_external_nodes; i++) {
         node_num = dpi->num_internal_nodes + dpi->num_boundary_nodes + i;
-        nvp[imtrx] = nvp_recv[imtrx] + i * MaxVarPerNode;
+        nvp[imtrx] = nvp_recv[imtrx] + i * goma_ctx->problem.max_var_per_node;
 
         /*
          * Unpack the nodal variable structure into a new structure
@@ -682,7 +670,7 @@ void setup_external_nodal_vars(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
         for (var_type = V_FIRST; var_type < V_LAST; var_type++) {
           p = get_nv_ndofs_modMF(nv_match, var_type);
           if (p > 0) {
-            Dolphin[imtrx][node_num][var_type] = p;
+            goma_ctx->problem.dolphin[imtrx][node_num][var_type] = p;
           }
         }
       }
@@ -798,7 +786,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
 
       count = 0;
       for (var_type = V_FIRST; var_type < V_LAST; var_type++) {
-        if (Dolphin[imtrx][i][var_type] > 0) {
+        if (goma_ctx->problem.dolphin[imtrx][i][var_type] > 0) {
           /*
            * Notice how if you want any concentration unknowns you get
            * space for *all* concentration unknowns!
@@ -806,12 +794,13 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
            * Just consider it a bonus in the Sandia tradition...
            */
           if (var_type == MASS_FRACTION) {
-            Local_Offset[imtrx][i][var_type] = count;
-            liver = Dolphin[imtrx][i][var_type] * goma_ctx->fem.upd->Max_Num_Species_Eqn;
+            goma_ctx->problem.local_offset[imtrx][i][var_type] = count;
+            liver = goma_ctx->problem.dolphin[imtrx][i][var_type] *
+                    goma_ctx->fem.upd->Max_Num_Species_Eqn;
             count += liver;
           } else {
-            Local_Offset[imtrx][i][var_type] = count;
-            liver = Dolphin[imtrx][i][var_type];
+            goma_ctx->problem.local_offset[imtrx][i][var_type] = count;
+            liver = goma_ctx->problem.dolphin[imtrx][i][var_type];
             count += liver;
           }
         }
@@ -844,20 +833,24 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    * and the number that will be communicated from other Procs
    */
 
-  num_internal_dofs = (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
-  num_boundary_dofs = (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
-  num_external_dofs = (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
-  num_universe_dofs = (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
+  goma_ctx->problem.num_internal_dofs =
+      (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
+  goma_ctx->problem.num_boundary_dofs =
+      (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
+  goma_ctx->problem.num_external_dofs =
+      (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
+  goma_ctx->problem.num_universe_dofs =
+      (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
 
   /*
    * How many degrees of freedom I own that I do not have to communicate to
    * any other processor.
    */
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    num_internal_dofs[imtrx] = 0;
+    goma_ctx->problem.num_internal_dofs[imtrx] = 0;
     for (i = 0; i < goma_ctx->mesh.num_internal_nodes; i++) {
       nv = Nodes[i]->Nodal_Vars_Info[imtrx];
-      num_internal_dofs[imtrx] += nv->Num_Unknowns;
+      goma_ctx->problem.num_internal_dofs[imtrx] += nv->Num_Unknowns;
     }
   }
   /*
@@ -865,11 +858,11 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    * some to neighboring processors.
    */
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    num_boundary_dofs[imtrx] = 0;
+    goma_ctx->problem.num_boundary_dofs[imtrx] = 0;
     for (i = goma_ctx->mesh.num_internal_nodes;
          i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes; i++) {
       nv = Nodes[i]->Nodal_Vars_Info[imtrx];
-      num_boundary_dofs[imtrx] += nv->Num_Unknowns;
+      goma_ctx->problem.num_boundary_dofs[imtrx] += nv->Num_Unknowns;
     }
   }
 
@@ -878,13 +871,13 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    * from other processors.
    */
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    num_external_dofs[imtrx] = 0;
+    goma_ctx->problem.num_external_dofs[imtrx] = 0;
     for (i = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes;
          i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
                  goma_ctx->mesh.num_external_nodes;
          i++) {
       nv = Nodes[i]->Nodal_Vars_Info[imtrx];
-      num_external_dofs[imtrx] += nv->Num_Unknowns;
+      goma_ctx->problem.num_external_dofs[imtrx] += nv->Num_Unknowns;
     }
   }
 
@@ -892,19 +885,20 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    * Count up the total number of degrees of freedom.
    */
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    num_universe_dofs[imtrx] =
-        num_internal_dofs[imtrx] + num_boundary_dofs[imtrx] + num_external_dofs[imtrx];
+    goma_ctx->problem.num_universe_dofs[imtrx] = goma_ctx->problem.num_internal_dofs[imtrx] +
+                                                 goma_ctx->problem.num_boundary_dofs[imtrx] +
+                                                 goma_ctx->problem.num_external_dofs[imtrx];
   }
   /*
    * Some element based quantities...
    */
-  num_personal_elems = 0;
+  goma_ctx->problem.num_personal_elems = 0;
 
   if (goma_ctx->num_proc == 1) {
     /*
      * In serial, they're all mine!
      */
-    num_personal_elems = exo->num_elems;
+    goma_ctx->problem.num_personal_elems = exo->num_elems;
   } else {
 
     /*
@@ -913,11 +907,11 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
 
     for (e = 0; e < exo->num_elems; e++) {
       if (dpi->elem_owner[e] == goma_ctx->proc_id) {
-        num_personal_elems++;
+        goma_ctx->problem.num_personal_elems++;
       }
     }
 #if (DEBUG_LEVEL > 1)
-    log_dbg("num_personal_elems = %d", num_personal_elems);
+    log_dbg("num_personal_elems = %d", goma_ctx->problem.num_personal_elems);
 #endif
   }
 
@@ -925,12 +919,15 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    * Setup legacy variables...
    */
 
-  NumUnknowns = (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
-  NumExtUnknowns = (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
+  goma_ctx->problem.num_unknowns =
+      (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
+  goma_ctx->problem.num_ext_unknowns =
+      (int *)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int));
 
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    NumUnknowns[imtrx] = num_internal_dofs[imtrx] + num_boundary_dofs[imtrx];
-    NumExtUnknowns[imtrx] = num_external_dofs[imtrx];
+    goma_ctx->problem.num_unknowns[imtrx] =
+        goma_ctx->problem.num_internal_dofs[imtrx] + goma_ctx->problem.num_boundary_dofs[imtrx];
+    goma_ctx->problem.num_ext_unknowns[imtrx] = goma_ctx->problem.num_external_dofs[imtrx];
   }
 
   /*
@@ -986,12 +983,14 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    *   Only allocate dofname if doing numerical jacobian checking or writing
    *   intermediate solution or Debug_Flag > 1
    */
-  if (dofname == NULL) {
+  if (goma_ctx->problem.dofname == NULL) {
     if (goma_ctx->debug_flag < 0 || goma_ctx->debug_flag > 1 ||
         goma_ctx->write_intermediate_solutions || (goma_ctx->iout == 1)) {
-      dofname = (char ***)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int **));
+      goma_ctx->problem.dofname =
+          (char ***)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int **));
       for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-        dofname[imtrx] = alloc_VecFixedStrings(NumUnknowns[imtrx] + NumExtUnknowns[imtrx], 80);
+        goma_ctx->problem.dofname[imtrx] = alloc_VecFixedStrings(
+            goma_ctx->problem.num_unknowns[imtrx] + goma_ctx->problem.num_ext_unknowns[imtrx], 80);
       }
     }
   }
@@ -999,11 +998,13 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
   /*
    *  Only allocate resname if doing numerical jacobian checking
    */
-  if (resname == NULL) {
+  if (goma_ctx->problem.resname == NULL) {
     if (goma_ctx->debug_flag < 0 || goma_ctx->iout == 1) {
-      resname = (char ***)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int **));
+      goma_ctx->problem.resname =
+          (char ***)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int **));
       for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-        resname[imtrx] = alloc_VecFixedStrings(NumUnknowns[imtrx] + NumExtUnknowns[imtrx], 80);
+        goma_ctx->problem.resname[imtrx] = alloc_VecFixedStrings(
+            goma_ctx->problem.num_unknowns[imtrx] + goma_ctx->problem.num_ext_unknowns[imtrx], 80);
       }
     }
   }
@@ -1011,10 +1012,11 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
   /*
    * Allocate only if unallocated...
    */
-  if (idv == NULL) {
-    idv = (int ***)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int **));
+  if (goma_ctx->problem.idv == NULL) {
+    goma_ctx->problem.idv = (int ***)malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int **));
     for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-      idv[imtrx] = alloc_int_2(NumUnknowns[imtrx] + NumExtUnknowns[imtrx], 3, -1);
+      goma_ctx->problem.idv[imtrx] = alloc_int_2(
+          goma_ctx->problem.num_unknowns[imtrx] + goma_ctx->problem.num_ext_unknowns[imtrx], 3, -1);
     }
   }
 
@@ -1055,7 +1057,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
       count = 0;
 
       for (var_type = V_FIRST; var_type < V_LAST; var_type++) {
-        if (Dolphin[imtrx][i][var_type] > 0) {
+        if (goma_ctx->problem.dolphin[imtrx][i][var_type] > 0) {
           /*
            * Notice how if there are concentration unknowns at the
            * node, then we assign a  fixed number of
@@ -1069,33 +1071,35 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
           } else {
             num = 1;
           }
-          liver = Dolphin[imtrx][i][var_type] * num;
+          liver = goma_ctx->problem.dolphin[imtrx][i][var_type] * num;
           for (ii = 0; ii < liver; ii++) {
-            idv[imtrx][gcount + count + ii][0] = var_type;
-            idv[imtrx][gcount + count + ii][1] = ii;
-            idv[imtrx][gcount + count + ii][2] = i;
-            if (dofname != NULL) {
+            goma_ctx->problem.idv[imtrx][gcount + count + ii][0] = var_type;
+            goma_ctx->problem.idv[imtrx][gcount + count + ii][1] = ii;
+            goma_ctx->problem.idv[imtrx][gcount + count + ii][2] = i;
+            if (goma_ctx->problem.dofname != NULL) {
               if (var_type == MASS_FRACTION) {
-                kspec = ii / Dolphin[imtrx][i][var_type];
-                dofkspec = ii - kspec * Dolphin[imtrx][i][var_type];
-                sprintf(dofname[imtrx][gcount + count + ii], "dof=%-5d %s%d_%d n=%05d %s",
-                        gdof + count + ii, Var_Name[var_type].name2, kspec, dofkspec, i1,
-                        position_label);
+                kspec = ii / goma_ctx->problem.dolphin[imtrx][i][var_type];
+                dofkspec = ii - kspec * goma_ctx->problem.dolphin[imtrx][i][var_type];
+                sprintf(goma_ctx->problem.dofname[imtrx][gcount + count + ii],
+                        "dof=%-5d %s%d_%d n=%05d %s", gdof + count + ii, Var_Name[var_type].name2,
+                        kspec, dofkspec, i1, position_label);
               } else {
-                sprintf(dofname[imtrx][gcount + count + ii], "dof=%-5d %2s_%d n=%05d",
-                        gdof + count + ii, Var_Name[var_type].name2, ii, i1);
+                sprintf(goma_ctx->problem.dofname[imtrx][gcount + count + ii],
+                        "dof=%-5d %2s_%d n=%05d", gdof + count + ii, Var_Name[var_type].name2, ii,
+                        i1);
               }
             }
-            if (resname != NULL) {
+            if (goma_ctx->problem.resname != NULL) {
               if (var_type == MASS_FRACTION) {
-                kspec = ii / Dolphin[imtrx][i][var_type];
-                dofkspec = ii - kspec * Dolphin[imtrx][i][var_type];
-                sprintf(resname[imtrx][gcount + count + ii], "dof=%-5d %s%d_%d n=%05d %s",
-                        gcount + count + ii, EQ_Name[var_type].name2, kspec, dofkspec, i1,
-                        position_label);
+                kspec = ii / goma_ctx->problem.dolphin[imtrx][i][var_type];
+                dofkspec = ii - kspec * goma_ctx->problem.dolphin[imtrx][i][var_type];
+                sprintf(goma_ctx->problem.resname[imtrx][gcount + count + ii],
+                        "dof=%-5d %s%d_%d n=%05d %s", gcount + count + ii, EQ_Name[var_type].name2,
+                        kspec, dofkspec, i1, position_label);
               } else {
-                sprintf(resname[imtrx][gcount + count + ii], "dof=%-5d %2s_%d n=%05d",
-                        gcount + count + ii, EQ_Name[var_type].name2, ii, i1);
+                sprintf(goma_ctx->problem.resname[imtrx][gcount + count + ii],
+                        "dof=%-5d %2s_%d n=%05d", gcount + count + ii, EQ_Name[var_type].name2, ii,
+                        i1);
               }
             }
           } /* for: ii */
@@ -1236,673 +1240,673 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_MOMENTUM2:
       case R_MOMENTUM3:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PHASE1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PHASE2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PHASE3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PHASE4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PHASE5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = VORT_DIR1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VORT_DIR2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VORT_DIR3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = POLYMER_STRESS11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = POLYMER_STRESS11_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = VOLTAGE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_LIQ_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_GAS_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_POROSITY;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_TEMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_SATURATION;
         v = BOND_EVOLUTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = LAGR_MULT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LAGR_MULT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LAGR_MULT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = CURVATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = EFIELD1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EFIELD2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EFIELD3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SURF_DIV_V;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SURF_CURV;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = N_DOT_CURL_V;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = GRAD_S_V_DOT_N1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = GRAD_S_V_DOT_N2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = GRAD_S_V_DOT_N3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_BDYVELO;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_DELTAH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_LUB_CURV;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_LUB_CURV_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_FILMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_FILMH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = MOMENT0;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = DENSITY_EQN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = EDDY_NU;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TURB_K;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TURB_OMEGA;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILM_HEIGHT;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
       case R_FILM_HEIGHT:
         v = FILM_HEIGHT;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
       case R_USTAR:
       case R_VSTAR:
       case R_WSTAR:
         v = USTAR;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VSTAR;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = WSTAR;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
       case R_PSTAR:
         v = PSTAR;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
       case R_PMOMENTUM1:
       case R_PMOMENTUM2:
       case R_PMOMENTUM3:
         v = PVELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PVELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PVELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHEAR_RATE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_EXT_VELOCITY:
         v = EXT_VELOCITY;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_ENERGY:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILM_HEIGHT;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = VOLTAGE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_LIQ_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_GAS_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_POROSITY;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_TEMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_SATURATION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = MOMENT0;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = DENSITY_EQN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = RESTIME;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_MASS:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PVELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PVELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PVELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = VORT_DIR1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VORT_DIR2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VORT_DIR3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = SHEAR_RATE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VOLTAGE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_LIQ_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_GAS_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_POROSITY;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_TEMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_SATURATION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = RESTIME;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -1910,336 +1914,336 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_MESH2:
       case R_MESH3:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PVELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PVELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PVELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_CURVATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_CURVATURE2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_LIQ_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_GAS_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_POROSITY;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_TEMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_SATURATION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_SINK_MASS;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_DIFF_FLUX;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = POLYMER_STRESS11_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_TENSION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_USER;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = ACOUS_PREAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = ACOUS_PIMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = ACOUS_REYN_STRESS;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_BDYVELO;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_DELTAH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MAX_STRAIN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = CUR_STRAIN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
         v = TFMP_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TFMP_SAT;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_MASS_SURF:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PVELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PVELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PVELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -2247,310 +2251,310 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_SOLID2:
       case R_SOLID3:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = ACOUS_PREAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = ACOUS_PIMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = ACOUS_REYN_STRESS;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_BDYVELO;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_DELTAH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MAX_STRAIN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = CUR_STRAIN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_PRESSURE:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = POLYMER_STRESS11_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHEAR_RATE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = MOMENT0;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = DENSITY_EQN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EDDY_NU;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TURB_K;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TURB_OMEGA;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -2561,84 +2565,84 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_STRESS23:
       case R_STRESS33:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = SHEAR_RATE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -2652,49 +2656,49 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_GRADIENT32:
       case R_GRADIENT33:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -2702,398 +2706,398 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_EFIELD2:
       case R_EFIELD3:
         v = R_EFIELD1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = R_EFIELD2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = R_EFIELD3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VOLTAGE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_POTENTIAL:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VOLTAGE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SURF_CHARGE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SURF_CHARGE:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VOLTAGE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SURF_CHARGE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_CURVATURE:
         v = SHELL_TENSION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_CURVATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_FILMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TFMP_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_CURVATURE2:
         v = SHELL_CURVATURE2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_SHELL_ANGLE1:
         v = SHELL_ANGLE1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_ANGLE2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_SHELL_ANGLE2:
         v = SHELL_ANGLE1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_ANGLE2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_SHELL_TENSION:
         v = SHELL_TENSION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_CURVATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_FILMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_X:
         v = SHELL_CURVATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_X;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_Y;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_Y:
         v = SHELL_CURVATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_X;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_Y;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_USER:
         v = SHELL_USER;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VOLTAGE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_SURF_DIV_V:
         v = SHELL_SURF_DIV_V;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SURF_CURV;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_SHELL_SURF_CURV:
         v = SHELL_SURF_CURV;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_N_DOT_CURL_V:
         v = N_DOT_CURL_V;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -3101,37 +3105,37 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_GRAD_S_V_DOT_N2:
       case R_GRAD_S_V_DOT_N3:
         v = GRAD_S_V_DOT_N1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = GRAD_S_V_DOT_N2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = GRAD_S_V_DOT_N3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -3142,169 +3146,169 @@ static void set_interaction_masks(Exo_DB *exo)
          */
       case R_SHELL_DIFF_FLUX:
         v = SHELL_DIFF_FLUX;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_DIFF_CURVATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_DIFF_CURVATURE:
         v = SHELL_DIFF_CURVATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_NORMAL1:
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_NORMAL2:
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_NORMAL3:
         v = SHELL_NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_EDDY_NU:
         v = EDDY_NU;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
       case R_TURB_K:
         v = TURB_K;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TURB_OMEGA;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
       case R_TURB_OMEGA:
         v = TURB_OMEGA;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TURB_K;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
@@ -3314,31 +3318,31 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_ACOUS_REYN_STRESS:
       case R_SHELL_BDYVELO:
         v = ACOUS_PREAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = ACOUS_PIMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = ACOUS_REYN_STRESS;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_BDYVELO;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -3346,171 +3350,171 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_LIGHT_INTM:
       case R_LIGHT_INTD:
         v = LIGHT_INTP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LIGHT_INTM;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LIGHT_INTD;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_RESTIME:
         v = RESTIME;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_LUBP:
         v = SHELL_LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_BDYVELO;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_LUBP:
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_CLOSED;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_PRESS_OPEN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_DELTAH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_LUB_CURV;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_GASN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_FILMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_PARTC;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SHEAR_TOP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SHEAR_BOT;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_CROSS_SHEAR;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         /* Need to add the height-var here and velocity var here */
@@ -3518,77 +3522,77 @@ static void set_interaction_masks(Exo_DB *exo)
 
       case R_LUBP_2:
         v = LUBP_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PHASE1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_CLOSED;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_PRESS_OPEN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_PRESS_OPEN_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_DELTAH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_LUB_CURV_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_GASN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_FILMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_PARTC;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SHEAR_TOP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SHEAR_BOT;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_CROSS_SHEAR;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         /* Need to add the height-var here and velocity var here */
@@ -3596,621 +3600,621 @@ static void set_interaction_masks(Exo_DB *exo)
 
       case R_SHELL_FILMP:
         v = SHELL_FILMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_FILMH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_PARTC;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_SHELL_FILMH:
         v = SHELL_FILMH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_FILMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_PARTC;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_PARTC:
         v = SHELL_PARTC;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_FILMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_FILMH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_SAT_CLOSED:
         v = SHELL_SAT_CLOSED;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_LUB_CURV;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_LUB_CURV_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_GASN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_SAT_OPEN:
         v = SHELL_PRESS_OPEN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PHASE1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_PRESS_OPEN_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_SINK_MASS;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_SAT_OPEN_2:
         v = PHASE1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_PRESS_OPEN_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_SAT_1:
         v = SHELL_SAT_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_SINK_MASS;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_SAT_2:
         v = SHELL_SAT_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_SAT_3:
         v = SHELL_SAT_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_ENERGY:
         v = SHELL_TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_FILMH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_DELTAH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_SHELL_DELTAH:
         v = SHELL_DELTAH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_LUB_CURV:
         v = SHELL_LUB_CURV;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_LUB_CURV_2:
         v = SHELL_LUB_CURV_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PHASE1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHELL_SAT_GASN:
         v = SHELL_SAT_GASN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_CLOSED;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_POR_SINK_MASS:
         v = POR_SINK_MASS;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_POROSITY;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_LIQ_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_GAS_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_PRESS_OPEN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SAT_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_SHELL_SHEAR_TOP:
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SHEAR_TOP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SHEAR_BOT;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_CROSS_SHEAR;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_SHELL_SHEAR_BOT:
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SHEAR_TOP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SHEAR_BOT;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_CROSS_SHEAR;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_SHELL_CROSS_SHEAR:
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SHEAR_TOP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_SHEAR_BOT;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_MAX_STRAIN:
         v = MAX_STRAIN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_CUR_STRAIN:
         v = CUR_STRAIN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         break;
 
       case R_FILL:
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EXT_VELOCITY;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         /* for eikonal methods, R_FILL can depend on anything the
            various kinematic conditions can depend on
          */
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LUBP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_LUB_CURV;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_DELTAH;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_SHEAR_RATE:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHEAR_RATE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_ENORM:
         v = VOLTAGE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = ENORM;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_BOND_EVOLUTION:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHEAR_RATE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = BOND_EVOLUTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_CURVATURE:
         v = CURVATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -4220,47 +4224,47 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_PHASE4:
       case R_PHASE5:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = PHASE1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PHASE2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PHASE3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PHASE4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PHASE5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = LUBP_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = SHELL_LUB_CURV_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -4270,19 +4274,19 @@ static void set_interaction_masks(Exo_DB *exo)
         v = (e == R_NORMAL1 ? NORMAL1
                             : (e == R_NORMAL2 ? NORMAL2 : (e == R_NORMAL3 ? NORMAL3 : -1)));
 
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -4291,40 +4295,40 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_VORT_DIR3:
       case R_VORT_LAMBDA:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VORT_DIR1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VORT_DIR2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VORT_DIR3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHEAR_RATE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -4332,73 +4336,73 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_LAGR_MULT2:
       case R_LAGR_MULT3:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SOLID_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VOLTAGE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_LIQ_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_GAS_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_POROSITY;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_TEMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_SATURATION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHEAR_RATE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LAGR_MULT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LAGR_MULT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LAGR_MULT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -4409,73 +4413,73 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_STRESS23_1:
       case R_STRESS33_1:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -4486,74 +4490,74 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_STRESS23_2:
       case R_STRESS33_2:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
 
         v = POLYMER_STRESS11_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -4564,73 +4568,73 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_STRESS23_3:
       case R_STRESS33_3:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -4641,73 +4645,73 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_STRESS23_4:
       case R_STRESS33_4:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_4;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -4718,73 +4722,73 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_STRESS23_5:
       case R_STRESS33_5:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_5;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -4795,73 +4799,73 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_STRESS23_6:
       case R_STRESS33_6:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_6;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -4872,73 +4876,73 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_STRESS23_7:
       case R_STRESS33_7:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS11_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS12_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS13_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS22_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS23_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POLYMER_STRESS33_7;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT11;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT12;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT13;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT21;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT22;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT23;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT31;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT32;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY_GRADIENT33;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = FILL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -4947,52 +4951,52 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_POR_POROSITY:
       case R_POR_SATURATION:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = PRESSURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_LIQ_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_GAS_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_POROSITY;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_TEMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_SATURATION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_SINK_MASS;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = LS;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -5001,97 +5005,97 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_MOMENT2:
       case R_MOMENT3:
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT0;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
       case R_DENSITY_EQN:
         v = DENSITY_EQN;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT0;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MASS_FRACTION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
       case R_TFMP_MASS:
       case R_TFMP_BOUND:
         v = TFMP_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TFMP_SAT;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_NORMAL3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_CURVATURE;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = SHELL_TENSION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -5127,37 +5131,37 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_SPECIES_UNK_29:
 
         v = VELOCITY1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = VELOCITY3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT1;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT2;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MESH_DISPLACEMENT3;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_LIQ_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_GAS_PRES;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_POROSITY;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_TEMP;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = POR_SATURATION;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
 
@@ -5174,67 +5178,67 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_EM_H2_IMAG:
       case R_EM_H3_IMAG:
         v = EM_E1_REAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_E2_REAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_E3_REAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_E1_IMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_E2_IMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_E3_IMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_H1_REAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_H2_REAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_H3_REAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_H1_IMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_H2_IMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_H3_IMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_CONT_REAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_CONT_IMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
       case R_EM_CONT_REAL:
       case R_EM_CONT_IMAG:
         v = EM_E1_REAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_E2_REAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_E3_REAL;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_E1_IMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_E2_IMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = EM_E3_IMAG;
-        if (Num_Var_In_Type[imtrx][v])
+        if (goma_ctx->problem.num_var_in_type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
       }
@@ -5273,7 +5277,7 @@ static void set_interaction_masks(Exo_DB *exo)
      automatically taken care of, I believe.  */
 
   for (ebi = 0; ebi < exo->num_elem_blocks; ebi++) {
-    mn = Matilda[ebi];
+    mn = goma_ctx->problem.matilda[ebi];
     if (mn < 0) {
       continue;
     }
@@ -5520,7 +5524,7 @@ int variable_type_nodalInterp(int var)
   int i, post_flag, i_type;
   struct Problem_Description *pd_local;
   post_flag = 0;
-  if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
+  if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
     for (i = 0; i < goma_ctx->fem.upd->Num_Mat; i++) {
       pd_local = goma_ctx->fem.pd_glob[i];
       i_type = pd_local->i[goma_ctx->fem.pg->imtrx][var];

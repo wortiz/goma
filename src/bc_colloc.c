@@ -214,7 +214,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
         GOMA_EH(err, "load_porous_properties");
       }
 
-      if (TimeIntegration != STEADY) {
+      if (goma_ctx->problem.time_integration != STEADY) {
         if (goma_ctx->fem.mp->SurfaceTensionModel != CONSTANT) {
           load_surface_tension(dsigma_dx);
           if (neg_elem_volume)
@@ -222,7 +222,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
         }
       }
 
-      if (TimeIntegration != STEADY) {
+      if (goma_ctx->problem.time_integration != STEADY) {
         for (icount = 0; icount < ielem_dim; icount++) {
           x_dot[icount] = goma_ctx->fem.fv_dot->x[icount];
         }
@@ -809,7 +809,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
                        * pointer to this entry *
                        * if it exists, add sens into matrix
                        */
-                      if (Dolphin[goma_ctx->fem.pg->imtrx][I][var] > 0) {
+                      if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][var] > 0) {
                         if (!doFullJac) {
                           ldof_var =
                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[var][id];
@@ -859,7 +859,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
                     } else {
                       for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
                         pvar = MAX_PROB_VAR + w;
-                        if (Dolphin[goma_ctx->fem.pg->imtrx][I][var] > 0) {
+                        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][var] > 0) {
                           ldof_var =
                               goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[var][id];
                           if (ldof_var != -1) {
@@ -1692,7 +1692,7 @@ void f_roll_fluid(int ielem_dim,
   v_roll[1] = omega * roll_rad * v_dir[1];
   v_roll[2] = omega * roll_rad * v_dir[2];
 
-  if (TimeIntegration == TRANSIENT && goma_ctx->fem.pd->gv[R_MESH1]) {
+  if (goma_ctx->problem.time_integration == TRANSIENT && goma_ctx->fem.pd->gv[R_MESH1]) {
     /* Add the mesh motion to the substrate velocity */
     v_roll[0] += goma_ctx->fem.fv_dot->x[0];
     v_roll[1] += goma_ctx->fem.fv_dot->x[1];

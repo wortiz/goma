@@ -169,8 +169,8 @@ int beer_belly(void) {
     DeformingMesh = goma_ctx->fem.ei[imtrx]->deforming_mesh;
   }
 
-  if ((si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, Num_Interpolations,
-                    Unique_Interpolations)) == -1) {
+  if ((si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, goma_ctx->problem.num_interpolations,
+                    goma_ctx->problem.unique_interpolations)) == -1) {
     GOMA_EH(GOMA_ERROR, "Seems to be a problem finding the IntegrationMap interpolation.");
   }
   MapBf = goma_ctx->fem.bfd[si];
@@ -190,7 +190,7 @@ int beer_belly(void) {
     is_initialized = FALSE;
   }
 
-  for (t = 0; t < Num_Basis_Functions; t++) {
+  for (t = 0; t < goma_ctx->problem.num_basis_functions; t++) {
     goma_ctx->fem.bfd[t]->detJ = 0.0;
     v_length = DIM * DIM * sizeof(double);
     memset(&(goma_ctx->fem.bfd[t]->J[0][0]), 0, v_length);
@@ -219,7 +219,7 @@ int beer_belly(void) {
    * for position, depending on whether the shapes are mapped sub/iso/super
    * parametrically...
    */
-  for (i = 0; i < VIM; i++) {
+  for (i = 0; i < goma_ctx->problem.vim; i++) {
     goma_ctx->fem.fv->x[i] = 0.;
     goma_ctx->fem.fv_old->x[i] = 0.;
   }
@@ -300,7 +300,7 @@ int beer_belly(void) {
    *
    */
 
-  for (t = 0; t < Num_Basis_Functions; t++) {
+  for (t = 0; t < goma_ctx->problem.num_basis_functions; t++) {
     if (t != si) {
       for (i = 0; i < dim; i++) {
         for (j = 0; j < pdim; j++) {
@@ -332,7 +332,7 @@ int beer_belly(void) {
   if (elem_shape == SHELL || elem_shape == TRISHELL ||
       (goma_ctx->fem.mp->ehl_integration_kind == SIK_S)) {
     dim++;
-    for (t = 0; t < Num_Basis_Functions; t++) {
+    for (t = 0; t < goma_ctx->problem.num_basis_functions; t++) {
       for (j = 0; j < pdim; j++) {
         goma_ctx->fem.bfd[t]->J[goma_ctx->fem.pd->Num_Dim - 1][j] =
             MapBf->J[goma_ctx->fem.pd->Num_Dim - 1][j] = (j + 1) * 1.0;
@@ -633,7 +633,7 @@ int beer_belly(void) {
 
   /* Now copy all this stuff from the MapBf to the other basis functions */
 
-  for (t = 0; t < Num_Basis_Functions; t++) {
+  for (t = 0; t < goma_ctx->problem.num_basis_functions; t++) {
     if (t != si) {
       goma_ctx->fem.bfd[t]->detJ = MapBf->detJ;
       for (i = 0; i < pdim; i++) {
@@ -1762,7 +1762,7 @@ int load_bf_grad(void)
       (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL)) {
     WIM = goma_ctx->fem.pd->Num_Dim;
   } else {
-    WIM = VIM;
+    WIM = goma_ctx->problem.vim;
   }
 #endif
 
@@ -1772,7 +1772,7 @@ int load_bf_grad(void)
   /*  v_length = DIM*DIM*DIM*MDE;
       init_vec_value(zero_array, 0., v_length); */
 
-  for (b = 0; b < Num_Basis_Functions; b++) {
+  for (b = 0; b < goma_ctx->problem.num_basis_functions; b++) {
     /*
      * This is a kludge until I can fix up the bfd's with the same
      * local node dof_list that the ei's currently enjoy.
@@ -1860,7 +1860,7 @@ int load_bf_grad(void)
 #else
           bfv->grad_phi[i][0] = (bfv->d_phi[i][0]) / (goma_ctx->fem.fv->h[0]);
           bfv->grad_phi[i][1] = (bfv->d_phi[i][1]) / (goma_ctx->fem.fv->h[1]);
-          if (VIM == 3)
+          if (goma_ctx->problem.vim == 3)
             bfv->grad_phi[i][2] = (bfv->d_phi[i][2]) / (goma_ctx->fem.fv->h[2]);
 #endif
         }
@@ -1889,9 +1889,9 @@ int load_bf_grad(void)
 
         for (i = 0; i < dofs; i++) {
 #ifdef DO_NOT_UNROLL
-          for (p = 0; p < VIM; p++) {
-            for (a = 0; a < VIM; a++) {
-              for (q = 0; q < VIM; q++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
+              for (q = 0; q < goma_ctx->problem.vim; q++) {
                 if (q == a)
                   bfv->grad_phi_e[i][a][p][a] = bfv->grad_phi[i][p];
                 else
@@ -1910,7 +1910,7 @@ int load_bf_grad(void)
           bfv->grad_phi_e[i][1][0][0] = 0.0;
           bfv->grad_phi_e[i][1][0][1] = bfv->grad_phi[i][0];
 
-          if (VIM == 3) {
+          if (goma_ctx->problem.vim == 3) {
             bfv->grad_phi_e[i][2][0][0] = 0.0;
             bfv->grad_phi_e[i][2][0][1] = 0.0;
             bfv->grad_phi_e[i][2][0][2] = bfv->grad_phi[i][0];
@@ -1946,8 +1946,8 @@ int load_bf_grad(void)
 
 #ifdef DO_NOT_UNROLL
             for (a = 0; a < WIM; a++) {
-              for (p = 0; p < VIM; p++) {
-                for (q = 0; q < VIM; q++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
+                for (q = 0; q < goma_ctx->problem.vim; q++) {
                   bfv->grad_phi_e[i][a][p][q] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[a][p][q];
                 }
               }
@@ -1979,7 +1979,7 @@ int load_bf_grad(void)
             bfv->grad_phi_e[i][1][0][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][0][1];
             bfv->grad_phi_e[i][1][1][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][1][0];
 
-            if (VIM == 3) {
+            if (goma_ctx->problem.vim == 3) {
               bfv->grad_phi_e[i][0][2][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][2][2];
               bfv->grad_phi_e[i][0][2][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][2][1];
               bfv->grad_phi_e[i][0][2][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][2][0];
@@ -2207,7 +2207,7 @@ int load_bf_mesh_derivs(void) {
       phi_m[j] = bfm->phi[j];
     }
 
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       g[p] = 1.0 / goma_ctx->fem.fv->h[p];
       g2[p] = g[p] * g[p];
     }
@@ -2216,7 +2216,7 @@ int load_bf_mesh_derivs(void) {
      * Loop over the number of different unique
      * basis functions defined in this material
      */
-    for (bix = 0; bix < Num_Basis_Functions; bix++) {
+    for (bix = 0; bix < goma_ctx->problem.num_basis_functions; bix++) {
       bf_ptr = goma_ctx->fem.bfd[bix];
 
       /*
@@ -2547,7 +2547,7 @@ int load_bf_mesh_derivs(void) {
          */
 #ifdef DO_NO_UNROLL
         for (i = 0; i < vdofs; i++) {
-          for (a = 0; a < WIM; a++) {
+          for (a = 0; a < goma_ctx->problem.wim; a++) {
             for (p = 0; p < dim; p++) {
               for (b = 0; b < dim; b++) {
                 for (j = 0; j < mdofs; j++) {
@@ -2580,7 +2580,7 @@ int load_bf_mesh_derivs(void) {
             bfl->d_grad_phi_e_dmesh[i][0][1][0][0][j] = bfl->d_grad_phi_dmesh[i][1][0][j];
             bfl->d_grad_phi_e_dmesh[i][1][1][1][0][j] = bfl->d_grad_phi_dmesh[i][1][0][j];
 
-            if (WIM == 3) {
+            if (goma_ctx->problem.wim == 3) {
               /*  bfl->d_grad_phi_e_dmesh[i][2] [p][2] [b][j] = bfl->d_grad_phi_dmesh[i][p]
                * [b][j];*/
               /* (p,b) = (0,0) */
@@ -2633,9 +2633,9 @@ int load_bf_mesh_derivs(void) {
             } */
 
         for (i = 0; i < vdofs; i++) {
-          for (a = 0; a < WIM; a++) {
-            for (p = 0; p < VIM; p++) {
-              for (q = 0; q < VIM; q++) {
+          for (a = 0; a < goma_ctx->problem.wim; a++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
+              for (q = 0; q < goma_ctx->problem.vim; q++) {
                 for (b = 0; b < dim; b++) {
                   for (j = 0; j < mdofs; j++) {
                     if (q != a) {
@@ -2645,7 +2645,8 @@ int load_bf_mesh_derivs(void) {
                       }
                       bfl->d_grad_phi_e_dmesh[i][a][p][q][b][j] = 0.0;
                     }
-                    if (dim < VIM && (p == VIM || q == VIM)) {
+                    if (dim < goma_ctx->problem.vim &&
+                        (p == goma_ctx->problem.vim || q == goma_ctx->problem.vim)) {
                       if (bfl->d_grad_phi_e_dmesh[i][a][p][q][b][j] != 0.0) {
                         printf("we shouldn't be here\n");
                         exit(-1);
@@ -2695,7 +2696,7 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
    * Load basis functions and derivatives in the unit elements for each
    * kind of unique basis function that we have...
    */
-  for (b = 0; b < Num_Basis_Functions; b++) {
+  for (b = 0; b < goma_ctx->problem.num_basis_functions; b++) {
     for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       bf_ptr = bfa[b];
 
@@ -3047,15 +3048,15 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
 
   /*   num_fill_unknowns  = dpi->num_universe_nodes; */
 
-  num_total_unknowns = num_universe_dofs[goma_ctx->fem.pg->imtrx];
+  num_total_unknowns = goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx];
 
   /* set boolean for save old A matrix for data sensitivities,
      flux sensitivities, modified newton schemes, augmenting conditions,
      and continuation */
 
   goma_ctx->solver.save_old_a = FALSE;
-  if (goma_ctx->solver.modified_newton || nAC > 0 || nn_post_data_sens > 0 ||
-      nn_post_fluxes_sens > 0 || Continuation > 0) {
+  if (goma_ctx->solver.modified_newton || goma_ctx->problem.n_ac > 0 || nn_post_data_sens > 0 ||
+      nn_post_fluxes_sens > 0 || goma_ctx->problem.continuation > 0) {
     goma_ctx->solver.save_old_a = TRUE;
   }
 
@@ -3072,9 +3073,10 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
    *  processor.
    */
 
-  num_total_fill_unknowns = gsum_Int(internal_fill_unknowns + boundary_fill_unknowns);
-  num_total_unknowns = gsum_Int(num_internal_dofs[goma_ctx->fem.pg->imtrx] +
-                                num_boundary_dofs[goma_ctx->fem.pg->imtrx]);
+  num_total_fill_unknowns =
+      gsum_Int(goma_ctx->problem.internal_fill_unknowns + goma_ctx->problem.boundary_fill_unknowns);
+  num_total_unknowns = gsum_Int(goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                                goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx]);
   dpi->num_dofs_global = num_total_unknowns;
 
   /*
@@ -3084,16 +3086,17 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
 
   if (Fill) {
     local_value =
-        (ija[internal_fill_unknowns + boundary_fill_unknowns] - external_fill_unknowns - 1);
+        (ija[goma_ctx->problem.internal_fill_unknowns + goma_ctx->problem.boundary_fill_unknowns] -
+         goma_ctx->problem.external_fill_unknowns - 1);
   } else {
-    local_value = (ija[num_internal_dofs[goma_ctx->fem.pg->imtrx] +
-                       num_boundary_dofs[goma_ctx->fem.pg->imtrx]] -
-                   num_external_dofs[goma_ctx->fem.pg->imtrx] - 1);
+    local_value = (ija[goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                       goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx]] -
+                   goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx] - 1);
   }
   nnz = gsum_Int(local_value);
 #else
   dpi->num_dofs_global = num_total_unknowns;
-  num_total_fill_unknowns = num_fill_unknowns;
+  num_total_fill_unknowns = goma_ctx->problem.num_fill_unknowns;
 #endif
 
   if (Fill) {
@@ -3151,8 +3154,8 @@ void alloc_VBR_sparse_arrays(struct GomaLinearSolverData *ams, Exo_DB *exo, Dpi 
      and continuation */
 
   goma_ctx->solver.save_old_a = FALSE;
-  if (goma_ctx->solver.modified_newton || nAC > 0 || nn_post_data_sens > 0 ||
-      nn_post_fluxes_sens > 0 || Continuation > 0) {
+  if (goma_ctx->solver.modified_newton || goma_ctx->problem.n_ac > 0 || nn_post_data_sens > 0 ||
+      nn_post_fluxes_sens > 0 || goma_ctx->problem.continuation > 0) {
     goma_ctx->solver.save_old_a = TRUE;
   }
 
@@ -3164,8 +3167,8 @@ void alloc_VBR_sparse_arrays(struct GomaLinearSolverData *ams, Exo_DB *exo, Dpi 
    *   calculate the total number of degrees of freedom in the problem
    *   by summing the contributions from each processor
    */
-  dpi->num_dofs_global = gsum_Int(num_internal_dofs[goma_ctx->fem.pg->imtrx] +
-                                  num_boundary_dofs[goma_ctx->fem.pg->imtrx]);
+  dpi->num_dofs_global = gsum_Int(goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                                  goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx]);
   nnz_tmp = gsum_Int(nnz);
 
   DPRINTF(stdout, "\n%-30s= %d\n", "Number of unknowns", dpi->num_dofs_global);
@@ -3211,7 +3214,7 @@ static int find_problem_graph_fill(int *ija[],         /* column pointer array *
    * Allocate arrays and initialize...
    * start allocating ija to a small estimate - reallocate later
    */
-  nz_temp = num_fill_unknowns * goma_ctx->mesh.max_np_elem;
+  nz_temp = goma_ctx->problem.num_fill_unknowns * goma_ctx->mesh.max_np_elem;
   *ija = alloc_int_1(nz_temp, -1);
   nsur_elem = alloc_int_1(itotal_nodes, 0);
   isur_elem = alloc_int_2(itotal_nodes, max_neigh_elem, -1);
@@ -3243,7 +3246,7 @@ static int find_problem_graph_fill(int *ija[],         /* column pointer array *
 
   /* set the number of unknowns per node to one */
 
-  nz_ptr = num_fill_unknowns + 1;
+  nz_ptr = goma_ctx->problem.num_fill_unknowns + 1;
 
   for (inode = 0; inode < itotal_nodes; inode++) {
     /*
@@ -3280,7 +3283,7 @@ static int find_problem_graph_fill(int *ija[],         /* column pointer array *
                 icol_index != irow_index) {
               if (nz_ptr + 1 == nz_temp) {
                 /* reallocate ija larger!! */
-                nz_temp += num_fill_unknowns * goma_ctx->mesh.max_np_elem;
+                nz_temp += goma_ctx->problem.num_fill_unknowns * goma_ctx->mesh.max_np_elem;
 
                 *ija = (int *)realloc((void *)*ija, nz_temp * sizeof(int));
                 if (*ija == NULL)
@@ -3336,7 +3339,8 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
   /*
    * Calculate the average number of degrees of freedom per node
    */
-  avgVarPerNode = (double)num_universe_dofs[goma_ctx->fem.pg->imtrx] / (double)itotal_nodes;
+  avgVarPerNode =
+      (double)goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx] / (double)itotal_nodes;
   /*
    * Estimate the average connectivity of a node
    */
@@ -3347,17 +3351,18 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
    *  -> Check for null pointer because this is a large
    *     allocation
    */
-  nz_temp = num_universe_dofs[goma_ctx->fem.pg->imtrx] * avgNodeToNodeConn * avgVarPerNode * 1.1;
+  nz_temp = goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx] * avgNodeToNodeConn *
+            avgVarPerNode * 1.1;
 
   *ija = ija_ptr = alloc_int_1(nz_temp, -1);
   if (*ija == NULL) {
     GOMA_EH(GOMA_ERROR, "No space for ija_temp");
   }
 
-  inode_varType = alloc_int_1(MaxVarPerNode, INT_NOINIT);
-  inode_matID = alloc_int_1(MaxVarPerNode, INT_NOINIT);
-  inter_node_varType = alloc_int_1(MaxVarPerNode, INT_NOINIT);
-  inter_node_matID = alloc_int_1(MaxVarPerNode, INT_NOINIT);
+  inode_varType = alloc_int_1(goma_ctx->problem.max_var_per_node, INT_NOINIT);
+  inode_matID = alloc_int_1(goma_ctx->problem.max_var_per_node, INT_NOINIT);
+  inter_node_varType = alloc_int_1(goma_ctx->problem.max_var_per_node, INT_NOINIT);
+  inter_node_matID = alloc_int_1(goma_ctx->problem.max_var_per_node, INT_NOINIT);
 
   /*
    * Initialize the pointer into the jacobian, nz_ptr,
@@ -3368,7 +3373,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
    * and then the total number of entries is storred at
    * ija[num_universe_dofs].
    */
-  nz_ptr = num_universe_dofs[goma_ctx->fem.pg->imtrx] + 1;
+  nz_ptr = goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx] + 1;
 #ifdef DEBUG_GRAPH
   fprintf(ifp, "P_%d: nz_ptr = %d\n", goma_ctx->proc_id, nz_ptr);
 #endif
@@ -3458,9 +3463,11 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
               exo->centroid_list[inter_node] != -1) {
             eb1 = exo->elem_eb[exo->centroid_list[inode]];
 
-            if (goma_ctx->fem.vn_glob[Matilda[eb1]]->dg_J_model == FULL_DG) {
-              i1 = goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][rowVarType];
-              i2 = goma_ctx->fem.pd_glob[Matilda[eb1]]->i[goma_ctx->fem.pg->imtrx][colVarType];
+            if (goma_ctx->fem.vn_glob[goma_ctx->problem.matilda[eb1]]->dg_J_model == FULL_DG) {
+              i1 = goma_ctx->fem.pd_glob[goma_ctx->problem.matilda[eb1]]
+                       ->i[goma_ctx->fem.pg->imtrx][rowVarType];
+              i2 = goma_ctx->fem.pd_glob[goma_ctx->problem.matilda[eb1]]
+                       ->i[goma_ctx->fem.pg->imtrx][colVarType];
 
               if ((rowVarType == colVarType) &&
                   (i1 == I_P0 || i1 == I_P1 || i1 == I_PQ1 || i1 == I_PQ2) &&
@@ -3620,7 +3627,7 @@ int fill_variable_vector(int inode, int ivec_varType[], int ivec_matID[])
       index++;
     }
   }
-  if (index > MaxVarPerNode) {
+  if (index > goma_ctx->problem.max_var_per_node) {
     GOMA_EH(GOMA_ERROR, "fill_variable_vector: index is greater than MaxVarPerNode");
   }
   return index;
@@ -4795,8 +4802,8 @@ int calc_shearrate(dbl *gammadot,           /* strain rate invariant */
 
   *gammadot = 0.;
   /* get gamma_dot invariant for viscosity calculations */
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       *gammadot += gamma_dot[a][b] * gamma_dot[b][a];
     }
   }
@@ -4817,9 +4824,9 @@ int calc_shearrate(dbl *gammadot,           /* strain rate invariant */
       mdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_MESH1];
     }
 
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
-        for (a = 0; a < VIM; a++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           for (i = 0; i < vdofs; i++) {
             grad_phi_e_gam[i][a][p][q] = goma_ctx->fem.bf[v]->grad_phi_e[i][a][p][q] +
                                          goma_ctx->fem.bf[v]->grad_phi_e[i][a][q][p];
@@ -4835,9 +4842,9 @@ int calc_shearrate(dbl *gammadot,           /* strain rate invariant */
 
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][R_MESH1] && d_gd_dmesh != NULL) {
 
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
-        for (b = 0; b < VIM; b++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           for (j = 0; j < mdofs; j++) {
 
             d_gamma_dot_dmesh[p][q][b][j] = goma_ctx->fem.fv->d_grad_v_dmesh[p][q][b][j] +
@@ -4852,11 +4859,11 @@ int calc_shearrate(dbl *gammadot,           /* strain rate invariant */
      */
 
     if (*gammadot != 0.) {
-      for (b = 0; b < VIM; b++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         for (j = 0; j < mdofs; j++) {
           d_gd_dmesh[b][j] = 0.;
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               d_gd_dmesh[b][j] += 0.5 * d_gamma_dot_dmesh[p][q][b][j] * gamma_dot[q][p] / *gammadot;
             }
           }
@@ -4870,11 +4877,11 @@ int calc_shearrate(dbl *gammadot,           /* strain rate invariant */
    */
 
   if (*gammadot != 0. && d_gd_dv != NULL) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (i = 0; i < vdofs; i++) {
         d_gd_dv[a][i] = 0.;
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             d_gd_dv[a][i] += 0.5 * grad_phi_e_gam[i][a][p][q] * gamma_dot[q][p] / *gammadot;
           }
         }

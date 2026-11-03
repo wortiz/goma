@@ -331,7 +331,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
             return (status);
         }
 
-        if (TimeIntegration != STEADY) {
+        if (goma_ctx->problem.time_integration != STEADY) {
           for (icount = 0; icount < ielem_dim; icount++) {
             x_dot[icount] = goma_ctx->fem.fv_dot->x[icount];
           }
@@ -403,7 +403,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
 
           /* figure out which bc corresponds to this CA condition */
           j_bc_id = -1;
-          for (j = 0; j < Num_BC; j++) {
+          for (j = 0; j < goma_ctx->problem.num_bc; j++) {
             if (BC_Types[j].BC_Data_Int[0] == 1000000 * I + 1000000 &&
                 ((BC_Types[j].BC_Data_Int[2] == -1 && iapply) ||
                  BC_Types[j].BC_Data_Int[2] ==
@@ -596,7 +596,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                     return (status);
                 }
 
-                if (TimeIntegration != STEADY) {
+                if (goma_ctx->problem.time_integration != STEADY) {
                   for (icount = 0; icount < ielem_dim; icount++) {
                     x_dot[icount] = goma_ctx->fem.fv_dot->x[icount];
                   }
@@ -714,7 +714,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                     }
                   }
                   /* try to find a VELO_TANGENT or similiar for wall velocity  */
-                  for (i1 = 0; i1 < Num_BC; i1++) {
+                  for (i1 = 0; i1 < goma_ctx->problem.num_bc; i1++) {
 
                     if ((BC_Types[i1].BC_Data_Int[0] == I &&
                          (BC_Types[i1].BC_Name == VELO_TANGENT_BC ||
@@ -992,7 +992,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                 if( neg_elem_volume ) return(status);
               }
     
-	    if (TimeIntegration != STEADY) {
+	    if (goma_ctx->problem.time_integration != STEADY) {
 	      for (icount = 0; icount < ielem_dim; icount++) {
 		x_dot[icount] = goma_ctx->fem.fv_dot->x[icount];
 	      }
@@ -1025,7 +1025,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
              BC_Types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC ||
              BC_Types[bc_input_id].BC_Name == CAP_RECOIL_PRESS_BC)) {
           j_bc_id = -1;
-          for (j = 0; j < Num_BC; j++) {
+          for (j = 0; j < goma_ctx->problem.num_bc; j++) {
             if (BC_Types[j].BC_Data_Int[0] == I &&
                 (BC_Types[j].BC_Name == SURFTANG_BC || BC_Types[j].BC_Name == CAP_ENDFORCE_BC)) {
               j_bc_id = j;
@@ -1053,7 +1053,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
              BC_Types[bc_input_id].BC_Name == CAPILLARY_TABLE_BC ||
              BC_Types[bc_input_id].BC_Name == CAP_RECOIL_PRESS_BC)) {
           j_bc_id = -1;
-          for (j = 0; j < Num_BC; j++) {
+          for (j = 0; j < goma_ctx->problem.num_bc; j++) {
             if (BC_Types[j].BC_Data_Int[0] == I &&
                 (BC_Types[j].BC_Name == SURFTANG_SCALAR_BC ||
                  BC_Types[j].BC_Name == CAP_ENDFORCE_SCALAR_BC)) {
@@ -1074,7 +1074,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
         if (node->DBSES == 1 && iapply && (BC_Types[bc_input_id].BC_Name == TENSION_SHEET_BC)) {
           j_bc_id = -1;
 
-          for (j = 0; j < Num_BC; j++) {
+          for (j = 0; j < goma_ctx->problem.num_bc; j++) {
             if ((BC_Types[j].BC_Data_Int[0] == I) && (BC_Types[j].BC_Name == SHEET_ENDSLOPE_BC)) {
               j_bc_id = j;
             }
@@ -1352,7 +1352,7 @@ int apply_shell_grad_bc(double x[],              /* Solution vector for the curr
   elem1 = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
   eb1 = find_elemblock_index(ielem, exo);
   ebid1 = exo->eb_id[eb1];
-  m1 = Matilda[eb1];
+  m1 = goma_ctx->problem.matilda[eb1];
 
   /* Allocate the n_dof array and store DOF counts for bulk element */
   n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
@@ -1367,7 +1367,7 @@ int apply_shell_grad_bc(double x[],              /* Solution vector for the curr
     elem2 = elem_friends[ielem][ef];
     eb2 = find_elemblock_index(elem2, exo);
     ebid2 = exo->eb_id[eb2];
-    m2 = Matilda[eb2];
+    m2 = goma_ctx->problem.matilda[eb2];
 
     /* Determine if this element is bulk with shell friend(s) */
     nbr_type = Elem_Type(exo, elem2);

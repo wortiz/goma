@@ -147,16 +147,16 @@ int load_coordinate_scales(const int c, struct Field_Variables *f) {
    *	q = [ x, y, z ]
    */
 #ifdef DEBUG_TIME
-  for (i = 0; i < VIM; i++) {
+  for (i = 0; i < goma_ctx->problem.vim; i++) {
     f->h[i] = 1.;
     f->dh3dq[i] = 0.;
-    for (j = 0; j < VIM; j++) {
+    for (j = 0; j < goma_ctx->problem.vim; j++) {
       f->hq[i][j] = 0.;
       f->curl_e[i][j] = 0.0;
-      for (k = 0; k < VIM; k++) {
+      for (k = 0; k < goma_ctx->problem.vim; k++) {
         f->hqq[i][j][k] = 0.;
         f->grad_e[i][j][k] = 0.;
-        for (l = 0; l < VIM; l++) {
+        for (l = 0; l < goma_ctx->problem.vim; l++) {
           f->d_grad_e_dq[i][j][k][l] = 0.;
         }
       }
@@ -315,7 +315,7 @@ int load_coordinate_scales(const int c, struct Field_Variables *f) {
    */
 
   f->h3 = 1.;
-  for (i = 0; i < VIM; i++) {
+  for (i = 0; i < goma_ctx->problem.vim; i++) {
     f->h3 *= f->h[i];
   }
 
@@ -324,9 +324,9 @@ int load_coordinate_scales(const int c, struct Field_Variables *f) {
    * volume element...
    */
 
-  for (i = 0; i < VIM; i++) {
+  for (i = 0; i < goma_ctx->problem.vim; i++) {
     f->dh3dq[i] = 0.;
-    for (j = 0; j < VIM; j++) {
+    for (j = 0; j < goma_ctx->problem.vim; j++) {
       f->dh3dq[i] += (f->hq[j][i]) / (f->h[j]);
     }
     f->dh3dq[i] *= f->h3;
@@ -338,14 +338,14 @@ int load_coordinate_scales(const int c, struct Field_Variables *f) {
    */
 
 #ifndef DO_NO_UNROLL
-  for (a = 0; a < VIM; a++) {
-    for (p = 0; p < VIM; p++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       f->grad_e[a][p][p] = f->hq[p][a] / (f->h[p] * f->h[a]);
     }
   }
 
-  for (a = 0; a < VIM; a++) {
-    for (q = 0; q < VIM; q++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       f->grad_e[a][a][q] -= f->hq[a][q] / (f->h[a] * f->h[q]);
     }
   }
@@ -360,7 +360,7 @@ int load_coordinate_scales(const int c, struct Field_Variables *f) {
   f->grad_e[0][0][1] -= f->hq[0][1] / (f->h[0] * f->h[1]);
   f->grad_e[1][1][0] -= f->hq[1][0] / (f->h[1] * f->h[0]);
 
-  if (VIM == 3) {
+  if (goma_ctx->problem.vim == 3) {
     f->grad_e[2][2][2] = f->hq[2][2] / (f->h[2] * f->h[2]);
     f->grad_e[2][0][0] = f->hq[0][2] / (f->h[0] * f->h[2]);
     f->grad_e[2][1][1] = f->hq[1][2] / (f->h[1] * f->h[2]);
@@ -480,10 +480,10 @@ int load_coordinate_scales(const int c, struct Field_Variables *f) {
     siz = sizeof(double) * DIM * DIM * DIM * DIM;
     memset(f->d_grad_e_dq, 0, siz);
 
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
 #ifndef DO_NO_UNROLL
-      for (p = 0; p < VIM; p++) {
-        for (b = 0; b < VIM; b++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           f->d_grad_e_dq[a][p][p][b] = (1. / ((f->h[p]) * (f->h[p]) * (f->h[a]) * (f->h[a]))) *
                                        (-(f->h[a]) * (f->hq[p][b]) * (f->hq[p][a]) -
                                         (f->h[p]) * (f->hq[a][b]) * (f->hq[p][a]) +
@@ -512,7 +512,7 @@ int load_coordinate_scales(const int c, struct Field_Variables *f) {
           (-(f->h[a]) * (f->hq[1][0]) * (f->hq[1][a]) - (f->h[1]) * (f->hq[a][0]) * (f->hq[1][a]) +
            (f->h[1]) * (f->h[a]) * (f->hqq[1][a][0]));
 
-      if (VIM == 3) {
+      if (goma_ctx->problem.vim == 3) {
         f->d_grad_e_dq[a][2][2][2] =
             (1. / ((f->h[2]) * (f->h[2]) * (f->h[a]) * (f->h[a]))) *
             (-(f->h[a]) * (f->hq[2][2]) * (f->hq[2][a]) -
@@ -541,10 +541,10 @@ int load_coordinate_scales(const int c, struct Field_Variables *f) {
 #endif
     }
 
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
 #ifndef DO_NO_UNROLL
-      for (q = 0; q < VIM; q++) {
-        for (b = 0; b < VIM; b++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           f->d_grad_e_dq[a][a][q][b] -= (1. / ((f->h[a]) * (f->h[a]) * (f->h[q]) * (f->h[q]))) *
                                         (-(f->h[q]) * (f->hq[a][b]) * (f->hq[a][q]) -
                                          (f->h[a]) * (f->hq[q][b]) * (f->hq[a][q]) +
@@ -573,7 +573,7 @@ int load_coordinate_scales(const int c, struct Field_Variables *f) {
           (-(f->h[1]) * (f->hq[a][0]) * (f->hq[a][1]) - (f->h[a]) * (f->hq[1][0]) * (f->hq[a][1]) +
            (f->h[a]) * (f->h[1]) * (f->hqq[a][1][0]));
 
-      if (VIM == 3) {
+      if (goma_ctx->problem.vim == 3) {
 
         f->d_grad_e_dq[a][a][2][2] -=
             (1. / ((f->h[a]) * (f->h[a]) * (f->h[2]) * (f->h[2]))) *
@@ -649,7 +649,7 @@ double global_velocity_norm(const dbl x[],     /* solution vector */
   NODE_INFO_STRUCT *node;
 
   for (eqn = R_MOMENTUM1; eqn <= R_MOMENTUM3; eqn++) {
-    if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][eqn]) {
+    if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][eqn]) {
       for (i = 0; i < (dpi->num_internal_nodes + dpi->num_boundary_nodes); i++) {
         node = Nodes[i];
         if (get_nv_ndofs(node->Nodal_Vars_Info[goma_ctx->fem.pg->imtrx], eqn)) {
@@ -709,8 +709,8 @@ dbl element_viscosity(void)
   VISCOSITY_DEPENDENCE_STRUCT *d_mup = &d_mup_struct;
 
   /* load up shearrate tensor based on nonzero initialization */
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       gamma[a][b] = 1.e-5;
     }
   }
@@ -733,9 +733,9 @@ dbl element_viscosity(void)
 
   /* initialize grad_phi_e for shear-thinning models */
   for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; i++) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
-        for (a = 0; a < VIM; a++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           goma_ctx->fem.bf[VELOCITY1]->grad_phi_e[i][a][p][q] = 0.;
         }
       }
@@ -1321,7 +1321,7 @@ surface_determinant_and_normal(
       inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
       ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][i];
       if (ldof >= 0) {
-        if (Dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
+        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           for (a = 0; a < dim; a++) {
             tmp = goma_ctx->fem.fv->dsnormal_dx[0][a][ldof];
             goma_ctx->fem.fv->dsnormal_dx[0][a][ldof] =
@@ -1478,7 +1478,7 @@ surface_determinant_and_normal(
           id = local_elem_node_id[i];
           inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-          if (Dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
+          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
             phi_i = map_bf->phi[ldof];
 
             for (q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; q++) {
@@ -1529,7 +1529,7 @@ surface_determinant_and_normal(
         id = (int)local_elem_node_id[i];
         inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
         ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-        if (Dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
+        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           phi_i = map_bf->phi[ldof];
 
           for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
@@ -1577,7 +1577,7 @@ surface_determinant_and_normal(
         id = (int)local_elem_node_id[i];
         inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
         ldof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[MESH_DISPLACEMENT1]]->ln_to_dof[ShapeVar][id];
-        if (Dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
+        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           phi_i = map_bf->phi[ldof];
 
           for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
@@ -1700,7 +1700,8 @@ void edge_determinant_and_vectors(
           id = (int)edge_elem_node_id[i];
           inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-          if (Dolphin[goma_ctx->fem.upd->matrix_index[R_MESH1]][inode][MESH_DISPLACEMENT1] > 0) {
+          if (goma_ctx->problem.dolphin[goma_ctx->fem.upd->matrix_index[R_MESH1]][inode]
+                                       [MESH_DISPLACEMENT1] > 0) {
             phi_i = goma_ctx->fem.bf[ShapeVar]->phi[ldof];
             goma_ctx->fem.fv->dedgedet_dx[0][ldof] = goma_ctx->fem.fv->hq[2][0] * phi_i;
             goma_ctx->fem.fv->dedgedet_dx[1][ldof] = goma_ctx->fem.fv->hq[2][1] * phi_i;
@@ -1779,7 +1780,8 @@ void edge_determinant_and_vectors(
         inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
         ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
         for (p = 0; p < dim; p++) {
-          if (Dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1 + p] > 0) {
+          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1 + p] >
+              0) {
             goma_ctx->fem.fv->dstangent_dx[0][0][p][ldof] =
                 goma_ctx->fem.fv->dsnormal_dx[1][p][ldof] * sign;
             goma_ctx->fem.fv->dstangent_dx[0][1][p][ldof] =
@@ -1806,7 +1808,8 @@ void edge_determinant_and_vectors(
       ldof = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[goma_ctx->fem.pd->ShapeVar]]
                  ->ln_to_dof[ShapeVar][id];
       if (DeformingMesh) {
-        if (Dolphin[goma_ctx->fem.upd->matrix_index[R_MESH1]][inode][MESH_DISPLACEMENT1] > 0) {
+        if (goma_ctx->problem
+                .dolphin[goma_ctx->fem.upd->matrix_index[R_MESH1]][inode][MESH_DISPLACEMENT1] > 0) {
           dxdalpha += goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][i_basis] *
                       (goma_ctx->mesh.coor[0][inode] + *goma_ctx->fem.esp->d[0][ldof]);
           dydalpha += goma_ctx->fem.bf[ShapeVar]->dphidxi[ldof][i_basis] *
@@ -2024,7 +2027,7 @@ void edge_determinant_and_vectors(
         inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
         ldof = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[goma_ctx->fem.pd->ShapeVar]]
                    ->ln_to_dof[ShapeVar][id];
-        if (Dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
+        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           phi_i = goma_ctx->fem.bf[ShapeVar]->phi[ldof];
 
           if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN && DEFAULT_CARTESIAN) {
@@ -2179,7 +2182,8 @@ void edge_determinant_and_vectors(
         inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
         ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[goma_ctx->fem.pd->ShapeVar][id];
         for (p = 0; p < dim; p++) {
-          if (Dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1 + p] > 0) {
+          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1 + p] >
+              0) {
             goma_ctx->fem.fv->dstangent_dx[0][0][p][ldof] =
                 goma_ctx->fem.fv->dsnormal_dx[1][p][ldof] * goma_ctx->fem.fv->stangent[1][2] -
                 goma_ctx->fem.fv->dsnormal_dx[2][p][ldof] * goma_ctx->fem.fv->stangent[1][1] +
@@ -2267,7 +2271,7 @@ void calc_CL_normal(double snormal[DIM],
 
       ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[goma_ctx->fem.pd->ShapeVar][id];
       for (p = 0; p < dim; p++) {
-        if (Dolphin[goma_ctx->fem.pg->imtrx][Inode][MESH_DISPLACEMENT1 + p] > 0) {
+        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Inode][MESH_DISPLACEMENT1 + p] > 0) {
           dclnormal_dx[0][p][ldof] =
               sign * (dsnormal_dx[1][p][ldof] * tangent[2] - dsnormal_dx[2][p][ldof] * tangent[1] +
                       snormal[1] * dtangent_dx[2][p][ldof] - snormal[2] * dtangent_dx[1][p][ldof]);

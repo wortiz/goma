@@ -39,8 +39,8 @@ static int calc_vort_mag(ADType &vort_mag, ADType omega[DIM][DIM]) {
 
   vort_mag = 0.;
   /* get gamma_dot invariant for viscosity calculations */
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       vort_mag += omega[a][b] * omega[a][b];
     }
   }
@@ -87,7 +87,7 @@ ADType ad_dcdd(int dim, int eqn, const ADType grad_U[DIM], ADType gs_inner_dot[D
   ADType hrgn = 1.0 / (tmp + 1e-14);
 
   ADType magv = 0.0;
-  for (int q = 0; q < VIM; q++) {
+  for (int q = 0; q < goma_ctx->problem.vim; q++) {
     magv += ad_fv->v[q] * ad_fv->v[q];
   }
   magv = sqrt(magv + 1e-32);
@@ -132,8 +132,8 @@ static int ad_calc_sa_S(scalar &S,                /* strain rate invariant */
                         scalar omega[DIM][DIM]) { /* strain rate tensor */
   S = 0.;
   /* get gamma_dot invariant for viscosity calculations */
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       S += omega[a][b] * omega[a][b];
     }
   }
@@ -201,16 +201,16 @@ extern "C" void ad_sa_wall_func(double func[DIM],
   ADType mu_tt = std::max(mu_t - mu, 0);
 
   ADType omega[DIM][DIM];
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       omega[a][b] = goma_ctx->fem.fv_old->grad_v[a][b] + goma_ctx->fem.fv_old->grad_v[b][a];
     }
   }
 
   ADType S = 0.;
   /* get gamma_dot invariant for viscosity calculations */
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       S += omega[a][b] * omega[a][b];
     }
   }
@@ -315,8 +315,8 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
   /* Rate of rotation tensor  */
   ADType omega[DIM][DIM];
   double omega_old[DIM][DIM];
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
       omega_old[a][b] = (goma_ctx->fem.fv_old->grad_v[a][b] - goma_ctx->fem.fv_old->grad_v[b][a]);
     }
@@ -426,7 +426,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
 
       if (supg > 0) {
         if (supg != 0.0) {
-          for (int p = 0; p < VIM; p++) {
+          for (int p = 0; p < goma_ctx->problem.vim; p++) {
             wt_func += supg * supg_tau * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
@@ -443,7 +443,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
 
       /* Assemble advection term */
       ADType adv = 0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         adv += ad_fv->v[p] * ad_fv->grad_eddy_nu[p];
       }
       adv *= wt_func * d_area;
@@ -464,7 +464,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
       /* Assemble diffusion terms */
       ADType diff_1 = 0.0;
       ADType diff_2 = 0.0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff_1 +=
             goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu_newt + mu_e * fn) * ad_fv->grad_eddy_nu[p];
         diff_2 += wt_func * cb2 * ad_fv->grad_eddy_nu[p] * ad_fv->grad_eddy_nu[p];
@@ -500,7 +500,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
       } /* End of if the variable is active */
 
       /* Sensitivity w.r.t. velocity */
-      for (b = 0; b < VIM; b++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         var = VELOCITY1 + b;
         if (pdv[var]) {
           pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -657,8 +657,8 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
 
   /* Rate of rotation tensor  */
   ADType omega[DIM][DIM];
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
     }
   }
@@ -717,7 +717,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
 
       if (supg > 0) {
         if (supg != 0.0) {
-          for (int p = 0; p < VIM; p++) {
+          for (int p = 0; p < goma_ctx->problem.vim; p++) {
             wt_func += supg * supg_tau * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
@@ -734,7 +734,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
 
       /* Assemble advection term */
       ADType adv = 0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         adv += rho * (ad_fv->v[p] - x_dot[p]) * ad_fv->grad_turb_k[p];
       }
       adv *= wt_func * d_area;
@@ -747,7 +747,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
 
       /* Assemble diffusion terms */
       ADType diff = 0.0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff +=
             goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_k) * ad_fv->grad_turb_k[p];
       }
@@ -797,8 +797,8 @@ ADType ad_only_turb_k_omega_sst_viscosity(void) {
   calc_blending_functions(rho, NULL, F1, F2);
 
   ADType omega[DIM][DIM];
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
     }
   }
@@ -824,8 +824,8 @@ extern "C" dbl ad_turb_k_omega_sst_viscosity(VISCOSITY_DEPENDENCE_STRUCT *d_mu) 
   calc_blending_functions(rho, d_rho, F1, F2);
 
   ADType omega[DIM][DIM];
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
     }
   }
@@ -843,7 +843,7 @@ extern "C" dbl ad_turb_k_omega_sst_viscosity(VISCOSITY_DEPENDENCE_STRUCT *d_mu) 
     for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TURB_K]; j++) {
       d_mu->turb_k[j] = mu.dx(ad_fv->offset[TURB_K] + j);
     }
-    for (int b = 0; b < VIM; b++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       int var = VELOCITY1 + b;
       for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         d_mu->v[b][j] = mu.dx(ad_fv->offset[var] + j);
@@ -903,8 +903,8 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
   }
 
   ADType omega[DIM][DIM];
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
     }
   }
@@ -974,7 +974,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
 
       if (supg > 0) {
         if (supg != 0.0) {
-          for (int p = 0; p < VIM; p++) {
+          for (int p = 0; p < goma_ctx->problem.vim; p++) {
             wt_func += supg * supg_tau * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
@@ -991,7 +991,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
 
       /* Assemble advection term */
       ADType adv = 0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         adv += rho * (ad_fv->v[p] - x_dot[p]) * ad_fv->grad_turb_omega[p];
       }
       adv *= wt_func * d_area;
@@ -1012,7 +1012,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
 
       /* Assemble diffusion terms */
       ADType diff = 0.0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_omega) *
                 ad_fv->grad_turb_omega[p];
       }
@@ -1119,8 +1119,8 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
   }
 
   ADType Omega_tens[DIM][DIM];
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       Omega_tens[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
     }
   }
@@ -1169,7 +1169,7 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
 
       if (supg > 0) {
         if (supg != 0.0) {
-          for (int p = 0; p < VIM; p++) {
+          for (int p = 0; p < goma_ctx->problem.vim; p++) {
             wt_func += supg * supg_tau * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
@@ -1186,7 +1186,7 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
 
       /* Assemble advection term */
       ADType adv = 0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_k[p];
       }
       adv *= wt_func * d_area;
@@ -1205,7 +1205,7 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
 
       /* Assemble diffusion terms */
       ADType diff = 0.0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t_kdiff * sigma_k) *
                 ad_fv->grad_turb_k[p];
       }
@@ -1284,8 +1284,8 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
   }
 
   ADType Omega_tens[DIM][DIM];
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       Omega_tens[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
     }
   }
@@ -1335,7 +1335,7 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
 
       if (supg > 0) {
         if (supg != 0.0) {
-          for (int p = 0; p < VIM; p++) {
+          for (int p = 0; p < goma_ctx->problem.vim; p++) {
             wt_func += supg * supg_tau * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
@@ -1352,7 +1352,7 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
 
       /* Assemble advection term */
       ADType adv = 0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_omega[p];
       }
       adv *= wt_func * d_area;
@@ -1371,7 +1371,7 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
 
       /* Assemble diffusion terms */
       ADType diff = 0.0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_omega) *
                 ad_fv->grad_turb_omega[p];
       }
@@ -1453,8 +1453,8 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
   }
 
   ADType Omega_tens[DIM][DIM];
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       Omega_tens[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
     }
   }
@@ -1515,7 +1515,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
 
       if (supg > 0) {
         if (supg != 0.0) {
-          for (int p = 0; p < VIM; p++) {
+          for (int p = 0; p < goma_ctx->problem.vim; p++) {
             wt_func += supg * supg_tau_w * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
@@ -1532,7 +1532,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
 
       /* Assemble advection term */
       ADType adv = 0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_omega[p];
       }
       adv *= wt_func * d_area;
@@ -1552,7 +1552,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
 
       /* Assemble diffusion terms */
       ADType diff = 0.0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_omega + vshock_w) *
                 ad_fv->grad_turb_omega[p];
       }
@@ -1571,7 +1571,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
 
       if (supg > 0) {
         if (supg != 0.0) {
-          for (int p = 0; p < VIM; p++) {
+          for (int p = 0; p < goma_ctx->problem.vim; p++) {
             wt_func += supg * supg_tau_k * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
@@ -1588,7 +1588,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
 
       /* Assemble advection term */
       ADType adv = 0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_k[p];
       }
       adv *= wt_func * d_area;
@@ -1605,7 +1605,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
 
       /* Assemble diffusion terms */
       ADType diff = 0.0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_t_kdiff * sigma_k + vshock_k) *
                 ad_fv->grad_turb_k[p];
       }
@@ -1892,7 +1892,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
 
       if (supg > 0) {
         if (supg != 0.0) {
-          for (int p = 0; p < VIM; p++) {
+          for (int p = 0; p < goma_ctx->problem.vim; p++) {
             wt_func += supg * tau_supg_k * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
         }
@@ -1910,7 +1910,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
 
       /* Assemble advection term */
       ADType adv = 0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_k[p];
       }
       adv *= wt_func * d_area;
@@ -1924,7 +1924,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
 
       /* Assemble diffusion terms */
       ADType diff = 0.0;
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_k + vshock_k) *
                 ad_fv->grad_turb_k[p];
         // + bf[eqn]->grad_phi[i][p] * vshock_k * gs_inner_dot[p];
@@ -1957,7 +1957,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
 
         /* Assemble advection term */
         ADType src = 0;
-        for (int p = 0; p < VIM; p++) {
+        for (int p = 0; p < goma_ctx->problem.vim; p++) {
           src -= 1e1 * ow;
         }
         src *= wt_func * d_area;
@@ -2036,7 +2036,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
 
         if (supg > 0) {
           if (supg != 0.0) {
-            for (int p = 0; p < VIM; p++) {
+            for (int p = 0; p < goma_ctx->problem.vim; p++) {
               wt_func += supg * tau_supg_w * ad_fv->v[p] * goma_ctx->fem.bf[eqn]->grad_phi[i][p];
             }
           }
@@ -2053,7 +2053,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
 
         /* Assemble advection term */
         ADType adv = 0;
-        for (int p = 0; p < VIM; p++) {
+        for (int p = 0; p < goma_ctx->problem.vim; p++) {
           adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_omega[p];
         }
         adv *= wt_func * d_area;
@@ -2077,7 +2077,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
 
         /* Assemble diffusion terms */
         ADType diff = 0.0;
-        for (int p = 0; p < VIM; p++) {
+        for (int p = 0; p < goma_ctx->problem.vim; p++) {
           diff += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_omega + vshock_w) *
                   ad_fv->grad_turb_omega[p];
           // + bf[eqn]->grad_phi[i][p] * vshock_w * gs_inner_dot[p];
@@ -2187,16 +2187,16 @@ int ad_assemble_invariant(double tt, /* parameter to vary time integration from
   ADType det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
 
   ADType omega[DIM][DIM];
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       omega[a][b] = ad_fv->grad_v[a][b] + ad_fv->grad_v[b][a];
     }
   }
 
   ADType S = 0.;
   /* get gamma_dot invariant for viscosity calculations */
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < goma_ctx->problem.vim; a++) {
+    for (int b = 0; b < goma_ctx->problem.vim; b++) {
       S += omega[a][b] * omega[a][b];
     }
   }

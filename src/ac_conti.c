@@ -272,9 +272,9 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
 
   (void)memset((void *)rd, 0, sizeof(struct Results_Description));
 
-  rd->nev = 0;       /* number element variables in results */
-  rd->nhv = 0;       /* number history variables in results */
-  rd->ngv = 6 + nAC; /* number global variables in results
+  rd->nev = 0;                          /* number element variables in results */
+  rd->nhv = 0;                          /* number history variables in results */
+  rd->ngv = 6 + goma_ctx->problem.n_ac; /* number global variables in results
                         see load_global_var_info for names*/
   error = load_global_var_info(rd, 0, "CONV");
   error = load_global_var_info(rd, 1, "NEWT_IT");
@@ -286,10 +286,10 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
   if (rd->ngv > MAX_NGV)
     GOMA_EH(-1, "Augmenting condition values overflowing MAX_NGV.  Change and rerun .");
 
-  if (nAC > 0) {
+  if (goma_ctx->problem.n_ac > 0) {
     char name[20];
 
-    for (i = 0; i < nAC; i++) {
+    for (i = 0; i < goma_ctx->problem.n_ac; i++) {
       sprintf(name, "AUGC_%d", i + 1);
       error = load_global_var_info(rd, 6 + i, name);
     }
@@ -342,11 +342,12 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
    */
   num_total_nodes = dpi->num_universe_nodes;
 
-  numProcUnknowns = NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
+  numProcUnknowns = goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx] +
+                    goma_ctx->problem.num_ext_unknowns[goma_ctx->fem.pg->imtrx];
 
   /* allocate memory for Volume Constraint Jacobian */
-  if (nAC > 0)
-    for (iAC = 0; iAC < nAC; iAC++)
+  if (goma_ctx->problem.n_ac > 0)
+    for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++)
       goma_ctx->fem.augc[iAC].d_evol_dx = (double *)malloc(numProcUnknowns * sizeof(double));
 
   asdv(&resid_vector, numProcUnknowns);
@@ -397,7 +398,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     fprintf(cl_aux, "-cn %d ", goma_ctx->fem.cont->MaxPathSteps);
     fprintf(cl_aux, "-cmin %10.6e ", goma_ctx->fem.cont->Delta_s_min);
     fprintf(cl_aux, "-cmax %10.6e ", goma_ctx->fem.cont->Delta_s_max);
-    fprintf(cl_aux, "-cm %d ", Continuation);
+    fprintf(cl_aux, "-cm %d ", goma_ctx->problem.continuation);
     fprintf(cl_aux, "-ct %d ", goma_ctx->fem.cont->upType);
 
     switch (goma_ctx->fem.cont->upType) {
@@ -450,15 +451,15 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     aldALC = -1;
 
   delta_s_new = 0.0;
-  Delta_s0 = goma_ctx->fem.cont->Delta_s0;
-  Delta_s_min = goma_ctx->fem.cont->Delta_s_min;
-  Delta_s_max = goma_ctx->fem.cont->Delta_s_max;
-  MaxPathSteps = goma_ctx->fem.cont->MaxPathSteps;
-  PathMax = goma_ctx->fem.cont->PathMax;
+  goma_ctx->problem.delta_s0 = goma_ctx->fem.cont->Delta_s0;
+  goma_ctx->problem.delta_s_min = goma_ctx->fem.cont->Delta_s_min;
+  goma_ctx->problem.delta_s_max = goma_ctx->fem.cont->Delta_s_max;
+  goma_ctx->problem.max_path_steps = goma_ctx->fem.cont->MaxPathSteps;
+  goma_ctx->problem.path_max = goma_ctx->fem.cont->PathMax;
   eps = goma_ctx->fem.cont->eps;
 
-  if (Delta_s0 < 0.0) {
-    Delta_s0 = -Delta_s0;
+  if (goma_ctx->problem.delta_s0 < 0.0) {
+    goma_ctx->problem.delta_s0 = -goma_ctx->problem.delta_s0;
     const_delta_s = 1;
   } else
     const_delta_s = 0;
@@ -466,16 +467,17 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
   path = path1 = lambda;
 
   if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
-    fprintf(stdout, "MaxPathSteps: %d \tlambdaEnd: %f\n", MaxPathSteps, lambdaEnd);
+    fprintf(stdout, "MaxPathSteps: %d \tlambdaEnd: %f\n", goma_ctx->problem.max_path_steps,
+            lambdaEnd);
     fprintf(stdout, "continuation in progress\n");
   }
 
   nprint = 0;
 
-  if (Delta_s0 > Delta_s_max)
-    Delta_s0 = Delta_s_max;
+  if (goma_ctx->problem.delta_s0 > goma_ctx->problem.delta_s_max)
+    goma_ctx->problem.delta_s0 = goma_ctx->problem.delta_s_max;
 
-  delta_s = delta_s_old = delta_s_older = Delta_s0;
+  delta_s = delta_s_old = delta_s_older = goma_ctx->problem.delta_s0;
 
   delta_t = 0.0;
   goma_ctx->fem.tran->delta_t = 0.0; /*for Newmark-Beta terms in Lagrangian Solid*/
@@ -502,9 +504,10 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
       max_unk_elem =
           (MAX_PROB_VAR + MAX_CONC) * MDE + 4 * goma_ctx->fem.vn_glob[0]->modes * 4 * MDE;
 
-    err = mf_setup(&exo->num_elems, &NumUnknowns[goma_ctx->fem.pg->imtrx], &max_unk_elem, &three,
-                   &one, exo->elem_order_map, fss->el_proc_assign, fss->level, fss->nopdof,
-                   fss->ncn, fss->constraint, goma_ctx->front_scratch_directory, &fss->ntra);
+    err = mf_setup(&exo->num_elems, &goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                   &max_unk_elem, &three, &one, exo->elem_order_map, fss->el_proc_assign,
+                   fss->level, fss->nopdof, fss->ncn, fss->constraint,
+                   goma_ctx->front_scratch_directory, &fss->ntra);
     GOMA_EH(err, "problems in frontal setup ");
 
 #else
@@ -531,10 +534,10 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
   } else
     x_sens_p = NULL;
 
-  if (nAC > 0) {
-    asdv(&x_AC, nAC);
-    asdv(&x_AC_old, nAC);
-    asdv(&x_AC_dot, nAC);
+  if (goma_ctx->problem.n_ac > 0) {
+    asdv(&x_AC, goma_ctx->problem.n_ac);
+    asdv(&x_AC_old, goma_ctx->problem.n_ac);
+    asdv(&x_AC_dot, goma_ctx->problem.n_ac);
   }
 
   /*
@@ -565,11 +568,12 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     GOMA_EH(err, "GomaSparseMatrix_CreateFromFormat");
     int local_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
                       goma_ctx->mesh.num_external_nodes;
-    err = GomaSparseMatrix_SetProblemGraph(goma_matrix, num_internal_dofs[goma_ctx->fem.pg->imtrx],
-                                           num_boundary_dofs[goma_ctx->fem.pg->imtrx],
-                                           num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes,
-                                           Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo, dpi, cx,
-                                           goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
+    err = GomaSparseMatrix_SetProblemGraph(
+        goma_matrix, goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx],
+        goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+        goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx], local_nodes, Nodes,
+        goma_ctx->problem.max_var_per_node, goma_ctx->problem.matilda, Inter_Mask, exo, dpi, cx,
+        goma_ctx->fem.pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
     GOMA_EH(err, "GomaSparseMatrix_SetProblemGraph");
     ams[JAC]->GomaMatrixData = goma_matrix;
   } else if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
@@ -579,9 +583,9 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
      * An attic to store external dofs column names is needed when
      * running in parallel.
      */
-    alloc_extern_ija_buffer(num_universe_dofs[goma_ctx->fem.pg->imtrx],
-                            num_internal_dofs[goma_ctx->fem.pg->imtrx] +
-                                num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+    alloc_extern_ija_buffer(goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx],
+                            goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                                goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx],
                             ija, &ija_attic);
     /*
      * Any necessary one time initialization of the linear
@@ -604,14 +608,14 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     ams[JAC]->npn_plus =
         dpi->num_internal_nodes + dpi->num_boundary_nodes + dpi->num_external_nodes;
 
-    ams[JAC]->npu =
-        num_internal_dofs[goma_ctx->fem.pg->imtrx] + num_boundary_dofs[goma_ctx->fem.pg->imtrx];
-    ams[JAC]->npu_plus = num_universe_dofs[goma_ctx->fem.pg->imtrx];
+    ams[JAC]->npu = goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                    goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx];
+    ams[JAC]->npu_plus = goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx];
 
-    ams[JAC]->nnz = ija[num_internal_dofs[goma_ctx->fem.pg->imtrx] +
-                        num_boundary_dofs[goma_ctx->fem.pg->imtrx]] -
+    ams[JAC]->nnz = ija[goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                        goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx]] -
                     1;
-    ams[JAC]->nnz_plus = ija[num_universe_dofs[goma_ctx->fem.pg->imtrx]];
+    ams[JAC]->nnz_plus = ija[goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx]];
   } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
     log_msg("alloc_VBR_sparse_arrays...");
     alloc_VBR_sparse_arrays(ams[JAC], exo, dpi);
@@ -629,9 +633,10 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     check_parallel_error("Matrix format / Solver incompatibility");
     goma_ctx->fem.pg->imtrx = 0;
     goma_error err = goma_setup_petsc_matrix_complex(
-        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[goma_ctx->fem.pg->imtrx],
-        num_boundary_dofs[goma_ctx->fem.pg->imtrx], num_external_dofs[goma_ctx->fem.pg->imtrx],
-        goma_ctx->fem.pg->imtrx);
+        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old,
+        goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx],
+        goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+        goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx], goma_ctx->fem.pg->imtrx);
     GOMA_EH(err, "goma_setup_petsc_matrix");
 #else
   } else if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
@@ -640,9 +645,10 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     check_parallel_error("Matrix format / Solver incompatibility");
     goma_ctx->fem.pg->imtrx = 0;
     goma_error err = goma_setup_petsc_matrix(
-        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[goma_ctx->fem.pg->imtrx],
-        num_boundary_dofs[goma_ctx->fem.pg->imtrx], num_external_dofs[goma_ctx->fem.pg->imtrx],
-        goma_ctx->fem.pg->imtrx);
+        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old,
+        goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx],
+        goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx],
+        goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx], goma_ctx->fem.pg->imtrx);
     GOMA_EH(err, "goma_setup_petsc_matrix");
 #endif
 #endif
@@ -656,12 +662,12 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
   }
 #endif
 #endif
-  init_vec(x, cx, exo, dpi, x_AC, nAC, &timeValueRead);
+  init_vec(x, cx, exo, dpi, x_AC, goma_ctx->problem.n_ac, &timeValueRead);
 
   /*  if read ACs, update data floats */
-  if (nAC > 0)
+  if (goma_ctx->problem.n_ac > 0)
     if (goma_ctx->fem.augc[0].iread == 1) {
-      for (iAC = 0; iAC < nAC; iAC++) {
+      for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
         update_parameterAC(iAC, x, xdot, x_AC, cx, exo, dpi);
       }
     }
@@ -683,8 +689,8 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
   dcopy1(numProcUnknowns, x_old, x_older);
   dcopy1(numProcUnknowns, x_older, x_oldest);
 
-  if (nAC > 0)
-    dcopy1(nAC, x_AC, x_AC_old);
+  if (goma_ctx->problem.n_ac > 0)
+    dcopy1(goma_ctx->problem.n_ac, x_AC, x_AC_old);
 
   /*
    * initialize the counters for when to print out data
@@ -727,11 +733,11 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
    * OF STEPS SURPASSED
    */
 
-  if (nAC > 0) {
-    dcopy1(nAC, x_AC, &(gv[5]));
+  if (goma_ctx->problem.n_ac > 0) {
+    dcopy1(goma_ctx->problem.n_ac, x_AC, &(gv[5]));
   }
 
-  for (n = 0; n < MaxPathSteps; n++) {
+  for (n = 0; n < goma_ctx->problem.max_path_steps; n++) {
     alqALC = 1;
 
     switch (aldALC) {
@@ -769,18 +775,20 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
      * IF STEP CHANGED, REDO FIRST ORDER PREDICTION
      */
     if (alqALC == -1) {
-      dcopy1(NumUnknowns[goma_ctx->fem.pg->imtrx], x_old, x);
+      dcopy1(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], x_old, x);
 
-      switch (Continuation) {
+      switch (goma_ctx->problem.continuation) {
       case ALC_ZEROTH:
         break;
       case ALC_FIRST:
         switch (aldALC) {
         case -1:
-          v1add(NumUnknowns[goma_ctx->fem.pg->imtrx], &x[0], -delta_s, &x_sens[0]);
+          v1add(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], &x[0], -delta_s,
+                &x_sens[0]);
           break;
         case +1:
-          v1add(NumUnknowns[goma_ctx->fem.pg->imtrx], &x[0], +delta_s, &x_sens[0]);
+          v1add(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], &x[0], +delta_s,
+                &x_sens[0]);
           break;
         default:
           DPRINTF(stderr, "%s: Bad aldALC, %d\n", yo, aldALC);
@@ -789,7 +797,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
         }
         break;
       default:
-        DPRINTF(stderr, "%s: Bad Continuation, %d\n", yo, Continuation);
+        DPRINTF(stderr, "%s: Bad Continuation, %d\n", yo, goma_ctx->problem.continuation);
         GOMA_EH(GOMA_ERROR, "\t");
         break; /* duh */
       }
@@ -804,7 +812,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
 
     if (goma_ctx->proc_id == 0) {
       fprintf(stdout, "\n\t----------------------------------");
-      switch (Continuation) {
+      switch (goma_ctx->problem.continuation) {
       case ALC_ZEROTH:
         DPRINTF(stdout, "\n\tZero Order Continuation:");
         break;
@@ -812,11 +820,11 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
         DPRINTF(stdout, "\n\tFirst Order Continuation:");
         break;
       default:
-        DPRINTF(stdout, "%s: Bad Continuation, %d\n", yo, Continuation);
+        DPRINTF(stdout, "%s: Bad Continuation, %d\n", yo, goma_ctx->problem.continuation);
         GOMA_EH(GOMA_ERROR, "\t");
         break; /* duh */
       }
-      DPRINTF(stdout, "\n\tStep number: %4d of %4d (max)", n + 1, MaxPathSteps);
+      DPRINTF(stdout, "\n\tStep number: %4d of %4d (max)", n + 1, goma_ctx->problem.max_path_steps);
       DPRINTF(stdout, "\n\tAttempting solution at:");
       switch (goma_ctx->fem.cont->upType) {
       case 1: /* BC */
@@ -835,7 +843,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
 
         /* This case requires an inner switch block */
       case 5: /* UF */
-        for (iUC = 0; iUC < nUC; iUC++) {
+        for (iUC = 0; iUC < goma_ctx->problem.n_uc; iUC++) {
           switch (goma_ctx->fem.cpuc[iUC].Type) {
           case 1: /* BC */
           case 3: /* AC */
@@ -899,12 +907,12 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
          * PRINT OUT VALUES OF EXTRA UNKNOWNS
          * FROM AUGMENTING CONDITIONS
          */
-        if (nAC > 0) {
+        if (goma_ctx->problem.n_ac > 0) {
           DPRINTF(stdout, "\n------------------------------\n");
-          DPRINTF(stdout, "Augmenting Conditions:    %4d\n", nAC);
-          DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
+          DPRINTF(stdout, "Augmenting Conditions:    %4d\n", goma_ctx->problem.n_ac);
+          DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", goma_ctx->problem.n_ac);
 
-          for (iAC = 0; iAC < nAC; iAC++) {
+          for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
             evol_local = goma_ctx->fem.augc[iAC].evol;
 #ifdef PARALLEL
             if (goma_ctx->num_proc > 1 && (goma_ctx->fem.augc[iAC].Type == AC_VOLUME ||
@@ -1031,7 +1039,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
 
         DPRINTF(stderr, "\n\tDecreasing step-length to %10.6e.\n", delta_s);
 
-        if (delta_s < Delta_s_min) {
+        if (delta_s < goma_ctx->problem.delta_s_min) {
           puts("\n X: C step-length reduced below minimum.");
           puts("\n    Program terminated.\n");
           /* This needs to have a return value of 0, indicating
@@ -1052,7 +1060,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
         /*
          * GET ZERO OR FIRST ORDER PREDICTION
          */
-        switch (Continuation) {
+        switch (goma_ctx->problem.continuation) {
         case ALC_ZEROTH:
           break;
         case ALC_FIRST:
@@ -1070,7 +1078,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
           }
           break;
         default:
-          DPRINTF(stderr, "%s: Bad Continuation, %d\n", yo, Continuation);
+          DPRINTF(stderr, "%s: Bad Continuation, %d\n", yo, goma_ctx->problem.continuation);
           GOMA_EH(GOMA_ERROR, "\t");
           break; /* duh */
         }
@@ -1089,9 +1097,9 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
         /*    Should be doing first order prediction on ACs
          *    but for now, just reset the AC variables
          */
-        if (nAC > 0) {
-          dcopy1(nAC, x_AC_old, x_AC);
-          for (iAC = 0; iAC < nAC; iAC++) {
+        if (goma_ctx->problem.n_ac > 0) {
+          dcopy1(goma_ctx->problem.n_ac, x_AC_old, x_AC);
+          for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
             update_parameterAC(iAC, x, xdot, x_AC, cx, exo, dpi);
           }
         }
@@ -1104,7 +1112,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
      */
     nt++;
 
-    if (Continuation == ALC_ZEROTH) {
+    if (goma_ctx->problem.continuation == ALC_ZEROTH) {
       DPRINTF(stdout, "\n\tStep accepted, parameter = %10.6e\n", path1);
     } else {
       DPRINTF(stdout, "\tStep accepted, parameter = %10.6e\n", path1);
@@ -1116,8 +1124,8 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     if ((ni == 1) && (n != 0) && (!const_delta_s)) {
       delta_s_new = path_step_control(num_total_nodes, delta_s, delta_s_old, x, eps, &success_ds,
                                       goma_ctx->fem.cont->use_var_norm, inewton);
-      if (delta_s_new > Delta_s_max)
-        delta_s_new = Delta_s_max;
+      if (delta_s_new > goma_ctx->problem.delta_s_max)
+        delta_s_new = goma_ctx->problem.delta_s_max;
     } else {
       success_ds = 1;
       delta_s_new = delta_s;
@@ -1136,7 +1144,8 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
       i_print = 1;
 
     if (i_print) {
-      error = write_ascii_soln(x, resid_vector, numProcUnknowns, x_AC, nAC, path1, file);
+      error = write_ascii_soln(x, resid_vector, numProcUnknowns, x_AC, goma_ctx->problem.n_ac,
+                               path1, file);
       if (error) {
         DPRINTF(stdout, "%s:  error writing ASCII soln file\n", yo);
       }
@@ -1184,8 +1193,8 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     delta_s_old = delta_s;
     delta_s = delta_s_new;
 
-    if (nAC > 0)
-      dcopy1(nAC, x_AC, x_AC_old);
+    if (goma_ctx->problem.n_ac > 0)
+      dcopy1(goma_ctx->problem.n_ac, x_AC, x_AC_old);
 
     /*
      * INCREMENT/DECREMENT PARAMETER
@@ -1221,7 +1230,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     /*
      * GET FIRST ORDER PREDICTION
      */
-    switch (Continuation) {
+    switch (goma_ctx->problem.continuation) {
     case ALC_ZEROTH:
       break;
     case ALC_FIRST:
@@ -1263,11 +1272,11 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     }
   } /* for(n = 0; n < MaxPathSteps; n++) */
 
-  if (n == MaxPathSteps && aldALC * (lambdaEnd - path) > 0) {
+  if (n == goma_ctx->problem.max_path_steps && aldALC * (lambdaEnd - path) > 0) {
     DPRINTF(
         stdout,
         "\n\tFailed to reach end of hunt in maximum number of successful steps (%d).\n\tSorry.\n",
-        MaxPathSteps);
+        goma_ctx->problem.max_path_steps);
     /*
     GOMA_EH(GOMA_ERROR,"\t");
     */
@@ -1306,7 +1315,7 @@ free_and_clear:
   safer_free((void **)&scale);
   safer_free((void **)&x);
 
-  if (nAC > 0) {
+  if (goma_ctx->problem.n_ac > 0) {
     safer_free((void **)&x_AC);
     safer_free((void **)&x_AC_old);
     safer_free((void **)&x_AC_dot);
@@ -1358,14 +1367,14 @@ free_and_clear:
 
   safer_free((void **)&rd);
   for (int i = 0; i < num_total_nodes; i++) {
-    free(Local_Offset[0][i]);
-    free(Dolphin[0][i]);
+    free(goma_ctx->problem.local_offset[0][i]);
+    free(goma_ctx->problem.dolphin[0][i]);
   }
-  free(Dolphin[0]);
-  free(Local_Offset[0]);
+  free(goma_ctx->problem.dolphin[0]);
+  free(goma_ctx->problem.local_offset[0]);
 
-  safer_free((void **)&Local_Offset);
-  safer_free((void **)&Dolphin);
+  safer_free((void **)&goma_ctx->problem.local_offset);
+  safer_free((void **)&goma_ctx->problem.dolphin);
 
   free(goma_ctx->fem.pg->matrices);
 

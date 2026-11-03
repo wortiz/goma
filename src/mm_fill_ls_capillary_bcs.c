@@ -92,8 +92,8 @@ static int continuous_surface_tension_old(double st,
 
   /* If we're not near the zero level set, then csf is a zero tensor. */
   if (!lsi_old->near) {
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         csf[a][b] = 0;
       }
     }
@@ -102,8 +102,8 @@ static int continuous_surface_tension_old(double st,
   }
 
   /* Calculate the CSF tensor. */
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       csf[a][b] =
           st * lsi_old->delta * (((double)delta(a, b)) - lsi_old->normal[a] * lsi_old->normal[b]);
     }
@@ -153,7 +153,7 @@ int assemble_csf_tensor(void) {
           subelement integration
           */
   if (goma_ctx->fem.ls->CalcSurfDependencies) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
       bfm = goma_ctx->fem.bf[eqn];
@@ -170,8 +170,8 @@ int assemble_csf_tensor(void) {
 
           source = 0.;
 
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               source += grad_phi_i_e_a[p][q] * csf[q][p];
             }
           }
@@ -200,7 +200,7 @@ int assemble_csf_tensor(void) {
 
   if (goma_ctx->fem.af->Assemble_Residual) {
 
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
       bfm = goma_ctx->fem.bf[eqn];
@@ -219,8 +219,8 @@ int assemble_csf_tensor(void) {
 
 #ifdef DO_NO_UNROLL
 
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               source += grad_phi_i_e_a[p][q] * csf[q][p];
             }
           }
@@ -229,7 +229,7 @@ int assemble_csf_tensor(void) {
           source += grad_phi_i_e_a[1][1] * csf[1][1];
           source += grad_phi_i_e_a[0][1] * csf[1][0];
           source += grad_phi_i_e_a[1][0] * csf[0][1];
-          if (VIM == 3) {
+          if (goma_ctx->problem.vim == 3) {
             source += grad_phi_i_e_a[2][2] * csf[2][2];
             source += grad_phi_i_e_a[2][1] * csf[1][2];
             source += grad_phi_i_e_a[2][0] * csf[0][2];
@@ -252,7 +252,7 @@ int assemble_csf_tensor(void) {
    */
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
       bfm = goma_ctx->fem.bf[eqn];
@@ -281,8 +281,8 @@ int assemble_csf_tensor(void) {
 
 #ifdef DO_NO_UNROLL
 
-              for (p = 0; p < VIM; p++) {
-                for (q = 0; q < VIM; q++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
+                for (q = 0; q < goma_ctx->problem.vim; q++) {
                   source += grad_phi_i_e_a[p][q] * d_csf_dF[q][p][j];
                 }
               }
@@ -293,7 +293,7 @@ int assemble_csf_tensor(void) {
               source += grad_phi_i_e_a[1][0] * d_csf_dF[0][1][j];
               source += grad_phi_i_e_a[1][1] * d_csf_dF[1][1][j];
 
-              if (VIM == 3) {
+              if (goma_ctx->problem.vim == 3) {
                 source += grad_phi_i_e_a[2][0] * d_csf_dF[0][2][j];
                 source += grad_phi_i_e_a[2][1] * d_csf_dF[1][2][j];
                 source += grad_phi_i_e_a[2][2] * d_csf_dF[2][2][j];
@@ -310,7 +310,7 @@ int assemble_csf_tensor(void) {
           }
           var = MESH_DISPLACEMENT1;
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-            for (b = 0; b < VIM; b++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               var = MESH_DISPLACEMENT1 + b;
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
@@ -319,8 +319,8 @@ int assemble_csf_tensor(void) {
 
                 source = 0.;
 #ifdef DO_NO_UNROLL
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     source += grad_phi_i_e_a[p][q] * d_csf_dX[q][p][b][j];
                   }
                 }
@@ -331,7 +331,7 @@ int assemble_csf_tensor(void) {
                 source += grad_phi_i_e_a[1][0] * d_csf_dX[0][1][b][j];
                 source += grad_phi_i_e_a[1][1] * d_csf_dX[1][1][b][j];
 
-                if (VIM == 3) {
+                if (goma_ctx->problem.vim == 3) {
                   source += grad_phi_i_e_a[2][0] * d_csf_dX[0][2][b][j];
                   source += grad_phi_i_e_a[2][1] * d_csf_dX[1][2][b][j];
                   source += grad_phi_i_e_a[2][2] * d_csf_dX[2][2][b][j];
@@ -386,7 +386,7 @@ int assemble_div_n_source(void) {
      subelement integration
   */
   if (goma_ctx->fem.ls->CalcSurfDependencies) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
       bfm = goma_ctx->fem.bf[eqn];
@@ -428,7 +428,7 @@ int assemble_div_n_source(void) {
    */
 
   if (goma_ctx->fem.af->Assemble_Residual) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
       bfm = goma_ctx->fem.bf[eqn];
@@ -462,7 +462,7 @@ int assemble_div_n_source(void) {
    */
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
       bfm = goma_ctx->fem.bf[eqn];
@@ -491,7 +491,7 @@ int assemble_div_n_source(void) {
 
                 source = goma_ctx->fem.fv->div_n * goma_ctx->fem.bf[var]->phi[j] * delta(a, b);
 
-                for (p = 0; p < VIM; p++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
                   source += goma_ctx->fem.fv->n[a] * goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][p];
                 }
                 source *= -goma_ctx->fem.mp->surface_tension * goma_ctx->fem.lsi->delta;
@@ -592,7 +592,7 @@ int assemble_div_s_n_source(void) {
      subelement integration
    */
   if (goma_ctx->fem.ls->CalcSurfDependencies) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
       bfm = goma_ctx->fem.bf[eqn];
@@ -634,7 +634,7 @@ int assemble_div_s_n_source(void) {
    */
 
   if (goma_ctx->fem.af->Assemble_Residual) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
       bfm = goma_ctx->fem.bf[eqn];
@@ -668,7 +668,7 @@ int assemble_div_s_n_source(void) {
    */
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
       bfm = goma_ctx->fem.bf[eqn];
@@ -695,15 +695,15 @@ int assemble_div_s_n_source(void) {
 
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 source1 = 0.0;
-                for (p = 0; p < VIM; p++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
                   source1 -= goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->grad_n[p][b] +
                              goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->grad_n[b][p];
                 }
                 source1 *= goma_ctx->fem.fv->n[a] * goma_ctx->fem.bf[var]->phi[j];
 
                 source2 = 0.0;
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     source2 += (delta(p, q) - goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->n[q]) *
                                goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][q];
                   }
@@ -786,10 +786,10 @@ int assemble_cap_hysing(double dt, double scale) {
 
   continuous_surface_tension_old(goma_ctx->fem.mp->surface_tension, csf, lsi_old);
 
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       grad_s_v[p][q] = goma_ctx->fem.fv->grad_v[p][q];
-      for (k = 0; k < VIM; k++) {
+      for (k = 0; k < goma_ctx->problem.vim; k++) {
         grad_s_v[p][q] -=
             (lsi_old->normal[p] * lsi_old->normal[k]) * goma_ctx->fem.fv->grad_v[k][q];
       }
@@ -809,7 +809,7 @@ int assemble_cap_hysing(double dt, double scale) {
 
   if (goma_ctx->fem.af->Assemble_Residual) {
 
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
       bfm = goma_ctx->fem.bf[eqn];
@@ -826,8 +826,8 @@ int assemble_cap_hysing(double dt, double scale) {
 
           source = 0.;
 
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               source += grad_phi_i_e_a[p][q] * csf[q][p];
             }
           }
@@ -841,8 +841,8 @@ int assemble_cap_hysing(double dt, double scale) {
            *				       -----
            *				       d x_a
            */
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               diffusion += goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * grad_s_v[p][q];
             }
           }
@@ -861,7 +861,7 @@ int assemble_cap_hysing(double dt, double scale) {
    */
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
       bfm = goma_ctx->fem.bf[eqn];
@@ -878,15 +878,15 @@ int assemble_cap_hysing(double dt, double scale) {
 
           var = VELOCITY1;
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-            for (b = 0; b < VIM; b++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               var = VELOCITY1 + b;
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     d_grad_s_v_dv[p][q] = goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][q];
-                    for (k = 0; k < VIM; k++) {
+                    for (k = 0; k < goma_ctx->problem.vim; k++) {
                       d_grad_s_v_dv[p][q] -= lsi_old->normal[p] * lsi_old->normal[k] *
                                              goma_ctx->fem.bf[var]->grad_phi_e[j][b][k][q];
                     }
@@ -895,8 +895,8 @@ int assemble_cap_hysing(double dt, double scale) {
 
                 diffusion = 0;
 
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     diffusion +=
                         goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dv[p][q];
                   }
@@ -955,10 +955,10 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
 
   memset(csf, 0, sizeof(double) * DIM * DIM);
 
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       grad_s_v[p][q] = goma_ctx->fem.fv->grad_v[p][q];
-      for (k = 0; k < VIM; k++) {
+      for (k = 0; k < goma_ctx->problem.vim; k++) {
         grad_s_v[p][q] -= (goma_ctx->fem.lsi->normal[p] * goma_ctx->fem.lsi->normal[k]) *
                           goma_ctx->fem.fv->grad_v[k][q];
       }
@@ -978,7 +978,7 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
 
   if (goma_ctx->fem.af->Assemble_Residual) {
 
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
@@ -992,8 +992,8 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
 
           diffusion = 0;
 
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               diffusion += goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * grad_s_v[p][q];
             }
           }
@@ -1012,7 +1012,7 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
    */
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
@@ -1031,12 +1031,12 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
               /* grouping lsi->delta into this now */
-              for (p = 0; p < VIM; p++) {
-                for (q = 0; q < VIM; q++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
+                for (q = 0; q < goma_ctx->problem.vim; q++) {
                   d_grad_s_v_dF[p][q] =
                       goma_ctx->fem.lsi->d_delta_dF[j] * goma_ctx->fem.fv->grad_v[p][q] +
                       goma_ctx->fem.lsi->delta * goma_ctx->fem.fv->grad_v[p][q];
-                  for (k = 0; k < VIM; k++) {
+                  for (k = 0; k < goma_ctx->problem.vim; k++) {
                     d_grad_s_v_dF[p][q] -=
                         goma_ctx->fem.lsi->d_delta_dF[j] *
                         (goma_ctx->fem.lsi->normal[p] * goma_ctx->fem.lsi->normal[k]) *
@@ -1055,8 +1055,8 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
 
               diffusion = 0;
 
-              for (p = 0; p < VIM; p++) {
-                for (q = 0; q < VIM; q++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
+                for (q = 0; q < goma_ctx->problem.vim; q++) {
                   diffusion += goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dF[p][q];
                 }
               }
@@ -1068,16 +1068,16 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
 
           var = VELOCITY1;
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-            for (b = 0; b < VIM; b++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               var = VELOCITY1 + b;
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     d_grad_s_v_dv[p][q] = goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][q];
-                    for (k = 0; k < VIM; k++) {
+                    for (k = 0; k < goma_ctx->problem.vim; k++) {
                       d_grad_s_v_dv[p][q] -= goma_ctx->fem.lsi->normal[p] *
                                              goma_ctx->fem.lsi->normal[k] *
                                              goma_ctx->fem.bf[var]->grad_phi_e[j][b][k][q];
@@ -1087,8 +1087,8 @@ int assemble_cap_denner_diffusion(double dt, double scale) {
 
                 diffusion = 0;
 
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     diffusion +=
                         goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dv[p][q];
                   }
@@ -1149,10 +1149,10 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
 
   memset(csf, 0, sizeof(double) * DIM * DIM);
 
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       grad_s_v[p][q] = goma_ctx->fem.fv->grad_v[p][q];
-      for (k = 0; k < VIM; k++) {
+      for (k = 0; k < goma_ctx->problem.vim; k++) {
         grad_s_v[p][q] -=
             (goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->n[k]) * goma_ctx->fem.fv->grad_v[k][q];
       }
@@ -1172,7 +1172,7 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
 
   if (goma_ctx->fem.af->Assemble_Residual) {
 
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
@@ -1186,8 +1186,8 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
 
           diffusion = 0;
 
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               diffusion += goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * grad_s_v[p][q];
             }
           }
@@ -1206,7 +1206,7 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
    */
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       eqn = R_MOMENTUM1 + a;
       peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
 
@@ -1225,8 +1225,8 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               diffusion = 0;
 
-              for (p = 0; p < VIM; p++) {
-                for (q = 0; q < VIM; q++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
+                for (q = 0; q < goma_ctx->problem.vim; q++) {
                   diffusion += goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * grad_s_v[p][q];
                 }
               }
@@ -1240,16 +1240,16 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
 
           var = VELOCITY1;
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-            for (b = 0; b < WIM; b++) {
+            for (b = 0; b < goma_ctx->problem.wim; b++) {
               var = VELOCITY1 + b;
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
-                for (p = 0; p < WIM; p++) {
-                  for (q = 0; q < WIM; q++) {
+                for (p = 0; p < goma_ctx->problem.wim; p++) {
+                  for (q = 0; q < goma_ctx->problem.wim; q++) {
                     d_grad_s_v_dv[p][q] = goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][q];
-                    for (k = 0; k < WIM; k++) {
+                    for (k = 0; k < goma_ctx->problem.wim; k++) {
                       d_grad_s_v_dv[p][q] -= goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->n[k] *
                                              goma_ctx->fem.bf[var]->grad_phi_e[j][b][k][q];
                     }
@@ -1258,8 +1258,8 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
 
                 diffusion = 0;
 
-                for (p = 0; p < WIM; p++) {
-                  for (q = 0; q < WIM; q++) {
+                for (p = 0; p < goma_ctx->problem.wim; p++) {
+                  for (q = 0; q < goma_ctx->problem.wim; q++) {
                     diffusion +=
                         goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dv[p][q];
                   }
@@ -1275,15 +1275,15 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
 
           var = R_NORMAL1;
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-            for (b = 0; b < VIM; b++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               var = R_NORMAL1 + b;
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
 
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     d_grad_s_v_dn[p][q] = 0;
-                    for (k = 0; k < VIM; k++) {
+                    for (k = 0; k < goma_ctx->problem.vim; k++) {
                       d_grad_s_v_dn[p][q] -= goma_ctx->fem.bf[var]->phi[j] *
                                              goma_ctx->fem.fv->n[k] *
                                              goma_ctx->fem.fv->grad_v[k][q];
@@ -1296,8 +1296,8 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
 
                 diffusion = 0;
 
-                for (p = 0; p < VIM; p++) {
-                  for (q = 0; q < VIM; q++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (q = 0; q < goma_ctx->problem.vim; q++) {
                     diffusion +=
                         goma_ctx->fem.bf[eqn]->grad_phi_e[i][a][p][q] * d_grad_s_v_dn[p][q];
                   }

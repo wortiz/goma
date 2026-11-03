@@ -154,7 +154,8 @@ void sl_init(unsigned int option_mask, /* option flag */
        * Number of equations in the matrix that this processor owns.
        */
 
-      A->N_update = num_internal_dofs[imtrx] + num_boundary_dofs[imtrx]; /* Whoa, mule! */
+      A->N_update = goma_ctx->problem.num_internal_dofs[imtrx] +
+                    goma_ctx->problem.num_boundary_dofs[imtrx]; /* Whoa, mule! */
       A->update = NULL;
 
 #ifdef GOMA_ENABLE_AZTEC
@@ -239,13 +240,13 @@ void sl_init(unsigned int option_mask, /* option flag */
          *
          */
 
-        length = AZ_COMM_SIZE + ptr_dof_send[imtrx][dpi->num_neighbors];
+        length = AZ_COMM_SIZE + goma_ctx->problem.ptr_dof_send[imtrx][dpi->num_neighbors];
 
         A->data_org = (int *)smalloc(length * sizeof(int));
 
-        A->data_org[AZ_N_internal] = num_internal_dofs[imtrx];
-        A->data_org[AZ_N_border] = num_boundary_dofs[imtrx];
-        A->data_org[AZ_N_external] = num_external_dofs[imtrx];
+        A->data_org[AZ_N_internal] = goma_ctx->problem.num_internal_dofs[imtrx];
+        A->data_org[AZ_N_border] = goma_ctx->problem.num_boundary_dofs[imtrx];
+        A->data_org[AZ_N_external] = goma_ctx->problem.num_external_dofs[imtrx];
 
         if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
           A->data_org[AZ_matrix_type] = AZ_VBR_MATRIX;
@@ -265,7 +266,7 @@ void sl_init(unsigned int option_mask, /* option flag */
         }
 
         A->data_org[AZ_N_neigh] = dpi->num_neighbors;
-        A->data_org[AZ_total_send] = ptr_dof_send[imtrx][dpi->num_neighbors];
+        A->data_org[AZ_total_send] = goma_ctx->problem.ptr_dof_send[imtrx][dpi->num_neighbors];
         A->data_org[AZ_name] = 1 + imtrx; /* Whoa, mule! */
 
         /*
@@ -285,8 +286,8 @@ void sl_init(unsigned int option_mask, /* option flag */
          * are indeces into the x[] vector with local meaning.
          */
 
-        for (i = 0; i < ptr_dof_send[imtrx][dpi->num_neighbors]; i++) {
-          A->data_org[AZ_send_list + i] = list_dof_send[imtrx][i];
+        for (i = 0; i < goma_ctx->problem.ptr_dof_send[imtrx][dpi->num_neighbors]; i++) {
+          A->data_org[AZ_send_list + i] = goma_ctx->problem.list_dof_send[imtrx][i];
         }
 #endif
       }

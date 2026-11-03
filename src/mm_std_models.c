@@ -2395,8 +2395,8 @@ double visc_diss_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
 
   /* Compute gamma_dot[][] */
 
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
@@ -2407,8 +2407,8 @@ double visc_diss_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
 
     (void)stress_eqn_pointer(v_s);
 
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
           s[a][b] += goma_ctx->fem.fv->S[mode][a][b];
         }
@@ -2439,14 +2439,14 @@ double visc_diss_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
     }
 
     if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-      for (b = 0; b < VIM; b++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         var = MESH_DISPLACEMENT1 + b;
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_h->X[b][j] += param[0] * (2. * mu * gammadot * d_gd_dmesh[b][j] +
                                       gammadot * gammadot * d_mu->X[b][j]);
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
-            for (p = 0; p < VIM; p++) {
-              for (q = 0; q < VIM; q++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
+              for (q = 0; q < goma_ctx->problem.vim; q++) {
                 d_h->X[b][j] += param[0] * s[p][q] * goma_ctx->fem.fv->d_grad_v_dmesh[q][p][b][j];
               }
             }
@@ -2456,14 +2456,14 @@ double visc_diss_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
     }
 
     if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
-      for (b = 0; b < VIM; b++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         var = VELOCITY1 + b;
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_h->v[b][j] +=
               param[0] * (2. * mu * gammadot * d_gd_dv[b][j] + gammadot * gammadot * d_mu->v[b][j]);
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
-            for (p = 0; p < VIM; p++) {
-              for (q = 0; q < VIM; q++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
+              for (q = 0; q < goma_ctx->problem.vim; q++) {
                 d_h->v[b][j] +=
                     param[0] * s[p][q] * goma_ctx->fem.bf[VELOCITY1]->grad_phi_e[j][b][q][p];
               }
@@ -2475,8 +2475,8 @@ double visc_diss_heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
 
     if (d_h != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
       for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             var = v_s[mode][a][b];
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               d_h->S[mode][a][b][j] =
@@ -4116,7 +4116,7 @@ int hydro_sediment_flux(struct Species_Conservation_Terms *st, int w)
 
   rhoD = coeff_rho * goma_ctx->fem.mp->diffusivity[w];
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     st->diff_flux[w][a] = flux_settling[a];
     st->diff_flux[w][a] += -rhoD * st->grad_Y[w][a];
   }
@@ -4126,7 +4126,7 @@ int hydro_sediment_flux(struct Species_Conservation_Terms *st, int w)
     /* Sensitivity w.r.t. species concentration */
     var = MASS_FRACTION;
     phi_ptr = goma_ctx->fem.bf[var]->phi;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
         tmp = -coeff_rho * st->grad_Y[w][a] *
               goma_ctx->fem.mp->d_diffusivity[w][MAX_VARIABLE_TYPES + w1];
@@ -4144,7 +4144,7 @@ int hydro_sediment_flux(struct Species_Conservation_Terms *st, int w)
     for (q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
       var = MESH_DISPLACEMENT1 + q;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             st->d_diff_flux_dmesh[w][a][q][j] =
                 -rhoD * goma_ctx->fem.fv->d_grad_c_dmesh[a][w][q][j];
@@ -4156,7 +4156,7 @@ int hydro_sediment_flux(struct Species_Conservation_Terms *st, int w)
     /* Sensitivity w.r.t. temperature */
     var = TEMPERATURE;
     phi_ptr = goma_ctx->fem.bf[var]->phi;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       tmp = -coeff_rho * goma_ctx->fem.mp->d_diffusivity[w][var] * st->grad_Y[w][a];
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         st->d_diff_flux_dT[w][a][j] = tmp * phi_ptr[j];
@@ -4663,8 +4663,8 @@ int hydro_flux(struct Species_Conservation_Terms *st,
 
   rzexp = 0.;
 
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
@@ -5157,8 +5157,8 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
 
   memset(gamma_dot, 0, DIM * DIM * sizeof(dbl));
 
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
@@ -5346,8 +5346,8 @@ int suspension_balance(struct Species_Conservation_Terms *st, int w) /* species 
     memset(st->d_diff_flux_dv, 0, MAX_CONC * DIM * DIM * MDE * sizeof(dbl));
 
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (a = 0; a < VIM; a++) {
-        for (p = 0; p < VIM; p++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             c_term = -M * d_div_tau_p_dv[a][p][j];
 
@@ -5441,8 +5441,8 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
 
   /* Compute gammadot, grad(gammadot), gamma_dot[][], d_gd_dG, and d_grad_gd_dG */
 
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
@@ -5496,27 +5496,27 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
 
   if (goma_ctx->fem.cr->MassFluxModel == HYDRODYNAMIC_QTENSOR_OLD) {
     /* Get Q tensor */
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       vort_dir_local[a] = 0.0;
     }
     find_super_special_eigenvector(gamma_dot, vort_dir_local, v1, v2, v3, &tmp, print);
 
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         qtensor[a][b] = (dbl)delta(a, b) - 0.5 * vort_dir_local[a] * vort_dir_local[b];
       }
     }
   } else if (goma_ctx->fem.cr->MassFluxModel == HYDRODYNAMIC_QTENSOR) {
     /* Get Q tensor */
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         qtensor[a][b] = (dbl)delta(a, b) - 0.5 * goma_ctx->fem.fv->vd[a] * goma_ctx->fem.fv->vd[b];
       }
     }
   } else {
     /* assume a diagonal Q tensor */
     memset(qtensor, 0, DIM * DIM * sizeof(dbl));
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       qtensor[a][a] = goma_ctx->fem.mp->u_qdiffusivity[w][a];
     }
   }
@@ -5524,11 +5524,11 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
   dbl cp;
   cp = 0.;
   memset(tau_p, 0, DIM * DIM * sizeof(dbl));
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     tau_p[a][a] +=
         cp * Y[w] *
         goma_ctx->fem.fv->P; /* suspension pressure adds an isotropic term on the diagonal */
-    for (b = 0; b < VIM; b++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       tau_p[a][b] += mu0 * pp * gammadot * qtensor[a][b];
     }
   }
@@ -5545,9 +5545,9 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
       dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       if (gammadot != 0.0) {
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
-            for (p = 0; p < VIM; p++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               for (j = 0; j < dofs; j++) {
                 d_tau_p_dv[a][b][p][j] = mu0 * pp * d_gd_dv[p][j] * qtensor[a][b];
               }
@@ -5561,8 +5561,8 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
       dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       if (gammadot != 0.0) {
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             for (p = 0; p < dim; p++) {
               for (j = 0; j < dofs; j++) {
                 d_tau_p_dmesh[a][b][p][j] = mu0 * pp * d_gd_dmesh[p][j] * qtensor[a][b];
@@ -5591,9 +5591,9 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
 
       dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       if (gammadot != 0.0) {
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
-            for (p = 0; p < VIM; p++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               for (j = 0; j < dofs; j++) {
                 d_tau_p_dvd[a][b][p][j] = mu0 * pp * gammadot * d_qtensor_dvd[a][b][p][j];
               }
@@ -5606,11 +5606,11 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
     var = MASS_FRACTION;
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
       dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < dofs; j++) {
           d_tau_p_dy[a][a][w][j] += cp * goma_ctx->fem.bf[var]->phi[j] * goma_ctx->fem.fv->P;
 
-          for (b = 0; b < VIM; b++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             d_tau_p_dy[a][b][w][j] +=
                 mu0 * d_pp_dy * gammadot * goma_ctx->fem.bf[var]->phi[j] * qtensor[a][b];
           }
@@ -5621,7 +5621,7 @@ int particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress 
     var = PRESSURE;
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][var]) {
       dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < dofs; j++) {
           d_tau_p_dp[a][a][j] += cp * Y[w] * goma_ctx->fem.bf[var]->phi[j];
         }
@@ -5697,8 +5697,8 @@ int divergence_particle_stress(
 
   memset(gamma_dot, 0, DIM * DIM * sizeof(dbl));
 
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       gamma_dot[a][b] = goma_ctx->fem.fv_old->grad_v[a][b] + goma_ctx->fem.fv_old->grad_v[b][a];
     }
   }
@@ -5720,7 +5720,7 @@ int divergence_particle_stress(
 
   /* Solve for the eigenvalues of gamma_dot   */
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     vort_dir_local[a] = 0.0;
   }
   find_super_special_eigenvector(gamma_dot, vort_dir_local, v1, v2, v3, &tmp, print);
@@ -5806,8 +5806,8 @@ int divergence_particle_stress(
 
   memset(div_tau_p, 0, DIM * sizeof(dbl));
 
-  for (a = 0; a < WIM; a++) {
-    for (b = 0; b < WIM; b++) {
+  for (a = 0; a < goma_ctx->problem.wim; a++) {
+    for (b = 0; b < goma_ctx->problem.wim; b++) {
       div_tau_p[a] +=
           mu0 * qtensor[a][b] * (pp * grad_gd[b] + (gammadot + gamma_nl) * d_pp_dy * grad_Y[w][b]);
     }
@@ -5823,9 +5823,9 @@ int divergence_particle_stress(
     var = MASS_FRACTION;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         for (j = 0; j < dofs; j++) {
-          for (b = 0; b < WIM; b++) {
+          for (b = 0; b < goma_ctx->problem.wim; b++) {
             d_div_tau_p_dy[a][w][j] +=
                 mu0 * qtensor[a][b] *
                 (d_pp_dy * goma_ctx->fem.bf[var]->phi[j] * grad_gd[b] +
@@ -5839,9 +5839,9 @@ int divergence_particle_stress(
     var = SHEAR_RATE;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         for (j = 0; j < dofs; j++) {
-          for (b = 0; b < WIM; b++) {
+          for (b = 0; b < goma_ctx->problem.wim; b++) {
             d_div_tau_p_dgd[a][j] += mu0 * qtensor[a][b] *
                                      (pp * goma_ctx->fem.bf[var]->grad_phi[j][b] +
                                       goma_ctx->fem.bf[var]->phi[j] * d_pp_dy * grad_Y[w][b]);
@@ -5855,8 +5855,8 @@ int divergence_particle_stress(
       dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
       for (p = 0; p < dim; p++) {
         for (j = 0; j < dofs; j++) {
-          for (a = 0; a < WIM; a++) {
-            for (b = 0; b < WIM; b++) {
+          for (a = 0; a < goma_ctx->problem.wim; a++) {
+            for (b = 0; b < goma_ctx->problem.wim; b++) {
               d_div_tau_p_dmesh[a][p][j] +=
                   mu0 * qtensor[a][b] *
                   (pp * goma_ctx->fem.fv->d_grad_SH_dmesh[b][p][j] +
@@ -7148,8 +7148,8 @@ int assemble_bond_evolution(double time, /* present time value */
 
   memset(gamma_dot, 0, DIM * DIM * sizeof(dbl));
 
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       gamma_dot[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
     }
   }
@@ -7199,7 +7199,7 @@ int assemble_bond_evolution(double time, /* present time value */
     var = BOND_EVOLUTION;
     for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
       phi_i = goma_ctx->fem.bf[eqn]->phi[i];
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         grad_phi_i[p] = goma_ctx->fem.bf[var]->grad_phi[i][p];
       }
 
@@ -7214,7 +7214,7 @@ int assemble_bond_evolution(double time, /* present time value */
       advection = 0.;
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
 
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           advection +=
               (goma_ctx->fem.fv->v[p] - goma_ctx->fem.fv_dot->x[p]) * goma_ctx->fem.fv->grad_nn[p];
         }
@@ -7225,7 +7225,7 @@ int assemble_bond_evolution(double time, /* present time value */
 
       diffusion = 0.;
       if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           diffusion += grad_phi_i[p] * goma_ctx->fem.fv->grad_nn[p];
         }
         diffusion *= diff_coef * det_J * wt * h3;
@@ -7258,7 +7258,7 @@ int assemble_bond_evolution(double time, /* present time value */
     for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
 
       phi_i = goma_ctx->fem.bf[eqn]->phi[i];
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
       }
 
@@ -7275,7 +7275,7 @@ int assemble_bond_evolution(double time, /* present time value */
         pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           phi_j = goma_ctx->fem.bf[var]->phi[j];
-          for (p = 0; p < VIM; p++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             grad_phi_j[p] = goma_ctx->fem.bf[var]->grad_phi[j][p];
           }
 
@@ -7297,7 +7297,7 @@ int assemble_bond_evolution(double time, /* present time value */
 
           advection = 0.;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               advection += (goma_ctx->fem.fv->v[p] - goma_ctx->fem.fv_dot->x[p]) * grad_phi_j[p];
             }
             advection *= phi_i * det_J * wt * h3;
@@ -7306,7 +7306,7 @@ int assemble_bond_evolution(double time, /* present time value */
 
           diffusion = 0.;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               diffusion += grad_phi_j[p] * grad_phi_i[p];
             }
             diffusion *= diff_coef * det_J * wt * h3;
@@ -7334,7 +7334,7 @@ int assemble_bond_evolution(double time, /* present time value */
       /*
        * J_nn_v
        */
-      for (b = 0; b < VIM; b++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
         var = VELOCITY1 + b;
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
           pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -7460,7 +7460,7 @@ int assemble_bond_evolution(double time, /* present time value */
               diff_a *= det_J * h3 * wt;
 
               diff_b = 0.;
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 diff_b += goma_ctx->fem.fv->d_grad_nn_dmesh[p][b][j] * grad_phi_i[p];
               }
               diff_b *= det_J * h3 * wt;

@@ -215,7 +215,7 @@ void init_shell_element_blocks(const Exo_DB *exo) {
       goma_ctx->fem.shell_blocks[si]->elemblock_index = bindex;
       goma_ctx->fem.shell_blocks[si]->elemblock_id = exo->eb_id[bindex];
       goma_ctx->fem.shell_blocks[si]->num_nbr_blocks = 0;
-      goma_ctx->fem.shell_blocks[si]->mn = Matilda[bindex];
+      goma_ctx->fem.shell_blocks[si]->mn = goma_ctx->problem.matilda[bindex];
     }
   }
 
@@ -497,7 +497,7 @@ void init_shell_element_blocks(const Exo_DB *exo) {
         elem = exo->eb_ptr[sindex] + se;
         nbr = sb->nbr_elem_ids[bindex][se];
         bID = find_elemblock_index(nbr, exo);
-        mnParent = Matilda[bID];
+        mnParent = goma_ctx->problem.matilda[bID];
         int notFound = 1;
         for (i = 0; i < numMnFound; i++) {
           if (mnParent == mnList[i]) {
@@ -1810,7 +1810,7 @@ int shell_normal_div_s(dbl *div_s_nv, dbl d_div_s_nv_dnv[DIM][MDE], dbl d_div_s_
     }
   */
   double g[DIM], g2[DIM];
-  for (p = 0; p < VIM; p++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
     g[p] = 1.0 / goma_ctx->fem.fv->h[p];
     g2[p] = g[p] * g[p];
   }
@@ -1831,8 +1831,8 @@ int shell_normal_div_s(dbl *div_s_nv, dbl d_div_s_nv_dnv[DIM][MDE], dbl d_div_s_
   }
 
   /* Local normal vector gradient, mesh and self sensitivity */
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       grad_nv[p][q] = 0.0;
 
       for (b = 0; b < pdim; b++) {
@@ -1868,8 +1868,8 @@ int shell_normal_div_s(dbl *div_s_nv, dbl d_div_s_nv_dnv[DIM][MDE], dbl d_div_s_
 #endif
   *div_s_nv = 0.0;
   memset(&(d_div_s_nv_dnv[0][0]), 0, DIM * MDE * sizeof(double));
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       *div_s_nv +=
           ((double)delta(p, q) - goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->n[q]) * grad_nv[p][q];
 
@@ -1887,8 +1887,8 @@ int shell_normal_div_s(dbl *div_s_nv, dbl d_div_s_nv_dnv[DIM][MDE], dbl d_div_s_
     }
   }
 
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       for (j = 0; j < dofs; j++) {
         phi_j = goma_ctx->fem.bf[eqn]->phi[j];
         d_div_s_nv_dnv[p][j] -= goma_ctx->fem.fv->n[q] * phi_j * grad_nv[q][p];
@@ -1896,8 +1896,8 @@ int shell_normal_div_s(dbl *div_s_nv, dbl d_div_s_nv_dnv[DIM][MDE], dbl d_div_s_
     }
   }
 
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       for (j = 0; j < dofs; j++) {
         phi_j = goma_ctx->fem.bf[eqn]->phi[j];
         d_div_s_nv_dnv[q][j] -= goma_ctx->fem.fv->n[p] * phi_j * grad_nv[q][p];
@@ -2055,7 +2055,7 @@ void shell_determinant_and_normal(
         for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
           inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
           ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][i];
-          if (Dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
+          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
             phi_i = map_bf->phi[ldof];
 
             for (q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
@@ -2096,7 +2096,7 @@ void shell_determinant_and_normal(
       for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
         inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][i];
-        if (Dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
+        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           phi_i = map_bf->phi[ldof];
 
           for (a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
@@ -2156,7 +2156,7 @@ void shell_determinant_and_normal(
       for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
         inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][i];
-        if (Dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
+        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           phi_i = map_bf->phi[ldof];
 
           for (a = 0; a < goma_ctx->fem.pd->Num_Dim; a++) {
@@ -3186,7 +3186,7 @@ void lubrication_shell_initialize(int *n_dof,        // Degrees of freedom
     el2 = elem_friends[el1][0];
     if (goma_ctx->fem.mp->FSIModel == 0) {
       a = find_elemblock_index(el2, exo);
-      b = Matilda[a];
+      b = goma_ctx->problem.matilda[a];
       FSIModel = goma_ctx->fem.mp_glob[b]->FSIModel;
     } else {
       FSIModel = goma_ctx->fem.mp->FSIModel;
@@ -4078,7 +4078,7 @@ void calculate_lub_q_v(const int EQN, double time, double dt, double xi[DIM], co
 
     if (do_convection) {
       for (i = 0; i < dim; i++) {
-        for (j = 0; j < VIM; j++) {
+        for (j = 0; j < goma_ctx->problem.vim; j++) {
           convf[i] += rho * goma_ctx->fem.fv->v[j] * goma_ctx->fem.fv->grad_v[j][i];
           for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; k++) {
             D_CONV_DV[i][j][k] +=
@@ -4096,7 +4096,7 @@ void calculate_lub_q_v(const int EQN, double time, double dt, double xi[DIM], co
       }
       ShellRotate(convf, d_conv_dx, CONV, D_CONV_DX, n_dof[MESH_DISPLACEMENT1]);
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VAR]) {
-        for (i = 0; i < VIM; i++) {
+        for (i = 0; i < goma_ctx->problem.vim; i++) {
           for (j = 0; j < dim; j++) {
             for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VAR]; k++) {
               d_conv_df[i][k] +=
@@ -4202,7 +4202,7 @@ void calculate_lub_q_v(const int EQN, double time, double dt, double xi[DIM], co
     }
     if (do_convection) {
       for (i = 0; i < dim; i++) {
-        for (j = 0; j < VIM; j++) {
+        for (j = 0; j < goma_ctx->problem.vim; j++) {
           for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; k++) {
             DGRADP_DV[i][j][k] += D_CONV_DV[i][j][k];
           }
@@ -4670,7 +4670,7 @@ void calculate_lub_q_v(const int EQN, double time, double dt, double xi[DIM], co
     if (do_convection) {
       for (i = 0; i < dim; i++) {
         for (i1 = 0; i1 < dim; i1++) {
-          for (j = 0; j < VIM; j++) {
+          for (j = 0; j < goma_ctx->problem.vim; j++) {
             for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; k++) {
               D_Q_DV[i][j][k] += D_Q_DGRADP[i][i1] * DGRADP_DV[i1][j][k];
             }
@@ -5209,7 +5209,7 @@ void calculate_lub_q_v(const int EQN, double time, double dt, double xi[DIM], co
 
     if (do_convection) {
       for (i = 0; i < dim; i++) {
-        for (j = 0; j < VIM; j++) {
+        for (j = 0; j < goma_ctx->problem.vim; j++) {
           convf[i] += rho * goma_ctx->fem.fv->v[j] * goma_ctx->fem.fv->grad_v[j][i];
           for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; k++) {
             D_CONV_DV[i][j][k] +=
@@ -5252,7 +5252,7 @@ void calculate_lub_q_v(const int EQN, double time, double dt, double xi[DIM], co
     }
     if (do_convection) {
       for (i = 0; i < dim; i++) {
-        for (j = 0; j < VIM; j++) {
+        for (j = 0; j < goma_ctx->problem.vim; j++) {
           for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; k++) {
             DGRADP_DV[i][j][k] += D_CONV_DV[i][j][k];
           }
@@ -5472,7 +5472,7 @@ void calculate_lub_q_v(const int EQN, double time, double dt, double xi[DIM], co
     if (do_convection) {
       for (i = 0; i < dim; i++) {
         for (i1 = 0; i1 < dim; i1++) {
-          for (j = 0; j < VIM; j++) {
+          for (j = 0; j < goma_ctx->problem.vim; j++) {
             for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; k++) {
               D_Q_DV[i][j][k] += D_Q_DGRADP[i][i1] * DGRADP_DV[i1][j][k];
             }
@@ -5795,7 +5795,7 @@ void calculate_lub_q_v_old(
 
     if (do_convection) {
       for (i = 0; i < dim; i++) {
-        for (j = 0; j < VIM; j++) {
+        for (j = 0; j < goma_ctx->problem.vim; j++) {
           convf[i] += rho_old * goma_ctx->fem.fv_old->v[j] * goma_ctx->fem.fv_old->grad_v[j][i];
         }
       }
@@ -6143,7 +6143,7 @@ void calculate_lub_q_v_old(
 
     if (do_convection) {
       for (i = 0; i < dim; i++) {
-        for (j = 0; j < VIM; j++) {
+        for (j = 0; j < goma_ctx->problem.vim; j++) {
           convf[i] += rho_old * goma_ctx->fem.fv_old->v[j] * goma_ctx->fem.fv_old->grad_v[j][i];
         }
       }
@@ -7836,14 +7836,14 @@ double lub2D_flowint_2D(const struct Generalized_Newtonian *gn_loc,
       }
       res = fabs(xint3 - xintold);
       res0 = fabs(xint3);
-      eps = res / (1. + res0);
-      if (eps < tolerance)
+      goma_ctx->problem.eps = res / (1. + res0);
+      if (goma_ctx->problem.eps < tolerance)
         break;
       xintold = xint3;
     }
-    if (eps > tolerance) {
+    if (goma_ctx->problem.eps > tolerance) {
       if (goma_ctx->debug_flag) {
-        DPRINTF(stderr, "flowint %d %g %g %g\n", jdi, xint3, eps, tolerance);
+        DPRINTF(stderr, "flowint %d %g %g %g\n", jdi, xint3, goma_ctx->problem.eps, tolerance);
       }
     }
   } else {
@@ -7877,14 +7877,14 @@ double lub2D_flowint_2D(const struct Generalized_Newtonian *gn_loc,
       }
       res = fabs(xint3 - xintold);
       res0 = fabs(xint3);
-      eps = res / (1. + res0);
-      if (eps < tolerance)
+      goma_ctx->problem.eps = res / (1. + res0);
+      if (goma_ctx->problem.eps < tolerance)
         break;
       xintold = xint3;
     }
-    if (eps > tolerance) {
+    if (goma_ctx->problem.eps > tolerance) {
       if (goma_ctx->debug_flag) {
-        DPRINTF(stderr, "flowint %d %g %g %g\n", jdi, xint3, eps, tolerance);
+        DPRINTF(stderr, "flowint %d %g %g %g\n", jdi, xint3, goma_ctx->problem.eps, tolerance);
       }
     }
   }

@@ -392,8 +392,8 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
   uni_dpi(dpi, monolith);
   setup_old_exo(monolith, dpi, 1);
 
-  Matilda = alloc_int_1(monolith->num_elem_blocks, 0);
-  setup_matilda(monolith, Matilda);
+  goma_ctx->problem.matilda = alloc_int_1(monolith->num_elem_blocks, 0);
+  setup_matilda(monolith, goma_ctx->problem.matilda);
 
   build_elem_node(monolith);
 
@@ -406,7 +406,7 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
   // crude block weights
   for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     for (int ebn = 0; ebn < monolith->num_elem_blocks; ebn++) {
-      int mn = Matilda[ebn];
+      int mn = goma_ctx->problem.matilda[ebn];
       for (int var = V_FIRST; var < V_LAST; var++) {
         if (goma_ctx->fem.pd_glob[mn]->e[imtrx][var]) {
           int interp = goma_ctx->fem.pd_glob[mn]->i[imtrx][var];
@@ -1028,7 +1028,7 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
   free(num_nodes_part);
   free(node_indicators);
   free(elem_indicators);
-  free(Matilda);
+  free(goma_ctx->problem.matilda);
   free(elem_adj_list);
   free(elem_adj_pntr);
   free(vwgt);

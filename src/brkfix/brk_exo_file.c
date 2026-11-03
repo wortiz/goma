@@ -699,8 +699,8 @@ int brk_exo_file(int num_pieces, char *Brk_File, char *Exo_File) {
    *  Matilda. Also, set up an equivalent entry in the Element Block
    *  structure.
    */
-  Matilda = alloc_int_1(mono->num_elem_blocks, 0);
-  setup_matilda(mono, Matilda);
+  goma_ctx->problem.matilda = alloc_int_1(mono->num_elem_blocks, 0);
+  setup_matilda(mono, goma_ctx->problem.matilda);
 
   /*
    * The physical space coordinates of the finite element nodes corresponding
@@ -4312,8 +4312,8 @@ int brk_exo_file(int num_pieces, char *Brk_File, char *Exo_File) {
 
   free(goma_ctx->mesh.coor);
   goma_ctx->mesh.coor = NULL;
-  free(Matilda);
-  Matilda = NULL;
+  free(goma_ctx->problem.matilda);
+  goma_ctx->problem.matilda = NULL;
 
   free_element_blocks(mono);
 

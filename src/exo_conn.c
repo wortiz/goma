@@ -313,7 +313,7 @@ void build_node_node(Exo_DB *exo) {
      */
 
     if ((exo->node_elem_pntr[node + 1] - exo->node_elem_pntr[node]) == 1 &&
-        (Use_DG || TRUE)) /* Disable Use_DG switch */
+        (goma_ctx->problem.use_dg || TRUE)) /* Disable Use_DG switch */
     {
       /*
        * This node belongs to only one element

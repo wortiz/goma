@@ -187,7 +187,7 @@ void read_input_file(struct Command_line_command **clc, int nclc) {
   /*
    * BEGIN EXECUTION
    */
-  nAC = 0;
+  goma_ctx->problem.n_ac = 0;
   goma_ctx->fem.augc = NULL;
 
   if (!goma_ctx->new_parser_flag) {
@@ -1077,8 +1077,8 @@ void rd_genl_specs(FILE *ifp, char *input) {
   /* Search for commands to read in and hold fixed an external nodal field variable */
   goma_ctx->num_var_external = 0;
   goma_ctx->num_var_external_pix = 0;
-  Num_Import_NV = 0;
-  Num_Import_EV = 0;
+  goma_ctx->problem.num_import_nv = 0;
+  goma_ctx->problem.num_import_ev = 0;
   goma_ctx->fem.efv->ev = T_NOTHING;
 
   memset(goma_ctx->fem.efv->ipix, 0, sizeof(int) * MAX_EXTERNAL_FIELD);
@@ -1180,9 +1180,9 @@ void rd_genl_specs(FILE *ifp, char *input) {
      * Count external (nodal and elemental) vars to be imported
      */
     if (!strcmp(input, "IMPORT_EV"))
-      Num_Import_EV++;
+      goma_ctx->problem.num_import_ev++;
     if (!strcmp(input, "IMPORT"))
-      Num_Import_NV++;
+      goma_ctx->problem.num_import_nv++;
 
     /* Option to initialize external field to some value (default = 0) if
      * if any part of the element block being mapped to lies outside of the
@@ -1269,7 +1269,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
   /*
    * Read export variable cards
    */
-  Num_Export_XS = 0;
+  goma_ctx->problem.num_export_xs = 0;
   while ((iread = look_forward_optional(ifp, "Export Field", input, '=')) == 1) {
 
     /*
@@ -1290,14 +1290,14 @@ void rd_genl_specs(FILE *ifp, char *input) {
     /*
      * Enter the id in the global array Export_XS_ID.
      */
-    Export_XS_ID[Num_Export_XS] = ex_id;
-    Num_Export_XS++;
+    goma_ctx->problem.export_xs_id[goma_ctx->problem.num_export_xs] = ex_id;
+    goma_ctx->problem.num_export_xs++;
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Export Field", ex_id);
     ECHO(echo_string, echo_file);
   }
 #ifndef LIBRARY_MODE
-  if (Num_Export_XS > 0)
+  if (goma_ctx->problem.num_export_xs > 0)
     GOMA_WH(-1, "Export Field only valid in LIBRARY_MODE!");
 #endif
 
@@ -1490,7 +1490,7 @@ void rd_timeint_specs(FILE *ifp, char *input) {
   /*  double init_time; this global variable appears in rf_fem.h */
   /*  double print_delt; this global variable appears in rf_fem.h */
   /* Whoa, how did this work? yo = "rd_timeint_specs"; */
-  nEQM = 0;
+  goma_ctx->problem.n_eqm = 0;
 
   /* Read in Time Integration Specifications */
 
@@ -1502,9 +1502,9 @@ void rd_timeint_specs(FILE *ifp, char *input) {
   (void)read_string(ifp, input, '\n');
   strip(input);
   if (strcmp(input, "steady") == 0) {
-    TimeIntegration = STEADY;
+    goma_ctx->problem.time_integration = STEADY;
   } else if (strcmp(input, "transient") == 0) {
-    TimeIntegration = TRANSIENT;
+    goma_ctx->problem.time_integration = TRANSIENT;
   } else {
     GOMA_EH(GOMA_ERROR, "unknown time integration option");
   }
@@ -1513,7 +1513,7 @@ void rd_timeint_specs(FILE *ifp, char *input) {
   ECHO(echo_string, echo_file);
 
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    goma_ctx->fem.pd_glob[mn]->TimeIntegration = TimeIntegration;
+    goma_ctx->fem.pd_glob[mn]->TimeIntegration = goma_ctx->problem.time_integration;
   }
 
   /* An initialization needed to avoid umrs for linear
@@ -1594,10 +1594,10 @@ void rd_timeint_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "Time step error", input, '=');
-    if (fscanf(ifp, "%le", &eps) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->problem.eps) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Time step error, expected at least one float");
     }
-    goma_ctx->fem.tran->eps = eps;
+    goma_ctx->fem.tran->eps = goma_ctx->problem.eps;
 
     /* initialize norm indicators */
     for (i = 0; i <= 10; i++)
@@ -1624,32 +1624,33 @@ void rd_timeint_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "Printing Frequency", input, '=');
-    print_freq = read_int(ifp, "Printing Frequency");
-    goma_ctx->fem.tran->print_freq = print_freq;
-    if (print_freq == 0) {
-      if (fscanf(ifp, "%le", &print_delt) != 1) {
+    goma_ctx->problem.print_freq = read_int(ifp, "Printing Frequency");
+    goma_ctx->fem.tran->print_freq = goma_ctx->problem.print_freq;
+    if (goma_ctx->problem.print_freq == 0) {
+      if (fscanf(ifp, "%le", &goma_ctx->problem.print_delt) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Printing delta time");
       }
-      goma_ctx->fem.tran->print_delt = print_delt;
+      goma_ctx->fem.tran->print_delt = goma_ctx->problem.print_delt;
 
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d %.4g", "Printing Frequency", print_freq,
-               print_delt);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d %.4g", "Printing Frequency",
+               goma_ctx->problem.print_freq, goma_ctx->problem.print_delt);
       ECHO(echo_string, echo_file);
 
-      print_delt2 = -print_delt;
-      print_delt2_time = time_max;
+      goma_ctx->problem.print_delt2 = -goma_ctx->problem.print_delt;
+      goma_ctx->problem.print_delt2_time = time_max;
       iread = look_for_optional(ifp, "Second frequency time", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%le %le", &print_delt2_time, &print_delt2) != 2) {
+        if (fscanf(ifp, "%le %le", &goma_ctx->problem.print_delt2_time,
+                   &goma_ctx->problem.print_delt2) != 2) {
           GOMA_EH(GOMA_ERROR, "error reading second frequency time");
         }
 
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g %.4g", "Second frequency time",
-                 print_delt2_time, print_delt2);
+                 goma_ctx->problem.print_delt2_time, goma_ctx->problem.print_delt2);
         ECHO(echo_string, echo_file);
       }
-      goma_ctx->fem.tran->print_delt2 = print_delt2;
-      goma_ctx->fem.tran->print_delt2_time = print_delt2_time;
+      goma_ctx->fem.tran->print_delt2 = goma_ctx->problem.print_delt2;
+      goma_ctx->fem.tran->print_delt2_time = goma_ctx->problem.print_delt2_time;
 
     } else {
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Printing Frequency",
@@ -1837,7 +1838,7 @@ void rd_timeint_specs(FILE *ifp, char *input) {
       goma_ctx->fem.tran->march_to_steady_state = 0;
     } else if (strcmp(input, "yes") == 0) {
       goma_ctx->fem.tran->march_to_steady_state = 1;
-      TimeIntegration = TRANSIENT;
+      goma_ctx->problem.time_integration = TRANSIENT;
     } else {
 
       GOMA_EH(GOMA_ERROR, "Bad specification for March to Steady State");
@@ -1961,7 +1962,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       goma_ctx->fem.ls->sm_object_name = NULL;
       goma_ctx->fem.ls->sm_object_type = NULL;
       goma_ctx->fem.lsi = alloc_struct_1(struct Level_Set_Interface, 1);
-      goma_ctx->fem.ls->Use_Level_Set = Use_Level_Set = TRUE;
+      goma_ctx->fem.ls->Use_Level_Set = goma_ctx->problem.use_level_set = TRUE;
       zero_lsi();
       zero_lsi_derivs();
       goma_ctx->fem.ls->Elem_Sign = 0;
@@ -3030,7 +3031,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
     if (i > 0) {
       goma_ctx->fem.pfd = alloc_struct_1(struct Phase_Function_Data, 1);
       goma_ctx->fem.pfd->num_phase_funcs = i;
-      goma_ctx->fem.pfd->Use_Phase_Field = Use_Phase_Field = i;
+      goma_ctx->fem.pfd->Use_Phase_Field = goma_ctx->problem.use_phase_field = i;
 
       goma_ctx->fem.pfd->ls =
           (struct Level_Set_Data **)alloc_ptr_1(goma_ctx->fem.pfd->num_phase_funcs);
@@ -3299,18 +3300,18 @@ void rd_levelset_specs(FILE *ifp, char *input) {
                 "LM phase function constraint method must be first augmenting condition.\n");
       }
 
-      goma_ctx->fem.augc[nAC - 1].Type = AC_PF_CONSTRAINT;
+      goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].Type = AC_PF_CONSTRAINT;
 
       goma_ctx->fem.pfd->jac_info = (PF_JAC_INFO *)array_alloc(1, 1, sizeof(PF_JAC_INFO));
 
-      if (fscanf(ifp, "%d %lf", &(goma_ctx->fem.augc[nAC - 1].MTID),
-                 &(goma_ctx->fem.augc[nAC - 1].CONSTV)) != 2) {
+      if (fscanf(ifp, "%d %lf", &(goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].MTID),
+                 &(goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].CONSTV)) != 2) {
         GOMA_EH(GOMA_ERROR,
                 "LM constraint type for phase function needs integer and double arguments.\n");
       }
 
-      SPF(endofstring(echo_string), " %d %.4g", goma_ctx->fem.augc[nAC - 1].MTID,
-          goma_ctx->fem.augc[nAC - 1].CONSTV);
+      SPF(endofstring(echo_string), " %d %.4g", goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].MTID,
+          goma_ctx->fem.augc[goma_ctx->problem.n_ac - 1].CONSTV);
       ECHO(echo_string, echo_file);
     }
   }
@@ -3445,7 +3446,7 @@ void rd_elem_quality_specs(FILE *ifp, char *input) {
   const char yo[] = "rd_elem_quality_specs";
 
   int iread;
-  nEQM = 0;
+  goma_ctx->problem.n_eqm = 0;
 
   /* Element quality specifications */
 
@@ -3453,7 +3454,7 @@ void rd_elem_quality_specs(FILE *ifp, char *input) {
   goma_ctx->fem.eqm->wt_jac = 0.0;
   iread = look_for_optional(ifp, "Jacobian quality weight", input, '=');
   if (iread == 1) {
-    nEQM++;
+    goma_ctx->problem.n_eqm++;
     goma_ctx->fem.eqm->do_jac = TRUE;
     if (fscanf(ifp, "%lf", &(goma_ctx->fem.eqm->wt_jac)) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Jacobian quality weight");
@@ -3464,7 +3465,7 @@ void rd_elem_quality_specs(FILE *ifp, char *input) {
   goma_ctx->fem.eqm->wt_vol = 0.0;
   iread = look_for_optional(ifp, "Volume change quality weight", input, '=');
   if (iread == 1) {
-    nEQM++;
+    goma_ctx->problem.n_eqm++;
     goma_ctx->fem.eqm->do_vol = TRUE;
     if (fscanf(ifp, "%lf", &(goma_ctx->fem.eqm->wt_vol)) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Volume change quality weight");
@@ -3475,7 +3476,7 @@ void rd_elem_quality_specs(FILE *ifp, char *input) {
   goma_ctx->fem.eqm->wt_ang = 0.0;
   iread = look_for_optional(ifp, "Angle quality weight", input, '=');
   if (iread == 1) {
-    nEQM++;
+    goma_ctx->problem.n_eqm++;
     goma_ctx->fem.eqm->do_ang = TRUE;
     if (fscanf(ifp, "%lf", &(goma_ctx->fem.eqm->wt_ang)) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Angle quality weight");
@@ -3486,7 +3487,7 @@ void rd_elem_quality_specs(FILE *ifp, char *input) {
   goma_ctx->fem.eqm->wt_tri = 0.0;
   iread = look_for_optional(ifp, "Triangle quality weight", input, '=');
   if (iread == 1) {
-    nEQM++;
+    goma_ctx->problem.n_eqm++;
     goma_ctx->fem.eqm->do_tri = TRUE;
     if (fscanf(ifp, "%lf", &(goma_ctx->fem.eqm->wt_tri)) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Triangle quality weight");
@@ -3582,11 +3583,11 @@ void rd_track_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
-  Continuation = ALC_NONE;
+  goma_ctx->problem.continuation = ALC_NONE;
   goma_ctx->fem.loca_in->Cont_Alg = ALC_NONE;
   goma_ctx->fem.loca_in->Cont_Order = 0;
-  nCC = 0;
-  nTC = 0;
+  goma_ctx->problem.n_cc = 0;
+  goma_ctx->problem.n_tc = 0;
   goma_ctx->fem.cont->eps = 0.0;
 
   /*  initialize sensivity vector id for first order continuation  */
@@ -3605,44 +3606,44 @@ void rd_track_specs(FILE *ifp, char *input) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tno continuation\n", yo);
       }
-      Continuation = ALC_NONE;
+      goma_ctx->problem.continuation = ALC_NONE;
     } else if (strcmp(input, "zero") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tzero order continuation\n", yo);
       }
-      Continuation = ALC_ZEROTH;
+      goma_ctx->problem.continuation = ALC_ZEROTH;
     } else if (strcmp(input, "hzero") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tzero order hunting continuation\n", yo);
       }
-      Continuation = HUN_ZEROTH;
+      goma_ctx->problem.continuation = HUN_ZEROTH;
     } else if (strcmp(input, "first") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tfirst order continuation\n", yo);
       }
-      Continuation = ALC_FIRST;
+      goma_ctx->problem.continuation = ALC_FIRST;
     } else if (strcmp(input, "hfirst") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tfirst order hunting continuation\n", yo);
       }
-      Continuation = HUN_FIRST;
+      goma_ctx->problem.continuation = HUN_FIRST;
     } else if (strcmp(input, "second") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tsecond order continuation\n", yo);
       }
-      Continuation = ALC_SECOND;
+      goma_ctx->problem.continuation = ALC_SECOND;
     } else if (strcmp(input, "loca") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tLOCA continuation library\n", yo);
       }
-      Continuation = LOCA;
+      goma_ctx->problem.continuation = LOCA;
     } else {
       GOMA_EH(GOMA_ERROR, "unknown Continuation option");
     }
     SPF(endofstring(echo_string), " %s", input);
     ECHO(echo_string, echo_file);
 
-    ContType = goma_ctx->fem.cont->upType = -1;
+    goma_ctx->problem.cont_type = goma_ctx->fem.cont->upType = -1;
     look_for(ifp, "Continuation Type", input, '=');
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = ", input);
@@ -3653,37 +3654,37 @@ void rd_track_specs(FILE *ifp, char *input) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tno continuation\n", yo);
       }
-      Continuation = ALC_NONE;
+      goma_ctx->problem.continuation = ALC_NONE;
     } else if (strcmp(input, "BC") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tBC continuation\n", yo);
       }
-      ContType = 1;
+      goma_ctx->problem.cont_type = 1;
     } else if (strcmp(input, "MT") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tMATPROP continuation\n", yo);
       }
-      ContType = 2;
+      goma_ctx->problem.cont_type = 2;
     } else if (strcmp(input, "AC") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tAC continuation\n", yo);
       }
-      ContType = 3;
+      goma_ctx->problem.cont_type = 3;
     } else if (strcmp(input, "UM") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tUser model continuation\n", yo);
       }
-      ContType = 4;
+      goma_ctx->problem.cont_type = 4;
     } else if (strcmp(input, "UF") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tUser-defined function continuation\n", yo);
       }
-      ContType = 5;
+      goma_ctx->problem.cont_type = 5;
     } else if (strcmp(input, "AN") == 0) {
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tAngular parameter continuation\n", yo);
       }
-      ContType = 6;
+      goma_ctx->problem.cont_type = 6;
     } else {
       GOMA_EH(GOMA_ERROR, "Unknown ContType option (one of BC, MT, AC, UM, AN or UF)");
     }
@@ -3691,130 +3692,132 @@ void rd_track_specs(FILE *ifp, char *input) {
     SPF(endofstring(echo_string), " %s", input);
     ECHO(echo_string, echo_file);
 
-    goma_ctx->fem.cont->upType = ContType;
+    goma_ctx->fem.cont->upType = goma_ctx->problem.cont_type;
 
     for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-      goma_ctx->fem.pd_glob[mn]->Continuation = Continuation;
+      goma_ctx->fem.pd_glob[mn]->Continuation = goma_ctx->problem.continuation;
     }
 
     /* Get number of user-defined continuation condition functions */
-    nUC = 0;
-    if (ContType == 5) {
+    goma_ctx->problem.n_uc = 0;
+    if (goma_ctx->problem.cont_type == 5) {
       look_for(ifp, "Number of user continuation functions", input, '=');
-      if (fscanf(ifp, "%d", &nUC) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->problem.n_uc) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Number of user continuation functions");
       }
 
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, nUC);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->problem.n_uc);
       ECHO(echo_string, echo_file);
 
       /* Allocate the structure cpuc for each function */
       goma_ctx->fem.cpuc = (struct User_Continuation_Info *)array_alloc(
-          1, nUC, sizeof(struct User_Continuation_Info));
+          1, goma_ctx->problem.n_uc, sizeof(struct User_Continuation_Info));
     }
 
     goma_ctx->fem.cont->upBCID = -1;
     iread = look_for_optional(ifp, "Boundary condition ID", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%d", &BdyCondID) != 1) {
+      if (fscanf(ifp, "%d", &goma_ctx->problem.bdy_cond_id) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Boundary condition ID");
       }
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, BdyCondID);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->problem.bdy_cond_id);
       ECHO(echo_string, echo_file);
     }
-    goma_ctx->fem.cont->upBCID = BdyCondID;
+    goma_ctx->fem.cont->upBCID = goma_ctx->problem.bdy_cond_id;
 
     look_for(ifp, "Boundary condition data float tag", input, '=');
-    if (fscanf(ifp, "%d", &DataFltID) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->problem.data_flt_id) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Boundary condition data float tag id");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, DataFltID);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->problem.data_flt_id);
     ECHO(echo_string, echo_file);
 
-    goma_ctx->fem.cont->upDFID = DataFltID;
+    goma_ctx->fem.cont->upDFID = goma_ctx->problem.data_flt_id;
 
     look_for(ifp, "Material id", input, '=');
-    if (fscanf(ifp, "%d", &MatID) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->problem.mat_id) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Material id");
     }
 
-    goma_ctx->fem.cont->upMTID = MatID - 1;
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, MatID);
+    goma_ctx->fem.cont->upMTID = goma_ctx->problem.mat_id - 1;
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->problem.mat_id);
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "Material property tag", input, '=');
-    if (fscanf(ifp, "%d", &MatPropID) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->problem.mat_prop_id) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Material property tag id");
     }
-    goma_ctx->fem.cont->upMPID = MatPropID;
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, MatPropID);
+    goma_ctx->fem.cont->upMPID = goma_ctx->problem.mat_prop_id;
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->problem.mat_prop_id);
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "Material property tag subindex", input, '=');
-    if (fscanf(ifp, "%d", &MatPropSIID) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->problem.mat_prop_si_id) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Material property tag subindex id");
     }
-    goma_ctx->fem.cont->upMDID = MatPropSIID;
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, MatPropSIID);
+    goma_ctx->fem.cont->upMDID = goma_ctx->problem.mat_prop_si_id;
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->problem.mat_prop_si_id);
     ECHO(echo_string, echo_file);
 
-    BegParameterValue = 0.0;
+    goma_ctx->problem.beg_parameter_value = 0.0;
     look_for(ifp, "Initial parameter value", input, '=');
-    if (fscanf(ifp, "%le", &BegParameterValue) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->problem.beg_parameter_value) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading BegParameterValue");
     }
-    goma_ctx->fem.cont->BegParameterValue = BegParameterValue;
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, BegParameterValue);
+    goma_ctx->fem.cont->BegParameterValue = goma_ctx->problem.beg_parameter_value;
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+             goma_ctx->problem.beg_parameter_value);
     ECHO(echo_string, echo_file);
 
-    EndParameterValue = 1.0;
+    goma_ctx->problem.end_parameter_value = 1.0;
     look_for(ifp, "Final parameter value", input, '=');
-    if (fscanf(ifp, "%le", &EndParameterValue) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->problem.end_parameter_value) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading EndParameterValue");
     }
-    goma_ctx->fem.cont->EndParameterValue = EndParameterValue;
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, EndParameterValue);
+    goma_ctx->fem.cont->EndParameterValue = goma_ctx->problem.end_parameter_value;
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input,
+             goma_ctx->problem.end_parameter_value);
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "delta_s", input, '=');
-    if (fscanf(ifp, "%le", &Delta_s0) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->problem.delta_s0) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading delta_s");
     }
-    goma_ctx->fem.cont->Delta_s0 = Delta_s0;
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, Delta_s0);
+    goma_ctx->fem.cont->Delta_s0 = goma_ctx->problem.delta_s0;
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, goma_ctx->problem.delta_s0);
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "Maximum number of path steps", input, '=');
-    if (fscanf(ifp, "%d", &MaxPathSteps) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->problem.max_path_steps) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading maximum number of path steps");
     }
-    goma_ctx->fem.cont->MaxPathSteps = MaxPathSteps;
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, MaxPathSteps);
+    goma_ctx->fem.cont->MaxPathSteps = goma_ctx->problem.max_path_steps;
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->problem.max_path_steps);
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "Minimum path step", input, '=');
-    if (fscanf(ifp, "%le", &Delta_s_min) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->problem.delta_s_min) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading minimum path step");
     }
-    goma_ctx->fem.cont->Delta_s_min = Delta_s_min;
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, Delta_s_min);
+    goma_ctx->fem.cont->Delta_s_min = goma_ctx->problem.delta_s_min;
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, goma_ctx->problem.delta_s_min);
     ECHO(echo_string, echo_file);
 
-    Delta_s_max = 1.e+12;
+    goma_ctx->problem.delta_s_max = 1.e+12;
     look_for(ifp, "Maximum path step", input, '=');
-    if (fscanf(ifp, "%le", &Delta_s_max) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->problem.delta_s_max) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Maximum path step");
     }
-    goma_ctx->fem.cont->Delta_s_max = Delta_s_max;
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, Delta_s_max);
+    goma_ctx->fem.cont->Delta_s_max = goma_ctx->problem.delta_s_max;
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", input, goma_ctx->problem.delta_s_max);
     ECHO(echo_string, echo_file);
 
     look_for(ifp, "Continuation Printing Frequency", input, '=');
-    if (fscanf(ifp, "%d", &print_freq) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->problem.print_freq) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Continuation Printing Frequency");
     }
-    goma_ctx->fem.cont->print_freq = print_freq;
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, print_freq);
+    goma_ctx->fem.cont->print_freq = goma_ctx->problem.print_freq;
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->problem.print_freq);
     ECHO(echo_string, echo_file);
 
     goma_ctx->fem.cont->fix_freq = 0;
@@ -3851,7 +3854,7 @@ void rd_track_specs(FILE *ifp, char *input) {
       }
     }
 
-    if (Continuation == LOCA) {
+    if (goma_ctx->problem.continuation == LOCA) {
 
       goma_ctx->fem.loca_in->Cont_Alg = CONTINUATION;
       iread = look_for_optional(ifp, "LOCA method", input, '=');
@@ -4018,24 +4021,24 @@ void rd_track_specs(FILE *ifp, char *input) {
 
       /* Bypass CC card section if LOCA is to use existing Hunting cards
          - this is for backward compatibility - EDW */
-      nCC = 1;
+      goma_ctx->problem.n_cc = 1;
       iread = look_for_optional(ifp, "Number of continuation conditions", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%d", &nCC) != 1) {
+        if (fscanf(ifp, "%d", &goma_ctx->problem.n_cc) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading Number of continuation conditions");
         }
 
-        if (nCC == -1) {
-          nCC = count_list(ifp, "CC", input, '=', "END OF CC") + 1;
+        if (goma_ctx->problem.n_cc == -1) {
+          goma_ctx->problem.n_cc = count_list(ifp, "CC", input, '=', "END OF CC") + 1;
         }
 
-        if (nCC < 1 && nCC != -2) {
-          Continuation = ALC_NONE;
+        if (goma_ctx->problem.n_cc < 1 && goma_ctx->problem.n_cc != -2) {
+          goma_ctx->problem.continuation = ALC_NONE;
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s)",
                    "No continuation conditions specified");
           return;
         } else
-          snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, nCC);
+          snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->problem.n_cc);
 
         ECHO(echo_string, echo_file);
       }
@@ -4043,20 +4046,20 @@ void rd_track_specs(FILE *ifp, char *input) {
       /*
        *  For angular continuation, ensure at least one angular CC is specified
        */
-      if (goma_ctx->fem.cont->upType == 6 && nCC < 2) {
+      if (goma_ctx->fem.cont->upType == 6 && goma_ctx->problem.n_cc < 2) {
         GOMA_EH(GOMA_ERROR, "Angular continuation requires at least one CC card!");
       }
 
       /*
        *  Allocate space for the vector cpcc
        */
-      if (nCC != -2) {
+      if (goma_ctx->problem.n_cc != -2) {
 
-        goma_ctx->fem.cpcc =
-            (struct Continuation_Conditions *)calloc(nCC, sizeof(struct Continuation_Conditions));
+        goma_ctx->fem.cpcc = (struct Continuation_Conditions *)calloc(
+            goma_ctx->problem.n_cc, sizeof(struct Continuation_Conditions));
 
         if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
-          printf("%s:\tallocated %d copies of the %lu sized\n", yo, nCC,
+          printf("%s:\tallocated %d copies of the %lu sized\n", yo, goma_ctx->problem.n_cc,
                  (long unsigned int)sizeof(struct Continuation_Conditions));
           printf("%s:\tCC structure.\n", yo);
         }
@@ -4065,7 +4068,7 @@ void rd_track_specs(FILE *ifp, char *input) {
          *  Load up cpcc[0] with inputs from above
          *  For angular continuation, also get angle range in radians
          */
-        goma_ctx->fem.cpcc[0].nCC = nCC;
+        goma_ctx->fem.cpcc[0].nCC = goma_ctx->problem.n_cc;
         goma_ctx->fem.cpcc[0].ratio = 1.0;
         goma_ctx->fem.cpcc[0].Type = goma_ctx->fem.cont->upType;
         goma_ctx->fem.cpcc[0].BCID = goma_ctx->fem.cont->upBCID;
@@ -4077,8 +4080,8 @@ void rd_track_specs(FILE *ifp, char *input) {
         goma_ctx->fem.cpcc[0].End_CC_Value = goma_ctx->fem.cont->EndParameterValue;
         range = goma_ctx->fem.cpcc[0].End_CC_Value - goma_ctx->fem.cpcc[0].Beg_CC_Value;
         if (goma_ctx->fem.cont->upType == 6) {
-          beg_angle = BegParameterValue * M_PIE / 180.0;
-          end_angle = EndParameterValue * M_PIE / 180.0;
+          beg_angle = goma_ctx->problem.beg_parameter_value * M_PIE / 180.0;
+          end_angle = goma_ctx->problem.end_parameter_value * M_PIE / 180.0;
         }
         goma_ctx->fem.cpcc[0].fn_flag = 0;
         goma_ctx->fem.cpcc[0].old_value = goma_ctx->fem.cpcc[0].Beg_CC_Value;
@@ -4089,15 +4092,15 @@ void rd_track_specs(FILE *ifp, char *input) {
          */
 
         /* First check for UF/CC conflict (UF has priority) */
-        if (nCC > 1 && goma_ctx->fem.cont->upType == 5) {
+        if (goma_ctx->problem.n_cc > 1 && goma_ctx->fem.cont->upType == 5) {
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s)",
                    "UF continuation overrides CC cards!");
           ECHO(echo_string, echo_file);
-          nCC = 1;
+          goma_ctx->problem.n_cc = 1;
         }
 
-        if (nCC > 1) {
-          for (iCC = 1; iCC < nCC; iCC++) {
+        if (goma_ctx->problem.n_cc > 1) {
+          for (iCC = 1; iCC < goma_ctx->problem.n_cc; iCC++) {
 
             look_for(ifp, "CC", input, '=');
 
@@ -4126,7 +4129,7 @@ void rd_track_specs(FILE *ifp, char *input) {
             }
             SPF(endofstring(echo_string), " %s", input);
 
-            goma_ctx->fem.cpcc[iCC].nCC = nCC;
+            goma_ctx->fem.cpcc[iCC].nCC = goma_ctx->problem.n_cc;
             /*
              *  Read in three required integers (four if type is UM)
              */
@@ -4314,11 +4317,11 @@ void rd_track_specs(FILE *ifp, char *input) {
                 goma_ctx->fem.cpcc[iCC].Beg_CC_Value =
                     goma_ctx->fem.cpcc[iCC].coeff_0 +
                     goma_ctx->fem.cpcc[iCC].coeff_1 *
-                        pow(BegParameterValue, goma_ctx->fem.cpcc[iCC].coeff_2);
+                        pow(goma_ctx->problem.beg_parameter_value, goma_ctx->fem.cpcc[iCC].coeff_2);
                 goma_ctx->fem.cpcc[iCC].End_CC_Value =
                     goma_ctx->fem.cpcc[iCC].coeff_0 +
                     goma_ctx->fem.cpcc[iCC].coeff_1 *
-                        pow(EndParameterValue, goma_ctx->fem.cpcc[iCC].coeff_2);
+                        pow(goma_ctx->problem.end_parameter_value, goma_ctx->fem.cpcc[iCC].coeff_2);
                 FALLTHROUGH;
               default:
                 DPRINTF(stderr, "%s:\tCC[%d] flag must be 0, 1, or 2\n", yo, iCC + 1);
@@ -4338,9 +4341,10 @@ void rd_track_specs(FILE *ifp, char *input) {
 
     } /* End of continuation=LOCA if block */
 
-    if (Continuation == LOCA && (goma_ctx->fem.loca_in->Cont_Alg == TP_CONTINUATION ||
-                                 goma_ctx->fem.loca_in->Cont_Alg == PF_CONTINUATION ||
-                                 goma_ctx->fem.loca_in->Cont_Alg == HP_CONTINUATION)) {
+    if (goma_ctx->problem.continuation == LOCA &&
+        (goma_ctx->fem.loca_in->Cont_Alg == TP_CONTINUATION ||
+         goma_ctx->fem.loca_in->Cont_Alg == PF_CONTINUATION ||
+         goma_ctx->fem.loca_in->Cont_Alg == HP_CONTINUATION)) {
 
       look_for(ifp, "TP Continuation Type", input, '=');
 
@@ -4390,18 +4394,18 @@ void rd_track_specs(FILE *ifp, char *input) {
       ECHO(echo_string, echo_file);
 
       /* Get number of user-defined TP continuation condition functions */
-      nUTC = 0;
+      goma_ctx->problem.n_utc = 0;
       if (TPContType == 5) {
         look_for(ifp, "Number of user TP continuation functions", input, '=');
-        if (fscanf(ifp, "%d", &nUTC) != 1) {
+        if (fscanf(ifp, "%d", &goma_ctx->problem.n_utc) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading Number of user TP continuation functions");
         }
 
         /* Allocate the structure tpuc for each function */
         goma_ctx->fem.tpuc = (struct User_Continuation_Info *)array_alloc(
-            1, nUTC, sizeof(struct User_Continuation_Info));
+            1, goma_ctx->problem.n_utc, sizeof(struct User_Continuation_Info));
 
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, nUTC);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->problem.n_utc);
         ECHO(echo_string, echo_file);
       }
 
@@ -4533,22 +4537,22 @@ void rd_track_specs(FILE *ifp, char *input) {
           ECHO(echo_string, echo_file);
         }
       }
-      nTC = 1;
+      goma_ctx->problem.n_tc = 1;
       iread = look_for_optional(ifp, "Number of TP continuation conditions", input, '=');
       if (iread == 1) {
-        if (fscanf(ifp, "%d", &nTC) != 1) {
+        if (fscanf(ifp, "%d", &goma_ctx->problem.n_tc) != 1) {
           GOMA_EH(GOMA_ERROR, "error reading Number of TP continuation conditions");
         }
 
-        if (nTC == -1) {
-          nTC = count_list(ifp, "TC", input, '=', "END OF TC") + 1;
+        if (goma_ctx->problem.n_tc == -1) {
+          goma_ctx->problem.n_tc = count_list(ifp, "TC", input, '=', "END OF TC") + 1;
         }
 
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, nTC);
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->problem.n_tc);
         ECHO(echo_string, echo_file);
 
-        if (nTC < 1) {
-          Continuation = ALC_NONE;
+        if (goma_ctx->problem.n_tc < 1) {
+          goma_ctx->problem.continuation = ALC_NONE;
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s)",
                    "No TP continuation conditions specified");
           ECHO(echo_string, echo_file);
@@ -4559,7 +4563,7 @@ void rd_track_specs(FILE *ifp, char *input) {
       /*
        *  For angular continuation, ensure at least one angular TC is specified
        */
-      if (TPContType == 6 && nTC < 2) {
+      if (TPContType == 6 && goma_ctx->problem.n_tc < 2) {
         GOMA_EH(GOMA_ERROR, "Angular TP continuation requires at least one TC card!");
       }
 
@@ -4568,10 +4572,10 @@ void rd_track_specs(FILE *ifp, char *input) {
        */
 
       goma_ctx->fem.tpcc = (struct Continuation_Conditions *)array_alloc(
-          1, nTC, sizeof(struct Continuation_Conditions));
+          1, goma_ctx->problem.n_tc, sizeof(struct Continuation_Conditions));
 
       if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
-        printf("%s:\tallocated %d copies of the %lu sized\n", yo, nTC,
+        printf("%s:\tallocated %d copies of the %lu sized\n", yo, goma_ctx->problem.n_tc,
                (long unsigned int)sizeof(struct Continuation_Conditions));
         printf("%s:\tTC structure.\n", yo);
       }
@@ -4580,7 +4584,7 @@ void rd_track_specs(FILE *ifp, char *input) {
        *  Load up tpcc[0] with inputs from above
        *  For angular continuation, also get angle range in radians
        */
-      goma_ctx->fem.tpcc[0].nCC = nTC;
+      goma_ctx->fem.tpcc[0].nCC = goma_ctx->problem.n_tc;
       goma_ctx->fem.tpcc[0].ratio = 1.0;
       goma_ctx->fem.tpcc[0].Type = goma_ctx->fem.loca_in->TPupType;
       goma_ctx->fem.tpcc[0].BCID = goma_ctx->fem.loca_in->TPupBCID;
@@ -4604,17 +4608,17 @@ void rd_track_specs(FILE *ifp, char *input) {
        */
 
       /* First check for UF/TC conflict (UF has priority) */
-      if (nTC > 1 && goma_ctx->fem.loca_in->TPupType == 5) {
+      if (goma_ctx->problem.n_tc > 1 && goma_ctx->fem.loca_in->TPupType == 5) {
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s)", "UF continuation overrides TC cards!");
         ECHO(echo_string, echo_file);
-        nTC = 1;
+        goma_ctx->problem.n_tc = 1;
       }
 
-      if (nTC > 1) {
+      if (goma_ctx->problem.n_tc > 1) {
 
-        for (iTC = 1; iTC < nTC; iTC++) {
+        for (iTC = 1; iTC < goma_ctx->problem.n_tc; iTC++) {
 
-          goma_ctx->fem.tpcc[iTC].nCC = nTC;
+          goma_ctx->fem.tpcc[iTC].nCC = goma_ctx->problem.n_tc;
 
           look_for(ifp, "TC", input, '=');
           snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", input);
@@ -4827,11 +4831,11 @@ void rd_track_specs(FILE *ifp, char *input) {
               goma_ctx->fem.tpcc[iTC].Beg_CC_Value =
                   goma_ctx->fem.tpcc[iTC].coeff_0 +
                   goma_ctx->fem.tpcc[iTC].coeff_1 *
-                      pow(BegParameterValue, goma_ctx->fem.tpcc[iTC].coeff_2);
+                      pow(goma_ctx->problem.beg_parameter_value, goma_ctx->fem.tpcc[iTC].coeff_2);
               goma_ctx->fem.tpcc[iTC].End_CC_Value =
                   goma_ctx->fem.tpcc[iTC].coeff_0 +
                   goma_ctx->fem.tpcc[iTC].coeff_1 *
-                      pow(EndParameterValue, goma_ctx->fem.tpcc[iTC].coeff_2);
+                      pow(goma_ctx->problem.end_parameter_value, goma_ctx->fem.tpcc[iTC].coeff_2);
               break;
             default:
               fprintf(stderr, "%s:\tTC[%d] flag must be 0-3\n", yo, iTC + 1);
@@ -4879,8 +4883,9 @@ void rd_hunt_specs(FILE *ifp, char *input) {
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
   char *echo_file = goma_ctx->echo_input_file;
 
-  if ((Continuation != HUN_ZEROTH) && (Continuation != HUN_FIRST) && (Continuation != LOCA)) {
-    nHC = 0;
+  if ((goma_ctx->problem.continuation != HUN_ZEROTH) &&
+      (goma_ctx->problem.continuation != HUN_FIRST) && (goma_ctx->problem.continuation != LOCA)) {
+    goma_ctx->problem.n_hc = 0;
     return;
   }
 
@@ -4889,7 +4894,7 @@ void rd_hunt_specs(FILE *ifp, char *input) {
   iread = look_for_optional(ifp, "Hunting Specifications", input, '=');
 
   if (iread != 1) {
-    nHC = 0;
+    goma_ctx->problem.n_hc = 0;
     return;
   } else {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s =", input);
@@ -4897,7 +4902,7 @@ void rd_hunt_specs(FILE *ifp, char *input) {
   }
 
   look_for(ifp, "Number of hunting conditions", input, '=');
-  if (fscanf(ifp, "%d", &nHC) != 1) {
+  if (fscanf(ifp, "%d", &goma_ctx->problem.n_hc) != 1) {
     GOMA_EH(GOMA_ERROR, "error reading Number of hunting conditions");
   }
 
@@ -4905,38 +4910,39 @@ void rd_hunt_specs(FILE *ifp, char *input) {
    * Count hunting conditions if nHC is set to -1
    */
 
-  if (nHC == -1) {
-    nHC = count_list(ifp, "HC", input, '=', "END OF HC");
+  if (goma_ctx->problem.n_hc == -1) {
+    goma_ctx->problem.n_hc = count_list(ifp, "HC", input, '=', "END OF HC");
   }
 
-  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, nHC);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, goma_ctx->problem.n_hc);
   ECHO(echo_string, echo_file);
 
   /*
    *  Allocate space for the vector hunt
    */
 
-  if (nHC == 0) {
-    Continuation = -1;
+  if (goma_ctx->problem.n_hc == 0) {
+    goma_ctx->problem.continuation = -1;
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "\t(%s)",
              "No hunting - reverting to no continuation");
     ECHO(echo_string, echo_file);
     return;
   }
 
-  goma_ctx->fem.hunt = (struct HC_Information *)array_alloc(1, nHC, sizeof(struct HC_Information));
+  goma_ctx->fem.hunt = (struct HC_Information *)array_alloc(1, goma_ctx->problem.n_hc,
+                                                            sizeof(struct HC_Information));
 
   if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
-    printf("%s:\tallocated %d copies of the %lu sized\n", yo, nHC,
+    printf("%s:\tallocated %d copies of the %lu sized\n", yo, goma_ctx->problem.n_hc,
            (long unsigned int)sizeof(struct HC_Information));
     printf("%s:\tHC structure.\n", yo);
   }
 
-  goma_ctx->fem.hunt[0].nHC = nHC;
+  goma_ctx->fem.hunt[0].nHC = goma_ctx->problem.n_hc;
 
-  for (iHC = 0; iHC < nHC; iHC++) {
+  for (iHC = 0; iHC < goma_ctx->problem.n_hc; iHC++) {
 
-    goma_ctx->fem.hunt[iHC].nHC = nHC;
+    goma_ctx->fem.hunt[iHC].nHC = goma_ctx->problem.n_hc;
 
     look_for(ifp, "HC", input, '=');
 
@@ -5047,14 +5053,14 @@ void rd_hunt_specs(FILE *ifp, char *input) {
   }
 
   /* This section is required for backward compatibility - EDW */
-  if (Continuation == LOCA) {
+  if (goma_ctx->problem.continuation == LOCA) {
 
     /* Allocate cpcc for specified number of HC's here.*/
-    nCC = nHC;
+    goma_ctx->problem.n_cc = goma_ctx->problem.n_hc;
     goma_ctx->fem.cpcc = (struct Continuation_Conditions *)array_alloc(
-        1, nCC, sizeof(struct Continuation_Conditions));
+        1, goma_ctx->problem.n_cc, sizeof(struct Continuation_Conditions));
     if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
-      printf("%s:\tallocated %d new copies of the %lu sized\n", yo, nCC,
+      printf("%s:\tallocated %d new copies of the %lu sized\n", yo, goma_ctx->problem.n_cc,
              (long unsigned int)sizeof(struct Continuation_Conditions));
       printf("%s:\tCC structure.\n", yo);
     }
@@ -5065,8 +5071,8 @@ void rd_hunt_specs(FILE *ifp, char *input) {
       goma_ctx->fem.hunt[0].Delta_s0 = range_0 / ((double)(goma_ctx->fem.cont->MaxPathSteps - 1));
       goma_ctx->fem.loca_in->StepAggr = 0.0;
     }
-    for (iHC = 0; iHC < nHC; iHC++) {
-      goma_ctx->fem.cpcc[iHC].nCC = nHC;
+    for (iHC = 0; iHC < goma_ctx->problem.n_hc; iHC++) {
+      goma_ctx->fem.cpcc[iHC].nCC = goma_ctx->problem.n_hc;
       goma_ctx->fem.cpcc[iHC].Type = goma_ctx->fem.hunt[iHC].Type;
       switch (goma_ctx->fem.hunt[iHC].Type) {
       case 3: /* AC */
@@ -5169,7 +5175,7 @@ void rd_ac_specs(FILE *ifp, char *input) {
     return;
   }
 
-  if (fscanf(ifp, "%d", &nAC) != 1) {
+  if (fscanf(ifp, "%d", &goma_ctx->problem.n_ac) != 1) {
     GOMA_EH(GOMA_ERROR, "error reading Number of augmenting conditions");
   }
   ECHO("\n***Augmenting Conditions***\n", echo_file);
@@ -5178,28 +5184,29 @@ void rd_ac_specs(FILE *ifp, char *input) {
    * Count augmenting conditions if nAC is set to -1
    */
 
-  if (nAC == -1) {
-    nAC = count_list(ifp, "AC", input, '=', "END OF AC");
+  if (goma_ctx->problem.n_ac == -1) {
+    goma_ctx->problem.n_ac = count_list(ifp, "AC", input, '=', "END OF AC");
   }
 
   /*
    * Add one more AC if doing arc length continuation
    */
 
-  nAC1 = nAC;
-  if (nAC > 0 && goma_ctx->fem.loca_in->Cont_Order == 2) {
+  nAC1 = goma_ctx->problem.n_ac;
+  if (goma_ctx->problem.n_ac > 0 && goma_ctx->fem.loca_in->Cont_Order == 2) {
     do_alc = TRUE;
-    nAC++;
+    goma_ctx->problem.n_ac++;
   }
 
-  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of augmenting conditions", nAC);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of augmenting conditions",
+           goma_ctx->problem.n_ac);
   ECHO(echo_string, echo_file);
 
   /*
    *  Allocate space for the vector augc
    */
 
-  if (nAC == 0) {
+  if (goma_ctx->problem.n_ac == 0) {
     return;
   }
 
@@ -5228,20 +5235,20 @@ void rd_ac_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
-  goma_ctx->fem.augc = alloc_struct_1(struct AC_Information, nAC);
+  goma_ctx->fem.augc = alloc_struct_1(struct AC_Information, goma_ctx->problem.n_ac);
 
   if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
-    printf("%s:\tallocated %d copies of the %lu sized\n", yo, nAC,
+    printf("%s:\tallocated %d copies of the %lu sized\n", yo, goma_ctx->problem.n_ac,
            (long unsigned int)sizeof(struct AC_Information));
     printf("%s:\tAC structure.\n", yo);
   }
 
-  goma_ctx->fem.augc[0].nAC = nAC;
+  goma_ctx->fem.augc[0].nAC = goma_ctx->problem.n_ac;
 
   for (iAC = 0; iAC < nAC1; iAC++) /* Begin loop over ACs */
   {
 
-    goma_ctx->fem.augc[iAC].nAC = nAC;
+    goma_ctx->fem.augc[iAC].nAC = goma_ctx->problem.n_ac;
     goma_ctx->fem.augc[iAC].BCID = -99;
     goma_ctx->fem.augc[iAC].MTID = -99;
     goma_ctx->fem.augc[iAC].VOLID = -99;
@@ -5878,7 +5885,7 @@ void rd_ac_specs(FILE *ifp, char *input) {
       }
 
       /* If these tests were passed, set global flag */
-      Do_Overlap = TRUE;
+      goma_ctx->problem.do_overlap = TRUE;
 
       SPF(endofstring(echo_string), " %d %d %d %d", goma_ctx->fem.augc[iAC].SSID,
           goma_ctx->fem.augc[iAC].solid_eb, goma_ctx->fem.augc[iAC].fluid_eb,
@@ -7580,7 +7587,7 @@ void rd_eigen_specs(FILE *ifp, char *input) {
     strip(input);
 
     /* Handle based on selected continuation */
-    switch (Continuation) {
+    switch (goma_ctx->problem.continuation) {
 
       /* LOCA continuation: default to shift and invert */
     case LOCA:
@@ -7615,7 +7622,7 @@ void rd_eigen_specs(FILE *ifp, char *input) {
 
     case HUN_ZEROTH:
     case HUN_FIRST:
-      fprintf(stderr, "HUN %d %d %d\n", nHC, goma_ctx->fem.hunt[0].Type,
+      fprintf(stderr, "HUN %d %d %d\n", goma_ctx->problem.n_hc, goma_ctx->fem.hunt[0].Type,
               goma_ctx->fem.hunt[0].BCID);
       if (strcmp(input, "cayley") == 0) {
         goma_ctx->fem.eigen->Eigen_Algorithm = LSA_CAYLEY;
@@ -8052,7 +8059,7 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
    * Identify section containing equation specification...
    */
 
-  Use_DG = FALSE;
+  goma_ctx->problem.use_dg = FALSE;
   look_for_optional(ifp, "Problem Description", input, '=');
   ECHO("\nProblem Description =\n", echo_input_file);
 
@@ -8085,10 +8092,10 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
   goma_ctx->fem.upd->Max_Num_Species = -123456789;     /* initialize */
   goma_ctx->fem.upd->Max_Num_Porous_Eqn = -123456789;  /* initialize */
 
-  Num_Interpolations = 0; /* Initialize counter (cf rf_fem.h) */
+  goma_ctx->problem.num_interpolations = 0; /* Initialize counter (cf rf_fem.h) */
 
   for (i = 0; i < MAX_INTERPOLATIONS; i++) {
-    Unique_Interpolations[i] = I_NOTHING;
+    goma_ctx->problem.unique_interpolations[i] = I_NOTHING;
   }
 
   for (imtrx = 0; imtrx < MAX_NUM_MATRICES; imtrx++) {
@@ -8123,9 +8130,9 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
      * augmented condition index associated with the Volume Integral
      * constraint.
      */
-    if (nAC > 0) {
+    if (goma_ctx->problem.n_ac > 0) {
       int iAC;
-      for (iAC = 0; iAC < nAC; iAC++) {
+      for (iAC = 0; iAC < goma_ctx->problem.n_ac; iAC++) {
         if (goma_ctx->fem.augc[iAC].Type == AC_VOLUME) {
           if (eb_in_matrl(goma_ctx->fem.augc[iAC].MTID, mn)) {
             goma_ctx->fem.pd_glob[mn]->VolumeIntegral = iAC;
@@ -8387,23 +8394,23 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
     GOMA_EH(GOMA_ERROR, "error reading Coordinate System");
   }
   if (!strcasecmp(tscs, "CARTESIAN")) {
-    CoordinateSystem = CARTESIAN;
+    goma_ctx->problem.coordinate_system = CARTESIAN;
   } else if (!strcasecmp(tscs, "CYLINDRICAL")) {
-    CoordinateSystem = CYLINDRICAL;
+    goma_ctx->problem.coordinate_system = CYLINDRICAL;
   } else if (!strcasecmp(tscs, "SPHERICAL")) {
-    CoordinateSystem = SPHERICAL;
+    goma_ctx->problem.coordinate_system = SPHERICAL;
   } else if (!strcasecmp(tscs, "SWIRLING")) {
-    CoordinateSystem = SWIRLING;
+    goma_ctx->problem.coordinate_system = SWIRLING;
   } else if (!strcasecmp(tscs, "PROJECTED_CARTESIAN")) {
-    CoordinateSystem = PROJECTED_CARTESIAN;
+    goma_ctx->problem.coordinate_system = PROJECTED_CARTESIAN;
   } else if (!strcasecmp(tscs, "CARTESIAN_2pt5D")) {
-    CoordinateSystem = CARTESIAN_2pt5D;
+    goma_ctx->problem.coordinate_system = CARTESIAN_2pt5D;
   } else {
     GOMA_EH(GOMA_ERROR, "Unknown coordinate system.\n");
   }
 
-  pd_ptr->CoordinateSystem = CoordinateSystem;
-  goma_ctx->fem.upd->CoordinateSystem = CoordinateSystem;
+  pd_ptr->CoordinateSystem = goma_ctx->problem.coordinate_system;
+  goma_ctx->fem.upd->CoordinateSystem = goma_ctx->problem.coordinate_system;
 
   snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Coordinate System", tscs);
   ECHO(echo_string, echo_file);
@@ -8920,7 +8927,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         ce = set_eqn(PSTAR, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "stress11")) {
         ce = set_eqn(R_STRESS11, mtrx_index0, pd_ptr);
-        Use_DG = TRUE;
+        goma_ctx->problem.use_dg = TRUE;
       } else if (!strcasecmp(ts, "stress12")) {
         ce = set_eqn(R_STRESS12, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "stress13")) {
@@ -9455,13 +9462,15 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
        * just the right kinds of basis function derivatives that we need...
        */
 
-      if (in_list(pd_ptr->w[mtrx_index0][ce], 0, Num_Interpolations, Unique_Interpolations) == -1) {
-        Unique_Interpolations[Num_Interpolations] = pd_ptr->w[mtrx_index0][ce];
+      if (in_list(pd_ptr->w[mtrx_index0][ce], 0, goma_ctx->problem.num_interpolations,
+                  goma_ctx->problem.unique_interpolations) == -1) {
+        goma_ctx->problem.unique_interpolations[goma_ctx->problem.num_interpolations] =
+            pd_ptr->w[mtrx_index0][ce];
         if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
-          fprintf(stdout, "Unique_Interpolations[%d] = %d\n", Num_Interpolations,
+          fprintf(stdout, "Unique_Interpolations[%d] = %d\n", goma_ctx->problem.num_interpolations,
                   pd_ptr->w[mtrx_index0][ce]);
         }
-        Num_Interpolations++;
+        goma_ctx->problem.num_interpolations++;
       }
 
       /*
@@ -9962,9 +9971,11 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
        * just the right kinds of basis function derivatives that we need...
        */
 
-      if (in_list(pd_ptr->i[mtrx_index0][cv], 0, Num_Interpolations, Unique_Interpolations) == -1) {
-        Unique_Interpolations[Num_Interpolations] = pd_ptr->i[mtrx_index0][cv];
-        Num_Interpolations++;
+      if (in_list(pd_ptr->i[mtrx_index0][cv], 0, goma_ctx->problem.num_interpolations,
+                  goma_ctx->problem.unique_interpolations) == -1) {
+        goma_ctx->problem.unique_interpolations[goma_ctx->problem.num_interpolations] =
+            pd_ptr->i[mtrx_index0][cv];
+        goma_ctx->problem.num_interpolations++;
       }
 
       /*
@@ -10466,7 +10477,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_BOUNDARY)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_DIFFUSION)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_SOURCE)])) != 5) {
-          if (TimeIntegration == TRANSIENT || Linear_Stability != LSA_NONE) {
+          if (goma_ctx->problem.time_integration == TRANSIENT || Linear_Stability != LSA_NONE) {
             pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)] = 1.0;
           } else {
             pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)] = .0;
@@ -10513,7 +10524,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_DIFFUSION)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_SOURCE)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_POROUS_BRINK)])) != 6) {
-          if (TimeIntegration == TRANSIENT || Linear_Stability != LSA_NONE) {
+          if (goma_ctx->problem.time_integration == TRANSIENT || Linear_Stability != LSA_NONE) {
             pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)] = 1.0;
           } else {
             pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)] = .0;
@@ -12495,9 +12506,9 @@ void apply_command_line(struct Command_line_command **clc, int nclc)
               goma_ctx->fem.cont->Delta_s_max, b, "Maximum path step", clc[i]->r_val);
       goma_ctx->fem.cont->Delta_s_max = clc[i]->r_val;
     } else if (clc[i]->type == CONT_METHOD) {
-      fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Continuation", Continuation, b,
-              "Continuation", clc[i]->i_val);
-      Continuation = clc[i]->i_val;
+      fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Continuation",
+              goma_ctx->problem.continuation, b, "Continuation", clc[i]->i_val);
+      goma_ctx->problem.continuation = clc[i]->i_val;
     } else if (clc[i]->type == CONT_TYPE) {
       fprintf(stdout, "%s%40s= %d ...\n%s%40s= %d ...\n", a, "Continuation Type",
               goma_ctx->fem.cont->upType, b, "Continuation Type", clc[i]->i_val);

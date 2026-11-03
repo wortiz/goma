@@ -216,7 +216,7 @@ void rd_particle_specs(FILE *ifp, char *input) {
 
   /* Get maximum number of particle time steps if we're running after
    * a steady-state solution... */
-  if (TimeIntegration == STEADY) {
+  if (goma_ctx->problem.time_integration == STEADY) {
     if (look_for_optional(ifp, "Time steps", input, '=') == 1) {
       if (fscanf(ifp, "%d", &goma_ctx->particles.max_time_steps) != 1)
         GOMA_EH(GOMA_ERROR, "Error reading Time steps card for post-steady problem.");

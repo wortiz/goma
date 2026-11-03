@@ -417,7 +417,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
       dbl strong_residual = 0;
       strong_residual = goma_ctx->fem.fv_dot_old->c[w];
-      for (int p = 0; p < VIM; p++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
         strong_residual += goma_ctx->fem.fv_old->v[p] * goma_ctx->fem.fv_old->grad_c[w][p];
       }
       dbl h_elem = 0;
@@ -563,14 +563,14 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
           advection = 0.0;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
             advection_a = 0.0;
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               advection_a += s_terms.conv_flux[w][p];
             }
 
             if (goma_ctx->fem.upd->PSPG_advection_correction) {
               advection -= pspg[0] * goma_ctx->fem.fv->grad_c[w][0];
               advection -= pspg[1] * goma_ctx->fem.fv->grad_c[w][1];
-              if (VIM == 3)
+              if (goma_ctx->problem.vim == 3)
                 advection -= pspg[2] * goma_ctx->fem.fv->grad_c[w][2];
             }
 
@@ -578,7 +578,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
                 goma_ctx->fem.mp->SpeciesSourceModel[w] == ION_REACTIONS) /*  RSL 3/19/01  */
             {
               psum = 0.;
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 sumflux = 0.;
                 sumfluxm = 0.;
                 for (j = 0; j < num_species - 1; j++) {
@@ -597,7 +597,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
             advection_b = 0.;
             if (taylor_galerkin[w]) {
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 advection_b += s_terms.taylor_flux[w][p];
               }
               advection_b *= -coeff_rho * s_terms.taylor_flux_wt[i] * dt / 2.;
@@ -617,11 +617,11 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
            */
           diffusion = 0.;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
             }
 
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               diffusion += grad_phi_i[p] * s_terms.diff_flux[w][p];
             }
 
@@ -637,7 +637,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
           }
           dbl sc_val = 0;
           if (shock_capture) {
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               sc_val +=
                   yzbeta * goma_ctx->fem.bf[eqn]->grad_phi[i][p] * goma_ctx->fem.fv->grad_c[w][i];
             }
@@ -760,7 +760,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
            * equation for bunches of (b,j) column variables...
            */
 
-          for (p = 0; p < VIM; p++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
           }
 
@@ -824,7 +824,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
                 advection = 0.;
                 if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
                   advection_a = 0.;
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     advection_a += coeff_rho * s_terms.d_conv_flux_dc[w][p][w1][j];
                     if (coeff_rho_nonunity) {
                       advection_a += d_rho->C[w1][j] * s_terms.conv_flux[w][p];
@@ -838,7 +838,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
                     psum2 = 0.;
                     psum3 = 0.;
                     psum4 = 0.;
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       psum1 += s_terms.conv_flux[w][p];
                       psum2 += s_terms.d_conv_flux_dc[w][p][w1][j];
                       sumflux = 0.;
@@ -873,7 +873,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
                   advection_b = 0.;
                   if (taylor_galerkin[w]) {
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       advection_b += coeff_rho * s_terms.d_taylor_flux_dc[w][p][w1][j];
                       if (coeff_rho_nonunity) {
                         advection_b += d_rho->C[w1][j] * s_terms.conv_flux[w][p];
@@ -890,7 +890,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
                 diffusion = 0.;
                 if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dc[w][p][w1][j];
                   }
 
@@ -908,7 +908,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
                 dbl sc_val = 0;
                 if (shock_capture) {
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     sc_val += yzbeta * goma_ctx->fem.bf[eqn]->grad_phi[i][p] *
                               goma_ctx->fem.bf[var]->grad_phi[j][p];
                   }
@@ -1031,7 +1031,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
                   advection_c = 0.;
                   if (taylor_galerkin[w]) {
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       advection_c += s_terms.taylor_flux[w][p];
                     }
                     advection_c *=
@@ -1049,7 +1049,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
                 diffusion = 0.;
 
                 if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dv[w][p][b][j];
                   }
                   diffusion *= h3 * det_J * wt *
@@ -1102,7 +1102,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
                 diffusion = 0.;
 
                 if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dvd[w][p][b][j];
                   }
                   diffusion *= h3 * det_J * wt *
@@ -1177,7 +1177,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
                    */
                   advection_a = 0.;
 
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     advection_a += s_terms.d_conv_flux_dmesh[w][p][b][j];
                   }
 
@@ -1185,7 +1185,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
                       goma_ctx->fem.mp->SpeciesSourceModel[w] == ION_REACTIONS) /*  RSL 9/27/01  */
                   {
                     psum = 0.;
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       sumdflux = 0.;
                       sumdfluxm = 0.;
                       for (q = 0; q < num_species - 1; q++) {
@@ -1203,7 +1203,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
                   advection_b = 0.;
 
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     advection_b += s_terms.conv_flux[w][p];
                   }
 
@@ -1211,7 +1211,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
                       goma_ctx->fem.mp->SpeciesSourceModel[w] == ION_REACTIONS) /*  RSL 9/27/01  */
                   {
                     psum = 0.;
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       sumflux = 0.;
                       sumfluxm = 0.;
                       for (q = 0; q < num_species - 1; q++) {
@@ -1229,7 +1229,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
                   if (taylor_galerkin[w]) {
                     advection_c = 0.;
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       advection_c += s_terms.taylor_flux[w][p];
                     }
                     advection_c *= -coeff_rho * s_terms.taylor_flux_wt[i] * dt / 2.;
@@ -1249,7 +1249,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
                   advection_d = 0.;
                   if (taylor_galerkin[w]) {
                     advection_e = 0.;
-                    for (p = 0; p < VIM; p++) {
+                    for (p = 0; p < goma_ctx->problem.vim; p++) {
                       advection_d += s_terms.d_taylor_flux_dmesh[w][p][b][j];
                       advection_e += s_terms.taylor_flux[w][p];
                     }
@@ -1280,7 +1280,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
                   diff_a = 0.;
 
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     dgrad_phi_i_dmesh[p] = goma_ctx->fem.bf[eqn]->d_grad_phi_dmesh[i][p][b][j];
 
                     diff_a += dgrad_phi_i_dmesh[p] * s_terms.diff_flux[w][p];
@@ -1289,14 +1289,14 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
                   diff_a *= h3 * det_J * wt;
 
                   diff_b = 0.;
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     diff_b += goma_ctx->fem.bf[eqn]->grad_phi[i][p] *
                               s_terms.d_diff_flux_dmesh[w][p][b][j];
                   }
                   diff_b *= h3 * det_J * wt;
 
                   diff_c = 0.;
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     diff_c += goma_ctx->fem.bf[eqn]->grad_phi[i][p] * s_terms.diff_flux[w][p];
                   }
                   diff_c *= (h3 * d_det_J_dmeshbj + dh3dmesh_bj * det_J) * wt;
@@ -1314,7 +1314,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
                 }
                 dbl sc_val = 0;
                 if (shock_capture) {
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     sc_val += yzbeta * goma_ctx->fem.bf[eqn]->grad_phi[i][p] *
                               goma_ctx->fem.fv->d_grad_c_dmesh[w][i][b][j];
                     sc_val += yzbeta * goma_ctx->fem.bf[eqn]->d_grad_phi_dmesh[i][p][b][j] *
@@ -1392,7 +1392,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
               advection = 0.;
               if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
-                for (p = 0; p < VIM; p++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
                   advection += coeff_rho * s_terms.d_conv_flux_dT[w][p][j];
                   if (coeff_rho_nonunity) {
                     advection += d_rho->T[j] * s_terms.conv_flux[w][p];
@@ -1402,7 +1402,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
                 if (taylor_galerkin[w]) {
                   advection_a = 0.;
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     advection_a += coeff_rho * s_terms.taylor_flux[w][p];
                     if (coeff_rho_nonunity) {
                       advection += d_rho->T[j] * s_terms.conv_flux[w][p];
@@ -1419,7 +1419,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
               diffusion = 0.;
               if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-                for (p = 0; p < VIM; p++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
                   diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dT[w][p][j];
                 }
                 diffusion *= h3 * det_J * wt;
@@ -1531,7 +1531,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
                 diffusion = 0.;
                 if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dV[w][p][j];
                   }
 
@@ -1583,7 +1583,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 diffusion = 0.;
                 if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dV[w][p][j];
                   }
                   diffusion *= h3 * det_J * wt;
@@ -1619,7 +1619,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
 
               diffusion = 0.;
               if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-                for (p = 0; p < VIM; p++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
                   diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dP[w][p][j];
                 }
                 diffusion *= h3 * det_J * wt;
@@ -1630,7 +1630,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
                  mass (or volume) fraction */
               advection = 0.;
               if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
-                for (p = 0; p < VIM; p++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
                   advection += rho * s_terms.d_conv_flux_dP[w][p][j];
                 }
                 advection *= -wt_func;
@@ -1660,7 +1660,7 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 diffusion = 0.0;
                 if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION)
-                  for (p = 0; p < VIM; p++) {
+                  for (p = 0; p < goma_ctx->problem.vim; p++) {
                     diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dSH[w][p][j];
                   }
                 diffusion *= h3 * det_J * wt;
@@ -1710,15 +1710,15 @@ int assemble_mass_transport(double time, /* present time valuel; KSC            
             v_g[2][1] = VELOCITY_GRADIENT32;
             v_g[2][2] = VELOCITY_GRADIENT33;
 
-            for (b = 0; b < VIM; b++) {
-              for (c = 0; c < VIM; c++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
+              for (c = 0; c < goma_ctx->problem.vim; c++) {
                 var = v_g[b][c];
                 if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
                   pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
                   for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                     diffusion = 0.0;
                     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION)
-                      for (p = 0; p < VIM; p++) {
+                      for (p = 0; p < goma_ctx->problem.vim; p++) {
                         diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dG[w][p][b][c][j];
                       }
                     diffusion *= h3 * det_J * wt;
@@ -2042,7 +2042,7 @@ int assemble_mass_transport_path_dependence(
           advection = 0.0;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
             advection_a = 0.0;
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               advection_a += s_terms.conv_flux[w][p];
             }
 
@@ -2050,7 +2050,7 @@ int assemble_mass_transport_path_dependence(
                 goma_ctx->fem.mp->SpeciesSourceModel[w] == ION_REACTIONS) /*  RSL 3/19/01  */
             {
               psum = 0.;
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 sumflux = 0.;
                 sumfluxm = 0.;
                 for (j = 0; j < num_species - 1; j++) {
@@ -2069,7 +2069,7 @@ int assemble_mass_transport_path_dependence(
 
             advection_b = 0.;
             if (taylor_galerkin[w]) {
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 advection_b += s_terms.taylor_flux[w][p];
               }
               advection_b *= -coeff_rho * s_terms.taylor_flux_wt[i] * dt / 2.;
@@ -2089,11 +2089,11 @@ int assemble_mass_transport_path_dependence(
            */
           diffusion = 0.;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               grad_phi_i[p] = goma_ctx->fem.bf[eqn]->grad_phi[i][p];
             }
 
-            for (p = 0; p < VIM; p++) {
+            for (p = 0; p < goma_ctx->problem.vim; p++) {
               diffusion += grad_phi_i[p] * s_terms.diff_flux[w][p];
             }
 
@@ -2224,7 +2224,7 @@ void mass_flux_surf_BV(dbl mass_flux[MAX_CONC],
   double PHI;               /* electrical potential in electrolyte phase */
   double conc, conc1, grpa, grpc;
 
-  if (nAC) { /* if augmenting condition card is active, then  */
+  if (goma_ctx->problem.n_ac) { /* if augmenting condition card is active, then  */
     goma_ctx->fem.mp->electrode_potential =
         V; /* set electrode potential to be used in current_BV_surf */
   }
@@ -4001,7 +4001,7 @@ void kinematic_species_bc(double func[DIM],
             phi_j = goma_ctx->fem.bf[var]->phi[j];
             d_func[0][var][j] += (mass_c * (goma_ctx->fem.fv->v[kdir] - x_dot[kdir]) *
                                   goma_ctx->fem.fv->dsnormal_dx[kdir][p][j]);
-            if (TimeIntegration != 0 && p == kdir) {
+            if (goma_ctx->problem.time_integration != 0 && p == kdir) {
               d_func[0][var][j] += (mass_c * (-(1. + 2. * tt) * phi_j / dt) *
                                     goma_ctx->fem.fv->snormal[kdir] * delta(p, kdir));
             }
@@ -7976,7 +7976,7 @@ void compute_leak_velocity(double *vnorm,
   } /*while ( fluxbc != NULL ) */
 
   if (add_fluxes) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       if (goma_ctx->fem.cr->MassFluxModel == FICKIAN ||
           goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL ||
           goma_ctx->fem.cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
@@ -8004,10 +8004,10 @@ void compute_leak_velocity(double *vnorm,
       }
     }
     if (goma_ctx->fem.af->Assemble_Jacobian && d_vnorm != NULL) {
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         var = MESH_DISPLACEMENT1;
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-          for (q = 0; q < VIM; q++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
               if (goma_ctx->fem.cr->MassFluxModel == FICKIAN) {
                 if (Diffusivity())
@@ -8133,7 +8133,7 @@ void compute_leak_velocity_heat(double *vnorm,
   k = conductivity(d_k, goma_ctx->fem.tran->time_value);
   local_q = 0.;
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     local_q += -k * goma_ctx->fem.fv->snormal[a] * goma_ctx->fem.fv->grad_T[a];
   }
   vnormal += -local_q / latent_heat_vap;
@@ -8142,7 +8142,7 @@ void compute_leak_velocity_heat(double *vnorm,
     var = TEMPERATURE;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           d_vnorm->T[j] += k * goma_ctx->fem.fv->snormal[a] *
                            goma_ctx->fem.bf[var]->grad_phi[j][a] / latent_heat_vap;
         }
@@ -9050,7 +9050,7 @@ void kin_bc_electrodeposition(double func[],
 
   /* calculate -xdot and its derivatives */
 
-  for (p = 0; p < VIM; p++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
     nxdot[p] = 0.;
     if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][R_MESH1]) {
@@ -9061,7 +9061,7 @@ void kin_bc_electrodeposition(double func[],
   }
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         var = MESH_DISPLACEMENT1 + p;
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
@@ -9640,7 +9640,7 @@ int get_convection_velocity(
   if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
     /* calculate v - xdot and it's derivatives */
 
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       vconv[p] = goma_ctx->fem.fv->v[p];
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
         vconv_old[p] = goma_ctx->fem.fv_old->v[p];
@@ -9654,7 +9654,7 @@ int get_convection_velocity(
     }
 
     if (goma_ctx->fem.af->Assemble_Jacobian && d_vconv != NULL) {
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         var = VELOCITY1 + p;
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
           for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
@@ -9756,7 +9756,7 @@ int get_convection_velocity(
         GOMA_WH(-1, "negative nonvolatile volume fraction %g %g", volsolid, goma_ctx->fem.fv->c[0]);
       }
 
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         vconv[p] = 0.;
         vconv_old[p] = 0.;
         if (goma_ctx->fem.cr->MassFluxModel == FICKIAN ||
@@ -9798,7 +9798,7 @@ int get_convection_velocity(
         }
       }
 
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         vconv[p] /= volsolid;
         if (goma_ctx->fem.pd->TimeIntegration != STEADY)
           vconv_old[p] /= volsolid_old;
@@ -9992,7 +9992,7 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
     }
   }
   for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       st->grad_Y[w][a] = goma_ctx->fem.fv->grad_c[w][a];
       /* note, this is zero for steady calculations */
       /* keep this only for VOF/Taylor-Galerkin stuff */
@@ -10126,14 +10126,14 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
       if (explicit[w]) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; j++) {
           st->taylor_flux_wt[j] = 0.;
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             st->taylor_flux_wt[j] += conv_old[a] * goma_ctx->fem.bf[eqn]->grad_phi[j][a];
           }
         }
       } else {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; j++) {
           st->taylor_flux_wt[j] = 0.;
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             st->taylor_flux_wt[j] += conv[a] * goma_ctx->fem.bf[eqn]->grad_phi[j][a];
           }
         }
@@ -10159,7 +10159,7 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
       conv_old = vconv_old;
       d_conv = d_vconv;
     }
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       if (taylor_galerkin[w] && !(explicit[w])) {
         st->conv_flux[w][a] = (c_new * conv[a] + c_old * conv_old[a]) * st->grad_Y[w][a];
         st->taylor_flux[w][a] = conv[a] * st->grad_Y[w][a];
@@ -11297,7 +11297,7 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
         conv_old = vconv_old;
         d_conv = d_vconv;
       }
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           if (taylor_galerkin[w] && !(explicit[w])) {
             for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
@@ -11334,7 +11334,7 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             if (taylor_galerkin[w] && !(explicit[w])) {
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 st->d_conv_flux_dmesh[w][a][b][j] =
                     (c_new * conv[a] + c_old * conv_old[a]) *
                         goma_ctx->fem.fv->d_grad_c_dmesh[a][w][b][j] +
@@ -11345,14 +11345,14 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
               }
               for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
                 st->d_taylor_flux_wt_dmesh[i][b][j] = 0.;
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   st->d_taylor_flux_wt_dmesh[i][b][j] +=
                       conv[a] * goma_ctx->fem.bf[eqn]->d_grad_phi_dmesh[i][a][b][j] +
                       d_conv->X[a][b][j] * st->grad_Y[w][a];
                 }
               }
             } else if (taylor_galerkin[w] && explicit[w]) {
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 st->d_conv_flux_dmesh[w][a][b][j] = 0.;
                 st->d_taylor_flux_dmesh[w][a][b][j] = 0.;
               }
@@ -11360,7 +11360,7 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
                 st->d_taylor_flux_wt_dmesh[i][b][j] = 0.;
               }
             } else {
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 st->d_conv_flux_dmesh[w][a][b][j] =
                     conv[a] * goma_ctx->fem.fv->d_grad_c_dmesh[a][w][b][j] +
                     d_conv->X[a][b][j] * st->grad_Y[w][a];
@@ -11373,7 +11373,7 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
 
             if (goma_ctx->fem.mp->ExtrinsicIndependentSpeciesVar[w]) {
               /* for compressible materials, add c(div_v) portion of advection term */
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 st->d_conv_flux_dmesh[w][a][b][j] +=
                     st->Y[w] * goma_ctx->fem.fv->d_grad_v_dmesh[a][a][b][j];
               }
@@ -11382,7 +11382,7 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
         }
       }
 
-      for (a = 0; a < WIM; a++) {
+      for (a = 0; a < goma_ctx->problem.wim; a++) {
         var = VELOCITY1 + a;
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
@@ -11419,7 +11419,7 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
 
             if (goma_ctx->fem.mp->ExtrinsicIndependentSpeciesVar[w]) {
               /* for compressible materials, add c(div_v) portion of advection term */
-              for (b = 0; b < VIM; b++) {
+              for (b = 0; b < goma_ctx->problem.vim; b++) {
                 st->d_conv_flux_dv[w][b][a][j] +=
                     st->Y[w] * goma_ctx->fem.bf[VELOCITY1 + a]->grad_phi_e[j][a][b][b];
               }
@@ -11431,19 +11431,19 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
       var = TEMPERATURE;
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         if (taylor_galerkin[w] && !(explicit[w])) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             st->d_conv_flux_dT[w][a][j] = c_new * d_conv->T[a][j] * st->grad_Y[w][a];
             st->d_taylor_flux_dT[w][a][j] = d_conv->T[a][j] * st->grad_Y[w][a];
           }
           for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
             st->d_taylor_flux_wt_dT[i][j] = 0.;
-            for (a = 0; a < VIM; a++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
               st->d_taylor_flux_wt_dT[i][j] +=
                   d_conv->T[a][j] * goma_ctx->fem.bf[eqn]->grad_phi[j][a];
             }
           }
         } else if (taylor_galerkin[w] && explicit[w]) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             st->d_conv_flux_dT[w][a][j] = 0.;
             st->d_taylor_flux_dT[w][a][j] = 0.;
           }
@@ -11451,7 +11451,7 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
             st->d_taylor_flux_wt_dT[i][j] = 0.;
           }
         } else {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             st->d_conv_flux_dT[w][a][j] =
                 d_conv->T[a][j] * st->grad_Y[w][a]; /* UMR FLAGGED on tbc */
             st->d_taylor_flux_dT[w][a][j] = 0.;
@@ -11531,7 +11531,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
 
   var = MASS_FRACTION;
   n_species = goma_ctx->fem.pd->Num_Species_Eqn + 1;
-  n = n_species * VIM;
+  n = n_species * goma_ctx->problem.vim;
   mn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn;
 
   if (!A_allocated) {
@@ -11679,12 +11679,12 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
   }
 
   for (i = 0; i < n_species - 1; i++) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       grad_x[i][a] = goma_ctx->fem.fv->grad_c[i][a]; /* more-fraction or concentration gradient */
     }
   }
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     sumdelx = 0.0;
     for (i = 0; i < n_species - 1; i++) {
       sumdelx += grad_x[i][a];
@@ -11693,7 +11693,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
   }
 
   /* gradient of electrical potential in electrolyte */
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     if (goma_ctx->fem.pd_glob[mn]->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
         volume_flag) /*  RSL 8/24/00  */
     {
@@ -11705,7 +11705,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
 
   for (i = 0; i < n_species; i++) {
     z[i] = goma_ctx->fem.mp->charge_number[i];
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       grad_mu[i][a] = z[i] * F * grad_phi2[a] + (R * T / x[i]) * grad_x[i][a];
       /* electrochemical potential gradient */
     }
@@ -11713,7 +11713,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
 
   if (goma_ctx->fem.af->Assemble_Residual) {
 
-    switch (VIM) {
+    switch (goma_ctx->problem.vim) {
     case 1: /* 1-D approximation */
       B[0] = 0.0;
       for (j = 0; j < n_species; j++) {
@@ -11739,8 +11739,8 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
       B[0] = 0.0;
       B[1] = 0.0;
       for (k = 0; k < n_species; k++) {
-        j1 = k * VIM;
-        j2 = k * VIM + 1;
+        j1 = k * goma_ctx->problem.vim;
+        j2 = k * goma_ctx->problem.vim + 1;
         A[0][j1] = M[k];
         A[0][j2] = 0.0;
         A[1][j1] = 0.0;
@@ -11748,13 +11748,13 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
       }
 
       for (k = 1; k < n_species; k++) {
-        i1 = k * VIM;
-        i2 = k * VIM + 1;
+        i1 = k * goma_ctx->problem.vim;
+        i2 = k * goma_ctx->problem.vim + 1;
         B[i1] = x[k] * grad_mu[k][0] / R / T;
         B[i2] = x[k] * grad_mu[k][1] / R / T;
         for (l = 0; l < n_species; l++) {
-          j1 = l * VIM;
-          j2 = l * VIM + 1;
+          j1 = l * goma_ctx->problem.vim;
+          j2 = l * goma_ctx->problem.vim + 1;
           if (l != k) {
             A[i1][j1] = x[k] / (c * e * D[k][l]);
             A[i1][j2] = 0.0;
@@ -11780,9 +11780,9 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
       B[1] = 0.0;
       B[2] = 0.0;
       for (k = 0; k < n_species; k++) {
-        j1 = k * VIM;
-        j2 = k * VIM + 1;
-        j3 = k * VIM + 2;
+        j1 = k * goma_ctx->problem.vim;
+        j2 = k * goma_ctx->problem.vim + 1;
+        j3 = k * goma_ctx->problem.vim + 2;
         A[0][j1] = M[k];
         A[0][j2] = 0.0;
         A[0][j3] = 0.0;
@@ -11795,16 +11795,16 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
       }
 
       for (k = 1; k < n_species; k++) {
-        i1 = k * VIM;
-        i2 = k * VIM + 1;
-        i3 = k * VIM + 2;
+        i1 = k * goma_ctx->problem.vim;
+        i2 = k * goma_ctx->problem.vim + 1;
+        i3 = k * goma_ctx->problem.vim + 2;
         B[i1] = x[k] * grad_mu[k][0] / R / T;
         B[i2] = x[k] * grad_mu[k][1] / R / T;
         B[i3] = x[k] * grad_mu[k][2] / R / T;
         for (l = 0; l < n_species; l++) {
-          j1 = l * VIM;
-          j2 = l * VIM + 1;
-          j3 = l * VIM + 2;
+          j1 = l * goma_ctx->problem.vim;
+          j2 = l * goma_ctx->problem.vim + 1;
+          j3 = l * goma_ctx->problem.vim + 2;
           if (l != k) {
             A[i1][j1] = x[k] / (c * e * D[k][l]);
             A[i1][j2] = 0.0;
@@ -11934,20 +11934,20 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
        } */
 
     for (w = 0; w < n_species - 1; w++) {
-      switch (VIM) {
+      switch (goma_ctx->problem.vim) {
       case 1:
         st->diff_flux[w][0] = B[w];
         break;
 
       case 2:
-        st->diff_flux[w][0] = B[VIM * w];
-        st->diff_flux[w][1] = B[VIM * w + 1];
+        st->diff_flux[w][0] = B[goma_ctx->problem.vim * w];
+        st->diff_flux[w][1] = B[goma_ctx->problem.vim * w + 1];
         break;
 
       case 3:
-        st->diff_flux[w][0] = B[VIM * w];
-        st->diff_flux[w][1] = B[VIM * w + 1];
-        st->diff_flux[w][2] = B[VIM * w + 2];
+        st->diff_flux[w][0] = B[goma_ctx->problem.vim * w];
+        st->diff_flux[w][1] = B[goma_ctx->problem.vim * w + 1];
+        st->diff_flux[w][2] = B[goma_ctx->problem.vim * w + 2];
         break;
       }
     }
@@ -11961,7 +11961,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
         correction = d_rho->C[w1][j] / rho - goma_ctx->fem.bf[var]->phi[j] *
                                                  (M[w1] - M[n_species - 1]) /
                                                  M_mix; /* RSL 8/24/00 */
-        switch (VIM) {
+        switch (goma_ctx->problem.vim) {
         case 1:                      /* 1-D approximation */
           for (wi = 0; wi < n; wi++) /* first zero the dA matrix and dB vector */
           {
@@ -12032,8 +12032,8 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
 
           for (k = 1; k < n_species - 1; k++) /* next fill in the non-zero entries */
           {
-            i1 = k * VIM;
-            i2 = k * VIM + 1;
+            i1 = k * goma_ctx->problem.vim;
+            i2 = k * goma_ctx->problem.vim + 1;
             if (k == w1) {
               dB[i1] = goma_ctx->fem.bf[var]->grad_phi[j][0];
               temp_var = z[k] * F * goma_ctx->fem.bf[var]->phi[j] / (R * T); /* RSL 8/23/00 */
@@ -12042,8 +12042,8 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
               dB[i2] += temp_var * grad_phi2[1]; /* RSL 3/23/00 */
             }
             for (l = 0; l < n_species; l++) {
-              j1 = l * VIM;
-              j2 = l * VIM + 1;
+              j1 = l * goma_ctx->problem.vim;
+              j2 = l * goma_ctx->problem.vim + 1;
               if (l != k) {
                 if (k == w1) {
                   dA[i1][j1] = goma_ctx->fem.bf[var]->phi[j] / (c * e * D[k][l]);
@@ -12079,8 +12079,8 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
           dB[n - 1] = -goma_ctx->fem.bf[var]->grad_phi[j][1];
           dB[n - 1] -= temp_var * grad_phi2[1]; /* RSL 3/23/00 */
           for (l = 0; l < n_species - 1; l++) {
-            j1 = l * VIM;
-            j2 = l * VIM + 1;
+            j1 = l * goma_ctx->problem.vim;
+            j2 = l * goma_ctx->problem.vim + 1;
             dA[n - 2][j1] = -goma_ctx->fem.bf[var]->phi[j] / (c * e * D[n_species - 1][l]);
             if (!volume_flag) /* RSL 8/24/00 */
             {
@@ -12107,9 +12107,9 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
             }
           }
           for (k = 1; k < n_species - 1; k++) {
-            i1 = k * VIM;
-            i2 = k * VIM + 1;
-            i3 = k * VIM + 2;
+            i1 = k * goma_ctx->problem.vim;
+            i2 = k * goma_ctx->problem.vim + 1;
+            i3 = k * goma_ctx->problem.vim + 2;
             if (k == w1) {
               dB[i1] = goma_ctx->fem.bf[var]->grad_phi[j][0];
               temp_var = z[k] * F * goma_ctx->fem.bf[var]->phi[j] / (R * T); /* RSL 8/23/00 */
@@ -12120,9 +12120,9 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
               dB[i3] += temp_var * grad_phi2[2]; /* RSL 3/23/00 */
             }
             for (l = 0; l < n_species; l++) {
-              j1 = l * VIM;
-              j2 = l * VIM + 1;
-              j3 = l * VIM + 2;
+              j1 = l * goma_ctx->problem.vim;
+              j2 = l * goma_ctx->problem.vim + 1;
+              j3 = l * goma_ctx->problem.vim + 2;
               if (l != k) {
                 if (k == w1) {
                   dA[i1][j1] = goma_ctx->fem.bf[var]->phi[j] / (c * e * D[k][l]);
@@ -12163,9 +12163,9 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
           dB[n - 1] = -goma_ctx->fem.bf[var]->grad_phi[j][2];
           dB[n - 1] -= temp_var * grad_phi2[2]; /* RSL 3/23/00 */
           for (l = 0; l < n_species - 1; l++) {
-            j1 = l * VIM;
-            j2 = l * VIM + 1;
-            j3 = l * VIM + 2;
+            j1 = l * goma_ctx->problem.vim;
+            j2 = l * goma_ctx->problem.vim + 1;
+            j3 = l * goma_ctx->problem.vim + 2;
             dA[n - 3][j1] = -goma_ctx->fem.bf[var]->phi[j] / (c * e * D[n_species - 1][l]);
             if (!volume_flag) /* RSL 8/24/00 */
             {
@@ -12222,7 +12222,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
         /* forward and back substitution to get solution vector B */
         lu_decomp_backsub_driver(A, B, indx, n, 0);
 
-        switch (VIM) {
+        switch (goma_ctx->problem.vim) {
         case 1:
           for (w = 0; w < n_species - 1; w++) {
             st->d_diff_flux_dc[w][0][w1][j] = B[w];
@@ -12231,16 +12231,16 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
 
         case 2:
           for (w = 0; w < n_species - 1; w++) {
-            st->d_diff_flux_dc[w][0][w1][j] = B[VIM * w];
-            st->d_diff_flux_dc[w][1][w1][j] = B[VIM * w + 1];
+            st->d_diff_flux_dc[w][0][w1][j] = B[goma_ctx->problem.vim * w];
+            st->d_diff_flux_dc[w][1][w1][j] = B[goma_ctx->problem.vim * w + 1];
           }
           break;
 
         case 3:
           for (w = 0; w < n_species - 1; w++) {
-            st->d_diff_flux_dc[w][0][w1][j] = B[VIM * w];
-            st->d_diff_flux_dc[w][1][w1][j] = B[VIM * w + 1];
-            st->d_diff_flux_dc[w][2][w1][j] = B[VIM * w + 2];
+            st->d_diff_flux_dc[w][0][w1][j] = B[goma_ctx->problem.vim * w];
+            st->d_diff_flux_dc[w][1][w1][j] = B[goma_ctx->problem.vim * w + 1];
+            st->d_diff_flux_dc[w][2][w1][j] = B[goma_ctx->problem.vim * w + 2];
           }
           break;
         }
@@ -12252,7 +12252,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
       var = MESH_DISPLACEMENT1 + q;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          switch (VIM) {
+          switch (goma_ctx->problem.vim) {
           case 1: /* 1-D approximation */
             dB[0] = 0.0;
             for (wi = 1; wi < n_species - 1; wi++) {
@@ -12271,16 +12271,18 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
             }
             for (k = 1; k < n_species - 1; k++) /* next fill in the non-zero entries */
             {
-              i1 = (k + 1) * VIM - 2;
-              i2 = (k + 1) * VIM - 1;
+              i1 = (k + 1) * goma_ctx->problem.vim - 2;
+              i2 = (k + 1) * goma_ctx->problem.vim - 1;
               dB[i1] = goma_ctx->fem.fv->d_grad_c_dmesh[0][k][q][j];
               dB[i2] = goma_ctx->fem.fv->d_grad_c_dmesh[1][k][q][j];
             }
-            dB[n_species * VIM - 2] = 0.0;
-            dB[n_species * VIM - 1] = 0.0;
+            dB[n_species * goma_ctx->problem.vim - 2] = 0.0;
+            dB[n_species * goma_ctx->problem.vim - 1] = 0.0;
             for (k = 0; k < n_species - 1; k++) {
-              dB[n_species * VIM - 2] -= goma_ctx->fem.fv->d_grad_c_dmesh[0][k][q][j];
-              dB[n_species * VIM - 1] -= goma_ctx->fem.fv->d_grad_c_dmesh[1][k][q][j];
+              dB[n_species * goma_ctx->problem.vim - 2] -=
+                  goma_ctx->fem.fv->d_grad_c_dmesh[0][k][q][j];
+              dB[n_species * goma_ctx->problem.vim - 1] -=
+                  goma_ctx->fem.fv->d_grad_c_dmesh[1][k][q][j];
             }
             break;
 
@@ -12289,23 +12291,26 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
             dB[1] = 0.0;
             dB[2] = 0.0;
             for (k = 1; k < n_species - 1; k++) {
-              i1 = (k + 1) * VIM - 3;
-              i2 = (k + 1) * VIM - 2;
-              i3 = (k + 1) * VIM - 1;
+              i1 = (k + 1) * goma_ctx->problem.vim - 3;
+              i2 = (k + 1) * goma_ctx->problem.vim - 2;
+              i3 = (k + 1) * goma_ctx->problem.vim - 1;
               dB[i1] = goma_ctx->fem.fv->d_grad_c_dmesh[0][k][q][j];
               dB[i2] = goma_ctx->fem.fv->d_grad_c_dmesh[1][k][q][j];
               dB[i3] = goma_ctx->fem.fv->d_grad_c_dmesh[2][k][q][j];
             }
-            dB[n_species * VIM - 3] = 0.0;
-            dB[n_species * VIM - 2] = 0.0;
-            dB[n_species * VIM - 1] = 0.0;
+            dB[n_species * goma_ctx->problem.vim - 3] = 0.0;
+            dB[n_species * goma_ctx->problem.vim - 2] = 0.0;
+            dB[n_species * goma_ctx->problem.vim - 1] = 0.0;
             for (k = 0; k < n_species - 1; k++) {
-              i1 = (k + 1) * VIM - 3;
-              i2 = (k + 1) * VIM - 2;
-              i3 = (k + 1) * VIM - 1;
-              dB[n_species * VIM - 3] -= goma_ctx->fem.fv->d_grad_c_dmesh[0][k][q][j];
-              dB[n_species * VIM - 2] -= goma_ctx->fem.fv->d_grad_c_dmesh[1][k][q][j];
-              dB[n_species * VIM - 1] -= goma_ctx->fem.fv->d_grad_c_dmesh[2][k][q][j];
+              i1 = (k + 1) * goma_ctx->problem.vim - 3;
+              i2 = (k + 1) * goma_ctx->problem.vim - 2;
+              i3 = (k + 1) * goma_ctx->problem.vim - 1;
+              dB[n_species * goma_ctx->problem.vim - 3] -=
+                  goma_ctx->fem.fv->d_grad_c_dmesh[0][k][q][j];
+              dB[n_species * goma_ctx->problem.vim - 2] -=
+                  goma_ctx->fem.fv->d_grad_c_dmesh[1][k][q][j];
+              dB[n_species * goma_ctx->problem.vim - 1] -=
+                  goma_ctx->fem.fv->d_grad_c_dmesh[2][k][q][j];
             }
             break;
           }
@@ -12316,7 +12321,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
           /* forward and back substitution to get solution vector B */
           lu_decomp_backsub_driver(A, B, indx, n, 0);
 
-          switch (VIM) {
+          switch (goma_ctx->problem.vim) {
           case 1:
             for (w = 0; w < n_species - 1; w++) {
               st->d_diff_flux_dmesh[w][0][q][j] = B[w];
@@ -12325,16 +12330,16 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
 
           case 2:
             for (w = 0; w < n_species - 1; w++) {
-              st->d_diff_flux_dmesh[w][0][q][j] = B[VIM * w];
-              st->d_diff_flux_dmesh[w][1][q][j] = B[VIM * w + 1];
+              st->d_diff_flux_dmesh[w][0][q][j] = B[goma_ctx->problem.vim * w];
+              st->d_diff_flux_dmesh[w][1][q][j] = B[goma_ctx->problem.vim * w + 1];
             }
             break;
 
           case 3:
             for (w = 0; w < n_species - 1; w++) {
-              st->d_diff_flux_dmesh[w][0][q][j] = B[VIM * w];
-              st->d_diff_flux_dmesh[w][1][q][j] = B[VIM * w + 1];
-              st->d_diff_flux_dmesh[w][2][q][j] = B[VIM * w + 2];
+              st->d_diff_flux_dmesh[w][0][q][j] = B[goma_ctx->problem.vim * w];
+              st->d_diff_flux_dmesh[w][1][q][j] = B[goma_ctx->problem.vim * w + 1];
+              st->d_diff_flux_dmesh[w][2][q][j] = B[goma_ctx->problem.vim * w + 2];
             }
             break;
           }
@@ -12343,7 +12348,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
     }
 
     var = TEMPERATURE;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
           st->d_diff_flux_dT[w][a][j] = 0.0;
@@ -12353,7 +12358,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
 
     var = PRESSURE;
 
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
           st->d_diff_flux_dP[w][a][j] = 0.;
@@ -12368,10 +12373,11 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
     var = VOLTAGE;
 
     for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         dB[a] = 0.0;
         for (l = 1; l < n_species; l++) {
-          dB[l * VIM + a] = F * x[l] * z[l] * goma_ctx->fem.bf[var]->grad_phi[j][a] / (R * T);
+          dB[l * goma_ctx->problem.vim + a] =
+              F * x[l] * z[l] * goma_ctx->fem.bf[var]->grad_phi[j][a] / (R * T);
         }
       }
       for (wi = 0; wi < n; wi++) {
@@ -12380,9 +12386,9 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
           dJ[wi] += goma_ctx->fem.fv->SM_matrix_inv[wi][k] * dB[k];
         }
       }
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-          st->d_diff_flux_dV[w][a][j] = dJ[w * VIM + a];
+          st->d_diff_flux_dV[w][a][j] = dJ[w * goma_ctx->problem.vim + a];
         }
       }
     }
@@ -12456,7 +12462,7 @@ int fickian_charged_flux(struct Species_Conservation_Terms *st, int w)
   FRT = F / (R * T);
   FRTzD = FRT * goma_ctx->fem.mp->charge_number[w] * goma_ctx->fem.mp->diffusivity[w];
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     st->diff_flux[w][a] =
         -coeff_rho * (goma_ctx->fem.mp->diffusivity[w] * goma_ctx->fem.fv->grad_c[w][a] +
                       FRTzD * goma_ctx->fem.fv->c[w] * goma_ctx->fem.fv->grad_V[a]);
@@ -12464,7 +12470,7 @@ int fickian_charged_flux(struct Species_Conservation_Terms *st, int w)
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = MASS_FRACTION;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
           st->d_diff_flux_dc[w][a][w1][j] = 0.0;
@@ -12479,7 +12485,7 @@ int fickian_charged_flux(struct Species_Conservation_Terms *st, int w)
       var = MESH_DISPLACEMENT1 + q;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             st->d_diff_flux_dmesh[w][a][q][j] =
                 -coeff_rho *
                 (goma_ctx->fem.mp->diffusivity[w] * goma_ctx->fem.fv->d_grad_c_dmesh[a][w][q][j] +
@@ -12490,7 +12496,7 @@ int fickian_charged_flux(struct Species_Conservation_Terms *st, int w)
     }
 
     var = TEMPERATURE;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         st->d_diff_flux_dT[w][a][j] = coeff_rho * (FRTzD / T) * goma_ctx->fem.fv->c[w] *
                                       goma_ctx->fem.bf[var]->phi[j] * goma_ctx->fem.fv->grad_V[a];
@@ -12498,7 +12504,7 @@ int fickian_charged_flux(struct Species_Conservation_Terms *st, int w)
     }
 
     var = VOLTAGE;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         st->d_diff_flux_dV[w][a][j] =
             -coeff_rho * FRTzD * goma_ctx->fem.fv->c[w] * goma_ctx->fem.bf[var]->grad_phi[j][a];
@@ -12582,12 +12588,12 @@ int fickian_charged_flux_x(struct Species_Conservation_Terms *st, double time, d
   c = rho / M_mix;
 
   for (i = 0; i < n_species - 1; i++) {
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       grad_x[i][a] = goma_ctx->fem.fv->grad_c[i][a];
     }
   }
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     grad_phi2[a] =
         goma_ctx->fem.fv->grad_V[a]; /* gradient of electrical potential in electrolyte */
   }
@@ -12595,7 +12601,7 @@ int fickian_charged_flux_x(struct Species_Conservation_Terms *st, double time, d
   if (goma_ctx->fem.af->Assemble_Residual) {
     frt = F / (R * T);
     for (i = 0; i < n_species - 1; i++) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         st->diff_flux[i][a] = -D[i] * c * (grad_x[i][a] + z[i] * frt * x[i] * grad_phi2[a]);
       }
     }
@@ -12608,7 +12614,7 @@ int fickian_charged_flux_x(struct Species_Conservation_Terms *st, double time, d
         derivative = d_rho->C[w][j] / rho -
                      goma_ctx->fem.bf[var]->phi[j] * (M[w] - M[n_species - 1]) / M_mix;
         for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             st->d_diff_flux_dc[i][a][w][j] = st->diff_flux[i][a] * derivative;
             if (i == w) {
               save1 = goma_ctx->fem.bf[var]->grad_phi[j][a];
@@ -12625,7 +12631,7 @@ int fickian_charged_flux_x(struct Species_Conservation_Terms *st, double time, d
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++) {
-            for (a = 0; a < VIM; a++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
               st->d_diff_flux_dmesh[i][a][q][j] =
                   -D[i] * c *
                   (goma_ctx->fem.fv->d_grad_c_dmesh[a][i][q][j] +
@@ -12639,7 +12645,7 @@ int fickian_charged_flux_x(struct Species_Conservation_Terms *st, double time, d
     var = TEMPERATURE;
     for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++) {
       save2 = D[i] * c * z[i] * frt * x[i] / T;
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         save1 = save2 * grad_phi2[a];
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           st->d_diff_flux_dT[i][a][j] = save1 * goma_ctx->fem.bf[var]->phi[j];
@@ -12649,7 +12655,7 @@ int fickian_charged_flux_x(struct Species_Conservation_Terms *st, double time, d
 
     var = PRESSURE;
     for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           st->d_diff_flux_dP[i][a][j] = 0.;
         }
@@ -12660,7 +12666,7 @@ int fickian_charged_flux_x(struct Species_Conservation_Terms *st, double time, d
     for (i = 0; i < goma_ctx->fem.pd->Num_Species_Eqn; i++) {
       save2 = -D[i] * c * z[i] * frt * x[i];
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           st->d_diff_flux_dV[i][a][j] = save2 * goma_ctx->fem.bf[var]->grad_phi[j][a];
         }
       }
@@ -12731,14 +12737,14 @@ int fickian_flux(struct Species_Conservation_Terms *st, int w)
   }
   rhoD = coeff_rho * goma_ctx->fem.mp->diffusivity[w];
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     st->diff_flux[w][a] = -rhoD * st->grad_Y[w][a];
   }
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = MASS_FRACTION;
     phi_ptr = goma_ctx->fem.bf[var]->phi;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species_Eqn; w1++) {
         tmp = -coeff_rho * st->grad_Y[w][a] *
               goma_ctx->fem.mp->d_diffusivity[w][MAX_VARIABLE_TYPES + w1];
@@ -12754,7 +12760,7 @@ int fickian_flux(struct Species_Conservation_Terms *st, int w)
     for (q = 0; q < goma_ctx->fem.pd->Num_Dim; q++) {
       var = MESH_DISPLACEMENT1 + q;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (a = 0; a < VIM; a++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             st->d_diff_flux_dmesh[w][a][q][j] =
                 -rhoD * goma_ctx->fem.fv->d_grad_c_dmesh[a][w][q][j];
@@ -12766,7 +12772,7 @@ int fickian_flux(struct Species_Conservation_Terms *st, int w)
     var = TEMPERATURE;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       phi_ptr = goma_ctx->fem.bf[var]->phi;
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         tmp = -coeff_rho * goma_ctx->fem.mp->d_diffusivity[w][var] * st->grad_Y[w][a];
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           st->d_diff_flux_dT[w][a][j] = tmp * phi_ptr[j];
@@ -12840,7 +12846,7 @@ int generalized_fickian_flux(struct Species_Conservation_Terms *st, int w)
     coeff_rho = goma_ctx->fem.mp->density / avg_molec_weight;
   }
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species; w1++) {
       st->diff_flux[w][a] -=
           coeff_rho * goma_ctx->fem.mp->diffusivity_gen_fick[w][w1] * st->grad_Y[w1][a];
@@ -12850,7 +12856,7 @@ int generalized_fickian_flux(struct Species_Conservation_Terms *st, int w)
   if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = MASS_FRACTION;
     phi_ptr = goma_ctx->fem.bf[var]->phi;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         tmp = coeff_rho * phi_ptr[j];
         for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species; w1++) {
@@ -12869,7 +12875,7 @@ int generalized_fickian_flux(struct Species_Conservation_Terms *st, int w)
       var = MESH_DISPLACEMENT1 + q;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (w1 = 0; w1 < goma_ctx->fem.pd->Num_Species; w1++) {
               st->d_diff_flux_dmesh[w][a][q][j] -= coeff_rho *
                                                    goma_ctx->fem.mp->diffusivity_gen_fick[w][w1] *
@@ -12882,7 +12888,7 @@ int generalized_fickian_flux(struct Species_Conservation_Terms *st, int w)
 
     var = TEMPERATURE;
     phi_ptr = goma_ctx->fem.bf[var]->phi;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         tmp = coeff_rho * phi_ptr[j];
         st->d_diff_flux_dT[w][a][j] = 0.;
@@ -13005,8 +13011,8 @@ int assemble_invariant(double tt, /* parameter to vary time integration from
    * Compute the 2nd invariant of the rate of strain tensor, I2
    */
 
-  for (k = 0; k < VIM; k++) {
-    for (l = 0; l < VIM; l++) {
+  for (k = 0; k < goma_ctx->problem.vim; k++) {
+    for (l = 0; l < goma_ctx->problem.vim; l++) {
       I2 += goma_ctx->fem.fv->grad_v[k][l] * goma_ctx->fem.fv->grad_v[k][l];
       I2 += 2.0 * goma_ctx->fem.fv->grad_v[k][l] * goma_ctx->fem.fv->grad_v[l][k];
       I2 += goma_ctx->fem.fv->grad_v[l][k] * goma_ctx->fem.fv->grad_v[l][k];
@@ -13031,9 +13037,9 @@ int assemble_invariant(double tt, /* parameter to vary time integration from
   memset(d_I2_dv, 0, sizeof(dbl) * DIM * MDE);
   memset(d_I2_dmesh, 0, sizeof(dbl) * DIM * MDE);
 
-  for (k = 0; k < VIM; k++) {
-    for (l = 0; l < VIM; l++) {
-      for (a = 0; a < VIM; a++)
+  for (k = 0; k < goma_ctx->problem.vim; k++) {
+    for (l = 0; l < goma_ctx->problem.vim; l++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++)
 
       {
         var = VELOCITY1 + a;
@@ -13129,7 +13135,7 @@ int assemble_invariant(double tt, /* parameter to vary time integration from
        * J_sh_v
        */
 
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         var = VELOCITY1 + a;
 
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
@@ -13299,7 +13305,7 @@ int get_particle_convection_velocity(double pvconv[DIM],
   dim = goma_ctx->fem.pd->Num_Dim;
   species = (int)goma_ctx->fem.mp->u_density[0];
 
-  for (p = 0; p < VIM; p++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
     pvconv[p] = 0.;
   }
 
@@ -13329,7 +13335,7 @@ int get_particle_convection_velocity(double pvconv[DIM],
   if (goma_ctx->fem.cr->MeshMotion == ARBITRARY) {
     /* calculate v - xdot and it's derivatives */
 
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       pvconv[p] = goma_ctx->fem.fv->pv[p];
       pvconv_old[p] = 0.;
       if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
@@ -13345,7 +13351,7 @@ int get_particle_convection_velocity(double pvconv[DIM],
      * Sensitivities of particle phase wrt particle phase.
      */
     if (goma_ctx->fem.af->Assemble_Jacobian) {
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         var = PVELOCITY1 + p;
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
           for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; i++) {
@@ -13402,7 +13408,7 @@ int get_particle_convection_velocity(double pvconv[DIM],
         }
       }
 
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         pvconv[p] = 0.;
         pvconv_old[p] = 0.;
         if (goma_ctx->fem.cr->MassFluxModel == FICKIAN) {
@@ -13426,7 +13432,7 @@ int get_particle_convection_velocity(double pvconv[DIM],
         }
       }
 
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         pvconv[p] /= volsolid;
         if (goma_ctx->fem.pd->TimeIntegration != STEADY)
           pvconv_old[p] /= volsolid_old;
@@ -13501,12 +13507,12 @@ int get_particle_convection_velocity(double pvconv[DIM],
         (goma_ctx->fem.mp->PorousMediaType == POROUS_UNSATURATED ||
          goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED ||
          goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE)) {
-      for (p = 0; p < VIM; p++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
         pvconv[p] = goma_ctx->fem.fv_dot->x[p];
         pvconv_old[p] = goma_ctx->fem.fv_dot_old->x[p];
       }
       if (goma_ctx->fem.af->Assemble_Jacobian) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
 
           if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
             var = MESH_DISPLACEMENT1 + p;
@@ -13710,7 +13716,7 @@ void fickian_charged_gradient_bc(double func[],
 
   /* Add on Fickian diffusivity portion so that only electrostatic flux is left */
 
-  for (a = 0; a < VIM; a++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
     st.diff_flux[w][a] +=
         coeff_rho * goma_ctx->fem.mp->diffusivity[w] * goma_ctx->fem.fv->grad_c[w][a];
 
@@ -13719,7 +13725,7 @@ void fickian_charged_gradient_bc(double func[],
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
     var = MASS_FRACTION;
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         st.d_diff_flux_dc[w][a][w][j] +=
             coeff_rho * (goma_ctx->fem.mp->diffusivity[w] * goma_ctx->fem.bf[var]->grad_phi[j][a]);
@@ -13732,7 +13738,7 @@ void fickian_charged_gradient_bc(double func[],
       var = MESH_DISPLACEMENT1 + q;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             st.d_diff_flux_dmesh[w][a][q][j] += coeff_rho * goma_ctx->fem.mp->diffusivity[w] *
                                                 goma_ctx->fem.fv->d_grad_c_dmesh[a][w][q][j];
 
@@ -13745,7 +13751,7 @@ void fickian_charged_gradient_bc(double func[],
     }
 
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var = TEMPERATURE]) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_func[0][var][j] += sign * goma_ctx->fem.fv->snormal[a] * st.d_diff_flux_dT[w][a][j];
         }
@@ -13753,7 +13759,7 @@ void fickian_charged_gradient_bc(double func[],
     }
 
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var = VOLTAGE]) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           d_func[0][var][j] += sign * goma_ctx->fem.fv->snormal[a] * st.d_diff_flux_dV[w][a][j];
         }

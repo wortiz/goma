@@ -571,7 +571,7 @@ int assemble_continuity(dbl time_value, /* current time */
            */
           if (particle_momentum_on) {
             source = 0.0;
-            for (a = 0; a < WIM; a++) {
+            for (a = 0; a < goma_ctx->problem.wim; a++) {
               /* Cannot use s_terms.conv_flux[a] here because that
                * is defined in terms of the particle phase
                * velocities.
@@ -611,7 +611,7 @@ int assemble_continuity(dbl time_value, /* current time */
 
       pressure_stabilization = 0.0;
       if (goma_ctx->solver.pspg) {
-        for (a = 0; a < WIM; a++) {
+        for (a = 0; a < goma_ctx->problem.wim; a++) {
           meqn = R_MOMENTUM1 + a;
           if (goma_ctx->fem.pd->gv[meqn]) {
             pressure_stabilization += grad_phi[i][a] * pspg[a];
@@ -672,7 +672,7 @@ int assemble_continuity(dbl time_value, /* current time */
       /*
        * J_c_v NOTE that this is applied whenever velocity is a variable
        */
-      for (b = 0; b < WIM; b++) {
+      for (b = 0; b < goma_ctx->problem.wim; b++) {
         var = VELOCITY1 + b;
         if (pdv[var]) {
           pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -695,13 +695,13 @@ int assemble_continuity(dbl time_value, /* current time */
             if (advection_on) {
               div_phi_j_e_b = 0.;
 #ifdef DO_NO_UNROLL
-              for (p = 0; p < VIM; p++) {
+              for (p = 0; p < goma_ctx->problem.vim; p++) {
                 div_phi_j_e_b += goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][p];
               }
 #else
               div_phi_j_e_b += goma_ctx->fem.bf[var]->grad_phi_e[j][b][0][0] +
                                goma_ctx->fem.bf[var]->grad_phi_e[j][b][1][1];
-              if (VIM == 3)
+              if (goma_ctx->problem.vim == 3)
                 div_phi_j_e_b += goma_ctx->fem.bf[var]->grad_phi_e[j][b][2][2];
 #endif
 
@@ -752,7 +752,7 @@ int assemble_continuity(dbl time_value, /* current time */
              */
             pressure_stabilization = 0.;
             if (goma_ctx->solver.pspg) {
-              for (a = 0; a < WIM; a++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
                 meqn = R_MOMENTUM1 + a;
                 if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn]) {
                   pressure_stabilization += grad_phi[i][a] * d_pspg->v[a][b][j];
@@ -784,7 +784,7 @@ int assemble_continuity(dbl time_value, /* current time */
            */
           pressure_stabilization = 0.;
 
-          for (a = 0; a < WIM; a++) {
+          for (a = 0; a < goma_ctx->problem.wim; a++) {
             meqn = R_MOMENTUM1 + a;
             if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn]) {
               pressure_stabilization += grad_phi[i][a] * d_pspg->eddy_nu[a][j];
@@ -812,7 +812,7 @@ int assemble_continuity(dbl time_value, /* current time */
            */
           pressure_stabilization = 0.;
 
-          for (a = 0; a < WIM; a++) {
+          for (a = 0; a < goma_ctx->problem.wim; a++) {
             meqn = R_MOMENTUM1 + a;
             if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn]) {
               pressure_stabilization += grad_phi[i][a] * d_pspg->T[a][j];
@@ -909,7 +909,7 @@ int assemble_continuity(dbl time_value, /* current time */
            */
           pressure_stabilization = 0.;
           if (goma_ctx->solver.pspg) {
-            for (a = 0; a < WIM; a++) {
+            for (a = 0; a < goma_ctx->problem.wim; a++) {
               meqn = R_MOMENTUM1 + a;
               if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn] & T_DIFFUSION) {
                 pressure_stabilization += grad_phi[i][a] * d_pspg->P[a][j];
@@ -932,15 +932,15 @@ int assemble_continuity(dbl time_value, /* current time */
       var = POLYMER_STRESS11;
       if (goma_ctx->solver.pspg && pdv[var]) {
         for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               var = v_s[mode][p][q];
               pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
               if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
                 for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                   pressure_stabilization = 0.;
 
-                  for (a = 0; a < WIM; a++) {
+                  for (a = 0; a < goma_ctx->problem.wim; a++) {
                     meqn = R_MOMENTUM1 + a;
                     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn]) {
                       pressure_stabilization += grad_phi[i][a] * d_pspg->S[a][mode][p][q][j];
@@ -962,15 +962,15 @@ int assemble_continuity(dbl time_value, /* current time */
        */
       var = VELOCITY_GRADIENT11;
       if (goma_ctx->solver.pspg && pdv[var]) {
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             var = v_g[p][q];
             pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
             {
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 pressure_stabilization = 0.;
 
-                for (a = 0; a < WIM; a++) {
+                for (a = 0; a < goma_ctx->problem.wim; a++) {
                   meqn = R_MOMENTUM1 + a;
                   if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn]) {
                     pressure_stabilization += grad_phi[i][a] * d_pspg->g[a][p][q][j];
@@ -1147,7 +1147,7 @@ int assemble_continuity(dbl time_value, /* current time */
              */
             pressure_stabilization = 0.0;
             if (goma_ctx->solver.pspg) {
-              for (a = 0; a < WIM; a++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
                 meqn = R_MOMENTUM1 + a;
                 if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn]) {
                   pressure_stabilization += grad_phi[i][a] * d_pspg->X[a][b][j] * h3 * det_J * wt +
@@ -1236,7 +1236,7 @@ int assemble_continuity(dbl time_value, /* current time */
              */
             pressure_stabilization = 0.;
             if (goma_ctx->solver.pspg) {
-              for (a = 0; a < WIM; a++) {
+              for (a = 0; a < goma_ctx->problem.wim; a++) {
                 meqn = R_MOMENTUM1 + a;
                 if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn] & T_DIFFUSION) {
                   pressure_stabilization += grad_phi[i][a] * d_pspg->C[a][w][j];
@@ -1261,7 +1261,7 @@ int assemble_continuity(dbl time_value, /* current time */
 
               if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
                 source_a = 0.0;
-                for (a = 0; a < WIM; a++)
+                for (a = 0; a < goma_ctx->problem.wim; a++)
                   source_a -= grad_phi[j][a] * v[a];
                 source_a *= phi_i * det_J * h3 * wt;
 
@@ -1302,7 +1302,7 @@ int assemble_continuity(dbl time_value, /* current time */
                 derivative = d_rho->C[jj][q] / goma_ctx->fem.bf[MASS_FRACTION]->phi[q];
                 sum1 = 0.;
                 sum2 = 0.;
-                for (p = 0; p < VIM; p++) {
+                for (p = 0; p < goma_ctx->problem.vim; p++) {
                   sum1 += s_terms.d_conv_flux_dc[jj][p][w][j];
                   sum2 += s_terms.conv_flux[jj][p];
                 }
@@ -1357,7 +1357,7 @@ int assemble_continuity(dbl time_value, /* current time */
       /*
        * J_c_MOM
        */
-      for (b = 0; b < WIM; b++) {
+      for (b = 0; b < goma_ctx->problem.wim; b++) {
         var = MOMENT0 + b;
         if (pdv[var]) {
           pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -2511,7 +2511,7 @@ double REFVolumeSource(double time,
             dFVS_dx[b][j] += (goma_ctx->fem.fv->v[a] - x_dot[a]) * dtmp[w] *
                              goma_ctx->fem.fv->d_grad_c_dmesh[a][w][b][j];
           }
-          if (TimeIntegration != STEADY)
+          if (goma_ctx->problem.time_integration != STEADY)
             dFVS_dx[b][j] +=
                 -(1.0 + 2 * tt) * phi_j * dtmp[w] * goma_ctx->fem.fv->grad_c[w][b] / dt;
         }
@@ -2652,8 +2652,8 @@ int assemble_projection_time_stabilization(Exo_DB *exo, double time, double tt, 
       }
 
       /* load up shearrate tensor based on velocity */
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
         }
       }
@@ -2809,8 +2809,8 @@ int assemble_projection_stabilization(Exo_DB *exo, double time)
       }
 
       /* load up shearrate tensor based on velocity */
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
         }
       }
@@ -2951,8 +2951,8 @@ int assemble_PPPS_generalized(Exo_DB *exo)
       vol += d_vol;
 
       /* load up shearrate tensor based on velocity */
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
           gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
         }
       }

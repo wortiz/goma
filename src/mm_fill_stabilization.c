@@ -223,7 +223,7 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
       int var = VELOCITY1;
       int a, j;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (a = 0; a < WIM; a++) {
+        for (a = 0; a < goma_ctx->problem.wim; a++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             d_mu->v[a][j] += d_mup->v[a][j];
           }
@@ -523,7 +523,7 @@ void supg_tau_gauss_point(SUPG_terms *supg_terms,
                           const PG_DATA *pg_data) {
   dbl vnorm = 0;
 
-  for (int i = 0; i < VIM; i++) {
+  for (int i = 0; i < goma_ctx->problem.vim; i++) {
     vnorm += goma_ctx->fem.fv->v[i] * goma_ctx->fem.fv->v[i];
   }
   vnorm = sqrt(vnorm);
@@ -581,7 +581,7 @@ void supg_tau_gauss_point(SUPG_terms *supg_terms,
   if (vnorm > 0) {
     supg_terms->supg_tau = 0.5 * hk * eta / vnorm;
 
-    for (int a = 0; a < VIM; a++) {
+    for (int a = 0; a < goma_ctx->problem.vim; a++) {
       int var = VELOCITY1 + a;
       for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         supg_terms->d_supg_tau_dv[a][j] = 0.5 * hk * eta * goma_ctx->fem.fv->v[a] *
@@ -779,7 +779,7 @@ dbl yzbeta_model(int model,
 void get_supg_tau(SUPG_terms *supg_terms, int dim, dbl diffusivity, PG_DATA *pg_data) {
   dbl vnorm = 0;
 
-  for (int i = 0; i < VIM; i++) {
+  for (int i = 0; i < goma_ctx->problem.vim; i++) {
     vnorm += goma_ctx->fem.fv->v[i] * goma_ctx->fem.fv->v[i];
   }
   vnorm = sqrt(vnorm);
@@ -837,7 +837,7 @@ void get_supg_tau(SUPG_terms *supg_terms, int dim, dbl diffusivity, PG_DATA *pg_
   if (vnorm > 0) {
     supg_terms->supg_tau = 0.5 * hk * eta / vnorm;
 
-    for (int a = 0; a < VIM; a++) {
+    for (int a = 0; a < goma_ctx->problem.vim; a++) {
       int var = VELOCITY1 + a;
       for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         supg_terms->d_supg_tau_dv[a][j] = 0.5 * hk * eta * goma_ctx->fem.fv->v[a] *
@@ -1070,7 +1070,7 @@ int calc_pspg(dbl pspg[DIM],
 
     // Average value of v**2 in the element
     vv_speed = 0.0;
-    for (a = 0; a < WIM; a++) {
+    for (a = 0; a < goma_ctx->problem.wim; a++) {
       vv_speed += v_avg[a] * v_avg[a];
     }
 
@@ -1117,12 +1117,12 @@ int calc_pspg(dbl pspg[DIM],
     tau_momentum_shakib(&pspg_tau, goma_ctx->fem.pd->Num_Dim, dt, TRUE);
   }
 
-  for (a = 0; a < VIM; a++)
+  for (a = 0; a < goma_ctx->problem.vim; a++)
     grad_v[a] = goma_ctx->fem.fv->grad_v[a];
 
   /* load up shearrate tensor based on velocity */
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       gamma[a][b] = grad_v[a][b] + grad_v[b][a];
     }
   }
@@ -1135,7 +1135,7 @@ int calc_pspg(dbl pspg[DIM],
 
   /* get variables we will need for momentum residual */
 
-  for (a = 0; a < WIM; a++) {
+  for (a = 0; a < goma_ctx->problem.wim; a++) {
     if (goma_ctx->fem.pd->TimeIntegration != STEADY &&
         goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1 + a]) {
       x_dot[a] = goma_ctx->fem.fv_dot->x[a];
@@ -1150,7 +1150,7 @@ int calc_pspg(dbl pspg[DIM],
     }
   }
 
-  for (p = 0; p < WIM; p++)
+  for (p = 0; p < goma_ctx->problem.wim; p++)
     div_s[p] = 0.;
 
   if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
@@ -1171,8 +1171,8 @@ int calc_pspg(dbl pspg[DIM],
           if (goma_ctx->fem.pg->imtrx == goma_ctx->fem.upd->matrix_index[POLYMER_STRESS11] &&
               (goma_ctx->fem.vn->evssModel == LOG_CONF_TRANSIENT_GRADV ||
                goma_ctx->fem.vn->evssModel == LOG_CONF_TRANSIENT)) {
-            for (int i = 0; i < VIM; i++) {
-              for (int j = 0; j < VIM; j++) {
+            for (int i = 0; i < goma_ctx->problem.vim; i++) {
+              for (int j = 0; j < goma_ctx->problem.vim; j++) {
                 if (j >= i) {
                   s[k][i][j] = *goma_ctx->fem.esp_old->S[mode][i][j][k];
                 } else {
@@ -1181,8 +1181,8 @@ int calc_pspg(dbl pspg[DIM],
               }
             }
           } else {
-            for (int i = 0; i < VIM; i++) {
-              for (int j = 0; j < VIM; j++) {
+            for (int i = 0; i < goma_ctx->problem.vim; i++) {
+              for (int j = 0; j < goma_ctx->problem.vim; j++) {
                 if (j >= i) {
                   s[k][i][j] = *goma_ctx->fem.esp->S[mode][i][j][k];
                 } else {
@@ -1193,9 +1193,9 @@ int calc_pspg(dbl pspg[DIM],
           }
           compute_exp_s(s[k], exp_s[k], eig_values, R);
         }
-        for (int p = 0; p < VIM; p++) {
-          for (int q = 0; q < VIM; q++) {
-            for (int r = 0; r < VIM; r++) {
+        for (int p = 0; p < goma_ctx->problem.vim; p++) {
+          for (int q = 0; q < goma_ctx->problem.vim; q++) {
+            for (int r = 0; r < goma_ctx->problem.vim; r++) {
               grad_S[r][p][q] = 0.;
               for (int i = 0; i < dofs; i++) {
                 if (p <= q) {
@@ -1217,12 +1217,12 @@ int calc_pspg(dbl pspg[DIM],
             div_exp_s[r] += grad_S[q][q][r];
           }
         }
-        for (p = 0; p < WIM; p++) {
+        for (p = 0; p < goma_ctx->problem.wim; p++) {
           div_s[p] += (mup / lambda) * div_exp_s[p];
         }
       }
     } else {
-      for (p = 0; p < WIM; p++) {
+      for (p = 0; p < goma_ctx->problem.wim; p++) {
         for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
           div_s[p] += goma_ctx->fem.fv->div_S[mode][p];
         }
@@ -1245,11 +1245,11 @@ int calc_pspg(dbl pspg[DIM],
     particle_stress(tau_p, d_tau_p_dv, d_tau_p_dvd, d_tau_p_dy, d_tau_p_dmesh, d_tau_p_dp, w0);
 
   if (goma_ctx->fem.pd->gv[VELOCITY_GRADIENT11]) {
-    for (p = 0; p < WIM; p++) {
+    for (p = 0; p < goma_ctx->problem.wim; p++) {
       div_G[p] = goma_ctx->fem.fv->div_G[p];
     }
   } else {
-    for (p = 0; p < WIM; p++) {
+    for (p = 0; p < goma_ctx->problem.wim; p++) {
       div_G[p] = 0.;
     }
   }
@@ -1289,7 +1289,7 @@ int calc_pspg(dbl pspg[DIM],
 
   /* for porous media stuff */
   speed = 0.0;
-  for (a = 0; a < WIM; a++) {
+  for (a = 0; a < goma_ctx->problem.wim; a++) {
     speed += v[a] * v[a];
   }
   speed = sqrt(speed);
@@ -1305,7 +1305,7 @@ int calc_pspg(dbl pspg[DIM],
     meqn1 = R_MOMENTUM1;
   }
 
-  for (a = 0; a < WIM; a++) {
+  for (a = 0; a < goma_ctx->problem.wim; a++) {
     meqn = meqn1 + a;
 
     mass = 0.;
@@ -1317,7 +1317,7 @@ int calc_pspg(dbl pspg[DIM],
 
     advection = 0.;
     if (goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[meqn]][meqn] & T_ADVECTION) {
-      for (p = 0; p < WIM; p++) {
+      for (p = 0; p < goma_ctx->problem.wim; p++) {
         advection += rho_t * (v[p] - x_dot[p]) * grad_v[p][a] / por2;
       }
       advection *=
@@ -1350,7 +1350,7 @@ int calc_pspg(dbl pspg[DIM],
     pspg[a] = pspg_tau.tau * momentum[a];
 
     if (d_pspg != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
-      for (b = 0; b < WIM; b++) {
+      for (b = 0; b < goma_ctx->problem.wim; b++) {
         var = VELOCITY1 + b;
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           phi_j = goma_ctx->fem.bf[var]->phi[j];
@@ -1365,7 +1365,7 @@ int calc_pspg(dbl pspg[DIM],
           advection = 0.;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[meqn]][meqn] & T_ADVECTION) {
             advection = phi_j * grad_v[b][a];
-            for (p = 0; p < WIM; p++) {
+            for (p = 0; p < goma_ctx->problem.wim; p++) {
               advection += (v[p] - x_dot[p]) * goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][a];
             }
             advection *= rho_t / por2;
@@ -1391,7 +1391,7 @@ int calc_pspg(dbl pspg[DIM],
           porous = 0.;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[meqn]][meqn] & T_POROUS_BRINK) {
             porous = (rho_t * sc * speed / sqrt(per) + vis / per) * phi_j;
-            for (p = 0; p < WIM; p++) {
+            for (p = 0; p < goma_ctx->problem.wim; p++) {
               porous += rho_t * sc / sqrt(per) * 2. * v[p] * v[a];
             }
             porous *= goma_ctx->fem.pd
@@ -1404,7 +1404,7 @@ int calc_pspg(dbl pspg[DIM],
     }
 
     if (d_pspg != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-      for (b = 0; b < WIM; b++) {
+      for (b = 0; b < goma_ctx->problem.wim; b++) {
         var = MESH_DISPLACEMENT1 + b;
         for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
           phi_j = goma_ctx->fem.bf[var]->phi[j];
@@ -1414,7 +1414,7 @@ int calc_pspg(dbl pspg[DIM],
             if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
               advection = -(1. + 2. * tt) * phi_j / dt * grad_v[b][a];
             }
-            for (p = 0; p < WIM; p++) {
+            for (p = 0; p < goma_ctx->problem.wim; p++) {
               advection += (v[p] - x_dot[p]) * goma_ctx->fem.fv->d_grad_v_dmesh[p][a][b][j];
             }
             advection *= rho_t / por2;
@@ -1466,7 +1466,7 @@ int calc_pspg(dbl pspg[DIM],
         advection = 0.;
         if (goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[meqn]][meqn] & T_ADVECTION) {
           advection = 0.;
-          for (p = 0; p < WIM; p++) {
+          for (p = 0; p < goma_ctx->problem.wim; p++) {
             advection += (v[p] - x_dot[p]) * grad_v[p][a];
           }
           advection *= d_rho_t_dT / por2;
@@ -1542,7 +1542,7 @@ int calc_pspg(dbl pspg[DIM],
           advection = 0.;
           if (goma_ctx->fem.pd->e[goma_ctx->fem.upd->matrix_index[meqn]][meqn] & T_ADVECTION) {
             advection = 0.;
-            for (p = 0; p < WIM; p++) {
+            for (p = 0; p < goma_ctx->problem.wim; p++) {
               advection += (v[p] - x_dot[p]) * grad_v[p][a];
             }
             advection *= d_rho_t_dC / por2;
@@ -1580,8 +1580,8 @@ int calc_pspg(dbl pspg[DIM],
     var = POLYMER_STRESS11;
     if (d_pspg != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
       for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-        for (b = 0; b < VIM; b++) {
-          for (c = 0; c < VIM; c++) {
+        for (b = 0; b < goma_ctx->problem.vim; b++) {
+          for (c = 0; c < goma_ctx->problem.vim; c++) {
             var = v_s[mode][b][c];
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               phi_j = goma_ctx->fem.bf[var]->phi[j];
@@ -1591,10 +1591,10 @@ int calc_pspg(dbl pspg[DIM],
                 diffusion = -(dbl)delta(a, c) * goma_ctx->fem.bf[var]->grad_phi[j][b];
 
                 if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-                  for (r = 0; r < VIM; r++) {
+                  for (r = 0; r < goma_ctx->problem.vim; r++) {
                     diffusion -= (dbl)delta(a, c) * phi_j * goma_ctx->fem.fv->grad_e[b][r][c];
                   }
-                  for (r = 0; r < WIM; r++) {
+                  for (r = 0; r < goma_ctx->problem.wim; r++) {
                     diffusion -= (dbl)delta(a, r) * phi_j * goma_ctx->fem.fv->grad_e[c][b][r];
                   }
                 }
@@ -1613,8 +1613,8 @@ int calc_pspg(dbl pspg[DIM],
 
     var = VELOCITY_GRADIENT11;
     if (d_pspg != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (b = 0; b < VIM; b++) {
-        for (c = 0; c < VIM; c++) {
+      for (b = 0; b < goma_ctx->problem.vim; b++) {
+        for (c = 0; c < goma_ctx->problem.vim; c++) {
           var = v_g[b][c];
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             phi_j = goma_ctx->fem.bf[var]->phi[j];
@@ -1624,10 +1624,10 @@ int calc_pspg(dbl pspg[DIM],
               diffusion = -(dbl)delta(a, c) * goma_ctx->fem.bf[var]->grad_phi[j][b];
 
               if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-                for (r = 0; r < VIM; r++) {
+                for (r = 0; r < goma_ctx->problem.vim; r++) {
                   diffusion -= (dbl)delta(a, c) * phi_j * goma_ctx->fem.fv->grad_e[b][r][c];
                 }
-                for (r = 0; r < WIM; r++) {
+                for (r = 0; r < goma_ctx->problem.wim; r++) {
                   diffusion -= (dbl)delta(a, r) * phi_j * goma_ctx->fem.fv->grad_e[c][b][r];
                 }
               }
@@ -1776,14 +1776,14 @@ int calc_cont_gls(dbl *cont_gls,
   // Determine Jacobian terms
 
   // J_v
-  for (b = 0; b < WIM; b++) {
+  for (b = 0; b < goma_ctx->problem.wim; b++) {
     var = VELOCITY1 + b;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] && d_cont_gls != NULL) {
       for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
         advection = 0.;
         if (advection_on) {
           div_phi_j_e_b = 0.;
-          for (p = 0; p < VIM; p++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             div_phi_j_e_b += goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][p];
           }
           advection = div_phi_j_e_b * advection_etm;

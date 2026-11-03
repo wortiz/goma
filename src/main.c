@@ -747,7 +747,7 @@ int main(int argc, char **argv)
     goma_ctx->fem.pg->imtrx = 0;
 
     if (goma_ctx->debug_flag) {
-      switch (Continuation) {
+      switch (goma_ctx->problem.continuation) {
       case ALC_ZEROTH:
         P0PRINTF("%s: continue_problem (zeroth order) ...\n", yo);
         break;
@@ -769,15 +769,15 @@ int main(int argc, char **argv)
       }
     }
 
-    if (TimeIntegration == TRANSIENT) {
-      Continuation = ALC_NONE;
+    if (goma_ctx->problem.time_integration == TRANSIENT) {
+      goma_ctx->problem.continuation = ALC_NONE;
       if (goma_ctx->debug_flag) {
         P0PRINTF("%s: solve_problem...TRANSIENT superceded Continuation...\n", yo);
       }
       solve_problem(EXO_ptr, DPI_ptr, NULL);
     }
 
-    switch (Continuation) {
+    switch (goma_ctx->problem.continuation) {
     case ALC_ZEROTH:
     case ALC_FIRST:
       log_msg("Solving continuation problem");
@@ -796,7 +796,7 @@ int main(int argc, char **argv)
       log_msg("Solving problem");
       if (goma_ctx->fem.loca_in->Cont_Alg == LOCA_LSA_ONLY) {
         error = do_loca(cx[0], EXO_ptr, DPI_ptr);
-      } else if (TimeIntegration != TRANSIENT) {
+      } else if (goma_ctx->problem.time_integration != TRANSIENT) {
         solve_problem(EXO_ptr, DPI_ptr, NULL);
       }
       break;

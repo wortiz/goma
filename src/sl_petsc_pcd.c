@@ -44,7 +44,7 @@ static goma_error initialize_PCD_matrices(PetscMatrixData *matrix_data,
   PetscInt *o_nnz = (PetscInt *)calloc(num_rows, sizeof(PetscInt));
 
   for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-    int mn = Matilda[eb_index];
+    int mn = goma_ctx->problem.matilda[eb_index];
 
     goma_ctx->fem.pd = goma_ctx->fem.pd_glob[mn];
     goma_ctx->fem.cr = goma_ctx->fem.cr_glob[mn];

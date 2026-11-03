@@ -262,7 +262,7 @@ void fem_structures_free(GomaFem *fem) {
 
   /* bf, bfi and bfex hold pointers into bfd */
   if (fem->bfd != NULL) {
-    for (int b = 0; b < Num_Basis_Functions; b++) {
+    for (int b = 0; b < goma_ctx->problem.num_basis_functions; b++) {
       if (fem->bfd[b] != NULL) {
         free(fem->bfd[b]->Var_Type_MatID);
         free(fem->bfd[b]);
@@ -1146,17 +1146,17 @@ int assembly_alloc(Exo_DB *exo)
 
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     /* ENERGY */
-    if (Num_Var_In_Type[imtrx][TEMPERATURE]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][TEMPERATURE]) {
       goma_ctx->fem.esp->T = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* MOMENTUM  */
-    if (Num_Var_In_Type[imtrx][VELOCITY1]) {
-      goma_ctx->fem.esp->v = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][VELOCITY1]) {
+      goma_ctx->fem.esp->v = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][USTAR]) {
-      goma_ctx->fem.esp->v_star = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][USTAR]) {
+      goma_ctx->fem.esp->v_star = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
 
     /* MMH
@@ -1164,39 +1164,39 @@ int assembly_alloc(Exo_DB *exo)
      * them here in case their particle equivalents are incorporated later.
      */
     /* PARTICLE MOMENTUM */
-    if (Num_Var_In_Type[imtrx][PVELOCITY1]) {
-      goma_ctx->fem.esp->pv = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][PVELOCITY1]) {
+      goma_ctx->fem.esp->pv = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
 
     /* MESH_DISPLACEMENT  */
-    if (Num_Var_In_Type[imtrx][MESH_DISPLACEMENT1]) {
-      goma_ctx->fem.esp->d = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][MESH_DISPLACEMENT1]) {
+      goma_ctx->fem.esp->d = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
 
     /* SOLID_DISPLACEMENT  */
-    if (Num_Var_In_Type[imtrx][SOLID_DISPLACEMENT1]) {
-      goma_ctx->fem.esp->d_rs = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][SOLID_DISPLACEMENT1]) {
+      goma_ctx->fem.esp->d_rs = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
 
     /* SPECIES CONTINUITY */
-    if (Num_Var_In_Type[imtrx][MASS_FRACTION]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][MASS_FRACTION]) {
       goma_ctx->fem.esp->c = (dbl ***)alloc_ptr_2(num_species_eqn, MDE);
     }
 
     /*CONTINUITY */
-    if (Num_Var_In_Type[imtrx][PRESSURE]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][PRESSURE]) {
       goma_ctx->fem.esp->P = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][PSTAR]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][PSTAR]) {
       goma_ctx->fem.esp->P_star = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* POLYMER STRESS for all modes */
-    if (Num_Var_In_Type[imtrx][POLYMER_STRESS11]) {
-      int sdim = VIM;
+    if (goma_ctx->problem.num_var_in_type[imtrx][POLYMER_STRESS11]) {
+      int sdim = goma_ctx->problem.vim;
       for (int i = 0; i < goma_ctx->fem.upd->Total_Num_Matrices; i++) {
-        if (Num_Var_In_Type[i][FILM_HEIGHT])
+        if (goma_ctx->problem.num_var_in_type[i][FILM_HEIGHT])
           sdim = 3;
       }
       goma_ctx->fem.esp->S = (dbl *****)array_alloc(4, MAX_MODES, sdim, sdim, MDE, sizeof(dbl *));
@@ -1204,10 +1204,10 @@ int assembly_alloc(Exo_DB *exo)
     }
 
     /* VELOCITY_GRADIENT */
-    if (Num_Var_In_Type[imtrx][VELOCITY_GRADIENT11]) {
-      int sdim = VIM;
+    if (goma_ctx->problem.num_var_in_type[imtrx][VELOCITY_GRADIENT11]) {
+      int sdim = goma_ctx->problem.vim;
       for (int i = 0; i < goma_ctx->fem.upd->Total_Num_Matrices; i++) {
-        if (Num_Var_In_Type[i][FILM_HEIGHT])
+        if (goma_ctx->problem.num_var_in_type[i][FILM_HEIGHT])
           sdim = 3;
       }
       goma_ctx->fem.esp->G = (dbl ****)array_alloc(3, sdim, sdim, MDE, sizeof(dbl *));
@@ -1215,295 +1215,300 @@ int assembly_alloc(Exo_DB *exo)
     }
 
     /* POTENTIAL */
-    if (Num_Var_In_Type[imtrx][VOLTAGE]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][VOLTAGE]) {
       goma_ctx->fem.esp->V = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* SURF_CHARGE */
-    if (Num_Var_In_Type[imtrx][SURF_CHARGE]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SURF_CHARGE]) {
       goma_ctx->fem.esp->qs = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* FILL */
-    if (Num_Var_In_Type[imtrx][FILL]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][FILL]) {
       goma_ctx->fem.esp->F = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* SHEAR_RATE INVARIANT */
-    if (Num_Var_In_Type[imtrx][SHEAR_RATE]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHEAR_RATE]) {
       goma_ctx->fem.esp->SH = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* ENORM, |E| */
-    if (Num_Var_In_Type[imtrx][ENORM]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][ENORM]) {
       goma_ctx->fem.esp->Enorm = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* LEVEL SET CURVATURE */
-    if (Num_Var_In_Type[imtrx][CURVATURE]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][CURVATURE]) {
       goma_ctx->fem.esp->H = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* LEVEL SET NORMAL VECTOR */
-    if (Num_Var_In_Type[imtrx][NORMAL1]) {
-      goma_ctx->fem.esp->n = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][NORMAL1]) {
+      goma_ctx->fem.esp->n = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
 
     /* POROUS MEDIA VARS */
-    if (Num_Var_In_Type[imtrx][POR_LIQ_PRES]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][POR_LIQ_PRES]) {
       goma_ctx->fem.esp->p_liq = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][POR_GAS_PRES]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][POR_GAS_PRES]) {
       goma_ctx->fem.esp->p_gas = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][POR_POROSITY]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][POR_POROSITY]) {
       goma_ctx->fem.esp->porosity = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][POR_TEMP]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][POR_TEMP]) {
       goma_ctx->fem.esp->T = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* VORTICITY PRINCIPLE FLOW DIRECTION
      * This is always 3D */
-    if (Num_Var_In_Type[imtrx][VORT_DIR1]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][VORT_DIR1]) {
       goma_ctx->fem.esp->vd = (dbl ***)alloc_ptr_2(DIM, MDE);
     }
 
     /* Lagrange Multipliers */
-    if (Num_Var_In_Type[imtrx][LAGR_MULT1]) {
-      goma_ctx->fem.esp->lm = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][LAGR_MULT1]) {
+      goma_ctx->fem.esp->lm = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
 
     /* Structural Shell equations */
-    if (Num_Var_In_Type[imtrx][SHELL_CURVATURE]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_CURVATURE]) {
       goma_ctx->fem.esp->sh_K = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][SHELL_CURVATURE2]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_CURVATURE2]) {
       goma_ctx->fem.esp->sh_K2 = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][SHELL_TENSION]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_TENSION]) {
       goma_ctx->fem.esp->sh_tens = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][SHELL_X]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_X]) {
       goma_ctx->fem.esp->sh_x = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][SHELL_Y]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_Y]) {
       goma_ctx->fem.esp->sh_y = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][SHELL_USER]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_USER]) {
       goma_ctx->fem.esp->sh_u = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* Shell orientation angles */
-    if (Num_Var_In_Type[imtrx][SHELL_ANGLE1]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_ANGLE1]) {
       goma_ctx->fem.esp->sh_ang = (dbl ***)alloc_ptr_2(DIM - 1, MDE);
     }
 
     /*Sundry pieces for Surface Rheological Const. Eqn. */
-    if (Num_Var_In_Type[imtrx][R_SHELL_SURF_DIV_V]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][R_SHELL_SURF_DIV_V]) {
       goma_ctx->fem.esp->div_s_v = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][R_SHELL_SURF_CURV]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][R_SHELL_SURF_CURV]) {
       goma_ctx->fem.esp->curv = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][R_N_DOT_CURL_V]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][R_N_DOT_CURL_V]) {
       goma_ctx->fem.esp->n_dot_curl_s_v = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][R_GRAD_S_V_DOT_N1]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][R_GRAD_S_V_DOT_N1]) {
       goma_ctx->fem.esp->grad_v_dot_n = (dbl ***)alloc_ptr_2(DIM, MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][R_SHELL_DIFF_FLUX]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][R_SHELL_DIFF_FLUX]) {
       goma_ctx->fem.esp->sh_J = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][R_SHELL_DIFF_CURVATURE]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][R_SHELL_DIFF_CURVATURE]) {
       goma_ctx->fem.esp->sh_Kd = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][R_SHELL_NORMAL1]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][R_SHELL_NORMAL1]) {
       goma_ctx->fem.esp->n = (dbl ***)alloc_ptr_2(DIM, MDE);
     }
 
     /* EIGENVALUE FOR VORTICITY PRINCIPLE FLOW DIRECTION
      * This is always 3D */
-    if (Num_Var_In_Type[imtrx][VORT_LAMBDA]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][VORT_LAMBDA]) {
       goma_ctx->fem.esp->vlambda = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* BOND Evolution
      * associated with structure formation during flow */
-    if (Num_Var_In_Type[imtrx][BOND_EVOLUTION]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][BOND_EVOLUTION]) {
       goma_ctx->fem.esp->nn = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* Extension Velocity */
-    if (Num_Var_In_Type[imtrx][EXT_VELOCITY]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][EXT_VELOCITY]) {
       goma_ctx->fem.esp->ext_v = (dbl **)alloc_ptr_1(MDE);
     }
 
     /* Electric Field */
-    if (Num_Var_In_Type[imtrx][EFIELD1]) {
-      goma_ctx->fem.esp->E_field = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][EFIELD1]) {
+      goma_ctx->fem.esp->E_field = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
 
     /* Phase function */
-    if (Num_Var_In_Type[imtrx][PHASE1]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][PHASE1]) {
       goma_ctx->fem.esp->pF = (dbl ***)alloc_ptr_2(goma_ctx->fem.pfd->num_phase_funcs, MDE);
     }
     /* Acoustic pressure */
-    if (Num_Var_In_Type[imtrx][ACOUS_PREAL]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][ACOUS_PREAL]) {
       goma_ctx->fem.esp->apr = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][ACOUS_PIMAG]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][ACOUS_PIMAG]) {
       goma_ctx->fem.esp->api = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][ACOUS_REYN_STRESS]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][ACOUS_REYN_STRESS]) {
       goma_ctx->fem.esp->ars = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][EM_CONT_REAL]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][EM_CONT_REAL]) {
       goma_ctx->fem.esp->epr = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][EM_CONT_IMAG]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][EM_CONT_IMAG]) {
       goma_ctx->fem.esp->epi = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_BDYVELO]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_BDYVELO]) {
       goma_ctx->fem.esp->sh_bv = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_LUBP]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_LUBP]) {
       goma_ctx->fem.esp->sh_p = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][LUBP]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][LUBP]) {
       goma_ctx->fem.esp->lubp = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][LUBP_2]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][LUBP_2]) {
       goma_ctx->fem.esp->lubp_2 = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_FILMP]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_FILMP]) {
       goma_ctx->fem.esp->sh_fp = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_FILMH]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_FILMH]) {
       goma_ctx->fem.esp->sh_fh = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_PARTC]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_PARTC]) {
       goma_ctx->fem.esp->sh_pc = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_SAT_CLOSED]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_SAT_CLOSED]) {
       goma_ctx->fem.esp->sh_sat_closed = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_PRESS_OPEN]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_PRESS_OPEN]) {
       goma_ctx->fem.esp->sh_p_open = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_PRESS_OPEN_2]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_PRESS_OPEN_2]) {
       goma_ctx->fem.esp->sh_p_open_2 = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_TEMPERATURE]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_TEMPERATURE]) {
       goma_ctx->fem.esp->sh_t = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_DELTAH]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_DELTAH]) {
       goma_ctx->fem.esp->sh_dh = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_LUB_CURV]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_LUB_CURV]) {
       goma_ctx->fem.esp->sh_l_curv = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_LUB_CURV_2]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_LUB_CURV_2]) {
       goma_ctx->fem.esp->sh_l_curv_2 = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_SAT_GASN]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_SAT_GASN]) {
       goma_ctx->fem.esp->sh_sat_gasn = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][POR_SINK_MASS]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][POR_SINK_MASS]) {
       goma_ctx->fem.esp->sink_mass = (dbl **)alloc_ptr_1(MDE);
     }
     /* Poynting Vector  */
-    if (Num_Var_In_Type[imtrx][LIGHT_INTP] || Num_Var_In_Type[imtrx][LIGHT_INTM] ||
-        Num_Var_In_Type[imtrx][LIGHT_INTD]) {
-      goma_ctx->fem.esp->poynt = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][LIGHT_INTP] ||
+        goma_ctx->problem.num_var_in_type[imtrx][LIGHT_INTM] ||
+        goma_ctx->problem.num_var_in_type[imtrx][LIGHT_INTD]) {
+      goma_ctx->fem.esp->poynt = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
     /* EM_wave components  */
-    if (Num_Var_In_Type[imtrx][EM_E1_REAL] || Num_Var_In_Type[imtrx][EM_E2_REAL] ||
-        Num_Var_In_Type[imtrx][EM_E3_REAL]) {
-      goma_ctx->fem.esp->em_er = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][EM_E1_REAL] ||
+        goma_ctx->problem.num_var_in_type[imtrx][EM_E2_REAL] ||
+        goma_ctx->problem.num_var_in_type[imtrx][EM_E3_REAL]) {
+      goma_ctx->fem.esp->em_er = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
-    if (Num_Var_In_Type[imtrx][EM_E1_IMAG] || Num_Var_In_Type[imtrx][EM_E2_IMAG] ||
-        Num_Var_In_Type[imtrx][EM_E3_IMAG]) {
-      goma_ctx->fem.esp->em_ei = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][EM_E1_IMAG] ||
+        goma_ctx->problem.num_var_in_type[imtrx][EM_E2_IMAG] ||
+        goma_ctx->problem.num_var_in_type[imtrx][EM_E3_IMAG]) {
+      goma_ctx->fem.esp->em_ei = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
-    if (Num_Var_In_Type[imtrx][EM_H1_REAL] || Num_Var_In_Type[imtrx][EM_H2_REAL] ||
-        Num_Var_In_Type[imtrx][EM_H3_REAL]) {
-      goma_ctx->fem.esp->em_hr = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][EM_H1_REAL] ||
+        goma_ctx->problem.num_var_in_type[imtrx][EM_H2_REAL] ||
+        goma_ctx->problem.num_var_in_type[imtrx][EM_H3_REAL]) {
+      goma_ctx->fem.esp->em_hr = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
-    if (Num_Var_In_Type[imtrx][EM_H1_IMAG] || Num_Var_In_Type[imtrx][EM_H2_IMAG] ||
-        Num_Var_In_Type[imtrx][EM_H3_IMAG]) {
-      goma_ctx->fem.esp->em_hi = (dbl ***)alloc_ptr_2(VIM, MDE);
+    if (goma_ctx->problem.num_var_in_type[imtrx][EM_H1_IMAG] ||
+        goma_ctx->problem.num_var_in_type[imtrx][EM_H2_IMAG] ||
+        goma_ctx->problem.num_var_in_type[imtrx][EM_H3_IMAG]) {
+      goma_ctx->fem.esp->em_hi = (dbl ***)alloc_ptr_2(goma_ctx->problem.vim, MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][TFMP_PRES]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][TFMP_PRES]) {
       goma_ctx->fem.esp->tfmp_pres = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][TFMP_SAT]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][TFMP_SAT]) {
       goma_ctx->fem.esp->tfmp_sat = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][RESTIME]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][RESTIME]) {
       goma_ctx->fem.esp->restime = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][MOMENT0]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][MOMENT0]) {
       goma_ctx->fem.esp->moment = (dbl ***)alloc_ptr_2(MAX_MOMENTS, MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][DENSITY_EQN]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][DENSITY_EQN]) {
       goma_ctx->fem.esp->rho = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][SHELL_SHEAR_TOP]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_SHEAR_TOP]) {
       goma_ctx->fem.esp->sh_shear_top = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_SHEAR_BOT]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_SHEAR_BOT]) {
       goma_ctx->fem.esp->sh_shear_bot = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_CROSS_SHEAR]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_CROSS_SHEAR]) {
       goma_ctx->fem.esp->sh_cross_shear = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][MAX_STRAIN]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][MAX_STRAIN]) {
       goma_ctx->fem.esp->max_strain = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][CUR_STRAIN]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][CUR_STRAIN]) {
       goma_ctx->fem.esp->cur_strain = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][SHELL_SAT_1]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_SAT_1]) {
       goma_ctx->fem.esp->sh_sat_1 = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_SAT_2]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_SAT_2]) {
       goma_ctx->fem.esp->sh_sat_2 = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][SHELL_SAT_3]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][SHELL_SAT_3]) {
       goma_ctx->fem.esp->sh_sat_3 = (dbl **)alloc_ptr_1(MDE);
     }
 
-    if (Num_Var_In_Type[imtrx][EDDY_NU]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][EDDY_NU]) {
       goma_ctx->fem.esp->eddy_nu = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][TURB_K]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][TURB_K]) {
       goma_ctx->fem.esp->turb_k = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][TURB_OMEGA]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][TURB_OMEGA]) {
       goma_ctx->fem.esp->turb_omega = (dbl **)alloc_ptr_1(MDE);
     }
-    if (Num_Var_In_Type[imtrx][FILM_HEIGHT]) {
+    if (goma_ctx->problem.num_var_in_type[imtrx][FILM_HEIGHT]) {
       goma_ctx->fem.esp->film_height = (dbl **)alloc_ptr_1(MDE);
     }
 
@@ -1559,16 +1564,17 @@ int assembly_alloc(Exo_DB *exo)
   */
 
   /* Now, here is the new way: */
-  Num_Shapes = shape_list(exo);
+  goma_ctx->problem.num_shapes = shape_list(exo);
 
   /*
    * To determine how many types of basis functions we'll need to represent,
    * multiply the number of basic element shapes by the number of different
    * interpolations that have been specified...
    */
-  Num_Basis_Functions = Num_Shapes * Num_Interpolations;
+  goma_ctx->problem.num_basis_functions =
+      goma_ctx->problem.num_shapes * goma_ctx->problem.num_interpolations;
 
-  goma_ctx->fem.bfd = (struct Basis_Functions **)alloc_ptr_1(Num_Basis_Functions);
+  goma_ctx->fem.bfd = (struct Basis_Functions **)alloc_ptr_1(goma_ctx->problem.num_basis_functions);
   goma_ctx->fem.bfi = (struct Basis_Functions **)alloc_ptr_1(MAX_INTERP_TYPES);
   goma_ctx->fem.bf = (struct Basis_Functions **)alloc_ptr_1(MAX_VARIABLE_TYPES);
   goma_ctx->fem.bfex = (struct Basis_Functions **)alloc_ptr_1(MAX_EXTERNAL_FIELD);
@@ -1580,14 +1586,14 @@ int assembly_alloc(Exo_DB *exo)
    */
 
   type = 0;
-  for (si = 0; si < Num_Shapes; si++) {
-    for (interp = 0; interp < Num_Interpolations; interp++) {
+  for (si = 0; si < goma_ctx->problem.num_shapes; si++) {
+    for (interp = 0; interp < goma_ctx->problem.num_interpolations; interp++) {
       goma_ctx->fem.bfd[type] = alloc_struct_1(struct Basis_Functions, 1);
       goma_ctx->fem.bfd[type]->Var_Type_MatID = alloc_int_1(goma_ctx->fem.upd->Num_Mat, -1);
-      goma_ctx->fem.bfd[type]->interpolation = Unique_Interpolations[interp];
-      goma_ctx->fem.bfd[type]->element_shape = Unique_Shapes[si];
-      goma_ctx->fem.bfd[type]->Max_Dofs_Interpolation =
-          getdofs(Unique_Shapes[si], Unique_Interpolations[interp]);
+      goma_ctx->fem.bfd[type]->interpolation = goma_ctx->problem.unique_interpolations[interp];
+      goma_ctx->fem.bfd[type]->element_shape = goma_ctx->problem.unique_shapes[si];
+      goma_ctx->fem.bfd[type]->Max_Dofs_Interpolation = getdofs(
+          goma_ctx->problem.unique_shapes[si], goma_ctx->problem.unique_interpolations[interp]);
       /*
        * Find a representative variable type in each material
        * that employs the current interpolation.
@@ -1613,8 +1619,8 @@ int assembly_alloc(Exo_DB *exo)
   }
 
   /* set pointers for basis function interpolation types */
-  for (interp = 0; interp < Num_Interpolations; interp++) {
-    type = Unique_Interpolations[interp];
+  for (interp = 0; interp < goma_ctx->problem.num_interpolations; interp++) {
+    type = goma_ctx->problem.unique_interpolations[interp];
     goma_ctx->fem.bfi[type] = goma_ctx->fem.bfd[interp];
   }
   /* so now bfi[pd_glob[mn]->i[eqn]] points to a basis function with
@@ -1799,7 +1805,7 @@ int bf_init(Exo_DB *exo)
    */
 
   for (ebi = 0; ebi < goma_ctx->mesh.proc_num_elem_blk; ebi++) {
-    m = Matilda[ebi];
+    m = goma_ctx->problem.matilda[ebi];
     if (m >= 0 && exo->eb_num_elems[ebi] > 0) {
       /* These are needed to check for matching element shapes */
       el = exo->eb_ptr[ebi];
@@ -1817,7 +1823,7 @@ int bf_init(Exo_DB *exo)
              * bfd[] is its match...
              * NEW: Check both interpolation AND element shape!
              */
-            for (t = 0; t < Num_Basis_Functions; t++) {
+            for (t = 0; t < goma_ctx->problem.num_basis_functions; t++) {
               if (goma_ctx->fem.pd_glob[m]->i[imtrx][v] == goma_ctx->fem.bfd[t]->interpolation &&
                   shape == goma_ctx->fem.bfd[t]->element_shape) {
                 if (goma_ctx->fem.bf[v] != 0) {
@@ -1887,7 +1893,7 @@ int bf_mp_init(struct Problem_Description *pd) {
          * Check both interpolation AND element shape!
          */
         goma_ctx->fem.bf[v] = NULL;
-        for (t = 0; t < Num_Basis_Functions; t++) {
+        for (t = 0; t < goma_ctx->problem.num_basis_functions; t++) {
           if ((pd->i[imtrx][v] == goma_ctx->fem.bfd[t]->interpolation) &&
               (ishape == goma_ctx->fem.bfd[t]->element_shape))
 
@@ -1916,7 +1922,7 @@ int bf_mp_init(struct Problem_Description *pd) {
        * bfd[] is its match...
        */
       ifound = 0;
-      for (t = 0; t < Num_Basis_Functions; t++) {
+      for (t = 0; t < goma_ctx->problem.num_basis_functions; t++) {
         if (goma_ctx->fem.efv->i[v] == goma_ctx->fem.bfd[t]->interpolation) {
           goma_ctx->fem.bfex[v] = goma_ctx->fem.bfd[t];
           ifound = 1;
@@ -2162,18 +2168,18 @@ static int shape_list(Exo_DB *exo)
   /* Initialize shape list with first element */
   etype = Elem_Type(exo, e1);
   eshape = type2shape(etype);
-  Unique_Shapes[0] = eshape;
+  goma_ctx->problem.unique_shapes[0] = eshape;
   N = 1;
 
   /* Loop over all other elements, check shapes */
   for (e = e1 + 1; e < e2; e++) {
     etype = Elem_Type(exo, e);
     eshape = type2shape(etype);
-    there = in_list(eshape, 0, N, Unique_Shapes);
+    there = in_list(eshape, 0, N, goma_ctx->problem.unique_shapes);
 
     /* Add to list if not there */
     if (there == -1) {
-      Unique_Shapes[N] = eshape;
+      goma_ctx->problem.unique_shapes[N] = eshape;
       N++;
     }
   }

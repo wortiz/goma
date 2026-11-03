@@ -268,7 +268,7 @@ void init_nodes(Exo_DB *exo, Dpi *dpi)
          * Search for nodes that have multivalued, Discontinuous BCs
          * Flag these using the DISC_BNDRY bit field
          */
-        for (ibc = 0; ibc < Num_BC; ibc++) {
+        for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
           if (BC_Types[ibc].BC_ID == exo->ss_id[ss_index]) {
             bc_desc = BC_Types[ibc].desc;
             if (bc_desc->i_apply == CROSS_PHASE_DISCONTINUOUS) {
@@ -341,7 +341,7 @@ void make_node_to_elem_matrl_map(Exo_DB *exo)
       /*
        *  Identify the materials index with the element block
        */
-      mn = Matilda[eb_index];
+      mn = goma_ctx->problem.matilda[eb_index];
       if (mn < 0) {
         continue;
       }

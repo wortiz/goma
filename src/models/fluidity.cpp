@@ -104,10 +104,10 @@ sfad sfad_fluidity_source(int species_no, dbl *params) {
 
   sfad phi_star(10, 0, goma_ctx->fem.fv->c[species_no]);
   sfad grad_v[DIM][DIM];
-  for (int i = 0; i < VIM; i++) {
-    for (int j = 0; j < VIM; j++) {
+  for (int i = 0; i < goma_ctx->problem.vim; i++) {
+    for (int j = 0; j < goma_ctx->problem.vim; j++) {
       grad_v[i][j] = goma_ctx->fem.fv->grad_v[i][j];
-      int idx = 1 + i * VIM + j;
+      int idx = 1 + i * goma_ctx->problem.vim + j;
       grad_v[i][j].fastAccessDx(idx) = 1.0;
     }
   }
@@ -183,13 +183,14 @@ extern "C" int fluidity_source(int species_no, struct Species_Conservation_Terms
 
     var = VELOCITY1;
     if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (int a = 0; a < VIM; a++) {
-        for (int p = 0; p < VIM; p++) {
-          for (int q = 0; q < VIM; q++) {
+      for (int a = 0; a < goma_ctx->problem.vim; a++) {
+        for (int p = 0; p < goma_ctx->problem.vim; p++) {
+          for (int q = 0; q < goma_ctx->problem.vim; q++) {
             for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1 + a];
                  j++) {
               st->d_MassSource_dv[species_no][a][j] +=
-                  F.dx(1 + p * VIM + q) * goma_ctx->fem.bf[VELOCITY1 + a]->grad_phi_e[j][a][p][q];
+                  F.dx(1 + p * goma_ctx->problem.vim + q) *
+                  goma_ctx->fem.bf[VELOCITY1 + a]->grad_phi_e[j][a][p][q];
             }
           }
         }
@@ -203,7 +204,8 @@ extern "C" int fluidity_source(int species_no, struct Species_Conservation_Terms
             for (int j = 0;
                  j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1 + a]; j++) {
               st->d_MassSource_dmesh[species_no][a][j] +=
-                  F.dx(1 + p * VIM + q) * goma_ctx->fem.fv->d_grad_v_dmesh[p][q][a][j];
+                  F.dx(1 + p * goma_ctx->problem.vim + q) *
+                  goma_ctx->fem.fv->d_grad_v_dmesh[p][q][a][j];
             }
           }
         }
@@ -257,11 +259,11 @@ extern "C" void fluidity_equilibrium_surf(double func[DIM],
 
   var = VELOCITY1;
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-    for (int a = 0; a < VIM; a++) {
-      for (int p = 0; p < VIM; p++) {
-        for (int q = 0; q < VIM; q++) {
+    for (int a = 0; a < goma_ctx->problem.vim; a++) {
+      for (int p = 0; p < goma_ctx->problem.vim; p++) {
+        for (int q = 0; q < goma_ctx->problem.vim; q++) {
           for (int j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1 + a]; j++) {
-            d_func[0][VELOCITY1 + a][j] += func_fad.dx(1 + p * VIM + q) *
+            d_func[0][VELOCITY1 + a][j] += func_fad.dx(1 + p * goma_ctx->problem.vim + q) *
                                            goma_ctx->fem.bf[VELOCITY1 + a]->grad_phi_e[j][a][p][q];
           }
         }

@@ -267,8 +267,8 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
     } /* end of if Assemble_Jacobian */
   } else { /* Lagrangian Mesh!! */
     /* Use Coordinates of Main Problem */
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         grad_d[p][q] = goma_ctx->fem.fv->grad_d[p][q];
         grad_d_old[p][q] = goma_ctx->fem.fv_old->grad_d[p][q];
         if (transient_run)
@@ -276,8 +276,8 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
       }
     }
     if (goma_ctx->fem.af->Assemble_Jacobian) {
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           for (b = 0; b < dim; b++) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1 + b];
                  j++) {
@@ -297,8 +297,8 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
   /*******************************************************************************/
 
   /* Start with contribution from linear elasticity */
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       cauchy_green[p][q] = 0.5 * (grad_d[p][q] + grad_d[q][p]);
       cauchy_green_old[p][q] = 0.5 * (grad_d_old[p][q] + grad_d_old[q][p]);
       if (transient_run)
@@ -307,9 +307,9 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
   }
   /* add on nonlinear term to Eulerian Strain Tensor */
   if (goma_ctx->fem.cr->MeshFluxModel != LINEAR) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
-        for (a = 0; a < VIM; a++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
           /* dot product between displacement gradient and
            * it's transpose - note that there are two ways to
            * do this
@@ -328,8 +328,8 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
 
   if (goma_ctx->fem.af->Assemble_Jacobian) {
 #if DO_NO_UNROLL
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1 + b];
                j++) {
@@ -340,7 +340,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
           }
         }
         if (goma_ctx->fem.cr->MeshFluxModel != LINEAR) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (b = 0; b < dim; b++) {
               for (j = 0;
                    j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1 + b];
@@ -385,7 +385,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
               0.5 * (d_grad_d_dot[1][0][b][j] + d_grad_d_dot[0][1][b][j]);
         }
 
-        if (VIM == 3) {
+        if (goma_ctx->problem.vim == 3) {
           d_cauchy_green_dx[2][2][b][j] = 0.5 * (d_grad_d[2][2][b][j] + d_grad_d[2][2][b][j]);
           d_cauchy_green_dx[2][1][b][j] = 0.5 * (d_grad_d[2][1][b][j] + d_grad_d[1][2][b][j]);
           d_cauchy_green_dx[2][0][b][j] = 0.5 * (d_grad_d[2][0][b][j] + d_grad_d[0][2][b][j]);
@@ -407,7 +407,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
       }
     }
     if (goma_ctx->fem.cr->MeshFluxModel != LINEAR) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1 + b];
                j++) {
@@ -445,7 +445,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
                          d_grad_d_dot[1][a][b][j] * grad_d[0][a]);
             }
 
-            if (VIM == 3) {
+            if (goma_ctx->problem.vim == 3) {
               d_cauchy_green_dx[2][2][b][j] -=
                   0.5 * (d_grad_d[2][a][b][j] * grad_d[2][a] + grad_d[2][a] * d_grad_d[2][a][b][j]);
               d_cauchy_green_dx[2][1][b][j] -=
@@ -503,8 +503,8 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
       /*
        * Lagrangian and Eulerian displacement Gradients are the same
        */
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           goma_ctx->fem.fv->deform_grad[p][q] = delta(p, q) + grad_d[p][q];
           if (transient_run)
             goma_ctx->fem.fv_dot->deform_grad[p][q] = grad_d_dot[p][q];
@@ -512,8 +512,8 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
       }
 
       if (goma_ctx->fem.af->Assemble_Jacobian) {
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0;
                    j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1 + b];
@@ -530,16 +530,16 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
       /*
        * Lagrangian and Eulerian Deformation Gradients are inverses
        */
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           invdeform_grad[p][q] = delta(p, q) - grad_d[p][q];
           invdeform_dot_grad[p][q] = -grad_d_dot[p][q];
         }
       }
 
       if (goma_ctx->fem.af->Assemble_Jacobian) {
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0;
                    j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1 + b];
@@ -552,12 +552,12 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
           }
         }
       }
-      invert_tensor(invdeform_grad, goma_ctx->fem.fv->deform_grad, VIM, d_invdeform_grad_dx,
-                    goma_ctx->fem.fv->d_deform_grad_dx,
+      invert_tensor(invdeform_grad, goma_ctx->fem.fv->deform_grad, goma_ctx->problem.vim,
+                    d_invdeform_grad_dx, goma_ctx->fem.fv->d_deform_grad_dx,
                     goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1],
                     goma_ctx->fem.af->Assemble_Jacobian);
       if (transient_run)
-        invert_tensor(invdeform_dot_grad, goma_ctx->fem.fv_dot->deform_grad, VIM,
+        invert_tensor(invdeform_dot_grad, goma_ctx->fem.fv_dot->deform_grad, goma_ctx->problem.vim,
                       d_invdeform_dot_grad_dx, goma_ctx->fem.fv_dot->d_deform_grad_dx,
                       goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1],
                       goma_ctx->fem.af->Assemble_Jacobian);
@@ -582,7 +582,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
     goma_ctx->fem.fv_dot->volume_change = 1.;
     goma_ctx->fem.fv->volume_strain = 0.;
     goma_ctx->fem.fv_dot->volume_strain = 0.;
-    for (p = 0; p < VIM; p++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
       goma_ctx->fem.fv->volume_change += cauchy_green[p][p];
       goma_ctx->fem.fv_old->volume_change += cauchy_green_old[p][p];
       goma_ctx->fem.fv->volume_strain += cauchy_green[p][p];
@@ -607,7 +607,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
             goma_ctx->fem.fv_dot->d_volume_change_dx[b][j] += d_cauchy_green_dot_dx[1][1][b][j];
             goma_ctx->fem.fv_dot->d_volume_strain_dx[b][j] += d_cauchy_green_dot_dx[1][1][b][j];
           }
-          if (VIM == 3) {
+          if (goma_ctx->problem.vim == 3) {
             goma_ctx->fem.fv->d_volume_change_dx[b][j] += d_cauchy_green_dx[2][2][b][j];
             goma_ctx->fem.fv->d_volume_strain_dx[b][j] += d_cauchy_green_dx[2][2][b][j];
             if (transient_run) {
@@ -626,8 +626,8 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
      */
 
     /* Eulerian Deformation Gradient is Identity MINUS displacement gradient !! */
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         deform_grad[p][q] = delta(p, q) - grad_d[p][q];
         deform_grad_old[p][q] = delta(p, q) - grad_d_old[p][q];
         /* fv->deform_grad[p][q] = deform_grad[p][q]; */ /*Uncomment for ST DILATATION MODEL*/
@@ -980,8 +980,8 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
       goma_ctx->fem.cr->MeshFluxModel == KELVIN_VOIGT ||
       goma_ctx->fem.cr->MeshFluxModel == ZENER_SLS) {
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         goma_ctx->fem.fv->strain[p][q] = cauchy_green[p][q];
         goma_ctx->fem.fv_old->strain[p][q] = cauchy_green_old[p][q];
         if (transient_run)
@@ -1016,7 +1016,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
       goma_ctx->fem.fv_dot->strain[0][1] = cauchy_green_dot[0][1];
     }
 
-    if (VIM == 3) {
+    if (goma_ctx->problem.vim == 3) {
       goma_ctx->fem.fv->strain[2][2] = cauchy_green[2][2];
       goma_ctx->fem.fv->strain[2][1] = cauchy_green[2][1];
       goma_ctx->fem.fv->strain[2][0] = cauchy_green[2][0];
@@ -1046,7 +1046,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
           goma_ctx->fem.fv->d_strain_dx[0][1][i][k] = d_cauchy_green_dx[0][1][i][k];
           goma_ctx->fem.fv->d_strain_dx[1][0][i][k] = d_cauchy_green_dx[1][0][i][k];
 
-          if (VIM == 3) {
+          if (goma_ctx->problem.vim == 3) {
             goma_ctx->fem.fv->d_strain_dx[2][2][i][k] = d_cauchy_green_dx[2][2][i][k];
             goma_ctx->fem.fv->d_strain_dx[2][1][i][k] = d_cauchy_green_dx[2][1][i][k];
             goma_ctx->fem.fv->d_strain_dx[2][0][i][k] = d_cauchy_green_dx[2][0][i][k];
@@ -1058,7 +1058,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
             goma_ctx->fem.fv_dot->d_strain_dx[1][1][i][k] = d_cauchy_green_dot_dx[1][1][i][k];
             goma_ctx->fem.fv_dot->d_strain_dx[0][1][i][k] = d_cauchy_green_dot_dx[0][1][i][k];
             goma_ctx->fem.fv_dot->d_strain_dx[1][0][i][k] = d_cauchy_green_dot_dx[1][0][i][k];
-            if (VIM == 3) {
+            if (goma_ctx->problem.vim == 3) {
               goma_ctx->fem.fv_dot->d_strain_dx[2][2][i][k] = d_cauchy_green_dot_dx[2][2][i][k];
               goma_ctx->fem.fv_dot->d_strain_dx[2][1][i][k] = d_cauchy_green_dot_dx[2][1][i][k];
               goma_ctx->fem.fv_dot->d_strain_dx[2][0][i][k] = d_cauchy_green_dot_dx[2][0][i][k];
@@ -1544,19 +1544,19 @@ void force_n_dot_f_bc(double func[DIM],
             goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)]) {
           for (a = 0; a < dim; a++) {
             vconv[a] = goma_ctx->fem.fv_dot->d_rs[a];
-            for (b = 0; b < VIM; b++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               vconv[a] -= goma_ctx->fem.fv_dot->d_rs[b] * goma_ctx->fem.fv->grad_d_rs[b][a];
             }
           }
-          for (a = 0; a < VIM; a++) {
-            for (b = 0; b < VIM; b++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               var = SOLID_DISPLACEMENT1 + b;
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 phi_j = goma_ctx->fem.bf[var]->phi[j];
                 d_vconv->rs[a][b][j] += phi_j * (1. + 2. * theta) * delta_t * delta(a, b);
                 d_vconv->rs[a][b][j] -=
                     (1. + 2. * theta) * phi_j * delta_t * goma_ctx->fem.fv->grad_d_rs[b][a];
-                for (c = 0; c < VIM; c++) {
+                for (c = 0; c < goma_ctx->problem.vim; c++) {
                   /*grad_phi_e[i][j][k][l] = e_k e_l : grad(phi_i e_j )*/
                   d_vconv->rs[a][b][j] -=
                       goma_ctx->fem.fv_dot->d_rs[c] * goma_ctx->fem.bf[var]->grad_phi_e[j][b][c][a];
@@ -2185,19 +2185,19 @@ void friction_n_dot_f_bc(double func[DIM],
           goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)]) {
         for (a = 0; a < dim; a++) {
           vconv[a] = goma_ctx->fem.fv_dot->d_rs[a];
-          for (b = 0; b < VIM; b++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             vconv[a] -= goma_ctx->fem.fv_dot->d_rs[b] * goma_ctx->fem.fv->grad_d_rs[b][a];
           }
         }
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             var = SOLID_DISPLACEMENT1 + b;
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               phi_j = goma_ctx->fem.bf[var]->phi[j];
               d_vconv->rs[a][b][j] += phi_j * (1. + 2. * theta) * delta_t * delta(a, b);
               d_vconv->rs[a][b][j] -=
                   (1. + 2. * theta) * phi_j * delta_t * goma_ctx->fem.fv->grad_d_rs[b][a];
-              for (c = 0; c < VIM; c++) {
+              for (c = 0; c < goma_ctx->problem.vim; c++) {
                 /*grad_phi_e[i][j][k][l] = e_k e_l : grad(phi_i e_j )*/
                 d_vconv->rs[a][b][j] -=
                     goma_ctx->fem.fv_dot->d_rs[c] * goma_ctx->fem.bf[var]->grad_phi_e[j][b][c][a];
@@ -2231,15 +2231,15 @@ void friction_n_dot_f_bc(double func[DIM],
   /* compute normal force and velocity magnitude	*/
   normal_force = 0;
   tang_force[0] = tang_force[1] = 0;
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
+  for (a = 0; a < goma_ctx->problem.vim; a++) {
+    for (b = 0; b < goma_ctx->problem.vim; b++) {
       normal_force += goma_ctx->fem.fv->snormal[a] * TT[a][b] * goma_ctx->fem.fv->snormal[b];
       tang_force[0] += goma_ctx->fem.fv->snormal[a] * TT[a][b] * goma_ctx->fem.fv->stangent[0][b];
       tang_force[1] += goma_ctx->fem.fv->snormal[a] * TT[a][b] * goma_ctx->fem.fv->stangent[1][b];
     }
   }
   velo_mag = tang_velo[0] = tang_velo[1] = 0;
-  for (a = 0; a < WIM; a++) {
+  for (a = 0; a < goma_ctx->problem.wim; a++) {
     velo_mag += vconv[a] * vconv[a];
     tang_velo[0] += goma_ctx->fem.fv->stangent[0][a] * vconv[a];
     tang_velo[1] += goma_ctx->fem.fv->stangent[1][a] * vconv[a];
@@ -2279,8 +2279,8 @@ void friction_n_dot_f_bc(double func[DIM],
 
           d_nforce = 0;
           d_tforce[0] = d_tforce[1] = 0;
-          for (a = 0; a < VIM; a++) {
-            for (b = 0; b < VIM; b++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               d_nforce += goma_ctx->fem.fv->dsnormal_dx[a][jvar][j_id] * TT[a][b] *
                               goma_ctx->fem.fv->snormal[b] +
                           goma_ctx->fem.fv->snormal[a] * dTT_dx[a][b][jvar][j_id] *
@@ -2407,9 +2407,9 @@ void put_liquid_stress_in_solid(int id,                /* local element node num
    * check to make sure that both mesh dof and velocity
    * dof exist at this node
    */
-  if (Dolphin[goma_ctx->fem.pg->imtrx][I][R_MESH1] <= 0)
+  if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][R_MESH1] <= 0)
     return;
-  if (Dolphin[goma_ctx->fem.pg->imtrx][I][R_MOMENTUM1] <= 0)
+  if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][R_MOMENTUM1] <= 0)
     return;
 
   /*
@@ -2418,7 +2418,7 @@ void put_liquid_stress_in_solid(int id,                /* local element node num
    * decrementing the psuedo-solid momentum
    */
   if (goma_ctx->fem.af->Assemble_Residual) {
-    for (p = 0; p < WIM; p++) {
+    for (p = 0; p < goma_ctx->problem.wim; p++) {
       /* don't do this if the displacement is fixed for this node */
       if (!xfixed[p]) {
         ieqn_mom = R_MOMENTUM1 + p;
@@ -2438,7 +2438,7 @@ void put_liquid_stress_in_solid(int id,                /* local element node num
    * momentum into local contribution for liquid momentum
    */
   if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (p = 0; p < WIM; p++) {
+    for (p = 0; p < goma_ctx->problem.wim; p++) {
       /*
        * don't do this if the mesh is fixed for this node
        *  HKM -> I assume this is the mesh since xfixed[] is used
@@ -2556,7 +2556,7 @@ void put_liquid_stress_in_solid(int id,                /* local element node num
         /*
          * local J_m_v -> J_d_v
          */
-        for (q = 0; q < WIM; q++) {
+        for (q = 0; q < goma_ctx->problem.wim; q++) {
           var = VELOCITY1 + q;
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -2574,8 +2574,8 @@ void put_liquid_stress_in_solid(int id,                /* local element node num
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
           (void)stress_eqn_pointer(v_s);
           for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-            for (p2 = 0; p2 < VIM; p2++) {
-              for (q = 0; q < VIM; q++) {
+            for (p2 = 0; p2 < goma_ctx->problem.vim; p2++) {
+              for (q = 0; q < goma_ctx->problem.vim; q++) {
                 var = v_s[mode][p2][q];
                 if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
                   pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -2604,8 +2604,8 @@ void put_liquid_stress_in_solid(int id,                /* local element node num
           v_g[2][0] = VELOCITY_GRADIENT31;
           v_g[2][1] = VELOCITY_GRADIENT32;
           v_g[2][2] = VELOCITY_GRADIENT33;
-          for (p2 = 0; p2 < VIM; p2++) {
-            for (q = 0; q < VIM; q++) {
+          for (p2 = 0; p2 < goma_ctx->problem.vim; p2++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               var = v_g[p2][q];
               if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
                 pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
@@ -2702,9 +2702,9 @@ void put_liquid_stress_in_solid_ALE(int id,        /* local element node number 
   }
 
   /* check to make sure that both SOLID dof and velocity dof exist at this node */
-  if (Dolphin[goma_ctx->fem.pg->imtrx][I][R_SOLID1] <= 0)
+  if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][R_SOLID1] <= 0)
     return;
-  if (Dolphin[goma_ctx->fem.pg->imtrx][I][R_MOMENTUM1] <= 0)
+  if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][R_MOMENTUM1] <= 0)
     return;
 
   /* loop over directions and add local contribution to liquid momentum into
@@ -2902,7 +2902,7 @@ void penetration(double func[],
     }
     err = get_convection_velocity(vconv, vconv_old, d_vconv, dt, tt);
     if (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         *func += goma_ctx->fem.fv->snormal[a] * vconv[a];
       }
 
@@ -3113,7 +3113,7 @@ void no_slip(double func[],
     }
 
     if (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         func[a] -= vconv[a] + v_solid_mesh[a];
       }
 
@@ -3126,7 +3126,7 @@ void no_slip(double func[],
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             phi_j = goma_ctx->fem.bf[var]->phi[j_id];
             /*     d( )/dx        */
-            for (a = 0; a < VIM; a++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
               d_func[a][var][j_id] -= d_vconv->T[a][j_id];
             }
           }
@@ -3136,7 +3136,7 @@ void no_slip(double func[],
         for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             phi_j = goma_ctx->fem.bf[var]->phi[j_id];
-            for (a = 0; a < VIM; a++) {
+            for (a = 0; a < goma_ctx->problem.vim; a++) {
               for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
                 /*     d( )/dx        */
                 d_func[a][MAX_VARIABLE_TYPES + w][j_id] -= d_vconv->C[a][w][j_id];
@@ -3150,7 +3150,7 @@ void no_slip(double func[],
           for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
             if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
               phi_j = goma_ctx->fem.bf[var]->phi[j_id];
-              for (a = 0; a < VIM; a++) {
+              for (a = 0; a < goma_ctx->problem.vim; a++) {
                 /*     d( )/dx        */
                 d_func[a][var][j_id] -= d_vconv->X[a][jvar][j_id];
               }
@@ -3164,7 +3164,7 @@ void no_slip(double func[],
             for (j_id = 0; j_id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j_id++) {
               if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
                 phi_j = goma_ctx->fem.bf[var]->phi[j_id];
-                for (a = 0; a < VIM; a++) {
+                for (a = 0; a < goma_ctx->problem.vim; a++) {
                   /*     d( )/dx        */
                   d_func[a][var][j_id] -= d_vconv->rs[a][jvar][j_id];
                 }
@@ -3193,7 +3193,7 @@ void no_slip(double func[],
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               phi_j = goma_ctx->fem.bf[var]->phi[j];
-              if (TimeIntegration != 0) {
+              if (goma_ctx->problem.time_integration != 0) {
                 d_func[jvar][var][j] += (-(1. + 2. * tt) * phi_j / dt);
               }
             }
@@ -3216,7 +3216,7 @@ void no_slip(double func[],
   else if (Current_EB_ptr->Elem_Blk_Id == eb_mat_fluid) {
 
     /* Calculate the residual contribution from the velocity */
-    for (a = 0; a < VIM; a++) {
+    for (a = 0; a < goma_ctx->problem.vim; a++) {
       func[a] += goma_ctx->fem.fv->v[a];
     }
 
@@ -3328,17 +3328,18 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
    */
 
   if (goma_ctx->fem.evpl->ConstitutiveEquation == NO_MODEL) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         TT[p][q] = lambda * goma_ctx->fem.fv->volume_strain * delta(p, q) +
                    2. * mu * goma_ctx->fem.fv->strain[p][q];
       }
     }
 
-    if (TimeIntegration != STEADY && (goma_ctx->fem.cr->MeshFluxModel == KELVIN_VOIGT ||
-                                      goma_ctx->fem.cr->MeshFluxModel == ZENER_SLS)) {
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+    if (goma_ctx->problem.time_integration != STEADY &&
+        (goma_ctx->fem.cr->MeshFluxModel == KELVIN_VOIGT ||
+         goma_ctx->fem.cr->MeshFluxModel == ZENER_SLS)) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           TT[p][q] += dil_viscos * goma_ctx->fem.fv_dot->volume_strain * delta(p, q) +
                       2. * viscos * goma_ctx->fem.fv_dot->strain[p][q];
         }
@@ -3351,8 +3352,8 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
           (int)Element_Blocks[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->elem_blk_index]
               .ElemStorage[mat_ielem]
               .solidified[ip]) {
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             TT[p][q] -= (2. * mu + 3. * lambda) * (-0.04) * delta(p, q);
           }
         }
@@ -3365,14 +3366,14 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
     /*  add thermo-elasticity  */
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_ENERGY]) {
       if (simple_thermexp) {
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             TT[p][q] -= (2. * mu + 3. * lambda) * thermexp * delta(p, q);
           }
         }
       } else if (goma_ctx->fem.elc->thermal_expansion_model == ORTHOTROPIC) {
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             TT[p][q] -=
                 (2. * mu + 3. * lambda) * (thermexp * (delta(p, q) - orient[p] * orient[q]) +
                                            ortho_thermexp * orient[p] * orient[q]);
@@ -3388,8 +3389,8 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
       for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
         if (goma_ctx->fem.mp->SpecVolExpModel[w] == CONSTANT ||
             goma_ctx->fem.mp->SpecVolExpModel[w] == PHOTO_CURING) {
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               TT[p][q] -= (2. * mu + 3. * lambda) * speciesexp[w] *
                           (goma_ctx->fem.fv->c[w] - goma_ctx->fem.mp->reference_concn[w]) *
                           delta(p, q);
@@ -3400,8 +3401,8 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
     }
 
     if (goma_ctx->fem.af->Assemble_Jacobian) {
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           for (b = 0; b < dim; b++) {
             v = MESH_DISPLACEMENT1 + b;
             if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
@@ -3415,8 +3416,9 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
                     d_lambda_dx[b][j] * goma_ctx->fem.fv->volume_strain * delta(p, q) +
                     2. * d_mu_dx[b][j] * goma_ctx->fem.fv->strain[p][q];
 
-                if (TimeIntegration != STEADY && (goma_ctx->fem.cr->MeshFluxModel == KELVIN_VOIGT ||
-                                                  goma_ctx->fem.cr->MeshFluxModel == ZENER_SLS)) {
+                if (goma_ctx->problem.time_integration != STEADY &&
+                    (goma_ctx->fem.cr->MeshFluxModel == KELVIN_VOIGT ||
+                     goma_ctx->fem.cr->MeshFluxModel == ZENER_SLS)) {
                   dTT_dx[p][q][b][j] +=
                       dil_viscos * goma_ctx->fem.fv_dot->d_volume_strain_dx[b][j] * delta(p, q) +
                       2. * viscos * goma_ctx->fem.fv_dot->d_strain_dx[p][q][b][j];
@@ -3475,8 +3477,9 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
                                   goma_ctx->fem.fv->volume_strain * delta(p, q)) *
                                  goma_ctx->fem.bf[v]->phi[j];
             }
-            if (TimeIntegration != STEADY && (goma_ctx->fem.cr->MeshFluxModel == KELVIN_VOIGT ||
-                                              goma_ctx->fem.cr->MeshFluxModel == ZENER_SLS)) {
+            if (goma_ctx->problem.time_integration != STEADY &&
+                (goma_ctx->fem.cr->MeshFluxModel == KELVIN_VOIGT ||
+                 goma_ctx->fem.cr->MeshFluxModel == ZENER_SLS)) {
               for (j = 0; j < dofs; j++) {
                 dTT_dT[p][q][j] += d_dilviscos_dx[v] * goma_ctx->fem.bf[v]->phi[j] *
                                        goma_ctx->fem.fv_dot->volume_strain * delta(p, q) +
@@ -3573,15 +3576,15 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
     if (goma_ctx->fem.cr->MeshFluxModel != INCOMP_PSTRAIN &&
         goma_ctx->fem.cr->MeshFluxModel != INCOMP_PSTRESS &&
         goma_ctx->fem.cr->MeshFluxModel != INCOMP_3D) {
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           TT[p][q] += lambda * goma_ctx->fem.fv->volume_strain * delta(p, q);
         }
       }
 
       if (goma_ctx->fem.af->Assemble_Jacobian) {
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < dim; b++) {
               v = MESH_DISPLACEMENT1 + b;
               if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
@@ -3630,7 +3633,7 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
          goma_ctx->fem.mp->PorousMediaType == POROUS_SATURATED ||
          goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) &&
         goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_POROSITY]) {
-      for (a = 0; a < VIM; a++) {
+      for (a = 0; a < goma_ctx->problem.vim; a++) {
         if (goma_ctx->fem.mp->CapStress == NO_CAP_STRESS) {
           /*do nothing*/
         } else if (goma_ctx->fem.mp->CapStress == COMPRESSIBLE &&
@@ -3696,8 +3699,8 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
         if (goma_ctx->fem.cr->MeshFluxModel == INCOMP_PSTRESS ||
             goma_ctx->fem.cr->MeshFluxModel == HOOKEAN_PSTRESS) {
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (q = 0; q < goma_ctx->problem.vim; q++) {
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 /* didn't add this sensitivity in before - add it now */
                 dTT_dp[p][q][j] = 2. * mu * goma_ctx->fem.fv->d_strain_dp[p][q][j] +
@@ -3712,7 +3715,7 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
              goma_ctx->fem.cr->MeshFluxModel == INCOMP_3D ||
              goma_ctx->fem.cr->MeshFluxModel == LINEAR) &&
             (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS)) {
-          for (a = 0; a < VIM; a++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               dTT_dp[a][a][j] -= goma_ctx->fem.bf[var]->phi[j];
             }
@@ -3729,8 +3732,8 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
         /* sensitivity of total stress to species concentrations
            - first calculate contribution from sensitivity of elastic moduli */
         for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-          for (a = 0; a < VIM; a++) {
-            for (b = 0; b < VIM; b++) {
+          for (a = 0; a < goma_ctx->problem.vim; a++) {
+            for (b = 0; b < goma_ctx->problem.vim; b++) {
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 /* didn't add this in before - add it in now */
                 dTT_dc[a][b][w][j] += goma_ctx->fem.bf[var]->phi[j] *
@@ -3748,8 +3751,8 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
          - first calculate contribution from sensitivity of elastic moduli */
       var = POR_POROSITY;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var])
-        for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
+        for (a = 0; a < goma_ctx->problem.vim; a++) {
+          for (b = 0; b < goma_ctx->problem.vim; b++) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               /* didn't add this in before - add it in now */
               dTT_dporosity[a][b][j] += goma_ctx->fem.bf[var]->phi[j] *
@@ -3766,7 +3769,7 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
       var = POR_LIQ_PRES;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] &&
           goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_POROSITY]) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             if (goma_ctx->fem.mp->CapStress == COMPRESSIBLE) {
               dTT_dp_liq[p][p][j] -=
@@ -3878,7 +3881,7 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
       var = POR_SINK_MASS;
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var] &&
           goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_POROSITY]) {
-        for (p = 0; p < VIM; p++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             /* dTT_dsink_mass[p][p][j] -=
              * factor*2*mu*bf[var]->phi[j]*mp->u_porous_sink_constants[5]/mp->density; */
@@ -3891,7 +3894,7 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
 
         var = POR_POROSITY;
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-          for (p = 0; p < VIM; p++) {
+          for (p = 0; p < goma_ctx->problem.vim; p++) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
 
               dTT_dporosity[p][p][j] -=
@@ -4152,21 +4155,21 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
   /* First calculate the displacement gradient, which is based on the current
      configuration */
 
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       grad_d[p][q] = goma_ctx->fem.fv->grad_d[p][q];
     }
   }
 
   /* Calculate the inverse of the deformation gradient tensor */
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       F_inv[p][q] = delta(p, q) - grad_d[p][q];
     }
   }
 
   /* determine the deformation gradient tensor from its inverse */
-  invert_tensor(F_inv, F, VIM, NULL, NULL, 0, 0);
+  invert_tensor(F_inv, F, goma_ctx->problem.vim, NULL, NULL, 0, 0);
 
   /* Because we are dealing with plane stress case */
   F[0][2] = 0;
@@ -4225,15 +4228,15 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
 
   /* invert the viscoplastic deformation gradient tensor only if material yields */
   if (F_vp_flag == 1) {
-    invert_tensor(F_vp, F_vp_inv, VIM, NULL, NULL, 0, 0);
+    invert_tensor(F_vp, F_vp_inv, goma_ctx->problem.vim, NULL, NULL, 0, 0);
   }
 
   /* calculate the elastic deformation gradient tensor */
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       if (F_vp_flag == 1) {
         F_e[p][q] = 0.0;
-        for (k = 0; k < VIM; k++) {
+        for (k = 0; k < goma_ctx->problem.vim; k++) {
           F_e[p][q] += (1.0 / alpha) * F[p][k] * F_vp_inv[k][q];
         }
       } else {
@@ -4243,10 +4246,10 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
   }
 
   /* calculate the strain tensor based on the stress-free reference frame */
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       C_e[p][q] = 0.0;
-      for (k = 0; k < VIM; k++) {
+      for (k = 0; k < goma_ctx->problem.vim; k++) {
         C_e[p][q] += F_e[k][p] * F_e[k][q];
       }
       E_e[p][q] = 0.5 * (C_e[p][q] - delta(p, q));
@@ -4255,16 +4258,16 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
 
   /* calculate the stress tensor */
 
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       S[p][q] = 2.0 * goma_ctx->fem.elc->lame_mu * E_e[p][q];
     }
   }
   /* calculate the true stress tensor, i.e. the stress tensor based on
      the current configuration */
 
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       TT[p][q] = S[p][q];
     }
   }
@@ -4272,16 +4275,16 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
   if (goma_ctx->fem.af->Assemble_Jacobian)
 
   {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         for (b = 0; b < dim; b++) {
           v = MESH_DISPLACEMENT1 + b;
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
             dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
             for (j = 0; j < dofs; j++) {
               dF_dx[p][q][b][j] = 0.0;
-              for (m = 0; m < VIM; m++) {
-                for (n = 0; n < VIM; n++) {
+              for (m = 0; m < goma_ctx->problem.vim; m++) {
+                for (n = 0; n < goma_ctx->problem.vim; n++) {
                   dF_dx[p][q][b][j] +=
                       F[p][m] * goma_ctx->fem.fv->d_grad_d_dmesh[m][n][b][j] * F[n][q];
                 }
@@ -4307,16 +4310,16 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
     }
 
     if (F_vp_flag == 1) {
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           for (b = 0; b < dim; b++) {
             v = MESH_DISPLACEMENT1 + b;
             if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
               dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
               for (j = 0; j < dofs; j++) {
                 dF_vp_inv_dx[p][q][b][j] = 0.;
-                for (m = 0; m < VIM; m++) {
-                  for (n = 0; n < VIM; n++) {
+                for (m = 0; m < goma_ctx->problem.vim; m++) {
+                  for (n = 0; n < goma_ctx->problem.vim; n++) {
                     dF_vp_inv_dx[p][q][b][j] -=
                         F_vp_inv[p][m] * dF_vp_dx[m][n][b][j] * F_vp_inv[n][q];
                   }
@@ -4327,13 +4330,13 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
         }
       }
       var = MASS_FRACTION;
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           for (b = 0; b < goma_ctx->fem.pd->Num_Species_Eqn; b++) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               dF_vp_inv_dc[p][q][b][j] = 0.;
-              for (m = 0; m < VIM; m++) {
-                for (n = 0; n < VIM; n++) {
+              for (m = 0; m < goma_ctx->problem.vim; m++) {
+                for (n = 0; n < goma_ctx->problem.vim; n++) {
                   dF_vp_inv_dc[p][q][b][j] -=
                       F_vp_inv[p][m] * dF_vp_dc[m][n][b][j] * F_vp_inv[n][q];
                 }
@@ -4344,8 +4347,8 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
       }
     }
 
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         for (b = 0; b < dim; b++) {
           v = MESH_DISPLACEMENT1 + b;
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
@@ -4353,7 +4356,7 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
             for (j = 0; j < dofs; j++) {
               if (F_vp_flag == 1) {
                 dF_e_dx[p][q][b][j] = 0.;
-                for (m = 0; m < VIM; m++) {
+                for (m = 0; m < goma_ctx->problem.vim; m++) {
                   dF_e_dx[p][q][b][j] += -1. / 3. * pow(goma_ctx->fem.fv->volume_change, -4. / 3.) *
                                              goma_ctx->fem.fv->d_volume_change_dx[b][j] * F[p][m] *
                                              F_vp_inv[m][q] +
@@ -4372,12 +4375,12 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
     }
 
     if (F_vp_flag == 1) {
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           for (b = 0; b < goma_ctx->fem.pd->Num_Species_Eqn; b++) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               dF_e_dc[p][q][b][j] = 0.;
-              for (m = 0; m < VIM; m++) {
+              for (m = 0; m < goma_ctx->problem.vim; m++) {
                 dF_e_dc[p][q][b][j] += -1. / 3. * pow(goma_ctx->fem.fv->volume_change, -4. / 3.) *
                                            goma_ctx->fem.fv->d_volume_change_dx[b][j] * F[p][m] *
                                            F_vp_inv[m][q] +
@@ -4388,15 +4391,15 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
         }
       }
     }
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         for (b = 0; b < dim; b++) {
           v = MESH_DISPLACEMENT1 + b;
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
             dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
             for (j = 0; j < dofs; j++) {
               dE_e_dx[p][q][b][j] = 0.0;
-              for (i = 0; i < VIM; i++) {
+              for (i = 0; i < goma_ctx->problem.vim; i++) {
                 dE_e_dx[p][q][b][j] +=
                     0.5 * (dF_e_dx[i][p][b][j] * F_e[i][q] + F_e[i][p] * dF_e_dx[i][q][b][j]);
               }
@@ -4407,12 +4410,12 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
     }
 
     if (F_vp_flag == 1) {
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           for (b = 0; b < goma_ctx->fem.pd->Num_Species_Eqn; b++) {
             for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
               dE_e_dc[p][q][b][j] = 0.0;
-              for (i = 0; i < VIM; i++) {
+              for (i = 0; i < goma_ctx->problem.vim; i++) {
                 dE_e_dc[p][q][b][j] +=
                     0.5 * (dF_e_dc[i][p][b][j] * F_e[i][q] + F_e[i][p] * dF_e_dc[i][q][b][j]);
               }
@@ -4421,8 +4424,8 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
         }
       }
     }
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         for (b = 0; b < dim; b++) {
           v = MESH_DISPLACEMENT1 + b;
           if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
@@ -4436,8 +4439,8 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
       }
     }
 
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         for (b = 0; b < goma_ctx->fem.pd->Num_Species_Eqn; b++) {
           for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
             if (F_vp_flag == 1) {
@@ -4453,13 +4456,13 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
   } /* End if Assemble Jacobian */
 
   /* Load local variables into global storage */
-  for (p = 0; p < VIM; p++)
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++)
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       goma_ctx->fem.evpl->TT_glob[ielem][ip][p][q] = TT[p][q];
       goma_ctx->fem.evpl->F_vp_glob[ielem][ip][p][q] = F_vp[p][q];
     }
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       for (b = 0; b < dim; b++) {
         v = MESH_DISPLACEMENT1 + b;
         if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
@@ -4527,19 +4530,19 @@ int get_F_vp(double F_vp[DIM][DIM],
   dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
 
   TTddC = 0.;
-  for (p = 0; p < VIM; p++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
     TTddC += TT[p][p];
   }
 
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       T[p][q] = TT[p][q] - 1. / 3. * TTddC * delta(p, q);
     }
   }
 
   phe = 0.;
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
+  for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (q = 0; q < goma_ctx->problem.vim; q++) {
       phe += T[q][p] * T[p][q];
     }
   }
@@ -4549,11 +4552,11 @@ int get_F_vp(double F_vp[DIM][DIM],
 
   /* calculate only if the material has yielded */
   if (phi > 0.) {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         d_phi_dTT[p][q] = 0.;
-        for (i = 0; i < VIM; i++) {
-          for (j = 0; j < VIM; j++) {
+        for (i = 0; i < goma_ctx->problem.vim; i++) {
+          for (j = 0; j < goma_ctx->problem.vim; j++) {
             d_phi_dTT[p][q] +=
                 T[i][j] * (delta(p, i) * delta(q, j) - 1. / 3. * delta(p, q) * delta(i, j));
           }
@@ -4564,8 +4567,8 @@ int get_F_vp(double F_vp[DIM][DIM],
 
     /* normalize d_phi_dTT */
     norm = 0.;
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         norm += d_phi_dTT[p][q] * d_phi_dTT[p][q];
       }
     }
@@ -4573,29 +4576,29 @@ int get_F_vp(double F_vp[DIM][DIM],
     if (norm < 1.e-12)
       norm = 1.;
 
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         d_phi_dTT_norm[p][q] = d_phi_dTT[p][q] / norm;
       }
     }
 
     /* calculate the viscoplastic strain rate tensor */
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         D_vp[p][q] = 1 / goma_ctx->fem.evpl->plastic_mu * phi * d_phi_dTT_norm[p][q];
         F_vp_flag = 1;
       }
     }
 
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         F_vp[p][q] = 0;
         F_vp[p][q] = D_vp[p][q] * delta_t + F_vp_old[p][q];
       }
     }
   } else {
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
+    for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (q = 0; q < goma_ctx->problem.vim; q++) {
         D_vp[p][q] = 0.0;
         F_vp[p][q] = F_vp_old[p][q];
       }
@@ -4726,8 +4729,8 @@ int get_F_vp(double F_vp[DIM][DIM],
         }
       }
 
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           for (b = 0; b < dim; b++) {
             v = MESH_DISPLACEMENT1 + b;
             if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
@@ -4742,8 +4745,8 @@ int get_F_vp(double F_vp[DIM][DIM],
       }
 
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < goma_ctx->fem.pd->Num_Species_Eqn; b++) {
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 d_phi_dTT_dc[p][q][b][j] = -0.75 * pow(phe, -2.) * d_phi_dc[b][j] * dT2_dTT[p][q] +
@@ -4754,8 +4757,8 @@ int get_F_vp(double F_vp[DIM][DIM],
         }
       }
 
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           for (b = 0; b < dim; b++) {
             v = MESH_DISPLACEMENT1 + b;
             if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
@@ -4771,8 +4774,8 @@ int get_F_vp(double F_vp[DIM][DIM],
       }
 
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < goma_ctx->fem.pd->Num_Species_Eqn; b++) {
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 d_phi_dTT_norm_dc[p][q][b][j] = (d_phi_dTT_dc[p][q][b][j] * norm -
@@ -4784,8 +4787,8 @@ int get_F_vp(double F_vp[DIM][DIM],
         }
       }
 
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           for (b = 0; b < dim; b++) {
             v = MESH_DISPLACEMENT1 + b;
             if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
@@ -4802,8 +4805,8 @@ int get_F_vp(double F_vp[DIM][DIM],
       }
 
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < goma_ctx->fem.pd->Num_Species_Eqn; b++) {
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 dF_vp_dc[p][q][b][j] =
@@ -4819,8 +4822,8 @@ int get_F_vp(double F_vp[DIM][DIM],
         }
       }
     } else {
-      for (p = 0; p < VIM; p++) {
-        for (q = 0; q < VIM; q++) {
+      for (p = 0; p < goma_ctx->problem.vim; p++) {
+        for (q = 0; q < goma_ctx->problem.vim; q++) {
           for (b = 0; b < dim; b++) {
             v = MESH_DISPLACEMENT1 + b;
             if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][v]) {
@@ -4834,8 +4837,8 @@ int get_F_vp(double F_vp[DIM][DIM],
       }
 
       if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
+        for (p = 0; p < goma_ctx->problem.vim; p++) {
+          for (q = 0; q < goma_ctx->problem.vim; q++) {
             for (b = 0; b < goma_ctx->fem.pd->Num_Species_Eqn; b++) {
               for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
                 dF_vp_dc[p][q][b][j] = 0.;

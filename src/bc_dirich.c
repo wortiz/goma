@@ -98,7 +98,8 @@ int put_dirichlet_in_matrix(double x[], const int num_total_nodes)
              * ordering.
              */
             ldof_eqn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[var_type][i];
-            for (j = 0, found = FALSE; j < Dolphin[goma_ctx->fem.pg->imtrx][I][var_type]; j++) {
+            for (j = 0, found = FALSE;
+                 j < goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][var_type]; j++) {
               ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[var_type][ldof_eqn];
               matID_dof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof];
               if (matID == matID_dof || matID == -1) {

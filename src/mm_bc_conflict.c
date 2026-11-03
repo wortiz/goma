@@ -329,7 +329,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
   int *matrix_used_BC = NULL;
 
   if (goma_ctx->proc_id == 0) {
-    matrix_used_BC = calloc((size_t)Num_BC, sizeof(int));
+    matrix_used_BC = calloc((size_t)goma_ctx->problem.num_bc, sizeof(int));
   }
 
   for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;
@@ -350,7 +350,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     BC_Unk_List = (int ***)alloc_ptr_1(num_total_nodes);
     num_bc_nodes = 0;
 
-    for (ibc = 0; ibc < Num_BC; ibc++) {
+    for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
       /* First check to see if this boundary condition is a node set */
       if (!strcmp(BC_Types[ibc].Set_Type, "NS")) {
         /*
@@ -413,7 +413,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     /*  visit each node on all side sets and list the BC's applied there       */
     /***************************************************************************/
 
-    for (ibc = 0; ibc < Num_BC; ibc++) {
+    for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
       /* First check to see if this boundary condition is a side set */
       if (!strcmp(BC_Types[ibc].Set_Type, "SS")) {
         /*
@@ -438,7 +438,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                */
               ielem = exo->ss_elem_list[exo->ss_elem_index[iss] + es];
               elem_block_index = find_elemblock_index(ielem, exo);
-              matIndex = Matilda[elem_block_index];
+              matIndex = goma_ctx->problem.matilda[elem_block_index];
               /*
                * Loop over all of the local nodes on the side
                */
@@ -2015,7 +2015,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
   }
 
   if (goma_ctx->proc_id == 0) {
-    for (int ibc = 0; ibc < Num_BC; ibc++) {
+    for (int ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
       if (matrix_used_BC[ibc] == 0) {
         GOMA_WH_MANY(-1, "Boundary condition %d, %s, applied on NS %d, is never used\n", ibc,
                      BC_Types[ibc].desc->name1, BC_Types[ibc].BC_ID);
@@ -2131,7 +2131,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     /*  visit each node on all node sets and list the BC's applied there         */
     /*****************************************************************************/
 
-    for (ibc = 0; ibc < Num_BC; ibc++) {
+    for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
 
       /* First check to see if this boundary condition is a node set 	      */
       if (!strcmp(BC_Types[ibc].Set_Type, "NS")) {
@@ -2217,7 +2217,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
          */
         ielem = exo->ss_elem_list[exo->ss_elem_index[iss] + side_index];
         elem_block_index = find_elemblock_index(ielem, exo);
-        matIndex = Matilda[elem_block_index];
+        matIndex = goma_ctx->problem.matilda[elem_block_index];
         /*
          * Loop over all of the local nodes on the side
          */
@@ -2241,7 +2241,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
       }
     }
 
-    for (ibc = 0; ibc < Num_BC; ibc++) {
+    for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
 
       /* First check to see if this boundary condition is a side set      */
       if (!strcmp(BC_Types[ibc].Set_Type, "SS")) {
@@ -2283,7 +2283,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                */
               ielem = exo->ss_elem_list[exo->ss_elem_index[iss] + side_index];
               elem_block_index = find_elemblock_index(ielem, exo);
-              matIndex = Matilda[elem_block_index];
+              matIndex = goma_ctx->problem.matilda[elem_block_index];
               /*
                * Loop over all of the local nodes on the side
                */
@@ -2373,7 +2373,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     /*  visit each node on all side sets and list the ROT's applied there      */
     /***************************************************************************/
 
-    for (irc = 0; irc < Num_ROT; irc++) {
+    for (irc = 0; irc < goma_ctx->problem.num_rot; irc++) {
 
       /* Check for consistency. I.E. make sure all side sets on cards exist */
 
@@ -2496,8 +2496,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     BC_dup_nodes[goma_ctx->fem.pg->imtrx] = alloc_int_1(num_bc_nodes, -1);
     BC_dup_list[goma_ctx->fem.pg->imtrx] = (int ***)alloc_ptr_1(num_bc_nodes);
     BC_dup_ptr[goma_ctx->fem.pg->imtrx] = 0;
-    bool *explicit_rot_print = malloc(sizeof(bool) * Num_BC);
-    for (int i = 0; i < Num_BC; i++) {
+    bool *explicit_rot_print = malloc(sizeof(bool) * goma_ctx->problem.num_bc);
+    for (int i = 0; i < goma_ctx->problem.num_bc; i++) {
       explicit_rot_print[i] = false;
     }
 

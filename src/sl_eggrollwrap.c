@@ -312,7 +312,7 @@ void eggrollwrap(int *istuff, /* info for eigenvalue extraction */
         bool is_P1 = FALSE;
         int dof = 0;
         for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-          int mn = Matilda[eb_index];
+          int mn = goma_ctx->problem.matilda[eb_index];
           if (goma_ctx->fem.pd_glob[mn]
                   ->i[goma_ctx->fem.upd->matrix_index[rd->evtype[iev]]][rd->evtype[iev]] == I_P1) {
             dof = MAX(getdofs(type2shape(exo->eb_elem_itype[eb_index]), I_P1), dof);

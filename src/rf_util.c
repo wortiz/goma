@@ -280,11 +280,13 @@ void put_fill_vector(const int N, double x[], const double fill_vector[], const 
   int ki;    /* counter from 0 to the number of dofs      */
 
   for (i = 0; i < N; i++) {
-    nvdof = Dolphin[goma_ctx->fem.pg->imtrx][i][R_FILL]; /* Number of FILL dofs at this node. */
+    nvdof =
+        goma_ctx->problem
+            .dolphin[goma_ctx->fem.pg->imtrx][i][R_FILL]; /* Number of FILL dofs at this node. */
     for (ki = 0; ki < nvdof; ki++) {
       ie = Index_Solution(i, R_FILL, 0, ki, -1, goma_ctx->fem.pg->imtrx);
       if (ie != -1) {
-        if (ie > NumUnknowns[goma_ctx->fem.pg->imtrx]) {
+        if (ie > goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]) {
           GOMA_EH(ie, "put_fill_vector");
         } else {
           x[ie] = fill_vector[node_to_fill[i] + ki];
@@ -318,7 +320,7 @@ void get_fill_vector(const int N,
   int ki;    /* counter from 0 to number of dofs          */
 
   for (i = 0; i < N; i++) {
-    nvdof = Dolphin[goma_ctx->fem.pg->imtrx][i][R_FILL];
+    nvdof = goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][i][R_FILL];
     for (ki = 0; ki < nvdof; ki++) {
       ie = Index_Solution(i, R_FILL, ktype, ki, -1, goma_ctx->fem.pg->imtrx);
       if (ie != -1) {
@@ -383,13 +385,13 @@ count_fill_unknowns ( int N,
 /* LOCAL VARIABLES */
   int i;               /* i count from 0 to total number of nodes   */
 
-  num_fill_unknowns = 0;
+  goma_ctx->problem.num_fill_unknowns = 0;
   for (i = 0; i < N; i++)
     {
-      if ( Dolphin[pg_imtrx][i][FILL] )
+      if ( goma_ctx->problem.dolphin[pg_imtrx][i][FILL] )
 	{
-	  node_to_fill[i] = num_fill_unknowns;
-	  num_fill_unknowns += Dolphin[goma_ctx->fem.pg->imtrx][i][FILL];
+	  node_to_fill[i] = goma_ctx->problem.num_fill_unknowns;
+	  goma_ctx->problem.num_fill_unknowns += goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][i][FILL];
 	}
     }
 } /* END of routine count_fill_unknowns */
@@ -442,7 +444,7 @@ int filter_conc(const int N, /* number of nodes */
 
   if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MASS]) {
     for (i = 0; i < N; i++) {
-      if (Dolphin[goma_ctx->fem.pg->imtrx][i][R_MASS]) {
+      if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][i][R_MASS]) {
         ie = Index_Solution(i, R_MASS, filter_species_material_number, 0, -1,
                             goma_ctx->fem.pg->imtrx);
         if (ie != -1) {
@@ -456,7 +458,7 @@ int filter_conc(const int N, /* number of nodes */
   }
   if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_SHEAR_RATE]) {
     for (i = 0; i < N; i++) {
-      if (Dolphin[goma_ctx->fem.pg->imtrx][i][R_SHEAR_RATE]) {
+      if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][i][R_SHEAR_RATE]) {
         ie = Index_Solution(i, R_SHEAR_RATE, 0, 0, -1, goma_ctx->fem.pg->imtrx);
         if (ie != -1) {
           if (x[ie] < minimum_shear_rate) {
@@ -607,8 +609,8 @@ double time_step_control(const double delta_t,
   init_vec_value(max, 0.0, MAX_VARIABLE_TYPES);
   memset(ncp, 0, sizeof(int) * MAX_VARIABLE_TYPES);
 
-  if (nAC > 0)
-    ecp_AC = alloc_dbl_1(nAC, 0);
+  if (goma_ctx->problem.n_ac > 0)
+    ecp_AC = alloc_dbl_1(goma_ctx->problem.n_ac, 0);
 
   for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
     ecp[i] = 0.0;
@@ -620,8 +622,8 @@ double time_step_control(const double delta_t,
    * Collect deviations from predicted and max values
    * and ncp[eqn] => Number of unknowns in each binned variable type
    */
-  for (i = 0; i < (num_internal_dofs[goma_ctx->fem.pg->imtrx] +
-                   num_boundary_dofs[goma_ctx->fem.pg->imtrx]);
+  for (i = 0; i < (goma_ctx->problem.num_internal_dofs[goma_ctx->fem.pg->imtrx] +
+                   goma_ctx->problem.num_boundary_dofs[goma_ctx->fem.pg->imtrx]);
        i++) {
 
     valid = TRUE;
@@ -631,7 +633,7 @@ double time_step_control(const double delta_t,
     eqn = vd->Variable_Type;
 
 #ifdef DEBUG_HKM
-    if (eqn != idv[goma_ctx->fem.pg->imtrx][i][0]) {
+    if (eqn != goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0]) {
       GOMA_EH(-1, "error in  Index_Solution_Inv mapping");
     }
 #endif
@@ -674,8 +676,8 @@ double time_step_control(const double delta_t,
     }
   }
 
-  if (nAC > 0) {
-    for (i = 0; i < nAC; i++) {
+  if (goma_ctx->problem.n_ac > 0) {
+    for (i = 0; i < goma_ctx->problem.n_ac; i++) {
       ecp_AC[i] = SQUARE(x_AC[i] - x_AC_pred[i]);
     }
   }
@@ -710,8 +712,8 @@ double time_step_control(const double delta_t,
 #endif
       }
     }
-    if (nAC > 0) {
-      for (i = 0; i < nAC; i++) {
+    if (goma_ctx->problem.n_ac > 0) {
+      for (i = 0; i < goma_ctx->problem.n_ac; i++) {
         if (fabs(x_AC[i]) > 0.0)
           ecp_AC[i] /= fabs(x_AC[i]);
       }
@@ -869,13 +871,14 @@ double time_step_control(const double delta_t,
     Err_norm += ecp[SHELL_BDYVELO];
     num_unknowns += ncp[SHELL_BDYVELO];
   }
-  if (nAC > 0) /* Don't we want to include the AC unknowns in time step control ? */
+  if (goma_ctx->problem.n_ac >
+      0) /* Don't we want to include the AC unknowns in time step control ? */
   {
     if (use_var_norm[9]) { /* answer -> not usually since they are often algebraic constraints */
-      for (i = 0; i < nAC; i++) {
+      for (i = 0; i < goma_ctx->problem.n_ac; i++) {
         Err_norm += ecp_AC[i];
       }
-      num_unknowns += nAC;
+      num_unknowns += goma_ctx->problem.n_ac;
     }
   }
 
@@ -953,7 +956,7 @@ double time_step_control(const double delta_t,
   for (eqn = POLYMER_STRESS11_1; eqn <= POLYMER_STRESS33_7; eqn++) {
     e_S += ecp[eqn];
   }
-  for (i = 0, e_AC = 0.0; i < nAC; i++)
+  for (i = 0, e_AC = 0.0; i < goma_ctx->problem.n_ac; i++)
     e_AC += ecp_AC[i];
 
   e_V = ecp[VOLTAGE];
@@ -1062,7 +1065,7 @@ double time_step_control(const double delta_t,
     if (ncp[TURB_K] || ncp[TURB_OMEGA] || ncp[EDDY_NU]) {
       DPRINTF(stdout, ", %7.1e", e_turb);
     }
-    if (nAC > 0) {
+    if (goma_ctx->problem.n_ac > 0) {
       DPRINTF(stdout, ", %7.1e", e_AC);
     }
     DPRINTF(stdout, "]\n");
@@ -1131,7 +1134,7 @@ double time_step_control(const double delta_t,
     if (rheo_present) {
       DPRINTF(stdout, ", %7.1e", e_rheo);
     }
-    if (nAC > 0) {
+    if (goma_ctx->problem.n_ac > 0) {
       DPRINTF(stdout, ", %7.1e", e_AC);
     }
     DPRINTF(stdout, "]\n");
@@ -1196,7 +1199,7 @@ double time_step_control(const double delta_t,
     if (rheo_present) {
       DPRINTF(stdout, ", %7.1e", e_rheo);
     }
-    if (nAC > 0) {
+    if (goma_ctx->problem.n_ac > 0) {
       DPRINTF(stdout, ", %7.1e", e_AC);
     }
     DPRINTF(stdout, "]\n");
@@ -1264,7 +1267,7 @@ double time_step_control(const double delta_t,
   if (ncp[FILM_HEIGHT]) {
     DPRINTF(stdout, ", %1d FIL_H", 1);
   }
-  if (nAC > 0) {
+  if (goma_ctx->problem.n_ac > 0) {
     DPRINTF(stdout, ",   %1d AC ", use_var_norm[9]);
   }
   DPRINTF(stdout, "]\n");
@@ -1279,7 +1282,7 @@ double time_step_control(const double delta_t,
   log_msg("                 %1d  e_V = %g", use_var_norm[6], e_V);
   log_msg("                 %1d  e_F = %g", use_var_norm[8], e_F);
   log_msg("                 %1d  e_sh_lub = %g", use_var_norm[9], e_sh_lub);
-  if (nAC > 0)
+  if (goma_ctx->problem.n_ac > 0)
     log_msg("                 %1d  e_AC = %g", use_var_norm[9], e_AC);
 
   /*
@@ -1317,7 +1320,7 @@ double time_step_control(const double delta_t,
     delta_t_new = TIME_STEP_GROWTH_CAP * delta_t;
   }
 
-  if (nAC > 0)
+  if (goma_ctx->problem.n_ac > 0)
     safer_free((void **)&ecp_AC);
   return (delta_t_new);
 } /* END of routine time_step_control */
@@ -1541,7 +1544,7 @@ void init_vec(
   switch (goma_ctx->solver.guess_flag) {
   case 0:
     /* Initialize all of the solution vector to zero */
-    for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+    for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
       u[i] = 0.0;
     }
 
@@ -1565,19 +1568,19 @@ void init_vec(
      *  Initialize the solution vector to random
      *  numbers between 0 and 1
      */
-    fill_dvec_rand(u, NumUnknowns[goma_ctx->fem.pg->imtrx]);
+    fill_dvec_rand(u, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]);
     break;
 
   case 2:
     /* Initialize all of the solution vector to  the value of 1 */
-    for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+    for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
       u[i] = 1.0;
     }
     break;
 
   case 4:
     /* Initialize a solution vector from an ascii file */
-    read_initial_guess(u, NumUnknowns[goma_ctx->fem.pg->imtrx], uAC, nAC);
+    read_initial_guess(u, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], uAC, nAC);
     break;
 
   case 5:
@@ -1806,7 +1809,7 @@ void init_vec(
   if (goma_ctx->num_proc > 1) {
     for (n = 0; n < exo->num_elem_blocks; n++) {
       for (k = n + 1; k < exo->num_elem_blocks; k++) {
-        if (Matilda[block_order[k]] < Matilda[block_order[n]]) {
+        if (goma_ctx->problem.matilda[block_order[k]] < goma_ctx->problem.matilda[block_order[n]]) {
           block_temp = block_order[n];
           block_order[n] = block_order[k];
           block_order[k] = block_temp;
@@ -1822,7 +1825,7 @@ void init_vec(
 
   for (ebj = 0; ebj < exo->num_elem_blocks; ebj++) {
     ebi = block_order[ebj];
-    mn = Matilda[ebi];
+    mn = goma_ctx->problem.matilda[ebi];
     if (mn < 0) {
       continue;
     }
@@ -2019,7 +2022,7 @@ void init_vec(
    */
   goma_ctx->fem.efv->TALE = FALSE;
   for (ebi = 0; ebi < exo->num_elem_blocks; ebi++) {
-    mn = Matilda[ebi];
+    mn = goma_ctx->problem.matilda[ebi];
     if (mn < 0) {
       continue;
     }
@@ -2052,7 +2055,7 @@ void init_vec(
    */
   for (ebj = 0; ebj < exo->num_elem_blocks; ebj++) {
     ebi = block_order[ebj];
-    mn = Matilda[ebi];
+    mn = goma_ctx->problem.matilda[ebi];
     if (mn < 0) {
       continue;
     }
@@ -2227,7 +2230,7 @@ void init_structural_shell_coord(double u[])
     var = SHELL_X + comp;
     if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var]) {
       for (node = 0; node < goma_ctx->mesh.num_node; node++) {
-        if (Dolphin[goma_ctx->fem.pg->imtrx][node][var] > 0) {
+        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][node][var] > 0) {
           dof = Index_Solution(node, var, 0, 0, -1, goma_ctx->fem.pg->imtrx);
           u[dof] = goma_ctx->mesh.coor[comp][node];
         }
@@ -2437,18 +2440,19 @@ int write_ascii_soln(double *u,     /* Solution vector */
   int i;
   if (file == NULL)
     return 0;
-  if (TimeIntegration != STEADY)
+  if (goma_ctx->problem.time_integration != STEADY)
     fprintf(file, "time = %f\n\n", time);
-  if (Continuation != ALC_NONE)
+  if (goma_ctx->problem.continuation != ALC_NONE)
     fprintf(file, "path = %f\n\n", time);
-  if (dofname != NULL) {
+  if (goma_ctx->problem.dofname != NULL) {
     if (resid == NULL) {
       for (i = 0; i < np; i++) {
-        fprintf(file, "%23.16e %s\n", u[i], dofname[goma_ctx->fem.pg->imtrx][i]);
+        fprintf(file, "%23.16e %s\n", u[i], goma_ctx->problem.dofname[goma_ctx->fem.pg->imtrx][i]);
       }
     } else {
       for (i = 0; i < np; i++) {
-        fprintf(file, "%23.16e %s %23.16e\n", u[i], dofname[goma_ctx->fem.pg->imtrx][i], resid[i]);
+        fprintf(file, "%23.16e %s %23.16e\n", u[i],
+                goma_ctx->problem.dofname[goma_ctx->fem.pg->imtrx][i], resid[i]);
       }
     }
   } else {
@@ -2461,7 +2465,7 @@ int write_ascii_soln(double *u,     /* Solution vector */
     }
   }
   /**  print out augmenting variables **/
-  if (dofname != NULL) {
+  if (goma_ctx->problem.dofname != NULL) {
     for (i = 0; i < nAC; i++) {
       fprintf(file, "%23.16e Aug_Cond=%d\n", uAC[i], i);
     }
@@ -2518,7 +2522,7 @@ int wr_soln_vec(double u[],    /* solution vector */
   }
 
   for (i = 0; i < np; i++) {
-    fprintf(file, fmt, u[i], dofname[goma_ctx->fem.pg->imtrx][i], r[i]);
+    fprintf(file, fmt, u[i], goma_ctx->problem.dofname[goma_ctx->fem.pg->imtrx][i], r[i]);
   }
 
   fclose(file);
@@ -2662,7 +2666,7 @@ int rd_vectors_from_exoII(double u[],
 
   if (action_flag == 0) {
     for (var = V_FIRST; var < V_LAST; var++) {
-      if (Num_Var_In_Type[goma_ctx->fem.pg->imtrx][var]) {
+      if (goma_ctx->problem.num_var_in_type[goma_ctx->fem.pg->imtrx][var]) {
         if (var == MASS_FRACTION) {
           for (mn = -1; mn < goma_ctx->fem.upd->Num_Mat; mn++) {
             if (mn == -1) {
@@ -2694,7 +2698,7 @@ int rd_vectors_from_exoII(double u[],
               // element variables we need to loop through the element blocks as we can have repeats
               // of the same material in different element blocks
               for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-                if (mn != Matilda[eb_index]) {
+                if (mn != goma_ctx->problem.matilda[eb_index]) {
                   continue;
                 }
                 if (exo->base_mesh->eb_num_elems[eb_index] > 0) {
@@ -2708,7 +2712,7 @@ int rd_vectors_from_exoII(double u[],
               // element variables we need to loop through the element blocks as we can have repeats
               // of the same material in different element blocks
               for (int eb_index = 0; eb_index < exo->num_elem_blocks; eb_index++) {
-                if (mn != Matilda[eb_index]) {
+                if (mn != goma_ctx->problem.matilda[eb_index]) {
                   continue;
                 }
                 if (exo->base_mesh->eb_num_elems[eb_index] > 0) {
@@ -2741,7 +2745,7 @@ int rd_vectors_from_exoII(double u[],
              (void *)goma_ctx->fem.efv->ext_fld_ndl_val[variable_no]);
       vdex = -1;
 #ifdef REACTION_PRODUCT_EFV
-      if (TimeIntegration != STEADY) {
+      if (goma_ctx->problem.time_integration != STEADY) {
         goma_ctx->fem.efv->ext_fld_ndl_val_old[variable_no] = alloc_dbl_1(exo->num_nodes, 0.);
         goma_ctx->fem.efv->ext_fld_ndl_val_older[variable_no] = alloc_dbl_1(exo->num_nodes, 0.);
       }
@@ -3608,7 +3612,7 @@ int find_first_elem_with_var(Exo_DB *e, int var) {
   int eb, mn, found = FALSE, first_elem = -1;
 
   for (eb = 0; (!found) && eb < e->num_elem_blocks; eb++) {
-    mn = Matilda[eb];
+    mn = goma_ctx->problem.matilda[eb];
 
     found = goma_ctx->fem.pd_glob[mn]->v[goma_ctx->fem.pg->imtrx][var];
     if (found)
@@ -3628,13 +3632,13 @@ int load_import_fields(dbl *base_p_por, const Exo_DB *exo, int callnum) {
   dbl *ev_tmp = NULL;
 
   /* Make sure there are fields to load */
-  if (Num_Import_NV == 0 && Num_Import_EV == 0)
+  if (goma_ctx->problem.num_import_nv == 0 && goma_ctx->problem.num_import_ev == 0)
     return 0;
   if (goma_ctx->fem.libio->xnv_in == NULL || goma_ctx->fem.libio->xev_in == NULL) {
     fprintf(stderr, "Invalid import vector(s)!\n");
     return -1;
   }
-  if (Num_Import_EV > 0)
+  if (goma_ctx->problem.num_import_ev > 0)
     ev_tmp = alloc_dbl_1(nn, 0.0);
 
   /* Loop over all defined external fields */
@@ -3689,7 +3693,7 @@ int load_import_fields(dbl *base_p_por, const Exo_DB *exo, int callnum) {
   }
 
   fprintf(stderr, " Imported %d of %d nodal vars and %d of %d elem vars.\n", nv_count,
-          Num_Import_NV, ev_count, Num_Import_EV);
+          goma_ctx->problem.num_import_nv, ev_count, goma_ctx->problem.num_import_ev);
   safer_free((void **)&ev_tmp);
   return 0;
 }

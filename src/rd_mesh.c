@@ -66,7 +66,6 @@
 
 int *ss_to_blks[MAX_MAT_PER_SS + 1] = {NULL};
 
-int *Matilda = NULL;
 /*
  * Definitions for rf_bc_const.h
  */
@@ -180,9 +179,9 @@ int read_mesh_exoII(Exo_DB *exo, Dpi *dpi) {
     log_err("Edit \"rf_fem_const.h\" to set MDE to %d; rebuld GOMA.", max);
   }
 
-  check_sidesets(exo, BC_Types, Num_BC, dpi);
+  check_sidesets(exo, BC_Types, goma_ctx->problem.num_bc, dpi);
 
-  check_nodesets(exo, BC_Types, Num_BC, dpi);
+  check_nodesets(exo, BC_Types, goma_ctx->problem.num_bc, dpi);
 
   check_elemblocks(exo, goma_ctx->fem.upd->Num_Mat, goma_ctx->fem.pd_glob, dpi);
 
@@ -191,8 +190,8 @@ int read_mesh_exoII(Exo_DB *exo, Dpi *dpi) {
    *  Matilda. Also, set up an equivalent entry in the Element Block
    *  structure.
    */
-  Matilda = alloc_int_1(exo->num_elem_blocks, 0);
-  setup_matilda(exo, Matilda);
+  goma_ctx->problem.matilda = alloc_int_1(exo->num_elem_blocks, 0);
+  setup_matilda(exo, goma_ctx->problem.matilda);
 
   /*
    * Build up nice connectivity information. Not just the big list of
@@ -1170,7 +1169,7 @@ int find_mat_number(const int ielem, const Exo_DB *exo)
   int ebi; /* element block index */
   ebi = find_elemblock_index(ielem, exo);
   GOMA_EH(ebi, "find_mat_number: Can not find matl - unknown element block index");
-  return (Matilda[ebi]);
+  return (goma_ctx->problem.matilda[ebi]);
 } /* END of find_mat_num */
 /*********************************************************************/
 /*********************************************************************/

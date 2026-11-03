@@ -276,7 +276,7 @@ void reconcile_bc_to_matrl(void)
   BOUNDARY_CONDITION_STRUCT *bc;
   MATRL_PROP_STRUCT *matrl_ptr;
 
-  for (ibc = 0; ibc < Num_BC; ibc++) {
+  for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
     /*
      *  Create a couple of pointers to cut down on the
      *  amount of indirect addressing

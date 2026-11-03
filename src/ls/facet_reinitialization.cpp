@@ -327,7 +327,7 @@ static void facet_based_reinitialization_3D(
 
   std::unordered_set<int> level_set_nodes;
   for (int elem_block = 0; elem_block < exo->num_elem_blocks; elem_block++) {
-    int mn = Matilda[elem_block];
+    int mn = goma_ctx->problem.matilda[elem_block];
     if (!(goma_ctx->fem.pd_glob[mn]->v[goma_ctx->fem.pg->imtrx][goma_ctx->fem.ls->var]))
       continue;
     int etype = exo->eb_elem_itype[elem_block];
@@ -605,7 +605,7 @@ static void facet_based_reinitialization_2D(
   std::unordered_set<int> level_set_nodes;
 
   for (int elem_block = 0; elem_block < exo->num_elem_blocks; elem_block++) {
-    int mn = Matilda[elem_block];
+    int mn = goma_ctx->problem.matilda[elem_block];
     if (!(goma_ctx->fem.pd_glob[mn]->v[goma_ctx->fem.pg->imtrx][goma_ctx->fem.ls->var]))
       continue;
     int etype = exo->eb_elem_itype[elem_block];

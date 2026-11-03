@@ -372,8 +372,8 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
   double *nj;
   char errstring[256];
   double *resid_vector_save;
-  int numProcUnknowns =
-      NumUnknowns[goma_ctx->fem.pg->imtrx] + NumExtUnknowns[goma_ctx->fem.pg->imtrx];
+  int numProcUnknowns = goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx] +
+                        goma_ctx->problem.num_ext_unknowns[goma_ctx->fem.pg->imtrx];
   // assuming we are only computing coloring once, and that the matrix does not change
   Coloring *coloring = NULL;
 
@@ -413,7 +413,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
   memset(x_scale, 0, (MAX_VARIABLE_TYPES) * sizeof(dbl));
   memset(count, 0, (MAX_VARIABLE_TYPES) * sizeof(int));
   for (i = 0; i < numProcUnknowns; i++) {
-    var_i = idv[goma_ctx->fem.pg->imtrx][i][0];
+    var_i = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0];
     count[var_i]++;
     x_scale[var_i] += x[i] * x[i];
   }
@@ -464,7 +464,8 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
     double t1, t2, t3, t4;
     t1 = MPI_Wtime();
 #endif
-    memset(resid_vector_1, 0, NumUnknowns[goma_ctx->fem.pg->imtrx] * sizeof(dbl));
+    memset(resid_vector_1, 0,
+           goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx] * sizeof(dbl));
     /*
      * Perturb many variables
      */
@@ -474,7 +475,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
 #endif
     for (j = 0; j < numProcUnknowns; j++) {
       if (coloring->column_color[j] == color) {
-        dx = x_scale[idv[goma_ctx->fem.pg->imtrx][j][0]] * FD_DELTA_UNKNOWN;
+        dx = x_scale[goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][0]] * FD_DELTA_UNKNOWN;
         if (dx < 1.0E-15)
           dx = 1.0E-7;
         x_1[j] = x[j] + dx;
@@ -487,7 +488,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
 #ifdef DEBUG_FD_COLORING
         count++;
 #endif
-        my_node_num = idv[goma_ctx->fem.pg->imtrx][j][2];
+        my_node_num = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][2];
 
         for (i = exo->node_elem_pntr[my_node_num]; i < exo->node_elem_pntr[my_node_num + 1]; i++) {
           my_elem_num = exo->node_elem_list[i];
@@ -556,7 +557,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
        *number so as to be compatible with the ElemStorage struct
        */
       ebn = find_elemblock_index(ielem, exo);
-      int mn = Matilda[ebn];
+      int mn = goma_ctx->problem.matilda[ebn];
       if (mn < 0) {
         continue;
       }
@@ -586,8 +587,8 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
       if (color == coloring->column_color[j]) {
         for (idx = coloring->colptr[j]; idx < coloring->colptr[j + 1]; idx++) {
           i = coloring->rowptr[idx];
-          var_i = idv[goma_ctx->fem.pg->imtrx][i][0];
-          var_j = idv[goma_ctx->fem.pg->imtrx][j][0];
+          var_i = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0];
+          var_j = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][0];
           int gnode;
           int ivd;
           int i_offset;
@@ -599,7 +600,8 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
               int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i + 1], ams->bindx);
               if (ja == -1) {
                 sprintf(errstring, "Index not found (%d, %d) for interaction (%d, %d)", i, j,
-                        idv[goma_ctx->fem.pg->imtrx][i][0], idv[goma_ctx->fem.pg->imtrx][j][0]);
+                        goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0],
+                        goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][0]);
                 GOMA_EH(ja, errstring);
               }
               if (Nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx] &&
@@ -618,15 +620,16 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
             /* Only for stress terms */
             //        if ((idv[pg->imtrx][i][0] >= v_s[mode][0][0] &&
             //            idv[pg->imtrx][i][0] <= v_s[mode][2][2]) ||
-            if ((idv[goma_ctx->fem.pg->imtrx][i][0] >= v_s[mode][0][0] &&
-                 idv[goma_ctx->fem.pg->imtrx][i][0] <= v_s[mode][2][2])) {
+            if ((goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0] >= v_s[mode][0][0] &&
+                 goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0] <= v_s[mode][2][2])) {
               //
               if (Inter_Mask[goma_ctx->fem.pg->imtrx][var_i][var_j]) {
 
                 int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i + 1], ams->bindx);
                 if (ja == -1) {
                   sprintf(errstring, "Index not found (%d, %d) for interaction (%d, %d)", i, j,
-                          idv[goma_ctx->fem.pg->imtrx][i][0], idv[goma_ctx->fem.pg->imtrx][j][0]);
+                          goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0],
+                          goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][0]);
                   GOMA_EH(ja, errstring);
                 }
                 if (Nodes[gnode]->DBC[goma_ctx->fem.pg->imtrx] &&
@@ -816,26 +819,34 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
 
   /* calculates the total number of non-zero entries in the analytical jacobian, a[] */
   nnonzero = goma_ctx->solver.nzeros + 1;
-  nn =
-      ija[NumUnknowns[goma_ctx->fem.pg->imtrx]] - ija[0]; /* total number of diagonal entries a[] */
+  nn = ija[goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]] -
+       ija[0]; /* total number of diagonal entries a[] */
 
   /* allocate arrays to hold jacobian and vector values */
   irow = (int *)array_alloc(1, nnonzero, sizeof(int));
   jcolumn = (int *)array_alloc(1, nnonzero, sizeof(int));
   nelem = (int *)array_alloc(1, nnonzero, sizeof(int));
-  aj_diag = (double *)array_alloc(1, NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
+  aj_diag = (double *)array_alloc(1, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                                  sizeof(double));
   aj_off_diag = (double *)array_alloc(1, nnonzero, sizeof(double));
-  resid_vector_1 = (double *)array_alloc(1, NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
-  x_1 = (double *)array_alloc(1, NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
-  scale = (double *)array_alloc(1, NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
-  output_list = (int *)array_alloc(1, NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(int));
-  dof_list = (int *)array_alloc(1, NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(int));
+  resid_vector_1 = (double *)array_alloc(1, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                                         sizeof(double));
+  x_1 = (double *)array_alloc(1, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                              sizeof(double));
+  scale = (double *)array_alloc(1, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                                sizeof(double));
+  output_list =
+      (int *)array_alloc(1, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], sizeof(int));
+  dof_list =
+      (int *)array_alloc(1, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], sizeof(int));
   elem_list = (int *)array_alloc(1, ELEM_LIST_SIZE, sizeof(int));
 #ifdef FORWARD_DIFF_NUMJAC
   nj = (double *)array_alloc(1, nnonzero, sizeof(double));
 #else
-  aj = (double *)array_alloc(1, NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
-  aj_1 = (double *)array_alloc(1, NumUnknowns[goma_ctx->fem.pg->imtrx], sizeof(double));
+  aj = (double *)array_alloc(1, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                             sizeof(double));
+  aj_1 = (double *)array_alloc(1, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
+                               sizeof(double));
 #endif
 
   if (aj_off_diag == NULL || scale == NULL)
@@ -847,7 +858,7 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
 
   /* Initialization */
   memset(aj_off_diag, 0, nnonzero * sizeof(dbl));
-  memset(aj_diag, 0, NumUnknowns[goma_ctx->fem.pg->imtrx] * sizeof(dbl));
+  memset(aj_diag, 0, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx] * sizeof(dbl));
 
   /* save Inter_Mask[pg->imtrx] away, turn on all entries so that we can make sure
    * that Inter_Mask[pg->imtrx] is being turned on for all entries being used
@@ -866,8 +877,8 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
    * is to estimate the scale for all variables in the problem */
   memset(x_scale, 0, (MAX_VARIABLE_TYPES) * sizeof(dbl));
   memset(count, 0, (MAX_VARIABLE_TYPES) * sizeof(int));
-  for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
-    var_i = idv[goma_ctx->fem.pg->imtrx][i][0];
+  for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
+    var_i = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0];
     count[var_i]++;
     x_scale[var_i] += x[i] * x[i];
   }
@@ -900,7 +911,7 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
     x_scale[FILL] = goma_ctx->fem.ls->Length_Scale;
 
   /* copy x vector */
-  for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+  for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
     x_1[i] = x[i];
   }
 
@@ -931,7 +942,7 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
 #ifdef DEBUG_NUMJAC
     abs_min = 1.0e+10;
     abs_max = 0.0;
-    for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+    for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
       if (fabs(scale[i]) > abs_max)
         abs_max = fabs(scale[i]);
       if (fabs(scale[i]) < abs_min)
@@ -944,9 +955,10 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
     /* Scale matrix by diagonal entry.  This is usually the largest
      * in magnitude.  If this is zero, then perform no scaling.
      */
-    for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++)
+    for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++)
       scale[i] = (a[i] == 0.0) ? 1.0 : a[i];
-    row_scaling(NumUnknowns[goma_ctx->fem.pg->imtrx], a, ija, resid_vector, scale);
+    row_scaling(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], a, ija, resid_vector,
+                scale);
   }
 
 #ifdef DEBUG_NUMJAC
@@ -956,7 +968,7 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
   min_scale = 1.0e+20;
   max_scale = -min_scale;
   DPRINTF(stderr, "Scale vector:\n");
-  for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+  for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
     DPRINTF(stderr, "scale[% 2d] = %-10.4g\n", i, scale[i]);
     if (scale[i] < min_scale)
       min_scale = scale[i];
@@ -968,15 +980,15 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
 
   /* extract diagonal and off-diagonal elements from the coefficient matrix stored
      in sparse-storage format */
-  for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++)
+  for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++)
     aj_diag[i] = a[i]; /* diagonal elements */
 
   kount = 0; /* off-diagonal elements */
-  for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+  for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
     nelem[i] = ija[i + 1] - ija[i];
     for (k = 0; k < nelem[i]; k++) {
       irow[kount] = i; /* row # in global jacobian matrix */
-      ii = kount + NumUnknowns[goma_ctx->fem.pg->imtrx] + 1;
+      ii = kount + goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx] + 1;
       jcolumn[kount] = ija[ii]; /* column # in global jacobian matrix */
       aj_off_diag[kount] = a[ii];
       kount = kount + 1;
@@ -993,27 +1005,28 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
    *  check that the perturbed residuals are consistent with range possible
    *  for range of analytical jacobian values
    */
-  for (j = 0; j < NumUnknowns[goma_ctx->fem.pg->imtrx]; j++) /* loop over each column */
+  for (j = 0; j < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx];
+       j++) /* loop over each column */
   {
     /*
      * Perturb one variable at a time
      */
 
     if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->Ignore_F_deps &&
-        idv[goma_ctx->fem.pg->imtrx][j][0] == FILL)
+        goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][0] == FILL)
       continue;
 
 #ifdef FORWARD_DIFF_NUMJAC
-    x_1[j] = x[j] + x_scale[idv[goma_ctx->fem.pg->imtrx][j][0]] * DELTA_UNKNOWN;
+    x_1[j] = x[j] + x_scale[goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][0]] * DELTA_UNKNOWN;
 #else
-    dx = x_scale[idv[goma_ctx->fem.pg->imtrx][j][0]] * FD_DELTA_UNKNOWN;
+    dx = x_scale[goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][0]] * FD_DELTA_UNKNOWN;
     x_1[j] = x[j] + dx;
 #endif
 
     num_elems = 0;
     for (i = 0; i < ELEM_LIST_SIZE; i++)
       elem_list[i] = 0;
-    for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++)
+    for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++)
       output_list[i] = FALSE;
 
     goma_ctx->fem.af->Assemble_Residual = TRUE;
@@ -1028,7 +1041,7 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
     neg_lub_height = FALSE;
     zero_detJ = FALSE;
 
-    my_node_num = idv[goma_ctx->fem.pg->imtrx][j][2];
+    my_node_num = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][2];
 
     /* Which elements to fill?  We need every element that contains
      * this node, plus all of the elements connected to them, even if
@@ -1096,7 +1109,7 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
     /* make compact list of Eqdof's that will be checked; put diagonal term first */
     dof_list[0] = j;
     num_dofs = 1;
-    for (i = 0; i < NumUnknowns[goma_ctx->fem.pg->imtrx]; i++) {
+    for (i = 0; i < goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]; i++) {
       if (i != j && output_list[i]) {
         dof_list[num_dofs++] = i;
       }
@@ -1104,7 +1117,8 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
 
     /* compute residual and Jacobian at perturbed soln */
     memset(a, 0, nnonzero * sizeof(dbl));
-    memset(resid_vector_1, 0, NumUnknowns[goma_ctx->fem.pg->imtrx] * sizeof(dbl));
+    memset(resid_vector_1, 0,
+           goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx] * sizeof(dbl));
 
     if (goma_ctx->fem.pd_glob[0]->TimeIntegration != STEADY) {
       xdot[j] += (x_1[j] - x[j]) * (1.0 + 2 * theta) / delta_t;
@@ -1175,9 +1189,11 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
        * penalty parameter.
        */
 #ifdef FORWARD_DIFF_NUMJAC
-      vector_scaling(NumUnknowns[goma_ctx->fem.pg->imtrx], resid_vector_1, scale);
+      vector_scaling(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], resid_vector_1,
+                     scale);
 #else
-      row_scaling(NumUnknowns[goma_ctx->fem.pg->imtrx], a, ija, resid_vector_1, scale);
+      row_scaling(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], a, ija, resid_vector_1,
+                  scale);
 #endif
     }
 
@@ -1209,12 +1225,13 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
     if (nj_err >= RESIDUAL_TOLERANCE || nj_scaled_err >= SCALED_RESIDUAL_TOLERANCE) {
       DPRINTF(stderr,
               "Diag%.22s Var%.22s aj=%-10.4g nj=%-10.4g er=%9.4g rer=%9.4g x=%-10.4g r=%-10.4g\n",
-              resname[goma_ctx->fem.pg->imtrx][j], dofname[goma_ctx->fem.pg->imtrx][j], aj_diag[j],
-              nj[j], nj_err, nj_scaled_err, x_1[j], resid_vector_1[j]);
+              goma_ctx->problem.resname[goma_ctx->fem.pg->imtrx][j],
+              goma_ctx->problem.dofname[goma_ctx->fem.pg->imtrx][j], aj_diag[j], nj[j], nj_err,
+              nj_scaled_err, x_1[j], resid_vector_1[j]);
     }
 
     /* COMPARISON: analytical vs. numerical ---  the off-diagonal elements for column j */
-    for (k = 0; k < (ija[NumUnknowns[goma_ctx->fem.pg->imtrx]] - ija[0]); k++) {
+    for (k = 0; k < (ija[goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]] - ija[0]); k++) {
       if (jcolumn[k] == j) /* match the column numbers */
       {
         for (ii = 0; ii < num_dofs; ii++) {
@@ -1231,9 +1248,9 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
               DPRINTF(stderr,
                       "  Eq%.42s Var%.42s aj=%-10.4g nj=%-10.4g er=%9.4g rer=%9.4g x=%-10.4g "
                       "r=%-10.4g\n",
-                      resname[goma_ctx->fem.pg->imtrx][irow[k]],
-                      dofname[goma_ctx->fem.pg->imtrx][jcolumn[k]], aj_off_diag[k], nj[i], nj_err,
-                      nj_scaled_err, x_1[j], resid_vector_1[j]);
+                      goma_ctx->problem.resname[goma_ctx->fem.pg->imtrx][irow[k]],
+                      goma_ctx->problem.dofname[goma_ctx->fem.pg->imtrx][jcolumn[k]],
+                      aj_off_diag[k], nj[i], nj_err, nj_scaled_err, x_1[j], resid_vector_1[j]);
           }
         }
       }
@@ -1242,15 +1259,16 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
     /* BRACKETED JACOBIAN CHECKER */
     /* extract diagonal and off-diagonal elements from the coefficient matrix stored
        in sparse-storage format */
-    memset(aj, 0, NumUnknowns[goma_ctx->fem.pg->imtrx] * sizeof(dbl));
-    memset(aj_1, 0, NumUnknowns[goma_ctx->fem.pg->imtrx] * sizeof(dbl));
+    memset(aj, 0, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx] * sizeof(dbl));
+    memset(aj_1, 0, goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx] * sizeof(dbl));
     for (ii = 0; ii < num_dofs; ii++) {
       i = dof_list[ii];
       if (i == j) {
         aj[i] = aj_diag[j];
         aj_1[i] = a[i];
       } else {
-        for (k = 0; k < (ija[NumUnknowns[goma_ctx->fem.pg->imtrx]] - ija[0]); k++) {
+        for (k = 0; k < (ija[goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx]] - ija[0]);
+             k++) {
           if ((jcolumn[k] == j) && (irow[k] == i)) {
             aj[i] = aj_off_diag[k];
           }
@@ -1281,10 +1299,10 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
       resid_scale = fabs(resid_vector[i]);
       /*DRN-MAX BROKEN? resid_scale = MAX( resid_scale, fabs( a[i] * x_scale[idv[pg->imtrx][i][0]] )
        * );*/
-      if (fabs(a[i] * x_scale[idv[goma_ctx->fem.pg->imtrx][i][0]]) > resid_scale)
-        resid_scale = fabs(a[i] * x_scale[idv[goma_ctx->fem.pg->imtrx][i][0]]);
+      if (fabs(a[i] * x_scale[goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0]]) > resid_scale)
+        resid_scale = fabs(a[i] * x_scale[goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0]]);
       for (k = ija[i]; k < ija[i + 1]; k++) {
-        var_j = idv[goma_ctx->fem.pg->imtrx][ija[k]][0];
+        var_j = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][ija[k]][0];
         /*DRN-MAX BROKEN? resid_scale = MAX( resid_scale, fabs( a[k] * x_scale[var_j]) );*/
         if (fabs(a[k] * x_scale[var_j]) > resid_scale)
           resid_scale = fabs(a[k] * x_scale[var_j]);
@@ -1338,19 +1356,21 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
           DPRINTF(stderr,
                   "Diag%32.32s Var%32.32s x=%-10.4g dx=%-10.4g aj=%-10.4g nj=%-10.4g aj_1=%-10.4g "
                   "d_aj=%-10.4g conf=%-10.4g\n",
-                  resname[goma_ctx->fem.pg->imtrx][i], dofname[goma_ctx->fem.pg->imtrx][j], x[j],
-                  dx, aj[i], nj, aj_1[i], delta_aj_percentage, confidence);
+                  goma_ctx->problem.resname[goma_ctx->fem.pg->imtrx][i],
+                  goma_ctx->problem.dofname[goma_ctx->fem.pg->imtrx][j], x[j], dx, aj[i], nj,
+                  aj_1[i], delta_aj_percentage, confidence);
         } else {
           DPRINTF(stderr,
                   "Eq%-32.32s Var%-32.32s x=%-10.2g dx=%-10.2g aj=%-10.4g nj=%-10.4g aj_1=%-10.2g "
                   "d_aj=%-10.2g conf=%-10.2g\n",
-                  resname[goma_ctx->fem.pg->imtrx][i], dofname[goma_ctx->fem.pg->imtrx][j], x[j],
-                  dx, aj[i], nj, aj_1[i], delta_aj_percentage, confidence);
+                  goma_ctx->problem.resname[goma_ctx->fem.pg->imtrx][i],
+                  goma_ctx->problem.dofname[goma_ctx->fem.pg->imtrx][j], x[j], dx, aj[i], nj,
+                  aj_1[i], delta_aj_percentage, confidence);
         }
 
         /* print disclaimer for entries that have much lower confidence levels */
         if (x[j] == 0.) {
-          switch (idv[goma_ctx->fem.pg->imtrx][j][0]) {
+          switch (goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][0]) {
           case MESH_DISPLACEMENT1:
           case MESH_DISPLACEMENT2:
           case MESH_DISPLACEMENT3:
@@ -1370,7 +1390,7 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
 
         /* list all BC's applied at this node and highlight ones with
          * desired sensitivity */
-        my_node_num = idv[goma_ctx->fem.pg->imtrx][i][2];
+        my_node_num = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][2];
 
         for (k = exo->node_elem_pntr[my_node_num]; k < exo->node_elem_pntr[my_node_num + 1]; k++) {
           my_elem_num = exo->node_elem_list[k];
@@ -1385,9 +1405,9 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
              ***************************************************************************/
             do {
               for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
-                var_i = idv[goma_ctx->fem.pg->imtrx][i][0];
-                var_j = idv[goma_ctx->fem.pg->imtrx][j][0];
-                I = idv[goma_ctx->fem.pg->imtrx][i][2];
+                var_i = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0];
+                var_j = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][0];
+                I = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][2];
 
                 if (in_list(I, 0, elem_side_bc->num_nodes_on_side, elem_side_bc->local_node_id)) {
                   eqn = var_i;
@@ -1412,16 +1432,16 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
       }
 
       /* check Inter_Mask[pg->imtrx] for missing entries */
-      var_i = idv[goma_ctx->fem.pg->imtrx][i][0];
-      var_j = idv[goma_ctx->fem.pg->imtrx][j][0];
+      var_i = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][i][0];
+      var_j = goma_ctx->problem.idv[goma_ctx->fem.pg->imtrx][j][0];
       if (!Inter_Mask_save[var_i][var_j]) {
         /* check to make sure no dependence appears in analytical jacobian */
         if ((aj[i] != 0.) || (aj_1[i] != 0.)) {
           DPRINTF(stderr,
                   "Potential dependency error: Inter_Mask[pg->imtrx][Eq%.32s][Var%.32s]=0, but "
                   "aj=%-10.4g aj_1=%-10.4g\n",
-                  resname[goma_ctx->fem.pg->imtrx][i], dofname[goma_ctx->fem.pg->imtrx][j], aj[i],
-                  aj_1[i]);
+                  goma_ctx->problem.resname[goma_ctx->fem.pg->imtrx][i],
+                  goma_ctx->problem.dofname[goma_ctx->fem.pg->imtrx][j], aj[i], aj_1[i]);
         }
 
         /* check to make sure no dependence appears in numerical jacobian */
@@ -1432,7 +1452,8 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
           DPRINTF(stderr,
                   "Potential dependency error: Inter_Mask[pg->imtrx][Eq%.32s][Var%.32s]=0, but "
                   "nj=%-10.4g\n",
-                  resname[goma_ctx->fem.pg->imtrx][i], dofname[goma_ctx->fem.pg->imtrx][j], nj);
+                  goma_ctx->problem.resname[goma_ctx->fem.pg->imtrx][i],
+                  goma_ctx->problem.dofname[goma_ctx->fem.pg->imtrx][j], nj);
         }
       }
     }
