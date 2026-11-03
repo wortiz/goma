@@ -335,7 +335,7 @@ int beer_belly(void) {
     if (fabs(MapBf->detJ) < 1.e-10) {
       zero_detJ = TRUE;
 #ifdef PARALLEL
-      fprintf(stderr, "\nP_%d: Uh-oh, detJ =  %e\n", ProcID, fabs(MapBf->detJ));
+      fprintf(stderr, "\nP_%d: Uh-oh, detJ =  %e\n", goma_ctx->proc_id, fabs(MapBf->detJ));
 #else
       fprintf(stderr, "\n Uh-oh, detJ =  %e\n", fabs(MapBf->detJ));
 #endif
@@ -2928,8 +2928,8 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
     nnz = find_MSR_problem_graph(&ija_temp, itotal_nodes, exo);
   }
 
-  if (Debug_Flag) {
-    printf("Processor %d nnz = %d\n", ProcID, nnz);
+  if (goma_ctx->debug_flag) {
+    printf("Processor %d nnz = %d\n", goma_ctx->proc_id, nnz);
   }
 
   /* Allocate and fill the true ija. */
@@ -2952,7 +2952,7 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
     FILE *fff;
     fff = fopen("ija_dump2.txt", "w");
     for (i = 0; i < nnz; i++) {
-      fprintf(fff, "P_%d: ija[%d] = %d\n", ProcID, i, ija[i]);
+      fprintf(fff, "P_%d: ija[%d] = %d\n", goma_ctx->proc_id, i, ija[i]);
     }
     fclose(fff);
   }
@@ -3047,8 +3047,8 @@ void alloc_VBR_sparse_arrays(struct GomaLinearSolverData *ams, Exo_DB *exo, Dpi 
   nnz = find_VBR_problem_graph(&(ams->indx), &(ams->bindx), &(ams->bpntr), &(ams->rpntr),
                                &(ams->cpntr), row_nodes, col_nodes, exo);
 
-  if (Debug_Flag) {
-    printf("Processor %d nnz = %d\n", ProcID, nnz);
+  if (goma_ctx->debug_flag) {
+    printf("Processor %d nnz = %d\n", goma_ctx->proc_id, nnz);
   }
 
   ams->val = alloc_dbl_1(nnz + 1, 0.0);
@@ -3288,7 +3288,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
    */
   nz_ptr = num_universe_dofs[pg->imtrx] + 1;
 #ifdef DEBUG_GRAPH
-  fprintf(ifp, "P_%d: nz_ptr = %d\n", ProcID, nz_ptr);
+  fprintf(ifp, "P_%d: nz_ptr = %d\n", goma_ctx->proc_id, nz_ptr);
 #endif
 
   /*
@@ -3392,7 +3392,7 @@ static int find_MSR_problem_graph(int *ija[],       /* column pointer array     
             }
           }
 
-          if (Debug_Flag < 0)
+          if (goma_ctx->debug_flag < 0)
             add_var = TRUE; /* add all vars for checking jacobian */
 
           if (add_var) {

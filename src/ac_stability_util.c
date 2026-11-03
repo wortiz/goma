@@ -804,10 +804,10 @@ int create_eigen_outfiles(Exo_DB *exo,
 
       /* Now, open a new ExodusII file with this composite name
          and initialize with basic mesh information */
-      one_base(exo, Num_Proc);
+      one_base(exo, goma_ctx->num_proc);
       wr_mesh_exo(exo, fname, 0);
       wr_result_prelim_exo(rd, exo, fname, gvec_elem);
-      if (Num_Proc > 1)
+      if (goma_ctx->num_proc > 1)
         wr_dpi(dpi, fname);
       zero_base(exo);
 
@@ -867,8 +867,8 @@ void get_eigen_outfile_name(char *in_name, int j, int k) {
     strcat(new_name, suffix);
 
   /* Multiname for this processor if parallel */
-  if (Num_Proc > 1)
-    multiname(new_name, ProcID, Num_Proc);
+  if (goma_ctx->num_proc > 1)
+    multiname(new_name, goma_ctx->proc_id, goma_ctx->num_proc);
 
   /* Return the name as in_name */
   strcpy(in_name, new_name);

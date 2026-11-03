@@ -25,6 +25,8 @@
 
 #include <mpi.h>
 
+#include "util/goma_context.h"
+
 /*
  * Parameters describing the characteristics of the Parallel Machine
  * and utility vectors used during MPI communications to monitor status
@@ -34,16 +36,10 @@
  * are defined in main.c, where the arrays are also allocated and freed.
  */
 
-extern int Num_Proc; /* Total number of processors */
 
-extern int ProcID; /* This processor's number */
 
-extern int Dim; /* Dimension of logical hypercube */
 
-extern MPI_Request *Request;
 
-extern MPI_Status *Status;
 
-extern int Num_Requests;
 
 #endif /* end of GOMA_RF_MP_H */

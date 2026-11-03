@@ -73,7 +73,7 @@ int put_dirichlet_in_matrix(double x[], const int num_total_nodes)
   /*
    * Return for numerical jacobian options.
    */
-  if (Debug_Flag < 0)
+  if (goma_ctx->debug_flag < 0)
     return 0;
 
   for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {

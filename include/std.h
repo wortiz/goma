@@ -385,19 +385,19 @@ typedef int MPI_Aint;
 #ifdef PARALLEL
 #define DPRINTF(...)        \
   do {                      \
-    if (ProcID == 0) {      \
+    if (goma_ctx->proc_id == 0) {      \
       fprintf(__VA_ARGS__); \
     }                       \
   } while (0)
 #define P0PRINTF(...)      \
   do {                     \
-    if (ProcID == 0) {     \
+    if (goma_ctx->proc_id == 0) {     \
       printf(__VA_ARGS__); \
     }                      \
   } while (0)
 #define DFPUTS(...)       \
   do {                    \
-    if (ProcID == 0) {    \
+    if (goma_ctx->proc_id == 0) {    \
       fputs(__VA_ARGS__); \
     }                     \
   } while (0)

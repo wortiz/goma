@@ -120,7 +120,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
 
   static const char yo[] = "rd_bc_specs";
   char echo_string[MAX_CHAR_IN_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   int overlap_bc = FALSE;
   int iread;
@@ -159,7 +159,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
    */
   BC_Types = alloc_struct_1(struct Boundary_Condition, Num_BC);
 
-  if (Debug_Flag && ProcID == 0) {
+  if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
     printf("%s:\tallocated %d copies of the %lu sized\n", yo, Num_BC,
            (unsigned long int)sizeof(struct Boundary_Condition));
     printf("%s:\tBoundary_Condition structure.\n", yo);

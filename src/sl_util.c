@@ -141,8 +141,8 @@ void sl_init(unsigned int option_mask, /* option flag */
        * serial and parallel...
        */
 #ifdef GOMA_ENABLE_AZTEC
-      A->proc_config[AZ_node] = ProcID;
-      A->proc_config[AZ_N_procs] = Num_Proc;
+      A->proc_config[AZ_node] = goma_ctx->proc_id;
+      A->proc_config[AZ_N_procs] = goma_ctx->num_proc;
       A->proc_config[AZ_dim] = 0;
 #endif
 
@@ -173,7 +173,7 @@ void sl_init(unsigned int option_mask, /* option flag */
        * arrays manually for each matrix system, assuming serial solution.
        */
 
-      if (Num_Proc == 1) {
+      if (goma_ctx->num_proc == 1) {
         A->external = NULL; /* Serial ? Nothing to be sent. */
         A->update_index = NULL;
         /*	      A->update_index = A->update; */
@@ -292,7 +292,7 @@ void sl_init(unsigned int option_mask, /* option flag */
       }
 
 #ifdef GOMA_ENABLE_AZTEC
-      if (Debug_Flag > 0) {
+      if (goma_ctx->debug_flag > 0) {
         err = AZ_check_input(A->data_org, A->options, A->params, A->proc_config);
 
         if (err != 0)
@@ -541,7 +541,7 @@ void set_aztec_options_params(int options[], double params[]) {
 
   else if (strcmp(Matrix_Preconditioner, "lu") == 0) {
     options[AZ_precond] = AZ_dom_decomp;
-    if (Debug_Flag > 1) {
+    if (goma_ctx->debug_flag > 1) {
       DPRINTF(stderr, "Deprecated Aztec 1.x usage of Preconditioner.  Prefer:\n");
       DPRINTF(stderr, "Preconditioner                  = dom_decomp\n");
       DPRINTF(stderr, "Matrix subdomain solver          = %s\n", Matrix_Preconditioner);
@@ -555,7 +555,7 @@ void set_aztec_options_params(int options[], double params[]) {
 
   else if (strcmp(Matrix_Preconditioner, "ilu") == 0) {
     options[AZ_precond] = AZ_dom_decomp;
-    if (Debug_Flag > 1) {
+    if (goma_ctx->debug_flag > 1) {
       DPRINTF(stderr, "Deprecated Aztec 1.x usage of Preconditioner.  Prefer:\n");
       DPRINTF(stderr, "Preconditioner                  = dom_decomp\n");
       DPRINTF(stderr, "Matrix subdomain solver          = %s\n", Matrix_Preconditioner);
@@ -569,7 +569,7 @@ void set_aztec_options_params(int options[], double params[]) {
 
   else if (strcmp(Matrix_Preconditioner, "ilut") == 0) {
     options[AZ_precond] = AZ_dom_decomp;
-    if (Debug_Flag > 1) {
+    if (goma_ctx->debug_flag > 1) {
       DPRINTF(stderr, "Deprecated Aztec 1.x usage of Preconditioner.  Prefer:\n");
       DPRINTF(stderr, "Preconditioner                  = dom_decomp\n");
       DPRINTF(stderr, "Matrix subdomain solver          = %s\n", Matrix_Preconditioner);
@@ -585,7 +585,7 @@ void set_aztec_options_params(int options[], double params[]) {
     if (strcmp(Matrix_Format, "vbr"))
       GOMA_EH(-1, "BILU requires VBR matrix format!");
     options[AZ_precond] = AZ_dom_decomp;
-    if (Debug_Flag > 1) {
+    if (goma_ctx->debug_flag > 1) {
       DPRINTF(stderr, "Deprecated Aztec 1.x usage of Preconditioner.  Prefer:\n");
       DPRINTF(stderr, "Preconditioner                  = dom_decomp\n");
       DPRINTF(stderr, "Matrix subdomain solver          = %s\n", Matrix_Preconditioner);
@@ -600,7 +600,7 @@ void set_aztec_options_params(int options[], double params[]) {
 
   else if (strcmp(Matrix_Preconditioner, "rilu") == 0) {
     options[AZ_precond] = AZ_dom_decomp;
-    if (Debug_Flag > 1) {
+    if (goma_ctx->debug_flag > 1) {
       DPRINTF(stderr, "Deprecated Aztec 1.x usage of Preconditioner.  Prefer:\n");
       DPRINTF(stderr, "Preconditioner                  = dom_decomp\n");
       DPRINTF(stderr, "Matrix subdomain solver          = %s\n", Matrix_Preconditioner);
@@ -615,7 +615,7 @@ void set_aztec_options_params(int options[], double params[]) {
 
   else if (strcmp(Matrix_Preconditioner, "icc") == 0) {
     options[AZ_precond] = AZ_dom_decomp;
-    if (Debug_Flag > 1) {
+    if (goma_ctx->debug_flag > 1) {
       DPRINTF(stderr, "Deprecated Aztec 1.x usage of Preconditioner.  Prefer:\n");
       DPRINTF(stderr, "Preconditioner                  = dom_decomp\n");
       DPRINTF(stderr, "Matrix subdomain solver          = %s\n", Matrix_Preconditioner);

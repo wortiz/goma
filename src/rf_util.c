@@ -1580,8 +1580,8 @@ void init_vec(
      * Initialize the solution vector from a stored solution
      * in the exodus input file
      */
-    DPRINTF(stdout, "\nInitial guess read from \"%s\" ...(last soln in file)\n", ExoFile);
-    err = rd_vectors_from_exoII(u, ExoFile, 0, 0, INT_MAX, timeValueRead, exo);
+    DPRINTF(stdout, "\nInitial guess read from \"%s\" ...(last soln in file)\n", goma_ctx->exo_file);
+    err = rd_vectors_from_exoII(u, goma_ctx->exo_file, 0, 0, INT_MAX, timeValueRead, exo);
     if (err != 0) {
       DPRINTF(stderr, "%s: err for rd_vectors_from_exoII()\n", yo);
       exit(-1);
@@ -1600,7 +1600,7 @@ void init_vec(
       /* 		  "%s:  reading augmenting conditions initial guess from \"%s\" ...\n",yo,
        * ExoFile); */
 
-      ngv = rd_globals_from_exoII(uAC, ExoFile, 6, nAC);
+      ngv = rd_globals_from_exoII(uAC, goma_ctx->exo_file, 6, nAC);
       if (ngv < 0)
         DPRINTF(stderr, "%s: error trying to read augmenting conditions\n", yo);
 
@@ -1620,13 +1620,13 @@ void init_vec(
      * Initialize the solution vector from a stored solution
      * in a different, specified exodus file
      */
-    if (ExoTimePlane < INT_MAX) {
-      DPRINTF(stdout, "\nInitial guess read from \"%s\" ...(soln plane = %d)\n", ExoAuxFile,
-              ExoTimePlane);
+    if (goma_ctx->exo_time_plane < INT_MAX) {
+      DPRINTF(stdout, "\nInitial guess read from \"%s\" ...(soln plane = %d)\n", goma_ctx->exo_aux_file,
+              goma_ctx->exo_time_plane);
     } else {
-      DPRINTF(stdout, "\nInitial guess read from \"%s\" ...(last soln in file)\n", ExoAuxFile);
+      DPRINTF(stdout, "\nInitial guess read from \"%s\" ...(last soln in file)\n", goma_ctx->exo_aux_file);
     }
-    err = rd_vectors_from_exoII(u, ExoAuxFile, 0, 0, ExoTimePlane, timeValueRead, exo);
+    err = rd_vectors_from_exoII(u, goma_ctx->exo_aux_file, 0, 0, goma_ctx->exo_time_plane, timeValueRead, exo);
     if (err != 0) {
       DPRINTF(stderr, "%s:  err for rd_vectors_from_exoII()\n", yo);
     }
@@ -1661,9 +1661,9 @@ void init_vec(
       int ngv;
 
       DPRINTF(stdout, "%s:  reading augmenting conditions initial guess from \"%s\" ...\n", yo,
-              ExoAuxFile);
+              goma_ctx->exo_aux_file);
 
-      ngv = rd_globals_from_exoII(uAC, ExoAuxFile, 6, nAC);
+      ngv = rd_globals_from_exoII(uAC, goma_ctx->exo_aux_file, 6, nAC);
       if (ngv < 0)
         DPRINTF(stderr, "%s: error trying to read augmenting conditions\n", yo);
 
@@ -1794,7 +1794,7 @@ void init_vec(
   for (n = 0; n < exo->num_elem_blocks; n++)
     block_order[n] = n;
 
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     for (n = 0; n < exo->num_elem_blocks; n++) {
       for (k = n + 1; k < exo->num_elem_blocks; k++) {
         if (Matilda[block_order[k]] < Matilda[block_order[n]]) {
@@ -1981,9 +1981,9 @@ void init_vec(
     }
     if (map_pix_fast_called) {
       MPI_Barrier(MPI_COMM_WORLD);
-      if (ProcID == 0) {
+      if (goma_ctx->proc_id == 0) {
         DPRINTF(stdout, "\nFixing exodus file %s\n", "map_pix_fast.exoII");
-        fix_exo_file(Num_Proc, "map_pix_fast.exoII");
+        fix_exo_file(goma_ctx->num_proc, "map_pix_fast.exoII");
       }
     }
     if (efv->exit_after_pixel_map == true) {
@@ -2331,16 +2331,16 @@ static void read_initial_guess(double u[], const int np, double uAC[], const int
   FILE *file;
   char yo[] = "read_initial_guess";
 
-  if (Debug_Flag > 0) {
-    DPRINTF(stderr, "Initial guess read from  \"%s\" ...\n", Init_GuessFile);
+  if (goma_ctx->debug_flag > 0) {
+    DPRINTF(stderr, "Initial guess read from  \"%s\" ...\n", goma_ctx->init_guess_file);
   }
 
   /*
    *  Open the guess file for reading
    */
-  file = fopen(Init_GuessFile, "r");
+  file = fopen(goma_ctx->init_guess_file, "r");
   if (file == NULL) {
-    DPRINTF(stderr, "%s:  error opening file \"%s\" for reading\n", yo, Init_GuessFile);
+    DPRINTF(stderr, "%s:  error opening file \"%s\" for reading\n", yo, goma_ctx->init_guess_file);
     exit(-1);
   }
 
@@ -2353,13 +2353,13 @@ static void read_initial_guess(double u[], const int np, double uAC[], const int
     nchar = read_line(file, input, FALSE);
     if (nchar <= 0) {
       fprintf(stderr, "%s: line %d of the initial guess file %s had an error, nchar = %d\n", yo, i,
-              Init_GuessFile, nchar);
+              goma_ctx->init_guess_file, nchar);
       fprintf(stderr, "%s:\t line = \"%s\"", yo, input);
       GOMA_EH(-1, yo);
     }
     if (!interpret_double(input, u + i)) {
       fprintf(stderr, "%s: line %d of the initial guess file %s had an error, %d\n", yo, i,
-              Init_GuessFile, nchar);
+              goma_ctx->init_guess_file, nchar);
       fprintf(stderr, "%s:\t line = \"%s\"", yo, input);
       GOMA_EH(-1, yo);
     }
@@ -2376,20 +2376,20 @@ static void read_initial_guess(double u[], const int np, double uAC[], const int
         nchar = read_line(file, input, FALSE);
         if (nchar <= 0) {
           fprintf(stderr, "%s: Aborting(nchar) read of Aug var %d from file %s , %s\n", yo, i,
-                  Init_GuessFile, input);
+                  goma_ctx->init_guess_file, input);
           break;
         }
         if (!interpret_double(input, uAC + i)) {
           fprintf(stderr, "%s: Aborting(dble) read of Aug var %d from file %s , %s\n", yo, i,
-                  Init_GuessFile, input);
+                  goma_ctx->init_guess_file, input);
           break;
         }
       }
     }
   }
-  if (Debug_Flag > 0) {
+  if (goma_ctx->debug_flag > 0) {
     DPRINTF(stderr, "%s:  Successfully read the initial guess from \"%s\" ...\n", yo,
-            Init_GuessFile);
+            goma_ctx->init_guess_file);
   }
   fclose(file);
 } /* END of routine read_initial_guess()  */
@@ -2487,7 +2487,7 @@ int wr_soln_vec(double u[],    /* solution vector */
   sprintf(fname, "tmp_%d.d", itn);
 
 #ifdef PARALLEL
-  multiname(fname, ProcID, Num_Proc);
+  multiname(fname, goma_ctx->proc_id, goma_ctx->num_proc);
 #endif
 
   file = fopen(fname, "w");
@@ -2554,10 +2554,10 @@ int rd_vectors_from_exoII(double u[],
   static const char yo[] = "rd_vectors_from_exoII";
 #endif
 
-  CPU_word_size = sizeof(double);
-  IO_word_size = 0;
+  goma_ctx->cpu_word_size = sizeof(double);
+  goma_ctx->io_word_size = 0;
 
-  exoid = ex_open(file_nm, EX_READ, &CPU_word_size, &IO_word_size, &version);
+  exoid = ex_open(file_nm, EX_READ, &goma_ctx->cpu_word_size, &goma_ctx->io_word_size, &version);
   GOMA_EH(exoid, "ex_open");
 
   error = ex_get_init(exoid, title, &num_dim, &num_nodes, &num_elem, &num_elem_blk, &num_node_sets,
@@ -2801,10 +2801,10 @@ int rd_trans_vectors_from_exoII(double u[],
   static const char yo[] = "rd_trans_vectors_from_exoII";
 #endif
 
-  CPU_word_size = sizeof(double);
-  IO_word_size = 0;
+  goma_ctx->cpu_word_size = sizeof(double);
+  goma_ctx->io_word_size = 0;
 
-  exoid = ex_open(file_nm, EX_READ, &CPU_word_size, &IO_word_size, &version);
+  exoid = ex_open(file_nm, EX_READ, &goma_ctx->cpu_word_size, &goma_ctx->io_word_size, &version);
   GOMA_EH(exoid, "ex_open");
 
   error = ex_get_init(exoid, title, &num_dim, &num_nodes, &num_elem, &num_elem_blk, &num_node_sets,
@@ -3108,10 +3108,10 @@ int rd_globals_from_exoII(double u[], const char *file_nm, const int start, cons
   static const char yo[] = "rd_globals_from_exoII";
 #endif
 
-  CPU_word_size = sizeof(double);
-  IO_word_size = 0;
+  goma_ctx->cpu_word_size = sizeof(double);
+  goma_ctx->io_word_size = 0;
 
-  exoid = ex_open(file_nm, EX_READ, &CPU_word_size, &IO_word_size, &version);
+  exoid = ex_open(file_nm, EX_READ, &goma_ctx->cpu_word_size, &goma_ctx->io_word_size, &version);
   GOMA_EH(exoid, "ex_open");
 
   error = ex_get_init(exoid, title, &num_dim, &num_nodes, &num_elem, &num_elem_blk, &num_node_sets,
@@ -3542,7 +3542,7 @@ void init_vec_value(double *vector, const double value, const int length)
   int i;
 
   if (vector == NULL) {
-    if (Debug_Flag > 1) {
+    if (goma_ctx->debug_flag > 1) {
       GOMA_WH(-1, "Warning: attempted to initialize NULL vector.");
     }
     return;

@@ -152,7 +152,7 @@ int pd_alloc(void)
     pg->time_step_control_disabled[imtrx] = 0;
   }
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Problem_Description @ %p has %ld bytes", yo, (void *)pd_glob,
             (long int)sizeof(struct Problem_Description));
   }
@@ -186,7 +186,7 @@ int efv_alloc(void) {
 
   sz = sizeof(struct External_Field_Variables);
   efv = (struct External_Field_Variables *)array_alloc(1, 1, sz);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: External_Field_Variables @ %p has %d bytes", yo, (void *)efv, sz);
   }
 
@@ -237,7 +237,7 @@ int mp_alloc(void)
   }
   mp_old = (MATRL_PROP_STRUCT *)alloc_void_struct_1(sizeof(MATRL_PROP_STRUCT), 1);
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Material_Properties @ %p has %lu bytes", yo, (void *)mp,
             (long unsigned int)sizeof(MATRL_PROP_STRUCT));
   }
@@ -277,7 +277,7 @@ int cr_alloc(void)
     memset(cr_glob[mn], 0, sz);
   }
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Constitutive_Relations @ %p has %d bytes", yo, (void *)cr, sz);
   }
 
@@ -324,7 +324,7 @@ int gn_alloc(void) {
     memset(gn_glob[mn], 0, sz);
   }
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Generalized_Newtonian @ %p has %d bytes", yo, (void *)gn, sz);
   }
 
@@ -377,7 +377,7 @@ int ve_alloc(void) {
     }
   }
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Viscoelastic_Constitutive @ %p has %d bytes", yo, (void *)ve_glob, sz);
   }
 
@@ -414,7 +414,7 @@ int elc_alloc(void) {
     init_Elastic_Constitutive(elc_glob[mn]);
   }
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Elastic Constitutive @ %p has %d bytes", yo, (void *)gn_glob, sz);
   }
 
@@ -450,7 +450,7 @@ int evp_alloc(void) {
     init_Viscoplastic_Constitutive(evpl_glob[mn]);
   }
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Viscoplastic Constitutive @ %p has %d bytes", yo, (void *)gn_glob, sz);
   }
 
@@ -559,7 +559,7 @@ int elc_rs_alloc(void) {
     init_Elastic_Constitutive(elc_rs_glob[mn]);
   }
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Elastic Constitutive RS @ %p has %d bytes", yo, (void *)gn_glob, sz);
   }
 
@@ -584,7 +584,7 @@ int tran_alloc(void) {
 
   sz = sizeof(struct Transient_Information);
   tran = (struct Transient_Information *)array_alloc(1, 1, sz);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Transient_Information @ %p has %d bytes", yo, (void *)tran, sz);
   }
 
@@ -599,7 +599,7 @@ int tran_alloc(void) {
   sz = sizeof(struct Element_Quality_Metrics);
   eqm = alloc_struct_1(struct Element_Quality_Metrics, 1);
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     P0PRINTF("%s: Element_Quality_Metrics @ %p has %d bytes", yo, (void *)eqm, sz);
   }
 
@@ -627,7 +627,7 @@ int libio_alloc(void) {
 
   sz = sizeof(struct Library_IO);
   libio = (struct Library_IO *)array_alloc(1, 1, sz);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Library_IO @ %p has %d bytes", yo, (void *)libio, sz);
   }
 
@@ -655,7 +655,7 @@ int eigen_alloc(void) {
 
   sz = sizeof(struct Eigensolver_Info);
   eigen = (struct Eigensolver_Info *)array_alloc(1, 1, sz);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Eigensolver_Info @ %p has %d bytes", yo, (void *)eigen, sz);
   }
 
@@ -683,7 +683,7 @@ int cont_alloc(void) {
 
   sz = sizeof(struct Continuation_Information);
   cont = (struct Continuation_Information *)array_alloc(1, 1, sz);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Continuation_Information @ %p has %d bytes", yo, (void *)cont, sz);
   }
 
@@ -711,7 +711,7 @@ int loca_alloc(void) {
 
   sz = sizeof(struct Loca_Input);
   loca_in = (struct Loca_Input *)array_alloc(1, 1, sz);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Loca_Input @ %p has %d bytes", yo, (void *)cont, sz);
   }
 
@@ -826,7 +826,7 @@ int assembly_alloc(Exo_DB *exo)
    */
   p0 = &zero;
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stderr, "%s...\n", yo);
   }
 
@@ -857,7 +857,7 @@ int assembly_alloc(Exo_DB *exo)
   esp_dbl_dot = (struct Element_Variable_Pointers *)array_alloc(1, 1, sz);
   evp = (struct Element_Variable_Pointers *)array_alloc(1, 1, sz);
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Element_Variable_Pointers @ %p has %d bytes", yo, (void *)esp_old, sz);
   }
 
@@ -872,7 +872,7 @@ int assembly_alloc(Exo_DB *exo)
   sz = sizeof(struct Element_Stiffness_Pointers);
   esp = alloc_struct_1(struct Element_Stiffness_Pointers, 1);
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     P0PRINTF("%s: Element_Stiffness_Pointers @ %p has %d bytes", yo, (void *)esp, sz);
   }
 
@@ -1259,7 +1259,7 @@ int assembly_alloc(Exo_DB *exo)
    * Action_Flags______________________________________________________________
    */
   af = alloc_struct_1(struct Action_Flags, 1);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     P0PRINTF("%s: Action_Flags @ %p has %lu bytes", yo, (void *)af,
              (long unsigned int)sizeof(struct Action_Flags));
   }
@@ -1368,7 +1368,7 @@ int assembly_alloc(Exo_DB *exo)
    */
 
   fv = alloc_struct_1(struct Field_Variables, 1);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Field_Variables @ %p has %ld bytes", yo, (void *)fv,
             (long int)sizeof(struct Field_Variables));
   }
@@ -1379,7 +1379,7 @@ int assembly_alloc(Exo_DB *exo)
   memset(fv, 0, sizeof(struct Field_Variables));
 
   fv_sens = alloc_struct_1(struct Field_Variables, 1);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Field_Variables Sensitivity @ %p has %lu bytes", yo, (void *)fv_sens,
             sizeof(struct Field_Variables));
   }
@@ -1395,7 +1395,7 @@ int assembly_alloc(Exo_DB *exo)
   fv_dot_dot = alloc_struct_1(struct Diet_Field_Variables, 1);
   fv_dot_old = alloc_struct_1(struct Diet_Field_Variables, 1);
   fv_dot_dot_old = alloc_struct_1(struct Diet_Field_Variables, 1);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Diet_Field_Variables @ %p has %d bytes", yo, (void *)fv_old, sz);
   }
   if (fv_old == NULL) {
@@ -1470,7 +1470,7 @@ int assembly_alloc(Exo_DB *exo)
    * Local_Element_Contributions___________________________________________
    */
   lec = alloc_struct_1(struct Local_Element_Contributions, 1);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Local_Element_Contributions @ %p has %ld bytes", yo, (void *)lec,
             (long int)sizeof(struct Local_Element_Contributions));
   }
@@ -1483,7 +1483,7 @@ int assembly_alloc(Exo_DB *exo)
    * Lubrication Auxiliaries_________________________________________________
    */
   LubAux = alloc_struct_1(struct Lubrication_Auxiliaries, 1);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Lubrication_Auxiliaries @ %p has %ld bytes", yo, (void *)LubAux,
             (long int)sizeof(struct Lubrication_Auxiliaries));
   }
@@ -1494,7 +1494,7 @@ int assembly_alloc(Exo_DB *exo)
   memset(LubAux, 0, sizeof(struct Lubrication_Auxiliaries));
 
   LubAux_old = alloc_struct_1(struct Lubrication_Auxiliaries, 1);
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Lubrication_Auxiliaries Old @ %p has %ld bytes", yo, (void *)LubAux_old,
             (long int)sizeof(struct Lubrication_Auxiliaries));
   }

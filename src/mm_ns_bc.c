@@ -3716,7 +3716,7 @@ int exchange_fvelo_slip_bc_info(int ibc /* Index into BC_Types for VELO_SLIP_BC 
 
   /* find which processor has the right data */
   if (BC_Types[ibc].BC_Data_Int[0] != -2) {
-    velo_slip_root = ProcID;
+    velo_slip_root = goma_ctx->proc_id;
   }
 
 #ifdef PARALLEL
@@ -3727,7 +3727,7 @@ int exchange_fvelo_slip_bc_info(int ibc /* Index into BC_Types for VELO_SLIP_BC 
   }
 #endif /* #ifdef PARALLEL */
 
-  if (ProcID == velo_slip_root) {
+  if (goma_ctx->proc_id == velo_slip_root) {
     int node = abs(BC_Types[ibc].BC_Data_Int[0]);
     /* find coordinate position of reference node */
     for (i = 0; i < pd->Num_Dim; i++) {

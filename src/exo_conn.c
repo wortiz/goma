@@ -782,7 +782,7 @@ void build_elem_elem(Exo_DB *exo) {
            * The face must connect either to outer space or to
            * another processor.
            */
-          if (Num_Proc == 1) {
+          if (goma_ctx->num_proc == 1) {
             neighbor_name = -1;
           } else {
             neighbor_name = -1;
@@ -1105,7 +1105,7 @@ int get_exterior_faces(int elem, int *ex_faces, const Exo_DB *exo, const Dpi *dp
 
 #ifdef PARALLEL
 
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     // TODO: NEMESIS DPI
     GOMA_EH(GOMA_ERROR, "Not implemented nemesis parallel format");
     elem_elem_list = dpi->elem_elem_list_global; /* This global list has the

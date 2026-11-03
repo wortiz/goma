@@ -146,7 +146,7 @@ void usr_out_hkm(int status MAYBE_UNUSED,
 #ifdef PARALLEL
   (void)MPI_Barrier(MPI_COMM_WORLD);
 #endif
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     printf("\n\n\t");
     fprint_line(stdout, "u", 70);
     printf("\tPrintout of the user defined solution statistics\n\t");
@@ -207,7 +207,7 @@ void usr_out_hkm(int status MAYBE_UNUSED,
        */
 #ifdef USE_CHEMKIN
 #ifdef SENKIN_OUTPUT
-      if (ProcID == 0) {
+      if (goma_ctx->proc_id == 0) {
         if (matID_prop->DefaultDatabase == DB_CHEMKIN_MAT) {
           WRITE_SENKIN_FILE(status, 1, SenkinNode, soln, time, time_step_num, matID_prop);
         }
@@ -283,7 +283,7 @@ void usr_out_hkm(int status MAYBE_UNUSED,
       safer_free((void **)&soln_mole_lastSpecies);
     }
     /************* Print a Banner Line at the End of Output ********************/
-    if (ProcID == 0) {
+    if (goma_ctx->proc_id == 0) {
       printf("\n\t");
       fprint_line(stdout, "u", 50);
       printf("\tEnd of of the user defined solution statistics\n\t");
@@ -317,7 +317,7 @@ static void PRNT_SOLN_VALS(char *soln_name,
 #ifdef PARALLEL
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
-  if (ProcID == print_proc) {
+  if (goma_ctx->proc_id == print_proc) {
     printf("\t %s:\n", soln_name);
     printf("\t  Average value = %g\n", g_avg);
 
@@ -333,7 +333,7 @@ static void PRNT_SOLN_VALS(char *soln_name,
    * Process the information for the minimum value
    */
   print_proc = GET_PRINT_PROC_NUM(l_min, g_min);
-  if (ProcID == print_proc) {
+  if (goma_ctx->proc_id == print_proc) {
     RETN_COORD(i_min, &Xcoor, &Ycoor, &Zcoor);
     printf("\t  Min value = %g\tat Xcoor: %g\tYcoor: %g", g_min, Xcoor, Ycoor);
     if (Num_Dim > 2)
@@ -354,9 +354,9 @@ static int GET_PRINT_PROC_NUM(const double num, const double g_num)
 {
   int proc_temp, print_proc;
   if (num == g_num)
-    proc_temp = ProcID;
+    proc_temp = goma_ctx->proc_id;
   else
-    proc_temp = Num_Proc;
+    proc_temp = goma_ctx->num_proc;
   print_proc = gmin_int(proc_temp);
   return print_proc;
 }
@@ -451,7 +451,7 @@ static void SOLN_VALUES(int var_type,
 
   /* Compute the global max and min values */
 
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
 #ifdef PARALLEL
     MPI_Allreduce(&s_max, g_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&s_min, g_min, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);

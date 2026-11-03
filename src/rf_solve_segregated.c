@@ -309,7 +309,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   tev_post = malloc(sizeof(int) * upd->Total_Num_Matrices);
   gvec_elem = malloc(sizeof(double ***) * upd->Total_Num_Matrices);
 
-  if (Num_Proc > 1 && tran->fix_freq > 0) {
+  if (goma_ctx->num_proc > 1 && tran->fix_freq > 0) {
     step_fix = 1; /* Always fix on the first timestep to match print frequency */
   }
   pg->matrices = malloc(sizeof(struct Matrix_Data) * upd->Total_Num_Matrices);
@@ -418,7 +418,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   }
 
   if (callnum == 1) {
-    wr_result_prelim_exo_segregated(rd, exo, ExoFileOut, gvec_elem);
+    wr_result_prelim_exo_segregated(rd, exo, goma_ctx->exo_file_out, gvec_elem);
   }
 
   /*
@@ -575,7 +575,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
       err = GomaSparseMatrix_SetProblemGraph(
           goma_matrix, num_internal_dofs[pg->imtrx], num_boundary_dofs[pg->imtrx],
           num_external_dofs[pg->imtrx], local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,
-          dpi, cx[pg->imtrx], pg->imtrx, Debug_Flag, ams[pg->imtrx]);
+          dpi, cx[pg->imtrx], pg->imtrx, goma_ctx->debug_flag, ams[pg->imtrx]);
       GOMA_EH(err, "GomaSparseMatrix_SetProblemGraph");
       ams[pg->imtrx]->GomaMatrixData = goma_matrix;
       ams[pg->imtrx]->npu = num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx];
@@ -888,7 +888,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
         find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
 
-        if (ProcID == 0) {
+        if (goma_ctx->proc_id == 0) {
           printf("\n===================== SOLVING MATRIX %d Step %d "
                  "===========================\n\n",
                  pg->imtrx, n);
@@ -990,11 +990,11 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                 vector_distance_vel(NumUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
             double pres =
                 vector_distance_pres(NumUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
-            if (ProcID == 0) {
+            if (goma_ctx->proc_id == 0) {
               printf("M%d distance = %g, %g, %g\n", i, d1, vel, pres);
             }
           } else {
-            if (ProcID == 0) {
+            if (goma_ctx->proc_id == 0) {
               printf("M%d distance = %g \n", i, d1);
             }
           }
@@ -1004,7 +1004,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
         distance = sqrt(distance);
 
-        if (ProcID == 0) {
+        if (goma_ctx->proc_id == 0) {
           printf("\nL_2 x changes %g\n", distance);
         }
 
@@ -1024,11 +1024,11 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                                 delta_t_old, time, 1);
           }
 
-          write_solution_segregated(ExoFileOut, resid_vector, x, x_old, xdot, xdot_old, tev_post,
+          write_solution_segregated(goma_ctx->exo_file_out, resid_vector, x, x_old, xdot, xdot_old, tev_post,
                                     gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, NULL,
                                     exo, dpi);
 
-          if (ProcID == 0) {
+          if (goma_ctx->proc_id == 0) {
             printf("\n Steady state reached \n");
           }
           goto free_and_clear;
@@ -1037,7 +1037,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
         break;
       }
     }
-    if (ProcID == 0) {
+    if (goma_ctx->proc_id == 0) {
       printf("Failed to solve steady state.");
     }
     goto free_and_clear;
@@ -1049,7 +1049,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   else {
 
     int renorm_subcycle_count = 0;
-    if (Debug_Flag && ProcID == 0) {
+    if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
       fprintf(stdout, "MaxTimeSteps: %d \tTimeMax: %f\n", tran->MaxTimeSteps, tran->TimeMax);
       fprintf(stdout, "solving transient problem\n");
     }
@@ -1198,7 +1198,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             DPRINTF(stdout, "\n\t\t Surface object level set initialization : ");
 
             /* parallel synchronization of initialization surfaces */
-            if (Num_Proc > 1) {
+            if (goma_ctx->num_proc > 1) {
               if (!ls->init_surf_list)
                 ls->init_surf_list = create_surf_list();
               assemble_Global_surf_list(ls->init_surf_list);
@@ -1356,8 +1356,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
     const_delta_ts = const_delta_t;
     last_renorm_nt = 0;
 
-    if (Write_Initial_Solution) {
-      write_solution_segregated(ExoFileOut, resid_vector, x, x_old, xdot, xdot_old, tev_post, gv,
+    if (goma_ctx->write_initial_solution) {
+      write_solution_segregated(goma_ctx->exo_file_out, resid_vector, x, x_old, xdot, xdot_old, tev_post, gv,
                                 rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, NULL, exo,
                                 dpi);
       nprint++;
@@ -1450,7 +1450,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               dcopy1(numProcUnknowns[imtrx], xdot[imtrx], xdot_old[imtrx]);
               dcopy1(numProcUnknowns[pg->imtrx], x[imtrx], x_prev[imtrx]);
             }
-            wr_result_prelim_exo_segregated(rd, exo, ExoFileOut, gvec_elem);
+            wr_result_prelim_exo_segregated(rd, exo, goma_ctx->exo_file_out, gvec_elem);
             pg->imtrx = 0;
             nprint = 0;
             nullify_dirichlet_bcs();
@@ -1561,7 +1561,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
               exchange_dof(cx[pg->imtrx], dpi, pg->sub_step_solutions[pg->imtrx].xdot, pg->imtrx);
 
-              if (ProcID == 0) {
+              if (goma_ctx->proc_id == 0) {
                 if (theta == 0.0)
                   strcpy(tspstring, "(BE)");
                 else if (theta == 0.5)
@@ -1680,7 +1680,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                 }
                 for (int i = 0; i < 4; i++) {
                   if (moment_floored[i]) {
-                    printf("Proc %d moment %d floored\n", ProcID, i);
+                    printf("Proc %d moment %d floored\n", goma_ctx->proc_id, i);
                   }
                 }
 
@@ -1808,7 +1808,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
             find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
 
-            if (ProcID == 0) {
+            if (goma_ctx->proc_id == 0) {
               if (theta == 0.0)
                 strcpy(tspstring, "(BE)");
               else if (theta == 0.5)
@@ -1905,11 +1905,11 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
              */
 
-            if (ProcID == 0 && upd->SegregatedSubcycles == 1 && renorm_subcycle_count <= 1) {
+            if (goma_ctx->proc_id == 0 && upd->SegregatedSubcycles == 1 && renorm_subcycle_count <= 1) {
               printf("\n========================== SOLVING MATRIX %d "
                      "===========================\n\n",
                      pg->imtrx + 1);
-            } else if (ProcID == 0 && (upd->SegregatedSubcycles > 1 || renorm_subcycle_count > 1)) {
+            } else if (goma_ctx->proc_id == 0 && (upd->SegregatedSubcycles > 1 || renorm_subcycle_count > 1)) {
               int num_subcycles = MAX(upd->SegregatedSubcycles, renorm_subcycle_count);
               printf("\n================== SOLVING MATRIX %d Subcycle %d/%d "
                      "===================\n\n",
@@ -2293,8 +2293,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
         error = 0;
         if (i_print) {
-          if (Write_Intermediate_Solutions == 0) {
-            write_solution_segregated(ExoFileOut, resid_vector, x, x_old, xdot, xdot_old, tev_post,
+          if (goma_ctx->write_intermediate_solutions == 0) {
+            write_solution_segregated(goma_ctx->exo_file_out, resid_vector, x, x_old, xdot, xdot_old, tev_post,
                                       gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, NULL,
                                       exo, dpi);
             nprint++;
@@ -2351,12 +2351,12 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               max_distance = distance;
           }
 
-          if (ProcID == 0) {
+          if (goma_ctx->proc_id == 0) {
             printf("\nMaximum Delta x %g\n", max_distance);
           }
 
           if (steady_state_reached) {
-            if (ProcID == 0) {
+            if (goma_ctx->proc_id == 0) {
               printf("\n Steady state reached \n");
             }
             goto free_and_clear;

@@ -201,7 +201,7 @@ static Coloring *find_coloring(struct GomaLinearSolverData *ams,
   free(col);
 #ifdef DEBUG_FD_COLORING
   t2 = MPI_Wtime();
-  printf("%d Elapsed time is %f\n", ProcID, t2 - t1);
+  printf("%d Elapsed time is %f\n", goma_ctx->proc_id, t2 - t1);
 #endif
 
   column_color = malloc(sizeof(int) * num_unknowns);
@@ -251,7 +251,7 @@ static Coloring *find_coloring(struct GomaLinearSolverData *ams,
   coloring->column_color = column_color;
 #ifdef DEBUG_FD_COLORING
   t2 = MPI_Wtime();
-  printf("%d Elapsed2 time is %f\n", ProcID, t2 - t1);
+  printf("%d Elapsed2 time is %f\n", goma_ctx->proc_id, t2 - t1);
 #endif
 
 #if defined(PRINT_FD_COLORING) || defined(DEBUG_FD_COLORING)
@@ -278,7 +278,7 @@ static Coloring *find_coloring(struct GomaLinearSolverData *ams,
 #endif
 #ifdef DEBUG_FD_COLORING
   t2 = MPI_Wtime();
-  printf("%d Elapsed3 time is %f\n", ProcID, t2 - t1);
+  printf("%d Elapsed3 time is %f\n", goma_ctx->proc_id, t2 - t1);
 #endif
 
   coloring->colptr = colptr;
@@ -536,7 +536,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
 #ifdef DEBUG_FD_COLORING
     printf("ColorStats %d [elem = %d], [count = %d]\n", color, elem_count, count);
     t2 = MPI_Wtime();
-    printf("%d Color0 time is %f\n", ProcID, t2 - t1);
+    printf("%d Color0 time is %f\n", goma_ctx->proc_id, t2 - t1);
 #endif
 
     af->Assemble_Residual = TRUE;
@@ -574,7 +574,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
 
 #ifdef DEBUG_FD_COLORING
     t3 = MPI_Wtime();
-    printf("%d Color1 time is %f\n", ProcID, t3 - t2);
+    printf("%d Color1 time is %f\n", goma_ctx->proc_id, t3 - t2);
 #endif
     /*
      * Free memory allocated above
@@ -659,7 +659,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
     elem_list = NULL;
 #ifdef DEBUG_FD_COLORING
     t4 = MPI_Wtime();
-    printf("%d Color2 time is %f\n", ProcID, t4 - t3);
+    printf("%d Color2 time is %f\n", goma_ctx->proc_id, t4 - t3);
 #endif
   } /* End of for (j=0; j<numProcUnknowns; j++) */
 

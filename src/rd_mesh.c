@@ -158,9 +158,9 @@ int read_mesh_exoII(Exo_DB *exo, Dpi *dpi) {
   int max;
   int *arr;
 
-  multiname(ExoFile, ProcID, Num_Proc);
+  multiname(goma_ctx->exo_file, goma_ctx->proc_id, goma_ctx->num_proc);
   error =
-      rd_exo(exo, ExoFile, 0, (EXODB_ACTION_RD_INIT + EXODB_ACTION_RD_MESH + EXODB_ACTION_RD_RES0));
+      rd_exo(exo, goma_ctx->exo_file, 0, (EXODB_ACTION_RD_INIT + EXODB_ACTION_RD_MESH + EXODB_ACTION_RD_RES0));
   check_parallel_error("Error in reading exodus file");
   /*
    *    if an error was encountered return to
@@ -177,17 +177,17 @@ int read_mesh_exoII(Exo_DB *exo, Dpi *dpi) {
    */
 
   zero_base(exo);
-  error = setup_base_mesh(dpi, exo, Num_Proc);
+  error = setup_base_mesh(dpi, exo, goma_ctx->num_proc);
   GOMA_EH(error, "setup_base_mesh");
 
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     /*
      * Construct a likely imposter for the distributed processing information
      * that will suffice in most cases when we are running in serial mode.
      */
     uni_dpi(dpi, exo);
   } else {
-    rd_dpi(exo, dpi, ExoFile, true); /* local extra info for distributed
+    rd_dpi(exo, dpi, goma_ctx->exo_file, true); /* local extra info for distributed
                           processing kept here, too.
                           some of this is stored in EXODUS names,
                           like the element number map, but some
@@ -205,7 +205,7 @@ int read_mesh_exoII(Exo_DB *exo, Dpi *dpi) {
 
   setup_old_dpi(exo, dpi);
 
-  setup_old_exo(exo, dpi, Num_Proc);
+  setup_old_exo(exo, dpi, goma_ctx->num_proc);
 
   /*
    * Duane mentions that blindly compiling with MDE too low (like 12)
@@ -391,8 +391,8 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
   char err_msg[MAX_CHAR_ERR_MSG];
   strcpy(Title, e->title);
 
-  CPU_word_size = e->comp_wordsize;
-  IO_word_size = e->io_wordsize;
+  goma_ctx->cpu_word_size = e->comp_wordsize;
+  goma_ctx->io_word_size = e->io_wordsize;
 
   Num_Dim = e->num_dim;
   Num_Node = e->num_nodes;
@@ -708,13 +708,13 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
     num_global_node = Num_Node;
   }
 
-  if (num_global_node / Num_Proc < 1) {
-    sprintf(err_msg, "Whoa! Problem with %lld nodes on %d processors.", num_global_node, Num_Proc);
+  if (num_global_node / goma_ctx->num_proc < 1) {
+    sprintf(err_msg, "Whoa! Problem with %lld nodes on %d processors.", num_global_node, goma_ctx->num_proc);
     GOMA_EH(GOMA_ERROR, err_msg);
   }
 
-  if (num_global_elem / Num_Proc < 1) {
-    sprintf(err_msg, "Whoa! Problem with %lld elems on %d processors.", num_global_elem, Num_Proc);
+  if (num_global_elem / goma_ctx->num_proc < 1) {
+    sprintf(err_msg, "Whoa! Problem with %lld elems on %d processors.", num_global_elem, goma_ctx->num_proc);
     GOMA_EH(GOMA_ERROR, err_msg);
   }
 
@@ -823,7 +823,7 @@ void check_sidesets(Exo_DB *e,                       /* EXODUS II FE db has all 
     }
   }
 
-  if (count_unused_ss > 0 && Debug_Flag > 2) {
+  if (count_unused_ss > 0 && goma_ctx->debug_flag > 2) {
     DPRINTF(stderr, "\nUnused side sets:");
     for (i = 0; i < count_unused_ss; i++) {
       DPRINTF(stderr, " %d", ssid[unused_ss[i]]);
@@ -910,7 +910,7 @@ void check_nodesets(Exo_DB *e,                       /* EXODUS II FE db has all 
     }
   }
 
-  if (count_unused_ns > 0 && Debug_Flag > 2) {
+  if (count_unused_ns > 0 && goma_ctx->debug_flag > 2) {
     DPRINTF(stderr, "\nUnused node sets:");
     for (i = 0; i < count_unused_ns; i++) {
       DPRINTF(stderr, " %d", nsid[unused_ns[i]]);
@@ -1251,7 +1251,7 @@ int map_mat_index(const int ebid)
       fprintf(stderr,
               "P_%d: Couldn't find Element block %d in any material, proceeding anyway with "
               "trepidation\n",
-              ProcID, ebid);
+              goma_ctx->proc_id, ebid);
     }
     // GOMA_EH(GOMA_ERROR, "Trouble in map_mat_index");
     return -1;

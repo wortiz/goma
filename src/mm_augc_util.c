@@ -892,11 +892,11 @@ void update_parameterAC(
       double temp, lambda_user;
       int ibc_user, idf_user, count;
 
-      if (Num_Proc != 1) {
+      if (goma_ctx->num_proc != 1) {
         GOMA_EH(GOMA_ERROR, "aprepro AC condition not ready for parallel");
       }
       sprintf(cmd_str, "%s %s %s %s %s %s %.20g", "bcdiff.pl", "-p", augc[iAC].Params_File, "-i",
-              Input_File, augc[iAC].AP_param, lambda);
+              goma_ctx->input_file, augc[iAC].AP_param, lambda);
       err = system(cmd_str);
       GOMA_EH(err, "Error could not create process for bcdiff.pl");
 
@@ -1932,7 +1932,7 @@ int std_aug_cond(int iAC,
       // with a global unknown.
       inventory = augc[iAC].evol;
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         inventory = global_inventory;
       }
@@ -1955,7 +1955,7 @@ int std_aug_cond(int iAC,
     LSvel_inventory = augc[iAC].lsvel;
 
 #ifdef PARALLEL
-    if (Num_Proc > 1) {
+    if (goma_ctx->num_proc > 1) {
       MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       MPI_Allreduce(&LSvel_inventory, &global_LSvel_inventory, 1, MPI_DOUBLE, MPI_SUM,
                     MPI_COMM_WORLD);
@@ -1984,7 +1984,7 @@ int std_aug_cond(int iAC,
   } else if (augc[iAC].Type == AC_POSITION || augc[iAC].Type == AC_POSITION_MT) {
     inventory = getPositionAC(augc + iAC, cAC[iAC], mf_args->x, mf_args->exo);
 #ifdef PARALLEL
-    if (Num_Proc > 1) {
+    if (goma_ctx->num_proc > 1) {
       MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       inventory = global_inventory;
     }
@@ -2000,7 +2000,7 @@ int std_aug_cond(int iAC,
   } else if (augc[iAC].Type == AC_ANGLE) {
     inventory = getAngleAC(augc + iAC, cAC[iAC], mf_args->x, mf_args->exo);
 #ifdef PARALLEL
-    if (Num_Proc > 1) {
+    if (goma_ctx->num_proc > 1) {
       MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       inventory = global_inventory;
     }
@@ -2079,7 +2079,7 @@ int alc_aug_cond(int iAC,
   for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
     alceq_s += sv[i] * sv[i] * dx[i] * (x[i] - x_old[i]);
   }
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     alceq_s = goma_gsum_double(alceq_s);
   }
 
@@ -2527,7 +2527,7 @@ static int estimate_dAC_ALC(
                                 augc[jAC].MTID, augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
                                 *(mf_args->delta_t), *(mf_args->time), 0);
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         inventory = global_inventory;
       }
@@ -2540,7 +2540,7 @@ static int estimate_dAC_ALC(
                                 augc[jAC].MDID, augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
                                 *(mf_args->delta_t), *(mf_args->time), 0);
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         inventory = global_inventory;
       }
@@ -2551,7 +2551,7 @@ static int estimate_dAC_ALC(
     case AC_VOLUME:
       inventory = augc[jAC].evol;
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         inventory = global_inventory;
       }
@@ -2565,7 +2565,7 @@ static int estimate_dAC_ALC(
       inventory = augc[jAC].lsvol;
       LSvel_inventory = augc[jAC].lsvel;
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(&LSvel_inventory, &global_LSvel_inventory, 1, MPI_DOUBLE, MPI_SUM,
                       MPI_COMM_WORLD);
@@ -2597,7 +2597,7 @@ static int estimate_dAC_ALC(
 
       inventory = getPositionAC(augc + jAC, dAC[jAC], mf_args->x, mf_args->exo);
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         inventory = global_inventory;
       }
@@ -2635,7 +2635,7 @@ static int estimate_dAC_ALC(
                                 augc[jAC].MTID, augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
                                 *(mf_args->delta_t), *(mf_args->time), 0);
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         inventory = global_inventory;
       }
@@ -2648,7 +2648,7 @@ static int estimate_dAC_ALC(
                                 augc[jAC].MDID, augc[jAC].COMPID, NULL, FALSE, x, xdot, NULL,
                                 *(mf_args->delta_t), *(mf_args->time), 0);
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         inventory = global_inventory;
       }
@@ -2659,7 +2659,7 @@ static int estimate_dAC_ALC(
     case AC_VOLUME:
       inventory = augc[jAC].evol;
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         inventory = global_inventory;
       }
@@ -2673,7 +2673,7 @@ static int estimate_dAC_ALC(
       inventory = augc[jAC].lsvol;
       LSvel_inventory = augc[jAC].lsvel;
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(&LSvel_inventory, &global_LSvel_inventory, 1, MPI_DOUBLE, MPI_SUM,
                       MPI_COMM_WORLD);
@@ -2701,7 +2701,7 @@ static int estimate_dAC_ALC(
       // just do it again
       inventory = getPositionAC(augc + jAC, dAC[jAC], mf_args->x, mf_args->exo);
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         inventory = global_inventory;
       }
@@ -2818,7 +2818,7 @@ int std_lgr_cond(int iAC,
   } else if (augc[iAC].Type == AC_PF_CONSTRAINT) {
     inventory = pfd->Constraint_Integral;
 #ifdef PARALLEL
-    if (Num_Proc > 1) {
+    if (goma_ctx->num_proc > 1) {
       MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       inventory = global_inventory;
     }
@@ -3417,7 +3417,7 @@ double getPositionAC(struct AC_Information *augc, double *cAC_iAC, double *x, Ex
     /* Check for a match between the ID of the current node set and the node set
        ID specified by NSIndexPosition */
     if (exo->ns_id[ins] == NSIndexPosition) {
-      if (exo->ns_num_nodes[ins] == 0 && Num_Proc > 1) {
+      if (exo->ns_num_nodes[ins] == 0 && goma_ctx->num_proc > 1) {
         // we probably aren't this ns owner
         break;
       } else if (exo->ns_num_nodes[ins] != 1) {
@@ -3517,7 +3517,7 @@ double getAngleAC(struct AC_Information *augc, double *cAC_iAC, double *x, Exo_D
     /* Check for a match between the ID of the current node set and the node set
        ID specified by NSIndexPosition */
     if (exo->ns_id[ins] == NSIndexPosition) {
-      if (exo->ns_num_nodes[ins] == 0 && Num_Proc > 1) {
+      if (exo->ns_num_nodes[ins] == 0 && goma_ctx->num_proc > 1) {
         // we probably aren't this ns owner
         break;
       } else if (exo->ns_num_nodes[ins] != 1) {
@@ -3526,7 +3526,7 @@ double getAngleAC(struct AC_Information *augc, double *cAC_iAC, double *x, Exo_D
           if (exo->ns_node_list[exo->ns_node_index[ins] + i] != inode) {
             printf("NS %d, non-unique nodes in list of %d\n", exo->ns_id[ins],
                    exo->ns_num_nodes[ins]);
-            printf("Proc %d Nodes %d %d\n", ProcID, inode,
+            printf("Proc %d Nodes %d %d\n", goma_ctx->proc_id, inode,
                    exo->ns_node_list[exo->ns_node_index[ins] + i]);
           }
         }

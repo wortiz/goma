@@ -210,7 +210,7 @@ int load_coordinate_scales(const int c, struct Field_Variables *f) {
 
   if (c == CYLINDRICAL || c == SWIRLING) {
     r = f->x[1];
-    if ((r == 0.) && (i_warning == 0) && (Debug_Flag != 0)) {
+    if ((r == 0.) && (i_warning == 0) && (goma_ctx->debug_flag != 0)) {
       i_warning = 1;
       fprintf(stderr, "Bad cylindrical coordinate -- @ r=0!\n");
     }
@@ -1192,8 +1192,8 @@ dbl global_h_elem_siz(dbl x[], dbl x_old[], dbl xdot[], dbl resid_vector[], Exo_
     }
     h_elem = sqrt(h_elem / dim);
     weight = 1.;
-    if (Num_Proc > 1) {
-      if (dpi->elem_owner[e] != ProcID) {
+    if (goma_ctx->num_proc > 1) {
+      if (dpi->elem_owner[e] != goma_ctx->proc_id) {
         weight = 0.0;
       }
     }

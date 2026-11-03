@@ -5,27 +5,29 @@
 #include <mpi.h>
 
 extern "C" {
-int ProcID = 0;
+#include "util/goma_context.h"
+}
+
+extern "C" {
 int parallel_err = 0;
-int Num_Proc = 1;
 }
 
 int main(int argc, char *argv[]) {
   // global setup...
   MPI_Init(&argc, &argv);
 
-  auto error = MPI_Comm_size(MPI_COMM_WORLD, &Num_Proc);
+  auto error = MPI_Comm_size(MPI_COMM_WORLD, &goma_ctx->num_proc);
   if (error) {
     return error;
   }
-  error = MPI_Comm_rank(MPI_COMM_WORLD, &ProcID);
+  error = MPI_Comm_rank(MPI_COMM_WORLD, &goma_ctx->proc_id);
   if (error) {
     return error;
   }
 
-  if (Num_Proc > 1) {
-    if (ProcID == 0) {
-      std::cerr << "Unit tests are currently expected to be run serially, found " << Num_Proc
+  if (goma_ctx->num_proc > 1) {
+    if (goma_ctx->proc_id == 0) {
+      std::cerr << "Unit tests are currently expected to be run serially, found " << goma_ctx->num_proc
                 << " MPI Processes\n";
     }
     return -1;

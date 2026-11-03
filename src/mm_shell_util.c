@@ -68,10 +68,10 @@ static char rcsid[] = "$Id: mm_shell_util.c,v 5.17 2010-07-21 16:39:27 hkmoffa E
 #define DEBUG_SHELL 0
 #define PRINTPROC   0
 #define DSPRINTF                          \
-  if (DEBUG_SHELL && ProcID == PRINTPROC) \
+  if (DEBUG_SHELL && goma_ctx->proc_id == PRINTPROC) \
   printf
 #define D2SPRINTF                             \
-  if (DEBUG_SHELL > 1 && ProcID == PRINTPROC) \
+  if (DEBUG_SHELL > 1 && goma_ctx->proc_id == PRINTPROC) \
   printf
 
 /*********** R O U T I N E S   I N   T H I S   F I L E ***********************
@@ -7204,7 +7204,7 @@ int lub2D_flow2D(const double gradp[DIM],
       th -= step;
       step *= 0.1;
       ifail += 1;
-      if (Debug_Flag) {
+      if (goma_ctx->debug_flag) {
         DPRINTF(stderr, "flow2 continuation reducing step %g pct %d %g\n", 100 * th, icnt, step);
       }
       if (ifail >= 6) {
@@ -7677,7 +7677,7 @@ double lub2D_flowint_2D(const struct Generalized_Newtonian *gn_loc,
       xintold = xint3;
     }
     if (eps > tolerance) {
-      if (Debug_Flag) {
+      if (goma_ctx->debug_flag) {
         DPRINTF(stderr, "flowint %d %g %g %g\n", jdi, xint3, eps, tolerance);
       }
     }
@@ -7718,7 +7718,7 @@ double lub2D_flowint_2D(const struct Generalized_Newtonian *gn_loc,
       xintold = xint3;
     }
     if (eps > tolerance) {
-      if (Debug_Flag) {
+      if (goma_ctx->debug_flag) {
         DPRINTF(stderr, "flowint %d %g %g %g\n", jdi, xint3, eps, tolerance);
       }
     }

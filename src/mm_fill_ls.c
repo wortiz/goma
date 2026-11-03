@@ -1375,7 +1375,7 @@ static struct LS_Surf_List *create_surfs_from_ns(int ns_id, double *x, Exo_DB *e
     ;
 
   if (ns >= exo->num_node_sets) {
-    if (Num_Proc == 1)
+    if (goma_ctx->num_proc == 1)
       GOMA_EH(GOMA_ERROR, "Error: cannot find initial level set nodeset for Huygens "
                           "initialization \n");
   } else {
@@ -1703,7 +1703,7 @@ create_surfs_from_iso(int isovar, double isoval, double x[], Exo_DB *exo) {
 
   isosurf_exists = (list->size == 0) ? FALSE : TRUE;
 
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
 #ifdef PARALLEL
     int global_bool = FALSE;
     MPI_Allreduce(&isosurf_exists, &global_bool, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
@@ -1765,7 +1765,7 @@ void create_subsurfs(struct LS_Surf_List *list, double *x, Exo_DB *exo) {
       break;
     }
 
-    if (Num_Proc > 1) {
+    if (goma_ctx->num_proc > 1) {
       if (surf->subsurf_list != NULL)
         assemble_Global_surf_list(surf->subsurf_list);
     }
@@ -1900,7 +1900,7 @@ void assemble_Global_surf_list(struct LS_Surf_List *list) {
     GOMA_EH(GOMA_ERROR, "Lists must exist before calling assemble_Global_surf_list");
 
 #ifdef PARALLEL
-  list_size = (int *)smalloc(Num_Proc * sizeof(int));
+  list_size = (int *)smalloc(goma_ctx->num_proc * sizeof(int));
 
   /* recurse list to find how many surfaces I have */
   /* To start, set list->current to NULL so that next_surf_or_subsurf
@@ -1920,7 +1920,7 @@ void assemble_Global_surf_list(struct LS_Surf_List *list) {
   MPI_Allgather(&my_list_size, 1, MPI_INT, list_size, 1, MPI_INT, MPI_COMM_WORLD);
 
   /* handle one processor at a time */
-  for (i = 0; i < Num_Proc; i++) {
+  for (i = 0; i < goma_ctx->num_proc; i++) {
     if (list_size[i] > 0) {
       /* get (or create) initial data concerning type and number of subsurfs */
       levels = (int *)smalloc(list_size[i] * sizeof(int));
@@ -1928,7 +1928,7 @@ void assemble_Global_surf_list(struct LS_Surf_List *list) {
 
       pkg = ddd_alloc();
 
-      if (ProcID == i) {
+      if (goma_ctx->proc_id == i) {
         /* Traverse my original list of surfs getting the level and type. */
 
         /* again reset the list */
@@ -1954,13 +1954,13 @@ void assemble_Global_surf_list(struct LS_Surf_List *list) {
       /* now both sender and receivers march through shoving addresses
        * via ddd_add_member
        */
-      if (ProcID == i) {
+      if (goma_ctx->proc_id == i) {
         /* again reset the list */
         list->current = NULL;
       }
 
       for (n = 0; n < list_size[i]; n++) {
-        if (ProcID == i) {
+        if (goma_ctx->proc_id == i) {
           level = 0;
           surf = next_surf_or_subsurf(list, &level);
         } else {
@@ -1980,7 +1980,7 @@ void assemble_Global_surf_list(struct LS_Surf_List *list) {
     }
   }
 
-  if (list->size == 0 && Num_Proc == 1) {
+  if (list->size == 0 && goma_ctx->num_proc == 1) {
     GOMA_EH(GOMA_ERROR, "No points found on zero level set");
     /*       DPRINTF(stderr,"No points found on zero level set\n"); */
   }
@@ -2560,7 +2560,7 @@ static int Hrenorm_constrain(Exo_DB *exo,
   ie_map = (int *)smalloc(num_ls_unkns * sizeof(int));
 
 #ifdef PARALLEL
-  if (Num_Proc > 1)
+  if (goma_ctx->num_proc > 1)
     ext_dof = (int *)smalloc(num_ls_unkns * sizeof(int));
 #endif
 
@@ -2571,7 +2571,7 @@ static int Hrenorm_constrain(Exo_DB *exo,
 
 #ifdef PARALLEL
       /* Here we set up the array ext_dof which */
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         if (I > (dpi->num_internal_nodes + dpi->num_boundary_nodes - 1))
           ext_dof[k] = TRUE;
         else
@@ -2612,7 +2612,7 @@ static int Hrenorm_constrain(Exo_DB *exo,
       R[k] = 2.0 * (F[k] - F_[k]) + lamda * b[k];
 
 #ifdef PARALLEL
-      if (Num_Proc > 1)
+      if (goma_ctx->num_proc > 1)
         external = ext_dof[k];
       /* when accumulating the dot products it is important not to add the
        * external dofs */
@@ -2626,7 +2626,7 @@ static int Hrenorm_constrain(Exo_DB *exo,
     }
 
 #ifdef PARALLEL
-    if (Num_Proc > 1) {
+    if (goma_ctx->num_proc > 1) {
       local_bTb = bTb;
       local_bTR = bTR;
       local_RTR = RTR;
@@ -2795,7 +2795,7 @@ void print_point_list(double *x, Exo_DB *exo, char *filename, double time_value)
 
   FILE *ofp = NULL;
 
-  if (ProcID == 0 && filename != NULL) /* Only Proc 0 writes */
+  if (goma_ctx->proc_id == 0 && filename != NULL) /* Only Proc 0 writes */
   {
 
     if ((ofp = fopen(filename, "w")) == NULL) {
@@ -2830,7 +2830,7 @@ void print_point_list(double *x, Exo_DB *exo, char *filename, double time_value)
 
   free_surf_list(&list);
 
-  if (ProcID == 0)
+  if (goma_ctx->proc_id == 0)
     fclose(ofp);
 }
 
@@ -2929,7 +2929,7 @@ int print_ls_interface(
   int status = 0;
 
   strncpy(output_filenm, filenm, MAX_FNL - 1);
-  multiname(output_filenm, ProcID, Num_Proc);
+  multiname(output_filenm, goma_ctx->proc_id, goma_ctx->num_proc);
 
   if (print_all_times) {
     outfile = fopen(output_filenm, "a");
@@ -3021,9 +3021,9 @@ void print_surf_list(struct LS_Surf_List *list, double time) {
   char filename1[80], filename2[80], err_msg[MAX_CHAR_ERR_MSG];
 
 #ifdef PARALLEL
-  if (Num_Proc > 1) {
-    sprintf(filename1, "level_set%d_of_%d.dat", ProcID + 1, Num_Proc);
-    sprintf(filename2, "level_set_all%d_of_%d.dat", ProcID + 1, Num_Proc);
+  if (goma_ctx->num_proc > 1) {
+    sprintf(filename1, "level_set%d_of_%d.dat", goma_ctx->proc_id + 1, goma_ctx->num_proc);
+    sprintf(filename2, "level_set_all%d_of_%d.dat", goma_ctx->proc_id + 1, goma_ctx->num_proc);
   } else {
     sprintf(filename1, "level_set.dat");
     sprintf(filename2, "level_set_all.dat");
@@ -4069,7 +4069,7 @@ void ls_var_initialization(double **u, Exo_DB *exo, Dpi *dpi, Comm_Ex **cx) {
   for (n = 0; n < exo->num_elem_blocks; n++)
     block_order[n] = n;
 
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     for (n = 0; n < exo->num_elem_blocks; n++) {
       for (k = n + 1; k < exo->num_elem_blocks; k++) {
         if (Matilda[block_order[k]] < Matilda[block_order[n]]) {
@@ -4695,7 +4695,7 @@ void load_xfem_for_elem(double x[], const Exo_DB *exo) {
   int eqn;
 
   /* only evaluate element quantities if new element */
-  if (ei[pg->imtrx]->ielem != xfem->ielem || Debug_Flag < 0) {
+  if (ei[pg->imtrx]->ielem != xfem->ielem || goma_ctx->debug_flag < 0) {
     xfem->ielem = ei[pg->imtrx]->ielem;
     xfem->elem_state = current_elem_xfem_state(xfem->node_var_state, &xfem->elem_var_state, x, exo);
     /* fill in bogus values to avoid pathological cases */
@@ -8600,7 +8600,7 @@ void ls_surface_extents(double x[], Exo_DB *exo, double min[3], double max[3]) {
   /* first step is to gather subelement information into a single list */
   get_subelement_descriptions(x, exo, &list);
 
-  if (list.size == 0 && Num_Proc == 1) {
+  if (list.size == 0 && goma_ctx->num_proc == 1) {
     DPRINTF(stderr, "No elements found on the interface.\n");
     return;
   }
@@ -8700,7 +8700,7 @@ void subelement_mesh_output(double x[], Exo_DB *exo) {
   /* first step is to gather subelement information into a single list */
   get_subelement_descriptions(x, exo, &list);
 
-  if (list.size == 0 && Num_Proc == 1) {
+  if (list.size == 0 && goma_ctx->num_proc == 1) {
     DPRINTF(stderr, "No elements found on the interface.\n");
     return;
   }
@@ -9170,7 +9170,7 @@ double Courant_Time_Step(double x[],
   /*fprintf(stderr,"Min dt = %g\n",min_dt);*/
 
   /* Search for global min_dt */
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     /* If interface not on this processor, don't allow zero min_dt! */
     if (!got_interface)
       min_dt = 100.0 * tran->Delta_t_max;
@@ -10807,7 +10807,7 @@ void resolve_ls_adc_old(struct Boundary_Condition *LS_ADC,
   double P;
 
   if ((iss = in_list(ssid, 0, exo->num_side_sets, exo->ss_id)) == -1) {
-    if (Num_Proc == 1) {
+    if (goma_ctx->num_proc == 1) {
       fprintf(stderr, "Error in resolve_ls_adc.  Cannot find side set id %d", ssid);
       exit(-1);
     } else
@@ -11276,7 +11276,7 @@ find_adc_node(int ns_id, double *x, Exo_DB *exo, struct LS_Surf *II, double *dis
     ;
 
   if (ns >= exo->num_node_sets) {
-    if (Num_Proc == 1)
+    if (goma_ctx->num_proc == 1)
       GOMA_EH(GOMA_ERROR, "In find_adc_node:  Can't locate nodeset id \n");
     else
       /* Parallel problem:  likely that this sideset isn't on this proc */

@@ -866,7 +866,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   memset(Norm, 0, 3 * 5 * sizeof(double));
   memset(Norm_r, 0, 3 * 2 * sizeof(double));
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stderr, "%s: max Newton itns = %d\n", yo, Max_Newton_Steps);
     DPRINTF(stderr, "%s: convergence tol = %.1e %.1e \n", yo, Epsilon[pg->imtrx][0],
             Epsilon[pg->imtrx][2]);
@@ -896,7 +896,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     GNZeros = global_nnz;
     GNumUnknowns = global_order;
 
-    if (Debug_Flag) {
+    if (goma_ctx->debug_flag) {
       DPRINTF(stderr, "%s: At matrix %d, NumUnknowns  = %d\n", yo, (pg->imtrx + 1),
               NumUnknowns[pg->imtrx]);
       DPRINTF(stderr, "%s: NZeros       = %d\n", yo, NZeros);
@@ -1146,7 +1146,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     /*
      * If doing continuation in parallel, restore external matrix rows here.
      */
-    if (Num_Proc > 1 && strcmp(Matrix_Format, "msr") == 0 && dofs_hidden) {
+    if (goma_ctx->num_proc > 1 && strcmp(Matrix_Format, "msr") == 0 && dofs_hidden) {
       show_external(num_universe_dofs[pg->imtrx],
                     (num_universe_dofs[pg->imtrx] - num_external_dofs[pg->imtrx]), ija, ija_save,
                     a);
@@ -1192,8 +1192,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       U_norm = 0.;
     }
 
-    if (Debug_Flag < 0 && Debug_Flag != -4 &&
-        (Debug_Flag != -5 || inewton >= Max_Newton_Steps - 1)) {
+    if (goma_ctx->debug_flag < 0 && goma_ctx->debug_flag != -4 &&
+        (goma_ctx->debug_flag != -5 || inewton >= Max_Newton_Steps - 1)) {
       /* Former block 0 in mm_fill.c. Here is some initialization */
       num_total_nodes = dpi->num_universe_nodes;
 
@@ -1209,7 +1209,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         calculate_2D_rotation_vectors(exo, x);
 
       numerical_jacobian(ams, x, resid_vector, delta_t, theta, x_old, x_older, xdot, xdot_old,
-                         x_update, num_total_nodes, First_Elem_Side_BC_Array[pg->imtrx], Debug_Flag,
+                         x_update, num_total_nodes, First_Elem_Side_BC_Array[pg->imtrx], goma_ctx->debug_flag,
                          time_value, exo, dpi, &h_elem_avg, &U_norm);
 
       DPRINTF(stdout, "%s: numerical Jacobian done....\n", yo);
@@ -1300,7 +1300,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       if (enable_numerical_jacobian && af->Assemble_Jacobian == TRUE) {
         err = numerical_jacobian_compute_stress(ams, x, resid_vector, delta_t, theta, x_old,
                                                 x_older, xdot, xdot_old, x_update, num_total_nodes,
-                                                First_Elem_Side_BC_Array[pg->imtrx], Debug_Flag,
+                                                First_Elem_Side_BC_Array[pg->imtrx], goma_ctx->debug_flag,
                                                 time_value, exo, dpi, &h_elem_avg, &U_norm);
         a_end = ut();
       }
@@ -1493,7 +1493,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
 #ifdef DEBUG_NORM
     if (fabs(resid_vector[num_unk_r]) == fabs(Norm[0][0])) {
-      printf("P_%d: dofname[%d] = ", ProcID, num_unk_r);
+      printf("P_%d: dofname[%d] = ", goma_ctx->proc_id, num_unk_r);
       if (dofname)
         printf("%s", dofname[num_unk_r]);
       else
@@ -1508,7 +1508,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      * values so we can reincorporate them back in before the next assembly
      * step.
      */
-    if (Num_Proc > 1 && strcmp(Matrix_Format, "msr") == 0) {
+    if (goma_ctx->num_proc > 1 && strcmp(Matrix_Format, "msr") == 0) {
       hide_external(num_universe_dofs[pg->imtrx], NumUnknowns[pg->imtrx], ija, ija_save, a);
       dofs_hidden = TRUE;
     }
@@ -1517,7 +1517,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     if (inewton < 2) {
       if (strcmp(Matrix_Format, "msr") == 0) {
         print_msr_matrix(num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx], ija, a, x);
-        print_array(ija, ija[ija[0] - 1], "ija", type_int, ProcID);
+        print_array(ija, ija[ija[0] - 1], "ija", type_int, goma_ctx->proc_id);
       } else {
         print_vbr_matrix(ams, exo, dpi, NumUnknowns[pg->imtrx]);
       }
@@ -1740,7 +1740,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
         first_linear_solver_call = FALSE;
 
-        if (Debug_Flag > 0) {
+        if (goma_ctx->debug_flag > 0) {
           dump_aztec_status(ams->status);
         }
 
@@ -2004,7 +2004,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                      ams->rpntr, ams->cpntr, ams->bpntr, ams->val, ams->data_org, ams->status,
                      ams->proc_config);
 
-            if (Debug_Flag > 0) {
+            if (goma_ctx->debug_flag > 0) {
               dump_aztec_status(ams->status);
             }
 
@@ -2130,7 +2130,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
 
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         for (iAC = 0; iAC < nAC; iAC++) {
           for (jAC = 0; jAC < nAC; jAC++)
             tempAC[jAC] = sAC[iAC][jAC];
@@ -2154,7 +2154,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         tAC[iAC] = dot_product(NumUnknowns[pg->imtrx], &cAC[iAC][0], &delta_x[0]);
       }
 #ifdef PARALLEL
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         for (jAC = 0; jAC < nAC; jAC++)
           tempAC[jAC] = tAC[jAC];
         MPI_Allreduce(tempAC, tAC, nAC, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -2407,7 +2407,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     log_msg("%-38s = %23.16e", "correction norm (L_1)", Norm[1][1]);
     log_msg("%-38s = %23.16e", "correction norm (L_2)", Norm[1][2]);
 
-    if (Write_Intermediate_Solutions || (Iout == 1)) {
+    if (goma_ctx->write_intermediate_solutions || (goma_ctx->iout == 1)) {
 
 #define debug_subelement_decomposition 1
 #if debug_subelement_decomposition
@@ -2429,7 +2429,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      * the initial guess.
      */
 
-    if (Write_Intermediate_Solutions && Unlimited_Output) {
+    if (goma_ctx->write_intermediate_solutions && goma_ctx->unlimited_output) {
       error = wr_soln_vec(x, resid_vector, NumUnknowns[pg->imtrx], inewton);
       GOMA_EH(error, "problem from wr_soln_vec");
     }
@@ -2641,7 +2641,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      *
      */
     if (nAC > 0) {
-      if (Debug_Flag > 0) {
+      if (goma_ctx->debug_flag > 0) {
         DPRINTF(stdout, "\n------------------------------\n");
         DPRINTF(stdout, "Augmenting Conditions:    %4d\n", nAC);
         DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
@@ -2659,7 +2659,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
          * PRINT OUT VALUES OF EXTRA UNKNOWNS
          * FROM AUGMENTING CONDITIONS
          */
-        if (Debug_Flag > 0) {
+        if (goma_ctx->debug_flag > 0) {
           if (augc[iAC].Type == AC_USERBC) {
             DPRINTF(stdout, "\tBC[%4d] DF[%4d]=% 10.6e Update=% 10.6e\n", augc[iAC].BCID,
                     augc[iAC].DFID, x_AC[iAC], damp_factor * yAC[iAC]);
@@ -2741,7 +2741,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
   skip_solve:
 
-    if (Write_Intermediate_Solutions) {
+    if (goma_ctx->write_intermediate_solutions) {
       if (TimeIntegration == STEADY) {
         time_value = (double)*nprint + 1.;
       }
@@ -2750,12 +2750,12 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       for (i = 0; i < rd->TotalNVSolnOutput; i++) {
         extract_nodal_vec(x, rd->nvtype[i], rd->nvkind[i], rd->nvmatID[i], gvec, exo, FALSE,
                           time_value);
-        wr_nodal_result_exo(exo, ExoFileOut, gvec, i + 1, *nprint + 1, time_value);
+        wr_nodal_result_exo(exo, goma_ctx->exo_file_out, gvec, i + 1, *nprint + 1, time_value);
       }
       /* Add additional user-specified post processing variables */
       if (rd->TotalNVPostOutput > 0) {
         post_process_nodal(x, x_sens_p, x_old, xdot, xdot_old, resid_vector, *nprint + 1,
-                           &time_value, delta_t, theta, NULL, exo, dpi, rd, ExoFileOut, pg->imtrx);
+                           &time_value, delta_t, theta, NULL, exo, dpi, rd, goma_ctx->exo_file_out, pg->imtrx);
       }
       /* Write out time derivatives if requested */
       if (TIME_DERIVATIVES != -1 && (TimeIntegration != STEADY)) {
@@ -2763,7 +2763,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           i_post = rd->TotalNVSolnOutput + rd->TotalNVPostOutput + i;
           extract_nodal_vec(xdot, rd->nvtype[i_post], rd->nvkind[i_post], rd->nvmatID[i_post], gvec,
                             exo, TRUE, time_value);
-          wr_nodal_result_exo(exo, ExoFileOut, gvec, i_post + 1, *nprint + 1, time_value);
+          wr_nodal_result_exo(exo, goma_ctx->exo_file_out, gvec, i_post + 1, *nprint + 1, time_value);
         }
       }
 
@@ -2783,12 +2783,12 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         if (is_P1) {
           for (int k = 0; k < dof; k++) {
             extract_elem_vec(x, i, rd->evtype[i], gvec_elem, exo, k);
-            wr_elem_result_exo(exo, ExoFileOut, gvec_elem, i, *nprint + 1, time_value, rd);
+            wr_elem_result_exo(exo, goma_ctx->exo_file_out, gvec_elem, i, *nprint + 1, time_value, rd);
             i++;
           }
         } else {
           extract_elem_vec(x, i, rd->evtype[i], gvec_elem, exo, 0);
-          wr_elem_result_exo(exo, ExoFileOut, gvec_elem, i, *nprint + 1, time_value, rd);
+          wr_elem_result_exo(exo, goma_ctx->exo_file_out, gvec_elem, i, *nprint + 1, time_value, rd);
         }
       }
       /* Add additional user-specified post processing variables */
@@ -2801,13 +2801,13 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           for (i = 0; i < tev; i++) {
             i_post = tev_post + i;
             extract_elem_vec(xdot, i_post, rd->evtype[i_post], gvec_elem, exo, 0);
-            wr_elem_result_exo(exo, ExoFileOut, gvec_elem, i_post, *nprint + 1, time_value, rd);
+            wr_elem_result_exo(exo, goma_ctx->exo_file_out, gvec_elem, i_post, *nprint + 1, time_value, rd);
           }
         }
       }
 
       /* and global variables.  The case glob_var_vals == NULL is caught in the function */
-      wr_global_result_exo(exo, ExoFileOut, *nprint + 1, 6 + nAC, glob_var_vals);
+      wr_global_result_exo(exo, goma_ctx->exo_file_out, *nprint + 1, 6 + nAC, glob_var_vals);
 
       *nprint = *nprint + 1;
     }
@@ -2820,7 +2820,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      * If we are doing continuation then after convergence one must
      * defer this event until after performing the sensitivity calculation
      */
-    if (Num_Proc > 1 && strcmp(Matrix_Format, "msr") == 0) {
+    if (goma_ctx->num_proc > 1 && strcmp(Matrix_Format, "msr") == 0) {
       if ((!*converged) &&
           ((Continuation != ALC_NONE) || (nn_post_fluxes_sens > 0) || (nn_post_data_sens > 0))) {
         show_external(num_universe_dofs[pg->imtrx],
@@ -2850,7 +2850,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       DPRINTF(stdout, "\n");
     }
 
-    if (Write_Intermediate_Solutions || (Iout == 1)) {
+    if (goma_ctx->write_intermediate_solutions || (goma_ctx->iout == 1)) {
       if (dofname_r[0] != '\0') {
         fprintf(stdout, "L_oo cause: R->(%s)", dofname_r);
       }
@@ -2933,11 +2933,11 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   return_value = inewton;
 
   if (!*converged) {
-    if (Debug_Flag) {
+    if (goma_ctx->debug_flag) {
       DPRINTF(stdout, "\n%s:  Newton iteration FAILED.\n", yo);
     }
   } else {
-    if (Debug_Flag) {
+    if (goma_ctx->debug_flag) {
       DPRINTF(stdout, "\n%s:  Newton iteration CONVERGED.\n", yo);
     }
   }
@@ -3154,7 +3154,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
    */
 
 free_and_clear:
-  if (Num_Proc > 1 && strcmp(Matrix_Format, "msr") == 0) {
+  if (goma_ctx->num_proc > 1 && strcmp(Matrix_Format, "msr") == 0) {
     if (Continuation != LOCA && dofs_hidden) {
       show_external(num_universe_dofs[pg->imtrx],
                     (num_universe_dofs[pg->imtrx] - num_external_dofs[pg->imtrx]), ija, ija_save,
@@ -3374,10 +3374,10 @@ double Loo_norm(double *vector, int nloc, int *num_unk, char *dofname_x)
   }
 #ifdef PARALLEL
   in.d = local_value;
-  in.i = ProcID;
+  in.i = goma_ctx->proc_id;
   MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
   local_value = out.d;
-  if (out.i == ProcID) {
+  if (out.i == goma_ctx->proc_id) {
     dofname40(*num_unk, dofname_x);
   } else {
     *num_unk = -1;
@@ -3432,10 +3432,10 @@ double Loo_norm_r(double *vector, double *vecscal, int nloc, int *num_unk, char 
   }
 #ifdef PARALLEL
   in.d = local_value;
-  in.i = ProcID;
+  in.i = goma_ctx->proc_id;
   MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
   local_value = out.d;
-  if (out.i == ProcID) {
+  if (out.i == goma_ctx->proc_id) {
     dofname40(*num_unk, dofname_r);
   } else {
     *num_unk = -1;
@@ -3578,7 +3578,7 @@ void print_array(
   char filename[MAX_FNL];
   FILE *f;
 
-  sprintf(filename, "%s_%dof%d", name, procid + 1, Num_Proc);
+  sprintf(filename, "%s_%dof%d", name, procid + 1, goma_ctx->num_proc);
   f = fopen(filename, "a");
 
 #if 0
@@ -3992,7 +3992,7 @@ static int soln_sens(double lambda,  /*  parameter */
                ams->rpntr, ams->cpntr, ams->bpntr, ams->val, ams->data_org, ams->status,
                ams->proc_config);
 
-      if (Debug_Flag > 0) {
+      if (goma_ctx->debug_flag > 0) {
         dump_aztec_status(ams->status);
       }
 

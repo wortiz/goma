@@ -85,16 +85,16 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
   CHECK_EX_ERROR(ex_error, "ex_get_eb_info_global");
 
   // Nemesis Info
-  d->rank = ProcID;
+  d->rank = goma_ctx->proc_id;
   ex_error = ex_get_init_info(exoid, &d->num_proc, &d->num_proc_in_file, &d->ftype);
   CHECK_EX_ERROR(ex_error, "ex_get_init_info");
-  if (d->num_proc != Num_Proc) {
+  if (d->num_proc != goma_ctx->num_proc) {
     GOMA_EH(GOMA_ERROR, "Nemesis mesh error num_proc != number of mpi processes");
   }
   if (d->num_proc_in_file != 1) {
     GOMA_EH(GOMA_ERROR, "Nemesis mesh error expected num_proc_in_file == 1");
   }
-  if (d->num_proc != Num_Proc) {
+  if (d->num_proc != goma_ctx->num_proc) {
     GOMA_EH(GOMA_ERROR, "Nemesis mesh error num_proc != number of mpi processes");
   }
   if (d->ftype != 'p') {
@@ -117,7 +117,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
   // Load Balance Information
   ex_error = ex_get_loadbal_param(
       exoid, &d->num_internal_nodes, &d->num_boundary_nodes, &d->num_external_nodes,
-      &d->num_internal_elems, &d->num_border_elems, &d->num_node_cmaps, &d->num_elem_cmaps, ProcID);
+      &d->num_internal_elems, &d->num_border_elems, &d->num_node_cmaps, &d->num_elem_cmaps, goma_ctx->proc_id);
   CHECK_EX_ERROR(ex_error, "ex_get_loadbal_param");
 
   d->base_internal_nodes = d->num_internal_nodes;
@@ -135,7 +135,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
   }
 
   ex_error = ex_get_processor_node_maps(exoid, d->proc_node_internal, d->proc_node_boundary,
-                                        d->proc_node_external, ProcID);
+                                        d->proc_node_external, goma_ctx->proc_id);
   CHECK_EX_ERROR(ex_error, "ex_get_processor_node_maps");
 
   d->node_cmap_ids = alloc_int_1(d->num_node_cmaps, 0);
@@ -146,7 +146,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
   }
 
   ex_error = ex_get_cmap_params(exoid, d->node_cmap_ids, d->node_cmap_node_counts, d->elem_cmap_ids,
-                                d->elem_cmap_elem_counts, ProcID);
+                                d->elem_cmap_elem_counts, goma_ctx->proc_id);
   CHECK_EX_ERROR(ex_error, "ex_get_cmake_params");
 
   d->node_map_node_ids = calloc(d->num_node_cmaps, sizeof(int *));
@@ -156,7 +156,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
     d->node_map_node_ids[i] = alloc_int_1(d->node_cmap_node_counts[i], 0);
     d->node_map_proc_ids[i] = alloc_int_1(d->node_cmap_node_counts[i], 0);
     ex_error = ex_get_node_cmap(exoid, d->node_cmap_ids[i], d->node_map_node_ids[i],
-                                d->node_map_proc_ids[i], ProcID);
+                                d->node_map_proc_ids[i], goma_ctx->proc_id);
     CHECK_EX_ERROR(ex_error, "ex_get_node_cmap %d", i);
   }
 
@@ -171,7 +171,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
     d->elem_cmap_side_ids[i] = alloc_int_1(d->elem_cmap_elem_counts[i], 0);
     d->elem_cmap_proc_ids[i] = alloc_int_1(d->elem_cmap_elem_counts[i], 0);
     ex_error = ex_get_elem_cmap(exoid, d->elem_cmap_ids[i], d->elem_cmap_elem_ids[i],
-                                d->elem_cmap_side_ids[i], d->elem_cmap_proc_ids[i], ProcID);
+                                d->elem_cmap_side_ids[i], d->elem_cmap_proc_ids[i], goma_ctx->proc_id);
     CHECK_EX_ERROR(ex_error, "ex_get_elem_cmap %d", i);
   }
 
@@ -259,7 +259,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
       free(ss_block_count_global);
     }
   }
-  d->elem_owner = alloc_int_1(exo->num_elems, ProcID);
+  d->elem_owner = alloc_int_1(exo->num_elems, goma_ctx->proc_id);
 
   if (parallel_call) {
     const int num_mpi_async = 2;
@@ -301,7 +301,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
   if (parallel_call) {
     d->num_neighbors = d->num_node_cmaps;
     d->neighbor = alloc_int_1(d->num_neighbors, -1);
-    d->node_owner = alloc_int_1(exo->num_nodes, ProcID);
+    d->node_owner = alloc_int_1(exo->num_nodes, goma_ctx->proc_id);
     d->num_node_recv = alloc_int_1(d->num_neighbors, 0);
     d->num_node_send = alloc_int_1(d->num_neighbors, 0);
     for (int i = 0; i < d->num_node_cmaps; i++) {
@@ -321,7 +321,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
     int elem_offset = 0;
     for (int i = 0; i < exo->num_elem_blocks; i++) {
       for (int j = 0; j < exo->eb_num_elems[i]; j++) {
-        int min_proc = ProcID;
+        int min_proc = goma_ctx->proc_id;
         int nnode_per_elem = exo->eb_num_nodes_per_elem[i];
         for (int k = 0; k < nnode_per_elem; k++) {
           int local_node = exo->eb_conn[i][j * nnode_per_elem + k];
@@ -400,9 +400,9 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
 
 #ifdef DEBUG_MPI
 
-    int *global_owners_min = alloc_int_1(d->num_nodes_global, Num_Proc + 1);
+    int *global_owners_min = alloc_int_1(d->num_nodes_global, goma_ctx->num_proc + 1);
     int *global_owners_max = alloc_int_1(d->num_nodes_global, -1);
-    int *all_global_owners_min = alloc_int_1(d->num_nodes_global, Num_Proc + 1);
+    int *all_global_owners_min = alloc_int_1(d->num_nodes_global, goma_ctx->num_proc + 1);
     int *all_global_owners_max = alloc_int_1(d->num_nodes_global, -1);
     for (int i = 0; i < exo->num_nodes; i++) {
       int gindex = d->node_index_global[i];
@@ -666,7 +666,7 @@ void uni_dpi(Dpi *dpi, Exo_DB *exo) {
   }
 
   len = dpi->num_elems;
-  dpi->elem_owner = alloc_int_1(len, ProcID);
+  dpi->elem_owner = alloc_int_1(len, goma_ctx->proc_id);
 
   dpi->num_elems_global = exo->num_elems;
 
@@ -715,7 +715,7 @@ void uni_dpi(Dpi *dpi, Exo_DB *exo) {
 
   dpi->eb_num_nodes_per_elem_global = exo->eb_num_nodes_per_elem;
 
-  dpi->neighbor = alloc_int_1(1, ProcID);
+  dpi->neighbor = alloc_int_1(1, goma_ctx->proc_id);
 
   dpi->ns_id_global = exo->ns_id;
 

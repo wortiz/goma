@@ -117,7 +117,7 @@ int ns_data_print(pp_Data *p,
     }
     if (ebIndex_first == -1) {
       sprintf(err_msg, "Can't find an element block with the elem Block id %d\n", elemBlock_id);
-      if (Num_Proc == 1) {
+      if (goma_ctx->num_proc == 1) {
         GOMA_EH(GOMA_ERROR, err_msg);
       }
     }
@@ -136,7 +136,7 @@ int ns_data_print(pp_Data *p,
     node = Proc_NS_List[Proc_NS_Pointers[nsp]];
   } else {
     sprintf(err_msg, "Node set ID %d not found.", node_set_id);
-    if (Num_Proc == 1)
+    if (goma_ctx->num_proc == 1)
       GOMA_EH(GOMA_ERROR, err_msg);
   }
 
@@ -146,7 +146,7 @@ int ns_data_print(pp_Data *p,
 
   if (*first_time) {
     if (format_flag[0] != '\0') {
-      if (ProcID == 0) {
+      if (goma_ctx->proc_id == 0) {
         uf = fopen(filenm, "a");
         if (uf != NULL) {
           fprintf(uf, "# %s %s @ nsid %d node (%d) \n", format_flag, qtity_str, node_set_id, node);
@@ -158,7 +158,7 @@ int ns_data_print(pp_Data *p,
   }
 
   if (format_flag[0] == '\0') {
-    if (ProcID == 0) {
+    if (goma_ctx->proc_id == 0) {
       if ((uf = fopen(filenm, "a")) != NULL) {
         fprintf(uf, "Time/iteration = %e \n", time_value);
         fprintf(uf, "  %s   Node_Set  %d Species %d\n", qtity_str, node_set_id, species_id);
@@ -568,7 +568,7 @@ int ns_data_sens_print(const struct Post_Processing_Data_Sens *p,
     node = Proc_NS_List[Proc_NS_Pointers[nsp]];
   } else {
     sprintf(err_msg, "Node set ID %d not found.", node_set_id);
-    if (Num_Proc == 1)
+    if (goma_ctx->num_proc == 1)
       GOMA_EH(GOMA_ERROR, err_msg);
   }
 
@@ -576,7 +576,7 @@ int ns_data_sens_print(const struct Post_Processing_Data_Sens *p,
 
   print_sync_start(TRUE);
 
-  if (ProcID == 0 && (uf = fopen(filenm, "a")) != NULL) {
+  if (goma_ctx->proc_id == 0 && (uf = fopen(filenm, "a")) != NULL) {
     fprintf(uf, "Time/iteration = %e \n", time_value);
     fprintf(uf, "  %s   Node_Set  %d \n", qtity_str, node_set_id);
     if (sens_type == 1) {
@@ -676,7 +676,7 @@ int psid2nn(int psid)
   nsp = match_nsid(psid); /* node set pointer this node set */
 
   if (nsp == -1) {
-    if (Num_Proc == 1) {
+    if (goma_ctx->num_proc == 1) {
       GOMA_EH(nsp, "Failed to match nodeset.");
     } else
       return (-1);
@@ -699,7 +699,7 @@ int nsid2nn(int psid)
   nsp = match_nsid(psid); /* node set pointer this node set */
 
   if (nsp == -1) {
-    if (Num_Proc == 1) {
+    if (goma_ctx->num_proc == 1) {
       GOMA_EH(nsp, "Failed to match nodeset.");
     } else
       return (-1);

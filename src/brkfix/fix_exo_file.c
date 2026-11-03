@@ -70,9 +70,9 @@ static void setup_exo_res_desc /* fix.c */
     (Exo_DB *);                /* exo - ptr to database */
 
 void fix_output() {
-  if (!Skip_Fix && Num_Proc > 1 && ProcID == 0) {
-    DPRINTF(stdout, "\nFixing exodus file %s\n", ExoFileOutMono);
-    fix_exo_file(Num_Proc, ExoFileOutMono);
+  if (!goma_ctx->skip_fix && goma_ctx->num_proc > 1 && goma_ctx->proc_id == 0) {
+    DPRINTF(stdout, "\nFixing exodus file %s\n", goma_ctx->exo_file_out_mono);
+    fix_exo_file(goma_ctx->num_proc, goma_ctx->exo_file_out_mono);
   }
 }
 

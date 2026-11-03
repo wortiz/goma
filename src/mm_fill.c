@@ -481,7 +481,7 @@ Revised:         Summer 1998, SY Tam (UNM)
   h_elem_avg = pg_data.h_elem_avg = *ptr_h_elem_avg;
   pg_data.U_norm = *ptr_U_norm;
 
-  if (Debug_Flag > 1) {
+  if (goma_ctx->debug_flag > 1) {
     P0PRINTF("%s: begins\n", yo);
   }
 
@@ -551,9 +551,9 @@ Revised:         Summer 1998, SY Tam (UNM)
           int n_nodes = exo->ns_num_nodes[nsp];
           if (n_nodes > 0) {
             nspk = exo->ns_node_list[exo->ns_node_index[nsp]];
-            if (Nodes[nspk]->Proc == ProcID) {
+            if (Nodes[nspk]->Proc == goma_ctx->proc_id) {
               count++;
-              CA_proc[count] = ProcID;
+              CA_proc[count] = goma_ctx->proc_id;
             }
           }
         }
@@ -2832,7 +2832,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif /*PHASE_COUPLED_FILL */
 
     if (pd->VolumeIntegral > -1) {
-      if (Num_Proc > 1 && dpi->elem_owner[ielem] != ProcID)
+      if (goma_ctx->num_proc > 1 && dpi->elem_owner[ielem] != goma_ctx->proc_id)
         owner = FALSE;
       err = assemble_volume(owner);
       GOMA_EH(err, "assemble_volume");
@@ -2844,7 +2844,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pd->LSVelocityIntegral > -1) {
-      if (Num_Proc > 1 && dpi->elem_owner[ielem] != ProcID)
+      if (goma_ctx->num_proc > 1 && dpi->elem_owner[ielem] != goma_ctx->proc_id)
         owner = FALSE;
       err = assemble_LSvelocity(owner, ielem);
       GOMA_EH(err, "assemble_LSvelocity");
@@ -2967,7 +2967,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       index = exo->elem_elem_pntr[ielem] + face;
       neighbor = exo->elem_elem_list[index];
 
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         GOMA_WH(-1, "DG doesn't seem to work in parallel");
       }
 
@@ -2991,7 +2991,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     var = 4 * lec->max_dof * (MAX_PROB_VAR + MAX_CONC) * lec->max_dof;
     memset(lec->J_stress_neighbor, 0, sizeof(double) * var);
 
-    if (Num_Proc > 1) {
+    if (goma_ctx->num_proc > 1) {
       GOMA_EH(GOMA_ERROR, "Discontinuous Galerkin for stress not implemented in parallel");
       return -1;
     }
@@ -3835,7 +3835,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     free_search_grid(&element_search_grid);
   }
 
-  if (Debug_Flag > 1) {
+  if (goma_ctx->debug_flag > 1) {
     P0PRINTF("%s: ends\n", yo);
     MMH_ip = -1;
   }
@@ -3848,7 +3848,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       for (j = 0; j < MAX_CA; j++) {
         if (CA_id[j] == -2)
           Num_CAs_done++;
-        if (CA_proc[j] == ProcID)
+        if (CA_proc[j] == goma_ctx->proc_id)
           count++;
       }
 
@@ -4005,7 +4005,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
   num_total_nodes = *ptr_num_total_nodes;
   pg_data.U_norm = *ptr_U_norm;
 
-  if (Debug_Flag > 1) {
+  if (goma_ctx->debug_flag > 1) {
     P0PRINTF("%s: begins\n", yo);
   }
 
@@ -4033,9 +4033,9 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
       case VELO_THETA_SHIK_BC:
         nsp = match_nsid(BC_Types[j].BC_ID);
         nspk = Proc_NS_List[Proc_NS_Pointers[nsp]];
-        if (nsp != -1 && Nodes[nspk]->Proc == ProcID) {
+        if (nsp != -1 && Nodes[nspk]->Proc == goma_ctx->proc_id) {
           count++;
-          CA_proc[count] = ProcID;
+          CA_proc[count] = goma_ctx->proc_id;
         }
         break;
       }
@@ -5225,7 +5225,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
     free_search_grid(&element_search_grid);
   }
 
-  if (Debug_Flag > 1) {
+  if (goma_ctx->debug_flag > 1) {
     P0PRINTF("%s: ends\n", yo);
     MMH_ip = -1;
   }
@@ -5236,7 +5236,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
       for (j = 0; j < MAX_CA; j++) {
         if (CA_id[j] == -2)
           Num_CAs_done++;
-        if (CA_proc[j] == ProcID)
+        if (CA_proc[j] == goma_ctx->proc_id)
           count++;
       }
 
@@ -5287,17 +5287,17 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
   int Print_Zeroes = TRUE;
   lec_it++;
 
-  sprintf(lec_name, "lec_dump_%d.txt", ProcID);
-  sprintf(ler_name, "ler_dump_%d.txt", ProcID);
+  sprintf(lec_name, "lec_dump_%d.txt", goma_ctx->proc_id);
+  sprintf(ler_name, "ler_dump_%d.txt", goma_ctx->proc_id);
   llll = fopen(lec_name, "a");
   rrrr = fopen(ler_name, "a");
   fprintf(rrrr, "------------------------------------------------------\n");
-  fprintf(rrrr, "local element = %d, Proc = %d\n", ei[pg->imtrx]->ielem, ProcID);
+  fprintf(rrrr, "local element = %d, Proc = %d\n", ei[pg->imtrx]->ielem, goma_ctx->proc_id);
   fprintf(rrrr, "lec_it = %d\n", lec_it);
   fprintf(rrrr, "global element = %d\n", DPI_ptr->elem_index_global[ei[pg->imtrx]->ielem]);
   fprintf(rrrr, "\nGlobal_NN Proc_NN  Equation    idof    Proc_SolnNum     ResidValue\n");
   fprintf(llll, "------------------------------------------------------\n");
-  fprintf(llll, "local element = %d, Proc = %d\n", ei[pg->imtrx]->ielem, ProcID);
+  fprintf(llll, "local element = %d, Proc = %d\n", ei[pg->imtrx]->ielem, goma_ctx->proc_id);
   fprintf(llll, "lec_it = %d\n", lec_it);
   fprintf(llll, "global element = %d\n", DPI_ptr->elem_index_global[ei[pg->imtrx]->ielem]);
   fprintf(llll, "\nGlobal_NN Proc_NN  Equation    idof    Proc_SolnNum     ResidValue\n");
@@ -5795,7 +5795,7 @@ non_finite_entry:
 #ifndef PARALLEL
     fprintf(stderr, "Non-finite entry in lec found at  %s:%d: %s\n", file, line, message);
 #else
-    fprintf(stderr, "P_%d: Non-finite entry in lec found at %s:%d: %s\n", ProcID, file, line,
+    fprintf(stderr, "P_%d: Non-finite entry in lec found at %s:%d: %s\n", goma_ctx->proc_id, file, line,
             message);
 #endif
     return -1;

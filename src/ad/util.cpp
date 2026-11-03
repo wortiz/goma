@@ -195,7 +195,7 @@ int ad_beer_belly(void) {
     if (fabs(ad_fv->detJ) < 1.e-10) {
       zero_detJ = TRUE;
 #ifdef PARALLEL
-      fprintf(stderr, "\nP_%d: Uh-oh, detJ =  %e\n", ProcID, fabs(ad_fv->detJ.val()));
+      fprintf(stderr, "\nP_%d: Uh-oh, detJ =  %e\n", goma_ctx->proc_id, fabs(ad_fv->detJ.val()));
 #else
       fprintf(stderr, "\n Uh-oh, detJ =  %e\n", fabs(ad_fv->detJ));
 #endif

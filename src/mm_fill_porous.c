@@ -5848,7 +5848,7 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
         saturation = mp->saturation = 1.0;
       if (saturation < 0.0) {
         fprintf(stderr, "Warning: Negative saturation detected on draining curve.\n");
-        fprintf(stderr, "Proc: %d,  Element: %d, IP: %d, Saturation: %6.4g \n", ProcID,
+        fprintf(stderr, "Proc: %d,  Element: %d, IP: %d, Saturation: %6.4g \n", goma_ctx->proc_id,
                 ei[pg->imtrx]->ielem + 1, ip, saturation);
       }
     } else /*on wetting curve */
@@ -5879,7 +5879,7 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
       }
       if (saturation < 0.0) {
         fprintf(stderr, "Warning: Negative saturation detected on draining curve.\n");
-        fprintf(stderr, "Proc: %d,  Element: %d, IP: %d, Saturation: %6.4g \n", ProcID,
+        fprintf(stderr, "Proc: %d,  Element: %d, IP: %d, Saturation: %6.4g \n", goma_ctx->proc_id,
                 ei[pg->imtrx]->ielem + 1, ip, saturation);
       }
     }

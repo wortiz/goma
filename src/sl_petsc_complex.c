@@ -305,7 +305,7 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
                 }
               }
 
-              if (Debug_Flag < 0)
+              if (goma_ctx->debug_flag < 0)
                 add_var = TRUE; /* add all vars for checking jacobian */
 
               if (add_var) {
@@ -336,7 +336,7 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
   matrix_data->d_nnz = d_nnz;
   matrix_data->o_nnz = o_nnz;
 
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     MatSeqAIJSetPreallocation(matrix_data->mat, 0, d_nnz);
   } else {
     MatMPIAIJSetPreallocation(matrix_data->mat, 0, d_nnz, 0, o_nnz);
@@ -486,7 +486,7 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
     MatSetSizes(matrix_data->mat, matrix_data->local_dof, matrix_data->local_dof,
                 matrix_data->global_dof, matrix_data->global_dof);
     MatSetFromOptions(matrix_data->mat);
-    if (Num_Proc == 1) {
+    if (goma_ctx->num_proc == 1) {
       MatSeqAIJSetPreallocation(matrix_data->mat, 0, matrix_data->d_nnz);
     } else {
       MatMPIAIJSetPreallocation(matrix_data->mat, 0, matrix_data->d_nnz, 0, matrix_data->o_nnz);

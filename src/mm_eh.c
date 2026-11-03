@@ -50,15 +50,15 @@ static void print_stacktrace(void) {
   }
 #endif
   if (print_color) {
-    fprintf(stderr, "\033[0;33mP_%d trace: Obtained %zd stack frames\033[0m\n", ProcID, size);
+    fprintf(stderr, "\033[0;33mP_%d trace: Obtained %zd stack frames\033[0m\n", goma_ctx->proc_id, size);
   } else {
-    fprintf(stderr, "P_%d trace: Obtained %zd stack frames.\n", ProcID, size);
+    fprintf(stderr, "P_%d trace: Obtained %zd stack frames.\n", goma_ctx->proc_id, size);
   }
   for (size_t i = 0; i < size; i++) {
     if (print_color) {
-      fprintf(stderr, "\033[0;33mP_%d trace:\033[0m %s\n", ProcID, stack_strings[i]);
+      fprintf(stderr, "\033[0;33mP_%d trace:\033[0m %s\n", goma_ctx->proc_id, stack_strings[i]);
     } else {
-      fprintf(stderr, "P_%d trace: %s\n", ProcID, stack_strings[i]);
+      fprintf(stderr, "P_%d trace: %s\n", goma_ctx->proc_id, stack_strings[i]);
     }
   }
   free(stack_strings);
@@ -115,10 +115,10 @@ void goma_eh(const int error_flag, const char *file, const int line, const char 
 #endif
 #ifndef PARALLEL
     if (print_color) {
-      fprintf(stderr, "\033[0;31mP_%d Goma Error: %s \033[0m(@ %s:%d)\n", ProcID, message, file,
+      fprintf(stderr, "\033[0;31mP_%d Goma Error: %s \033[0m(@ %s:%d)\n", goma_ctx->proc_id, message, file,
               line);
     } else {
-      fprintf(stderr, "P_%d Goma Error: %s (@ %s:%d)\n", ProcID, message, file, line);
+      fprintf(stderr, "P_%d Goma Error: %s (@ %s:%d)\n", goma_ctx->proc_id, message, file, line);
     }
     exit(-1);
 #else
@@ -128,15 +128,15 @@ void goma_eh(const int error_flag, const char *file, const int line, const char 
     vsnprintf(message, MAX_CHAR_ERR_MSG, format, args);
     va_end(args);
     if (print_color) {
-      fprintf(stderr, "\033[0;31mP_%d Goma Error: %s \033[0m(@ %s:%d)\n", ProcID, message, file,
+      fprintf(stderr, "\033[0;31mP_%d Goma Error: %s \033[0m(@ %s:%d)\n", goma_ctx->proc_id, message, file,
               line);
     } else {
-      fprintf(stderr, "P_%d Goma Error: %s (@ %s:%d)\n", ProcID, message, file, line);
+      fprintf(stderr, "P_%d Goma Error: %s (@ %s:%d)\n", goma_ctx->proc_id, message, file, line);
     }
 #ifdef PRINT_STACK_TRACE_ON_EH
     print_stacktrace();
 #endif
-    if (Num_Proc == 1) {
+    if (goma_ctx->num_proc == 1) {
       MPI_Finalize();
       exit(-1);
     } else {
@@ -221,7 +221,7 @@ void logprintf(const char *format, ...) {
 
   /* Proceed only if there are no print limits set */
 
-  if (!Unlimited_Output)
+  if (!goma_ctx->unlimited_output)
     return;
 
   /*
@@ -235,8 +235,8 @@ void logprintf(const char *format, ...) {
    */
 
   if (log_strm == NULL) {
-    if (Num_Proc > 1) {
-      multiname(log_filename, ProcID, Num_Proc);
+    if (goma_ctx->num_proc > 1) {
+      multiname(log_filename, goma_ctx->proc_id, goma_ctx->num_proc);
     }
 
     log_strm = fopen(log_filename, "a");
@@ -271,24 +271,24 @@ void logprintf(const char *format, ...) {
   fprintf(log_strm, "%s ", time_result);
 
   if (current_severity < 0) {
-    if (Num_Proc > 1) {
-      fprintf(log_strm, "P_%d ", ProcID);
+    if (goma_ctx->num_proc > 1) {
+      fprintf(log_strm, "P_%d ", goma_ctx->proc_id);
     }
     fprintf(log_strm, "error at %s:%d %s() \n", current_file, current_line, current_routine);
 
     fprintf(log_strm, "%s ", time_result);
   }
 
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     if (current_severity == 0) {
-      fprintf(log_strm, "P_%d ", ProcID);
+      fprintf(log_strm, "P_%d ", goma_ctx->proc_id);
     }
   }
 
   if (current_severity > 0) {
     fprintf(log_strm, "%s:%d %s() ", current_file, current_line, current_routine);
-    if (Num_Proc > 1) {
-      fprintf(log_strm, "P_%d ", ProcID);
+    if (goma_ctx->num_proc > 1) {
+      fprintf(log_strm, "P_%d ", goma_ctx->proc_id);
     }
   }
 
@@ -301,7 +301,7 @@ void logprintf(const char *format, ...) {
    * cause big time performance loss on many processors, for example.
    */
 
-  if (Num_Proc < 16) {
+  if (goma_ctx->num_proc < 16) {
     fflush(log_strm);
   }
 
@@ -335,11 +335,11 @@ void smooth_stop_with_msg(const char *msg) {
   fprintf(stderr, msg);
   exit(-1);
 #else
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     fprintf(stderr, "\n\t -- Goma stops smoothly--\n");
     fputs(msg, stderr);
   } else {
-    fprintf(stderr, "\n\n Proc %d -- Goma stops smoothly --\n", ProcID);
+    fprintf(stderr, "\n\n Proc %d -- Goma stops smoothly --\n", goma_ctx->proc_id);
     DFPUTS(msg, stderr);
   }
   MPI_Finalize();

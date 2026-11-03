@@ -309,7 +309,7 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
   /*
    * Output some statistics concerning the communications pattern
    */
-  if (Num_Proc > 1)
+  if (goma_ctx->num_proc > 1)
     output_comm_stats(dpi, cx);
 
   /*
@@ -365,7 +365,7 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
    *  Print out the edge boudary condition structures
    *  if necessary
    */
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
       print_setup_Surf_BC(First_Elem_Side_BC_Array[pg->imtrx]);
     }
@@ -699,7 +699,7 @@ static void bc_matrl_index_print(struct Boundary_Condition *bc_ptr,
   NODE_INFO_STRUCT *node_ptr;
   UMI_LIST_STRUCT *matrlLP;
   printf("=============================================================\n");
-  printf("\tbc_matrl_index statistics for ibc = %d on Proc %d:\n", ibc, ProcID);
+  printf("\tbc_matrl_index statistics for ibc = %d on Proc %d:\n", ibc, goma_ctx->proc_id);
   printf("\t  Matrl_index    bin_matrl    [bin_matrl_elem]\n");
   printf("\t===================================================\n");
   for (i = 0; i < upd->Num_Mat; i++) {
@@ -808,7 +808,7 @@ void bc_set_index(Exo_DB *exo)
       DPRINTF(stderr,
               "On P_%d, bc_set_index: ERROR Can't find ns or ss id %d for"
               " boundary condition %d with type %s \n",
-              ProcID, bc_ptr->BC_ID, ibc, bc_ptr->Set_Type);
+              goma_ctx->proc_id, bc_ptr->BC_ID, ibc, bc_ptr->Set_Type);
       GOMA_EH(GOMA_ERROR, "Error in specification of boundary condition");
     }
   }
@@ -1116,7 +1116,7 @@ void bc_matrl_index(Exo_DB *exo)
       matrl_first = find_next_max(bin_matrl, ind_matrl, upd->Num_Mat);
       success = assign_matrl_2(bc_ptr, matrl_first);
       if (success < 0) {
-        printf("%s P_%d: problem in assigning first matrl index in ibc %d, %d:\n", yo, ProcID, ibc,
+        printf("%s P_%d: problem in assigning first matrl index in ibc %d, %d:\n", yo, goma_ctx->proc_id, ibc,
                matrl_first);
         bc_matrl_index_print(bc_ptr, bin_matrl, bin_matrl_elem, min_node_matrl, max_node_matrl,
                              node_matrl_1, node_matrl_2, node_matrl_3, node_matrl_4, ibc);
@@ -1125,14 +1125,14 @@ void bc_matrl_index(Exo_DB *exo)
       if (matrl_first >= 0) {
         success = assign_matrl_2(bc_ptr, matrl_first);
         if (success < 0) {
-          printf("%s P_%d: problem in assigning second matrl index in ibc %d, %d:\n", yo, ProcID,
+          printf("%s P_%d: problem in assigning second matrl index in ibc %d, %d:\n", yo, goma_ctx->proc_id,
                  ibc, matrl_first);
           bc_matrl_index_print(bc_ptr, bin_matrl, bin_matrl_elem, min_node_matrl, max_node_matrl,
                                node_matrl_1, node_matrl_2, node_matrl_3, node_matrl_4, ibc);
         }
       } else {
         if (num_matrl_needed > 2) {
-          printf("%s P_%d: problem in finding a needed second matrl index:\n", yo, ProcID);
+          printf("%s P_%d: problem in finding a needed second matrl index:\n", yo, goma_ctx->proc_id);
           GOMA_EH(GOMA_ERROR, "bc_matrl_index ERROR");
         }
       }

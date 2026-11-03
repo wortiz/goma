@@ -179,17 +179,17 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   /* Open exodus output file */
   /***************************/
   sprintf(exooutfilename, "%s.exoII", "map_pix_fast");
-  multiname(exooutfilename, ProcID, Num_Proc);
+  multiname(exooutfilename, goma_ctx->proc_id, goma_ctx->num_proc);
 
   /* Replicate current input exodus database to prepare for mapped fields, unless it has already
      been done This is the file we will write out the new fields to for future use as fields */
 
   if (first_time_fopen2) {
-    one_base(exo, Num_Proc);
+    one_base(exo, goma_ctx->num_proc);
     wr_mesh_exo(exo, exooutfilename, 0);
     zero_base(exo);
 
-    if (Num_Proc > 1)
+    if (goma_ctx->num_proc > 1)
       wr_dpi(DPI_ptr, exooutfilename);
 
     exoout = ex_open(exooutfilename, EX_WRITE, &CPU_word_size, &IO_word_size, &exoversion);
@@ -238,7 +238,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   /****************************************/
   resz = 1;
   z0 = 0;
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     sprintf(voxfilename, "%s", efv->file_nm_serial[N_ext]);
     pixfid = fopen(voxfilename, "r");
     if (pixfid == NULL) {
@@ -339,7 +339,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   MPI_Bcast(&x0, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast(&y0, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-  if (ProcID != 0) {
+  if (goma_ctx->proc_id != 0) {
     numpix = pixsize[0] * pixsize[1] * pixsize[2];
     pixdata = (double *)calloc(numpix, sizeof(double));
     resx = resolution[0];
@@ -389,7 +389,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   nmiss = 0;
   // Loop over elements to assign pixel values to Gauss points
   for (ielem = e_start; ielem < e_end; ielem++) {
-    if (DPI_ptr->elem_owner[ielem] != ProcID) {
+    if (DPI_ptr->elem_owner[ielem] != goma_ctx->proc_id) {
       continue; // Skip elements not owned by this processor
     }
     load_ei(ielem, exo, 0, pg->imtrx);
@@ -451,7 +451,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
 
   for (ielem = e_start; ielem < e_end; ielem++) // Loop over elements
   {
-    if (DPI_ptr->elem_owner[ielem] != ProcID) {
+    if (DPI_ptr->elem_owner[ielem] != goma_ctx->proc_id) {
       continue; // Skip elements not owned by this processor
     }
     load_ei(ielem, exo, 0, pg->imtrx);

@@ -230,7 +230,7 @@ void setup_nodal_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
     gnn = list_node_send[i];
     lnn = in_list(gnn, dpi->num_internal_nodes, exo->num_nodes, dpi->node_index_global);
     if (lnn == -1) {
-      fprintf(stderr, "%s %d: couldn't find gnn = %d\n", yo, ProcID, gnn);
+      fprintf(stderr, "%s %d: couldn't find gnn = %d\n", yo, goma_ctx->proc_id, gnn);
       GOMA_EH(GOMA_ERROR, "failed dp mapping");
     }
     list_node_send[i] = lnn;
@@ -274,7 +274,7 @@ void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
     retn = MPI_Irecv((np_ptr->recv_message_buf), np_ptr->recv_message_length, MPI_BYTE,
                      np_ptr->neighbor_ProcID, mtype, MPI_COMM_WORLD, &(np_ptr->recv_request));
     if (retn != MPI_SUCCESS) {
-      fprintf(stderr, "%s Proc %d: Irecv to %d failed post: %d\n", yo, ProcID,
+      fprintf(stderr, "%s Proc %d: Irecv to %d failed post: %d\n", yo, goma_ctx->proc_id,
               np_ptr->neighbor_ProcID, retn);
       GOMA_EH(GOMA_ERROR, "MPI failure");
     }
@@ -289,7 +289,7 @@ void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
     retn = MPI_Isend(np_ptr->send_message_buf, np_ptr->send_message_length, MPI_BYTE,
                      np_ptr->neighbor_ProcID, mtype, MPI_COMM_WORLD, &(np_ptr->send_request));
     if (retn != MPI_SUCCESS) {
-      fprintf(stderr, "%s Proc %d: Isend to %d failed post: %d\n", yo, ProcID,
+      fprintf(stderr, "%s Proc %d: Isend to %d failed post: %d\n", yo, goma_ctx->proc_id,
               np_ptr->neighbor_ProcID, retn);
       GOMA_EH(GOMA_ERROR, "MPI failure");
     }
@@ -303,13 +303,13 @@ void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
   for (p = 0; p < num_neighbors; p++) {
     retn = MPI_Wait(&(np_ptr->recv_request), &(np_ptr->recv_status));
     if (retn != MPI_SUCCESS) {
-      fprintf(stderr, "%s Proc %d: Irecv to %d failed: %d\n", yo, ProcID, np_ptr->neighbor_ProcID,
+      fprintf(stderr, "%s Proc %d: Irecv to %d failed: %d\n", yo, goma_ctx->proc_id, np_ptr->neighbor_ProcID,
               retn);
       GOMA_EH(GOMA_ERROR, "MPI failure");
     }
     retn = MPI_Wait(&(np_ptr->send_request), &(np_ptr->send_status));
     if (retn != MPI_SUCCESS) {
-      fprintf(stderr, "%s Proc %d: Isend to %d failed: %d\n", yo, ProcID, np_ptr->neighbor_ProcID,
+      fprintf(stderr, "%s Proc %d: Isend to %d failed: %d\n", yo, goma_ctx->proc_id, np_ptr->neighbor_ProcID,
               retn);
       GOMA_EH(GOMA_ERROR, "MPI failure");
     }
@@ -477,7 +477,7 @@ static void build_node_recv_indeces(Exo_DB *exo, Dpi *dpi)
    *  we raster through the external nodes.
    */
   if (num_owner_changes > dpi->num_neighbors) {
-    fprintf(stderr, "Proc %d: num_owner_changes %d > dpi->num_neighbors %d\n", ProcID,
+    fprintf(stderr, "Proc %d: num_owner_changes %d > dpi->num_neighbors %d\n", goma_ctx->proc_id,
             num_owner_changes, dpi->num_neighbors);
     GOMA_EH(GOMA_ERROR, "External node ownership inconsistency!");
   }
@@ -516,8 +516,8 @@ void output_comm_stats(Dpi *dpi, Comm_Ex **cx)
   int gmin_mesg_proc;
   int imtrx;
 
-  gmax_neighbor = gmaxloc_int(dpi->num_neighbors, ProcID, &gmax_neighbor_proc);
-  gmin_neighbor = gminloc_int(dpi->num_neighbors, ProcID, &gmin_neighbor_proc);
+  gmax_neighbor = gmaxloc_int(dpi->num_neighbors, goma_ctx->proc_id, &gmax_neighbor_proc);
+  gmin_neighbor = gminloc_int(dpi->num_neighbors, goma_ctx->proc_id, &gmin_neighbor_proc);
   gavg_neighbor = gavg_double((double)dpi->num_neighbors);
 
   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
@@ -528,14 +528,14 @@ void output_comm_stats(Dpi *dpi, Comm_Ex **cx)
     }
   }
 
-  gmaxloc_int(max_mesg, ProcID, &gmax_mesg_proc);
-  gminloc_int(min_mesg, ProcID, &gmin_mesg_proc);
+  gmaxloc_int(max_mesg, goma_ctx->proc_id, &gmax_mesg_proc);
+  gminloc_int(min_mesg, goma_ctx->proc_id, &gmin_mesg_proc);
   if (dpi->num_neighbors > 0) {
     avg_mesg /= dpi->num_neighbors;
   }
   gavg_mesg = gavg_double(avg_mesg);
 
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     printf("\n\n----------------- Communications Stats ------------\n");
     printf("\n\t\tNumber of Neighbors\n");
     printf("\t\tMax: %5d (Proc = %d)\t\t Avg: %6.3f\t\tMin: %d (Proc = %d)\n", gmax_neighbor,

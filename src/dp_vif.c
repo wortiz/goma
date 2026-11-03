@@ -108,9 +108,9 @@ void noahs_raven(void) {
   Noahs_Raven = ddd_alloc();
   n = Noahs_Raven;
 
-  ddd_add_member(n, &Decompose_Flag, 1, MPI_INT);
-  ddd_add_member(n, &Decompose_Type, 1, MPI_INT);
-  ddd_add_member(n, &Skip_Fix, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->decompose_flag, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->decompose_type, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->skip_fix, 1, MPI_INT);
 
   ddd_add_member(n, &Num_Var_Init, 1, MPI_INT);
   ddd_add_member(n, &Num_Var_Bound, 1, MPI_INT);
@@ -182,7 +182,7 @@ void raven_landing(void) {
   int i;
   int m;
 
-  if (ProcID == 0)
+  if (goma_ctx->proc_id == 0)
     return;
 
   /*
@@ -544,15 +544,15 @@ void noahs_ark(void) {
    * Stuff read into rd_file_specs()
    */
 
-  ddd_add_member(n, ExoFile, MAX_FNL, MPI_CHAR);
-  ddd_add_member(n, ExoFileOut, MAX_FNL, MPI_CHAR);
-  ddd_add_member(n, ExoFileOutMono, MAX_FNL, MPI_CHAR);
-  ddd_add_member(n, Init_GuessFile, MAX_FNL, MPI_CHAR);
-  ddd_add_member(n, Soln_OutFile, MAX_FNL, MPI_CHAR);
-  ddd_add_member(n, ExoAuxFile, MAX_FNL, MPI_CHAR);
-  ddd_add_member(n, &ExoTimePlane, 1, MPI_INT);
-  ddd_add_member(n, &Write_Intermediate_Solutions, 1, MPI_INT);
-  ddd_add_member(n, &Write_Initial_Solution, 1, MPI_INT);
+  ddd_add_member(n, goma_ctx->exo_file, MAX_FNL, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->exo_file_out, MAX_FNL, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->exo_file_out_mono, MAX_FNL, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->init_guess_file, MAX_FNL, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->soln_out_file, MAX_FNL, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->exo_aux_file, MAX_FNL, MPI_CHAR);
+  ddd_add_member(n, &goma_ctx->exo_time_plane, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->write_intermediate_solutions, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->write_initial_solution, 1, MPI_INT);
 
   if (GomaPetscOptionsStrLen > 0) {
     ddd_add_member(n, GomaPetscOptions, GomaPetscOptionsStrLen, MPI_CHAR);
@@ -562,9 +562,9 @@ void noahs_ark(void) {
    */
 
   /*  ddd_add_member(n, &Num_Proc, 1, MPI_INT); ...dal */
-  ddd_add_member(n, &Dim, 1, MPI_INT);
-  ddd_add_member(n, &Iout, 1, MPI_INT);
-  ddd_add_member(n, &Debug_Flag, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->dim, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->iout, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->debug_flag, 1, MPI_INT);
 #ifdef MATRIX_DUMP
   ddd_add_member(n, &Number_Jac_Dump, 1, MPI_INT);
 #endif
@@ -2865,7 +2865,7 @@ void ark_landing(void) {
   struct Material_Properties *m;
   struct Viscoelastic_Nonmodal *v;
 
-  if (ProcID == 0)
+  if (goma_ctx->proc_id == 0)
     return;
 
   // turbulence information
@@ -3338,7 +3338,7 @@ void noahs_dove(void) {
 
     if (m->Num_Matrl_Elem_Blk > 0) {
       if (m->Matrl_Elem_Blk_Ids == NULL) {
-        printf("P_%d: ERROR: NULL address but nonzero length, %s line %d!\n", ProcID, __FILE__,
+        printf("P_%d: ERROR: NULL address but nonzero length, %s line %d!\n", goma_ctx->proc_id, __FILE__,
                __LINE__);
         fflush(stdout);
         GOMA_EH(GOMA_ERROR, "noahs_dove fatal error");

@@ -101,7 +101,7 @@ public:
 
   void print_elapsed(const char *msg) {
     MPI_Barrier(MPI_COMM_WORLD);
-    if (ProcID == 0) {
+    if (goma_ctx->proc_id == 0) {
       auto precision = std::cout.precision();
       std::cout.precision(1);
       std::cout << msg << " " << std::scientific << elapsed() << " sec" << std::endl;
@@ -500,14 +500,14 @@ static void facet_based_reinitialization_3D(
     facet_data[i * 9 + 8] = facets[i].p2[2];
   }
 
-  std::vector<int> facet_sizes(Num_Proc, 0);
+  std::vector<int> facet_sizes(goma_ctx->num_proc, 0);
   int my_size = facet_data.size();
   MPI_Allgather(&my_size, 1, MPI_INT, facet_sizes.data(), 1, MPI_INT, MPI_COMM_WORLD);
 
   std::vector<double> all_facets(std::accumulate(facet_sizes.begin(), facet_sizes.end(), 0));
-  std::vector<int> offsets(Num_Proc, 0);
+  std::vector<int> offsets(goma_ctx->num_proc, 0);
   int offset = 0;
-  for (int i = 1; i < Num_Proc; i++) {
+  for (int i = 1; i < goma_ctx->num_proc; i++) {
     offset += facet_sizes[i - 1];
     offsets[i] = offset;
   }
@@ -627,7 +627,7 @@ static void facet_based_reinitialization_2D(
     }
 
     for (int elem = exo->eb_ptr[elem_block]; elem < exo->eb_ptr[elem_block + 1]; elem++) {
-      if (dpi->elem_owner[elem] != ProcID) {
+      if (dpi->elem_owner[elem] != goma_ctx->proc_id) {
         continue;
       }
       // If the level set interface exists on that element we will compute facets for that element.
@@ -754,14 +754,14 @@ static void facet_based_reinitialization_2D(
     facet_data[i * 4 + 3] = facets[i].p1[1];
   }
 
-  std::vector<int> facet_sizes(Num_Proc, 0);
+  std::vector<int> facet_sizes(goma_ctx->num_proc, 0);
   int my_size = facets.size() * 4;
   MPI_Allgather(&my_size, 1, MPI_INT, facet_sizes.data(), 1, MPI_INT, MPI_COMM_WORLD);
 
   std::vector<double> all_facets(std::accumulate(facet_sizes.begin(), facet_sizes.end(), 0));
-  std::vector<int> offsets(Num_Proc, 0);
+  std::vector<int> offsets(goma_ctx->num_proc, 0);
   int offset = 0;
-  for (int i = 1; i < Num_Proc; i++) {
+  for (int i = 1; i < goma_ctx->num_proc; i++) {
     offset += facet_sizes[i - 1];
     offsets[i] = offset;
   }
@@ -833,7 +833,7 @@ extern "C" void facet_based_reinitialization(
     double *x, Exo_DB *exo, Comm_Ex *cx, Dpi *dpi, int num_total_nodes, double time) {
   BasicTimer timer;
   timer.start();
-  if (ProcID == 0)
+  if (goma_ctx->proc_id == 0)
     std::cout << "Facet based reinitialization\n";
   if (exo->num_dim == 2) {
     facet_based_reinitialization_2D(x, exo, cx, dpi, num_total_nodes, time);

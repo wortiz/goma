@@ -241,10 +241,10 @@ void set_init_Element_Storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
 
     if (Guess_Flag == 5 || Guess_Flag == 6) {
       GOMA_WH(-1, "Initializing Hysteretic Curve values at all Gauss points with read_exoII_file");
-      CPU_word_size = sizeof(double);
-      IO_word_size = 0;
+      goma_ctx->cpu_word_size = sizeof(double);
+      goma_ctx->io_word_size = 0;
 
-      exoid = ex_open(ExoAuxFile, EX_READ, &CPU_word_size, &IO_word_size, &version);
+      exoid = ex_open(goma_ctx->exo_aux_file, EX_READ, &goma_ctx->cpu_word_size, &goma_ctx->io_word_size, &version);
       GOMA_EH(exoid, "ex_open");
 
       error = ex_get_init(exoid, title, &num_dim, &num_nodes, &num_elem, &num_elem_blk,

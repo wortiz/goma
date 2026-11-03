@@ -157,7 +157,6 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
   static const char yo[] = "find_and_set_Dirichlet";
 
 #ifdef DEBUG_BC
-  extern int ProcID;
 #endif                      /* DEBUG_BC */
   int apply_pressure_datum; /* boolean */
   int i, ibc, ins, inode = -1, error_cond = FALSE;
@@ -402,7 +401,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
      */
 
     if (local_elem > -1) {
-      if (dpi->elem_owner[local_elem] == ProcID) {
+      if (dpi->elem_owner[local_elem] == goma_ctx->proc_id) {
         apply_pressure_datum = TRUE;
 
         /*
@@ -867,11 +866,10 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
   static char *yo = "set_up_Surf_BC";
 
 #ifdef DEBUG_BC
-  extern int ProcID, Dim;
 #endif
 
 #ifdef DEBUG_BC
-  printf("\nNumber of side sets on Proc %d = %d\n", ProcID, exo->num_side_sets);
+  printf("\nNumber of side sets on Proc %d = %d\n", goma_ctx->proc_id, exo->num_side_sets);
 #endif
 
   /*
@@ -1042,7 +1040,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
               if (num_nodes_on_side < 1) {
                 fprintf(stderr,
                         "P_%d: SS[%d]=%d, index=%d, elem=(%d), side=%d has num_nodes_on_side=%d!\n",
-                        ProcID, iss, exo->ss_id[iss], i, ielem + 1, side, num_nodes_on_side);
+                        goma_ctx->proc_id, iss, exo->ss_id[iss], i, ielem + 1, side, num_nodes_on_side);
               }
               local_node_list = &(exo->ss_node_list[iss][exo->ss_node_side_index[iss][i]]);
 #ifdef DEBUG_SS
@@ -1192,7 +1190,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
           }
         }
         BC_Types[ibc].BC_Data_Int[0] = inode;
-        if (Debug_Flag > 1) {
+        if (goma_ctx->debug_flag > 1) {
           printf("set_up_Surf_BC: point BC= %d corresponds to node= %d\n", poinbc, inode);
         }
       }
@@ -1209,7 +1207,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
           }
         }
         BC_Types[ibc].BC_Data_Int[2] = inode;
-        if (Debug_Flag > 1) {
+        if (goma_ctx->debug_flag > 1) {
           printf("set_up_Surf_BC: point BC= %d corresponds to node= %d\n", poinbc, inode);
         }
       }
@@ -2477,10 +2475,10 @@ int find_id_side_SS(const int ielem,   /* ielem - element index number     (in) 
 void print_setup_Surf_BC(struct elem_side_bc_struct *First_Elem_Side_BC_Array[]) {
   int ielem;
 
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     (void)printf("\t\t PRINTOUT OF SURFACE BOUNDARY INTEGRAL SET-UP\n");
   }
-  (void)printf("\n\nSurface Integrals on Processor %d:\n", ProcID);
+  (void)printf("\n\nSurface Integrals on Processor %d:\n", goma_ctx->proc_id);
   (void)printf("Global_Elem_Num ID_side Num_Nodes_On_Side BC_applied  ");
   (void)printf(" BC_input_id   |  Global_node_id\'s ");
   (void)printf("       |  Local_Elem_node_ID\'s\n");

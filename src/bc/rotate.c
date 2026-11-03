@@ -1961,7 +1961,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
 
   /***************************************************************************/
   /* BEGIN EXECUTION */
-  if (Debug_Flag > 0)
+  if (goma_ctx->debug_flag > 0)
     DPRINTF(stderr, "Starting to calculate rotation vectors\n");
 
   /* initialize the rotation_vector array of rotation structures */
@@ -2296,7 +2296,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
     }
   } /* end of ADJUST */
 
-  if (Debug_Flag > 0)
+  if (goma_ctx->debug_flag > 0)
     DPRINTF(stderr, "Done calculating rotation vectors\n");
 
   return;

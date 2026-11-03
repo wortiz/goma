@@ -122,7 +122,7 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
   /* Scalar floats */
 
   /* Stop if parallel run */
-  if (Num_Proc > 1)
+  if (goma_ctx->num_proc > 1)
     GOMA_EH(GOMA_ERROR, "pixel mapping is not yet available in parallel. Run serial then use the "
                         "mapped exoII file");
 
@@ -157,7 +157,7 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
   */
 
   if (first_time_fopen) {
-    one_base(exo, Num_Proc);
+    one_base(exo, goma_ctx->num_proc);
     wr_mesh_exo(exo, outfile, 0);
     zero_base(exo);
     first_time_fopen = FALSE;

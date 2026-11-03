@@ -94,56 +94,8 @@ Exo_DB *EXO_ptr = NULL;
 
 #define LAST_LEGAL_STRING "Last Legal String"
 
-char Input_File[MAX_FNL] = "\0"; /* input EXODUS II database w/ problem defn */
-
-char ExoFile[MAX_FNL] = "\0"; /* input EXODUS II database w/ problem defn */
-
-char Exo_LB_File[MAX_FNL] = "\0"; /* EXODUS II load balance info for mesh */
-
-char ExoFileOut[MAX_FNL] = "\0"; /* output EXODUS II database w/ results */
-
-char ExoFileOutMono[MAX_FNL] = "\0"; /* output EXODUS II database without per proc identifier */
-
-char ExoAuxFile[MAX_FNL] = "\0"; /* auxiliary EXODUS II database for initguess */
-
-int ExoTimePlane = INT_MAX; /* Time plane # or continuation # of soln to use as an initguess */
-
-char Echo_Input_File[MAX_FNL] = "\0"; /* echo of problem def file  */
-
-int Decompose_Flag = 1;
-int Decompose_Type = 0;
-int Skip_Fix = 0;
-
 char *GomaPetscOptions = NULL;
 int GomaPetscOptionsStrLen = 0;
-
-char DomainMappingFile[MAX_FNL] = "\0"; /* Domain Mapping file. Maps the materials
-                                      and names of material boundaries
-                                      specified in this file into this file
-                                      into chemkin domains and chemkin
-                                      surface and volumetric domains. */
-
-int CPU_word_size;
-int IO_word_size; /*Precision variables for exodus II files*/
-
-char Init_GuessFile[MAX_FNL]; /* ASCII file holding initial guess */
-
-char Soln_OutFile[MAX_FNL]; /* ASCII file holding solution vector, */
-                            /* same format as Init_GuessFile      */
-
-int Debug_Flag; /* Flag to specify debug info is to be     */
-                /* printed out. The value of this flag     */
-                /* determines the level of diagnostic info */
-                /* which is printed to stdout              */
-                /* Debug_Flag == 0 	No output          */
-                /*	 1	minimun output             */
-                /*	 2	medium  output		   */
-                /*	 3	maximum output             */
-                /*	 -1	check jacobian             */
-                /*	 -2	check jacobian with scaling*/
-
-int New_Parser_Flag; /* New_Parser_Flag = 0	Parse with old parser */
-                     /* New_Parser_Flag = 1  Parse with new flex/bison parser */
 
 #ifdef MATRIX_DUMP
 int Number_Jac_Dump = 0; /* Number of jacobians to dump out
@@ -151,16 +103,7 @@ int Number_Jac_Dump = 0; /* Number of jacobians to dump out
                           * jacobian, the -n'th jacobian, is dumped
                           * out */
 #endif
-int Iout; /* Flag to specify level of diagnostic output */
-          /* which is to be printed out for the program */
 
-int Write_Intermediate_Solutions = FALSE; /* Flag specifies whether to */
-                                          /* write out solution data at each */
-                                          /* Newton iteration. */
-int Write_Initial_Solution = FALSE;
-/* Flag to indicate whether to write the
- * initial solution to the ascii and exodus
- * output files */
 int Num_Var_Init;         /* number of variables to overwrite with
                            * global initialization */
 int Num_Var_Bound;        /* number of variables to bound  */
@@ -225,18 +168,9 @@ static char *legal_notice[] = {
 int parallel_err = FALSE;
 int parallel_err_global = FALSE;
 
-int Unlimited_Output = TRUE; /* print limit flag */
-
-int Num_Proc = 1;
-int ProcID = 0;
-int Dim = -1;
-
 int unlerr;
 
-MPI_Request *Request = NULL;
-MPI_Status *Status = NULL;
 MPI_Aint type_extent;
-int Num_Requests = 6;
 
 /*
  * Data structures for transporting input data to other processors...
@@ -348,8 +282,8 @@ int main(int argc, char **argv)
    * pretty early if we're "one of many" or the only process.
    */
 
-  error = MPI_Comm_size(MPI_COMM_WORLD, &Num_Proc);
-  error = MPI_Comm_rank(MPI_COMM_WORLD, &ProcID);
+  error = MPI_Comm_size(MPI_COMM_WORLD, &goma_ctx->num_proc);
+  error = MPI_Comm_rank(MPI_COMM_WORLD, &goma_ctx->proc_id);
 
 #ifdef GOMA_ENABLE_AZTEC
   /*
@@ -362,21 +296,21 @@ int main(int argc, char **argv)
 
   /* set the output limit flag if need be */
 
-  if (Num_Proc > DP_PROC_PRINT_LIMIT)
-    Unlimited_Output = FALSE;
+  if (goma_ctx->num_proc > DP_PROC_PRINT_LIMIT)
+    goma_ctx->unlimited_output = FALSE;
 
 #ifdef HAVE_MPE_H
   error = MPE_Init_log();
 #endif /* HAVE_MPE_H */
 
-  Dim = 0; /* for any hypercube legacy code...  */
+  goma_ctx->dim = 0; /* for any hypercube legacy code...  */
 
 #endif /* PARALLEL */
 
 #ifndef PARALLEL
-  Dim = 0;
-  ProcID = 0;
-  Num_Proc = 1;
+  goma_ctx->dim = 0;
+  goma_ctx->proc_id = 0;
+  goma_ctx->num_proc = 1;
 #endif /* PARALLEL */
 
   /*
@@ -394,7 +328,7 @@ int main(int argc, char **argv)
    * Some initial stuff that only the master process does.
    */
 
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     if (argc > 1) {
       log_msg("Preprocessing command line options.");
       clc = (struct Command_line_command **)smalloc(argc * sizeof(struct Command_line_command *));
@@ -410,15 +344,15 @@ int main(int argc, char **argv)
       }
     }
 
-    strcpy(Input_File, "input");
-    strcpy(Echo_Input_File, "echo_input");
+    strcpy(goma_ctx->input_file, "input");
+    strcpy(goma_ctx->echo_input_file, "echo_input");
 
     if (argc > 1)
       translate_command_line(argc, argv, clc, &nclc);
 
-    ECHO("OPEN", Echo_Input_File);
+    ECHO("OPEN", goma_ctx->echo_input_file);
 
-    echo_command_line(argc, argv, Echo_Input_File);
+    echo_command_line(argc, argv, goma_ctx->echo_input_file);
     print_code_version();
     ptmp = legal_notice;
     while (strcmp(*ptmp, LAST_LEGAL_STRING) != 0) {
@@ -474,7 +408,7 @@ int main(int argc, char **argv)
   /*
    * Read ASCII input file, data files, related exodusII FEM databases.
    */
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     log_msg("Reading input file ...");
     read_input_file(clc, nclc); /* Read ascii input file get file names */
 
@@ -572,14 +506,14 @@ int main(int argc, char **argv)
 
 #ifdef GOMA_ENABLE_METIS
   /* Now break the exodus files */
-  if (Decompose_Flag == 1 && Num_Proc > 1 && ProcID == 0) {
+  if (goma_ctx->decompose_flag == 1 && goma_ctx->num_proc > 1 && goma_ctx->proc_id == 0) {
     char **filenames = malloc(sizeof(char *) * (2 + MAX_EXTERNAL_FIELD));
     int n_files = 1;
     filenames[0] = malloc(sizeof(char) * MAX_FNL);
-    memcpy(filenames[0], ExoFile, MAX_FNL);
-    if (strcmp(ExoAuxFile, "") != 0) {
+    memcpy(filenames[0], goma_ctx->exo_file, MAX_FNL);
+    if (strcmp(goma_ctx->exo_aux_file, "") != 0) {
       filenames[n_files] = malloc(sizeof(char) * MAX_FNL);
-      memcpy(filenames[n_files], ExoAuxFile, MAX_FNL);
+      memcpy(filenames[n_files], goma_ctx->exo_aux_file, MAX_FNL);
       n_files++;
     }
 
@@ -683,7 +617,7 @@ int main(int argc, char **argv)
   error = assembly_alloc(EXO_ptr);
   GOMA_EH(error, "Problem from assembly_alloc");
 
-  if (Debug_Flag) {
+  if (goma_ctx->debug_flag) {
     DPRINTF(stderr, "%s:  setting up EXODUS II output files...\n", yo);
   }
 
@@ -702,21 +636,21 @@ int main(int argc, char **argv)
    * But, remember that if we're parallel, that the output file names must
    * be multiplexed first...
    */
-  if (Num_Proc > 1) {
-    multiname(ExoFileOut, ProcID, Num_Proc);
-    multiname(Init_GuessFile, ProcID, Num_Proc);
+  if (goma_ctx->num_proc > 1) {
+    multiname(goma_ctx->exo_file_out, goma_ctx->proc_id, goma_ctx->num_proc);
+    multiname(goma_ctx->init_guess_file, goma_ctx->proc_id, goma_ctx->num_proc);
 
-    if (strcmp(Soln_OutFile, "") != 0) {
-      multiname(Soln_OutFile, ProcID, Num_Proc);
+    if (strcmp(goma_ctx->soln_out_file, "") != 0) {
+      multiname(goma_ctx->soln_out_file, goma_ctx->proc_id, goma_ctx->num_proc);
     }
 
-    if (strcmp(ExoAuxFile, "") != 0) {
-      multiname(ExoAuxFile, ProcID, Num_Proc);
+    if (strcmp(goma_ctx->exo_aux_file, "") != 0) {
+      multiname(goma_ctx->exo_aux_file, goma_ctx->proc_id, goma_ctx->num_proc);
     }
 
     if (efv->Num_external_field != 0) {
       for (i = 0; i < efv->Num_external_field; i++) {
-        multiname(efv->file_nm[i], ProcID, Num_Proc);
+        multiname(efv->file_nm[i], goma_ctx->proc_id, goma_ctx->num_proc);
       }
     }
   }
@@ -769,8 +703,8 @@ int main(int argc, char **argv)
     int imtrx;
     for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
       cx[imtrx] = alloc_struct_1(Comm_Ex, DPI_ptr->num_neighbors);
-      Request = alloc_struct_1(MPI_Request, Num_Requests * DPI_ptr->num_neighbors);
-      Status = alloc_struct_1(MPI_Status, Num_Requests * DPI_ptr->num_neighbors);
+      goma_ctx->request = alloc_struct_1(MPI_Request, goma_ctx->num_requests * DPI_ptr->num_neighbors);
+      goma_ctx->status = alloc_struct_1(MPI_Status, goma_ctx->num_requests * DPI_ptr->num_neighbors);
     }
   }
 #endif
@@ -805,14 +739,14 @@ int main(int argc, char **argv)
    *  Only have to initialize the exodus file if we are using different
    *  files for the output versus the input mesh
    */
-  if (strcmp(ExoFile, ExoFileOut)) {
+  if (strcmp(goma_ctx->exo_file, goma_ctx->exo_file_out)) {
     /*
      * Temporarily we'll need to renumber the nodes and elements in the
      * mesh to be 1-based. After writing, return to the 0 based indexing
      * that is more convenient in C.
      */
-    one_base(EXO_ptr, Num_Proc);
-    wr_mesh_exo(EXO_ptr, ExoFileOut, 0);
+    one_base(EXO_ptr, goma_ctx->num_proc);
+    wr_mesh_exo(EXO_ptr, goma_ctx->exo_file_out, 0);
     zero_base(EXO_ptr);
 
     /*
@@ -820,8 +754,8 @@ int main(int argc, char **argv)
      * element information of EXODUS with the description of how this
      * piece fits into the global problem.
      */
-    if (Num_Proc > 1) {
-      wr_dpi(DPI_ptr, ExoFileOut);
+    if (goma_ctx->num_proc > 1) {
+      wr_dpi(DPI_ptr, goma_ctx->exo_file_out);
     }
   }
 #ifdef FP_EXCEPT
@@ -838,7 +772,7 @@ int main(int argc, char **argv)
   if (upd->Total_Num_Matrices == 1) {
     pg->imtrx = 0;
 
-    if (Debug_Flag) {
+    if (goma_ctx->debug_flag) {
       switch (Continuation) {
       case ALC_ZEROTH:
         P0PRINTF("%s: continue_problem (zeroth order) ...\n", yo);
@@ -863,7 +797,7 @@ int main(int argc, char **argv)
 
     if (TimeIntegration == TRANSIENT) {
       Continuation = ALC_NONE;
-      if (Debug_Flag) {
+      if (goma_ctx->debug_flag) {
         P0PRINTF("%s: solve_problem...TRANSIENT superceded Continuation...\n", yo);
       }
       solve_problem(EXO_ptr, DPI_ptr, NULL);
@@ -933,7 +867,7 @@ int main(int argc, char **argv)
   /*
    * Free command line stuff
    */
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     if (argc > 1) {
       for (i = 0; i < argc; i++) {
         safer_free((void **)&(clc[i]->string));
@@ -949,7 +883,7 @@ int main(int argc, char **argv)
   free_exo(EXO_ptr);
   safer_free((void **)&EXO_ptr);
 
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     free_dpi(DPI_ptr);
   } else {
     free_dpi_uni(DPI_ptr);
@@ -985,8 +919,8 @@ int main(int argc, char **argv)
   fflush(stdout);
   fflush(stderr);
   log_msg("GOMA ends normally.");
-  free(Status);
-  free(Request);
+  free(goma_ctx->status);
+  free(goma_ctx->request);
   return (0);
 }
 /***********************************************************************/

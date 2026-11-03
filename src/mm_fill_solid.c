@@ -641,15 +641,15 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
       plstr_vol_change = 1. / det_defgrad_2d;
 
       /* escape if element has inverted */
-      if ((det_defgrad_2d <= 0.) && (Debug_Flag >= 0)) {
+      if ((det_defgrad_2d <= 0.) && (goma_ctx->debug_flag >= 0)) {
 #ifdef PARALLEL
-        fprintf(stderr, "\nP_%d: Volume change  %f\n", ProcID, plstr_vol_change);
+        fprintf(stderr, "\nP_%d: Volume change  %f\n", goma_ctx->proc_id, plstr_vol_change);
 #else
         fprintf(stderr, "\nVolume change  %f\n", plstr_vol_change);
 #endif
         for (i = 0; i < dim; i++) {
 #ifdef PARALLEL
-          fprintf(stderr, "P_%d: Deformation Gradient %f %f in elem [%d]\n", ProcID,
+          fprintf(stderr, "P_%d: Deformation Gradient %f %f in elem [%d]\n", goma_ctx->proc_id,
                   deform_grad[i][0], deform_grad[i][1], ei[pg->imtrx]->ielem);
 #else
           fprintf(stderr, "Deformation Gradient %f %f in elem [%d] %g %g\n", deform_grad[i][0],
@@ -792,16 +792,16 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
         fv_dot->volume_change *= -(fv->volume_change * fv->volume_change);
       }
       /* Check to make sure element hasn't inverted */
-      if ((fv->volume_change <= 0.) && (Debug_Flag >= 0)) {
+      if ((fv->volume_change <= 0.) && (goma_ctx->debug_flag >= 0)) {
 #ifdef PARALLEL
-        fprintf(stderr, "\nP_%d: Volume change  %f\n", ProcID, fv->volume_change);
+        fprintf(stderr, "\nP_%d: Volume change  %f\n", goma_ctx->proc_id, fv->volume_change);
 #else
         fprintf(stderr, "\nVolume change  %f\n", fv->volume_change);
 #endif
 
         for (i = 0; i < dim; i++) {
 #ifdef PARALLEL
-          fprintf(stderr, "P_%d: Deformation Gradient %f %f %f in elem [%d]\n", ProcID,
+          fprintf(stderr, "P_%d: Deformation Gradient %f %f %f in elem [%d]\n", goma_ctx->proc_id,
                   deform_grad[i][0], deform_grad[i][1], deform_grad[i][2], ei[pg->imtrx]->ielem);
 #else
           fprintf(stderr, "Deformation Gradient %f %f %f in elem [%d]\n", deform_grad[i][0],
@@ -4751,11 +4751,11 @@ int load_elastic_properties(struct Elastic_Constitutive *elcp,
     }
 
     if (nnn == -1) {
-      if (Num_Proc == 1)
+      if (goma_ctx->num_proc == 1)
         GOMA_EH(GOMA_ERROR, "Cannot find NS number on Lame MU CONTACT_LINE model");
     } else {
       if (Proc_NS_Count[nnn] != 1) {
-        if (Num_Proc == 1)
+        if (goma_ctx->num_proc == 1)
           GOMA_EH(GOMA_ERROR, "Illegal NS number on Lame MU CONTACT_LINE model");
       } else {
         inode = Proc_NS_List[Proc_NS_Pointers[nnn]];

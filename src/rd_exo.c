@@ -215,7 +215,7 @@ int rd_exo(Exo_DB *x, /* def'd in exo_struct.h */
 
   if (err) {
     snprintf(err_msg, MAX_CHAR_ERR_MSG,
-             "\nProc %d: Exodus file read error, mesh files may not exist.\n", ProcID);
+             "\nProc %d: Exodus file read error, mesh files may not exist.\n", goma_ctx->proc_id);
     GOMA_EH(GOMA_ERROR, err_msg);
   }
 #endif
@@ -1403,7 +1403,7 @@ void zero_base(Exo_DB *E) {
     }
   }
 
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     zero_base_base_mesh(E);
   } else {
     struct Exodus_Base *base = E->base_mesh;

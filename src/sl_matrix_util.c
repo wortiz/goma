@@ -119,7 +119,7 @@ void print_msr_matrix(int n, int *ija, double *a, double *x)
   if (n < 1) {
     GOMA_EH(GOMA_ERROR, "Bad matrix order.");
   }
-  sprintf(filename, "A%d_of_%d.%d", ProcID + 1, Num_Proc, num_call);
+  sprintf(filename, "A%d_of_%d.%d", goma_ctx->proc_id + 1, goma_ctx->num_proc, num_call);
   of = fopen(filename, "w");
 
   /*   fprintf(of, "# row col value \n");*/
@@ -223,7 +223,7 @@ void print_vbr_matrix(struct GomaLinearSolverData *ams, /* matrix info */
     GOMA_EH(GOMA_ERROR, "Bad matrix order.");
   }
 
-  sprintf(filename, "A%d_of_%d", ProcID + 1, Num_Proc);
+  sprintf(filename, "A%d_of_%d", goma_ctx->proc_id + 1, goma_ctx->num_proc);
 
   of = fopen(filename, "w");
 
@@ -236,7 +236,7 @@ void print_vbr_matrix(struct GomaLinearSolverData *ams, /* matrix info */
 
       block = ams->bindx[j];
 
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         /* account for possibility of different  */
         /*   number of unknowns per element      */
         col_dof = 0;
@@ -264,7 +264,7 @@ void print_vbr_matrix(struct GomaLinearSolverData *ams, /* matrix info */
           a_val = ams->val[ams->indx[indx_kount] + offset];
           offset++;
 
-          if (Num_Proc > 1) {
+          if (goma_ctx->num_proc > 1) {
             if (col < num_internal_dofs[pg->imtrx]) {
               col_kind = 'I';
             } else if (col < num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]) {
@@ -275,7 +275,7 @@ void print_vbr_matrix(struct GomaLinearSolverData *ams, /* matrix info */
           } else {
             col_kind = 'I';
           }
-          fprintf(of, "%d %2d %2d %9f %c\n", ProcID, row + m, col, a_val, col_kind);
+          fprintf(of, "%d %2d %2d %9f %c\n", goma_ctx->proc_id, row + m, col, a_val, col_kind);
         }
         col++;
       }
@@ -410,7 +410,7 @@ gmax_double
     }
     row_max = MAX( row_sum, row_max);
   }
-  row_max = gmax_double (row_max, ProcID, Dim);
+  row_max = gmax_double (row_max, goma_ctx->proc_id, goma_ctx->dim);
   return(row_max);
 } /* END of routine pmax_matrix_norm */
 #endif
@@ -478,7 +478,7 @@ void row_sum_scaling_scale_AC(double **cAC, double **dAC, double *gAC, int nAC) 
   }
 
 #ifdef PARALLEL
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     local_sums = alloc_dbl_1(nAC, 0.0);
     for (iAC = 0; iAC < nAC; iAC++)
       local_sums[iAC] = row_sums[iAC];
@@ -573,10 +573,10 @@ void row_sum_scale_MSR(int N, double a[], int ija[], double b[], double scale[])
       if (dofname) {
         fprintf(stderr,
                 "row_sum_scaling_scale ERROR: Proc %d Row %d is zero, dofname = %s, x=(%g,%g,%g)\n",
-                ProcID, irow, dofname[pg->imtrx][irow], x[0], x[1], x[2]);
+                goma_ctx->proc_id, irow, dofname[pg->imtrx][irow], x[0], x[1], x[2]);
       } else {
         fprintf(stderr, "row_sum_scaling_scale ERROR: Proc %d Row %d is zero, dofname = unknown\n",
-                ProcID, irow);
+                goma_ctx->proc_id, irow);
         fprintf(stderr, "\t var_type = %d, matid = %d, Node = %d, x=(%g,%g,%g)\n",
                 vd->Variable_Type, vd->MatID, inode, x[0], x[1], x[2]);
       }

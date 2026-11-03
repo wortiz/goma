@@ -861,12 +861,12 @@ set(GOMA_USER_SOURCES
     src/user_senkin.F)
 
 set(GOMA_UTIL_INCLUDES
-    include/bc/rotate_util.h include/mm_eh.h include/util/goma_normal.h
+    include/bc/rotate_util.h include/mm_eh.h include/util/goma_normal.h include/util/goma_context.h
     include/util/aprepro_helper.h
     include/util/distance_helpers.h)
 
 set(GOMA_UTIL_SOURCES
-    src/bc/rotate_util.c src/util/goma_normal.c src/mm_eh.c
+    src/bc/rotate_util.c src/util/goma_normal.c src/util/goma_context.c src/mm_eh.c
     src/util/aprepro_helper.cpp
     src/util/distance_helpers.cpp)
 

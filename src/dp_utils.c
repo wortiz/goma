@@ -181,7 +181,7 @@ int ProcWithMaxInt(const int value, int *maxval)
   int in_buf[2], out_buf[2];
 #ifdef PARALLEL
   in_buf[0] = value;
-  in_buf[1] = ProcID;
+  in_buf[1] = goma_ctx->proc_id;
   MPI_Allreduce((void *)in_buf, (void *)out_buf, 1, MPI_2INT, MPI_MAXLOC, MPI_COMM_WORLD);
   *maxval = out_buf[0];
   return out_buf[1];
@@ -216,7 +216,7 @@ void check_parallel_error_FL(char *errstring, char *file_name, int lineno)
     DPRINTF(stderr, " check previous output for cause of error: %s line %d", file_name, lineno);
     fflush(stderr);
     if (parallel_err) {
-      fprintf(stderr, "\tP_%d had a flagged error\n", ProcID);
+      fprintf(stderr, "\tP_%d had a flagged error\n", goma_ctx->proc_id);
     }
     (void)MPI_Finalize();
     exit(-1);
@@ -227,7 +227,7 @@ void check_parallel_error_FL(char *errstring, char *file_name, int lineno)
     DPRINTF(stderr, " check previous output for cause of error: %s line %d", file_name, lineno);
     fflush(stderr);
     if (parallel_err) {
-      fprintf(stderr, "\tP_%d had a flagged error\n", ProcID);
+      fprintf(stderr, "\tP_%d had a flagged error\n", goma_ctx->proc_id);
     }
     exit(-1);
   }
@@ -471,7 +471,7 @@ double gavg_double(double value)
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "gavg_double: MPI_Allreduce returned an error");
   }
-  return out_buf / Num_Proc;
+  return out_buf / goma_ctx->num_proc;
 #else
   return value;
 #endif
@@ -489,12 +489,12 @@ void print_sync_start(int do_print)
  *  Wrapper around AZ_print_sync_start()
  *********************************************************************/
 {
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     int tag = 155;
     static int nullbuf = 0;
     static MPI_Request request;
-    if (ProcID + 1 < Num_Proc) {
-      MPI_Isend(&nullbuf, 1, MPI_INT, ProcID + 1, tag, MPI_COMM_WORLD, &request);
+    if (goma_ctx->proc_id + 1 < goma_ctx->num_proc) {
+      MPI_Isend(&nullbuf, 1, MPI_INT, goma_ctx->proc_id + 1, tag, MPI_COMM_WORLD, &request);
     }
 
     if (do_print) {
@@ -515,11 +515,11 @@ void print_sync_end(int do_print)
  *  Wrapper around AZ_print_sync_end()
  *********************************************************************/
 {
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     int nullbuf = 0;
     int tag = 155;
-    if (ProcID > 0) {
-      MPI_Recv(&nullbuf, 1, MPI_INT, ProcID - 1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    if (goma_ctx->proc_id > 0) {
+      MPI_Recv(&nullbuf, 1, MPI_INT, goma_ctx->proc_id - 1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
   }
   if (do_print) {

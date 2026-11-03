@@ -296,7 +296,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
   af->Assemble_Jacobian = TRUE;
   /* first right time stamp or run stamp to separate the sets */
 
-  if (print_flag && ProcID == 0) {
+  if (print_flag && goma_ctx->proc_id == 0) {
     FILE *jfp;
     if ((jfp = fopen(filenm, "a")) != NULL) {
       fprintf(jfp, "Time/iteration = %e \n", time_value);
@@ -358,7 +358,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
         /**    only do integration if the requested material number  **/
 
         if (blk_id == -1 ||
-            (mn == map_mat_index(blk_id) && dpi->elem_owner[elem_list[i]] == ProcID)) {
+            (mn == map_mat_index(blk_id) && dpi->elem_owner[elem_list[i]] == goma_ctx->proc_id)) {
           /*
            * Yes, "x" gets recycled like garbage. Fortunately, this
            * routine should not write onto "x"...
@@ -2103,7 +2103,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             for (a = 0; a < DIM; a++) {
               delta_Torque[a] = Torque[a] - Torque0[a];
             }
-            if (Num_Proc > 1 && dpi->elem_owner[elem_list[i]] == ProcID) {
+            if (goma_ctx->num_proc > 1 && dpi->elem_owner[elem_list[i]] == goma_ctx->proc_id) {
               proc_flux += delta_flux;
               proc_flux_conv += delta_flux_conv;
               proc_area += delta_area;
@@ -3746,7 +3746,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
             mn = find_mat_number(corner_elem, exo);
 
             if (blk_id == -1 ||
-                (mn == map_mat_index(blk_id) && dpi->elem_owner[corner_elem] == ProcID)) {
+                (mn == map_mat_index(blk_id) && dpi->elem_owner[corner_elem] == goma_ctx->proc_id)) {
 
               err = load_elem_dofptr(corner_elem, exo, x, x, xdot, xdot, 0);
               GOMA_EH(err, "load_elem_dofptr");
@@ -3934,7 +3934,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 delta_Torque[a] = Torque[a] - Torque0[a];
               }
 
-              if (Num_Proc > 1 && dpi->elem_owner[elem_list[i]] == ProcID) {
+              if (goma_ctx->num_proc > 1 && dpi->elem_owner[elem_list[i]] == goma_ctx->proc_id) {
                 proc_flux += delta_flux;
                 proc_flux_conv += delta_flux_conv;
                 proc_area += delta_area;
@@ -4045,7 +4045,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
   }
 
 #ifdef PARALLEL
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     MPI_Allreduce(&proc_flux, &global_flux, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&proc_flux_conv, &global_flux_conv, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
@@ -4062,7 +4062,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
   /**   skip this section if not printing - i.e. for AC conditions  **/
 
-  if (print_flag && ProcID == 0) {
+  if (print_flag && goma_ctx->proc_id == 0) {
     FILE *jfp;
     if ((jfp = fopen(filenm, "a")) != NULL) {
       if (quantity == TORQUE) {
@@ -4186,7 +4186,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
 
   /* first write time stamp or run stamp to separate the sets */
 
-  if (print_flag && ProcID == 0) {
+  if (print_flag && goma_ctx->proc_id == 0) {
     FILE *jfp;
     if ((jfp = fopen(filenm, "a")) != NULL) {
       if (ppvi_type == PPVI_VERBOSE) {
@@ -4279,7 +4279,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
        */
       /*  element crossing interrogation */
       if (quantity == I_SURF_SPECIES || quantity == I_SURF_TEMP) {
-        if (Num_Proc > 1)
+        if (goma_ctx->num_proc > 1)
           GOMA_WH(-1, "SURFACE_SPECIES not recommended in parallel\n");
         if (quantity == I_SURF_SPECIES) {
           for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
@@ -4409,7 +4409,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
 #ifdef PARALLEL
         delta_sum = sum - sum0;
 
-        if (Num_Proc > 1 && dpi->elem_owner[ei[pg->imtrx]->ielem] == ProcID) {
+        if (goma_ctx->num_proc > 1 && dpi->elem_owner[ei[pg->imtrx]->ielem] == goma_ctx->proc_id) {
           proc_sum += delta_sum;
         }
 
@@ -4425,7 +4425,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
   }
 
 #ifdef PARALLEL
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     MPI_Allreduce(&proc_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     sum = global_sum;
@@ -4446,7 +4446,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
       Spec_source_inventory[mn][species_id] += 0.5 * sum * (delta_t + tran->delta_t);
     }
   }
-  if (print_flag && ProcID == 0) {
+  if (print_flag && goma_ctx->proc_id == 0) {
     FILE *jfp;
 
     if ((jfp = fopen(filenm, "a")) != NULL) {
@@ -5721,7 +5721,7 @@ double evaluate_global_flux(const Exo_DB *exo,
 #ifdef PARALLEL
             delta_sum = sum - sum0;
 
-            if (Num_Proc > 1 && dpi->elem_owner[ei[pg->imtrx]->ielem] == ProcID) {
+            if (goma_ctx->num_proc > 1 && dpi->elem_owner[ei[pg->imtrx]->ielem] == goma_ctx->proc_id) {
               proc_sum += delta_sum;
             }
 
@@ -5734,7 +5734,7 @@ double evaluate_global_flux(const Exo_DB *exo,
   }
 
 #ifdef PARALLEL
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
 
     MPI_Allreduce(&proc_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
@@ -5962,7 +5962,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
   /* first right time stamp or run stamp to separate the sets */
 
-  if (print_flag && ProcID == 0) {
+  if (print_flag && goma_ctx->proc_id == 0) {
     FILE *jfp;
     if ((filenm != NULL) && ((jfp = fopen(filenm, "a")) != NULL)) {
       fprintf(jfp, "Time/iteration = %e \n", time_value);
@@ -6020,7 +6020,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
         /**    only do integration if the requested material number  **/
 
         if (mat_id == -1 ||
-            (mn == map_mat_index(mat_id) && dpi->elem_owner[elem_list[i]] == ProcID)) {
+            (mn == map_mat_index(mat_id) && dpi->elem_owner[elem_list[i]] == goma_ctx->proc_id)) {
           /*
            * Yes, "x" gets recycled like garbage. Fortunately, this
            * routine should not write onto "x"...
@@ -7017,7 +7017,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
             mn = find_mat_number(corner_elem, exo);
 
             if (mat_id == -1 ||
-                (mn == map_mat_index(mat_id) && dpi->elem_owner[corner_elem] == ProcID)) {
+                (mn == map_mat_index(mat_id) && dpi->elem_owner[corner_elem] == goma_ctx->proc_id)) {
 
               err = load_elem_dofptr(corner_elem, exo, x, x_sens_p[vector_id], xdot, xdot, 0);
               GOMA_EH(err, "load_elem_dofptr");
@@ -7193,7 +7193,7 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
 
   /**   skip this section if not printing - i.e. for AC conditions  **/
 
-  if (print_flag && ProcID == 0) {
+  if (print_flag && goma_ctx->proc_id == 0) {
     FILE *jfp;
     if ((filenm != NULL) && ((jfp = fopen(filenm, "a")) != NULL)) {
       if (quantity == TORQUE) {

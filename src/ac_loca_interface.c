@@ -422,7 +422,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     gvec_elem[i] = (double **)calloc(tev + tev_post, sizeof(double *));
   }
 
-  wr_result_prelim_exo(rd, exo, ExoFileOut, gvec_elem);
+  wr_result_prelim_exo(rd, exo, goma_ctx->exo_file_out, gvec_elem);
 
   /*
    * This gvec workhorse transports output variables as nodal based vectors
@@ -478,7 +478,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 
   /* FRIENDLY COMMAND LINE EQUIV */
 
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     cl_aux = fopen("goma-cl.txt", "w+");
 
     fprintf(cl_aux, "goma -a -i input ");
@@ -758,8 +758,8 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 #endif
 
   /* Open ASCII output file Soln_OutFile */
-  if (strlen(Soln_OutFile)) {
-    passdown.file = fopen(Soln_OutFile, "w");
+  if (strlen(goma_ctx->soln_out_file)) {
+    passdown.file = fopen(goma_ctx->soln_out_file, "w");
     if (passdown.file == NULL) {
       DPRINTF(stdout, "%s:  opening soln file for writing\n", yo);
       GOMA_EH(GOMA_ERROR, "\t");
@@ -776,7 +776,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 
     /* Check for ARPACK and/or PARPACK */
 #ifndef HAVE_PARPACK
-    if (Num_Proc > 1) {
+    if (goma_ctx->num_proc > 1) {
       GOMA_WH(-1, "PARPACK was not compiled in -- cannot do eigensolves!");
       Linear_Stability = LSA_NONE;
     }
@@ -819,7 +819,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   con.general_info.numUnks = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
   con.general_info.numOwnedUnks = NumUnknowns[pg->imtrx];
   con.general_info.perturb = loca_in->perturb;
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     if (loca_in->Cont_Alg == LOCA_LSA_ONLY) {
       con.general_info.printproc = 5;
     } else {
@@ -890,8 +890,8 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
       con.turning_point_info.nv =
           (double *)array_alloc(1, con.general_info.numUnks, sizeof(double));
       con.general_info.nv_restart = TRUE;
-      if (Num_Proc > 1)
-        multiname(loca_in->NV_exoII_infile, ProcID, Num_Proc);
+      if (goma_ctx->num_proc > 1)
+        multiname(loca_in->NV_exoII_infile, goma_ctx->proc_id, goma_ctx->num_proc);
       DPRINTF(stdout, "Reading previous null vector ...\n");
       err = rd_vectors_from_exoII(con.turning_point_info.nv, loca_in->NV_exoII_infile, 0, 0,
                                   INT_MAX, &timeValueRead, exo);
@@ -908,8 +908,8 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     /* Set variables in the con.pitchfork_info structure: */
     con.pitchfork_info.bif_param = loca_in->TPGuess;
     con.pitchfork_info.psi = (double *)array_alloc(1, con.general_info.numUnks, sizeof(double));
-    if (Num_Proc > 1)
-      multiname(loca_in->NV_exoII_infile, ProcID, Num_Proc);
+    if (goma_ctx->num_proc > 1)
+      multiname(loca_in->NV_exoII_infile, goma_ctx->proc_id, goma_ctx->num_proc);
     DPRINTF(stdout, "Reading previous null vector ...\n");
     err = rd_vectors_from_exoII(con.pitchfork_info.psi, loca_in->NV_exoII_infile, 0, 0, INT_MAX,
                                 &timeValueRead, exo);
@@ -935,9 +935,9 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     con.hopf_info.mass_flag = TRUE;
 
     /* Get Exodus file names for both parts of initial null vector */
-    if (Num_Proc > 1) {
-      multiname(loca_in->NV_exoII_infile, ProcID, Num_Proc);
-      multiname(loca_in->NV_imag_infile, ProcID, Num_Proc);
+    if (goma_ctx->num_proc > 1) {
+      multiname(loca_in->NV_exoII_infile, goma_ctx->proc_id, goma_ctx->num_proc);
+      multiname(loca_in->NV_imag_infile, goma_ctx->proc_id, goma_ctx->num_proc);
     }
 
     /* Allocate arrays for real and imaginary parts of null vector */
@@ -1045,7 +1045,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     print_final(con.general_info.param, nstep, passdown.num_mat_fills, passdown.num_res_fills,
                 passdown.num_linear_its);
 
-  if (strlen(Soln_OutFile))
+  if (strlen(goma_ctx->soln_out_file))
     fclose(passdown.file);
 
   /* Write null vector to file if requested */
@@ -1053,12 +1053,12 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
                           passdown.method == PITCHFORK_CONTINUATION)) {
 
     /* Open a new ExodusII file */
-    if (Num_Proc > 1)
-      multiname(loca_in->NV_exoII_outfile, ProcID, Num_Proc);
-    one_base(exo, Num_Proc);
+    if (goma_ctx->num_proc > 1)
+      multiname(loca_in->NV_exoII_outfile, goma_ctx->proc_id, goma_ctx->num_proc);
+    one_base(exo, goma_ctx->num_proc);
     wr_mesh_exo(exo, loca_in->NV_exoII_outfile, 0);
     wr_result_prelim_exo(rd, exo, loca_in->NV_exoII_outfile, NULL);
-    if (Num_Proc > 1)
+    if (goma_ctx->num_proc > 1)
       wr_dpi(dpi, loca_in->NV_exoII_outfile);
     *passdown.nprint = 0;
 
@@ -1076,16 +1076,16 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   if (loca_in->NVSave && passdown.method == HOPF_CONTINUATION) {
 
     /* Open two new ExodusII files */
-    if (Num_Proc > 1) {
-      multiname(loca_in->NV_exoII_outfile, ProcID, Num_Proc);
-      multiname(loca_in->NV_imag_outfile, ProcID, Num_Proc);
+    if (goma_ctx->num_proc > 1) {
+      multiname(loca_in->NV_exoII_outfile, goma_ctx->proc_id, goma_ctx->num_proc);
+      multiname(loca_in->NV_imag_outfile, goma_ctx->proc_id, goma_ctx->num_proc);
     }
-    one_base(exo, Num_Proc);
+    one_base(exo, goma_ctx->num_proc);
 
     /* First write real part (y_vec) to NV_exoII_outfile */
     wr_mesh_exo(exo, loca_in->NV_exoII_outfile, 0);
     wr_result_prelim_exo(rd, exo, loca_in->NV_exoII_outfile, NULL);
-    if (Num_Proc > 1)
+    if (goma_ctx->num_proc > 1)
       wr_dpi(dpi, loca_in->NV_exoII_outfile);
     *passdown.nprint = 0;
 
@@ -1098,7 +1098,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     /* Then write imaginary part (z_vec) to NV_imag_outfile */
     wr_mesh_exo(exo, loca_in->NV_imag_outfile, 0);
     wr_result_prelim_exo(rd, exo, loca_in->NV_imag_outfile, NULL);
-    if (Num_Proc > 1)
+    if (goma_ctx->num_proc > 1)
       wr_dpi(dpi, loca_in->NV_imag_outfile);
     *passdown.nprint = 0;
 
@@ -1234,7 +1234,7 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
   exchange_dof(passdown.cx, passdown.dpi, x, pg->imtrx);
 
   /* show continuation type */
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     fprintf(stdout, "\n\t----------------------------------");
     switch (passdown.method) {
     case ZERO_ORDER_CONTINUATION:
@@ -1356,8 +1356,8 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
 
   /* Write converged solution */
   if (converged) {
-    if (Write_Intermediate_Solutions == 0 && Unlimited_Output) {
-      write_solution(ExoFileOut, passdown.resid_vector, x, passdown.x_sens_p, passdown.x_old,
+    if (goma_ctx->write_intermediate_solutions == 0 && goma_ctx->unlimited_output) {
+      write_solution(goma_ctx->exo_file_out, passdown.resid_vector, x, passdown.x_sens_p, passdown.x_old,
                      passdown.xdot, passdown.xdot_old, passdown.tev, passdown.tev_post, passdown.gv,
                      passdown.rd, passdown.gvec, passdown.gvec_elem, passdown.nprint, delta_s,
                      passdown.theta, passdown.lambda, NULL, passdown.exo, passdown.dpi);
@@ -1390,7 +1390,7 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
         } else if (augc[iAC].Type == AC_VOLUME) {
           evol_local = augc[iAC].evol;
 #ifdef PARALLEL
-          if (Num_Proc > 1) {
+          if (goma_ctx->num_proc > 1) {
             MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
           }
           evol_local = evol_global;
@@ -1400,7 +1400,7 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
         } else if (augc[iAC].Type == AC_POSITION || augc[iAC].Type == AC_POSITION_MT) {
           evol_local = augc[iAC].evol;
 #ifdef PARALLEL
-          if (Num_Proc > 1) {
+          if (goma_ctx->num_proc > 1) {
             MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
           }
           evol_local = evol_global;
@@ -1602,7 +1602,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
 
       first_linear_solver_call = FALSE;
 
-      if (Debug_Flag > 0) {
+      if (goma_ctx->debug_flag > 0) {
         dump_aztec_status(ams->status);
       }
 
@@ -1670,7 +1670,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
 
   /* Report solve time and status */
   s_end = ut();
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
 #ifdef GOMA_ENABLE_AZTEC
     if (Linear_Solver == AZTEC) {
       if (why == AZ_normal) {
@@ -1811,7 +1811,7 @@ int komplex_linear_solver_conwrap(KOMPLEX_UNUSED double *c,
   lits = ams->status[AZ_its];
   aztec_stringer(why, lits, &stringer[0]);
 
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     if (why == AZ_normal) {
       printf("\tKomplex solve time = %7.1e   lits = %s\n", (s_end - s_start), stringer);
     } else {
@@ -2461,7 +2461,7 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
 
       first_linear_solver_call = FALSE;
 
-      if (Debug_Flag > 0) {
+      if (goma_ctx->debug_flag > 0) {
         dump_aztec_status(ams->status);
       }
 
@@ -2836,7 +2836,7 @@ double gsum_double_conwrap(double sum)
  *    The global sum is returned on all processors.
  */
 {
-  if (Num_Proc > 1)
+  if (goma_ctx->num_proc > 1)
     return goma_gsum_double(sum);
   else
     return sum;
@@ -2858,7 +2858,7 @@ int gmax_int_conwrap(int max)
  * Only used by Eigensolver
  */
 {
-  if (Num_Proc > 1)
+  if (goma_ctx->num_proc > 1)
     return goma_gmax_int(max);
   else
     return max;
@@ -3039,8 +3039,8 @@ void solution_output_conwrap(int num_soln_flag,
                              param1, passdown.file);
     if (error)
       DPRINTF(stdout, "%s:  error writing ASCII soln file\n", yo);
-    if (Write_Intermediate_Solutions == 0 && Unlimited_Output) {
-      write_solution(ExoFileOut, passdown.resid_vector, x, passdown.x_sens_p, passdown.x_old,
+    if (goma_ctx->write_intermediate_solutions == 0 && goma_ctx->unlimited_output) {
+      write_solution(goma_ctx->exo_file_out, passdown.resid_vector, x, passdown.x_sens_p, passdown.x_old,
                      passdown.xdot, passdown.xdot_old, passdown.tev, passdown.tev_post, passdown.gv,
                      passdown.rd, passdown.gvec, passdown.gvec_elem, &n_print, param1,
                      passdown.theta, param1, NULL, passdown.exo, passdown.dpi);
@@ -3235,7 +3235,7 @@ void eigenvector_output_conwrap(int j,
     }
   }
 
-  if (Debug_Flag > 1) {
+  if (goma_ctx->debug_flag > 1) {
     DPRINTF(stdout, "Mode %d eigenvector recorded\n", j);
   }
 

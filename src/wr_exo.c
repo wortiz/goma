@@ -1740,7 +1740,7 @@ void add_info_stamp(Exo_DB *exo) {
    * -7 -- current working directory
    */
 
-  if (ProcID < 8) /* too much I/O overhead for many procs */
+  if (goma_ctx->proc_id < 8) /* too much I/O overhead for many procs */
   {
     char *cwderr = getcwd(buf, MAX_LINE_LENGTH + 1);
     if (cwderr == NULL) {

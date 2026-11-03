@@ -463,7 +463,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
    */
 
   /* Set step_fix only if parallel run and only if fix freq is enabled*/
-  if (Num_Proc > 1 && tran->fix_freq > 0) {
+  if (goma_ctx->num_proc > 1 && tran->fix_freq > 0) {
     step_fix = 1; /* Always fix on the first timestep to match print frequency */
   }
 
@@ -498,10 +498,10 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             efv->ev_etch_area, efv->ev_etch_depth);
   }
 
-  if (Unlimited_Output && strlen(Soln_OutFile)) {
-    file = fopen(Soln_OutFile, "w");
+  if (goma_ctx->unlimited_output && strlen(goma_ctx->soln_out_file)) {
+    file = fopen(goma_ctx->soln_out_file, "w");
     if (file == NULL) {
-      fprintf(stdout, "%s:  opening soln file, %s, for writing\n", yo, Soln_OutFile);
+      fprintf(stdout, "%s:  opening soln file, %s, for writing\n", yo, goma_ctx->soln_out_file);
       GOMA_EH(GOMA_ERROR, "Can not open solution file\n");
     }
   }
@@ -638,7 +638,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         gvec_elem[i] = (double **)alloc_ptr_1(tev + tev_post);
       }
     }
-    wr_result_prelim_exo(rd, exo, ExoFileOut, gvec_elem);
+    wr_result_prelim_exo(rd, exo, goma_ctx->exo_file_out, gvec_elem);
   }
 
   /*
@@ -738,7 +738,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     err = GomaSparseMatrix_SetProblemGraph(
         goma_matrix, num_internal_dofs[pg->imtrx], num_boundary_dofs[pg->imtrx],
         num_external_dofs[pg->imtrx], local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,
-        dpi, cx[pg->imtrx], pg->imtrx, Debug_Flag, ams[JAC]);
+        dpi, cx[pg->imtrx], pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
     GOMA_EH(err, "GomaSparseMatrix_SetProblemGraph");
     ams[JAC]->GomaMatrixData = goma_matrix;
 #ifdef GOMA_ENABLE_PETSC
@@ -926,7 +926,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
   if (Output_Variable_Stats) {
     err = variable_stats(x, timeValueRead, FALSE);
     GOMA_EH(err, "Problem with variable_stats!");
-    if (ProcID == 0)
+    if (goma_ctx->proc_id == 0)
       fflush(stdout);
   }
 
@@ -994,10 +994,10 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
     GOMA_EH(error, "Error writing ASCII soln file.");
 
-    if (Write_Intermediate_Solutions == 0) {
+    if (goma_ctx->write_intermediate_solutions == 0) {
       nprint = 0;
 
-      write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev, tev_post,
+      write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev, tev_post,
                      gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, x_pp, exo, dpi);
     } /* end of if Write Intermediate Solutions */
 
@@ -1010,7 +1010,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       for (iAC = 0; iAC < nAC; iAC++) {
         evol_local = augc[iAC].evol;
 #ifdef PARALLEL
-        if (Num_Proc > 1 && (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
+        if (goma_ctx->num_proc > 1 && (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
                              augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
           MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
           evol_local = evol_global;
@@ -1035,7 +1035,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
           lsvel_local = augc[iAC].lsvel;
 
 #ifdef PARALLEL
-          if (Num_Proc > 1) {
+          if (goma_ctx->num_proc > 1) {
             MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             MPI_Allreduce(&lsvel_local, &lsvel_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             evol_local = evol_global;
@@ -1087,7 +1087,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       if (Output_Variable_Stats) {
         err = variable_stats(x, time1, Output_Variable_Regression);
         GOMA_EH(err, "Problem with variable_stats!");
-        if (ProcID == 0)
+        if (goma_ctx->proc_id == 0)
           fflush(stdout);
       }
 
@@ -1135,7 +1135,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
    *                            Transient solution process
    ********************************************************************************/
   else {
-    if (Debug_Flag && ProcID == 0) {
+    if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
       fprintf(stdout, "MaxTimeSteps: %d \tTimeMax: %f\n", tran->MaxTimeSteps, tran->TimeMax);
       fprintf(stdout, "solving transient problem\n");
     }
@@ -1272,13 +1272,13 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
      * an optional flag in the input file
      *  -> Helpful in debugging what's going on.
      */
-    if (Write_Initial_Solution) {
+    if (goma_ctx->write_initial_solution) {
       if (file != NULL) {
         error = write_ascii_soln(x, resid_vector, numProcUnknowns, x_AC, nAC, time, file);
         if (error != 0)
           DPRINTF(stderr, "%s:  error writing ASCII soln file\n", yo);
       }
-      (void)write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
+      (void)write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
                            tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time, x_pp,
                            exo, dpi);
       nprint++;
@@ -1493,7 +1493,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             DPRINTF(stdout, "\n\t\t Surface object level set initialization : ");
 
             /* parallel synchronization of initialization surfaces */
-            if (Num_Proc > 1) {
+            if (goma_ctx->num_proc > 1) {
               if (!ls->init_surf_list)
                 ls->init_surf_list = create_surf_list();
               assemble_Global_surf_list(ls->init_surf_list);
@@ -1507,9 +1507,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
               FILE *data_out;
               int II, je;
 
-              if (ProcID == 0)
+              if (goma_ctx->proc_id == 0)
                 data_out = fopen("Proc0.dat", "w");
-              if (ProcID == 1)
+              if (goma_ctx->proc_id == 1)
                 data_out = fopen("Proc1.dat", "w");
 
               fprintf(data_out, "num_total_nodes:  %d \n", num_total_nodes);
@@ -1666,7 +1666,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
               DPRINTF(stdout, "\n\t\t Surface object initialization for phase function: %d", i);
 
               /* parallel synchronization of initialization surfaces */
-              if (Num_Proc > 1) {
+              if (goma_ctx->num_proc > 1) {
                 if (!ls->init_surf_list)
                   ls->init_surf_list = create_surf_list();
                 assemble_Global_surf_list(ls->init_surf_list);
@@ -1716,7 +1716,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         create_subsurfs(ls->last_surf_list, x_old, exo);
       }
 
-      if (ProcID == 0) {
+      if (goma_ctx->proc_id == 0) {
         if (theta == 0.0)
           strcpy(tspstring, "(BE)");
         else if (theta == 0.5)
@@ -1880,7 +1880,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         memset(scale, 0, sizeof(double) * numProcUnknowns);
         memset(x_update, 0, sizeof(double) * (numProcUnknowns + numProcUnknowns));
         dcopy1(numProcUnknowns, xdot, xdot_old);
-        wr_result_prelim_exo(rd, exo, ExoFileOut, gvec_elem);
+        wr_result_prelim_exo(rd, exo, goma_ctx->exo_file_out, gvec_elem);
         nprint = 0;
         //        (void) write_solution(ExoFileOut, resid_vector, x, x_sens_p,
         //                              x_old, xdot, xdot_old, tev, tev_post, gv,
@@ -2076,12 +2076,12 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
           }
           max_distance = distance;
 
-          if (ProcID == 0) {
+          if (goma_ctx->proc_id == 0) {
             printf("\nDelta x %g\n", max_distance);
           }
 
           if (steady_state_reached) {
-            if (ProcID == 0) {
+            if (goma_ctx->proc_id == 0) {
               printf("\n Steady state reached \n");
             }
             goto free_and_clear;
@@ -2115,7 +2115,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
               fprintf(stderr, "%s:  error writing ASCII soln file\n", yo);
             }
           }
-          if (Write_Intermediate_Solutions == 0) {
+          if (goma_ctx->write_intermediate_solutions == 0) {
 #ifdef LIBRARY_MODE
             lib_print = FALSE;
             if (libio->goma_first == 0) {
@@ -2135,7 +2135,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             if (lib_print)
             /* Write out the full solution */
             {
-              write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
+              write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
                              tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time, x_pp,
                              exo, dpi);
               nprint++;
@@ -2146,7 +2146,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
                                  &time_value, delta_t, theta, x_pp, exo, dpi, rd, NULL);
             }
 #else
-            write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
+            write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
                            tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time, x_pp,
                            exo, dpi);
             nprint++;
@@ -2165,7 +2165,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             for (iAC = 0; iAC < nAC; iAC++) {
               evol_local = augc[iAC].evol;
 #ifdef PARALLEL
-              if (Num_Proc > 1 &&
+              if (goma_ctx->num_proc > 1 &&
                   (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
                    augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
                 MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -2408,7 +2408,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             err = variable_stats(x, time, FALSE);
           }
           GOMA_EH(err, "Problem with variable_stats!");
-          if (ProcID == 0)
+          if (goma_ctx->proc_id == 0)
             fflush(stdout);
         }
 
@@ -2453,8 +2453,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
               fprintf(stderr, "%s:  error writing ASCII soln file\n", yo);
             }
           }
-          if (Write_Intermediate_Solutions == 0) {
-            write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
+          if (goma_ctx->write_intermediate_solutions == 0) {
+            write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
                            tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time, x_pp,
                            exo, dpi);
             nprint++;
@@ -3107,10 +3107,10 @@ int anneal_mesh(double x[],
     exo->base_mesh->z_coord = &new_coord[2][0];
   }
 
-  if (Num_Proc > 1)
-    multiname(afilename, ProcID, Num_Proc);
+  if (goma_ctx->num_proc > 1)
+    multiname(afilename, goma_ctx->proc_id, goma_ctx->num_proc);
 
-  one_base(exo, Num_Proc); /* cause node numbers, etc. to start at 1 */
+  one_base(exo, goma_ctx->num_proc); /* cause node numbers, etc. to start at 1 */
 
   wr_mesh_exo(exo, afilename, 0);
 
@@ -3152,7 +3152,7 @@ int anneal_mesh(double x[],
   rd->nnv = rd_nnv_save; /* Return values to normal */
   rd->nev = rd_nev_save;
 
-  if (Num_Proc > 1)
+  if (goma_ctx->num_proc > 1)
     wr_dpi(dpi, afilename);
 
   for (i = 0; i < rd->TotalNVSolnOutput; i++) {
@@ -3180,7 +3180,7 @@ int anneal_mesh(double x[],
     wr_global_result_exo(exo, afilename, 1, rd->ngv, glob_vars_val);
   }
 
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     anneal_dat = fopen("anneal.dat", "w");
 
     (void)write_ascii_soln(x_file, NULL, numProcUnknowns, x, 0, 0.0, anneal_dat);
@@ -3190,9 +3190,9 @@ int anneal_mesh(double x[],
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  if (!Skip_Fix && Num_Proc > 1 && ProcID == 0) {
+  if (!goma_ctx->skip_fix && goma_ctx->num_proc > 1 && goma_ctx->proc_id == 0) {
     DPRINTF(stdout, "\nFixing exodus file %s\n", anneal_file);
-    fix_exo_file(Num_Proc, anneal_file);
+    fix_exo_file(goma_ctx->num_proc, anneal_file);
   }
 
   /*
@@ -3601,7 +3601,7 @@ int variable_stats(double *x, const double time, const int coord_linear) {
     ncp[i] = ncp_buf[i];
   }
 #endif
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
       double std_arg = 0.;
       if (upd->vp[pg->imtrx][var] > -1) {
@@ -3616,7 +3616,7 @@ int variable_stats(double *x, const double time, const int coord_linear) {
     }
   }
   DPRINTF(stdout, "============================================================= \n");
-  if (ProcID == 0 && coord_linear) {
+  if (goma_ctx->proc_id == 0 && coord_linear) {
     int dir, dirj, j, k;
     double reg_A[4][4], reg_RHS[4][MAX_PROB_VAR];
     int n_rhs, reg_N = 0, reg_order = 4;

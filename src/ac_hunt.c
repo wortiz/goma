@@ -203,7 +203,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 #endif
 
   /* Set step_fix only if parallel run and only if fix freq is enabled*/
-  if (Num_Proc > 1 && cont->fix_freq > 0) {
+  if (goma_ctx->num_proc > 1 && cont->fix_freq > 0) {
     step_fix = 1; /* Always fix on the first timestep to match print frequency */
   }
 
@@ -228,8 +228,8 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
    * For 2D prototype problem:  allocate space for T, dx, dy arrays
    */
 
-  if (strlen(Soln_OutFile)) {
-    file = fopen(Soln_OutFile, "w");
+  if (strlen(goma_ctx->soln_out_file)) {
+    file = fopen(goma_ctx->soln_out_file, "w");
     if (file == NULL) {
       DPRINTF(stdout, "%s:  opening soln file for writing\n", yo);
       GOMA_EH(GOMA_ERROR, "\t");
@@ -317,7 +317,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     gvec_elem[i] = (double **)calloc(tev + tev_post, sizeof(double *));
   }
 
-  wr_result_prelim_exo(rd, exo, ExoFileOut, gvec_elem);
+  wr_result_prelim_exo(rd, exo, goma_ctx->exo_file_out, gvec_elem);
 
   /*
    * This gvec workhorse transports output variables as nodal based vectors
@@ -464,7 +464,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
     path[iHC] = path1[iHC] = lambda[iHC];
 
-    if (Debug_Flag && ProcID == 0) {
+    if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
       fprintf(stdout, "MaxPathSteps: %d \tlambdaEnd: %f\n", MaxPathSteps, lambdaEnd[iHC]);
       fprintf(stdout, "continuation in progress\n");
     }
@@ -556,7 +556,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     err = GomaSparseMatrix_SetProblemGraph(
         goma_matrix, num_internal_dofs[pg->imtrx], num_boundary_dofs[pg->imtrx],
         num_external_dofs[pg->imtrx], local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,
-        dpi, cx, pg->imtrx, Debug_Flag, ams[JAC]);
+        dpi, cx, pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
     GOMA_EH(err, "GomaSparseMatrix_SetProblemGraph");
 
     ams[JAC]->GomaMatrixData = goma_matrix;
@@ -705,7 +705,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
   if (Output_Variable_Stats) {
     err = variable_stats(x, path1[0], Output_Variable_Regression);
     GOMA_EH(err, "Problem with variable_stats!");
-    if (ProcID == 0)
+    if (goma_ctx->proc_id == 0)
       fflush(stdout);
   }
 
@@ -815,7 +815,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
     exchange_dof(cx, dpi, x, pg->imtrx);
 
-    if (ProcID == 0) {
+    if (goma_ctx->proc_id == 0) {
       DPRINTF(stdout, "\n\t----------------------------------");
       switch (Continuation) {
       case HUN_ZEROTH:
@@ -858,9 +858,9 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
       if (converged) {
         GOMA_EH(error, "error writing ASCII soln file."); /* srs need to check */
 
-        if (Write_Intermediate_Solutions == 0) {
+        if (goma_ctx->write_intermediate_solutions == 0) {
           exo_time = aldALC[0] * path1[0];
-          write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
+          write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
                          tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_s[0], theta, exo_time,
                          NULL, exo, dpi);
         }
@@ -879,7 +879,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
           for (iAC = 0; iAC < nAC; iAC++) {
             evol_local = augc[iAC].evol;
 #ifdef PARALLEL
-            if (Num_Proc > 1 && (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
+            if (goma_ctx->num_proc > 1 && (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
                                  augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
               MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
               evol_local = evol_global;
@@ -1107,8 +1107,8 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
               (damp_factor2 <= 1. && damp_factor2 >= 0.) &&
               (damp_factor3 <= 1. && damp_factor3 >= 0.)) {
             if (hunt[0].BCID == -1) {
-              if (Write_Intermediate_Solutions == 0) {
-                write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
+              if (goma_ctx->write_intermediate_solutions == 0) {
+                write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
                                tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_s[0], theta,
                                custom_tol1, NULL, exo, dpi);
                 nprint++;
@@ -1121,9 +1121,9 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
                     custom_tol3);
           } else {
             if (hunt[0].BCID == -1) {
-              if (Write_Intermediate_Solutions == 0) {
+              if (goma_ctx->write_intermediate_solutions == 0) {
                 DPRINTF(stdout, "  writing solution %g  \n", damp_factor1);
-                write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
+                write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
                                tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_s[0], theta,
                                damp_factor1, NULL, exo, dpi);
                 nprint++;
@@ -1198,9 +1198,9 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
       if (error) {
         DPRINTF(stderr, "%s:  error writing ASCII soln file\n", yo);
       }
-      if (Write_Intermediate_Solutions == 0) {
+      if (goma_ctx->write_intermediate_solutions == 0) {
         exo_time = aldALC[0] * path1[0];
-        write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev, tev_post,
+        write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev, tev_post,
                        gv, rd, gvec, gvec_elem, &nprint, delta_s[0], theta, exo_time, NULL, exo,
                        dpi);
         nprint++;
@@ -1214,7 +1214,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     if (Output_Variable_Stats) {
       err = variable_stats(x, path1[0], Output_Variable_Regression);
       GOMA_EH(err, "Problem with variable_stats!");
-      if (ProcID == 0)
+      if (goma_ctx->proc_id == 0)
         fflush(stdout);
     }
 
@@ -1428,7 +1428,7 @@ free_and_clear:
   safer_free((void **)&Local_Offset);
   safer_free((void **)&Dolphin);
 
-  if (strlen(Soln_OutFile)) {
+  if (strlen(goma_ctx->soln_out_file)) {
     fclose(file);
   }
 

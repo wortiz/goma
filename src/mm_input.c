@@ -199,7 +199,7 @@ void read_input_file(struct Command_line_command **clc, int nclc) {
   char err_msg[MAX_CHAR_IN_INPUT];
   char input[MAX_CHAR_IN_INPUT];
   FILE *ifp;
-  char *echo = Echo_Input_File;
+  char *echo = goma_ctx->echo_input_file;
 
   /*
    * BEGIN EXECUTION
@@ -207,8 +207,8 @@ void read_input_file(struct Command_line_command **clc, int nclc) {
   nAC = 0;
   augc = NULL;
 
-  if (!New_Parser_Flag) {
-    if ((ifp = fopen(Input_File, "r")) != NULL) {
+  if (!goma_ctx->new_parser_flag) {
+    if ((ifp = fopen(goma_ctx->input_file, "r")) != NULL) {
 
       rd_file_specs(ifp, input);
 
@@ -250,7 +250,7 @@ void read_input_file(struct Command_line_command **clc, int nclc) {
       ECHO("CLOSE", echo);
 
     } else {
-      sprintf(Err_Msg, "Could not open input file \"%s\"\n", Input_File);
+      sprintf(Err_Msg, "Could not open input file \"%s\"\n", goma_ctx->input_file);
       GOMA_EH(GOMA_ERROR, Err_Msg);
     }
   } else {
@@ -694,7 +694,7 @@ void rd_file_specs(FILE *ifp, char *input) {
   int foundBrkFile;
 
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   look_for_optional(ifp, "FEM File Specifications", input, '=');
 
@@ -703,9 +703,9 @@ void rd_file_specs(FILE *ifp, char *input) {
   look_for(ifp, "FEM file", input, '=');
   (void)read_string(ifp, input, '\n');
   strip(input);
-  (void)strcpy(ExoFile, input);
+  (void)strcpy(goma_ctx->exo_file, input);
 
-  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "FEM file", ExoFile);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "FEM file", goma_ctx->exo_file);
   ECHO(echo_string, echo_file);
 
   /*
@@ -717,45 +717,45 @@ void rd_file_specs(FILE *ifp, char *input) {
   look_for(ifp, "Output EXODUS II file", input, '=');
   (void)read_string(ifp, input, '\n');
   strip(input);
-  strcpy(ExoFileOut, input);
-  strcpy(ExoFileOutMono, input);
-  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Output EXODUS II file", ExoFileOut);
+  strcpy(goma_ctx->exo_file_out, input);
+  strcpy(goma_ctx->exo_file_out_mono, input);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Output EXODUS II file", goma_ctx->exo_file_out);
   ECHO(echo_string, echo_file);
 
   look_for(ifp, "GUESS file", input, '=');
   (void)read_string(ifp, input, '\n');
   strip(input);
   if (strcasecmp(input, "NONE") && strcasecmp(input, "NO")) {
-    strcpy(Init_GuessFile, input);
+    strcpy(goma_ctx->init_guess_file, input);
   } else {
-    Init_GuessFile[0] = '\0';
+    goma_ctx->init_guess_file[0] = '\0';
   }
 
-  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "GUESS file", Init_GuessFile);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "GUESS file", goma_ctx->init_guess_file);
   ECHO(echo_string, echo_file);
 
   look_for(ifp, "SOLN file", input, '=');
   (void)read_string(ifp, input, '\n');
   strip(input);
   if (strcasecmp(input, "NONE") && strcasecmp(input, "NO")) {
-    strcpy(Soln_OutFile, input);
+    strcpy(goma_ctx->soln_out_file, input);
   } else {
-    Soln_OutFile[0] = '\0';
+    goma_ctx->soln_out_file[0] = '\0';
   }
 
-  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "SOLN file", Soln_OutFile);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "SOLN file", goma_ctx->soln_out_file);
   ECHO(echo_string, echo_file);
 
   /* Find BRK file */
 
   foundBrkFile = look_for_optional(ifp, "External Decomposition", input, '=');
-  if (foundBrkFile == 1 && Decompose_Flag != 0) {
+  if (foundBrkFile == 1 && goma_ctx->decompose_flag != 0) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcasecmp(input, "YES") == 0 || strcasecmp(input, "ON") == 0) {
-      Decompose_Flag = 0;
+      goma_ctx->decompose_flag = 0;
     } else if (strcasecmp(input, "NO") || strcasecmp(input, "OFF") == 0) {
-      Decompose_Flag = 1;
+      goma_ctx->decompose_flag = 1;
     } else {
       GOMA_EH(GOMA_ERROR,
               "Unexpected input for External Decomposition: %s, expected (YES/NO) or (ON/OFF)",
@@ -766,13 +766,13 @@ void rd_file_specs(FILE *ifp, char *input) {
   }
 
   foundBrkFile = look_for_optional(ifp, "Decomposition Type", input, '=');
-  if (foundBrkFile == 1 && Decompose_Type < 1) {
+  if (foundBrkFile == 1 && goma_ctx->decompose_type < 1) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcasecmp(input, "kway") == 0) {
-      Decompose_Type = 2;
+      goma_ctx->decompose_type = 2;
     } else if (strcasecmp(input, "rcb") == 0) {
-      Decompose_Type = 1;
+      goma_ctx->decompose_type = 1;
     } else {
       GOMA_EH(GOMA_ERROR, "Unexpected input for Decomposition_Type: %s, expected kway or rcb",
               input);
@@ -782,13 +782,13 @@ void rd_file_specs(FILE *ifp, char *input) {
   }
 
   foundBrkFile = look_for_optional(ifp, "Disable Fix", input, '=');
-  if (foundBrkFile == 1 && Skip_Fix != 1) {
+  if (foundBrkFile == 1 && goma_ctx->skip_fix != 1) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcasecmp(input, "YES") == 0 || strcasecmp(input, "ON") == 0) {
-      Skip_Fix = 0;
+      goma_ctx->skip_fix = 0;
     } else if (strcasecmp(input, "NO") || strcasecmp(input, "OFF") == 0) {
-      Skip_Fix = 1;
+      goma_ctx->skip_fix = 1;
     } else {
       GOMA_EH(GOMA_ERROR,
               "Unexpected input for External Decomposition: %s, expected (YES/NO) or (ON/OFF)",
@@ -802,11 +802,11 @@ void rd_file_specs(FILE *ifp, char *input) {
    *   look_for Optional Domain mapping file, the usage of the default
    *   will be indicated by the null character string in the name.
    */
-  DomainMappingFile[0] = '\0';
+  goma_ctx->domain_mapping_file[0] = '\0';
   foundMappingFile =
-      look_for_optional_string(ifp, "Domain Mapping File", DomainMappingFile, MAX_FNL);
+      look_for_optional_string(ifp, "Domain Mapping File", goma_ctx->domain_mapping_file, MAX_FNL);
   if (foundMappingFile == 1) {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Domain Mapping File", DomainMappingFile);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Domain Mapping File", goma_ctx->domain_mapping_file);
     ECHO(echo_string, echo_file);
   }
 
@@ -819,10 +819,10 @@ void rd_file_specs(FILE *ifp, char *input) {
   (void)read_string(ifp, input, '\n');
   strip(input);
   if (strcasecmp(input, "no") == 0) {
-    Write_Intermediate_Solutions = FALSE;
+    goma_ctx->write_intermediate_solutions = FALSE;
     ECHO("Write intermediate results = no", echo_file);
   } else if (strcasecmp(input, "yes") == 0) {
-    Write_Intermediate_Solutions = TRUE;
+    goma_ctx->write_intermediate_solutions = TRUE;
     ECHO("Write intermediate results = yes", echo_file);
   } else {
     GOMA_EH(GOMA_ERROR, "Bad specification for intermediate results");
@@ -839,10 +839,10 @@ void rd_file_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (!strcasecmp(input, "no")) {
-      Write_Initial_Solution = FALSE;
+      goma_ctx->write_initial_solution = FALSE;
       ECHO("Write initial solution = no", echo_file);
     } else if (!strcasecmp(input, "yes")) {
-      Write_Initial_Solution = TRUE;
+      goma_ctx->write_initial_solution = TRUE;
       ECHO("Write initial solution = yes", echo_file);
     } else {
       GOMA_EH(GOMA_ERROR, "Bad specification for intermediate results");
@@ -879,7 +879,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
 
   static const char yo[] = "rd_genl_specs";
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
   char ftype[MAX_CHAR_IN_INPUT];
 
   int iread;
@@ -893,28 +893,28 @@ void rd_genl_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Output Level", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &Iout) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->iout) != 1) {
       DPRINTF(stderr, "%s:\tError reading Output Level\n", yo);
       exit(-1);
     }
   } else {
-    Iout = 0;
+    goma_ctx->iout = 0;
   }
 
-  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Output Level", Iout);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Output Level", goma_ctx->iout);
   ECHO(echo_string, echo_file);
 
   iread = look_for_optional(ifp, "Debug", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &Debug_Flag) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->debug_flag) != 1) {
       DPRINTF(stderr, "%s:\tError reading Debug Level\n", yo);
       exit(-1);
     }
   } else {
-    Debug_Flag = 0;
+    goma_ctx->debug_flag = 0;
   }
 
-  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Debug", Debug_Flag);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Debug", goma_ctx->debug_flag);
   ECHO(echo_string, echo_file);
 
   iread = look_for_optional(ifp, "Print 3D BC Dup", input, '=');
@@ -969,13 +969,13 @@ void rd_genl_specs(FILE *ifp, char *input) {
       }
       break;
     case 3:
-      if (sscanf(third_string, "%d", &ExoTimePlane) != 1) {
+      if (sscanf(third_string, "%d", &goma_ctx->exo_time_plane) != 1) {
         GOMA_EH(GOMA_ERROR, "Time plane for read_exoII_file option is undecipherable");
       }
       FALLTHROUGH;
     case 2:
       Guess_Flag = 6;
-      strcpy(ExoAuxFile, second_string);
+      strcpy(goma_ctx->exo_aux_file, second_string);
       break;
     default:
       DPRINTF(stderr, "%s:\tUnknown initial guess (%s)\n", yo, input);
@@ -989,7 +989,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
       SPF(echo_string, "%s = %s %s", "Initial Guess", first_string, second_string);
       break;
     case 3:
-      SPF(echo_string, "%s = %s %s %d", "Initial Guess", first_string, second_string, ExoTimePlane);
+      SPF(echo_string, "%s = %s %s %d", "Initial Guess", first_string, second_string, goma_ctx->exo_time_plane);
       break;
     }
     ECHO(echo_string, echo_file);
@@ -1488,7 +1488,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
 
 void rd_timeint_specs(FILE *ifp, char *input) {
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   int mn, iread, i;
   /*  double init_time; this global variable appears in rf_fem.h */
@@ -1655,7 +1655,7 @@ void rd_timeint_specs(FILE *ifp, char *input) {
     /* Look for fix frequency */
 
     /* only look for fix frequency in parallel */
-    if (Num_Proc > 1 && !Skip_Fix) {
+    if (goma_ctx->num_proc > 1 && !goma_ctx->skip_fix) {
       iread = look_for_optional(ifp, "Fix Frequency", input, '=');
       if (iread == 1) {
         tran->fix_freq = read_int(ifp, "Fix Frequency");
@@ -1924,7 +1924,7 @@ void rd_timeint_specs(FILE *ifp, char *input) {
 
 void rd_levelset_specs(FILE *ifp, char *input) {
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   int iread, i;
 
@@ -3318,7 +3318,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
 
 void rd_turbulent_specs(FILE *ifp, char *input) {
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   int iread;
 
@@ -3486,37 +3486,37 @@ void rd_elem_quality_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "jac") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tMinimum Jacobian quality tolerance\n", yo);
       }
       eqm->tol_type = EQM_JAC;
     } else if (strcmp(input, "vol") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tMinimum Volume change quality tolerance\n", yo);
       }
       eqm->tol_type = EQM_VOL;
     } else if (strcmp(input, "ang") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tMinimum Angle quality tolerance\n", yo);
       }
       eqm->tol_type = EQM_ANG;
     } else if (strcmp(input, "tri") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tMinimum Triangle quality tolerance\n", yo);
       }
       eqm->tol_type = EQM_TRI;
     } else if (strcmp(input, "min") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tMinimum overall quality tolerance\n", yo);
       }
       eqm->tol_type = EQM_MIN;
     } else if (strcmp(input, "avg") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tWeighted average quality tolerance\n", yo);
       }
       eqm->tol_type = EQM_AVG;
     } else if (strcmp(input, "wtmin") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tWeighted minimum quality tolerance\n", yo);
       }
       eqm->tol_type = EQM_WTMIN;
@@ -3547,7 +3547,7 @@ void rd_track_specs(FILE *ifp, char *input) {
   double range;
   double beg_angle = 0.0, end_angle = 0.0;
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   yo = "rd_track_specs";
 
@@ -3580,37 +3580,37 @@ void rd_track_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "none") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tno continuation\n", yo);
       }
       Continuation = ALC_NONE;
     } else if (strcmp(input, "zero") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tzero order continuation\n", yo);
       }
       Continuation = ALC_ZEROTH;
     } else if (strcmp(input, "hzero") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tzero order hunting continuation\n", yo);
       }
       Continuation = HUN_ZEROTH;
     } else if (strcmp(input, "first") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tfirst order continuation\n", yo);
       }
       Continuation = ALC_FIRST;
     } else if (strcmp(input, "hfirst") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tfirst order hunting continuation\n", yo);
       }
       Continuation = HUN_FIRST;
     } else if (strcmp(input, "second") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tsecond order continuation\n", yo);
       }
       Continuation = ALC_SECOND;
     } else if (strcmp(input, "loca") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tLOCA continuation library\n", yo);
       }
       Continuation = LOCA;
@@ -3628,37 +3628,37 @@ void rd_track_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "none") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tno continuation\n", yo);
       }
       Continuation = ALC_NONE;
     } else if (strcmp(input, "BC") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tBC continuation\n", yo);
       }
       ContType = 1;
     } else if (strcmp(input, "MT") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tMATPROP continuation\n", yo);
       }
       ContType = 2;
     } else if (strcmp(input, "AC") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tAC continuation\n", yo);
       }
       ContType = 3;
     } else if (strcmp(input, "UM") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tUser model continuation\n", yo);
       }
       ContType = 4;
     } else if (strcmp(input, "UF") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tUser-defined function continuation\n", yo);
       }
       ContType = 5;
     } else if (strcmp(input, "AN") == 0) {
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tAngular parameter continuation\n", yo);
       }
       ContType = 6;
@@ -3796,7 +3796,7 @@ void rd_track_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
 
     cont->fix_freq = 0;
-    if (Num_Proc > 1) {
+    if (goma_ctx->num_proc > 1) {
       iread = look_for_optional(ifp, "Continuation Fix Frequency", input, '=');
       if (iread == 1) {
         cont->fix_freq = read_int(ifp, "Continuation Fix Frequency");
@@ -3840,7 +3840,7 @@ void rd_track_specs(FILE *ifp, char *input) {
         strip(input);
 
         if (strcmp(input, "ss") == 0) {
-          if (Debug_Flag && ProcID == 0) {
+          if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
             printf("%s:\tsteady state continuation\n", yo);
           }
 
@@ -3857,14 +3857,14 @@ void rd_track_specs(FILE *ifp, char *input) {
         }
 
         else if (strcmp(input, "zero") == 0) {
-          if (Debug_Flag && ProcID == 0) {
+          if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
             printf("%s:\tzero order continuation\n", yo);
           }
           SPF(endofstring(echo_string), " %s", input);
         }
 
         else if (strcmp(input, "first") == 0) {
-          if (Debug_Flag && ProcID == 0) {
+          if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
             printf("%s:\tzero order continuation\n", yo);
           }
           loca_in->Cont_Order = 1;
@@ -3872,7 +3872,7 @@ void rd_track_specs(FILE *ifp, char *input) {
         }
 
         else if (strcmp(input, "alc") == 0) {
-          if (Debug_Flag && ProcID == 0) {
+          if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
             printf("%s:\tarc length continuation\n", yo);
           }
           loca_in->Cont_Order = 2;
@@ -3880,7 +3880,7 @@ void rd_track_specs(FILE *ifp, char *input) {
         }
 
         else if (strcmp(input, "tp") == 0) {
-          if (Debug_Flag && ProcID == 0) {
+          if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
             printf("%s:\tturning point continuation\n", yo);
           }
           loca_in->Cont_Alg = TP_CONTINUATION;
@@ -3888,7 +3888,7 @@ void rd_track_specs(FILE *ifp, char *input) {
         }
 
         else if (strcmp(input, "pf") == 0) {
-          if (Debug_Flag && ProcID == 0) {
+          if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
             printf("%s:\tpitchfork continuation\n", yo);
           }
           loca_in->Cont_Alg = PF_CONTINUATION;
@@ -3896,7 +3896,7 @@ void rd_track_specs(FILE *ifp, char *input) {
         }
 
         else if (strcmp(input, "hp") == 0) {
-          if (Debug_Flag && ProcID == 0) {
+          if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
             printf("%s:\tHopf continuation\n", yo);
           }
           loca_in->Cont_Alg = HP_CONTINUATION;
@@ -4027,7 +4027,7 @@ void rd_track_specs(FILE *ifp, char *input) {
         cpcc =
             (struct Continuation_Conditions *)calloc(nCC, sizeof(struct Continuation_Conditions));
 
-        if (Debug_Flag && ProcID == 0) {
+        if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
           printf("%s:\tallocated %d copies of the %lu sized\n", yo, nCC,
                  (long unsigned int)sizeof(struct Continuation_Conditions));
           printf("%s:\tCC structure.\n", yo);
@@ -4300,32 +4300,32 @@ void rd_track_specs(FILE *ifp, char *input) {
       if (strcmp(input, "none") == 0) {
         GOMA_EH(GOMA_ERROR, "TP parameter type is required!");
       } else if (strcmp(input, "BC") == 0) {
-        if (Debug_Flag && ProcID == 0) {
+        if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
           printf("%s:\tTP BC continuation\n", yo);
         }
         TPContType = 1;
       } else if (strcmp(input, "MT") == 0) {
-        if (Debug_Flag && ProcID == 0) {
+        if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
           printf("%s:\tTP MATPROP continuation\n", yo);
         }
         TPContType = 2;
       } else if (strcmp(input, "AC") == 0) {
-        if (Debug_Flag && ProcID == 0) {
+        if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
           printf("%s:\tTP AC continuation\n", yo);
         }
         TPContType = 3;
       } else if (strcmp(input, "UM") == 0) {
-        if (Debug_Flag && ProcID == 0) {
+        if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
           printf("%s:\tTP User model continuation\n", yo);
         }
         TPContType = 4;
       } else if (strcmp(input, "UF") == 0) {
-        if (Debug_Flag && ProcID == 0) {
+        if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
           printf("%s:\tTP User-defined function continuation\n", yo);
         }
         TPContType = 5;
       } else if (strcmp(input, "AN") == 0) {
-        if (Debug_Flag && ProcID == 0) {
+        if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
           printf("%s:\tAngular parameter continuation\n", yo);
         }
         TPContType = 6;
@@ -4516,7 +4516,7 @@ void rd_track_specs(FILE *ifp, char *input) {
       tpcc = (struct Continuation_Conditions *)array_alloc(1, nTC,
                                                            sizeof(struct Continuation_Conditions));
 
-      if (Debug_Flag && ProcID == 0) {
+      if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
         printf("%s:\tallocated %d copies of the %lu sized\n", yo, nTC,
                (long unsigned int)sizeof(struct Continuation_Conditions));
         printf("%s:\tTC structure.\n", yo);
@@ -4798,7 +4798,7 @@ void rd_hunt_specs(FILE *ifp, char *input) {
   double range, range_0;
   int iread;
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   if ((Continuation != HUN_ZEROTH) && (Continuation != HUN_FIRST) && (Continuation != LOCA)) {
     nHC = 0;
@@ -4847,7 +4847,7 @@ void rd_hunt_specs(FILE *ifp, char *input) {
 
   hunt = (struct HC_Information *)array_alloc(1, nHC, sizeof(struct HC_Information));
 
-  if (Debug_Flag && ProcID == 0) {
+  if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
     printf("%s:\tallocated %d copies of the %lu sized\n", yo, nHC,
            (long unsigned int)sizeof(struct HC_Information));
     printf("%s:\tHC structure.\n", yo);
@@ -4962,7 +4962,7 @@ void rd_hunt_specs(FILE *ifp, char *input) {
     nCC = nHC;
     cpcc = (struct Continuation_Conditions *)array_alloc(1, nCC,
                                                          sizeof(struct Continuation_Conditions));
-    if (Debug_Flag && ProcID == 0) {
+    if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
       printf("%s:\tallocated %d new copies of the %lu sized\n", yo, nCC,
              (long unsigned int)sizeof(struct Continuation_Conditions));
       printf("%s:\tCC structure.\n", yo);
@@ -5037,7 +5037,7 @@ void rd_hunt_specs(FILE *ifp, char *input) {
 void rd_ac_specs(FILE *ifp, char *input) {
   char err_msg[MAX_CHAR_IN_INPUT];
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   int iAC;
   char *yo;
@@ -5139,7 +5139,7 @@ void rd_ac_specs(FILE *ifp, char *input) {
 
   augc = alloc_struct_1(struct AC_Information, nAC);
 
-  if (Debug_Flag && ProcID == 0) {
+  if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
     printf("%s:\tallocated %d copies of the %lu sized\n", yo, nAC,
            (long unsigned int)sizeof(struct AC_Information));
     printf("%s:\tAC structure.\n", yo);
@@ -5220,7 +5220,7 @@ void rd_ac_specs(FILE *ifp, char *input) {
       }
       SPF(endofstring(echo_string), " %d %d", augc[iAC].BCID, augc[iAC].DFID);
 
-      if (Num_Proc != 1 && augc[iAC].BCID == APREPRO_AC_BCID) {
+      if (goma_ctx->num_proc != 1 && augc[iAC].BCID == APREPRO_AC_BCID) {
         GOMA_EH(GOMA_ERROR, "Aprepro parameter AC not ready for parallel");
       }
       break;
@@ -5379,7 +5379,7 @@ void rd_ac_specs(FILE *ifp, char *input) {
         SPF(endofstring(echo_string), " %d %d %d %s", augc[iAC].MTID, augc[iAC].BCID,
             augc[iAC].DFID, input);
 
-        if (Num_Proc != 1 && augc[iAC].BCID == APREPRO_AC_BCID) {
+        if (goma_ctx->num_proc != 1 && augc[iAC].BCID == APREPRO_AC_BCID) {
           GOMA_EH(GOMA_ERROR, "Aprepro parameter AC not ready for parallel");
         }
       } else {
@@ -5878,7 +5878,7 @@ void rd_ac_specs(FILE *ifp, char *input) {
 void rd_solver_specs(FILE *ifp, char *input) {
   char *c;
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   char def_form[MAX_CHAR_IN_INPUT] = " (%s = %s) %s";
 
@@ -7348,7 +7348,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
   }
 
 #ifdef PARALLEL
-  if ((Num_Proc > 1) && (is_Solver_Serial == TRUE)) {
+  if ((goma_ctx->num_proc > 1) && (is_Solver_Serial == TRUE)) {
     GOMA_EH(GOMA_ERROR, "Your solver choice cannot be used for PARALLEL solutions");
   }
 #endif
@@ -7367,7 +7367,7 @@ void rd_eigen_specs(FILE *ifp, char *input) {
   int iread;
   char copy_of_input[MAX_CHAR_IN_INPUT];
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
   /*  */
 
   /* READ IN EIGENSOLVER SPECIFICATIONS */
@@ -7837,7 +7837,7 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
   char TmpMatFile[MAX_FNL]; /* Temporary copy of mat db after APREPRO. */
 
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_input_file = Echo_Input_File;
+  char *echo_input_file = goma_ctx->echo_input_file;
   char echo_mat_file[MAX_FNL] = "\0";
 
   static char MatFileSuffix[] = ".mat";
@@ -8032,7 +8032,7 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
 #else
           GOMA_EH(GOMA_ERROR, "aprepro the mat file prior to running goma.");
 #endif
-          if (Debug_Flag > 0) {
+          if (goma_ctx->debug_flag > 0) {
             fprintf(stdout, "system: %s\n", System_Command);
           }
         }
@@ -8054,7 +8054,7 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
      *  Print a description of the materials properties for the
      *  current material
      */
-    if (Debug_Flag > 2) {
+    if (goma_ctx->debug_flag > 2) {
       (void)matrl_prop_print(mp_glob[mn], mn);
     }
     ECHO("CLOSE", echo_mat_file);
@@ -8163,7 +8163,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
   char tscs[MAX_CS_KEYWORD_LENGTH] = "\0";
 
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   static char yo[] = "rd_eq_specs";
 
@@ -8206,31 +8206,31 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
   (void)read_string(ifp, input, '\n');
   strip(input);
   if (strcasecmp(input, "isoparametric") == 0) {
-    if (Debug_Flag && ProcID == 0) {
+    if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
       printf("%s:\t(T,c) = isoparametric\n", yo);
     }
     pd_ptr->IntegrationMap = ISOPARAMETRIC;
   } else if (strcasecmp(input, "subparametric") == 0) {
-    if (Debug_Flag && ProcID == 0) {
+    if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
       printf("%s:\t(T,c) = subparametric\n", yo);
     }
     fprintf(stderr, "%s:\tSubparametric mapping not active yet\n", yo);
     exit(-1);
     pd_ptr->IntegrationMap = SUBPARAMETRIC;
   } else if (strcasecmp(input, "Q1") == 0) {
-    if (Debug_Flag && ProcID == 0) {
+    if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
       printf("%s:\t(T,c) = Q1\n", yo);
     }
     pd_ptr->IntegrationMap = I_Q1;
   } else if (strcasecmp(input, "Q2") == 0) {
-    if (Debug_Flag && ProcID == 0) {
+    if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
       printf("%s:\t(T,c) = Q2\n", yo);
     }
     pd_ptr->IntegrationMap = I_Q2;
   } else if (strcasecmp(input, "N1") == 0) {
     pd_ptr->IntegrationMap = I_N1;
   } else if (strcasecmp(input, "SP") == 0) {
-    if (Debug_Flag && ProcID == 0) {
+    if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
       printf("%s:\t(T,c) = SP\n", yo);
     }
     pd_ptr->IntegrationMap = I_SP;
@@ -9244,7 +9244,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
 
       if (in_list(pd_ptr->w[mtrx_index0][ce], 0, Num_Interpolations, Unique_Interpolations) == -1) {
         Unique_Interpolations[Num_Interpolations] = pd_ptr->w[mtrx_index0][ce];
-        if (Debug_Flag && ProcID == 0) {
+        if (goma_ctx->debug_flag && goma_ctx->proc_id == 0) {
           fprintf(stdout, "Unique_Interpolations[%d] = %d\n", Num_Interpolations,
                   pd_ptr->w[mtrx_index0][ce]);
         }
@@ -11734,7 +11734,7 @@ void translate_command_line(int argc, char *argv[], struct Command_line_command 
           sr = sprintf(err_msg, "Problem diverting stderr to \"%s\"", clc[*nclc]->string);
           GOMA_EH(GOMA_ERROR, err_msg);
         }
-        if (Num_Proc > 1 && Unlimited_Output) {
+        if (goma_ctx->num_proc > 1 && goma_ctx->unlimited_output) {
           fprintf(stderr, "GOMA WARNING: Standard error was redirected to %s on Proc 0 only!\n",
                   clc[*nclc]->string);
           fprintf(stderr, "\t\tThe other processors will still print to the terminal\n");
@@ -11759,7 +11759,7 @@ void translate_command_line(int argc, char *argv[], struct Command_line_command 
           sr = sprintf(err_msg, "Problem diverting stdout to \"%s\"", clc[*nclc]->string);
           GOMA_EH(GOMA_ERROR, err_msg);
         }
-        if (Num_Proc > 1) {
+        if (goma_ctx->num_proc > 1) {
           fprintf(stderr, "GOMA WARNING: Standard output was redirected to %s on Proc 0 only!\n",
                   clc[*nclc]->string);
           fprintf(stderr, "\t\tThe other processors will still print to the terminal\n");
@@ -11777,7 +11777,7 @@ void translate_command_line(int argc, char *argv[], struct Command_line_command 
         istr++;
         clc[*nclc]->type = INPUT_FILE;
         strcpy_rtn = strcpy(clc[*nclc]->string, argv[istr]);
-        strcpy_rtn = strcpy(Input_File, clc[*nclc]->string);
+        strcpy_rtn = strcpy(goma_ctx->input_file, clc[*nclc]->string);
         istr++;
       }
       /*
@@ -12034,7 +12034,7 @@ void translate_command_line(int argc, char *argv[], struct Command_line_command 
         (*nclc)++;
         istr++;
         clc[*nclc]->type = PARSER_OPTION;
-        New_Parser_Flag = 1;
+        goma_ctx->new_parser_flag = 1;
       }
 
       /*
@@ -12089,22 +12089,22 @@ void translate_command_line(int argc, char *argv[], struct Command_line_command 
       } else if ((strcmp(argv[istr], "-e") == 0) || (strcmp(argv[istr], "-external_decomp")) == 0) {
         (*nclc)++;
         istr++;
-        Decompose_Flag = 0;
+        goma_ctx->decompose_flag = 0;
         clc[*nclc]->type = NOECHO;
       } else if ((strcmp(argv[istr], "-nf") == 0) || (strcmp(argv[istr], "-no_fix")) == 0) {
         (*nclc)++;
         istr++;
-        Skip_Fix = 1;
+        goma_ctx->skip_fix = 1;
         clc[*nclc]->type = NOECHO;
       } else if (strcmp(argv[istr], "-kway") == 0) {
         (*nclc)++;
         istr++;
-        Decompose_Type = 2;
+        goma_ctx->decompose_type = 2;
         clc[*nclc]->type = NOECHO;
       } else if (strcmp(argv[istr], "-rcb") == 0) {
         (*nclc)++;
         istr++;
-        Decompose_Type = 1;
+        goma_ctx->decompose_type = 1;
         clc[*nclc]->type = NOECHO;
       } else if (strcmp(argv[istr], "-petsc") == 0 || strcmp(argv[istr], "-petsc_opts") == 0) {
         (*nclc)++;
@@ -12134,9 +12134,9 @@ void translate_command_line(int argc, char *argv[], struct Command_line_command 
       {
         clc[0]->type = INPUT_FILE;
         strcpy_rtn = strcpy(clc[0]->string, argv[istr]);
-        fprintf(stdout, "Change reading input from \"%s\" to \"%s\"\n", Input_File, argv[istr]);
+        fprintf(stdout, "Change reading input from \"%s\" to \"%s\"\n", goma_ctx->input_file, argv[istr]);
 
-        strcpy_rtn = strcpy(Input_File, clc[0]->string);
+        strcpy_rtn = strcpy(goma_ctx->input_file, clc[0]->string);
         istr++;
         *nclc = 0;
       } else {
@@ -12145,34 +12145,34 @@ void translate_command_line(int argc, char *argv[], struct Command_line_command 
     }
   }
   (*nclc)++;
-  if (Debug_Flag > 0) {
+  if (goma_ctx->debug_flag > 0) {
     fprintf(stdout, "Total of %d commands found\n", *nclc);
   }
 
   /* make Echo_Input_File consistent with Input_File */
 
-  if (strcmp(Input_File, "input") != 0) {
-    strcpy(Echo_Input_File, "echo_");
-    strcat(Echo_Input_File, Input_File);
+  if (strcmp(goma_ctx->input_file, "input") != 0) {
+    strcpy(goma_ctx->echo_input_file, "echo_");
+    strcat(goma_ctx->echo_input_file, goma_ctx->input_file);
   }
   /* Perform system calls to aprepro, fastq, etc */
 
   if (run_aprepro) {
     strcpy(temp_file_inp, "tmp.");
-    strcat(temp_file_inp, Input_File);
+    strcat(temp_file_inp, goma_ctx->input_file);
 
 #ifdef GOMA_ENABLE_APREPRO_LIB
     if (run_aprepro == 2) {
-      goma_error err = aprepro_parse_file(Input_File, temp_file_inp);
-      GOMA_EH(err, "Issue with Aprepro parsing %s", Input_File);
+      goma_error err = aprepro_parse_file(goma_ctx->input_file, temp_file_inp);
+      GOMA_EH(err, "Issue with Aprepro parsing %s", goma_ctx->input_file);
     } else if (run_aprepro == 1) {
 #else
     if (run_aprepro == 1) {
 #endif
-      strcat(command_line_ap, Input_File);
+      strcat(command_line_ap, goma_ctx->input_file);
       strcat(command_line_ap, " ");
       strcat(command_line_ap, temp_file_inp);
-      if (Debug_Flag > 0) {
+      if (goma_ctx->debug_flag > 0) {
         fprintf(stdout, "system: %s\n", command_line_ap);
       }
 
@@ -12188,9 +12188,9 @@ void translate_command_line(int argc, char *argv[], struct Command_line_command 
       GOMA_EH(GOMA_ERROR, "aprepro the input file prior to running goma.");
 #endif
     }
-    strcpy(Input_File, temp_file_inp);
-    if (Debug_Flag > 0) {
-      fprintf(stdout, "reading input from \"%s\"\n", Input_File);
+    strcpy(goma_ctx->input_file, temp_file_inp);
+    if (goma_ctx->debug_flag > 0) {
+      fprintf(stdout, "reading input from \"%s\"\n", goma_ctx->input_file);
     }
   }
   return;
@@ -12214,28 +12214,28 @@ void apply_command_line(struct Command_line_command **clc, int nclc)
   upd->fpe_enabled = 0;
   for (i = 0; i < nclc; i++) {
     if (clc[i]->type == CONTIN_FILE) {
-      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "GUESS file", Init_GuessFile, b, "GUESS file",
+      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "GUESS file", goma_ctx->init_guess_file, b, "GUESS file",
               clc[i]->string);
-      strcpy_rtn = strcpy(Init_GuessFile, clc[i]->string);
+      strcpy_rtn = strcpy(goma_ctx->init_guess_file, clc[i]->string);
     } else if (clc[i]->type == HELP_USAGE) {
       usage(0);
     } else if (clc[i]->type == SOLN_FILE) {
-      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "SOLN file", Soln_OutFile, b, "SOLN file",
+      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "SOLN file", goma_ctx->soln_out_file, b, "SOLN file",
               clc[i]->string);
-      strcpy_rtn = strcpy(Soln_OutFile, clc[i]->string);
+      strcpy_rtn = strcpy(goma_ctx->soln_out_file, clc[i]->string);
     } else if (clc[i]->type == INEXOII_FILE) {
-      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "FEM file", ExoFile, b, "FEM file",
+      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "FEM file", goma_ctx->exo_file, b, "FEM file",
               clc[i]->string);
-      strcpy_rtn = strcpy(ExoFile, clc[i]->string);
+      strcpy_rtn = strcpy(goma_ctx->exo_file, clc[i]->string);
     } else if (clc[i]->type == OUTEXOII_FILE) {
-      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "Output EXODUS II file", ExoFileOut, b,
+      fprintf(stdout, "%s%40s= %s\n%s%40s= %s\n", a, "Output EXODUS II file", goma_ctx->exo_file_out, b,
               "Output EXODUS II file", clc[i]->string);
-      strcpy_rtn = strcpy(ExoFileOut, clc[i]->string);
-      strcpy_rtn = strcpy(ExoFileOutMono, clc[i]->string);
+      strcpy_rtn = strcpy(goma_ctx->exo_file_out, clc[i]->string);
+      strcpy_rtn = strcpy(goma_ctx->exo_file_out_mono, clc[i]->string);
     } else if (clc[i]->type == DEBUG_OPTION) {
-      fprintf(stdout, "%s%40s= %d\n%s%40s= %d\n", a, "Debug", Debug_Flag, b, "Debug",
+      fprintf(stdout, "%s%40s= %d\n%s%40s= %d\n", a, "Debug", goma_ctx->debug_flag, b, "Debug",
               clc[i]->i_val);
-      Debug_Flag = clc[i]->i_val;
+      goma_ctx->debug_flag = clc[i]->i_val;
     } else if (clc[i]->type == NEWTON_NUM) {
       fprintf(stdout, "%s%40s= %d\n%s%40s= %d\n", a, "Number of Newton Iterations",
               Max_Newton_Steps, b, "Number of Newton Iterations", clc[i]->i_val);
@@ -12304,19 +12304,19 @@ void apply_command_line(struct Command_line_command **clc, int nclc)
       cont->upMPID = clc[i]->i_val;
     } else if (clc[i]->type == PARSER_OPTION) {
       fprintf(stdout, "-newp request.");
-      New_Parser_Flag = 1;
+      goma_ctx->new_parser_flag = 1;
     } else if (clc[i]->type == CONT_BC_LIST) {
       fprintf(stdout, "-bc_list request.\n\n\t goma done.\n\n");
       exit(0);
     } else if (clc[i]->type == WRITE_INTERMEDIATE) {
       fprintf(stdout, "Write Intermediate Solutions request.\n\n");
-      Write_Intermediate_Solutions = TRUE;
+      goma_ctx->write_intermediate_solutions = TRUE;
     } else if (clc[i]->type == CL_FPE_ENABLED) {
       fprintf(stdout, "Enabling floating point exceptions.\n\n");
       upd->fpe_enabled = 1;
     } else if (clc[i]->type == EXOII_TIME_PLANE) {
       fprintf(stdout, "Exodus Time Plane = %d\n\n", clc[i]->i_val);
-      ExoTimePlane = clc[i]->i_val;
+      goma_ctx->exo_time_plane = clc[i]->i_val;
     }
   }
   return;
@@ -12350,7 +12350,7 @@ setup_table_BC(FILE *ifp, char *input, struct Boundary_Condition *BC_Type, char 
   char *yo, *dataname = NULL;
   FILE *datafile = NULL;
   char *es;
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   yo = "setup_table_BC";
 
@@ -13122,7 +13122,7 @@ FILE *fopen_aprepro(const char *filename, const char *format) {
     GOMA_EH(GOMA_ERROR, "aprepro the input file prior to running goma");
 #endif
 
-    if (Debug_Flag > 0) {
+    if (goma_ctx->debug_flag > 0) {
       fprintf(stdout, "system: %s\n", System_Command);
     }
 
@@ -13159,7 +13159,7 @@ setup_gd_table_BC(FILE *ifp, char *input, struct Boundary_Condition *BC_Type, ch
   FILE *datafile = NULL;
   int k;
   char *es = endofstring(echo_string);
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   yo = "setup_gd_table_BC";
 
@@ -13562,7 +13562,7 @@ void rd_table_data(FILE *ifp, char *input, struct Data_Table *table, char *endli
   int i, j, k, Num_Pnts, ibegin, iend;
   int table_dim = 0;
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   /*
    * Count the number of PNTs in the TABLE
@@ -14141,11 +14141,11 @@ int scan_table_columns(
 void echo_compiler_settings(void) {
   FILE *echo_file;
 
-  echo_file = ECHO("FILE_POINTER", Echo_Input_File);
+  echo_file = ECHO("FILE_POINTER", goma_ctx->echo_input_file);
   if (echo_file == NULL)
     echo_file = stdout;
 
-  ECHO("\n---Compiler defines---\n", Echo_Input_File);
+  ECHO("\n---Compiler defines---\n", goma_ctx->echo_input_file);
 
   fprintf(echo_file, "%-30s= %d\n", "MDE", MDE);
   fprintf(echo_file, "%-30s= %d\n", "MAX_PROB_VAR", MAX_PROB_VAR);
@@ -14154,9 +14154,9 @@ void echo_compiler_settings(void) {
   fprintf(echo_file, "%-30s= %d\n", "MAX_EXTERNAL_FIELD", MAX_EXTERNAL_FIELD);
 
 #ifdef HAVE_MPI_H
-  fprintf(echo_file, "%-30s= %d\n", "PARALLEL             Num_Proc", Num_Proc);
+  fprintf(echo_file, "%-30s= %d\n", "PARALLEL             Num_Proc", goma_ctx->num_proc);
 #else
-  fprintf(echo_file, "%-30s= %d\n", "SERIAL               Num_Proc", Num_Proc);
+  fprintf(echo_file, "%-30s= %d\n", "SERIAL               Num_Proc", goma_ctx->num_proc);
 #endif
 
 #ifdef HAVE_MPI_H
@@ -14403,7 +14403,7 @@ static void read_MAT_line(FILE *ifp, int mn, char *input)
   TOKEN_STRUCT tok;
   char *yo = "read_MAT_line";
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   /*
    *  Search forward in the input deck for the next MAT keyword line
@@ -14484,7 +14484,7 @@ void read_surface_objects(FILE *ifp, char *input, struct LS_Surf_List *list, int
   char name[32];
   struct LS_Surf *surf;
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
-  char *echo_file = Echo_Input_File;
+  char *echo_file = goma_ctx->echo_input_file;
 
   while (num_surf > 0) {
     iread = look_forward_optional(ifp, "SURF", input, '=');

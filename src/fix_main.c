@@ -92,56 +92,8 @@ Exo_DB *EXO_ptr = NULL;
 
 #define LAST_LEGAL_STRING "Last Legal String"
 
-char Input_File[MAX_FNL] = "\0"; /* input EXODUS II database w/ problem defn */
-
-char ExoFile[MAX_FNL] = "\0"; /* input EXODUS II database w/ problem defn */
-
-char Exo_LB_File[MAX_FNL] = "\0"; /* EXODUS II load balance info for mesh */
-
-char ExoFileOut[MAX_FNL] = "\0"; /* output EXODUS II database w/ results */
-
-char ExoFileOutMono[MAX_FNL] = "\0"; /* output EXODUS II database without per proc identifier */
-
-char ExoAuxFile[MAX_FNL] = "\0"; /* auxiliary EXODUS II database for initguess */
-
-int ExoTimePlane = INT_MAX; /* Time plane # or continuation # of soln to use as an initguess */
-
-char Echo_Input_File[MAX_FNL] = "\0"; /* echo of problem def file  */
-
-int Decompose_Flag = 1;
-int Decompose_Type = 0;
-int Skip_Fix = 0;
-
 char *GomaPetscOptions = NULL;
 int GomaPetscOptionsStrLen = 0;
-
-char DomainMappingFile[MAX_FNL] = "\0"; /* Domain Mapping file. Maps the materials
-                                      and names of material boundaries
-                                      specified in this file into this file
-                                      into chemkin domains and chemkin
-                                      surface and volumetric domains. */
-
-int CPU_word_size;
-int IO_word_size; /*Precision variables for exodus II files*/
-
-char Init_GuessFile[MAX_FNL]; /* ASCII file holding initial guess */
-
-char Soln_OutFile[MAX_FNL]; /* ASCII file holding solution vector, */
-                            /* same format as Init_GuessFile      */
-
-int Debug_Flag; /* Flag to specify debug info is to be     */
-                /* printed out. The value of this flag     */
-                /* determines the level of diagnostic info */
-                /* which is printed to stdout              */
-                /* Debug_Flag == 0 	No output          */
-                /*	 1	minimun output             */
-                /*	 2	medium  output		   */
-                /*	 3	maximum output             */
-                /*	 -1	check jacobian             */
-                /*	 -2	check jacobian with scaling*/
-
-int New_Parser_Flag; /* New_Parser_Flag = 0	Parse with old parser */
-                     /* New_Parser_Flag = 1  Parse with new flex/bison parser */
 
 #ifdef MATRIX_DUMP
 int Number_Jac_Dump = 0; /* Number of jacobians to dump out
@@ -149,16 +101,7 @@ int Number_Jac_Dump = 0; /* Number of jacobians to dump out
                           * jacobian, the -n'th jacobian, is dumped
                           * out */
 #endif
-int Iout; /* Flag to specify level of diagnostic output */
-          /* which is to be printed out for the program */
 
-int Write_Intermediate_Solutions = FALSE; /* Flag specifies whether to */
-                                          /* write out solution data at each */
-                                          /* Newton iteration. */
-int Write_Initial_Solution = FALSE;
-/* Flag to indicate whether to write the
- * initial solution to the ascii and exodus
- * output files */
 int Num_Var_Init;         /* number of variables to overwrite with
                            * global initialization */
 int Num_Var_Bound;        /* number of variables to bound  */
@@ -202,18 +145,9 @@ static int CVS_Extraction_Date_Stamp[] = { 2002, 9, 20, 21, 17, 15};
 int parallel_err = FALSE;
 int parallel_err_global = FALSE;
 
-int Unlimited_Output = TRUE; /* print limit flag */
-
-int Num_Proc = 1;
-int ProcID = 0;
-int Dim = -1;
-
 int unlerr;
 
-MPI_Request *Request = NULL;
-MPI_Status *Status = NULL;
 MPI_Aint type_extent;
-int Num_Requests = 6;
 
 /*
  * Data structures for transporting input data to other processors...
@@ -311,8 +245,8 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  ProcID = rank;
-  Num_Proc = size;
+  goma_ctx->proc_id = rank;
+  goma_ctx->num_proc = size;
 
   if (size > 1) {
     GOMA_EH(GOMA_ERROR, "Fix only supports running on one processor.");
@@ -338,7 +272,7 @@ int main(int argc, char **argv) {
 
     get_fix_info(argv[1], &num_procs, mono_name);
 
-    Num_Proc = num_procs;
+    goma_ctx->num_proc = num_procs;
 
     DPRINTF(stdout, "Fixing file %s with %d procs\n", mono_name, num_procs);
     fix_exo_file(num_procs, mono_name);

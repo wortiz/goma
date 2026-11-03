@@ -96,7 +96,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
 
   // setup eb_elem_type
   std::vector<std::array<char, MAX_STR_LENGTH>> local_elem_type(exo->num_elem_blocks);
-  std::vector<std::array<char, MAX_STR_LENGTH>> global_elem_type(Num_Proc * exo->num_elem_blocks);
+  std::vector<std::array<char, MAX_STR_LENGTH>> global_elem_type(goma_ctx->num_proc * exo->num_elem_blocks);
   for (int i = 0; i < exo->num_elem_blocks; i++) {
     memcpy(local_elem_type[i].data(), exo->eb_elem_type[i], MAX_STR_LENGTH);
   }
@@ -107,7 +107,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
 
   for (int i = 0; i < exo->num_elem_blocks; i++) {
     if (strncmp((const char *)local_elem_type[i].data(), "NULL", MAX_STR_LENGTH) == 0) {
-      for (int j = 0; j < Num_Proc; j++) {
+      for (int j = 0; j < goma_ctx->num_proc; j++) {
         if (strncmp((const char *)global_elem_type[j * exo->num_elem_blocks + i].data(), "NULL",
                     MAX_STR_LENGTH) != 0) {
           memcpy(exo->eb_elem_type[i], global_elem_type[j * exo->num_elem_blocks + i].data(),
@@ -138,7 +138,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
       for (int k = 0; k < nnode_per_elem; k++) {
         int local_node = exo->eb_conn[i][j * nnode_per_elem + k];
         int owner = dpi->node_owner[local_node];
-        if (dpi->node_owner[local_node] != ProcID) {
+        if (dpi->node_owner[local_node] != goma_ctx->proc_id) {
           // neighbor needs element find which negibhor
           int n_index = -1;
           for (int k = 0; k < dpi->num_neighbors; k++) {
@@ -267,7 +267,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
           new_nodes_ids.insert(ref.id);
         }
       } else {
-        if (dpi->neighbor[i] > ProcID) {
+        if (dpi->neighbor[i] > goma_ctx->proc_id) {
           my_boundary_nodes.insert(ref.id);
         }
       }
@@ -418,7 +418,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
     dpi->node_owner[i] = node_owner_new.at(global_id);
   }
   for (int i = 0; i < exo->num_nodes; i++) {
-    if (dpi->node_owner[i] != ProcID) {
+    if (dpi->node_owner[i] != goma_ctx->proc_id) {
       neighbors_set.insert(dpi->node_owner[i]);
     }
   }
@@ -429,7 +429,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   int max_neighbors;
 
   MPI_Allreduce(&my_neighbors, &max_neighbors, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  std::vector<int> all_neighbors(max_neighbors * Num_Proc);
+  std::vector<int> all_neighbors(max_neighbors * goma_ctx->num_proc);
   neighbor_list.resize(max_neighbors);
   for (int i = my_neighbors; i < max_neighbors; i++) {
     neighbor_list[i] = -1;
@@ -439,11 +439,11 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
                 MPI_INT, MPI_COMM_WORLD);
 
   // loop over the neighbors and decide if we have another neighbor
-  for (int i = 0; i < Num_Proc; i++) {
-    if (i == ProcID)
+  for (int i = 0; i < goma_ctx->num_proc; i++) {
+    if (i == goma_ctx->proc_id)
       continue;
     for (int j = max_neighbors * i; j < (max_neighbors * i + max_neighbors); j++) {
-      if (all_neighbors[j] == ProcID) {
+      if (all_neighbors[j] == goma_ctx->proc_id) {
         neighbors_set.insert(i);
       }
     }
@@ -516,7 +516,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   // all nodes with owners < ProcID
   int changed_to_external = 0;
   for (int i = 0; i < num_old_nodes; i++) {
-    if (dpi->node_owner[i] < ProcID) {
+    if (dpi->node_owner[i] < goma_ctx->proc_id) {
       new_external_nodes.insert(i);
       changed_to_external++;
     }
@@ -528,7 +528,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   for (int i = 0; i < dpi->num_neighbors; i++) {
     for (int j = 0; j < static_cast<int>(global_send_nodes[i].size()); j++) {
       int local_id = global_to_local.at(global_send_nodes[i][j]);
-      if (dpi->node_owner[local_id] >= ProcID) {
+      if (dpi->node_owner[local_id] >= goma_ctx->proc_id) {
         new_boundary_nodes.insert(dpi->node_index_global[local_id]);
       }
     }
@@ -536,7 +536,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
 
   for (auto &bn : my_boundary_nodes) {
     int local_id = global_to_local.at(bn);
-    if (dpi->node_owner[local_id] >= ProcID) {
+    if (dpi->node_owner[local_id] >= goma_ctx->proc_id) {
       new_boundary_nodes.insert(bn);
     }
   }
@@ -931,7 +931,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   offset = 0;
   for (int i = 0; i < exo->num_elem_blocks; i++) {
     for (int j = 0; j < exo->eb_num_elems[i]; j++) {
-      int min_proc = ProcID;
+      int min_proc = goma_ctx->proc_id;
       int nnode_per_elem = exo->eb_num_nodes_per_elem[i];
       for (int k = 0; k < nnode_per_elem; k++) {
         int local_node = exo->eb_conn[i][j * nnode_per_elem + k];

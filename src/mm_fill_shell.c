@@ -4756,7 +4756,7 @@ int assemble_shell_surface_rheo_pieces(double time_value, /* Time */
     }
     if (fabs(tester[i] - fv->curl_v[i]) > 1.0E-9) {
       printf("WARNING %d: assertion on curl_v is wrong, permute grad [%d] = %g, curl_v[%d] = %g",
-             ProcID, i, tester[i], i, fv->curl_v[i]);
+             goma_ctx->proc_id, i, tester[i], i, fv->curl_v[i]);
     }
   }
 #endif
@@ -6580,7 +6580,7 @@ int assemble_lubrication(const int EQN,  /* equation type: either R_LUBP or R_LU
     neg_lub_height = TRUE;
 
 #ifdef PARALLEL
-    fprintf(stderr, "\nP_%d: Lubrication height =  %e\n", ProcID, H);
+    fprintf(stderr, "\nP_%d: Lubrication height =  %e\n", goma_ctx->proc_id, H);
 #else
     fprintf(stderr, "\n Lubrication height =  %e\n", H);
 #endif
@@ -8786,7 +8786,7 @@ int assemble_film(double time,    /* present time value */
     neg_lub_height = TRUE;
 
 #ifdef PARALLEL
-    fprintf(stderr, "\nP_%d: Lubrication height =  %e\n", ProcID, H);
+    fprintf(stderr, "\nP_%d: Lubrication height =  %e\n", goma_ctx->proc_id, H);
 #else
     fprintf(stderr, "\n Lubrication height =  %e\n", H);
 #endif
@@ -9782,7 +9782,7 @@ int assemble_film_1D(double time,    /* present time value */
     neg_lub_height = TRUE;
 
 #ifdef PARALLEL
-    fprintf(stderr, "\nP_%d: Lubrication height =  %e\n", ProcID, H);
+    fprintf(stderr, "\nP_%d: Lubrication height =  %e\n", goma_ctx->proc_id, H);
 #else
     fprintf(stderr, "\n Lubrication height =  %e\n", H);
 #endif

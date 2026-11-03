@@ -2732,7 +2732,7 @@ int assemble_surface(Exo_DB *exo,    /* ptr to basic exodus ii mesh information 
             for (ki = 0; ki < nvdofi; ki++) {
               /* set rhs to zero for Dirichlet boundary conditions */
               if (node->DBC[pg->imtrx] && (node->DBC[pg->imtrx][offseti + ki] != -1) &&
-                  Debug_Flag >= 0) {
+                  goma_ctx->debug_flag >= 0) {
                 rf[node_to_fill[I] + ki] = 0;
               } else {
                 /* check to make sure that unknowns are defined at this node,
@@ -2776,7 +2776,7 @@ int assemble_surface(Exo_DB *exo,    /* ptr to basic exodus ii mesh information 
 
                   /* set diagonal to one for Dirichlet boundary conditions */
                   if (node->DBC[pg->imtrx] && (node->DBC[pg->imtrx][offseti + ki] != -1) &&
-                      Debug_Flag >= 0) {
+                      goma_ctx->debug_flag >= 0) {
                     afill[ja] = delta(i, j);
                   } else {
                     afill[ja] -= wt * fv->sdet * vdotn * phi_j * phi_i;

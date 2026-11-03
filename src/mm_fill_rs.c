@@ -1506,15 +1506,15 @@ int belly_flop_rs(dbl mu) /* elastic modulus - (for plane stress case) */
       det2d = (deform_grad[0][0] * deform_grad[1][1] - deform_grad[0][1] * deform_grad[1][0]);
 
       /* escape/warn if element has inverted */
-      if ((det2d <= 0.) && (Debug_Flag >= 0)) {
+      if ((det2d <= 0.) && (goma_ctx->debug_flag >= 0)) {
 #ifdef PARALLEL
-        fprintf(stderr, "P_%d: Volume change  %f\n", ProcID, det2d);
+        fprintf(stderr, "P_%d: Volume change  %f\n", goma_ctx->proc_id, det2d);
 #else
         fprintf(stderr, "Volume change  %f\n", det2d);
 #endif
         for (i = 0; i < dim; i++) {
 #ifdef PARALLEL
-          fprintf(stderr, "P_%d: Deformation Gradient of real solid  %f  %f\n", ProcID,
+          fprintf(stderr, "P_%d: Deformation Gradient of real solid  %f  %f\n", goma_ctx->proc_id,
                   deform_grad[i][0], deform_grad[i][1]);
 #else
           fprintf(stderr, "Deformation Gradient of real solid  %f  %f\n", deform_grad[i][0],

@@ -81,7 +81,7 @@ extern "C" goma_error g_tpetra_create_graph(GomaSparseMatrix matrix,
   tmp->crs_graph->insertGlobalIndices(
       current_row, Teuchos::ArrayView<GomaGlobalOrdinal>(indices.data(), row_count));
 
-  if (Debug_Flag > 2) {
+  if (goma_ctx->debug_flag > 2) {
     RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(std::cout));
     tmp->crs_graph->describe(*fos, Teuchos::VERB_EXTREME);
   }

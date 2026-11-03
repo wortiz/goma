@@ -34,7 +34,7 @@ static goma_error initialize_PCD_matrices(PetscMatrixData *matrix_data,
                                           PetscInt local_nodes,
                                           PetscInt global_nodes) {
   PetscInt global_offset = 0;
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     MPI_Scan(&local_nodes, &global_offset, 1, MPIU_INT, MPI_SUM, MPI_COMM_WORLD);
     global_offset -= local_nodes;
   }
@@ -78,7 +78,7 @@ static goma_error initialize_PCD_matrices(PetscMatrixData *matrix_data,
           int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
           int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
           if (ldof_i >= 0 && ldof_j >= 0 &&
-              ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
+              ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || goma_ctx->num_proc == 1)) {
             if (gnn_i < num_rows) {
               PetscInt global_i = matrix_data->schur_s_local_to_global[gnn_i];
               if (gnn_j >= num_rows) {
@@ -95,7 +95,7 @@ static goma_error initialize_PCD_matrices(PetscMatrixData *matrix_data,
     } /* END  for (iel = 0; iel < num_internal_elem; iel++)            */
   } /* END for (ieb loop) */
 
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     MatSeqAIJSetPreallocation(matrix_data->pcd_data->Mp, 0, d_nnz);
     MatSeqAIJSetPreallocation(matrix_data->pcd_data->Mp_mu, 0, d_nnz);
     MatSeqAIJSetPreallocation(matrix_data->pcd_data->Fp, 0, d_nnz);

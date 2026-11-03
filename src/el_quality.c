@@ -268,7 +268,7 @@ static double jacobian_metric(Exo_DB *exo, double *x, int *proc_config) {
 
   /* Return results */
   els = (double)(e_end - e_start);
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     els = goma_gsum_double(els);
     eqsum = goma_gsum_double(eqsum);
     eqmin = goma_gmin_double(eqmin);
@@ -288,7 +288,7 @@ static double volume_metric(int *proc_config)
   double sum = eqm->vol_sum;
   double low = eqm->vol_low;
 
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     points = (int)goma_gsum_int(eqm->vol_count);
     sum = goma_gsum_double(eqm->vol_sum);
     low = goma_gmin_double(eqm->vol_low);
@@ -373,7 +373,7 @@ static double angle_metric(Exo_DB *exo, double *x, int *proc_config) {
 
   /* Return results */
   els = (double)(e_end - e_start);
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     els = goma_gsum_double(els);
     eqsum = goma_gsum_double(eqsum);
     eqmin = goma_gmin_double(eqmin);
@@ -478,7 +478,7 @@ static double triangle_metric(Exo_DB *exo, double *x, int *proc_config) {
 
   /* Return results */
   els = (double)(e_end - e_start);
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     els = goma_gsum_double(els);
     eqsum = goma_gsum_double(eqsum);
     eqmin = goma_gmin_double(eqmin);

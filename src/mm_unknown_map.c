@@ -525,7 +525,7 @@ void print_vars_at_nodes(void)
   maxLength = MAX(maxLength, 2);
 
   print_sync_start(TRUE);
-  printf("\n\n  Processor %d: Table of Variables at nodes:\n\n", ProcID);
+  printf("\n\n  Processor %d: Table of Variables at nodes:\n\n", goma_ctx->proc_id);
   printf("Local  Global|   MatIDs |  Node   Num    |   VARIABLES:\n");
   printf("Node#  Node# |   Present|  Type  Unknowns|             \n ");
   fprint_line(stdout, "-", 80);
@@ -737,10 +737,10 @@ int find_MaxUnknownNode(void)
   }
 
 #ifdef PARALLEL
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     retn = MPI_Allreduce(&maxUnknowns, &gmax, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
     if (retn != MPI_SUCCESS) {
-      fprintf(stderr, "find_MaxUnknownNode MPI error, P_%d, error = %d\n", ProcID, retn);
+      fprintf(stderr, "find_MaxUnknownNode MPI error, P_%d, error = %d\n", goma_ctx->proc_id, retn);
     }
   } else {
     gmax = maxUnknowns;
@@ -814,7 +814,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
         }
       }
       if (count != nv->Num_Unknowns) {
-        fprintf(stderr, "P_%d: at node %d, Num_Unknowns_Node = %d, count = %d\n", ProcID, i,
+        fprintf(stderr, "P_%d: at node %d, Num_Unknowns_Node = %d, count = %d\n", goma_ctx->proc_id, i,
                 nv->Num_Unknowns, count);
         fprintf(stderr, "nv->Num_Unknowns lost count.\n");
         GOMA_EH(-1, "Num_Unknowns_Node incompatibility");
@@ -829,7 +829,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
     for (i = 0; i < total_nodes; i++) {
       nv = Nodes[i]->Nodal_Vars_Info[imtrx];
       if (nv->Num_Unknowns == -1) {
-        fprintf(stderr, "P_%d: local node index (%d) at matrix %d lost track.\n", ProcID, i + 1,
+        fprintf(stderr, "P_%d: local node index (%d) at matrix %d lost track.\n", goma_ctx->proc_id, i + 1,
                 imtrx + 1);
         GOMA_EH(-1, "Num_Unknowns_Node incompatibility");
       }
@@ -894,7 +894,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    */
   num_personal_elems = 0;
 
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     /*
      * In serial, they're all mine!
      */
@@ -906,7 +906,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
      */
 
     for (e = 0; e < exo->num_elems; e++) {
-      if (dpi->elem_owner[e] == ProcID) {
+      if (dpi->elem_owner[e] == goma_ctx->proc_id) {
         num_personal_elems++;
       }
     }
@@ -981,7 +981,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    *   intermediate solution or Debug_Flag > 1
    */
   if (dofname == NULL) {
-    if (Debug_Flag < 0 || Debug_Flag > 1 || Write_Intermediate_Solutions || (Iout == 1)) {
+    if (goma_ctx->debug_flag < 0 || goma_ctx->debug_flag > 1 || goma_ctx->write_intermediate_solutions || (goma_ctx->iout == 1)) {
       dofname = (char ***)malloc(upd->Total_Num_Matrices * sizeof(int **));
       for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
         dofname[imtrx] = alloc_VecFixedStrings(NumUnknowns[imtrx] + NumExtUnknowns[imtrx], 80);
@@ -993,7 +993,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    *  Only allocate resname if doing numerical jacobian checking
    */
   if (resname == NULL) {
-    if (Debug_Flag < 0 || Iout == 1) {
+    if (goma_ctx->debug_flag < 0 || goma_ctx->iout == 1) {
       resname = (char ***)malloc(upd->Total_Num_Matrices * sizeof(int **));
       for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
         resname[imtrx] = alloc_VecFixedStrings(NumUnknowns[imtrx] + NumExtUnknowns[imtrx], 80);
@@ -1019,7 +1019,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
       nv = Nodes[i]->Nodal_Vars_Info[imtrx];
       gcount = First_Unknown[imtrx][i];
 
-      if (Num_Proc > 1) {
+      if (goma_ctx->num_proc > 1) {
         gdof = gcount;
         i1 = dpi->node_index_global[i] + 1; /* convert 0-based to 1-based */
       } else {
@@ -1095,7 +1095,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
       }
 
       if (count != nv->Num_Unknowns) {
-        fprintf(stderr, "P_%d: at node %d, Num_Unknowns_Node = %d, count = %d\n", ProcID, i,
+        fprintf(stderr, "P_%d: at node %d, Num_Unknowns_Node = %d, count = %d\n", goma_ctx->proc_id, i,
                 nv->Num_Unknowns, count);
         fprintf(stderr, "nv->Num_Unknowns lost count.");
         GOMA_EH(-1, "Sorry, Charlie.");
@@ -1107,7 +1107,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    *      -> print out a mapping of what variables are active at
    *         each node.
    */
-  if (Debug_Flag > 2) {
+  if (goma_ctx->debug_flag > 2) {
     print_vars_at_nodes();
   }
 
@@ -5277,8 +5277,8 @@ static void set_interaction_masks(Exo_DB *exo)
     }
   }
 
-  if (Debug_Flag > 2) {
-    printf("\n\nProc: %d\n", ProcID);
+  if (goma_ctx->debug_flag > 2) {
+    printf("\n\nProc: %d\n", goma_ctx->proc_id);
     for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
       for (n = 0; n < MAX_VARIABLE_TYPES; n++) {
         printf("\n");
@@ -5709,8 +5709,8 @@ void dofname40(const int unknown, char *str)
   /*
    *  Add the name of the processor if we are doing a multiprocessor run
    */
-  if (Num_Proc > 1) {
-    sprintf(str, "P_%d, ", ProcID);
+  if (goma_ctx->num_proc > 1) {
+    sprintf(str, "P_%d, ", goma_ctx->proc_id);
     len += strlen(str);
     str += strlen(str);
   }

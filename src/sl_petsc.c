@@ -104,7 +104,7 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
         int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
         int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
         if (ldof_i >= 0 &&
-            ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
+            ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || goma_ctx->num_proc == 1)) {
           if (nzp[gnn_i] == -1) {
             nzp[gnn_i] = index_pres;
             index_pres++;
@@ -118,7 +118,7 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
             int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
             int ldof_i = ei[upd->matrix_index[var]]->ln_to_dof[var][i];
             if (ldof_i >= 0 &&
-                ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
+                ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || goma_ctx->num_proc == 1)) {
               if (nzv[var - VELOCITY1][gnn_i] == -1) {
                 nzv[var - VELOCITY1][gnn_i] = index_vel;
                 index_vel++;
@@ -179,7 +179,7 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
         GOMA_EH(row_index, "Bad var index.");
         PetscInt global_row = matrix_data->local_to_global[row_index];
         int gnn_i = ei[pg->imtrx]->gnn_list[v][j];
-        if ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1) {
+        if ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || goma_ctx->num_proc == 1) {
           if (nzp[gnn_i] == -1) {
             nzp[gnn_i] = 0;
             (*pres_is)[index_pres] = global_row;
@@ -197,7 +197,7 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
           GOMA_EH(row_index, "Bad var index.");
           PetscInt global_row = matrix_data->local_to_global[row_index];
           int gnn_i = ei[pg->imtrx]->gnn_list[v][j];
-          if ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1) {
+          if ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || goma_ctx->num_proc == 1) {
             if (nzv[v - VELOCITY1][gnn_i] == -1) {
               nzv[v - VELOCITY1][gnn_i] = 0;
               (*vel_is)[index_vel] = global_row;
@@ -268,7 +268,7 @@ goma_error count_pressure_nodes(PetscMatrixData *matrix_data,
         int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
         int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
         if (ldof_i >= 0 &&
-            ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
+            ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || goma_ctx->num_proc == 1)) {
           if (nz[gnn_i] == -1) {
             nz[gnn_i] = index;
             index++;
@@ -282,7 +282,7 @@ goma_error count_pressure_nodes(PetscMatrixData *matrix_data,
 
   MPI_Allreduce(local_nodes, global_nodes, 1, MPIU_INT, MPI_SUM, MPI_COMM_WORLD);
   PetscInt global_offset = 0;
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     MPI_Scan(local_nodes, &global_offset, 1, MPIU_INT, MPI_SUM, MPI_COMM_WORLD);
     global_offset -= *local_nodes;
   }
@@ -315,7 +315,7 @@ static goma_error initialize_petsc_pressure_matrix(PetscMatrixData *matrix_data,
                                                    PetscInt local_nodes,
                                                    PetscInt global_nodes) {
   PetscInt global_offset = 0;
-  if (Num_Proc > 1) {
+  if (goma_ctx->num_proc > 1) {
     MPI_Scan(&local_nodes, &global_offset, 1, MPIU_INT, MPI_SUM, MPI_COMM_WORLD);
     global_offset -= local_nodes;
   }
@@ -359,7 +359,7 @@ static goma_error initialize_petsc_pressure_matrix(PetscMatrixData *matrix_data,
           int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
           int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
           if (ldof_i >= 0 && ldof_j >= 0 &&
-              ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
+              ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || goma_ctx->num_proc == 1)) {
             if (gnn_i < num_rows) {
               PetscInt global_i = matrix_data->schur_s_local_to_global[gnn_i];
               if (gnn_j >= num_rows) {
@@ -376,7 +376,7 @@ static goma_error initialize_petsc_pressure_matrix(PetscMatrixData *matrix_data,
     } /* END  for (iel = 0; iel < num_internal_elem; iel++)            */
   } /* END for (ieb loop) */
 
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     MatSeqAIJSetPreallocation(matrix_data->SchurS, 0, d_nnz);
   } else {
     MatMPIAIJSetPreallocation(matrix_data->SchurS, 0, d_nnz, 0, o_nnz);
@@ -482,7 +482,7 @@ static goma_error set_pcd_matrices(PetscMatrixData *matrix_data,
             int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
             int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
             if (ldof_i >= 0 && ldof_j >= 0 &&
-                ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
+                ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || goma_ctx->num_proc == 1)) {
 
               PetscInt global_row = matrix_data->schur_s_local_to_global[gnn_i];
               PetscInt global_col = matrix_data->schur_s_local_to_global[gnn_j];
@@ -754,7 +754,7 @@ static goma_error set_petsc_pressure_matrix(PetscMatrixData *matrix_data,
             int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
             int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
             if (ldof_i >= 0 && ldof_j >= 0 &&
-                ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
+                ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || goma_ctx->num_proc == 1)) {
               dbl mm_contrib = 0.5 * invmu * bf[eqn]->phi[ldof_i] * bf[eqn]->phi[ldof_j] * fv->wt *
                                bf[eqn]->detJ;
               PetscInt global_row = matrix_data->schur_s_local_to_global[gnn_i];
@@ -855,7 +855,7 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
             int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
             int ldof_j = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][j];
             if (ldof_i >= 0 && ldof_j >= 0 &&
-                ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
+                ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || goma_ctx->num_proc == 1)) {
               if (gnn_i < num_rows) {
                 if (gnn_j >= num_rows) {
                   o_nnz[gnn_i] += 1;
@@ -870,7 +870,7 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
     } /* END  for (iel = 0; iel < num_internal_elem; iel++)            */
   } /* END for (ieb loop) */
 
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     MatSeqAIJSetPreallocation(matrix_data->mat, 0, d_nnz);
   } else {
     MatMPIAIJSetPreallocation(matrix_data->mat, 0, d_nnz, 0, o_nnz);
@@ -964,7 +964,7 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
               int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
               int ldof_j = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][j];
               if (ldof_i >= 0 && ldof_j >= 0 &&
-                  ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
+                  ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || goma_ctx->num_proc == 1)) {
                 dbl mm_contrib =
                     bf[eqn]->phi[ldof_i] * bf[eqn]->phi[ldof_j] * fv->wt * bf[eqn]->detJ;
                 PetscInt global_row = matrix_data->local_to_global[gnn_i];
@@ -1202,7 +1202,7 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
             }
           }
 
-          if (Debug_Flag < 0)
+          if (goma_ctx->debug_flag < 0)
             add_var = TRUE; /* add all vars for checking jacobian */
 
           if (add_var) {
@@ -1228,7 +1228,7 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
     }
   }
 
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     MatSeqAIJSetPreallocation(matrix_data->mat, 0, d_nnz);
   } else {
     MatMPIAIJSetPreallocation(matrix_data->mat, 0, d_nnz, 0, o_nnz);

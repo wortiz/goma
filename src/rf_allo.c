@@ -42,7 +42,6 @@ static int ALLO_errorOption = 1;
 #include "rf_io.h"
 #include "std.h"
 
-extern int ProcID;
 
 #ifndef ALLIGNMENT_BOUNDARY
 #define ALLIGNMENT_BOUNDARY 8
@@ -177,7 +176,7 @@ double *array_alloc(va_alist) va_dcl
   if (dim[0].index <= 0) {
     (void)fprintf(stderr, "WARNING: array_alloc called with first dimension <= 0, %d\n",
                   dim[0].index);
-    (void)fprintf(stderr, "\tProc_%d: will return the nil pointer\n", ProcID);
+    (void)fprintf(stderr, "\tProc_%d: will return the nil pointer\n", goma_ctx->proc_id);
   }
   dim[0].total = dim[0].index;
   dim[0].size = sizeof(void *);
@@ -282,7 +281,7 @@ void *safe_malloc(const int n, const char *filename, const int line)
   void *pntr;
   size_t nn;
   if (n < 0) {
-    fprintf(stderr, "smalloc ERROR P_%d: Negative memory specification (%d)", ProcID, n);
+    fprintf(stderr, "smalloc ERROR P_%d: Negative memory specification (%d)", goma_ctx->proc_id, n);
     fprint_location(filename, line);
     exit(-1);
   } else if (n == 0) {
@@ -291,7 +290,7 @@ void *safe_malloc(const int n, const char *filename, const int line)
     nn = ((n - 1) / ALLIGNMENT_BOUNDARY + 1) * ALLIGNMENT_BOUNDARY;
     pntr = (void *)malloc(nn);
     if (pntr == NULL) {
-      fprintf(stderr, "smalloc ERROR P_%d:  Memory allocation failure for %ld bytes", ProcID,
+      fprintf(stderr, "smalloc ERROR P_%d:  Memory allocation failure for %ld bytes", goma_ctx->proc_id,
               (long int)nn);
       fprint_location(filename, line);
       exit(-1);
@@ -366,9 +365,9 @@ static void alloc_eh(char *rname, int bytes)
   double cd = 0.0;
   if (ALLO_errorOption) {
     if (bytes == ALLOC_INTERFACE_ERROR) {
-      fprintf(stderr, "alloc Interface ERROR P_%d: %s\n", ProcID, rname);
+      fprintf(stderr, "alloc Interface ERROR P_%d: %s\n", goma_ctx->proc_id, rname);
     } else {
-      fprintf(stderr, "%s ERROR P_%d: out of memory while mallocing %s %u bytes\n", yo, ProcID,
+      fprintf(stderr, "%s ERROR P_%d: out of memory while mallocing %s %u bytes\n", yo, goma_ctx->proc_id,
               rname, bytes);
     }
   }
@@ -473,8 +472,8 @@ int *alloc_int_1_FL(const int nvalues, const int val, const char *filename, cons
   int *array;
   if (nval1 <= 0) {
     nval1 = 1;
-    if (Unlimited_Output) {
-      fprintf(stderr, "Warning: alloc_int_1 P_%d: called with n = %d ", ProcID, nvalues);
+    if (goma_ctx->unlimited_output) {
+      fprintf(stderr, "Warning: alloc_int_1 P_%d: called with n = %d ", goma_ctx->proc_id, nvalues);
       fprint_location(filename, line);
     }
   }
@@ -526,8 +525,8 @@ short int *alloc_short_1_FL(const int nvalues, const int val, const char *filena
   short int *array, val_short;
   if (nval1 <= 0) {
     nval1 = 1;
-    if (Unlimited_Output) {
-      fprintf(stderr, "Warning: alloc_short_1 P_%d: called with n = %d ", ProcID, nvalues);
+    if (goma_ctx->unlimited_output) {
+      fprintf(stderr, "Warning: alloc_short_1 P_%d: called with n = %d ", goma_ctx->proc_id, nvalues);
       fprint_location(filename, line);
     }
   }
@@ -542,7 +541,7 @@ short int *alloc_short_1_FL(const int nvalues, const int val, const char *filena
         for (i = 0; i < nval1; i++)
           array[i] = val_short;
       } else {
-        fprintf(stderr, "Error: alloc_short_1 P_%d: called with val out of bounds, %d", ProcID,
+        fprintf(stderr, "Error: alloc_short_1 P_%d: called with val out of bounds, %d", goma_ctx->proc_id,
                 val);
         fprint_location(filename, line);
         alloc_eh("alloc_short_1 outofbounds", bytenum);
@@ -589,15 +588,15 @@ int **alloc_int_2_FL(
   int **array, *iloc;
   if (nval1 <= 0) {
     nval1 = 1;
-    if (Unlimited_Output) {
-      fprintf(stderr, "Warning: alloc_int_2 P_%d: called with ndim1 = %d ", ProcID, ndim1);
+    if (goma_ctx->unlimited_output) {
+      fprintf(stderr, "Warning: alloc_int_2 P_%d: called with ndim1 = %d ", goma_ctx->proc_id, ndim1);
       fprint_location(filename, line);
     }
   }
   if (nval2 <= 0) {
     nval2 = 1;
-    if (Unlimited_Output) {
-      fprintf(stderr, "Warning: alloc_int_2 P_%d: called with ndim2 = %d ", ProcID, ndim2);
+    if (goma_ctx->unlimited_output) {
+      fprintf(stderr, "Warning: alloc_int_2 P_%d: called with ndim2 = %d ", goma_ctx->proc_id, ndim2);
       fprint_location(filename, line);
     }
   }
@@ -652,8 +651,8 @@ double *alloc_dbl_1_FL(const int nvalues, const double val, const char *filename
   double *array;
   if (nval1 <= 0) {
     nval1 = 1;
-    if (Unlimited_Output) {
-      (void)fprintf(stderr, "Warning: alloc_dbl_1 P_%d: called with n = %d ", ProcID, nvalues);
+    if (goma_ctx->unlimited_output) {
+      (void)fprintf(stderr, "Warning: alloc_dbl_1 P_%d: called with n = %d ", goma_ctx->proc_id, nvalues);
       fprint_location(filename, line);
     }
   }
@@ -709,12 +708,12 @@ double **alloc_dbl_2_FL(
   double **array, *iloc;
   if (nval1 <= 0) {
     nval1 = 1;
-    fprintf(stderr, "Warning: alloc_dbl_2 P_%d: called with ndim1 = %d", ProcID, ndim1);
+    fprintf(stderr, "Warning: alloc_dbl_2 P_%d: called with ndim1 = %d", goma_ctx->proc_id, ndim1);
     fprint_location(filename, line);
   }
   if (nval2 <= 0) {
     nval2 = 1;
-    fprintf(stderr, "Warning: alloc_dbl_2 P_%d: called with ndim2 = %d", ProcID, ndim2);
+    fprintf(stderr, "Warning: alloc_dbl_2 P_%d: called with ndim2 = %d", goma_ctx->proc_id, ndim2);
     fprint_location(filename, line);
   }
   array = (double **)array_alloc(2, nval1, nval2, sizeof(double));
@@ -772,7 +771,7 @@ void *alloc_void_struct_1_FL(const size_t structsize,
   size_t bytenum = 0;
   void *array = NULL;
   if (structsize == 0) {
-    if (Unlimited_Output) {
+    if (goma_ctx->unlimited_output) {
       fprintf(stderr, "alloc_void_struct_1 WARNING size of structure is zero\n");
     }
     alloc_eh("alloc_void_struct_1", bytenum);
@@ -780,8 +779,8 @@ void *alloc_void_struct_1_FL(const size_t structsize,
   }
   if (nvalues <= 0) {
     bytenum = structsize;
-    if (Unlimited_Output) {
-      fprintf(stderr, "Warning: alloc_void_struct_1 P_%d: called with n = %d ", ProcID, nvalues);
+    if (goma_ctx->unlimited_output) {
+      fprintf(stderr, "Warning: alloc_void_struct_1 P_%d: called with n = %d ", goma_ctx->proc_id, nvalues);
       fprint_location(filename, line);
     }
   } else {
@@ -830,8 +829,8 @@ void **alloc_ptr_1_FL(const int num_ptrs, const char *filename, const int line)
   void **array = NULL;
   if (nval1 <= 0) {
     nval1 = 1;
-    if (Unlimited_Output) {
-      fprintf(stderr, "Warning: alloc_ptr_1 P_%d: called with n = %d ", ProcID, num_ptrs);
+    if (goma_ctx->unlimited_output) {
+      fprintf(stderr, "Warning: alloc_ptr_1 P_%d: called with n = %d ", goma_ctx->proc_id, num_ptrs);
       fprint_location(filename, line);
     }
   }
@@ -882,8 +881,8 @@ void realloc_int_1_FL(int **list_hndl,
     return;
   if (nval1 <= 0) {
     nval1 = 1;
-    if (Unlimited_Output) {
-      fprintf(stderr, "Warning: realloc_int_1 P_%d: called with n = %d ", ProcID, new_length);
+    if (goma_ctx->unlimited_output) {
+      fprintf(stderr, "Warning: realloc_int_1 P_%d: called with n = %d ", goma_ctx->proc_id, new_length);
       fprint_location(filename, line);
     }
   }
@@ -945,7 +944,7 @@ void realloc_dbl_1_FL(double **dvec_hndl,
     return;
   if (nval1 <= 0) {
     nval1 = 1;
-    fprintf(stderr, "Warning: realloc_dbl_1 P_%d: called with n = %d ", ProcID, new_length);
+    fprintf(stderr, "Warning: realloc_dbl_1 P_%d: called with n = %d ", goma_ctx->proc_id, new_length);
     fprint_location(filename, line);
   }
   bytenum = nval1 * sizeof(double);
@@ -1006,8 +1005,8 @@ void realloc_ptr_1_FL(void ***list_hndl,
     return;
   if (nval1 <= 0) {
     nval1 = 1;
-    if (Unlimited_Output) {
-      fprintf(stderr, "Warning: realloc_ptr_1 P_%d: called with n = %d ", ProcID, new_num_ptrs);
+    if (goma_ctx->unlimited_output) {
+      fprintf(stderr, "Warning: realloc_ptr_1 P_%d: called with n = %d ", goma_ctx->proc_id, new_num_ptrs);
       fprint_location(filename, line);
     }
   }
@@ -1077,7 +1076,7 @@ void *realloc_void_struct_1_FL(void *vec_ptr,
     return (vec_ptr);
   if (nval1 <= 0) {
     nval1 = 1;
-    fprintf(stderr, "Warning: realloc_struct_1 P_%d: called with n = %d ", ProcID, new_length);
+    fprintf(stderr, "Warning: realloc_struct_1 P_%d: called with n = %d ", goma_ctx->proc_id, new_length);
     fprint_location(filename, line);
   }
   bytenum = nval1 * structsize;
@@ -1138,16 +1137,16 @@ void ***alloc_ptr_2_FL(const int numDim1, const int numDim2, const char *filenam
   void ***array;
   if (nval1 <= 0) {
     nval1 = 1;
-    if (Unlimited_Output) {
-      (void)fprintf(stderr, "Warning: alloc_ptr_2 P_%d: called with numDim1 = %d ", ProcID,
+    if (goma_ctx->unlimited_output) {
+      (void)fprintf(stderr, "Warning: alloc_ptr_2 P_%d: called with numDim1 = %d ", goma_ctx->proc_id,
                     numDim1);
       fprint_location(filename, line);
     }
   }
   if (nval2 <= 0) {
     nval2 = 1;
-    if (Unlimited_Output) {
-      fprintf(stderr, "Warning: alloc_ptr_2 P_%d: called with numDim2 = %d ", ProcID, numDim2);
+    if (goma_ctx->unlimited_output) {
+      fprintf(stderr, "Warning: alloc_ptr_2 P_%d: called with numDim2 = %d ", goma_ctx->proc_id, numDim2);
       fprint_location(filename, line);
     }
   }

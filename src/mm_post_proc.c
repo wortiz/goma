@@ -4475,11 +4475,11 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
    * Obtain an optimized element order map from the exoII database
    * if available. If it is not available, then calculate one
    */
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     listel = alloc_int_1(Num_Internal_Elems, 0);
     cpu_word_size = sizeof(dbl);
     io_word_size = 0;
-    mesh_exoid = ex_open(ExoFile, EX_READ, &cpu_word_size, &io_word_size, &version);
+    mesh_exoid = ex_open(goma_ctx->exo_file, EX_READ, &cpu_word_size, &io_word_size, &version);
     GOMA_EH(mesh_exoid, "ex_open");
     /*
      * Turn off annoying warning about nonexistent element order maps
@@ -4527,7 +4527,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
     post_proc_vect[j] = (double *)smalloc(num_universe_nodes * sizeof(double));
   }
 
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     if (STREAM != -1 && Num_Var_In_Type[pg->imtrx][R_MOMENTUM1]) {
       listnd = (int *)smalloc(num_universe_nodes * sizeof(int));
     }
@@ -4545,7 +4545,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
     pressure_elem_vect = (double *)smalloc(Num_Internal_Elems * sizeof(double));
   }
 
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     if (FLUXLINES != -1 && Num_Var_In_Type[pg->imtrx][R_MASS]) {
       for (w = 0; w < upd->Max_Num_Species_Eqn; w++) {
         listndm[w] = (int *)smalloc(num_universe_nodes * sizeof(int));
@@ -4562,7 +4562,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
     }
   }
 
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     if (ENERGY_FLUXLINES != -1 && Num_Var_In_Type[pg->imtrx][R_ENERGY]) {
       listnde = (int *)smalloc(num_universe_nodes * sizeof(int));
       if (CONDUCTION_VECTORS == -1)
@@ -4584,7 +4584,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   }
 
   /*Initialize */
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     if (STREAM != -1 && Num_Var_In_Type[pg->imtrx][R_MOMENTUM1]) {
       for (I = 0; I < num_universe_nodes; I++) {
         listnd[I] = 0;
@@ -5114,7 +5114,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   /*                CALCULATE STREAM OR FLUX FUNCTIONS                          */
   /******************************************************************************/
 
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     if (STREAM != -1 || FLUXLINES != -1 || ENERGY_FLUXLINES != -1) {
       /*
        * Loop over all the elements, in the "optimal" order.
@@ -5973,7 +5973,7 @@ void post_process_elem(double x[],     /* soln vector */
      * When we're parallel, this will write out results for boundary
      * elements that are shared by other processors.
      */
-    wr_elem_result_exo(exo, ExoFileOut, gvec_elem, tev + i, ts, *time_ptr, rd);
+    wr_elem_result_exo(exo, goma_ctx->exo_file_out, gvec_elem, tev + i, ts, *time_ptr, rd);
   }
 
   /* Release the struct array memory if it exists */
@@ -7831,7 +7831,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
   char echo_file[MAX_CHAR_IN_INPUT] = "\0";
   int elemBlock_id = -1;
 
-  strcpy(echo_file, Echo_Input_File);
+  strcpy(echo_file, goma_ctx->echo_input_file);
   /*
    * Initialize count of post proc vars to be exported
    */
@@ -9371,7 +9371,7 @@ static int look_for_post_proc(FILE *ifp,           /* pointer to file           
   char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
   char echo_file[MAX_CHAR_IN_INPUT] = "\0";
 
-  strcpy(echo_file, Echo_Input_File);
+  strcpy(echo_file, goma_ctx->echo_input_file);
 
   /*
    * Rewind file and look for the optional string anywhere in the input deck

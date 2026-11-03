@@ -121,7 +121,7 @@ static int **alloc_bc_unk_list_node(int inode)
   }
 
   if (sum_unknowns <= 0) {
-    fprintf(stderr, "P_%d: Warning: node %d with zero unknowns has an applied bc\n", ProcID, inode);
+    fprintf(stderr, "P_%d: Warning: node %d with zero unknowns has an applied bc\n", goma_ctx->proc_id, inode);
   }
 
   return bc_unk_list_node;
@@ -327,7 +327,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 
   int *matrix_used_BC = NULL;
 
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     matrix_used_BC = calloc((size_t)Num_BC, sizeof(int));
   }
 
@@ -399,7 +399,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
           } /* if (exo->ns_id[ins] == BC_Types[ibc].BC_ID) { */
         } /* for (ins = 0; ins < exo->num_node_sets; ins++) { */
         used_BC = gsum_Int(used_BC);
-        if (ProcID == 0) {
+        if (goma_ctx->proc_id == 0) {
           matrix_used_BC[ibc] |= used_BC;
         }
 
@@ -582,7 +582,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
          */
 
         used_BC = gsum_Int(used_BC);
-        if (ProcID == 0) {
+        if (goma_ctx->proc_id == 0) {
           matrix_used_BC[ibc] |= used_BC;
         }
       } /* END if (!strcmp(BC_Types[ibc].Set_Type, "SS")) 		      */
@@ -639,13 +639,13 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                */
               BC_dup_list[pg->imtrx][BC_dup_ptr[pg->imtrx]] = BC_Unk_List[inode];
               BC_dup_ptr[pg->imtrx]++;
-              if (Debug_Flag > 0) {
+              if (goma_ctx->debug_flag > 0) {
                 fprintf(stderr, "New node in duplication list %d %d\n", inode + 1,
                         BC_dup_ptr[pg->imtrx]);
               }
             }
 
-            if (Debug_Flag) {
+            if (goma_ctx->debug_flag) {
               idup = 0;
               fprintf(stderr, "  DUPLICATE BC at node %d equation %d, material %d: ", inode + 1,
                       eqn, vd->MatID);
@@ -826,7 +826,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                         }
                         /* sum the differences between coefficients and normalize*/
                         if (max > 0. && sum / max > 1e-8) {
-                          if (Debug_Flag > 0) {
+                          if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr,
                                     "    TWO BC's %s at node %d have conflicting values, "
                                     " defaulting to 1st occurence = %g\n",
@@ -835,7 +835,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           }
                           i_delete = 2; /* delete 2nd occurence */
                         } else {
-                          if (Debug_Flag > 0) {
+                          if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr, "    IDENTICAL BC %s at node %d equation %d\n",
                                     BC_Types[ibc1].desc->name2, inode + 1, eqn);
                           }
@@ -859,14 +859,14 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                 get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                             idum =
                                 find_first_opening(BC_Unk_List[inode][offset_mesh2], MAX_NODAL_BCS);
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
                                       BC_Types[ibc2].desc->name2, inode + 1,
                                       BC_Types[ibc1].desc->name2);
                             }
                             BC_Unk_List[inode][offset_mesh2][idum] = ibc2;
                           } else {
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
                                       BC_Types[ibc2].desc->name2, inode + 1,
                                       BC_Types[ibc1].desc->name2);
@@ -880,14 +880,14 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                             idum =
                                 find_first_opening(BC_Unk_List[inode][offset_mom2], MAX_NODAL_BCS);
 
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
                                       BC_Types[ibc2].desc->name2, inode + 1,
                                       BC_Types[ibc1].desc->name2);
                             }
                             BC_Unk_List[inode][offset_mom2][idum] = ibc2;
                           } else {
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
                                       BC_Types[ibc2].desc->name2, inode + 1,
                                       BC_Types[ibc1].desc->name2);
@@ -901,14 +901,14 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                             idum =
                                 find_first_opening(BC_Unk_List[inode][offset_mom2], MAX_NODAL_BCS);
 
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
                                       BC_Types[ibc2].desc->name2, inode + 1,
                                       BC_Types[ibc1].desc->name2);
                             }
                             BC_Unk_List[inode][offset_mom2][idum] = ibc2;
                           } else {
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
                                       BC_Types[ibc2].desc->name2, inode + 1,
                                       BC_Types[ibc1].desc->name2);
@@ -921,7 +921,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 
                       /* remove this BC from list */
                       if (i_delete == 1) {
-                        if (Debug_Flag > 0) {
+                        if (goma_ctx->debug_flag > 0) {
                           fprintf(
                               stderr, "    DISCARDING %s at node %d from dup_list because of %s\n",
                               BC_Types[ibc2].desc->name2, inode + 1, BC_Types[ibc1].desc->name2);
@@ -929,7 +929,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                         BC_Unk_List[inode][offset][k] = -1;
                       }
                       if (i_delete == 2) {
-                        if (Debug_Flag > 0) {
+                        if (goma_ctx->debug_flag > 0) {
                           fprintf(
                               stderr, "    DISCARDING %s at node %d from dup_list because of %s\n",
                               BC_Types[ibc1].desc->name2, inode + 1, BC_Types[ibc2].desc->name2);
@@ -978,7 +978,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           (bct2 <= GD_TIME_BC && bct2 >= GD_CONST_BC)) {
                         if (BC_Types[ibc1].BC_ID == BC_Types[ibc2].BC_ID) {
                           action = -1;
-                          if (Debug_Flag > 0) {
+                          if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr, "    MULTIPLE GD %s at node %d\n",
                                     BC_Types[ibc2].desc->name2, inode + 1);
                           }
@@ -1001,7 +1001,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                        * the second one is discarded.
                        */
                       if (bct1 == bct2 && action == 1) {
-                        if (Debug_Flag > 0) {
+                        if (goma_ctx->debug_flag > 0) {
                           fprintf(stderr,
                                   "    TWO BC's %s at node %d have same type, "
                                   " defaulting to 1st occurence = %g\n",
@@ -1032,7 +1032,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                             BC_Types[ibc2].desc->method == WEAK_INT_EDGE ||
                             BC_Types[ibc2].desc->method == WEAK_SHARP_INT) {
                           action = -1;
-                          if (Debug_Flag > 0) {
+                          if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr,
                                     "    BC %s is a Weak BC masquerading as colloc BC"
                                     " Allow Weak BC %s to stack on top of it\n",
@@ -1067,14 +1067,14 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                 get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                             idum =
                                 find_first_opening(BC_Unk_List[inode][offset_mesh2], MAX_NODAL_BCS);
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
                                       BC_Types[ibc2].desc->name2, inode + 1,
                                       BC_Types[ibc1].desc->name2);
                               BC_Unk_List[inode][offset_mesh2][idum] = ibc2;
                             }
                           } else {
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr,
                                       "    REMOVING BC %s at node %d because of %s and next coord "
                                       "not available\n",
@@ -1089,7 +1089,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                 get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                             idum =
                                 find_first_opening(BC_Unk_List[inode][offset_mom2], MAX_NODAL_BCS);
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr,
                                       "    MOVING BC %s at node %d to next coord because of %s\n",
                                       BC_Types[ibc2].desc->name2, inode + 1,
@@ -1097,7 +1097,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                             }
                             BC_Unk_List[inode][offset_mom2][idum] = ibc2;
                           } else {
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr,
                                       "    REMOVING BC %s at node %d because of %s and next coord "
                                       "not avail\n",
@@ -1121,7 +1121,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                       /* remove this BC from list */
                       if (action == 1 && i_delete == 1) {
 
-                        if (Debug_Flag > 0) {
+                        if (goma_ctx->debug_flag > 0) {
                           fprintf(
                               stderr, "    DISCARDING %s at node %d from dup_list because of %s\n",
                               BC_Types[ibc2].desc->name2, inode + 1, BC_Types[ibc1].desc->name2);
@@ -1130,7 +1130,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                       }
 
                       if (i_delete == -1) {
-                        if (Debug_Flag > 0) {
+                        if (goma_ctx->debug_flag > 0) {
                           fprintf(
                               stderr, "    DISCARDING %s at node %d from dup_list because of %s\n",
                               BC_Types[ibc1].desc->name2, inode + 1, BC_Types[ibc2].desc->name2);
@@ -1198,14 +1198,14 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                 get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                             idum =
                                 find_first_opening(BC_Unk_List[inode][offset_mesh2], MAX_NODAL_BCS);
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
                                       BC_Types[ibc2].desc->name2, inode + 1,
                                       BC_Types[ibc1].desc->name2);
                             }
                             BC_Unk_List[inode][offset_mesh2][idum] = ibc2;
                           } else {
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
                                       BC_Types[ibc2].desc->name2, inode + 1,
                                       BC_Types[ibc1].desc->name2);
@@ -1218,14 +1218,14 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                 get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                             idum =
                                 find_first_opening(BC_Unk_List[inode][offset_mom2], MAX_NODAL_BCS);
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
                                       BC_Types[ibc2].desc->name2, inode + 1,
                                       BC_Types[ibc1].desc->name2);
                             }
                             BC_Unk_List[inode][offset_mom2][idum] = ibc2;
                           } else {
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
                                       BC_Types[ibc2].desc->name2, inode + 1,
                                       BC_Types[ibc1].desc->name2);
@@ -1238,7 +1238,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 
                       /* remove this BC from list */
                       if (i_delete == 1) {
-                        if (Debug_Flag > 0) {
+                        if (goma_ctx->debug_flag > 0) {
                           fprintf(
                               stderr, "    DISCARDING %s at node %d from dup_list because of %s\n",
                               BC_Types[ibc2].desc->name2, inode + 1, BC_Types[ibc1].desc->name2);
@@ -1273,7 +1273,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           (bct2 <= GD_TIME_BC && bct2 >= GD_CONST_BC)) {
                         if (BC_Types[ibc1].BC_ID == BC_Types[ibc2].BC_ID) {
                           action = -1;
-                          if (Debug_Flag > 0) {
+                          if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr, "    MULTIPLE GD %s at node %d\n",
                                     BC_Types[ibc2].desc->name2, inode + 1);
                           }
@@ -1302,7 +1302,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                   BC_Types[ibc1].desc->name1, BC_Types[ibc2].desc->name1);
                           GOMA_WH(-1, Err_Msg);
                         } else {
-                          if (Debug_Flag > 0) {
+                          if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr,
                                     "    REMOVING SPECIAL BC %s at node %d from dup_list because "
                                     "of %s\n",
@@ -1520,7 +1520,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                           }
 
                           if (fabs(det) < 1.0e-10) {
-                            if (Debug_Flag > 0) {
+                            if (goma_ctx->debug_flag > 0) {
                               fprintf(stderr, "    COLINEAR SIDES %s at node %d \n",
                                       BC_Types[ibc1].desc->name2, inode + 1);
                             }
@@ -1585,14 +1585,14 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                   get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                               idum = find_first_opening(BC_Unk_List[inode][offset_mesh2],
                                                         MAX_NODAL_BCS);
-                              if (Debug_Flag > 0) {
+                              if (goma_ctx->debug_flag > 0) {
                                 fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
                                         BC_Types[imove].desc->name2, inode + 1,
                                         BC_Types[istay].desc->name2);
                               }
                               BC_Unk_List[inode][offset_mesh2][idum] = imove;
                             } else {
-                              if (Debug_Flag > 0) {
+                              if (goma_ctx->debug_flag > 0) {
                                 fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
                                         BC_Types[imove].desc->name2, inode + 1,
                                         BC_Types[istay].desc->name2);
@@ -1605,14 +1605,14 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                                   get_nodal_unknown_offset(nv, eqn + 1, vd->MatID, 0, &vd_retn2);
                               idum = find_first_opening(BC_Unk_List[inode][offset_mom2],
                                                         MAX_NODAL_BCS);
-                              if (Debug_Flag > 0) {
+                              if (goma_ctx->debug_flag > 0) {
                                 fprintf(stderr, "    MOVING BC %s at node %d because of %s\n",
                                         BC_Types[imove].desc->name2, inode + 1,
                                         BC_Types[istay].desc->name2);
                               }
                               BC_Unk_List[inode][offset_mom2][idum] = imove;
                             } else {
-                              if (Debug_Flag > 0) {
+                              if (goma_ctx->debug_flag > 0) {
                                 fprintf(stderr, "    REMOVING BC %s at node %d because of %s\n",
                                         BC_Types[imove].desc->name2, inode + 1,
                                         BC_Types[istay].desc->name2);
@@ -1625,7 +1625,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 
                         /* remove this BC from list */
                         if (action == 1 && i_delete == 1) {
-                          if (Debug_Flag > 0) {
+                          if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr,
                                     "    DISCARDING %s at node %d from dup_list because of %s\n",
                                     BC_Types[ibc2].desc->name2, inode + 1,
@@ -1635,7 +1635,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                         }
 
                         if (action == 1 && i_delete == -1) {
-                          if (Debug_Flag > 0) {
+                          if (goma_ctx->debug_flag > 0) {
                             fprintf(stderr,
                                     "    DISCARDING %s at node %d from dup_list because of %s\n",
                                     BC_Types[ibc1].desc->name2, inode + 1,
@@ -1698,17 +1698,17 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 
     divert = gsum_Int(divert);
 
-    if (Debug_Flag > 0 || pd_glob[0]->Num_Dim < 3) {
+    if (goma_ctx->debug_flag > 0 || pd_glob[0]->Num_Dim < 3) {
       print_sync_start(TRUE);
       if (divert) {
         strcpy(bc_divert_fn, DUP_THRESHHOLD_FILENAME);
-        if (ProcID == 0) {
+        if (goma_ctx->proc_id == 0) {
           bc_dup_out = fopen(bc_divert_fn, "w");
         } else {
           bc_dup_out = fopen(bc_divert_fn, "a");
         }
         if (BC_dup_ptr[pg->imtrx] > 0) {
-          fprintf(bc_dup_out, "BC Duplication list for Processor %d:\n", ProcID);
+          fprintf(bc_dup_out, "BC Duplication list for Processor %d:\n", goma_ctx->proc_id);
           fprintf(bc_dup_out, "-------- --------- ----------- ----\n");
         }
       } else {
@@ -1864,7 +1864,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                 idup++;
               }
             }
-            if (Debug_Flag > 1) {
+            if (goma_ctx->debug_flag > 1) {
               fprintf(stderr,
                       "%d BC's at node %d on %d: DC=%d "
                       "WIC=%d SIC=%d PC=%d SP=%d ROT=%d\n",
@@ -1877,11 +1877,11 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
               i_rotate = 1;
             }
             if (count_rotate >= pd_glob[0]->Num_Dim && ivar == 0 &&
-                (pd_glob[0]->Num_Dim < 3 || Debug_Flag >= 2)) {
+                (pd_glob[0]->Num_Dim < 3 || goma_ctx->debug_flag >= 2)) {
               log_msg("Don't rotate MESH at node %d because too many rotations\n", inode + 1);
             }
             if (count_rotate >= pd_glob[0]->Num_Dim && ivar == 1 &&
-                (pd_glob[0]->Num_Dim < 3 || Debug_Flag >= 2)) {
+                (pd_glob[0]->Num_Dim < 3 || goma_ctx->debug_flag >= 2)) {
               log_msg("Don't rotate MOMENTUM at node %d because too many rotations\n", inode + 1);
             }
             if (count_DC > 0) {
@@ -1900,7 +1900,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
               }
             }
             if (i_rotate && ivar == 0) {
-              if (Debug_Flag > 0) {
+              if (goma_ctx->debug_flag > 0) {
                 fprintf(stderr, "Rotate MESH for BC's at node %d\n", inode + 1);
               }
               if (num_mesh_rotate[pg->imtrx] == 0 ||
@@ -1911,7 +1911,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
               }
             }
             if (i_rotate && ivar == 1) {
-              if (Debug_Flag > 0)
+              if (goma_ctx->debug_flag > 0)
                 fprintf(stderr, "Rotate MOMENTUM for BC's at node %d\n", inode + 1);
               if (num_mom_rotate[pg->imtrx] == 0 ||
                   mom_rotate_node[pg->imtrx][num_mom_rotate[pg->imtrx] - 1] != inode) {
@@ -1965,16 +1965,16 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
       }
     }
 
-    if (Debug_Flag > 0) {
+    if (goma_ctx->debug_flag > 0) {
       for (i = 0; i < num_mesh_rotate[pg->imtrx]; i++) {
         fprintf(stderr, "\tMESH node %d rotate on SS %d\n", mesh_rotate_node[pg->imtrx][i] + 1,
                 mesh_rotate_ss[pg->imtrx][i]);
       }
     }
-    if (Debug_Flag > 0 && num_mom_rotate[pg->imtrx] > 0) {
+    if (goma_ctx->debug_flag > 0 && num_mom_rotate[pg->imtrx] > 0) {
       fprintf(stderr, "Rotate MOMENTUM for BC's at %d NODES \n", num_mom_rotate[pg->imtrx]);
     }
-    if (Debug_Flag > 0) {
+    if (goma_ctx->debug_flag > 0) {
       for (i = 0; i < num_mom_rotate[pg->imtrx]; i++) {
         fprintf(stderr, "\tMOMENTUM node %d rotate on SS %d\n", mom_rotate_node[pg->imtrx][i] + 1,
                 mom_rotate_ss[pg->imtrx][i]);
@@ -1995,7 +1995,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
     safer_free((void **)&BC_Unk_List);
   }
 
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     for (int ibc = 0; ibc < Num_BC; ibc++) {
       if (matrix_used_BC[ibc] == 0) {
         GOMA_WH_MANY(-1, "Boundary condition %d, %s, applied on NS %d, is never used\n", ibc,
@@ -2056,19 +2056,19 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
 #endif
   strcpy(ofbc_fn, BC_3D_INFO_FILENAME); /* def in rf_bc_const.h */
 
-  if (Unlimited_Output) {
+  if (goma_ctx->unlimited_output) {
     print_sync_start(TRUE);
-    if (ProcID == 0) {
+    if (goma_ctx->proc_id == 0) {
       ofbc = fopen(ofbc_fn, "w");
     } else {
       ofbc = fopen(ofbc_fn, "a");
     }
     if (ofbc == NULL) {
-      sprintf(Err_Msg, "P_%d: cannot open file \"%s\" to write 3D BC info", ProcID, ofbc_fn);
+      sprintf(Err_Msg, "P_%d: cannot open file \"%s\" to write 3D BC info", goma_ctx->proc_id, ofbc_fn);
       GOMA_EH(GOMA_ERROR, Err_Msg);
     }
-    if (Num_Proc > 1) {
-      fprintf(ofbc, "BC Duplication and Rotation list for Processor %d:\n", ProcID);
+    if (goma_ctx->num_proc > 1) {
+      fprintf(ofbc, "BC Duplication and Rotation list for Processor %d:\n", goma_ctx->proc_id);
       fprintf(ofbc, "----------- ------------ -------------- -------------\n");
     }
   }
@@ -2360,7 +2360,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
        * be "OK".
        */
 
-      if (Num_Proc == 1) {
+      if (goma_ctx->num_proc == 1) {
         len_ssid_list = exo->num_side_sets;
         ssid_list = exo->ss_id;
       } else {
@@ -2457,7 +2457,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     fprintf(stderr, "Found %d nodes at which to rotate equations\n", num_rot_nodes);
 #endif
 #ifdef PARALLEL
-    DPRINTF(stdout, "P_%d: rotating equations at %d nodes.\n", ProcID, num_rot_nodes);
+    DPRINTF(stdout, "P_%d: rotating equations at %d nodes.\n", goma_ctx->proc_id, num_rot_nodes);
 #endif
 
     /******************************************************************************/
@@ -2538,7 +2538,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                                                                                      * BC_list
                                                                                      */
                 BC_dup_ptr[pg->imtrx]++;
-                if ((Print3DBCDup > 1 || Debug_Flag > 1) && Unlimited_Output) {
+                if ((Print3DBCDup > 1 || goma_ctx->debug_flag > 1) && goma_ctx->unlimited_output) {
                   fprintf(ofbc, "New Rot node in dup list %d %d\n", inode + 1,
                           BC_dup_ptr[pg->imtrx]);
                 }
@@ -2665,11 +2665,11 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                   fprintf(stderr, "Problem on ROT [%d], coord [%d], node (%d)\n", irc, p,
                           inode + 1);
                   if (tilt_bct && tilt_bcSS && tilt_save) {
-                    fprintf(stderr, "P_%d: bct = %d, bct1 = %d\n", ProcID, bct, bct1);
-                    fprintf(stderr, "P_%d: bcSS = %d, bcSS1 = %d\n", ProcID, bcSS, bcSS1);
-                    fprintf(stderr, "P_%d: save_this_bc1[q][j]=%d\n", ProcID, val);
+                    fprintf(stderr, "P_%d: bct = %d, bct1 = %d\n", goma_ctx->proc_id, bct, bct1);
+                    fprintf(stderr, "P_%d: bcSS = %d, bcSS1 = %d\n", goma_ctx->proc_id, bcSS, bcSS1);
+                    fprintf(stderr, "P_%d: save_this_bc1[q][j]=%d\n", goma_ctx->proc_id, val);
                   }
-                  fprintf(stderr, "P_%d death, nss = %d\n", ProcID, exo->num_side_sets);
+                  fprintf(stderr, "P_%d death, nss = %d\n", goma_ctx->proc_id, exo->num_side_sets);
                   GOMA_EH(GOMA_ERROR, "Rotation BC not found");
                 }
 #endif
@@ -2716,24 +2716,24 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                 BC_dup_nodes[pg->imtrx][BC_dup_ptr[pg->imtrx]] = inode;
                 BC_dup_list[pg->imtrx][BC_dup_ptr[pg->imtrx]] = BC_Unk_List[inode];
                 BC_dup_ptr[pg->imtrx]++;
-                if ((Print3DBCDup > 1 || Debug_Flag > 1) && Unlimited_Output) {
+                if ((Print3DBCDup > 1 || goma_ctx->debug_flag > 1) && goma_ctx->unlimited_output) {
                   fprintf(ofbc, "New node in duplication list %d %d\n", inode + 1,
                           BC_dup_ptr[pg->imtrx]);
                 }
               }
 
               idup = 0;
-              if ((Print3DBCDup > 0 || Debug_Flag > 0) && Unlimited_Output) {
+              if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
                 fprintf(ofbc, "  DUPLICATE BC at node %d equation %d: ", inode + 1, eqn);
               }
               while (BC_Unk_List[inode][offset][idup] != -1) {
                 ibc = BC_Unk_List[inode][offset][idup];
-                if ((Print3DBCDup > 0 || Debug_Flag > 0) && Unlimited_Output) {
+                if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
                   fprintf(ofbc, "%s, ", BC_Types[ibc].desc->name2);
                 }
                 idup++;
               }
-              if ((Print3DBCDup > 0 || Debug_Flag > 0) && Unlimited_Output) {
+              if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
                 fprintf(ofbc, "\n");
               }
 
@@ -2793,7 +2793,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                     ibc2 = BC_Unk_List[inode][offset][j_DC];
                     bct2 = BC_Types[ibc2].BC_Name;
                     /* RESOLVE CONFLICT */
-                    if ((Print3DBCDup > 0 || Debug_Flag > 0) && Unlimited_Output) {
+                    if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
                       ibc = BC_Unk_List[inode][offset][j_DC];
                       fprintf(ofbc, "    TWO DBC's %s and %s at node %d \n",
                               BC_Types[ibc1].desc->name2, BC_Types[ibc].desc->name2, inode + 1);
@@ -2824,20 +2824,20 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                       if ((bct1 <= GD_TIME_BC && bct1 >= GD_CONST_BC) &&
                           (bct2 <= GD_TIME_BC && bct2 >= GD_CONST_BC)) {
                         if (BC_Types[ibc1].BC_ID == BC_Types[ibc2].BC_ID) {
-                          if ((Print3DBCDup > 0 || Debug_Flag > 0) && Unlimited_Output) {
+                          if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
                             fprintf(ofbc, "    MULTIPLE GD %s at node %d\n",
                                     BC_Types[ibc2].desc->name2, inode + 1);
                           }
                           save_this_bc[j] = 1;
                         } else {
-                          if ((Print3DBCDup > 0 || Debug_Flag > 0) && Unlimited_Output) {
+                          if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
                             fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
                                     BC_Types[ibc2].desc->name2, BC_Types[ibc1].desc->name2,
                                     inode + 1);
                           }
                         }
                       } else {
-                        if ((Print3DBCDup > 0 || Debug_Flag > 0) && Unlimited_Output) {
+                        if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
                           fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
                                   BC_Types[ibc2].desc->name2, BC_Types[ibc1].desc->name2,
                                   inode + 1);
@@ -2861,7 +2861,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                         ibc2 = BC_Unk_List[inode][offset][j_SI];
                         bct2 = BC_Types[ibc2].BC_Name;
                         /* RESOLVE CONFLICT */
-                        if ((Print3DBCDup > 0 || Debug_Flag > 0) && Unlimited_Output) {
+                        if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
                           fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
                                   BC_Types[ibc2].desc->name2, BC_Types[ibc1].desc->name2,
                                   inode + 1);
@@ -2885,7 +2885,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                         if (j_CSWI != -1) {
                           ibc2 = BC_Unk_List[inode][offset][j_CSWI];
                           bct2 = BC_Types[ibc2].BC_Name;
-                          if ((Print3DBCDup > 0 || Debug_Flag > 0) && Unlimited_Output) {
+                          if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
                             fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
                                     BC_Types[ibc1].desc->name2, BC_Types[ibc2].desc->name2,
                                     inode + 1);
@@ -2927,13 +2927,13 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     /* Now print out BC_dup list for 3-D problems */
     /* Also check for potentially conflicting combinations */
     if (pd_glob[0]->Num_Dim == 3) {
-      if (Unlimited_Output) {
+      if (goma_ctx->unlimited_output) {
         fprintf(ofbc, "\nBoundary Condition Duplication List (numbers in paren are BC_ID):\n");
       }
       for (i = 0; i < BC_dup_ptr[pg->imtrx]; i++) {
         inode = BC_dup_nodes[pg->imtrx][i];
         node = Nodes[inode];
-        if (Unlimited_Output) {
+        if (goma_ctx->unlimited_output) {
           fprintf(ofbc, "N=%d:", BC_dup_nodes[pg->imtrx][i] + 1);
         }
         nv = node->Nodal_Vars_Info[pg->imtrx];
@@ -2946,7 +2946,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
             if (ROT_list[inode] != NULL && ROT_list[inode][VECT_EQ_MOM] >= 0) {
               if (ROT_Types[ROT_list[inode][VECT_EQ_MOM]].BC_Type[eqn - R_MOMENTUM1] < 0 &&
                   ROT_Types[ROT_list[inode][VECT_EQ_MOM]].ROTATE) {
-                if (Unlimited_Output)
+                if (goma_ctx->unlimited_output)
                   fprintf(ofbc, " E%d=ROTATE", eqn);
                 eprint = 0;
               }
@@ -2956,27 +2956,27 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
             if (ROT_list[inode] != NULL && ROT_list[inode][VECT_EQ_MESH] >= 0) {
               if (ROT_Types[ROT_list[inode][VECT_EQ_MESH]].BC_Type[eqn - R_MESH1] < 0 &&
                   ROT_Types[ROT_list[inode][VECT_EQ_MESH]].ROTATE) {
-                if (Unlimited_Output)
+                if (goma_ctx->unlimited_output)
                   fprintf(ofbc, " E%d=ROTATE", eqn);
                 eprint = 0;
               }
             }
           }
           if (BC_Unk_List[inode][offset][0] != -1) {
-            if (eprint && Unlimited_Output)
+            if (eprint && goma_ctx->unlimited_output)
               fprintf(ofbc, " E%d=", eqn);
             idup = 0;
             while (BC_Unk_List[inode][offset][idup] != -1) {
-              if (Unlimited_Output) {
+              if (goma_ctx->unlimited_output) {
                 fprintf(ofbc, "%s(%d", BC_Types[BC_Unk_List[inode][offset][idup]].desc->name1,
                         BC_Types[BC_Unk_List[inode][offset][idup]].BC_ID);
               }
               if (BC_Types[BC_Unk_List[inode][offset][idup]].BC_ID2 == -1) {
-                if (Unlimited_Output) {
+                if (goma_ctx->unlimited_output) {
                   fprintf(ofbc, ")");
                 }
               } else {
-                if (Unlimited_Output) {
+                if (goma_ctx->unlimited_output) {
                   fprintf(ofbc, ",%d)", BC_Types[BC_Unk_List[inode][offset][idup]].BC_ID2);
                 }
               }
@@ -2984,11 +2984,11 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
             }
           }
         }
-        if (Unlimited_Output)
+        if (goma_ctx->unlimited_output)
           fprintf(ofbc, "\n");
       }
     }
-    if (Unlimited_Output)
+    if (goma_ctx->unlimited_output)
       fprintf(ofbc, "\n");
 
     /* free memory associated with nodes that don't have duplicate BC's */
@@ -3010,7 +3010,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     safer_free((void **)&NS_list);
   }
 
-  if (Unlimited_Output) {
+  if (goma_ctx->unlimited_output) {
     fclose(ofbc);
     print_sync_end(TRUE);
   }

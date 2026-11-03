@@ -177,7 +177,7 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
 
   std::vector<LO> owned_elems;
   for (int i = 0; i < exo->num_elems; i++) {
-    if (dpi->elem_owner[i] == ProcID) {
+    if (dpi->elem_owner[i] == goma_ctx->proc_id) {
       owned_elems.push_back(i);
     }
   }
@@ -402,7 +402,7 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
       //      CALL(ex_get_set_param(file, EX_SIDE_SET, side_set_ids[i], &nsides, &ndist_factors));
       nsides = exo->ss_num_sides[i];
       if (verbose)
-        std::cout << "Proc" << ProcID << " has " << nsides << "sides\n";
+        std::cout << "Proc" << goma_ctx->proc_id << " has " << nsides << "sides\n";
       int snl[MAX_NODES_PER_SIDE]; /* Side Node List - NOT Saturday Night Live! */
 
       std::set<int> ss_side_nodes;
@@ -429,7 +429,7 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
       }
 
       if (verbose) {
-        std::cout << "ss#" << dpi->ss_id_global[i] << " Proc " << ProcID << " ss_side_nodes ";
+        std::cout << "ss#" << dpi->ss_id_global[i] << " Proc " << goma_ctx->proc_id << " ss_side_nodes ";
 
         for (auto n : ss_side_nodes) {
           std::cout << n << " ";
@@ -451,7 +451,7 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
 
       int max_nnodes;
       MPI_Allreduce(&nnodes_owned, &max_nnodes, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-      std::vector<int> all_owned(max_nnodes * Num_Proc);
+      std::vector<int> all_owned(max_nnodes * goma_ctx->num_proc);
       std::vector<int> my_owned(max_nnodes);
       std::fill(my_owned.begin(), my_owned.end(), -1);
 
@@ -505,7 +505,7 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
       for (int j = 0; j < my_size; j++) {
         send_sides[j] = mesh->globals(dim - 1)[set_sides2side_tmp[j]];
       }
-      std::vector<int> all_sides(max_sides * Num_Proc);
+      std::vector<int> all_sides(max_sides * goma_ctx->num_proc);
       MPI_Allgather(send_sides.data(), max_sides, MPI_INT, all_sides.data(), max_sides, MPI_INT,
                     MPI_COMM_WORLD);
 
@@ -519,7 +519,7 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
       std::sort(sides.begin(), sides.end());
 
       if (verbose)
-        std::cout << "Proc" << ProcID << " has found " << sides.size() << "sides\n";
+        std::cout << "Proc" << goma_ctx->proc_id << " has found " << sides.size() << "sides\n";
       Write<LO> set_sides2side(sides.size());
 
       for (size_t j = 0; j < sides.size(); j++) {
@@ -528,14 +528,14 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
 
       auto surface_id = dpi->ss_id_global[i];
       if (verbose) {
-        std::cout << "P" << ProcID << " side set #" << surface_id << " \"" << name_ptrs[i]
+        std::cout << "P" << goma_ctx->proc_id << " side set #" << surface_id << " \"" << name_ptrs[i]
                   << "\" has " << nsides << " sides, will be surface " << surface_id << "\n";
 
-        std::cout << "P" << ProcID << " side set #" << surface_id << " nodes = ";
+        std::cout << "P" << goma_ctx->proc_id << " side set #" << surface_id << " nodes = ";
         for (int i = 0; i < h_set_nodes.size(); i++) {
           std::cout << mesh->globals(0).data()[h_set_nodes.data()[i]] << " ";
         }
-        std::cout << "P" << ProcID << " side set #" << surface_id << " sides = ";
+        std::cout << "P" << goma_ctx->proc_id << " side set #" << surface_id << " sides = ";
         for (int i = 0; i < set_sides2side.size(); i++) {
           std::cout << mesh->globals(dim - 1).data()[set_sides2side.data()[i]] << " ";
         }
@@ -590,7 +590,7 @@ void convert_omega_h_to_goma(
   //  Omega_h::exodus::write(std::to_string(ProcID) + "", mesh, true, classify_with);
   char out_par[MAX_FNL];
   strncpy(out_par, "tmp_omega_h_mesh.e", MAX_FNL - 1);
-  multiname(out_par, ProcID, Num_Proc);
+  multiname(out_par, goma_ctx->proc_id, goma_ctx->num_proc);
   mesh->set_parting(OMEGA_H_ELEM_BASED);
   auto comp_ws = int(sizeof(Real));
   auto io_ws = comp_ws;
@@ -638,7 +638,7 @@ void convert_omega_h_to_goma(
   std::vector<int> my_global_comm_nodes;
   std::unordered_map<int, int> global_node_to_local;
   for (int i = 0; i < mesh->nverts(); i++) {
-    if (vert_owners[i] != ProcID) {
+    if (vert_owners[i] != goma_ctx->proc_id) {
       my_global_comm_nodes.push_back(mesh->globals(0)[i]);
     }
     global_node_to_local.insert(std::make_pair((int)mesh->globals(0)[i], i));
@@ -647,7 +647,7 @@ void convert_omega_h_to_goma(
   int comm_size = my_global_comm_nodes.size();
   int max_comm_size;
   MPI_Allreduce(&comm_size, &max_comm_size, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  std::vector<int> all_neighbors_comm_nodes(max_comm_size * Num_Proc);
+  std::vector<int> all_neighbors_comm_nodes(max_comm_size * goma_ctx->num_proc);
 
   my_global_comm_nodes.resize(max_comm_size);
   for (int i = comm_size; i < max_comm_size; i++) {
@@ -671,7 +671,7 @@ void convert_omega_h_to_goma(
   for (int i = comm_size; i < max_comm_size; i++) {
     updated_comm_nodes[i] = -1;
   }
-  all_neighbors_comm_nodes.resize(max_comm_size * Num_Proc);
+  all_neighbors_comm_nodes.resize(max_comm_size * goma_ctx->num_proc);
   MPI_Allgather(updated_comm_nodes.data(), max_comm_size, MPI_INT, all_neighbors_comm_nodes.data(),
                 max_comm_size, MPI_INT, MPI_COMM_WORLD);
 
@@ -688,11 +688,11 @@ void convert_omega_h_to_goma(
   std::sort(all_comm_nodes.begin(), all_comm_nodes.end());
 
   std::vector<int> all_comm_owners(all_comm_nodes.size());
-  std::fill(all_comm_owners.begin(), all_comm_owners.end(), Num_Proc);
+  std::fill(all_comm_owners.begin(), all_comm_owners.end(), goma_ctx->num_proc);
 
   for (unsigned int i = 0; i < all_comm_nodes.size(); i++) {
     if (global_node_to_local.find(all_comm_nodes[i]) != global_node_to_local.end()) {
-      all_comm_owners[i] = ProcID;
+      all_comm_owners[i] = goma_ctx->proc_id;
     }
   }
 
@@ -707,16 +707,16 @@ void convert_omega_h_to_goma(
 
   std::vector<int> neighbor_list;
   // look for neighbors in other neighbors comm nodes
-  for (int proc = 0; proc < Num_Proc; proc++) {
+  for (int proc = 0; proc < goma_ctx->num_proc; proc++) {
     int offset = proc * max_comm_size;
     for (int i = 0; i < max_comm_size; i++) {
       int gnode = all_neighbors_comm_nodes[offset + i];
       if (gnode != -1) {
         int owner = global_to_owner.at(gnode);
-        if (proc != ProcID && owner == ProcID &&
+        if (proc != goma_ctx->proc_id && owner == goma_ctx->proc_id &&
             std::find(neighbor_list.begin(), neighbor_list.end(), proc) == neighbor_list.end()) {
           neighbor_list.push_back(proc);
-        } else if ((owner != ProcID &&
+        } else if ((owner != goma_ctx->proc_id &&
                     global_node_to_local.find(gnode) != global_node_to_local.end()) &&
                    (std::find(neighbor_list.begin(), neighbor_list.end(), owner) ==
                     neighbor_list.end())) {
@@ -732,9 +732,9 @@ void convert_omega_h_to_goma(
   std::vector<int> proc_node_idx(neighbor_list.size() + 1);
   std::fill(proc_node_counts.begin(), proc_node_counts.end(), 0);
   std::set<int> boundary_nodes;
-  for (int proc = 0; proc < Num_Proc; proc++) {
+  for (int proc = 0; proc < goma_ctx->num_proc; proc++) {
     int offset = proc * max_comm_size;
-    if (proc == ProcID)
+    if (proc == goma_ctx->proc_id)
       continue;
     for (int i = 0; i < max_comm_size; i++) {
       int gnode = all_neighbors_comm_nodes[offset + i];
@@ -773,7 +773,7 @@ void convert_omega_h_to_goma(
   std::sort(boundary_nodes_sorted.begin(), boundary_nodes_sorted.end());
   std::vector<int> internal_nodes;
   for (int j = 0; j < vert_owners.size(); j++) {
-    if (vert_owners[j] == ProcID) {
+    if (vert_owners[j] == goma_ctx->proc_id) {
       if (!std::binary_search(boundary_nodes_sorted.begin(), boundary_nodes_sorted.end(), j)) {
         internal_nodes.push_back(j);
       }
@@ -983,7 +983,7 @@ void convert_omega_h_to_goma(
     // Nodeset dpi information needs total nodes for each nodeset and we need
     // to share information in order to have an accurate count.
     std::vector<int> my_sizes(surface_set_vec.size());
-    std::vector<int> all_sizes(surface_set_vec.size() * Num_Proc);
+    std::vector<int> all_sizes(surface_set_vec.size() * goma_ctx->num_proc);
     for (size_t i = 0; i < surface_set_vec.size(); i++) {
       my_sizes[i] = ns_nodes[i].size();
     }
@@ -993,7 +993,7 @@ void convert_omega_h_to_goma(
 
     for (size_t i = 0; i < surface_set_vec.size(); i++) {
       int max = 0;
-      for (int j = 0; j < Num_Proc; j++) {
+      for (int j = 0; j < goma_ctx->num_proc; j++) {
         max = std::max(all_sizes[j * surface_set_vec.size() + i], max);
       }
       std::vector<int> ns_global_nodes(max);
@@ -1001,12 +1001,12 @@ void convert_omega_h_to_goma(
         ns_global_nodes[j] = global_node[ns_nodes[i][j] - 1];
       }
 
-      std::vector<int> all_ns_nodes(max * Num_Proc);
+      std::vector<int> all_ns_nodes(max * goma_ctx->num_proc);
       MPI_Allgather(ns_global_nodes.data(), max, MPI_INT, all_ns_nodes.data(), max, MPI_INT,
                     MPI_COMM_WORLD);
 
       std::set<int> ns_nodes_set;
-      for (int j = 0; j < Num_Proc; j++) {
+      for (int j = 0; j < goma_ctx->num_proc; j++) {
         size_t offset = j * max;
         for (int k = 0; k < all_sizes[j * surface_set_vec.size() + i]; k++) {
           ns_nodes_set.insert(all_ns_nodes[offset + k]);
@@ -1028,7 +1028,7 @@ void convert_omega_h_to_goma(
   int max_sets = surface_set_vec.size();
   int gmax_sets;
   MPI_Allreduce(&max_sets, &gmax_sets, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  std::vector<int> all_sets(gmax_sets * Num_Proc + 1);
+  std::vector<int> all_sets(gmax_sets * goma_ctx->num_proc + 1);
   std::fill(all_sets.begin(), all_sets.end(), -1);
   std::vector<int> my_sets(surface_set_vec.begin(), surface_set_vec.end());
   my_sets.resize(gmax_sets);
@@ -1071,20 +1071,20 @@ void convert_omega_h_to_goma(
 
   CALL(ex_put_eb_info_global(exoid, eb_id.data(), eb_counts.data()));
   char ftype = 'p';
-  CALL(ex_put_init_info(exoid, Num_Proc, 1, &ftype));
+  CALL(ex_put_init_info(exoid, goma_ctx->num_proc, 1, &ftype));
 
   CALL(ex_put_loadbal_param(exoid, internal_nodes.size(), boundary_nodes_sorted.size(), 0,
-                            global_elem.size(), 0, node_cmap_ids.size(), 0, ProcID));
+                            global_elem.size(), 0, node_cmap_ids.size(), 0, goma_ctx->proc_id));
 
   std::vector<int> elem_internal(global_elem.size());
   std::iota(elem_internal.begin(), elem_internal.end(), 1);
 
-  CALL(ex_put_processor_elem_maps(exoid, elem_internal.data(), NULL, ProcID));
+  CALL(ex_put_processor_elem_maps(exoid, elem_internal.data(), NULL, goma_ctx->proc_id));
   std::vector<int> node_mesh(global_node.size());
   std::iota(node_mesh.begin(), node_mesh.end(), 1);
 
   CALL(ex_put_processor_node_maps(exoid, node_mesh.data(), &node_mesh[internal_nodes.size()], NULL,
-                                  ProcID));
+                                  goma_ctx->proc_id));
 
   std::vector<int> cmap_node_counts;
   cmap_node_counts.reserve(node_cmap_to_neighbor.size());
@@ -1093,7 +1093,7 @@ void convert_omega_h_to_goma(
   }
 
   CALL(
-      ex_put_cmap_params(exoid, node_cmap_ids.data(), cmap_node_counts.data(), NULL, NULL, ProcID));
+      ex_put_cmap_params(exoid, node_cmap_ids.data(), cmap_node_counts.data(), NULL, NULL, goma_ctx->proc_id));
 
   std::vector<int> node_map_proc_ids(proc_node_idx[neighbor_list.size()]);
   for (auto nidx : node_cmap_to_neighbor) {
@@ -1102,7 +1102,7 @@ void convert_omega_h_to_goma(
   }
   for (auto nidx : node_cmap_to_neighbor) {
     CALL(ex_put_node_cmap(exoid, neighbor_list[nidx], proc_node_list[nidx].data(),
-                          &node_map_proc_ids[proc_node_idx[nidx]], ProcID));
+                          &node_map_proc_ids[proc_node_idx[nidx]], goma_ctx->proc_id));
   }
 
   CALL(ex_close(exoid));
@@ -1116,7 +1116,7 @@ void convert_omega_h_to_goma(
   free_Surf_BC(First_Elem_Side_BC_Array, exo);
   free_Edge_BC(First_Elem_Edge_BC_Array, exo, dpi);
   free_nodes();
-  if (Num_Proc == 1) {
+  if (goma_ctx->num_proc == 1) {
     free_dpi_uni(dpi);
   } else {
     free_dpi(dpi);
@@ -1157,10 +1157,10 @@ void convert_omega_h_to_goma(
   }
 
   //  const char * tmpfile = "";
-  strncpy(ExoFile, "tmp_omega_h_mesh.e", 127);
-  strncpy(ExoFileOutMono, path, 127);
-  strncpy(ExoFileOut, path, 127);
-  multiname(ExoFileOut, ProcID, Num_Proc);
+  strncpy(goma_ctx->exo_file, "tmp_omega_h_mesh.e", 127);
+  strncpy(goma_ctx->exo_file_out_mono, path, 127);
+  strncpy(goma_ctx->exo_file_out, path, 127);
+  multiname(goma_ctx->exo_file_out, goma_ctx->proc_id, goma_ctx->num_proc);
   int num_total_nodes = dpi->num_internal_nodes + dpi->num_boundary_nodes + dpi->num_external_nodes;
 
   for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
@@ -1175,12 +1175,12 @@ void convert_omega_h_to_goma(
   safer_free((void **)&Dolphin);
 
   read_mesh_exoII(exo, dpi);
-  one_base(exo, Num_Proc);
-  wr_mesh_exo(exo, ExoFileOut, 0);
+  one_base(exo, goma_ctx->num_proc);
+  wr_mesh_exo(exo, goma_ctx->exo_file_out, 0);
   zero_base(exo);
 
-  if (Num_Proc > 1) {
-    wr_dpi(dpi, ExoFileOut);
+  if (goma_ctx->num_proc > 1) {
+    wr_dpi(dpi, goma_ctx->exo_file_out);
   }
   dpi->exodus_to_omega_h_node = (int *)malloc(sizeof(int) * global_node.size());
   for (size_t i = 0; i < old_to_new_node_map.size(); i++) {
@@ -1191,11 +1191,11 @@ void convert_omega_h_to_goma(
   if (dpi->num_neighbors > 0) {
     for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
       free(cx[imtrx]);
-      free(Request);
-      free(Status);
+      free(goma_ctx->request);
+      free(goma_ctx->status);
       cx[imtrx] = alloc_struct_1(Comm_Ex, DPI_ptr->num_neighbors);
-      Request = alloc_struct_1(MPI_Request, Num_Requests * DPI_ptr->num_neighbors);
-      Status = alloc_struct_1(MPI_Status, Num_Requests * DPI_ptr->num_neighbors);
+      goma_ctx->request = alloc_struct_1(MPI_Request, goma_ctx->num_requests * DPI_ptr->num_neighbors);
+      goma_ctx->status = alloc_struct_1(MPI_Status, goma_ctx->num_requests * DPI_ptr->num_neighbors);
     }
   }
 
@@ -1246,7 +1246,7 @@ void adapt_mesh(Omega_h::Mesh &mesh) {
 
   for (int i = 0; i < count; i++) {
     if (Omega_h::approach_metric(&mesh, opts)) {
-      if (ProcID == 0) {
+      if (goma_ctx->proc_id == 0) {
         std::cout << "Omega_h approach_metric adapt count = " << i << "\n";
       }
       Omega_h::adapt(&mesh, opts);
@@ -1255,13 +1255,13 @@ void adapt_mesh(Omega_h::Mesh &mesh) {
     }
   }
   auto imb = mesh.imbalance();
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     std::cout << "Mesh imbalance = " << imb << "\n";
   }
-  if (power_of_two(Num_Proc)) {
+  if (power_of_two(goma_ctx->num_proc)) {
     mesh.balance();
     imb = mesh.imbalance();
-    if (ProcID == 0) {
+    if (goma_ctx->proc_id == 0) {
       std::cout << "Mesh imbalance after balance = " << imb << "\n";
     }
   } else {
@@ -1352,7 +1352,7 @@ void adapt_mesh_omega_h(struct GomaLinearSolverData **ams,
   adapt_mesh(mesh);
 
   if (first_call) {
-    base_name = std::string(ExoFileOutMono);
+    base_name = std::string(goma_ctx->exo_file_out_mono);
     first_call = false;
   }
 

@@ -64,7 +64,7 @@ static unsigned char INT_TO_UCHAR(int value)
 {
   if (value < 0 || value > 255) {
     fprintf(stderr, "matrix_dump ERROR: byte conversion used, but value = %d: Proc = %d\n", value,
-            ProcID);
+            goma_ctx->proc_id);
     exit(-1);
   }
   return ((unsigned char)value);
@@ -83,7 +83,7 @@ static void CHECK_FCLOSE(int result)
 {
   extern int errno;
   if (result) {
-    fprintf(stderr, "matrix_dump ERROR: fclose failed Proc = %d: %s\n", ProcID, strerror(errno));
+    fprintf(stderr, "matrix_dump ERROR: fclose failed Proc = %d: %s\n", goma_ctx->proc_id, strerror(errno));
     exit(-1);
   }
 }
@@ -102,7 +102,7 @@ static void CHECK_XDR(bool result)
  */
 {
   if (!result) {
-    fprintf(stderr, "matrix_dump ERROR: xdr write failed Proc = %d\n", ProcID);
+    fprintf(stderr, "matrix_dump ERROR: xdr write failed Proc = %d\n", goma_ctx->proc_id);
     exit(-1);
   }
 }
@@ -268,7 +268,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
    */
 
   sprintf(fname, "matrix.%03d", index);
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
 
     /*
      *  Write an informative message to standard output
@@ -384,7 +384,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
        *  Open the output file on the current processor for appending
        */
       if ((fptr = fopen(fname, "ab")) == NULL) {
-        (void)fprintf(stderr, "Proc %d: Couldn't open %s: %s\n", ProcID, fname, strerror(errno));
+        (void)fprintf(stderr, "Proc %d: Couldn't open %s: %s\n", goma_ctx->proc_id, fname, strerror(errno));
         exit(-1);
       }
       xdrstdio_create(xdrs, fptr, XDR_ENCODE);
@@ -501,7 +501,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
         CHECK_XDR(xdr_int(xdrs, &gNodeLocalNext));
 
         /*       Output the processor number */
-        CHECK_XDR(xdr_int(xdrs, &ProcID));
+        CHECK_XDR(xdr_int(xdrs, &goma_ctx->proc_id));
 
         /*       Output the local node number */
         CHECK_XDR(xdr_int(xdrs, &iblk_row));
@@ -726,7 +726,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
   /*
    *  Write an informative message to standard output
    */
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     start_time = ut() - start_time;
     printf("\n\t\tmatrix_dump_msr: finished, dump time =  %g sec\n", start_time);
     printf("\t\t");
@@ -865,7 +865,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
    */
 
   sprintf(fname, "matrix.%03d", index);
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
 
     /*
      *  Write an informative message to standard output
@@ -976,7 +976,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
        *  Open the output file on the current processor for appending
        */
       if ((fptr = fopen(fname, "ab")) == NULL) {
-        (void)fprintf(stderr, "Proc %d: Couldn't open %s: %s\n", ProcID, fname, strerror(errno));
+        (void)fprintf(stderr, "Proc %d: Couldn't open %s: %s\n", goma_ctx->proc_id, fname, strerror(errno));
         exit(-1);
       }
       xdrstdio_create(xdrs, fptr, XDR_ENCODE);
@@ -1073,7 +1073,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
         CHECK_XDR(xdr_int(xdrs, &gNodeLocalNext));
 
         /*       Output the processor number */
-        CHECK_XDR(xdr_int(xdrs, &ProcID));
+        CHECK_XDR(xdr_int(xdrs, &goma_ctx->proc_id));
 
         /*       Output the local node number */
         CHECK_XDR(xdr_int(xdrs, &iblk_row));
@@ -1300,7 +1300,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
   /*
    *  Write an informative message to standard output
    */
-  if (ProcID == 0) {
+  if (goma_ctx->proc_id == 0) {
     start_time = ut() - start_time;
     (void)printf("\n\t\tmatrix_dump_vbr: finished, dump time =  %g sec\n", start_time);
     (void)printf("\t\t");

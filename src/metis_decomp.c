@@ -453,14 +453,14 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
 
   idx_t edgecut;
   int *partitions = malloc(sizeof(int) * monolith->num_elems);
-  idx_t n_parts = Num_Proc;
+  idx_t n_parts = goma_ctx->num_proc;
 
-  if (Decompose_Type == 1 || Decompose_Type == 0) {
+  if (goma_ctx->decompose_type == 1 || goma_ctx->decompose_type == 0) {
     DPRINTF(stdout, "\nInternal METIS decomposition using Recursive Bisection.\n\n");
     METIS_PartGraphRecursive(&monolith->num_elems, &n_con, elem_adj_pntr, elem_adj_list, vwgt, NULL,
                              NULL, &n_parts, NULL, NULL, options, &edgecut, partitions);
 
-  } else if (Decompose_Type == 2) {
+  } else if (goma_ctx->decompose_type == 2) {
     DPRINTF(stdout, "\nInternal METIS decomposition using KWAY.\n\n");
     METIS_PartGraphKway(&monolith->num_elems, &n_con, elem_adj_pntr, elem_adj_list, vwgt, NULL,
                         NULL, &n_parts, NULL, NULL, options, &edgecut, partitions);

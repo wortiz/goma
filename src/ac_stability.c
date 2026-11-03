@@ -357,10 +357,10 @@ for(i = 0; i < NZeros+1; i++)
     eggroll_init(NumUnknowns[pg->imtrx], NZeros, &istuff[0], &dstuff[0]);
 
     /* Call eggroll solver */
-    eggrollwrap(istuff, dstuff, ija, jacobian_matrix, mass_matrix, x, ExoFileOut, ProblemType,
+    eggrollwrap(istuff, dstuff, ija, jacobian_matrix, mass_matrix, x, goma_ctx->exo_file_out, ProblemType,
                 delta_t, theta, x_old, xdot, xdot_old, resid_vector, converged, nprint, tnv,
                 tnv_post, tev, tev_post, rd, gindex, p_gsize, gvec, gvec_elem, time_value, exo,
-                Num_Proc, dpi);
+                goma_ctx->num_proc, dpi);
   }
 
   /* Free space, and return ams->val to what it was when we came
@@ -722,10 +722,10 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
       /* Call eggroll solver */
       printf("Entering eggrollwrap...\n");
       fflush(stdout);
-      eggrollwrap(istuff, dstuff, ija, jacobian_matrix, mass_matrix, x, ExoFileOut, ProblemType,
+      eggrollwrap(istuff, dstuff, ija, jacobian_matrix, mass_matrix, x, goma_ctx->exo_file_out, ProblemType,
                   delta_t, theta, x_old, xdot, xdot_old, resid_vector, converged, nprint, tnv,
                   tnv_post, tev, tev_post, rd, gindex, p_gsize, gvec, gvec_elem, time_value, exo,
-                  Num_Proc, dpi);
+                  goma_ctx->num_proc, dpi);
     }
   } /* for(wn = 0; wn < LSA_num_wave_numbers; wn++) */
 
@@ -776,10 +776,10 @@ void output_stability_matrices(double *mass_matrix,
   }
 
   /* Multiplex output names in parallel */
-  if (Num_Proc > 1) {
-    multiname(LSA_mass_output_filename, ProcID, Num_Proc);
-    multiname(LSA_jacobian_output_filename, ProcID, Num_Proc);
-    multiname(LSA_vars_output_filename, ProcID, Num_Proc);
+  if (goma_ctx->num_proc > 1) {
+    multiname(LSA_mass_output_filename, goma_ctx->proc_id, goma_ctx->num_proc);
+    multiname(LSA_jacobian_output_filename, goma_ctx->proc_id, goma_ctx->num_proc);
+    multiname(LSA_vars_output_filename, goma_ctx->proc_id, goma_ctx->num_proc);
   }
 
   printf("Writing matrix files (%s, %s, %s)...", LSA_mass_output_filename,
@@ -880,7 +880,7 @@ void compare_mass_matrices(double *jacobian_matrix,
   row_max_vector = calloc(NumUnknowns, sizeof(double));
 
   printf("Checking for differences between two methods.\n");
-  if (Iout != 1)
+  if (goma_ctx->iout != 1)
     printf("Iout (Output level) not equal to 1, cannot construct resname/dofname.\n");
 
   for (i = 0; i < NumUnknowns; i++) {

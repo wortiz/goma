@@ -194,7 +194,7 @@ void init_nodes(Exo_DB *exo, Dpi *dpi)
   total_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
   if (total_nodes != number_proc_nodes) {
     fprintf(stderr, "Proc %d : init_nodes ERROR total nodes, %d, differs from num_proc_nodes, %d\n",
-            ProcID, total_nodes, number_proc_nodes);
+            goma_ctx->proc_id, total_nodes, number_proc_nodes);
     GOMA_EH(GOMA_ERROR, "init_nodes: Shouldn't be here");
   }
 
@@ -220,7 +220,7 @@ void init_nodes(Exo_DB *exo, Dpi *dpi)
     Nodes[i]->Type.Internal = FALSE;
     Nodes[i]->Type.Border = FALSE;
     Nodes[i]->Type.External = FALSE;
-    Nodes[i]->Proc = ProcID;
+    Nodes[i]->Proc = goma_ctx->proc_id;
     Nodes[i]->Nodal_Vars_Info = (NODAL_VARS_STRUCT **)alloc_ptr_1(upd->Total_Num_Matrices);
     Nodes[i]->DBC = malloc(sizeof(short int *) * upd->Total_Num_Matrices);
 
@@ -385,7 +385,7 @@ void make_node_to_elem_matrl_map(Exo_DB *exo)
   }
 #ifdef DEBUG_NODE
   print_sync_start(TRUE);
-  printf("Processor %d: Num nodes = %d\n", ProcID, exo->num_nodes);
+  printf("Processor %d: Num nodes = %d\n", goma_ctx->proc_id, exo->num_nodes);
   for (I = 0; I < exo->num_nodes; I++) {
     matrlLP = &(Nodes[I]->Mat_List);
     printf(" %5d  %5d : ", I, matrlLP->Length);
@@ -480,7 +480,7 @@ int first_matID_at_node(const int nodeNum)
 {
   UMI_LIST_STRUCT *umi_ptr = &(Nodes[nodeNum]->Mat_List);
   if (umi_ptr == NULL || umi_ptr->Length <= 0) {
-    fprintf(stderr, "first_matID_at_node ERROR P_%d: mat list is empty at node %d\n", ProcID,
+    fprintf(stderr, "first_matID_at_node ERROR P_%d: mat list is empty at node %d\n", goma_ctx->proc_id,
             nodeNum);
     GOMA_EH(GOMA_ERROR, "first_matID_at_node ERROR");
     return -1;

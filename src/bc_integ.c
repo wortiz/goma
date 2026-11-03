@@ -1737,7 +1737,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                                              BC_Types[i1].u_BC, time_value);
                 break;
               default:
-                if (Debug_Flag > 1)
+                if (goma_ctx->debug_flag > 1)
                   GOMA_WH(-1, "Wall velocity bc not found\n");
               } /* switch bc */
             } /*  if BC_Types  */

@@ -98,7 +98,7 @@ int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
   /*
    * Output some statistics concerning the communications pattern
    */
-  if (Num_Proc > 1)
+  if (goma_ctx->num_proc > 1)
     output_comm_stats(dpi, cx);
 
   /*
@@ -199,7 +199,7 @@ int resetup_matrix(struct GomaLinearSolverData **ams, Exo_DB *exo, Dpi *dpi) {
       GomaSparseMatrix_SetProblemGraph(goma_matrix, num_internal_dofs[pg->imtrx],
                                        num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx],
                                        local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,
-                                       dpi, cx[pg->imtrx], pg->imtrx, Debug_Flag, ams[JAC]);
+                                       dpi, cx[pg->imtrx], pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
     }
     pg->imtrx = 0;
     ams[pg->imtrx]->solveSetup = 0;

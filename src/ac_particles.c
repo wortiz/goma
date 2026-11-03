@@ -362,14 +362,14 @@ void initialize_particles(const Exo_DB *exo,
     /* First get total element "volume" */
     total_volume = my_volume = fill_element_volumes(el_index_begin, el_index_end);
 #ifdef PARALLEL
-    proc_volume = (dbl *)calloc((unsigned)Num_Proc, sizeof(dbl));
-    proc_volume_local = (dbl *)calloc((unsigned)Num_Proc, sizeof(dbl));
-    proc_volume_local[ProcID] = my_volume;
-    MPI_Reduce(proc_volume_local, proc_volume, Num_Proc, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    proc_volume = (dbl *)calloc((unsigned)goma_ctx->num_proc, sizeof(dbl));
+    proc_volume_local = (dbl *)calloc((unsigned)goma_ctx->num_proc, sizeof(dbl));
+    proc_volume_local[goma_ctx->proc_id] = my_volume;
+    MPI_Reduce(proc_volume_local, proc_volume, goma_ctx->num_proc, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
     /* Get total volume. */
     total_volume = 0.0;
-    for (i = 0; i < Num_Proc; i++)
+    for (i = 0; i < goma_ctx->num_proc; i++)
       total_volume += proc_volume[i];
 
     /*
@@ -414,7 +414,7 @@ void initialize_particles(const Exo_DB *exo,
     num_els = el_index_end - el_index_begin;
     for (elem_id = el_index_begin; elem_id < el_index_end; elem_id++) {
 #ifdef PARALLEL
-      if (DPI_ptr->elem_owner[elem_id] != ProcID)
+      if (DPI_ptr->elem_owner[elem_id] != goma_ctx->proc_id)
         continue;
 #endif
 
@@ -441,16 +441,16 @@ void initialize_particles(const Exo_DB *exo,
     fflush(stdout);
     /* Processor zero controls the global random sampling procedure.
      * This is pretty trivial in single-processor. */
-    number_to_create = (int *)calloc((unsigned)Num_Proc, sizeof(int));
-    number_created = (int *)calloc((unsigned)Num_Proc, sizeof(int));
-    local_number_created = (int *)calloc((unsigned)Num_Proc, sizeof(int));
-    if (ProcID == 0) {
+    number_to_create = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
+    number_created = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
+    local_number_created = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
+    if (goma_ctx->proc_id == 0) {
       while (creation_count < Particle_Number) {
         DPRINTF(stdout, "    %d=", Particle_Number - creation_count);
         fflush(stdout);
         /* First figure out how much each processor should generate, rounded down. */
         left_over = Particle_Number - creation_count;
-        for (proc_index = 0; proc_index < Num_Proc; proc_index++) {
+        for (proc_index = 0; proc_index < goma_ctx->num_proc; proc_index++) {
           number_to_create[proc_index] = (int)floor(proc_volume[proc_index] / total_volume *
                                                     (Particle_Number - creation_count));
           left_over -= number_to_create[proc_index];
@@ -462,23 +462,23 @@ void initialize_particles(const Exo_DB *exo,
            * to try to create a particle on. */
           r = drand48() * total_volume;
           proc_index = 0;
-          while (proc_index < Num_Proc && r > proc_volume[proc_index]) {
+          while (proc_index < goma_ctx->num_proc && r > proc_volume[proc_index]) {
             r -= proc_volume[proc_index];
             proc_index++;
           }
-          if (proc_index == Num_Proc)
+          if (proc_index == goma_ctx->num_proc)
             GOMA_EH(GOMA_ERROR, "proc_index == Num_Proc");
           number_to_create[proc_index]++;
         }
 
-        for (i = 0; i < Num_Proc - 1; i++)
+        for (i = 0; i < goma_ctx->num_proc - 1; i++)
           DPRINTF(stdout, "%d+", number_to_create[i]);
-        DPRINTF(stdout, "%d", number_to_create[Num_Proc - 1]);
+        DPRINTF(stdout, "%d", number_to_create[goma_ctx->num_proc - 1]);
         fflush(stdout);
 
         /* Now broadcast the vector containing how many particles each processor should create. */
         MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Bcast(number_to_create, Num_Proc, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(number_to_create, goma_ctx->num_proc, MPI_INT, 0, MPI_COMM_WORLD);
 
         /* Create our particles while everyone else is creating theirs. */
         rejection = 0;
@@ -486,39 +486,39 @@ void initialize_particles(const Exo_DB *exo,
           rejection += rejection_sample_a_particle();
 
         /* Now receive how many particles were created by everyone. */
-        memset(local_number_created, 0, Num_Proc * sizeof(int));
+        memset(local_number_created, 0, goma_ctx->num_proc * sizeof(int));
         local_number_created[0] = number_to_create[0] - rejection;
         MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Reduce(local_number_created, number_created, Num_Proc, MPI_INT, MPI_SUM, 0,
+        MPI_Reduce(local_number_created, number_created, goma_ctx->num_proc, MPI_INT, MPI_SUM, 0,
                    MPI_COMM_WORLD);
 
-        for (i = 0; i < Num_Proc; i++) {
+        for (i = 0; i < goma_ctx->num_proc; i++) {
           creation_count += number_created[i];
           rejection_count += number_to_create[i] - number_created[i];
         }
         DPRINTF(stdout, " -> ");
-        for (i = 0; i < Num_Proc - 1; i++)
+        for (i = 0; i < goma_ctx->num_proc - 1; i++)
           DPRINTF(stdout, "%d+", number_created[i]);
-        DPRINTF(stdout, "%d", number_created[Num_Proc - 1]);
+        DPRINTF(stdout, "%d", number_created[goma_ctx->num_proc - 1]);
         fflush(stderr);
         DPRINTF(stdout, ", total C/R=%d/%d\n", creation_count, rejection_count);
       }
       number_to_create[0] = -1;
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Bcast(number_to_create, Num_Proc, MPI_INT, 0, MPI_COMM_WORLD);
+      MPI_Bcast(number_to_create, goma_ctx->num_proc, MPI_INT, 0, MPI_COMM_WORLD);
     } else {
       while (number_to_create[0] != -1) {
         MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Bcast(number_to_create, Num_Proc, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(number_to_create, goma_ctx->num_proc, MPI_INT, 0, MPI_COMM_WORLD);
         if (number_to_create[0] == -1)
           continue;
         rejection = 0;
-        for (i = 0; i < number_to_create[ProcID]; i++)
+        for (i = 0; i < number_to_create[goma_ctx->proc_id]; i++)
           rejection += rejection_sample_a_particle();
-        memset(local_number_created, 0, Num_Proc * sizeof(int));
-        local_number_created[ProcID] = number_to_create[ProcID] - rejection;
+        memset(local_number_created, 0, goma_ctx->num_proc * sizeof(int));
+        local_number_created[goma_ctx->proc_id] = number_to_create[goma_ctx->proc_id] - rejection;
         MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Reduce(local_number_created, number_created, Num_Proc, MPI_INT, MPI_SUM, 0,
+        MPI_Reduce(local_number_created, number_created, goma_ctx->num_proc, MPI_INT, MPI_SUM, 0,
                    MPI_COMM_WORLD);
       }
     }
@@ -755,10 +755,10 @@ static void find_exit_wound(const int elem_id,
                                  xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[1]) > 1.0) {
             if (tolerance_level < 2) {
-              if (Num_Proc > 1)
+              if (goma_ctx->num_proc > 1)
                 fprintf(stderr,
                         "WARNING: Proc%d: Going to tolerance level %d in find_exit_wound().\n",
-                        ProcID, tolerance_level + 1);
+                        goma_ctx->proc_id, tolerance_level + 1);
               else
                 fprintf(stderr, "WARNING: Going to tolerance level %d in find_exit_wound().\n",
                         tolerance_level + 1);
@@ -816,10 +816,10 @@ static void find_exit_wound(const int elem_id,
 
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[1]) > 1.0) {
             if (tolerance_level < 2) {
-              if (Num_Proc > 1)
+              if (goma_ctx->num_proc > 1)
                 fprintf(stderr,
                         "WARNING: Proc%d: Going to tolerance level %d in find_exit_wound().\n",
-                        ProcID, tolerance_level + 1);
+                        goma_ctx->proc_id, tolerance_level + 1);
               else
                 fprintf(stderr, "WARNING: Going to tolerance level %d in find_exit_wound().\n",
                         tolerance_level + 1);
@@ -868,10 +868,10 @@ static void find_exit_wound(const int elem_id,
 
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[1]) > 1.0) {
             if (tolerance_level < 2) {
-              if (Num_Proc > 1)
+              if (goma_ctx->num_proc > 1)
                 fprintf(stderr,
                         "WARNING: Proc%d: Going to tolerance level %d in find_exit_wound().\n",
-                        ProcID, tolerance_level + 1);
+                        goma_ctx->proc_id, tolerance_level + 1);
               else
                 fprintf(stderr, "WARNING: Going to tolerance level %d in find_exit_wound().\n",
                         tolerance_level + 1);
@@ -920,10 +920,10 @@ static void find_exit_wound(const int elem_id,
 
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[2]) > 1.0) {
             if (tolerance_level < 2) {
-              if (Num_Proc > 1)
+              if (goma_ctx->num_proc > 1)
                 fprintf(stderr,
                         "WARNING: Proc%d: Going to tolerance level %d in find_exit_wound().\n",
-                        ProcID, tolerance_level + 1);
+                        goma_ctx->proc_id, tolerance_level + 1);
               else
                 fprintf(stderr, "WARNING: Going to tolerance level %d in find_exit_wound().\n",
                         tolerance_level + 1);
@@ -964,10 +964,10 @@ static void find_exit_wound(const int elem_id,
                                  xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[1]) > 1.0 || fabs(xi_tmp[2]) > 1.0) {
             if (tolerance_level < 2) {
-              if (Num_Proc > 1)
+              if (goma_ctx->num_proc > 1)
                 fprintf(stderr,
                         "WARNING: Proc%d: Going to tolerance level %d in find_exit_wound().\n",
-                        ProcID, tolerance_level + 1);
+                        goma_ctx->proc_id, tolerance_level + 1);
               else
                 fprintf(stderr, "WARNING: Going to tolerance level %d in find_exit_wound().\n",
                         tolerance_level + 1);
@@ -998,10 +998,10 @@ static void find_exit_wound(const int elem_id,
                                  xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[1]) > 1.0 || fabs(xi_tmp[2]) > 1.0) {
             if (tolerance_level < 2) {
-              if (Num_Proc > 1)
+              if (goma_ctx->num_proc > 1)
                 fprintf(stderr,
                         "WARNING: Proc%d: Going to tolerance level %d in find_exit_wound().\n",
-                        ProcID, tolerance_level + 1);
+                        goma_ctx->proc_id, tolerance_level + 1);
               else
                 fprintf(stderr, "WARNING: Going to tolerance level %d in find_exit_wound().\n",
                         tolerance_level + 1);
@@ -1035,10 +1035,10 @@ static void find_exit_wound(const int elem_id,
                                  xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[2]) > 1.0) {
             if (tolerance_level < 2) {
-              if (Num_Proc > 1)
+              if (goma_ctx->num_proc > 1)
                 fprintf(stderr,
                         "WARNING: Proc%d: Going to tolerance level %d in find_exit_wound().\n",
-                        ProcID, tolerance_level + 1);
+                        goma_ctx->proc_id, tolerance_level + 1);
               else
                 fprintf(stderr, "WARNING: Going to tolerance level %d in find_exit_wound().\n",
                         tolerance_level + 1);
@@ -1069,10 +1069,10 @@ static void find_exit_wound(const int elem_id,
                                  xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[2]) > 1.0) {
             if (tolerance_level < 2) {
-              if (Num_Proc > 1)
+              if (goma_ctx->num_proc > 1)
                 fprintf(stderr,
                         "WARNING: Proc%d: Going to tolerance level %d in find_exit_wound().\n",
-                        ProcID, tolerance_level + 1);
+                        goma_ctx->proc_id, tolerance_level + 1);
               else
                 fprintf(stderr, "WARNING: Going to tolerance level %d in find_exit_wound().\n",
                         tolerance_level + 1);
@@ -1106,10 +1106,10 @@ static void find_exit_wound(const int elem_id,
                                  xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[1]) > 1.0) {
             if (tolerance_level < 2) {
-              if (Num_Proc > 1)
+              if (goma_ctx->num_proc > 1)
                 fprintf(stderr,
                         "WARNING: Proc%d: Going to tolerance level %d in find_exit_wound().\n",
-                        ProcID, tolerance_level + 1);
+                        goma_ctx->proc_id, tolerance_level + 1);
               else
                 fprintf(stderr, "WARNING: Going to tolerance level %d in find_exit_wound().\n",
                         tolerance_level + 1);
@@ -1140,10 +1140,10 @@ static void find_exit_wound(const int elem_id,
                                  xi_boundary_tolerances[tolerance_level]);
           if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[1]) > 1.0) {
             if (tolerance_level < 2) {
-              if (Num_Proc > 1)
+              if (goma_ctx->num_proc > 1)
                 fprintf(stderr,
                         "WARNING: Proc%d: Going to tolerance level %d in find_exit_wound().\n",
-                        ProcID, tolerance_level + 1);
+                        goma_ctx->proc_id, tolerance_level + 1);
               else
                 fprintf(stderr, "WARNING: Going to tolerance level %d in find_exit_wound().\n",
                         tolerance_level + 1);
@@ -1351,7 +1351,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
 #ifdef PARALLEL
     /* This shouldn't affect anything unless I was holding on to
      * ghosted particles somehow... */
-    if (DPI_ptr->elem_owner[el_index] != ProcID)
+    if (DPI_ptr->elem_owner[el_index] != goma_ctx->proc_id)
       continue;
 #endif
 
@@ -1421,7 +1421,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
   }
 
 #ifdef PARALLEL
-  if (Num_Proc > 0) {
+  if (goma_ctx->num_proc > 0) {
     /*
       fprintf(stderr, "Proc %d wants to send %d particles.\n", ProcID, local_num_to_send);
       fflush(stderr);
@@ -1443,8 +1443,8 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
       /* This next loop does a full all processor to all processor
        * exchange of particles.  This is done before any other moves are
        * completed. */
-      for (i = 0; i < Num_Proc; i++) {
-        if (i == ProcID) /* I'm the sender! */
+      for (i = 0; i < goma_ctx->num_proc; i++) {
+        if (i == goma_ctx->proc_id) /* I'm the sender! */
         {
           p = particles_to_send;
           particles_to_send = NULL;
@@ -1458,13 +1458,13 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
             mpi_retval = MPI_Send(&send_p, sizeof(particle_t), MPI_BYTE, p->owning_proc_id, 0,
                                   MPI_COMM_WORLD);
             if (mpi_retval != MPI_SUCCESS) {
-              fprintf(stderr, "Proc %d failed on particle send (%d).\n", ProcID, mpi_retval);
+              fprintf(stderr, "Proc %d failed on particle send (%d).\n", goma_ctx->proc_id, mpi_retval);
               exit(-1);
             }
             free(p);
             p = p_tmp;
           }
-          for (j = 0; j < Num_Proc; j++)
+          for (j = 0; j < goma_ctx->num_proc; j++)
             if (i == j)
               continue;
             else {
@@ -1475,7 +1475,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
               mpi_retval =
                   MPI_Send(&termination_p, sizeof(particle_t), MPI_BYTE, j, 0, MPI_COMM_WORLD);
               if (mpi_retval != MPI_SUCCESS) {
-                fprintf(stderr, "Proc %d failed on TERMINATION_MARKER send (%d).\n", ProcID,
+                fprintf(stderr, "Proc %d failed on TERMINATION_MARKER send (%d).\n", goma_ctx->proc_id,
                         mpi_retval);
                 exit(-1);
               }
@@ -1486,7 +1486,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
             mpi_retval =
                 MPI_Recv(&recv_p, sizeof(particle_t), MPI_BYTE, i, 0, MPI_COMM_WORLD, &mpi_status);
             if (mpi_retval != MPI_SUCCESS) {
-              fprintf(stderr, "Proc %d failed on particle receive (%d).\n", ProcID, mpi_retval);
+              fprintf(stderr, "Proc %d failed on particle receive (%d).\n", goma_ctx->proc_id, mpi_retval);
               exit(-1);
             }
             MPI_Get_count(&mpi_status, MPI_BYTE, &mpi_byte_count);
@@ -1498,7 +1498,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
               fflush(stderr);
             */
             if (mpi_byte_count != sizeof(particle_t)) {
-              fprintf(stderr, "Proc %d did not have proper incoming byte count!\n", ProcID);
+              fprintf(stderr, "Proc %d did not have proper incoming byte count!\n", goma_ctx->proc_id);
               fflush(stderr);
               MPI_Finalize();
               exit(-1);
@@ -1521,7 +1521,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
           fprintf(stderr, "Proc %d BARRIER\n", ProcID);
         */
         if (mpi_retval != MPI_SUCCESS) {
-          fprintf(stderr, "Proc %d failed on MPI_BARRIER (%d).\n", ProcID, mpi_retval);
+          fprintf(stderr, "Proc %d failed on MPI_BARRIER (%d).\n", goma_ctx->proc_id, mpi_retval);
           exit(-1);
         }
       }
@@ -1679,7 +1679,7 @@ static dbl fill_element_volumes(const int e_begin, const int e_end) {
   /* First get total element "volume" */
   for (i = e_begin; i < e_end; i++) {
 #ifdef PARALLEL
-    if (DPI_ptr->elem_owner[i] != ProcID) {
+    if (DPI_ptr->elem_owner[i] != goma_ctx->proc_id) {
       el_volume[i] = 0.0;
       continue;
     }
@@ -1743,7 +1743,7 @@ static int position_particle_uniformly(const int elem_id, particle_t *p) {
        * place the particle. */
 #ifdef PARALLEL
       fprintf(stderr, "Proc %d could not converge on element xi coordinates -- everything is OK\n",
-              ProcID);
+              goma_ctx->proc_id);
 #else
       fprintf(stderr, "Could not converge on element xi coordinates -- everything is OK.\n");
 #endif
@@ -1770,7 +1770,7 @@ static char *construct_filename(const char *template) {
 
   strcpy(result, template);
 #ifdef PARALLEL
-  multiname(result, ProcID, Num_Proc);
+  multiname(result, goma_ctx->proc_id, goma_ctx->num_proc);
 #endif
   return result;
 }
@@ -2017,9 +2017,9 @@ static particle_t *create_a_particle(particle_t *seed_p, const int elem_id) {
   particle_t *p, *p_last_keep, *p_next_keep;
   int i;
 
-  if (DPI_ptr->elem_owner[elem_id] != ProcID && seed_p->state != GHOST)
+  if (DPI_ptr->elem_owner[elem_id] != goma_ctx->proc_id && seed_p->state != GHOST)
     dump4(EXIT, seed_p,
-          "Proc %d tried to create a particle on element %d(%d), which it doesn't own.\n", ProcID,
+          "Proc %d tried to create a particle on element %d(%d), which it doesn't own.\n", goma_ctx->proc_id,
           elem_id, DPI_ptr->elem_index_global[elem_id]);
 
   p = obtain_particle_space(elem_id);
@@ -2212,7 +2212,7 @@ static void create_element_particle_info_maps(void) {
    *              matching element on the other side from another proc.
    * -2 => I'm done, go to next proc.
    */
-  if (Num_Proc == 1)
+  if (goma_ctx->num_proc == 1)
     return; /* Nothing to do, right? */
 
   nodes_per_side = (mdim == 2 ? 2 : 4);
@@ -2220,13 +2220,13 @@ static void create_element_particle_info_maps(void) {
   msg = (int *)calloc((unsigned)msg_size, sizeof(int));
   msg_tag = 0;
   if (output) {
-    sprintf(fp2name, "map%d_response.txt", ProcID);
+    sprintf(fp2name, "map%d_response.txt", goma_ctx->proc_id);
     fp2 = fopen(fp2name, "w");
   }
-  for (proc_id = 0; proc_id < Num_Proc; proc_id++) {
+  for (proc_id = 0; proc_id < goma_ctx->num_proc; proc_id++) {
     DPRINTF(stderr, "%d, ", proc_id);
     fflush(stderr);
-    if (proc_id == ProcID) {
+    if (proc_id == goma_ctx->proc_id) {
       if (output) {
         fp = fopen("map_creation.txt", proc_id ? "a" : "w");
         if (!fp)
@@ -2243,7 +2243,7 @@ static void create_element_particle_info_maps(void) {
           msg[1] = global_elem_id;
           msg[2] = elem_id;
           if (output) {
-            fprintf(fp, "Proc %d Elem %4d(%3d) not owned, sending ghost message.\n", ProcID,
+            fprintf(fp, "Proc %d Elem %4d(%3d) not owned, sending ghost message.\n", goma_ctx->proc_id,
                     global_elem_id, elem_id);
             fflush(fp);
           }
@@ -2257,7 +2257,7 @@ static void create_element_particle_info_maps(void) {
             neighbor_elem_id =
                 static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + side_id];
             if (element_particle_info[elem_id].PBC_side_id[side_id] == -1 &&
-                (neighbor_elem_id == -1 || DPI_ptr->elem_owner[neighbor_elem_id] != ProcID)) {
+                (neighbor_elem_id == -1 || DPI_ptr->elem_owner[neighbor_elem_id] != goma_ctx->proc_id)) {
               msg[0] = global_elem_id;
               if (mdim == 2) {
                 indices[0] = side_id;
@@ -2290,7 +2290,7 @@ static void create_element_particle_info_maps(void) {
                   }
 
               if (output) {
-                fprintf(fp, "Proc %d Elem %4d(%3d) Side %d not linked nodes =", ProcID,
+                fprintf(fp, "Proc %d Elem %4d(%3d) Side %d not linked nodes =", goma_ctx->proc_id,
                         global_elem_id, elem_id, side_id);
                 for (i = 0; i < nodes_per_side; i++)
                   fprintf(fp, " %5d", msg[i + 1]);
@@ -2313,7 +2313,7 @@ static void create_element_particle_info_maps(void) {
           } /* for side_id ... */
       } /* for elem_id ... */
       if (output) {
-        fprintf(fp, "Proc %d sending termination ticket.\n", ProcID);
+        fprintf(fp, "Proc %d sending termination ticket.\n", goma_ctx->proc_id);
         fclose(fp);
       }
       MPI_Barrier(MPI_COMM_WORLD);
@@ -2346,7 +2346,7 @@ static void create_element_particle_info_maps(void) {
             fflush(fp2);
           }
           elem_id = in_list(global_elem_id, 0, static_exo->num_elems, DPI_ptr->elem_index_global);
-          if (elem_id > -1 && DPI_ptr->elem_owner[elem_id] == ProcID) {
+          if (elem_id > -1 && DPI_ptr->elem_owner[elem_id] == goma_ctx->proc_id) {
             ghost_id = element_particle_info[elem_id].num_ghost_target_elems++;
             element_particle_info[elem_id].ghost_proc = (int *)realloc(
                 element_particle_info[elem_id].ghost_proc, (ghost_id + 1) * sizeof(int));
@@ -2376,14 +2376,14 @@ static void create_element_particle_info_maps(void) {
           }
           match_found = 0;
           for (elem_id = 0; elem_id < static_exo->num_elems && !match_found; elem_id++) {
-            if (DPI_ptr->elem_owner[elem_id] != ProcID)
+            if (DPI_ptr->elem_owner[elem_id] != goma_ctx->proc_id)
               continue;
             elem_ptr_start = Proc_Connect_Ptr[elem_id];
             for (side_id = 0; side_id < sides_per_element && !match_found; side_id++) {
               /* If the element on the other side is owned by us, skip this side. */
               neighbor_elem_id =
                   static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + side_id];
-              if (DPI_ptr->elem_owner[neighbor_elem_id] == ProcID)
+              if (DPI_ptr->elem_owner[neighbor_elem_id] == goma_ctx->proc_id)
                 continue;
 
               if (mdim == 2) {
@@ -2439,7 +2439,7 @@ static void create_element_particle_info_maps(void) {
                       elem_id);
               fflush(fp2);
             }
-            msg[0] = ProcID;
+            msg[0] = goma_ctx->proc_id;
             msg[1] = elem_id;
             MPI_Send(msg, 2, MPI_INT, proc_id, msg_tag, MPI_COMM_WORLD);
           } else {
@@ -2532,7 +2532,7 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
 #ifdef PARALLEL
             /* Don't try to create particles for elements that
              * don't belong on this processor!. */
-            if (DPI_ptr->elem_owner[elem_id] != ProcID)
+            if (DPI_ptr->elem_owner[elem_id] != goma_ctx->proc_id)
               continue;
 #endif
 
@@ -2646,7 +2646,7 @@ static void zero_a_particle(particle_t *p) {
 #ifdef PARALLEL
   memset(p->x_start, 0, DIM * sizeof(dbl));
   memset(p->x_end, 0, DIM * sizeof(dbl));
-  p->owning_proc_id = ProcID;
+  p->owning_proc_id = goma_ctx->proc_id;
 #endif
 }
 
@@ -4443,7 +4443,7 @@ static void dump_fcn(
 
   fprintf(stderr, "\n=== DUMP BEGINS ===\n");
 #ifdef PARALLEL
-  fprintf(stderr, "Called from %s:%d on Proc %d\n", file_name, line_number, ProcID);
+  fprintf(stderr, "Called from %s:%d on Proc %d\n", file_name, line_number, goma_ctx->proc_id);
 #else
   fprintf(stderr, "Called from %s:%d\n", file_name, line_number);
 #endif
@@ -4732,11 +4732,11 @@ static void couple_to_continuum(void) {
 
   if (use_ghost_particles) {
     /* Exchange ghost particles first! */
-    num_ghost_particles_to_send = (int *)calloc((unsigned)Num_Proc, sizeof(int));
-    num_ghost_particles_to_recv = (int *)calloc((unsigned)Num_Proc, sizeof(int));
-    ghost_particles_to_send = (particle_t **)calloc((unsigned)Num_Proc, sizeof(particle_t *));
+    num_ghost_particles_to_send = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
+    num_ghost_particles_to_recv = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
+    ghost_particles_to_send = (particle_t **)calloc((unsigned)goma_ctx->num_proc, sizeof(particle_t *));
     num_particles_in_elem = (int *)calloc((unsigned)(static_exo->num_elems), sizeof(int));
-    num_ghost_particles_copied = (int *)calloc((unsigned)Num_Proc, sizeof(int));
+    num_ghost_particles_copied = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
 
     /* I should introduce a level of indirection into
      * element_particle_info[i].ghost_proc[] if I want to speed things
@@ -4755,11 +4755,11 @@ static void couple_to_continuum(void) {
       for (j = 0; j < element_particle_info[i].num_ghost_target_elems; j++)
         num_ghost_particles_to_send[element_particle_info[i].ghost_proc[j]] +=
             num_particles_in_elem[i];
-    for (i = 0; i < Num_Proc; i++)
+    for (i = 0; i < goma_ctx->num_proc; i++)
       local_num_particle_ghosts += num_ghost_particles_to_send[i];
 
     /* Allocate the space for the outgoing particles. */
-    for (i = 0; i < Num_Proc; i++)
+    for (i = 0; i < goma_ctx->num_proc; i++)
       if (num_ghost_particles_to_send[i])
         ghost_particles_to_send[i] =
             (particle_t *)calloc((unsigned)num_ghost_particles_to_send[i], sizeof(particle_t));
@@ -4783,11 +4783,11 @@ static void couple_to_continuum(void) {
           }
 
     /* Now we round-robin the information about... */
-    for (i = 0; i < Num_Proc; i++) {
-      if (i == ProcID) {
+    for (i = 0; i < goma_ctx->num_proc; i++) {
+      if (i == goma_ctx->proc_id) {
         temp_ust = ust();
-        MPI_Bcast(num_ghost_particles_to_send, Num_Proc, MPI_INT, i, MPI_COMM_WORLD);
-        for (j = 0; j < Num_Proc; j++)
+        MPI_Bcast(num_ghost_particles_to_send, goma_ctx->num_proc, MPI_INT, i, MPI_COMM_WORLD);
+        for (j = 0; j < goma_ctx->num_proc; j++)
           if (i != j && num_ghost_particles_to_send[j])
             MPI_Send(&ghost_particles_to_send[j][0],
                      num_ghost_particles_to_send[j] * sizeof(particle_t), MPI_BYTE, j, 0,
@@ -4796,17 +4796,17 @@ static void couple_to_continuum(void) {
         communication_accum_ust += MAX(ust() - temp_ust, 0.0);
       } else {
         temp_ust = ust();
-        MPI_Bcast(num_ghost_particles_to_recv, Num_Proc, MPI_INT, i, MPI_COMM_WORLD);
+        MPI_Bcast(num_ghost_particles_to_recv, goma_ctx->num_proc, MPI_INT, i, MPI_COMM_WORLD);
         communication_accum_ust += MAX(ust() - temp_ust, 0.0);
-        if (num_ghost_particles_to_recv[ProcID]) {
+        if (num_ghost_particles_to_recv[goma_ctx->proc_id]) {
           ghost_particles_to_recv = (particle_t *)calloc(
-              (unsigned)num_ghost_particles_to_recv[ProcID], sizeof(particle_t));
+              (unsigned)num_ghost_particles_to_recv[goma_ctx->proc_id], sizeof(particle_t));
           temp_ust = ust();
           MPI_Recv(ghost_particles_to_recv,
-                   num_ghost_particles_to_recv[ProcID] * sizeof(particle_t), MPI_BYTE, i, 0,
+                   num_ghost_particles_to_recv[goma_ctx->proc_id] * sizeof(particle_t), MPI_BYTE, i, 0,
                    MPI_COMM_WORLD, &mpi_status);
           communication_accum_ust += MAX(ust() - temp_ust, 0.0);
-          for (j = 0; j < num_ghost_particles_to_recv[ProcID]; j++) {
+          for (j = 0; j < num_ghost_particles_to_recv[goma_ctx->proc_id]; j++) {
             ghost_particles_to_recv[j].state = GHOST;
             p = create_a_particle(&ghost_particles_to_recv[j],
                                   ghost_particles_to_recv[j].owning_elem_id);
@@ -4840,10 +4840,10 @@ static void couple_to_continuum(void) {
         load_field_variables_at_xi(i, p->xi);
 
         if (p->owning_elem_id != i) {
-          fprintf(stderr, "PROC%d: UH-OH, THEY ARE NOT EQUAL!\n", ProcID);
-          fprintf(stderr, "PROC%d: \t\ti = %d, particle->owning_elem_id = %d\n", ProcID, i,
+          fprintf(stderr, "PROC%d: UH-OH, THEY ARE NOT EQUAL!\n", goma_ctx->proc_id);
+          fprintf(stderr, "PROC%d: \t\ti = %d, particle->owning_elem_id = %d\n", goma_ctx->proc_id, i,
                   p->owning_elem_id);
-          fprintf(stderr, "PROC%d: \t\tstate = %d\n", ProcID, p->state);
+          fprintf(stderr, "PROC%d: \t\tstate = %d\n", goma_ctx->proc_id, p->state);
         }
 
         for (j = 0; j < ei[pg->imtrx]->dof[source_eqn]; j++) {
@@ -4880,7 +4880,7 @@ static void couple_to_continuum(void) {
         p = p_tmp;
       }
     }
-    for (i = 0; i < Num_Proc; i++)
+    for (i = 0; i < goma_ctx->num_proc; i++)
       if (ghost_particles_to_send[i])
         free(ghost_particles_to_send[i]);
     free(num_ghost_particles_to_send);
@@ -4906,19 +4906,19 @@ static void test_map_integrity(void) {
   FILE *fp;
 
 #ifdef PARALLEL
-  for (proc_id = 0; proc_id < Num_Proc; proc_id++) {
-    if (proc_id == ProcID) {
+  for (proc_id = 0; proc_id < goma_ctx->num_proc; proc_id++) {
+    if (proc_id == goma_ctx->proc_id) {
       if (proc_id == 0)
         fp = fopen("map.txt", "w");
       else
         fp = fopen("map.txt", "a");
       for (elem_id = 0; elem_id < static_exo->num_elems; elem_id++) {
-        if (DPI_ptr->elem_owner[elem_id] != ProcID) {
-          fprintf(fp, "Proc %2d Elem %4d(%3d) <not owned>\n", ProcID,
+        if (DPI_ptr->elem_owner[elem_id] != goma_ctx->proc_id) {
+          fprintf(fp, "Proc %2d Elem %4d(%3d) <not owned>\n", goma_ctx->proc_id,
                   DPI_ptr->elem_index_global[elem_id], elem_id);
           continue;
         } else
-          fprintf(fp, "Proc %2d Elem %4d(%3d)\n", ProcID, DPI_ptr->elem_index_global[elem_id],
+          fprintf(fp, "Proc %2d Elem %4d(%3d)\n", goma_ctx->proc_id, DPI_ptr->elem_index_global[elem_id],
                   elem_id);
         for (face_id = 0; face_id < sides_per_element; face_id++) {
           PBC_id = element_particle_info[elem_id].PBC_side_id[face_id];
@@ -4934,7 +4934,7 @@ static void test_map_integrity(void) {
               else
                 fprintf(fp, "local neighbor=%4d(%3d) (%5s)   OK\n",
                         DPI_ptr->elem_index_global[neighbor_elem_id], neighbor_elem_id,
-                        (DPI_ptr->elem_owner[neighbor_elem_id] == ProcID ? "owned" : "ghost"));
+                        (DPI_ptr->elem_owner[neighbor_elem_id] == goma_ctx->proc_id ? "owned" : "ghost"));
             } else {
               neighbor_elem_proc_id = -(PBC_id + 2);
               neighbor_elem_id = element_particle_info[elem_id].owner_local_element_id[face_id];
