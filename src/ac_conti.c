@@ -1379,6 +1379,7 @@ free_and_clear:
   safer_free((void **)&goma_ctx->problem.local_offset);
   safer_free((void **)&goma_ctx->problem.dolphin);
 
+  safer_free((void **)&ija_attic);
   safer_free((void **)&goma_ctx->fem.pg->matrices);
 
   if (file != NULL)

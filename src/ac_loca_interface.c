@@ -1187,6 +1187,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   safer_free((void **)&con.hopf_info.y_vec);
   safer_free((void **)&con.hopf_info.z_vec);
 
+  safer_free((void **)&ija_attic);
   safer_free((void **)&goma_ctx->fem.pg->matrices);
 
   return nstep;
@@ -3139,13 +3140,13 @@ void solution_output_conwrap(int num_soln_flag,
 #ifdef GOMA_ENABLE_ARPACK
 
   /* Decide if eigenvalues will be calculated on this step */
-  if (con->eigen_info.Num_Eigenvalues < 1)
-    return;
   i_print = FALSE;
   if (freq > 0 && nt % freq == 0)
     i_print = TRUE;
   if (freq == -1 && passdown.last_step)
     i_print = TRUE;
+  if (con->eigen_info.Num_Eigenvalues < 1)
+    i_print = FALSE;
 
   if (i_print) {
 

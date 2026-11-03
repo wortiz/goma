@@ -1467,6 +1467,7 @@ free_and_clear:
   }
 
   free(gv);
+  safer_free((void **)&ija_attic);
   safer_free((void **)&goma_ctx->fem.pg->matrices);
 
   return;
