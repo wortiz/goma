@@ -1041,8 +1041,8 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
   for (int i = 0; i < MAX_MAT_PER_SS + 1; i++) {
     free(ss_to_blks[i]);
   }
-  free(Proc_SS_Node_Count);
-  free(Coor);
+  free(goma_ctx->mesh.proc_ss_node_count);
+  free(goma_ctx->mesh.coor);
   return GOMA_SUCCESS;
 }
 

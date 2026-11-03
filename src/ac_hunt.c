@@ -326,7 +326,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
    * the exodus database.
    */
 
-  asdv(&gvec, Num_Node);
+  asdv(&gvec, goma_ctx->mesh.num_node);
 
   /*
    * Allocate space and manipulate for all the nodes that this processor
@@ -552,7 +552,8 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     goma_error err = GomaSparseMatrix_CreateFromFormat(&goma_matrix, Matrix_Format);
     GOMA_EH(err, "GomaSparseMatrix_CreateFromFormat");
 
-    int local_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+    int local_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                      goma_ctx->mesh.num_external_nodes;
     err = GomaSparseMatrix_SetProblemGraph(
         goma_matrix, num_internal_dofs[pg->imtrx], num_boundary_dofs[pg->imtrx],
         num_external_dofs[pg->imtrx], local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,

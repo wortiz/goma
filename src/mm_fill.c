@@ -924,7 +924,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if ((pd->i[pg->imtrx][eqn] == I_Q1) || (pd->i[pg->imtrx][eqn] == I_Q2)) {
           /* check all neighboring elements to see if any
              span the interface */
-          I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+          I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
           for (j = exo->node_elem_pntr[I]; j < exo->node_elem_pntr[I + 1]; j++) {
             e = exo->node_elem_list[j];
             if (elem_overlaps_interface(e, x, exo, ls->Length_Scale)) {
@@ -3234,7 +3234,7 @@ Revised:         Summer 1998, SY Tam (UNM)
          * elemental node number i into a processor node index I.
          * Then, make sure this node is owned by this processor
          */
-        I = Proc_Elem_Connect[iconnect_ptr + i];
+        I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         if (I < (dpi->num_internal_nodes + dpi->num_boundary_nodes)) {
           if (in_list(I, 0, num_mom_rotate[pg->imtrx], mom_rotate_node[pg->imtrx]) != -1)
             call_rotate = 1;
@@ -3277,7 +3277,7 @@ Revised:         Summer 1998, SY Tam (UNM)
        *   elemental node number i into a global index I
        *  You only have to rotate equations at nodes that you own?!?
        */
-      I = Proc_Elem_Connect[iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
       if (I < (dpi->num_internal_nodes + dpi->num_boundary_nodes)) {
         /*
          * Check for rotation of mesh equations or momentum equations
@@ -3325,7 +3325,7 @@ Revised:         Summer 1998, SY Tam (UNM)
        *   elemental node number i into a global index I
        *  You only have to rotate equations at nodes that you own?!?
        */
-      I = Proc_Elem_Connect[iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
       if (I < (dpi->num_internal_nodes + dpi->num_boundary_nodes)) {
 
         int rotate_momentum = 0;
@@ -3351,7 +3351,7 @@ Revised:         Summer 1998, SY Tam (UNM)
        *   elemental node number i into a global index I
        *  You only have to rotate equations at nodes that you own?!?
        */
-      I = Proc_Elem_Connect[iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
       if (I < (dpi->num_internal_nodes + dpi->num_boundary_nodes)) {
 
         int rotate_mesh = 0;
@@ -3679,7 +3679,7 @@ Revised:         Summer 1998, SY Tam (UNM)
   /* PRS test code for shell endpoint conditions.  4/21/2004 */
   if (pde[R_MESH1] && pde[R_SHELL_TENSION]) {
     for (i = 0; i < num_local_nodes; i++) {
-      I = Proc_Elem_Connect[iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
       node = Nodes[I];
       /*Now apply condition */
       if (node->DBSH_SLOPE_X == 1) {
@@ -3778,7 +3778,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 	      for( i=0; i < (int) elem_side_bc->num_nodes_on_side; i++)
 		{	
 		  id = (int) elem_side_bc->local_elem_node_id[i];
-		  I = Proc_Elem_Connect[iconnect_ptr + id];
+		  I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
 					
 		  for(eqn=0; eqn < 2; eqn++)
 		    {
@@ -3840,7 +3840,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     MMH_ip = -1;
   }
 
-  if (Proc_NS_List_Length > 0 &&
+  if (goma_ctx->mesh.proc_ns_list_length > 0 &&
       ((Linear_Solver != FRONT && ielem == exo->eb_ptr[exo->num_elem_blocks] - 1) ||
        (Linear_Solver == FRONT && ielem == exo->elem_order_map[exo->num_elem_blocks] - 1))) {
     if (zeroCA == 0) {
@@ -4015,7 +4015,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
   /*          INITIALIZATION THAT IS DEPENDENT ON THE ELEMENT NUMBER            */
   /******************************************************************************/
 
-  if (Proc_NS_List_Length > 0 &&
+  if (goma_ctx->mesh.proc_ns_list_length > 0 &&
       ((zeroCA == 1) || ((Linear_Solver != FRONT && ielem == exo->eb_ptr[0]) ||
                          (Linear_Solver == FRONT && ielem == exo->elem_order_map[0] - 1)))) {
     int nsp, nspk, count = -1;
@@ -4032,7 +4032,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
       case VELO_THETA_COX_BC:
       case VELO_THETA_SHIK_BC:
         nsp = match_nsid(BC_Types[j].BC_ID);
-        nspk = Proc_NS_List[Proc_NS_Pointers[nsp]];
+        nspk = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp]];
         if (nsp != -1 && Nodes[nspk]->Proc == goma_ctx->proc_id) {
           count++;
           CA_proc[count] = goma_ctx->proc_id;
@@ -4256,7 +4256,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
         if ((pd->i[pg->imtrx][eqn] == I_Q1) || (pd->i[pg->imtrx][eqn] == I_Q2)) {
           /* check all neighboring elements to see if any
              span the interface */
-          I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+          I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
           for (j = exo->node_elem_pntr[I]; j < exo->node_elem_pntr[I + 1]; j++) {
             e = exo->node_elem_list[j];
             if (elem_overlaps_interface(e, x, exo, ls->Length_Scale)) {
@@ -4800,7 +4800,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
          * elemental node number i into a processor node index I.
          * Then, make sure this node is owned by this processor
          */
-        I = Proc_Elem_Connect[iconnect_ptr + i];
+        I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         if (I < (dpi->num_internal_nodes + dpi->num_boundary_nodes)) {
           if (in_list(I, 0, num_mom_rotate[pg->imtrx], mom_rotate_node[pg->imtrx]) != -1)
             call_rotate = 1;
@@ -4843,7 +4843,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
        *   elemental node number i into a global index I
        *  You only have to rotate equations at nodes that you own?!?
        */
-      I = Proc_Elem_Connect[iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
       if (I < (dpi->num_internal_nodes + dpi->num_boundary_nodes)) {
         /*
          * Check for rotation of mesh equations or momentum equations
@@ -4892,7 +4892,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
        *   elemental node number i into a global index I
        *  You only have to rotate equations at nodes that you own?!?
        */
-      I = Proc_Elem_Connect[iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
       if (I < (dpi->num_internal_nodes + dpi->num_boundary_nodes)) {
 
         rotate_momentum = 0;
@@ -5146,7 +5146,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
   /* PRS test code for shell endpoint conditions.  4/21/2004 */
   if (pde[R_MESH1] && pde[R_SHELL_TENSION]) {
     for (i = 0; i < num_local_nodes; i++) {
-      I = Proc_Elem_Connect[iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
       node = Nodes[I];
       /*Now apply condition */
       if (node->DBSH_SLOPE_X == 1) {
@@ -5579,7 +5579,7 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
 
       for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
         /* I is the global row block index, also global node number */
-        I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
         /* if I is an external node to this processor, skip all this stuff */
         if (I < ams->npn) {
           row_dofs = rpntr[I + 1] - rpntr[I];
@@ -5611,8 +5611,9 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                             }
                           }
                           for (j = 0; j < ei_ptr->num_local_nodes; j++) {
-                            J = Proc_Elem_Connect[ei_ptr->iconnect_ptr +
-                                                  j]; /* J is the global column block index */
+                            J = goma_ctx->mesh
+                                    .proc_elem_connect[ei_ptr->iconnect_ptr +
+                                                       j]; /* J is the global column block index */
                             K = in_list(J, bpntr[I], bpntr[I + 1],
                                         bindx); /* K is the block index */
                             GOMA_EH(K, " Can't locate column index in bindx ");
@@ -5666,8 +5667,9 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                           }
                         }
                         for (j = 0; j < ei_ptr->num_local_nodes; j++) {
-                          J = Proc_Elem_Connect[ei_ptr->iconnect_ptr +
-                                                j]; /* J is the global column block index */
+                          J = goma_ctx->mesh
+                                  .proc_elem_connect[ei_ptr->iconnect_ptr +
+                                                     j]; /* J is the global column block index */
                           K = in_list(J, bpntr[I], bpntr[I + 1], bindx); /* K is the block index */
                           GOMA_EH(K, " Can't locate column index in bindx ");
                           a_ptr = a + indx[K]; /* a_ptr points to first entry in val of Kth block */

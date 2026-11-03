@@ -2227,8 +2227,8 @@ void overlap_aug_cond(int ija[],
               x, mf_args->resid, *mf_args->delta_t, *mf_args->theta_, *mf_args->h_elem_avg, h,
               mu_avg, *mf_args->U_norm, First_Elem_Side_BC_Array[pg->imtrx], ielem,
               ei[pg->imtrx]->ielem_type, ei[pg->imtrx]->num_local_nodes, ei[pg->imtrx]->ielem_dim,
-              Proc_Connect_Ptr[ielem], elem_side_bc, *mf_args->num_total_nodes, CONTACT_SURF, jAC,
-              gAC, bAC, cAC, dAC, *mf_args->time, exo);
+              goma_ctx->mesh.proc_connect_ptr[ielem], elem_side_bc, *mf_args->num_total_nodes,
+              CONTACT_SURF, jAC, gAC, bAC, cAC, dAC, *mf_args->time, exo);
           GOMA_EH(err, " apply_contact_bc");
         } /* END of "if (ielem != jelem || iside != jside)" */
 
@@ -2301,8 +2301,8 @@ void overlap_aug_cond(int ija[],
                 x, mf_args->resid, *mf_args->delta_t, *mf_args->theta_, *mf_args->h_elem_avg, h,
                 mu_avg, *mf_args->U_norm, First_Elem_Side_BC_Array[pg->imtrx], ielem,
                 ei[pg->imtrx]->ielem_type, ei[pg->imtrx]->num_local_nodes, ei[pg->imtrx]->ielem_dim,
-                Proc_Connect_Ptr[ielem], elem_side_bc, *mf_args->num_total_nodes, CONTACT_SURF, jAC,
-                gAC, bAC, cAC, dAC, *mf_args->time, exo);
+                goma_ctx->mesh.proc_connect_ptr[ielem], elem_side_bc, *mf_args->num_total_nodes,
+                CONTACT_SURF, jAC, gAC, bAC, cAC, dAC, *mf_args->time, exo);
           }
           /****************************************************************************/
         } while ((elem_side_bc = elem_side_bc->next_side_bc) != NULL);
@@ -3064,7 +3064,8 @@ int create_overlap_acs(Exo_DB *exo, int iAC)
 
           /* Write AC ID data */
           fprintf(ac_id, "Solid element %5d side %d  <%g, %g> AC's:  %3d (X), %3d (Y)\n", e + 1, s,
-                  Coor[0][inode], Coor[1][inode], ac_count - 1, ac_count);
+                  goma_ctx->mesh.coor[0][inode], goma_ctx->mesh.coor[1][inode], ac_count - 1,
+                  ac_count);
         }
       }
     }
@@ -3285,8 +3286,8 @@ int create_periodic_acs(Exo_DB *exo)
        */
       scale = 0.;
       for (k = 0; k < dim; k++)
-        scale += (Coor[k][node_list1[1]] - Coor[k][node_list1[0]]) *
-                 (Coor[k][node_list1[1]] - Coor[k][node_list1[0]]);
+        scale += (goma_ctx->mesh.coor[k][node_list1[1]] - goma_ctx->mesh.coor[k][node_list1[0]]) *
+                 (goma_ctx->mesh.coor[k][node_list1[1]] - goma_ctx->mesh.coor[k][node_list1[0]]);
       scale = sqrt(scale);
 
       for (i = 0; i < count1; i++) {
@@ -3294,7 +3295,8 @@ int create_periodic_acs(Exo_DB *exo)
         for (j = 0; j < count1 && !found; j++) {
           dim_count = 0;
           for (k = 0; k < dim; k++) {
-            if (fabs(Coor[k][node_list1[i]] - Coor[k][node_list2[j]]) < 1.e-5 * scale)
+            if (fabs(goma_ctx->mesh.coor[k][node_list1[i]] -
+                     goma_ctx->mesh.coor[k][node_list2[j]]) < 1.e-5 * scale)
               dim_count++;
           }
           if (dim_count == dim - 1) {
@@ -3375,10 +3377,10 @@ int create_periodic_acs(Exo_DB *exo)
 
 static void RETN_COORD(int node, double *x, double *y, double *z) {
   if (node >= 0) {
-    *x = Coor[0][node];
-    *y = Coor[1][node];
-    if (Num_Dim > 2)
-      *z = Coor[2][node];
+    *x = goma_ctx->mesh.coor[0][node];
+    *y = goma_ctx->mesh.coor[1][node];
+    if (goma_ctx->mesh.num_dim > 2)
+      *z = goma_ctx->mesh.coor[2][node];
     else
       *z = 0.0;
   } else {
@@ -3433,7 +3435,7 @@ double getPositionAC(struct AC_Information *augc, double *cAC_iAC, double *x, Ex
 
   // Decide whether this processor owns that node and get local node number
   int node = -1;
-  for (i = 0; i < Num_Internal_Nodes + Num_Border_Nodes; i++) {
+  for (i = 0; i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes; i++) {
     node_ptr = Nodes[i];
     if (globalNodeNum == node_ptr->Global_Node_Num) {
       node = i;
@@ -3540,7 +3542,7 @@ double getAngleAC(struct AC_Information *augc, double *cAC_iAC, double *x, Exo_D
 
   // Decide whether this processor owns that node and get local node number
   int node = -1;
-  for (i = 0; i < Num_Internal_Nodes + Num_Border_Nodes; i++) {
+  for (i = 0; i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes; i++) {
     node_ptr = Nodes[i];
     if (globalNodeNum == node_ptr->Global_Node_Num) {
       node = i;

@@ -2282,7 +2282,9 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                 if (nedelecBC) {
                   int lnn;
                   for (lnn = 0; lnn < exo->eb_num_nodes_per_elem[elem_block_index]; lnn++) {
-                    if (inode == Proc_Elem_Connect[Proc_Connect_Ptr[ielem] + lnn])
+                    if (inode ==
+                        goma_ctx->mesh
+                            .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ielem] + lnn])
                       break;
                   }
                   node_ok =

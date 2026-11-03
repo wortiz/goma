@@ -3203,9 +3203,9 @@ void apply_sh_weak(double func[DIM],
 
   for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
     node = ei[pg->imtrx]->dof_list[R_MESH2][i];
-    index = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
+    index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
     d_phi_dcsi[i] = bf[eqn]->dphidxi[i][0];
-    d_sh_y_dcsi += (Coor[1][index] + *esp->d[1][i]) * d_phi_dcsi[i];
+    d_sh_y_dcsi += (goma_ctx->mesh.coor[1][index] + *esp->d[1][i]) * d_phi_dcsi[i];
 
     // don't need to loop over k, it's just sensitive to d[1];
     d_sh_y_dcsi_dmesh[1][i] += d_phi_dcsi[i];

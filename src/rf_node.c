@@ -191,7 +191,8 @@ void init_nodes(Exo_DB *exo, Dpi *dpi)
    * Calculate the total number of nodes and do a consistency check
    * with the fe database.
    */
-  total_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+  total_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                goma_ctx->mesh.num_external_nodes;
   if (total_nodes != number_proc_nodes) {
     fprintf(stderr, "Proc %d : init_nodes ERROR total nodes, %d, differs from num_proc_nodes, %d\n",
             goma_ctx->proc_id, total_nodes, number_proc_nodes);
@@ -228,10 +229,10 @@ void init_nodes(Exo_DB *exo, Dpi *dpi)
       Nodes[i]->DBC[k] = NULL;
     }
 
-    if (i < Num_Internal_Nodes) {
+    if (i < goma_ctx->mesh.num_internal_nodes) {
       Nodes[i]->Type.Internal = TRUE;
       Nodes[i]->Type.Owned = TRUE;
-    } else if (i < Num_Internal_Nodes + Num_Border_Nodes) {
+    } else if (i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes) {
       Nodes[i]->Type.Border = TRUE;
       Nodes[i]->Type.Owned = TRUE;
     } else {
@@ -295,7 +296,7 @@ void free_nodes(void)
 {
   int i, k;
   NODE_INFO_STRUCT *node_ptr;
-  for (i = 0; i < Num_Node; i++) {
+  for (i = 0; i < goma_ctx->mesh.num_node; i++) {
     node_ptr = Nodes[i];
     free_umi_list(&(node_ptr->Mat_List));
     for (k = 0; k < upd->Total_Num_Matrices; k++) {
@@ -371,10 +372,10 @@ void make_node_to_elem_matrl_map(Exo_DB *exo)
         /*
          *  find ptr to the beginning of this element's connectivity list
          */
-        iconnect_ptr = Proc_Connect_Ptr[ielem];
+        iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[ielem];
 
         for (i = 0; i < num_local_nodes; i++) {
-          I = Proc_Elem_Connect[iconnect_ptr + i];
+          I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
           add_to_umi_int_list(&(Nodes[I]->Mat_List), mn);
           /*
             add_to_umi_int_list(&(Nodes[I]->Element_List), ielem);
@@ -718,7 +719,8 @@ void nullify_dirichlet_bcs(void)
   int total_nodes;
   NODE_INFO_STRUCT *node;
   NODAL_VARS_STRUCT *nv;
-  total_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+  total_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                goma_ctx->mesh.num_external_nodes;
   for (i = 0; i < total_nodes; i++) {
     node = Nodes[i];
     if (node->DBC[pg->imtrx]) {

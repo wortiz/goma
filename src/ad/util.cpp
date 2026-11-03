@@ -126,19 +126,22 @@ int ad_beer_belly(void) {
       for (k = 0; k < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; k++) {
         node = ei[upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
 
-        index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
+        index = goma_ctx->mesh.proc_elem_connect
+                    [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
 
-        ad_fv->x[i] += (Coor[i][index] + ADType(ad_fv->total_ad_variables,
-                                                ad_fv->offset[R_MESH1 + i] + k, *esp->d[i][k])) *
-                       bf[R_MESH1]->phi[k];
+        ad_fv->x[i] +=
+            (goma_ctx->mesh.coor[i][index] +
+             ADType(ad_fv->total_ad_variables, ad_fv->offset[R_MESH1 + i] + k, *esp->d[i][k])) *
+            bf[R_MESH1]->phi[k];
       }
     } else {
       for (k = 0; k < mdof; k++) {
         node = MapBf->interpolation == I_N1 ? k : ei[imtrx]->dof_list[ShapeVar][k];
 
-        index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[imtrx]->ielem] + node];
+        index = goma_ctx->mesh
+                    .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[imtrx]->ielem] + node];
 
-        ad_fv->x[i] += Coor[i][index] * MapBf->phi[k];
+        ad_fv->x[i] += goma_ctx->mesh.coor[i][index] * MapBf->phi[k];
       }
     }
   }
@@ -155,18 +158,21 @@ int ad_beer_belly(void) {
         for (k = 0; k < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; k++) {
           node = ei[upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
 
-          index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
+          index =
+              goma_ctx->mesh.proc_elem_connect
+                  [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
 
           ad_fv->J[i][j] +=
-              (Coor[j][index] +
+              (goma_ctx->mesh.coor[j][index] +
                ADType(ad_fv->total_ad_variables, ad_fv->offset[R_MESH1 + j] + k, *esp->d[j][k])) *
               bf[R_MESH1]->dphidxi[k][i];
         }
       } else {
         for (k = 0; k < mdof; k++) {
           node = MapBf->interpolation == I_N1 ? k : ei[imtrx]->dof_list[ShapeVar][k];
-          index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[imtrx]->ielem] + node];
-          ad_fv->J[i][j] += Coor[j][index] * bf[ShapeVar]->dphidxi[k][i];
+          index = goma_ctx->mesh
+                      .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[imtrx]->ielem] + node];
+          ad_fv->J[i][j] += goma_ctx->mesh.coor[j][index] * bf[ShapeVar]->dphidxi[k][i];
         }
       }
     }

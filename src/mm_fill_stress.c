@@ -5133,7 +5133,7 @@ int assemble_surface_stress(Exo_DB *exo, /* ptr to basic exodus ii mesh informat
     if (BC_Types[ibc].BC_Name == TABLE_BC) {
       /*Loop over all side sets to find a match */
       for (ins = 0; ins < exo->num_side_sets; ins++) {
-        if (Proc_SS_Ids[ins] == BC_Types[ibc].BC_ID) {
+        if (goma_ctx->mesh.proc_ss_ids[ins] == BC_Types[ibc].BC_ID) {
 
           /* Does it contain the element? */
           for (side_index = 0; side_index < exo->ss_num_sides[ins]; side_index++) {
@@ -5634,12 +5634,12 @@ int neighbor_stress(Exo_DB *exo, /* ptr to basic exodus ii mesh information */
 
   /* first get global node numbers for current element
      and side */
-  iconnect_ptr = Proc_Connect_Ptr[current_elem]; /* find pointer to beginning */
+  iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[current_elem]; /* find pointer to beginning */
 
   for (i = 0; i < nodes_per_side; i++) {
     id = local_elem_node_id[i];
     /* load up global node numbers on this side */
-    inode[i] = Proc_Elem_Connect[iconnect_ptr + id];
+    inode[i] = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
   }
 
   /* find localside number for neighbor element from
@@ -5674,18 +5674,18 @@ int neighbor_stress(Exo_DB *exo, /* ptr to basic exodus ii mesh information */
      *  we are trying to get information for
      */
 
-    iconnect_ptr = Proc_Connect_Ptr[neighbor_elem]; /* find pointer to beginning */
+    iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[neighbor_elem]; /* find pointer to beginning */
     for (i = 0; i < ei[pg->imtrx]->dof[v]; i++) {
       phi_map[i] = newshape(xi, ielem_type, PSI, ei[pg->imtrx]->dof_list[v][i], ielem_shape,
                             pd->i[pg->imtrx][v], i);
     }
 
-    iconnect_ptr = Proc_Connect_Ptr[neighbor_elem]; /* find pointer to beginning */
+    iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[neighbor_elem]; /* find pointer to beginning */
     for (i = 0; i < ei[pg->imtrx]->dof[v]; i++) {
-      gnn = Proc_Elem_Connect[iconnect_ptr + i];
+      gnn = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
 
       for (p = 0; p < dim; p++) {
-        x_n[ip][p] += Coor[p][gnn] * phi_map[i];
+        x_n[ip][p] += goma_ctx->mesh.coor[p][gnn] * phi_map[i];
       }
     }
 
@@ -5696,7 +5696,7 @@ int neighbor_stress(Exo_DB *exo, /* ptr to basic exodus ii mesh information */
             v = v_s[mode][a][b];
             if (pd->v[pg->imtrx][v]) {
               for (i = 0; i < num_local_nodes; i++) {
-                gnn = Proc_Elem_Connect[iconnect_ptr + i];
+                gnn = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
                 nvdof = Dolphin[pg->imtrx][gnn][v];
                 for (j = 0; j < nvdof; j++) {
                   ledof = ei[pg->imtrx]->lvdof_to_ledof[v][j];
@@ -5793,12 +5793,12 @@ int neighbor_stress_table(Exo_DB *exo, /* ptr to basic exodus ii mesh informatio
   }
 
   /* first get global node numbers for current element and side */
-  iconnect_ptr = Proc_Connect_Ptr[current_elem]; /* find pointer to beginning */
+  iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[current_elem]; /* find pointer to beginning */
 
   for (i = 0; i < nodes_per_side; i++) {
     id = local_elem_node_id[i];
     /* load up global node numbers on this side */
-    inode[i] = Proc_Elem_Connect[iconnect_ptr + id];
+    inode[i] = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
   }
 
   /* find localside number for neighbor element from
@@ -5813,17 +5813,17 @@ int neighbor_stress_table(Exo_DB *exo, /* ptr to basic exodus ii mesh informatio
 
     v = pd->ShapeVar;
 
-    iconnect_ptr = Proc_Connect_Ptr[current_elem]; /* find pointer to beginning */
+    iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[current_elem]; /* find pointer to beginning */
     for (i = 0; i < ei[pg->imtrx]->dof[v]; i++) {
       phi_map[i] = newshape(xi, ielem_type, PSI, ei[pg->imtrx]->dof_list[v][i], ielem_shape,
                             pd->i[pg->imtrx][v], i);
     }
 
     for (i = 0; i < ei[pg->imtrx]->dof[v]; i++) {
-      gnn = Proc_Elem_Connect[iconnect_ptr + i];
+      gnn = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
 
       for (p = 0; p < dim; p++) {
-        x_n[ip][p] += Coor[p][gnn] * phi_map[i];
+        x_n[ip][p] += goma_ctx->mesh.coor[p][gnn] * phi_map[i];
       }
 
     } /* sets global positions for gaussian points */

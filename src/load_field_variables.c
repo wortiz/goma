@@ -986,10 +986,11 @@ int load_fv(void)
 
       for (i = 0; i < dofs; i++) {
         node = ei[upd->matrix_index[v]]->dof_list[R_MESH1][i];
-        index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[upd->matrix_index[v]]->ielem] + node];
+        index = goma_ctx->mesh.proc_elem_connect
+                    [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[v]]->ielem] + node];
         fv->d[p] += *esp->d[p][i] * bfv->phi[i];
-        fv->x[p] += (Coor[p][index] + *esp->d[p][i]) * bfv->phi[i];
-        fv->x0[p] += Coor[p][index] * bfv->phi[i];
+        fv->x[p] += (goma_ctx->mesh.coor[p][index] + *esp->d[p][i]) * bfv->phi[i];
+        fv->x0[p] += goma_ctx->mesh.coor[p][index] * bfv->phi[i];
 
         /*
          * HKM -> We calculate the old xdot's by doing a little pointer
@@ -998,7 +999,7 @@ int load_fv(void)
          */
         if (transient_run) {
           fv_old->d[p] += *esp_old->d[p][i] * bfv->phi[i];
-          fv_old->x[p] += (Coor[p][index] + *esp_old->d[p][i]) * bf[v]->phi[i];
+          fv_old->x[p] += (goma_ctx->mesh.coor[p][index] + *esp_old->d[p][i]) * bf[v]->phi[i];
           fv_dot->d[p] += *esp_dot->d[p][i] * bfv->phi[i];
           fv_dot->x[p] += *esp_dot->d[p][i] * bfv->phi[i];
           if (tran->solid_inertia) {
@@ -1049,8 +1050,9 @@ int load_fv(void)
         } else {
           node = ei[upd->matrix_index[v]]->dof_list[v][i];
         }
-        index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[upd->matrix_index[v]]->ielem] + node];
-        fv->x[p] += (Coor[p][index]) * bf[v]->phi[i];
+        index = goma_ctx->mesh.proc_elem_connect
+                    [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[v]]->ielem] + node];
+        fv->x[p] += (goma_ctx->mesh.coor[p][index]) * bf[v]->phi[i];
       }
       fv_old->x[p] = fv->x[p]; /* Fixed grid stays fixed thru time. */
       fv->x0[p] = fv->x[p];
@@ -1077,7 +1079,8 @@ int load_fv(void)
 
       for (i = 0; i < dofs; i++) {
         node = ei[upd->matrix_index[v]]->dof_list[R_SOLID1][i];
-        index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[upd->matrix_index[v]]->ielem] + node];
+        index = goma_ctx->mesh.proc_elem_connect
+                    [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[v]]->ielem] + node];
         fv->d_rs[p] += *esp->d_rs[p][i] * bf[v]->phi[i];
 
         if (pd->TimeIntegration != STEADY) {

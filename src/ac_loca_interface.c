@@ -430,7 +430,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
    * vector at all and only carries this processor's nodal variables to
    * the exodus database.
    */
-  asdv(&gvec, Num_Node);
+  asdv(&gvec, goma_ctx->mesh.num_node);
 
   /*
    * Allocate space and manipulate for all the nodes that this processor

@@ -662,8 +662,8 @@ double time_step_control(const double delta_t,
        * there is near zero displacement - i.e., better timestep control */
       if (bit_DM_scale &&
           (eqn == MESH_DISPLACEMENT1 || eqn == MESH_DISPLACEMENT2 || eqn == MESH_DISPLACEMENT3)) {
-        if (fabs(Coor[eqn - MESH_DISPLACEMENT1][inode]) > max[eqn])
-          max[eqn] = fabs(Coor[eqn - MESH_DISPLACEMENT1][inode]);
+        if (fabs(goma_ctx->mesh.coor[eqn - MESH_DISPLACEMENT1][inode]) > max[eqn])
+          max[eqn] = fabs(goma_ctx->mesh.coor[eqn - MESH_DISPLACEMENT1][inode]);
       } else {
         if (fabs(x[i]) > max[eqn])
           max[eqn] = fabs(x[i]);
@@ -1734,7 +1734,7 @@ void init_vec(
         double xpt[DIM] = {0, 0, 0}, var_val[MAX_VARIABLE_TYPES];
         int dir, ierr;
         for (dir = 0; dir < pd->Num_Dim; dir++) {
-          xpt[dir] = Coor[dir][i];
+          xpt[dir] = goma_ctx->mesh.coor[dir][i];
         }
         init_vec_value(var_val, 0.0, MAX_VARIABLE_TYPES);
         ierr = user_initialize(Var_init[i].var, u, Var_init[i].init_val, Var_init[i].u_pars, xpt,
@@ -1839,12 +1839,12 @@ void init_vec(
       for (ielem = e_start; ielem < e_end; ielem++) {
         ielem_type = Elem_Type(exo, ielem);
         num_nodes = elem_info(NNODES, ielem_type);
-        index = Proc_Connect_Ptr[ielem];
+        index = goma_ctx->mesh.proc_connect_ptr[ielem];
         /*
          *  Loop over each local node in the element
          */
         for (n = 0; n < num_nodes; n++) {
-          i = Proc_Elem_Connect[index++];
+          i = goma_ctx->mesh.proc_elem_connect[index++];
           nv = Nodes[i]->Nodal_Vars_Info[pg->imtrx];
           for (j = 0; j < Num_Var_Init_Mat[mn]; j++) {
             int slaved = Var_init_mat[mn][j].slave_block;
@@ -2067,12 +2067,12 @@ void init_vec(
       for (ielem = e_start; ielem < e_end; ielem++) {
         ielem_type = Elem_Type(exo, ielem);
         num_nodes = elem_info(NNODES, ielem_type);
-        index = Proc_Connect_Ptr[ielem];
+        index = goma_ctx->mesh.proc_connect_ptr[ielem];
         /*
          *  Loop over each local node in the element
          */
         for (n = 0; n < num_nodes; n++) {
-          i = Proc_Elem_Connect[index++];
+          i = goma_ctx->mesh.proc_elem_connect[index++];
           nv = Nodes[i]->Nodal_Vars_Info[pg->imtrx];
           for (j = 0; j < Num_Var_Init_Mat[mn]; j++) {
             int slaved = Var_init_mat[mn][j].slave_block;
@@ -2094,7 +2094,7 @@ void init_vec(
               double xpt[DIM] = {0, 0, 0}, var_val[MAX_VARIABLE_TYPES];
               int dir;
               for (dir = 0; dir < pd->Num_Dim; dir++) {
-                xpt[dir] = Coor[dir][i];
+                xpt[dir] = goma_ctx->mesh.coor[dir][i];
               }
               init_vec_value(var_val, 0.0, MAX_VARIABLE_TYPES);
               for (a = 0; a < MAX_VARIABLE_TYPES; a++) {
@@ -2208,10 +2208,10 @@ void init_structural_shell_coord(double u[])
   {
     var = SHELL_X + comp;
     if (upd->vp[pg->imtrx][var]) {
-      for (node = 0; node < Num_Node; node++) {
+      for (node = 0; node < goma_ctx->mesh.num_node; node++) {
         if (Dolphin[pg->imtrx][node][var] > 0) {
           dof = Index_Solution(node, var, 0, 0, -1, pg->imtrx);
-          u[dof] = Coor[comp][node];
+          u[dof] = goma_ctx->mesh.coor[comp][node];
         }
       } /* for: node(s) */
     } /* if: var in upd-> */
@@ -2272,7 +2272,7 @@ void init_shell_normal_unknowns(double x[], const Exo_DB *exo)
 
       ielem_dim = elem_info(NDIM, ielem_type);
       num_local_nodes = elem_info(NNODES, ielem_type);
-      iconnect_ptr = Proc_Connect_Ptr[ielem];
+      iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[ielem];
 
       switch (ei[pg->imtrx]->ielem_shape) {
       case LINE_SEGMENT:
@@ -2292,7 +2292,7 @@ void init_shell_normal_unknowns(double x[], const Exo_DB *exo)
           shell_determinant_and_normal(ielem, iconnect_ptr, num_local_nodes, ielem_dim, 1);
 
           /* Get global node number */
-          ignode = Proc_Elem_Connect[iconnect_ptr + ilnode];
+          ignode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ilnode];
 
           /* Get node number and indices into solution vector for normal dofs */
           nxi = Index_Solution(ignode, SHELL_NORMAL1, 0, 0, -2, pg->imtrx);
@@ -3349,7 +3349,7 @@ static void inject_elem_vec(double sol_vec[],
 
     ielem_type = Elem_Type(exo, ielem); /* func defd in el_geom.h */
     num_local_nodes = elem_info(NNODES, ielem_type);
-    iconnect_ptr = Proc_Connect_Ptr[ielem]; /* find ptr to beginning */
+    iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[ielem]; /* find ptr to beginning */
     /* of this element's */
     /* connectivity list */
 
@@ -3364,7 +3364,7 @@ static void inject_elem_vec(double sol_vec[],
     if (ielem_type == BIQUAD_QUAD || ielem_type == TRIQUAD_HEX || ielem_type == C_BILINEAR_QUAD ||
         ielem_type == C_TRILINEAR_HEX) {
       for (i = 0; i < num_local_nodes; i++) {
-        I = Proc_Elem_Connect[iconnect_ptr + i];
+        I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         /* NOTE: here, the element variables (such as PRESSURE) are being
            extracted from the solution vector coming off of the hanging
            interior nodes, or a given specified node for such a quantity.
@@ -3389,7 +3389,7 @@ static void inject_elem_vec(double sol_vec[],
       }
     } else {
       int i = 0;
-      I = Proc_Elem_Connect[iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
       /* NOTE: here, the element variables (such as PRESSURE) are being
          extracted from the solution vector coming off of the hanging
          interior nodes, or a given specified node for such a quantity.

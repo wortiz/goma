@@ -1767,13 +1767,13 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                         table_distance_search(BC_Types[bc_table_id].table, coord, &slope, d_tfcn);
                   if (dcl_node != -1) {
                     nsp = match_nsid(dcl_node);
-                    k = Proc_NS_List[Proc_NS_Pointers[nsp]];
-                    for (b = 0; b < Proc_NS_Count[nsp]; b++) {
-                      k = Proc_NS_List[Proc_NS_Pointers[nsp] + b];
+                    k = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp]];
+                    for (b = 0; b < goma_ctx->mesh.proc_ns_count[nsp]; b++) {
+                      k = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp] + b];
                       i1 = Index_Solution(k, MESH_DISPLACEMENT1, 0, 0, -1, pg->imtrx);
                       GOMA_EH(i1, "Could not resolve index_solution.");
                       for (i2 = 0; i2 < pd->Num_Dim; i2++) {
-                        point[i2] = Coor[i2][k] + x[i1 + i2];
+                        point[i2] = goma_ctx->mesh.coor[i2][k] + x[i1 + i2];
                       }
                     }
                     dcl_dist = sqrt(SQUARE(coord[0] - point[0]) + SQUARE(coord[1] - point[1]) +
@@ -4973,7 +4973,7 @@ int compute_volume_integrand(const int quantity,
     if (efv->ev) {
       if (efv->i[species_no] != I_TABLE) {
         for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          ie = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+          ie = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
           ldof = ei[pg->imtrx]->ln_to_dof[eqn][i];
           if (ldof >= 0) {
             /* on first time step, integrate initial reaction product field  */

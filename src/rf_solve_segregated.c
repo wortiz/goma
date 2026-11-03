@@ -430,7 +430,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
   gvec = malloc(sizeof(double *) * upd->Total_Num_Matrices);
   for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-    asdv(&gvec[pg->imtrx], Num_Node);
+    asdv(&gvec[pg->imtrx], goma_ctx->mesh.num_node);
   }
 
   /*
@@ -571,7 +571,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
       GomaSparseMatrix goma_matrix;
       goma_error err = GomaSparseMatrix_CreateFromFormat(&goma_matrix, Matrix_Format);
       GOMA_EH(err, "GomaSparseMatrix_CreateFromFormat");
-      int local_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+      int local_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                        goma_ctx->mesh.num_external_nodes;
       err = GomaSparseMatrix_SetProblemGraph(
           goma_matrix, num_internal_dofs[pg->imtrx], num_boundary_dofs[pg->imtrx],
           num_external_dofs[pg->imtrx], local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,
@@ -1437,7 +1438,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               dcopy1(numProcUnknowns[imtrx], x_old[imtrx], x_older[imtrx]);
               dcopy1(numProcUnknowns[imtrx], x_older[imtrx], x_oldest[imtrx]);
               realloc_dbl_1(&x_pred[imtrx], numProcUnknowns[imtrx], 0);
-              realloc_dbl_1(&gvec[imtrx], Num_Node, 0);
+              realloc_dbl_1(&gvec[imtrx], goma_ctx->mesh.num_node, 0);
               realloc_dbl_1(&xdot_older[imtrx], numProcUnknowns[imtrx], 0);
               realloc_dbl_1(&x_prev[imtrx], numProcUnknowns[imtrx], 0);
               memset(xdot[imtrx], 0, sizeof(double) * numProcUnknowns[imtrx]);

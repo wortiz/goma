@@ -444,7 +444,7 @@ static void facet_based_reinitialization_3D(
                         newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ln, ei[pg->imtrx]->ielem_shape,
                                  pd->i[pd->mi[ShapeVar]][ShapeVar], j);
 
-                    x[a] += Coor[a][I] * phi_j;
+                    x[a] += goma_ctx->mesh.coor[a][I] * phi_j;
                   }
                 } else {
                   for (int j = 0; j < mdof; j++) {
@@ -458,7 +458,7 @@ static void facet_based_reinitialization_3D(
                         newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ln, ei[pg->imtrx]->ielem_shape,
                                  pd->i[pd->mi[ShapeVar]][ShapeVar], j);
 
-                    x[a] += (Coor[a][I] + *esp->d[a][j]) * phi_j;
+                    x[a] += (goma_ctx->mesh.coor[a][I] + *esp->d[a][j]) * phi_j;
                   }
                 }
               }
@@ -540,7 +540,8 @@ static void facet_based_reinitialization_3D(
     }
     int index_ls = Index_Solution(node, ls->var, 0, 0, -2, pg->imtrx);
     if (index_ls != -1) {
-      Point<3> p({Coor[0][node], Coor[1][node], Coor[2][node]});
+      Point<3> p({goma_ctx->mesh.coor[0][node], goma_ctx->mesh.coor[1][node],
+                  goma_ctx->mesh.coor[2][node]});
       if (pd->gv[MESH_DISPLACEMENT1]) {
         int index_dx = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, -2, pg->imtrx);
         if (index_dx != -1) {
@@ -703,7 +704,7 @@ static void facet_based_reinitialization_2D(
                       newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ln, ei[pg->imtrx]->ielem_shape,
                                pd->i[pd->mi[ShapeVar]][ShapeVar], j);
 
-                  x[a] += Coor[a][I] * phi_j;
+                  x[a] += goma_ctx->mesh.coor[a][I] * phi_j;
                 }
               } else {
                 for (int j = 0; j < mdof; j++) {
@@ -715,7 +716,7 @@ static void facet_based_reinitialization_2D(
                       newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ln, ei[pg->imtrx]->ielem_shape,
                                pd->i[pd->mi[ShapeVar]][ShapeVar], j);
 
-                  x[a] += (Coor[a][I] + *esp->d[a][j]) * phi_j;
+                  x[a] += (goma_ctx->mesh.coor[a][I] + *esp->d[a][j]) * phi_j;
                 }
               }
             }
@@ -793,7 +794,7 @@ static void facet_based_reinitialization_2D(
     }
     int index_ls = Index_Solution(node, ls->var, 0, 0, -2, pg->imtrx);
     if (index_ls != -1) {
-      Point<2> p = {Coor[0][node], Coor[1][node]};
+      Point<2> p = {goma_ctx->mesh.coor[0][node], goma_ctx->mesh.coor[1][node]};
       if (pd->gv[MESH_DISPLACEMENT1]) {
         int index_dx = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, -2, pg->imtrx);
         if (index_dx != -1) {

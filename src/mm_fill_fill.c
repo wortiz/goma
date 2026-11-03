@@ -2724,7 +2724,7 @@ int assemble_surface(Exo_DB *exo,    /* ptr to basic exodus ii mesh information 
         if (af->Assemble_Residual) {
           rhs = 0.;
           for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-            I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+            I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
             node = Nodes[I];
             nv = node->Nodal_Vars_Info[pg->imtrx];
             nvdofi = get_nv_ndofs(nv, eqn);
@@ -2751,7 +2751,7 @@ int assemble_surface(Exo_DB *exo,    /* ptr to basic exodus ii mesh information 
 
         if (af->Assemble_Jacobian) {
           for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-            I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+            I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
             node = Nodes[I];
             nv = node->Nodal_Vars_Info[pg->imtrx];
             nvdofi = get_nv_ndofs(nv, eqn);
@@ -2764,7 +2764,7 @@ int assemble_surface(Exo_DB *exo,    /* ptr to basic exodus ii mesh information 
 
               /* derivatives of fill equation wrt to fill variable */
               for (j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-                J = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+                J = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
                 nvdofj = Dolphin[pg->imtrx][J][eqn];
                 for (kj = 0; kj < nvdofj; kj++) {
                   jdof = ei[pg->imtrx]->ln_to_first_dof[eqn][j] + kj;
@@ -2852,12 +2852,12 @@ static int neighbor_fill(Exo_DB *exo,
 
   /* first get global node numbers for current element
      and side */
-  iconnect_ptr = Proc_Connect_Ptr[current_elem]; /* find pointer to beginning */
+  iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[current_elem]; /* find pointer to beginning */
 
   for (i = 0; i < nodes_per_side; i++) {
     id = local_elem_node_id[i];
     /* load up global node numbers on this side */
-    inode[i] = Proc_Elem_Connect[iconnect_ptr + id];
+    inode[i] = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
   }
 
   /* find localside number for neighbor element from
@@ -2881,10 +2881,10 @@ static int neighbor_fill(Exo_DB *exo,
                         pd->i[pg->imtrx][v], i);
     }
 
-    iconnect_ptr = Proc_Connect_Ptr[neighbor_elem]; /* find pointer to beginning */
+    iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[neighbor_elem]; /* find pointer to beginning */
 
     ktype = 0;
-    iconnect_ptr = Proc_Connect_Ptr[neighbor_elem]; /* find pointer to beginning */
+    iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[neighbor_elem]; /* find pointer to beginning */
 
     v = pd->ShapeVar; /* ShapeVar is the variable index where we find the element mapping
                          interpolation */
@@ -2893,17 +2893,17 @@ static int neighbor_fill(Exo_DB *exo,
       phi_map[i] = newshape(xi, ielem_type, PSI, ei[pg->imtrx]->dof_list[v][i], ielem_shape,
                             pd->i[pg->imtrx][v], i);
 
-      gnn = Proc_Elem_Connect[iconnect_ptr + i];
+      gnn = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
 
       for (p = 0; p < dim; p++) {
-        x_n[ip][p] += Coor[p][gnn] * phi_map[i];
+        x_n[ip][p] += goma_ctx->mesh.coor[p][gnn] * phi_map[i];
       }
     }
 
     ktype = 0;
 
     for (i = 0; i < num_local_nodes; i++) {
-      gnn = Proc_Elem_Connect[iconnect_ptr + i];
+      gnn = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
       nvdof = num_varType_at_node(gnn, FILL);
       for (j = 0; j < nvdof; j++) {
         ie = Index_Solution(gnn, FILL, ktype, j, -1, pg->imtrx);
@@ -3674,12 +3674,12 @@ static int neighbor_species(Exo_DB *exo, /* ptr to basic exodus ii mesh informat
 
   /* first get global node numbers for current element
      and side */
-  iconnect_ptr = Proc_Connect_Ptr[current_elem]; /* find pointer to beginning */
+  iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[current_elem]; /* find pointer to beginning */
 
   for (i = 0; i < nodes_per_side; i++) {
     id = local_elem_node_id[i];
     /* load up global node numbers on this side */
-    inode[i] = Proc_Elem_Connect[iconnect_ptr + id];
+    inode[i] = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
   }
 
   /* find localside number for neighbor element from
@@ -3711,19 +3711,19 @@ static int neighbor_species(Exo_DB *exo, /* ptr to basic exodus ii mesh informat
      *  we are trying to get information for
      */
 
-    iconnect_ptr = Proc_Connect_Ptr[neighbor_elem]; /* find pointer to beginning */
+    iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[neighbor_elem]; /* find pointer to beginning */
 
     for (i = 0; i < ei[pg->imtrx]->dof[v]; i++) {
       phi_map[i] = newshape(xi, ielem_type, PSI, ei[pg->imtrx]->dof_list[v][i], ielem_shape,
                             pd->i[pg->imtrx][v], i);
     }
 
-    iconnect_ptr = Proc_Connect_Ptr[neighbor_elem]; /* find pointer to beginning */
+    iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[neighbor_elem]; /* find pointer to beginning */
     for (i = 0; i < ei[pg->imtrx]->dof[v]; i++) {
-      gnn = Proc_Elem_Connect[iconnect_ptr + i];
+      gnn = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
 
       for (p = 0; p < dim; p++) {
-        x_n[ip][p] += Coor[p][gnn] * phi_map[i];
+        x_n[ip][p] += goma_ctx->mesh.coor[p][gnn] * phi_map[i];
       }
     }
     /*
@@ -3733,7 +3733,7 @@ static int neighbor_species(Exo_DB *exo, /* ptr to basic exodus ii mesh informat
     v = MASS_FRACTION;
     for (w = 0; w < pd->Num_Species_Eqn; w++) {
       for (i = 0; i < num_local_nodes; i++) {
-        gnn = Proc_Elem_Connect[iconnect_ptr + i];
+        gnn = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         node = Nodes[gnn];
         nvdof = get_nv_ndofs_modMF(node->Nodal_Vars_Info[pg->imtrx], v);
         for (j = 0; j < nvdof; j++) {

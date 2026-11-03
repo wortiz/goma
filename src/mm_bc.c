@@ -254,7 +254,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
            * Check for a match between the ID of the current side set and the side set
            * ID specified in the input file - continue if a match is found
            */
-          if (Proc_SS_Ids[ins] == BC_Types[ibc].BC_ID) {
+          if (goma_ctx->mesh.proc_ss_ids[ins] == BC_Types[ibc].BC_ID) {
             /*
              * Loop over all the sides in the current side set
              */
@@ -313,7 +313,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
        *  to ensure that we vist each node that needs a bc, once
        *  and only once.
        */
-      been_there = alloc_int_1(Num_Node, 0);
+      been_there = alloc_int_1(goma_ctx->mesh.num_node, 0);
       /*
        *  Check to see if this is indeed a Dirichlet condition
        */
@@ -351,9 +351,9 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
             /*
              *  find ptr to the beginning of this element's connectivity list
              */
-            iconnect_ptr = Proc_Connect_Ptr[ielem];
+            iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[ielem];
             for (i = 0; i < num_local_nodes; i++) {
-              I = Proc_Elem_Connect[iconnect_ptr + i];
+              I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
               if (!been_there[I]) {
                 been_there[I] = TRUE;
                 /*
@@ -415,7 +415,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
   }
 
   if (apply_pressure_datum) {
-    iconnect_ptr = Proc_Connect_Ptr[pressure_datum_element];
+    iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[pressure_datum_element];
     /*
      * determine the node at which to apply the pressure datum
      * it is always applied to the first pressure unknown in the designated
@@ -429,7 +429,7 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
     datum_set = 1;
     mn = find_mat_number(pressure_datum_element, exo);
     for (n = 0; n < num_nodes; n++) {
-      inode = Proc_Elem_Connect[iconnect_ptr + n];
+      inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + n];
       node = Nodes[inode];
       nv = node->Nodal_Vars_Info[pg->imtrx];
       if (Dolphin[pg->imtrx][inode][PRESSURE] > 0 && datum_set) {
@@ -522,12 +522,12 @@ static int set_nodal_Dirichlet_BC(int inode,
           DX2 = boundary_condition->BC_Data_Float[3];
 
           epsilon = (DX2 - DX1) / (X2 - X1);
-          x[ieqn] = epsilon * (Coor[0][inode] - X1) + DX1;
+          x[ieqn] = epsilon * (goma_ctx->mesh.coor[0][inode] - X1) + DX1;
           if (boundary_condition->BC_Name == DY_USER_NODE_BC) {
-            x[ieqn] = epsilon * (Coor[1][inode] - X1) + DX1;
+            x[ieqn] = epsilon * (goma_ctx->mesh.coor[1][inode] - X1) + DX1;
           }
           if (boundary_condition->BC_Name == DZ_USER_NODE_BC) {
-            x[ieqn] = epsilon * (Coor[2][inode] - X1) + DX1;
+            x[ieqn] = epsilon * (goma_ctx->mesh.coor[2][inode] - X1) + DX1;
           }
           xdot[ieqn] = 0.0;
         } else if (boundary_condition->BC_relax == -1.0) {
@@ -654,12 +654,14 @@ static int set_nodal_Dirichlet_BC(int inode,
      * of the bc input float data
      */
     ieqn = Index_Solution(inode, MESH_DISPLACEMENT1, 0, ndof, matID, pg->imtrx);
-    boundary_condition->BC_Data_Float[7] = boundary_condition->BC_Data_Float[4] - (Coor[0][inode]);
+    boundary_condition->BC_Data_Float[7] =
+        boundary_condition->BC_Data_Float[4] - (goma_ctx->mesh.coor[0][inode]);
     if (boundary_condition->BC_Data_Int[0]) {
       xdot[ieqn] = 0.;
     }
     ieqn = Index_Solution(inode, MESH_DISPLACEMENT2, 0, ndof, matID, pg->imtrx);
-    boundary_condition->BC_Data_Float[8] = boundary_condition->BC_Data_Float[5] - (Coor[1][inode]);
+    boundary_condition->BC_Data_Float[8] =
+        boundary_condition->BC_Data_Float[5] - (goma_ctx->mesh.coor[1][inode]);
     if (boundary_condition->BC_Data_Int[0]) {
       xdot[ieqn] = 0.;
     }
@@ -667,7 +669,7 @@ static int set_nodal_Dirichlet_BC(int inode,
     if (pd_glob[0]->Num_Dim == 3) {
       ieqn = Index_Solution(inode, MESH_DISPLACEMENT3, 0, ndof, matID, pg->imtrx);
       boundary_condition->BC_Data_Float[9] =
-          boundary_condition->BC_Data_Float[6] - (Coor[2][inode]);
+          boundary_condition->BC_Data_Float[6] - (goma_ctx->mesh.coor[2][inode]);
       if (boundary_condition->BC_Data_Int[0]) {
         xdot[ieqn] = 0.;
       }
@@ -2484,7 +2486,7 @@ void print_setup_Surf_BC(struct elem_side_bc_struct *First_Elem_Side_BC_Array[])
   (void)printf(" BC_input_id   |  Global_node_id\'s ");
   (void)printf("       |  Local_Elem_node_ID\'s\n");
 
-  for (ielem = 0; ielem < Num_Internal_Elems; ielem++) {
+  for (ielem = 0; ielem < goma_ctx->mesh.num_internal_elems; ielem++) {
     if (First_Elem_Side_BC_Array[ielem] != NULL)
       print_Elem_Surf_BC(ielem, First_Elem_Side_BC_Array[ielem]);
   }

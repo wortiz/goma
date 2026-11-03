@@ -566,10 +566,10 @@ void row_sum_scale_MSR(int N, double a[], int ija[], double b[], double scale[])
       VARIABLE_DESCRIPTION_STRUCT *vd;
       GOMA_WH(-1, "row_sum_scale_MSR ERROR: row_sum = 0.0,");
       vd = Index_Solution_Inv(irow, &inode, &i_Var_Desc, &i_offset, &idof, pg->imtrx);
-      x[0] = Coor[0][inode];
-      x[1] = Coor[1][inode];
+      x[0] = goma_ctx->mesh.coor[0][inode];
+      x[1] = goma_ctx->mesh.coor[1][inode];
       if (pd_glob[0]->Num_Dim == 3)
-        x[2] = Coor[2][inode];
+        x[2] = goma_ctx->mesh.coor[2][inode];
       if (dofname) {
         fprintf(stderr,
                 "row_sum_scaling_scale ERROR: Proc %d Row %d is zero, dofname = %s, x=(%g,%g,%g)\n",

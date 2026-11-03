@@ -133,7 +133,7 @@ int ns_data_print(pp_Data *p,
   nsp = match_nsid(node_set_id);
 
   if (nsp != -1) {
-    node = Proc_NS_List[Proc_NS_Pointers[nsp]];
+    node = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp]];
   } else {
     sprintf(err_msg, "Node set ID %d not found.", node_set_id);
     if (goma_ctx->num_proc == 1)
@@ -170,29 +170,29 @@ int ns_data_print(pp_Data *p,
 
   if (nsp != -1) {
 
-    for (j = 0; j < Proc_NS_Count[nsp]; j++) {
-      node = Proc_NS_List[Proc_NS_Pointers[nsp] + j];
+    for (j = 0; j < goma_ctx->mesh.proc_ns_count[nsp]; j++) {
+      node = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp] + j];
       if (node < num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]) {
         idx = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, -1, pg->imtrx);
         if (idx == -1) {
-          x_pos = Coor[0][node];
+          x_pos = goma_ctx->mesh.coor[0][node];
           GOMA_WH(idx, "Mesh variable not found.  May get undeformed coords.");
         } else {
-          x_pos = Coor[0][node] + x[idx];
+          x_pos = goma_ctx->mesh.coor[0][node] + x[idx];
         }
         idy = Index_Solution(node, MESH_DISPLACEMENT2, 0, 0, -1, pg->imtrx);
         if (idy == -1) {
-          y_pos = Coor[1][node];
+          y_pos = goma_ctx->mesh.coor[1][node];
         } else {
-          y_pos = Coor[1][node] + x[idy];
+          y_pos = goma_ctx->mesh.coor[1][node] + x[idy];
         }
         z_pos = 0.;
         if (pd->Num_Dim == 3) {
           idz = Index_Solution(node, MESH_DISPLACEMENT3, 0, 0, -1, pg->imtrx);
           if (idz == -1) {
-            z_pos = Coor[2][node];
+            z_pos = goma_ctx->mesh.coor[2][node];
           } else {
-            z_pos = Coor[2][node] + x[idz];
+            z_pos = goma_ctx->mesh.coor[2][node] + x[idz];
           }
         }
         if (quantity == MASS_FRACTION) {
@@ -565,7 +565,7 @@ int ns_data_sens_print(const struct Post_Processing_Data_Sens *p,
 
   nsp = match_nsid(node_set_id);
   if (nsp != -1) {
-    node = Proc_NS_List[Proc_NS_Pointers[nsp]];
+    node = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp]];
   } else {
     sprintf(err_msg, "Node set ID %d not found.", node_set_id);
     if (goma_ctx->num_proc == 1)
@@ -598,29 +598,29 @@ int ns_data_sens_print(const struct Post_Processing_Data_Sens *p,
 
   if (nsp != -1) {
 
-    for (j = 0; j < Proc_NS_Count[nsp]; j++) {
-      node = Proc_NS_List[Proc_NS_Pointers[nsp] + j];
+    for (j = 0; j < goma_ctx->mesh.proc_ns_count[nsp]; j++) {
+      node = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp] + j];
       if (node < num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]) {
         idx = Index_Solution(node, MESH_DISPLACEMENT1, 0, 0, -1, pg->imtrx);
         if (idx == -1) {
-          x_pos = Coor[0][node];
+          x_pos = goma_ctx->mesh.coor[0][node];
           GOMA_WH(idx, "Mesh variable not found.  May get undeformed coords.");
         } else {
-          x_pos = Coor[0][node] + x[idx];
+          x_pos = goma_ctx->mesh.coor[0][node] + x[idx];
         }
         idy = Index_Solution(node, MESH_DISPLACEMENT2, 0, 0, -1, pg->imtrx);
         if (idy == -1) {
-          y_pos = Coor[1][node];
+          y_pos = goma_ctx->mesh.coor[1][node];
         } else {
-          y_pos = Coor[1][node] + x[idy];
+          y_pos = goma_ctx->mesh.coor[1][node] + x[idy];
         }
         z_pos = 0.;
         if (pd->Num_Dim == 3) {
           idz = Index_Solution(node, MESH_DISPLACEMENT3, 0, 0, -1, pg->imtrx);
           if (idz == -1) {
-            z_pos = Coor[2][node];
+            z_pos = goma_ctx->mesh.coor[2][node];
           } else {
-            z_pos = Coor[2][node] + x[idz];
+            z_pos = goma_ctx->mesh.coor[2][node] + x[idz];
           }
         }
         if (quantity == MASS_FRACTION) {
@@ -655,8 +655,8 @@ int match_nsid(int id)
 {
   int i;
 
-  for (i = 0; i < Proc_Num_Node_Sets; i++) {
-    if (Proc_NS_Ids[i] == id) {
+  for (i = 0; i < goma_ctx->mesh.proc_num_node_sets; i++) {
+    if (goma_ctx->mesh.proc_ns_ids[i] == id) {
       return (i);
     }
   }
@@ -682,7 +682,7 @@ int psid2nn(int psid)
       return (-1);
   }
 
-  return (Proc_NS_List[Proc_NS_Pointers[nsp]]); /* global node num */
+  return (goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp]]); /* global node num */
 
 } /* END of routine psid2nn */
 /******************************************************************************/
@@ -705,7 +705,7 @@ int nsid2nn(int psid)
       return (-1);
   }
 
-  return (Proc_NS_List[Proc_NS_Pointers[nsp]]); /* global node num */
+  return (goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp]]); /* global node num */
 
 } /* END of routine nsid2nn */
 /******************************************************************************/

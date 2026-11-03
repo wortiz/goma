@@ -648,7 +648,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
    * the exodus database.
    */
 
-  asdv(&gvec, Num_Node);
+  asdv(&gvec, goma_ctx->mesh.num_node);
 
   /*
    * Allocate space and manipulate for all the nodes that this processor
@@ -734,7 +734,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     GomaSparseMatrix goma_matrix;
     goma_error err = GomaSparseMatrix_CreateFromFormat(&goma_matrix, Matrix_Format);
     GOMA_EH(err, "GomaSparseMatrix_CreateFromFormat");
-    int local_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+    int local_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                      goma_ctx->mesh.num_external_nodes;
     err = GomaSparseMatrix_SetProblemGraph(
         goma_matrix, num_internal_dofs[pg->imtrx], num_boundary_dofs[pg->imtrx],
         num_external_dofs[pg->imtrx], local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,
@@ -1872,7 +1873,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         dcopy1(numProcUnknowns, x_older, x_oldest);
         dcopy1(numProcUnknowns, xdot, xdot_save);
         realloc_dbl_1(&x_pred, numProcUnknowns, 0);
-        realloc_dbl_1(&gvec, Num_Node, 0);
+        realloc_dbl_1(&gvec, goma_ctx->mesh.num_node, 0);
         realloc_dbl_1(&xdot_older, numProcUnknowns, 0);
         x_pred_static = x_pred;
         memset(xdot, 0, sizeof(double) * numProcUnknowns);
@@ -3241,7 +3242,7 @@ int anneal_mesh_with_external_field(const Exo_DB *exo)
 
   for (p = 0; p < dim; p++) {
     new_coord[p] = (double *)calloc(num_nodes, sizeof(double));
-    dcopy1(num_nodes, Coor[p], new_coord[p]);
+    dcopy1(num_nodes, goma_ctx->mesh.coor[p], new_coord[p]);
   }
 
   for (i = 0; i < num_nodes; i++) {
@@ -3290,25 +3291,25 @@ int anneal_mesh_with_external_field(const Exo_DB *exo)
    * displaced coordinates for the annealed file...
    */
 
-  Coor[0] = &new_coord[0][0]; /*Old Deprecated holder that is stil
-                               *used
-                               */
-  Coor[1] = &new_coord[1][0];
+  goma_ctx->mesh.coor[0] = &new_coord[0][0]; /*Old Deprecated holder that is stil
+                                              *used
+                                              */
+  goma_ctx->mesh.coor[1] = &new_coord[1][0];
 
   if (dim > 2) {
-    Coor[2] = &new_coord[2][0];
+    goma_ctx->mesh.coor[2] = &new_coord[2][0];
   }
 
   // adjust base mesh
   for (int i = 0; i < num_nodes; i++) {
     int base_node = exo->ghost_node_to_base[i];
     if (base_node != -1) {
-      exo->base_mesh->x_coord[base_node] = Coor[0][i];
+      exo->base_mesh->x_coord[base_node] = goma_ctx->mesh.coor[0][i];
       if (dim > 1) {
-        exo->base_mesh->y_coord[base_node] = Coor[1][i];
+        exo->base_mesh->y_coord[base_node] = goma_ctx->mesh.coor[1][i];
       }
       if (dim > 2) {
-        exo->base_mesh->z_coord[base_node] = Coor[2][i];
+        exo->base_mesh->z_coord[base_node] = goma_ctx->mesh.coor[2][i];
       }
     }
   }
@@ -3487,9 +3488,9 @@ int variable_stats(double *x, const double time, const int coord_linear) {
         var = MESH_DISPLACEMENT1 + dir;
         if (upd->vp[pg->imtrx][var] > -1) {
           idv = Index_Solution(i, var, 0, 0, -1, pg->imtrx);
-          coord = Coor[dir][i] + x[idv];
+          coord = goma_ctx->mesh.coor[dir][i] + x[idv];
         } else {
-          coord = Coor[dir][i];
+          coord = goma_ctx->mesh.coor[dir][i];
         }
         crd_sum[dir] += coord;
         crd_sqr[dir] += SQUARE(coord);
@@ -3500,9 +3501,9 @@ int variable_stats(double *x, const double time, const int coord_linear) {
           var = MESH_DISPLACEMENT1 + dirj;
           if (upd->vp[pg->imtrx][var] > -1) {
             idv = Index_Solution(i, var, 0, 0, -1, pg->imtrx);
-            coordj = Coor[dirj][i] + x[idv];
+            coordj = goma_ctx->mesh.coor[dirj][i] + x[idv];
           } else {
-            coordj = Coor[dirj][i];
+            coordj = goma_ctx->mesh.coor[dirj][i];
           }
           crd_sqr[pdim + dir + dirj - 1] += coord * coordj;
         }
@@ -3514,7 +3515,7 @@ int variable_stats(double *x, const double time, const int coord_linear) {
         dvar = MESH_DISPLACEMENT1 + dir;
         if (upd->vp[pg->imtrx][dvar] > -1) {
           idx = Index_Solution(i, dvar, 0, 0, -1, pg->imtrx);
-          coord = Coor[dir][i] + x[idx];
+          coord = goma_ctx->mesh.coor[dir][i] + x[idx];
           for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
             if (upd->vp[pg->imtrx][var] > -1) {
               var_somewhere = FALSE;

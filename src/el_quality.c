@@ -501,14 +501,14 @@ static void load_vertex_xy(Exo_DB *exo, int ielem, int dofs, double *x, double *
     for (k = 0; k < dofs; k++) {
       if (DM) {
         node = ei[pg->imtrx]->dof_list[R_MESH1 + i][k];
-        index = Proc_Elem_Connect[Proc_Connect_Ptr[ielem] + node];
+        index = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ielem] + node];
         nd = Index_Solution(index, MESH_DISPLACEMENT1 + i, 0, 0, ei[pg->imtrx]->mn, pg->imtrx);
         GOMA_EH(nd, "Bad displacement unknown index!");
-        xy[i][k] = Coor[i][index] + x[nd];
+        xy[i][k] = goma_ctx->mesh.coor[i][index] + x[nd];
       } else {
         node = ei[pg->imtrx]->dof_list[pd->ShapeVar][k];
-        index = Proc_Elem_Connect[Proc_Connect_Ptr[ielem] + node];
-        xy[i][k] = Coor[i][index];
+        index = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ielem] + node];
+        xy[i][k] = goma_ctx->mesh.coor[i][index];
       }
     }
   }

@@ -319,14 +319,14 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
     fclose(pixfid);
   }
 
-  double min_x = Coor[0][0];
-  double min_y = Coor[1][0];
+  double min_x = goma_ctx->mesh.coor[0][0];
+  double min_y = goma_ctx->mesh.coor[1][0];
   for (int i = 0; i < exo->num_nodes; i++) {
-    if (Coor[0][i] < min_x) {
-      min_x = Coor[0][i];
+    if (goma_ctx->mesh.coor[0][i] < min_x) {
+      min_x = goma_ctx->mesh.coor[0][i];
     }
-    if (Coor[1][i] < min_y) {
-      min_y = Coor[1][i];
+    if (goma_ctx->mesh.coor[1][i] < min_y) {
+      min_y = goma_ctx->mesh.coor[1][i];
     }
   }
 
@@ -371,7 +371,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
     ei[pg->imtrx]->ielem_type = Elem_Type(exo, ielem);
     gptot += elem_info(NQUAD, ei[pg->imtrx]->ielem_type);
     for (ilnode = 0; ilnode < ei[pg->imtrx]->num_local_nodes; ilnode++) {
-      ignode = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+      ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
       my_ignodes[j++] = ignode;
     }
   }
@@ -474,7 +474,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
       val = save_gp[gp_global++];
 
       for (ilnode = 0; ilnode < ei[pg->imtrx]->num_local_nodes; ilnode++) {
-        ignode = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+        ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
         phi_i = bfex[N_ext]->phi[ilnode];
         bvec[ignode] += phi_i * val * wt * det_J;
         for (jlnode = 0; jlnode < ei[pg->imtrx]->num_local_nodes; jlnode++) {
@@ -653,23 +653,23 @@ extern double calc_error(double ***pixdata,
     xmax = ymax = zmax = -1e20;
 
     for (ilnode = 0; ilnode < ei[pg->imtrx]->num_local_nodes; ilnode++) {
-      ignode = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
-      if (Coor[0][ignode] < xmin)
-        xmin = Coor[0][ignode];
-      if (Coor[0][ignode] > xmax)
-        xmax = Coor[0][ignode];
-      if (Coor[1][ignode] < ymin)
-        ymin = Coor[1][ignode];
-      if (Coor[1][ignode] > ymax)
-        ymax = Coor[1][ignode];
-      nodecoor[ilnode][0] = Coor[0][ignode];
-      nodecoor[ilnode][1] = Coor[1][ignode];
-      nodecoor[ilnode][2] = Coor[2][ignode];
+      ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+      if (goma_ctx->mesh.coor[0][ignode] < xmin)
+        xmin = goma_ctx->mesh.coor[0][ignode];
+      if (goma_ctx->mesh.coor[0][ignode] > xmax)
+        xmax = goma_ctx->mesh.coor[0][ignode];
+      if (goma_ctx->mesh.coor[1][ignode] < ymin)
+        ymin = goma_ctx->mesh.coor[1][ignode];
+      if (goma_ctx->mesh.coor[1][ignode] > ymax)
+        ymax = goma_ctx->mesh.coor[1][ignode];
+      nodecoor[ilnode][0] = goma_ctx->mesh.coor[0][ignode];
+      nodecoor[ilnode][1] = goma_ctx->mesh.coor[1][ignode];
+      nodecoor[ilnode][2] = goma_ctx->mesh.coor[2][ignode];
       if (pixsize[2] > 1) {
-        if (Coor[2][ignode] < zmin)
-          zmin = Coor[2][ignode];
-        if (Coor[2][ignode] > zmax)
-          zmax = Coor[2][ignode];
+        if (goma_ctx->mesh.coor[2][ignode] < zmin)
+          zmin = goma_ctx->mesh.coor[2][ignode];
+        if (goma_ctx->mesh.coor[2][ignode] > zmax)
+          zmax = goma_ctx->mesh.coor[2][ignode];
       }
     }
 
@@ -701,11 +701,19 @@ extern double calc_error(double ***pixdata,
               get_side_info(ei[pg->imtrx]->ielem_type, iside + 1, &nodes_per_side,
                             local_elem_node_id);
 
-              n1x = Coor[0][Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + local_elem_node_id[0]]];
-              n1y = Coor[1][Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + local_elem_node_id[0]]];
+              n1x = goma_ctx->mesh
+                        .coor[0][goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr +
+                                                                  local_elem_node_id[0]]];
+              n1y = goma_ctx->mesh
+                        .coor[1][goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr +
+                                                                  local_elem_node_id[0]]];
 
-              n2x = Coor[0][Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + local_elem_node_id[1]]];
-              n2y = Coor[1][Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + local_elem_node_id[1]]];
+              n2x = goma_ctx->mesh
+                        .coor[0][goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr +
+                                                                  local_elem_node_id[1]]];
+              n2y = goma_ctx->mesh
+                        .coor[1][goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr +
+                                                                  local_elem_node_id[1]]];
 
               ux = n2x - n1x;
               uy = n2y - n1y;
@@ -744,7 +752,7 @@ extern double calc_error(double ***pixdata,
 
           pix_interp = 0;
           for (ilnode = 0; ilnode < ei[pg->imtrx]->num_local_nodes; ilnode++) {
-            ignode = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+            ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
             phi_i = newshape(xi_data, ei[pg->imtrx]->ielem_type, PSI, ilnode,
                              ei[pg->imtrx]->ielem_shape, efv->i[N_ext], ilnode);
             pix_interp += phi_i * nodal_var_vals[ignode];

@@ -64,56 +64,7 @@
 
 #define GOMA_RD_MESH_C
 
-/*
- * Variables defined here that are typically declared extern in el_geom.h
- *
- * These are largely legacy variables and have been deprecated in favor of
- * the exo->.... usage.
- */
-
-int Num_Dim = 0;
-int Num_Node = 0;
-int Num_Elem = 0;
-int Max_NP_Elem = 0;
-
-int Num_Internal_Elems = 0;
-
-int *GNodes = NULL;
-
-int *GElems = NULL;
-
-int *Proc_Connect_Ptr = NULL;
-int Proc_Num_Elem_Blk;
-int *Proc_Num_Elem_In_Blk = NULL;
-int *Proc_Elem_Blk_Ids = NULL;
-int *Proc_Elem_Blk_Types = NULL;
-int *Proc_Nodes_Per_Elem = NULL;
-int *Proc_Num_Attr = NULL;
-int *Proc_Elem_Connect = NULL;
-int Proc_Num_Node_Sets = 0;
-int Proc_NS_List_Length = 0;
-int *Proc_NS_Ids = NULL;
-int *Proc_NS_Count = NULL;
-int *Proc_NS_Pointers = NULL;
-int *Proc_NS_List = NULL;
-double *Proc_NS_Dist_Fact = NULL;
-int Proc_Num_Side_Sets = 0;
-int Proc_SS_Elem_List_Length = 0;
-int Proc_SS_Node_List_Length = 0;
-int *Proc_SS_Ids = NULL;
-int *Proc_SS_Elem_Count = NULL;
-int *Proc_SS_Node_Count = NULL;
-int *Proc_SS_Elem_Pointers = NULL;
-int *Proc_SS_Elem_List = NULL;
-double *Proc_SS_Dist_Fact = NULL;
-
 int *ss_to_blks[MAX_MAT_PER_SS + 1] = {NULL};
-
-double **Coor = NULL;
-
-int Num_Internal_Nodes = 0;
-int Num_Border_Nodes = 0;
-int Num_External_Nodes = 0;
 
 int *Matilda = NULL;
 /*
@@ -394,54 +345,54 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
   goma_ctx->cpu_word_size = e->comp_wordsize;
   goma_ctx->io_word_size = e->io_wordsize;
 
-  Num_Dim = e->num_dim;
-  Num_Node = e->num_nodes;
+  goma_ctx->mesh.num_dim = e->num_dim;
+  goma_ctx->mesh.num_node = e->num_nodes;
 
-  Num_Elem = e->num_elems;
+  goma_ctx->mesh.num_elem = e->num_elems;
 
-  Proc_Num_Side_Sets = e->num_side_sets;
+  goma_ctx->mesh.proc_num_side_sets = e->num_side_sets;
 
-  Num_Internal_Elems = e->num_elems;
+  goma_ctx->mesh.num_internal_elems = e->num_elems;
 
   /*
    * Node point coordinates.
    */
 
-  Coor = (dbl **)smalloc(Num_Dim * sizeof(dbl *));
+  goma_ctx->mesh.coor = (dbl **)smalloc(goma_ctx->mesh.num_dim * sizeof(dbl *));
 
-  if (Num_Dim > 0) {
-    Coor[0] = e->x_coord;
+  if (goma_ctx->mesh.num_dim > 0) {
+    goma_ctx->mesh.coor[0] = e->x_coord;
   }
 
-  if (Num_Dim > 1) {
-    Coor[1] = e->y_coord;
+  if (goma_ctx->mesh.num_dim > 1) {
+    goma_ctx->mesh.coor[1] = e->y_coord;
   }
 
-  if (Num_Dim > 2) {
-    Coor[2] = e->z_coord;
+  if (goma_ctx->mesh.num_dim > 2) {
+    goma_ctx->mesh.coor[2] = e->z_coord;
   }
 
   /*
    * Element Blocks.
    */
 
-  Proc_Num_Elem_Blk = e->num_elem_blocks;
-  Proc_Nodes_Per_Elem = e->eb_num_nodes_per_elem;
-  Proc_Elem_Blk_Ids = e->eb_id;
-  Proc_Num_Elem_In_Blk = e->eb_num_elems;
+  goma_ctx->mesh.proc_num_elem_blk = e->num_elem_blocks;
+  goma_ctx->mesh.proc_nodes_per_elem = e->eb_num_nodes_per_elem;
+  goma_ctx->mesh.proc_elem_blk_ids = e->eb_id;
+  goma_ctx->mesh.proc_num_elem_in_blk = e->eb_num_elems;
 
   e->eb_elem_itype = (int *)smalloc(e->num_elem_blocks * sizeof(int));
 
-  Proc_Elem_Blk_Types = e->eb_elem_itype;
+  goma_ctx->mesh.proc_elem_blk_types = e->eb_elem_itype;
 
   /*
    * Another legacy variable....
    */
 
-  Max_NP_Elem = -1;
+  goma_ctx->mesh.max_np_elem = -1;
   for (i = 0; i < e->num_elem_blocks; i++) {
-    if (e->eb_num_nodes_per_elem[i] > Max_NP_Elem) {
-      Max_NP_Elem = e->eb_num_nodes_per_elem[i];
+    if (e->eb_num_nodes_per_elem[i] > goma_ctx->mesh.max_np_elem) {
+      goma_ctx->mesh.max_np_elem = e->eb_num_nodes_per_elem[i];
     }
   }
 
@@ -463,7 +414,7 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
    * block index, this gives the lo and hi element numbers.
    */
 
-  if (e->eb_ptr[Proc_Num_Elem_Blk] != Num_Internal_Elems) {
+  if (e->eb_ptr[goma_ctx->mesh.proc_num_elem_blk] != goma_ctx->mesh.num_internal_elems) {
     GOMA_EH(GOMA_ERROR, "Inconsistent element count.");
   }
 
@@ -481,8 +432,8 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
   e->node_list = (int *)smalloc(length * sizeof(int));
   e->elem_ptr = (int *)smalloc((e->num_elems + 1) * sizeof(int));
 
-  Proc_Connect_Ptr = e->elem_ptr;
-  Proc_Elem_Connect = e->node_list;
+  goma_ctx->mesh.proc_connect_ptr = e->elem_ptr;
+  goma_ctx->mesh.proc_elem_connect = e->node_list;
 
   /*
    * Load the per element block connectivities into the big connectivity.
@@ -514,7 +465,7 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
    *
    */
 
-  Proc_Num_Attr = e->eb_num_attr;
+  goma_ctx->mesh.proc_num_attr = e->eb_num_attr;
 
   /*
    * Node Sets.
@@ -524,30 +475,30 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
    * Scalar values...
    */
 
-  Proc_Num_Node_Sets = e->num_node_sets;
-  Proc_NS_List_Length = e->ns_node_len;
+  goma_ctx->mesh.proc_num_node_sets = e->num_node_sets;
+  goma_ctx->mesh.proc_ns_list_length = e->ns_node_len;
 
   /*
    * These are pointers to ints...
    */
 
-  Proc_NS_Ids = e->ns_id;
-  Proc_NS_Count = e->ns_num_nodes;
-  Proc_NS_Pointers = e->ns_node_index;
+  goma_ctx->mesh.proc_ns_ids = e->ns_id;
+  goma_ctx->mesh.proc_ns_count = e->ns_num_nodes;
+  goma_ctx->mesh.proc_ns_pointers = e->ns_node_index;
 
-  Proc_NS_List = e->ns_node_list;
-  Proc_NS_Dist_Fact = e->ns_distfact_list;
+  goma_ctx->mesh.proc_ns_list = e->ns_node_list;
+  goma_ctx->mesh.proc_ns_dist_fact = e->ns_distfact_list;
 
   /*
    * Side Sets.
    */
 
-  Proc_Num_Side_Sets = e->num_side_sets;
-  Proc_SS_Elem_List_Length = e->ss_elem_len;
-  Proc_SS_Node_List_Length = e->ss_node_len;
+  goma_ctx->mesh.proc_num_side_sets = e->num_side_sets;
+  goma_ctx->mesh.proc_ss_elem_list_length = e->ss_elem_len;
+  goma_ctx->mesh.proc_ss_node_list_length = e->ss_node_len;
 
-  Proc_SS_Ids = e->ss_id;
-  Proc_SS_Elem_Count = e->ss_num_sides;
+  goma_ctx->mesh.proc_ss_ids = e->ss_id;
+  goma_ctx->mesh.proc_ss_elem_count = e->ss_num_sides;
 
   /*
    * This variable expects a single count of nodes for each side set.
@@ -559,7 +510,8 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
    * old beast, doing some checking to avoid getting eaten.
    */
 
-  Proc_SS_Node_Count = (int *)smalloc(Proc_Num_Side_Sets * sizeof(int));
+  goma_ctx->mesh.proc_ss_node_count =
+      (int *)smalloc(goma_ctx->mesh.proc_num_side_sets * sizeof(int));
 
   for (i = 0; i < e->num_side_sets; i++) {
     if (e->ss_num_sides[i] > 0) {
@@ -581,13 +533,13 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
 
   for (i = 0; i < e->num_side_sets; i++) {
     num_sides = e->ss_num_sides[i];
-    Proc_SS_Node_Count[i] = e->ss_node_side_index[i][num_sides];
+    goma_ctx->mesh.proc_ss_node_count[i] = e->ss_node_side_index[i][num_sides];
   }
 
-  Proc_SS_Elem_Pointers = e->ss_elem_index;
+  goma_ctx->mesh.proc_ss_elem_pointers = e->ss_elem_index;
 
-  Proc_SS_Elem_List = e->ss_elem_list;
-  Proc_SS_Dist_Fact = e->ss_distfact_list;
+  goma_ctx->mesh.proc_ss_elem_list = e->ss_elem_list;
+  goma_ctx->mesh.proc_ss_dist_fact = e->ss_distfact_list;
 
   /*
    * The ss_node_list is doubly indexed. The Proc_SS_Node_List is a 1D array
@@ -694,9 +646,9 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
    */
 
   unsigned long long num_global_node = 0;
-  unsigned long long num_local_node = Num_Node;
+  unsigned long long num_local_node = goma_ctx->mesh.num_node;
   unsigned long long num_global_elem = 0;
-  unsigned long long num_local_elem = Num_Elem;
+  unsigned long long num_local_elem = goma_ctx->mesh.num_elem;
 
   if (num_proc > 1) {
     MPI_Allreduce(&num_local_node, &num_global_node, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM,
@@ -704,8 +656,8 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
     MPI_Allreduce(&num_local_elem, &num_global_elem, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM,
                   MPI_COMM_WORLD);
   } else {
-    num_global_elem = Num_Elem;
-    num_global_node = Num_Node;
+    num_global_elem = goma_ctx->mesh.num_elem;
+    num_global_node = goma_ctx->mesh.num_node;
   }
 
   if (num_global_node / goma_ctx->num_proc < 1) {
@@ -1014,11 +966,11 @@ void check_elemblocks(Exo_DB *e,                       /* EXODUS II FE db has al
 
 void setup_old_dpi(Exo_DB *e, Dpi *d) {
 
-  Num_Internal_Nodes = d->num_internal_nodes;
+  goma_ctx->mesh.num_internal_nodes = d->num_internal_nodes;
 
-  Num_Border_Nodes = d->num_boundary_nodes;
+  goma_ctx->mesh.num_border_nodes = d->num_boundary_nodes;
 
-  Num_External_Nodes = d->num_external_nodes;
+  goma_ctx->mesh.num_external_nodes = d->num_external_nodes;
 
   return;
 }

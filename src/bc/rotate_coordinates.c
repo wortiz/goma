@@ -201,7 +201,7 @@ goma_error exchange_neighbor_ss_edges(Exo_DB *exo, Dpi *dpi) {
       /* use nodal points only!! */
       for (int k = 0; k < num_nodes_on_side; k++) {
         int id = elem_node_id[k];
-        int I = Proc_Elem_Connect[Proc_Connect_Ptr[ielem] + id];
+        int I = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ielem] + id];
         int global_node = dpi->node_index_global[I];
         ss_edge_info[i].global_node_ids[offset++] = global_node;
       }
@@ -461,8 +461,8 @@ goma_error exchange_neighbor_ss_edges(Exo_DB *exo, Dpi *dpi) {
             bool found = false;
             for (int k = 0; k < num_nodes_on_side; k++) {
               int id = local_side_node_list[k];
-              int iconnect = Proc_Connect_Ptr[elem];
-              int I = Proc_Elem_Connect[iconnect + id];
+              int iconnect = goma_ctx->mesh.proc_connect_ptr[elem];
+              int I = goma_ctx->mesh.proc_elem_connect[iconnect + id];
               side_nodes[k] = I;
               if (I == node) {
                 found = true;
@@ -607,8 +607,8 @@ goma_error exchange_neighbor_ss_edges(Exo_DB *exo, Dpi *dpi) {
       exo->ss_node_cnt_list[i][e] = num_nodes_on_side;
       for (int j = 0; j < num_nodes_on_side; j++) {
         int id = local_side_node_list[j];
-        int iconnect = Proc_Connect_Ptr[ielem];
-        int I = Proc_Elem_Connect[iconnect + id];
+        int iconnect = goma_ctx->mesh.proc_connect_ptr[ielem];
+        int I = goma_ctx->mesh.proc_elem_connect[iconnect + id];
         exo->ss_node_list[i][j + offset] = I;
       }
       offset += num_nodes_on_side;
@@ -782,7 +782,7 @@ goma_error setup_rotated_bc_nodes(
         /* use nodal points only!! */
         for (int k = 0; k < num_ROT_nodes; k++) {
           int id = elem_node_id[k];
-          int I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + id];
+          int I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + id];
           if (!side_set_seen[ss_index]) {
             /* Find the local element node number for the current node */
             double xi[DIM];

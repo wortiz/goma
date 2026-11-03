@@ -148,7 +148,7 @@ int apply_rotated_bc(double resid_vector[], /* Residual vector for the current p
     }
     for (i = 0; i < num_nodes_on_side; i++) {
       id = (int)elem_side_bc->local_elem_node_id[i];
-      I = Proc_Elem_Connect[iconnect_ptr + id]; /* Find global node */
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id]; /* Find global node */
       /* check to see if this global node is in the momentum rotation list and
        * make sure this nodal equation hasn't been rotated yet */
       if (((irot = in_list(I, 0, num_mom_rotate[pg->imtrx], mom_rotate_node[pg->imtrx])) != -1) &&
@@ -164,7 +164,8 @@ int apply_rotated_bc(double resid_vector[], /* Residual vector for the current p
              *  Determine if the tangent should be negated for a consistent
              * force balance
              */
-            if ((ss_index = in_list(ss_rot, 0, Proc_Num_Side_Sets, ss_to_blks[0])) == -1) {
+            if ((ss_index = in_list(ss_rot, 0, goma_ctx->mesh.proc_num_side_sets, ss_to_blks[0])) ==
+                -1) {
               GOMA_EH(GOMA_ERROR, "Cannot match side set id with that in ss_to_blks array");
             } else {
               for (j = 0; j < MAX_MAT_PER_SS; j++) {
@@ -271,7 +272,7 @@ int apply_rotated_bc(double resid_vector[], /* Residual vector for the current p
         id = (int)elem_side_bc->local_elem_node_id[i];
 
         /* Find the local node number given the local element node number,  'i'     */
-        I = Proc_Elem_Connect[iconnect_ptr + id];
+        I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
 
         if (rot_mesh[i] && ei[pg->imtrx]->ln_to_dof[MESH_DISPLACEMENT1][id] != -1) {
           rotate_res_jac_mesh(ei[pg->imtrx]->ln_to_dof[MESH_DISPLACEMENT1][id], I, iconnect_ptr,
@@ -362,7 +363,7 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
   case 1:
     svector[0][0] = snormal[0];
     for (id = 0; id < ei[pg->imtrx]->dof[ShapeVar]; id++) {
-      Id = Proc_Elem_Connect[iconnect_ptr + id];
+      Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
       if (Dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
           Dolphin[pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
@@ -377,7 +378,7 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
       svector[1][kdir] = sign * stangent[0][kdir];
       for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
         for (id = 0; id < ei[pg->imtrx]->dof[ShapeVar]; id++) {
-          Id = Proc_Elem_Connect[iconnect_ptr + id];
+          Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
           if (Dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
               Dolphin[pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
@@ -396,7 +397,7 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
       svector[2][kdir] = sign * stangent[1][kdir];
       for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
         for (id = 0; id < ei[pg->imtrx]->dof[ShapeVar]; id++) {
-          Id = Proc_Elem_Connect[iconnect_ptr + id];
+          Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
           if (Dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
               Dolphin[pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
@@ -459,7 +460,7 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
         }
 
         for (id = 0; id < ei[pg->imtrx]->dof[ShapeVar]; id++) {
-          Id = Proc_Elem_Connect[iconnect_ptr + id];
+          Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
           if (Dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
               Dolphin[pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
@@ -1589,7 +1590,7 @@ void rotate_res_jac_mom(int irow_index,           /* Elemental stiffness matrix 
   case 1:
     svector[0][0] = snormal[0];
     for (id = 0; id < ei[pg->imtrx]->dof[ShapeVar]; id++) {
-      Id = Proc_Elem_Connect[iconnect_ptr + id];
+      Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
       if (Dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
           Dolphin[pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
@@ -1604,7 +1605,7 @@ void rotate_res_jac_mom(int irow_index,           /* Elemental stiffness matrix 
       svector[1][kdir] = sign * stangent[0][kdir];
       for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
         for (id = 0; id < ei[pg->imtrx]->dof[ShapeVar]; id++) {
-          Id = Proc_Elem_Connect[iconnect_ptr + id];
+          Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
           if (Dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
               Dolphin[pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
@@ -1623,7 +1624,7 @@ void rotate_res_jac_mom(int irow_index,           /* Elemental stiffness matrix 
       svector[2][kdir] = sign * stangent[1][kdir];
       for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
         for (id = 0; id < ei[pg->imtrx]->dof[ShapeVar]; id++) {
-          Id = Proc_Elem_Connect[iconnect_ptr + id];
+          Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
           if (Dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
               Dolphin[pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
@@ -1685,7 +1686,7 @@ void rotate_res_jac_mom(int irow_index,           /* Elemental stiffness matrix 
           }
 
           for (id = 0; id < ei[pg->imtrx]->dof[ShapeVar]; id++) {
-            Id = Proc_Elem_Connect[iconnect_ptr + id];
+            Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
             ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
             if (Dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
                 Dolphin[pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
@@ -1965,7 +1966,8 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
     DPRINTF(stderr, "Starting to calculate rotation vectors\n");
 
   /* initialize the rotation_vector array of rotation structures */
-  num_total_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+  num_total_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                    goma_ctx->mesh.num_external_nodes;
   dim = pd_glob[0]->Num_Dim;
 
   if (!rotation_allocated) {
@@ -2100,7 +2102,8 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
           num_ROT_nodes = 1;
           /* determine id of vertex node */
           v_id = 0;
-          while (Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + v_id] != ROT_Types[irc].node)
+          while (goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + v_id] !=
+                 ROT_Types[irc].node)
             v_id++;
           elem_node_id = &(v_id);
         }
@@ -2109,7 +2112,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
         for (k = 0; k < num_ROT_nodes; k++) {
           /* Find the local element node number for the current node */
           id = elem_node_id[k];
-          I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + id];
+          I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + id];
 
           if (ROT_list[I] != NULL && ROT_list[I][eq] == irc) {
 
@@ -2148,7 +2151,7 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
                     for (j = 0; j < num_nodes_on_side; j++) {
                       /* Find the local element node number for the current node */
                       j_id = side_elem_node_id[j];
-                      J = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j_id];
+                      J = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j_id];
                       normal->d_vector_J[j] = J;
                       for (q = 0; q < dim; q++) {
                         normal->d_vector_dx[p][q][j] = fv->dsnormal_dx[p][q][j_id];
@@ -2326,7 +2329,8 @@ void calculate_2D_rotation_vectors(Exo_DB *exo, /* the mesh */
   int *gnn_side_list, local_node_side_list[MAX_NODES_PER_SIDE];
   int num_nodes_on_side, num_local_nodes, iconnect_ptr;
 
-  num_total_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+  num_total_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                    goma_ctx->mesh.num_external_nodes;
   dim = pd_glob[0]->Num_Dim;
 
   if (!rotation_allocated) {
@@ -2440,7 +2444,8 @@ void calculate_2D_rotation_vectors(Exo_DB *exo, /* the mesh */
 
               /*lnn = local_node_side_list[lnn];*/
 
-              lnn = in_list(inode, 0, num_local_nodes, &Proc_Elem_Connect[iconnect_ptr]);
+              lnn = in_list(inode, 0, num_local_nodes,
+                            &goma_ctx->mesh.proc_elem_connect[iconnect_ptr]);
 
               find_nodal_stu(lnn, Elem_Type(exo, elem), xi, xi + 1, xi + 2);
 
@@ -2557,7 +2562,7 @@ void append_vectors(int inode,
       for (j = 0; j < num_nodes_on_side; j++) {
 
         id = local_node_side_list[j];
-        J = Proc_Elem_Connect[iconnect_ptr + id];
+        J = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
 
         j_id = in_list(J, 0, vectors[vect]->d_vector_n, vectors[vect]->d_vector_J);
 
@@ -3206,7 +3211,7 @@ void rotate_eqns_at_node_2D(int iconn,
   int i, id_mesh, id_mom, I;
 
   for (i = 0; i < num_local_nodes; i++) {
-    I = Proc_Elem_Connect[iconn + i];
+    I = goma_ctx->mesh.proc_elem_connect[iconn + i];
 
     if (rotation[I][VECT_EQ_MOM] != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
       id_mom = ei[pg->imtrx]->ln_to_first_dof[VELOCITY1][i];

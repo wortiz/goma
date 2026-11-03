@@ -1886,7 +1886,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           /* Find the processor node number given the
            * local element node number,  'i'
            */
-          I = Proc_Elem_Connect[iconnect_ptr + id];
+          I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
 
           /*
            * If BC is capillarity, convert the node-based cfunc to func

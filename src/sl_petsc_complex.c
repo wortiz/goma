@@ -105,7 +105,8 @@ static void create_complex_mapping(struct GomaLinearSolverData *ams,
   /*
    * loop over all of the nodes on this processor
    */
-  for (int inode = 0; inode < (Num_Internal_Nodes + Num_Border_Nodes); inode++) {
+  for (int inode = 0; inode < (goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes);
+       inode++) {
     NODAL_VARS_STRUCT *nv = Nodes[inode]->Nodal_Vars_Info[pg->imtrx];
     /*
      * Fill the vector list which points to the unknowns defined at this
@@ -201,7 +202,8 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
   PetscInt *o_nnz = (PetscInt *)calloc(num_rows, sizeof(PetscInt));
   PetscInt nnz = 0;
 
-  int total_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+  int total_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                    goma_ctx->mesh.num_external_nodes;
 
   PetscInt irow_index = 0;
 

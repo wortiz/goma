@@ -92,16 +92,16 @@ int find_id_elem(const double x, /* x-coordinate */
         I = exo->node_list[iconn_ptr + id];
         i = Index_Solution(I, MESH_DISPLACEMENT1, 0, 0, -1, pg->imtrx);
         if (i == -1 && pd_glob[mn]->IntegrationMap != SUBPARAMETRIC) {
-          sum_xcoord += Coor[0][I];
-          sum_ycoord += Coor[1][I];
+          sum_xcoord += goma_ctx->mesh.coor[0][I];
+          sum_ycoord += goma_ctx->mesh.coor[1][I];
           if (exo->num_dim > 2)
-            sum_zcoord += Coor[2][I];
+            sum_zcoord += goma_ctx->mesh.coor[2][I];
         }
         if (i != -1) {
-          sum_xcoord += Coor[0][I] + xv[i];
-          sum_ycoord += Coor[1][I] + xv[i + 1];
+          sum_xcoord += goma_ctx->mesh.coor[0][I] + xv[i];
+          sum_ycoord += goma_ctx->mesh.coor[1][I] + xv[i + 1];
           if (exo->num_dim > 2)
-            sum_zcoord += Coor[2][I] + xv[i + 2];
+            sum_zcoord += goma_ctx->mesh.coor[2][I] + xv[i + 2];
         }
       }
       x_center = sum_xcoord / num_local_nodes;

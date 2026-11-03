@@ -407,7 +407,7 @@ int apply_strong_fill_ca_bc(
     if (af->Assemble_Residual) {
       rhs = 0.;
       for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
 
         /* check for multiple dofs */
         nvdofi = Dolphin[pg->imtrx][I][eqn];
@@ -430,7 +430,7 @@ int apply_strong_fill_ca_bc(
 
     if (af->Assemble_Jacobian) {
       for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
         nvdofi = Dolphin[pg->imtrx][I][eqn];
 
         for (ki = 0; ki < nvdofi; ki++) {
@@ -440,7 +440,7 @@ int apply_strong_fill_ca_bc(
 
           /* derivatives of fill equation wrt to fill variable */
           for (j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-            J = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+            J = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
             nvdofj = Dolphin[pg->imtrx][J][eqn];
             for (kj = 0; kj < nvdofj; kj++) {
               jdof = ei[pg->imtrx]->ln_to_first_dof[eqn][j] + kj;
@@ -683,7 +683,7 @@ int assemble_level_project(double afill[], /* Jacobian matrix for fill equation 
    */
   if (af->Assemble_Residual) {
     for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-      I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
       /* check for multiple dofs */
       nvdofi = Dolphin[pg->imtrx][I][eqn];
 
@@ -703,7 +703,7 @@ int assemble_level_project(double afill[], /* Jacobian matrix for fill equation 
 
   if (af->Assemble_Jacobian) {
     for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-      I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
 
       nvdofi = Dolphin[pg->imtrx][I][eqn];
       for (ki = 0; ki < nvdofi; ki++) {
@@ -713,7 +713,7 @@ int assemble_level_project(double afill[], /* Jacobian matrix for fill equation 
 
         /* derivatives of fill equation wrt to fill variable */
         for (j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-          J = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+          J = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
           nvdofj = Dolphin[pg->imtrx][J][eqn];
           for (kj = 0; kj < nvdofj; kj++)
 
@@ -1533,9 +1533,9 @@ int stash_node_displacements(double **d, int num_total_nodes, double *x, Exo_DB 
 static void retrieve_node_coordinates(int I, double *x, double *p, double **d) {
   int a, ie, var;
 
-  p[0] = Coor[0][I];
-  p[1] = Coor[1][I];
-  p[2] = (pd->Num_Dim == 3) ? Coor[2][I] : 0.0;
+  p[0] = goma_ctx->mesh.coor[0][I];
+  p[1] = goma_ctx->mesh.coor[1][I];
+  p[2] = (pd->Num_Dim == 3) ? goma_ctx->mesh.coor[2][I] : 0.0;
 
   if (d == NULL) {
     for (a = 0; a < pd->Num_Dim; a++) {
@@ -3176,8 +3176,8 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
 
         i = links[link][0];
         j = links[link][1];
-        I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
-        J = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
+        J = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
 
         find_nodal_stu(i, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
         find_nodal_stu(j, ei[pg->imtrx]->ielem_type, yi, yi + 1, yi + 2);
@@ -3209,8 +3209,8 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
 
         i = links[link][0];
         j = links[link][1];
-        I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
-        J = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
+        J = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
 
         find_nodal_stu(i, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
         find_nodal_stu(j, ei[pg->imtrx]->ielem_type, yi, yi + 1, yi + 2);
@@ -3255,8 +3255,8 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
 
         i = links[link][0];
         j = links[link][1];
-        I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
-        J = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
+        J = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
 
         find_nodal_stu(i, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
         find_nodal_stu(j, ei[pg->imtrx]->ielem_type, yi, yi + 1, yi + 2);
@@ -3299,8 +3299,8 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
 
         i = links[link][0];
         j = links[link][1];
-        I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
-        J = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
+        J = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
 
         find_nodal_stu(i, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
         find_nodal_stu(j, ei[pg->imtrx]->ielem_type, yi, yi + 1, yi + 2);
@@ -3341,8 +3341,8 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
 
         i = links[link][0];
         j = links[link][1];
-        I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
-        J = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
+        J = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
 
         find_nodal_stu(i, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
         find_nodal_stu(j, ei[pg->imtrx]->ielem_type, yi, yi + 1, yi + 2);
@@ -3383,8 +3383,8 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
 
         i = links[link][0];
         j = links[link][1];
-        I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
-        J = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
+        J = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
 
         find_nodal_stu(i, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
         find_nodal_stu(j, ei[pg->imtrx]->ielem_type, yi, yi + 1, yi + 2);
@@ -3413,8 +3413,8 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
       for (link = 0; link < 27; link++) {
         i = links[link][0];
         j = links[link][1];
-        I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
-        J = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
+        J = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
         find_nodal_stu(i, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
         find_nodal_stu(j, ei[pg->imtrx]->ielem_type, yi, yi + 1, yi + 2);
 
@@ -3512,8 +3512,8 @@ find_quad_facets(struct LS_Surf_List *list, int isovar, double isoval, int *quad
   for (edge = 0; edge < 4; edge++) {
     i = quad[edge];
     j = quad[(edge + 1) % 4];
-    I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
-    J = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+    I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
+    J = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
 
     esp = x_static + ei[pg->imtrx]->ieqn_ledof[ei[pg->imtrx]->lvdof_to_ledof[isovar][i]];
     val_I = *esp - isoval;
@@ -3651,7 +3651,7 @@ static int point_on_ca_boundary(int I, Exo_DB *exo)
   for (ica = 0; ica < num_ss_on_ca_boundary; ica++) {
     iss = iss_on_ca_boundary[ica];
 
-    for (i = 0; i < Proc_SS_Node_Count[iss]; i++) {
+    for (i = 0; i < goma_ctx->mesh.proc_ss_node_count[iss]; i++) {
       J = exo->ss_node_list[iss][i];
       if (J == I)
         inflection = TRUE;
@@ -4099,13 +4099,13 @@ void ls_var_initialization(double **u, Exo_DB *exo, Dpi *dpi, Comm_Ex **cx) {
       for (ielem = e_start; ielem < e_end; ielem++) {
         ielem_type = Elem_Type(exo, ielem);
         num_nodes = elem_info(NNODES, ielem_type);
-        index = Proc_Connect_Ptr[ielem];
+        index = goma_ctx->mesh.proc_connect_ptr[ielem];
         ls->Elem_Sign = 0;
 
         for (n = 0; n < num_nodes; n++) /* local nodes */
         {
           scalar_value_at_local_node(ielem, ielem_type, n, LS, 0, u[pg->imtrx], exo);
-          i = Proc_Elem_Connect[index++];
+          i = goma_ctx->mesh.proc_elem_connect[index++];
 
           for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
 
@@ -6309,7 +6309,7 @@ static int current_elem_xfem_state(int node_var_state[],
       /* nodal vars still might be active */
       for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
         /* check all neighboring elements to see if any span the interface */
-        I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
         for (j = exo->node_elem_pntr[I]; j < exo->node_elem_pntr[I + 1] && !node_var_state[i];
              j++) {
           e = exo->node_elem_list[j];
@@ -6336,7 +6336,7 @@ static int current_elem_xfem_state(int node_var_state[],
 
       for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
         /* check all neighboring elements */
-        I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
         for (j = exo->node_elem_pntr[I]; j < exo->node_elem_pntr[I + 1] && !node_var_state[i];
              j++) {
           e = exo->node_elem_list[j];
@@ -6790,7 +6790,7 @@ void map_local_coordinates(double *xi, double *x) {
   int DeformingMesh = pd->e[pg->imtrx][R_MESH1];
   int mdof = ei[pd->mi[ShapeVar]]->dof[ShapeVar];
   int ln, I;
-  int iconnect = Proc_Connect_Ptr[ei[pg->imtrx]->ielem];
+  int iconnect = goma_ctx->mesh.proc_connect_ptr[ei[pg->imtrx]->ielem];
   double phi_j;
 
   if (ei[pg->imtrx]->ielem_shape == SHELL || ei[pg->imtrx]->ielem_shape == TRISHELL) {
@@ -6804,23 +6804,23 @@ void map_local_coordinates(double *xi, double *x) {
       for (j = 0; j < mdof; j++) {
         ln = ei[pd->mi[ShapeVar]]->dof_list[ShapeVar][j];
 
-        I = Proc_Elem_Connect[iconnect + ln];
+        I = goma_ctx->mesh.proc_elem_connect[iconnect + ln];
 
         phi_j = newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ln, ei[pg->imtrx]->ielem_shape,
                          pd->i[pd->mi[ShapeVar]][ShapeVar], j);
 
-        x[a] += Coor[a][I] * phi_j;
+        x[a] += goma_ctx->mesh.coor[a][I] * phi_j;
       }
     } else {
       for (j = 0; j < mdof; j++) {
         ln = ei[pd->mi[ShapeVar]]->dof_list[ShapeVar][j];
 
-        I = Proc_Elem_Connect[iconnect + ln];
+        I = goma_ctx->mesh.proc_elem_connect[iconnect + ln];
 
         phi_j = newshape(xi, ei[pg->imtrx]->ielem_type, PSI, ln, ei[pg->imtrx]->ielem_shape,
                          pd->i[pd->mi[ShapeVar]][ShapeVar], j);
 
-        x[a] += (Coor[a][I] + *esp->d[a][j]) * phi_j;
+        x[a] += (goma_ctx->mesh.coor[a][I] + *esp->d[a][j]) * phi_j;
       }
     }
   }
@@ -11031,10 +11031,10 @@ static void apply_adc_to_elem(Exo_DB *exo,
     ln = local_elem_node_id[i];
     I = ei[pg->imtrx]->gnn_list[LS][ln];
 
-    r[0] = Coor[0][I];
-    r[1] = Coor[1][I];
+    r[0] = goma_ctx->mesh.coor[0][I];
+    r[1] = goma_ctx->mesh.coor[1][I];
     if (pd->Num_Dim == 3)
-      r[2] = Coor[2][I];
+      r[2] = goma_ctx->mesh.coor[2][I];
 
     s = create_surf_point(r, ei[pg->imtrx]->ielem, r, FALSE);
 
@@ -11059,10 +11059,10 @@ static void apply_adc_to_elem(Exo_DB *exo,
     struct LS_Surf *s;
     if (in_list(i, 0, nodes_per_side, local_elem_node_id) == -1) {
       I = ei[pg->imtrx]->gnn_list[LS][i];
-      r[0] = Coor[0][I];
-      r[1] = Coor[1][I];
+      r[0] = goma_ctx->mesh.coor[0][I];
+      r[1] = goma_ctx->mesh.coor[1][I];
       if (pd->Num_Dim == 3)
-        r[2] = Coor[2][I];
+        r[2] = goma_ctx->mesh.coor[2][I];
 
       s = closest_surf(list, x, exo, r);
       if (ei[pg->imtrx]->ln_to_first_dof[LS][i] != -1) {
@@ -11095,10 +11095,10 @@ determine_nearest_distance(Exo_DB *exo, double *x, int nodes_per_side, int *loca
     ln = local_elem_node_id[i];
     I = ei[pg->imtrx]->gnn_list[LS][ln];
 
-    r[0] = Coor[0][I];
-    r[1] = Coor[1][I];
+    r[0] = goma_ctx->mesh.coor[0][I];
+    r[1] = goma_ctx->mesh.coor[1][I];
     if (pd->Num_Dim == 3)
-      r[2] = Coor[2][I];
+      r[2] = goma_ctx->mesh.coor[2][I];
 
     s = closest_surf(list, x, exo, r);
 

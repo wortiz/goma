@@ -162,7 +162,6 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
  *
  *****************************************************************************/
 {
-  extern int Num_Dim; /* Number of dimensions in the problem       */
   char *yo = "matrix_dump_msr ERROR:";
   static int index = 0; /* Static variable containing the file
                            index. This routine will dump out files
@@ -301,7 +300,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
     safer_free((void **)&stringPtr);
     CHECK_XDR(xdr_int(xdrs, &gNum_Nodes));
     CHECK_XDR(xdr_int(xdrs, &gNum_Unknowns));
-    CHECK_XDR(xdr_int(xdrs, &Num_Dim));
+    CHECK_XDR(xdr_int(xdrs, &goma_ctx->mesh.num_dim));
     xdr_destroy(xdrs);
     CHECK_FCLOSE(fclose(fptr));
   }
@@ -513,7 +512,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
          */
         flt_coord[0] = (float)exo->x_coord[iblk_row];
         flt_coord[1] = (float)exo->y_coord[iblk_row];
-        if (Num_Dim > 2) {
+        if (goma_ctx->mesh.num_dim > 2) {
           flt_coord[2] = (float)exo->z_coord[iblk_row];
         } else {
           flt_coord[2] = (float)0.0;
@@ -625,7 +624,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
            */
           flt_coord[0] = (float)exo->x_coord[jblk];
           flt_coord[1] = (float)exo->y_coord[jblk];
-          if (Num_Dim > 2) {
+          if (goma_ctx->mesh.num_dim > 2) {
             flt_coord[2] = (float)exo->z_coord[jblk];
           } else {
             flt_coord[2] = 0.0;
@@ -764,7 +763,6 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
  *
  *****************************************************************************/
 {
-  extern int Num_Dim; /* Number of dimensions in the problem       */
   char yo[] = "matrix_dump_vbr ERROR:";
   static int index = 0; /* Static variable containing the file
                            index. This routine will dump out files
@@ -900,7 +898,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
     safer_free((void **)&stringPtr);
     CHECK_XDR(xdr_int(xdrs, &gNum_Nodes));
     CHECK_XDR(xdr_int(xdrs, &gNum_Unknowns));
-    CHECK_XDR(xdr_int(xdrs, &Num_Dim));
+    CHECK_XDR(xdr_int(xdrs, &goma_ctx->mesh.num_dim));
     xdr_destroy(xdrs);
     CHECK_FCLOSE(fclose(fptr));
   }
@@ -1086,7 +1084,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
          */
         flt_coord[0] = (float)exo->x_coord[iblk_row];
         flt_coord[1] = (float)exo->y_coord[iblk_row];
-        if (Num_Dim > 2) {
+        if (goma_ctx->mesh.num_dim > 2) {
           flt_coord[2] = (float)exo->z_coord[iblk_row];
         } else {
           flt_coord[2] = (float)0.0;
@@ -1201,7 +1199,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
                    current column */
           flt_coord[0] = (float)exo->x_coord[jblk];
           flt_coord[1] = (float)exo->y_coord[jblk];
-          if (Num_Dim > 2) {
+          if (goma_ctx->mesh.num_dim > 2) {
             flt_coord[2] = (float)exo->z_coord[jblk];
           } else {
             flt_coord[2] = (float)0.0;

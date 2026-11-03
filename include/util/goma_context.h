@@ -24,6 +24,54 @@ extern "C" {
 #endif
 
 /*
+ * Legacy per-processor mesh description, formerly the globals in el_geom.h.
+ * Deprecated in favor of the Exo_DB structure.
+ */
+typedef struct GomaMesh {
+  double **coor;         /* physical space coordinates for each node, num_dim by num_node */
+  int *proc_connect_ptr; /* global connectivity ptrs for element nums */
+
+  int num_dim;     /* number of physical dimensions */
+  int num_node;    /* total number of nodes in the mesh */
+  int num_elem;    /* total number of elements in the mesh */
+  int max_np_elem; /* maximum number of nodes in any element */
+
+  int num_internal_elems; /* number of elements on the local processor ("internal" + "border") */
+  int *gnodes;            /* internal, border and external nodes on each processor */
+  int *gelems;            /* map from local to global element number, length num_internal_elems */
+
+  int proc_num_elem_blk;     /* number of element blocks in this processor */
+  int *proc_num_elem_in_blk; /* number of elements in the processor's element blocks */
+  int *proc_elem_blk_ids;    /* element block id's for the processor's element blocks */
+  int *proc_elem_blk_types;  /* element block types for the processor's element blocks */
+  int *proc_nodes_per_elem;  /* # of nodes per element for each block on this processor */
+  int *proc_num_attr;        /* # of attributes for each block on this processor */
+  int *proc_elem_connect;    /* connectivity lists for the elements required by this processor */
+
+  int proc_num_node_sets;    /* number node sets on current processor */
+  int proc_ns_list_length;   /* total length of all the node set lists */
+  int *proc_ns_ids;          /* node sets ids for the node sets */
+  int *proc_ns_count;        /* node sets count record */
+  int *proc_ns_pointers;     /* node sets pointer record */
+  int *proc_ns_list;         /* node sets list record */
+  double *proc_ns_dist_fact; /* node sets distribution factors */
+
+  int proc_num_side_sets;       /* number side sets on current processor */
+  int proc_ss_elem_list_length; /* total length of all the side set elem lists */
+  int proc_ss_node_list_length; /* total length of all the side set node lists */
+  int *proc_ss_ids;             /* side sets ids */
+  int *proc_ss_elem_count;      /* side sets count record for elements */
+  int *proc_ss_node_count;      /* side sets count record for nodes */
+  int *proc_ss_elem_pointers;   /* side sets pointer record for elements */
+  int *proc_ss_elem_list;       /* side sets element list record */
+  double *proc_ss_dist_fact;    /* side sets distribution factors */
+
+  int num_internal_nodes; /* owned exclusively by this proc */
+  int num_border_nodes;   /* owned here but communicated elsewhere */
+  int num_external_nodes; /* owned elsewhere, but needed here */
+} GomaMesh;
+
+/*
  * GomaContext collects process-wide state that used to live in individual
  * global variables: MPI/parallel information and I/O / run configuration.
  *
@@ -86,6 +134,8 @@ typedef struct GomaContext {
   /* Benner's frontal solver strcat()s onto this directory name, so leave room for
    * dirname/lu.123456.0 */
   char front_scratch_directory[MAX_FNL];
+
+  GomaMesh mesh; /* legacy mesh description */
 } GomaContext;
 
 /* Set every field of ctx to the Goma startup default. */

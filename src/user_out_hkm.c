@@ -323,7 +323,7 @@ static void PRNT_SOLN_VALS(char *soln_name,
 
     RETN_COORD(i_max, &Xcoor, &Ycoor, &Zcoor);
     printf("\t  Max value = %g\tat Xcoor: %g\tYcoor: %g", g_max, Xcoor, Ycoor);
-    if (Num_Dim > 2)
+    if (goma_ctx->mesh.num_dim > 2)
       printf("\tZcoor: %g", Zcoor);
     printf("\n");
     fflush(stdout);
@@ -336,7 +336,7 @@ static void PRNT_SOLN_VALS(char *soln_name,
   if (goma_ctx->proc_id == print_proc) {
     RETN_COORD(i_min, &Xcoor, &Ycoor, &Zcoor);
     printf("\t  Min value = %g\tat Xcoor: %g\tYcoor: %g", g_min, Xcoor, Ycoor);
-    if (Num_Dim > 2)
+    if (goma_ctx->mesh.num_dim > 2)
       printf("\tZcoor: %g", Zcoor);
     printf("\n");
     fflush(stdout);
@@ -408,9 +408,9 @@ static void SOLN_VALUES(int var_type,
       for (ielem = e_start; ielem < e_end; ielem++) {
         ielem_type = Elem_Type(EXO_ptr, ielem);
         num_local_nodes = elem_info(NNODES, ielem_type);
-        index = Proc_Connect_Ptr[ielem];
+        index = goma_ctx->mesh.proc_connect_ptr[ielem];
         for (n = 0; n < num_local_nodes; n++) {
-          i = Proc_Elem_Connect[index++];
+          i = goma_ctx->mesh.proc_elem_connect[index++];
           if (Nodes[i]->Type.Owned) {
             if (!i_been_there[i]) {
               i_been_there[i] = 1;
@@ -485,10 +485,10 @@ static void SOLN_VALUES(int var_type,
 static void RETN_COORD(int node, double *x, double *y, double *z)
 
 {
-  *x = Coor[0][node];
-  *y = Coor[1][node];
-  if (Num_Dim > 2)
-    *z = Coor[2][node];
+  *x = goma_ctx->mesh.coor[0][node];
+  *y = goma_ctx->mesh.coor[1][node];
+  if (goma_ctx->mesh.num_dim > 2)
+    *z = goma_ctx->mesh.coor[2][node];
   else
     *z = 0.0;
 }

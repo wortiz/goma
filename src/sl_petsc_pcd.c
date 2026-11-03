@@ -72,10 +72,10 @@ static goma_error initialize_PCD_matrices(PetscMatrixData *matrix_data,
 
       int eqn = PRESSURE;
       for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+        int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
         int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
         for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-          int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+          int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
           int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
           if (ldof_i >= 0 && ldof_j >= 0 &&
               ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||

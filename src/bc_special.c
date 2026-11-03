@@ -295,7 +295,7 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
          *  node number, 'i' . Then store a pointer to the NODE_INFO
          *  structure pertaining to that node.
          */
-        I = Proc_Elem_Connect[iconnect_ptr + id];
+        I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
         node = Nodes[I];
 
         /*
@@ -1745,7 +1745,7 @@ void assemble_sharp_integrated_bc(
 
       id = (int)elem_side_bc->local_elem_node_id[i];
 
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
 
       for (p = 0; p < bc_desc->vector; p++) {
 

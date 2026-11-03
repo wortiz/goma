@@ -903,22 +903,22 @@ void h_elem_siz(dbl hsquared[DIM],
       mp->FSIModel == FSI_SHELL_ONLY_MESH)
     DeformingMeshShell = 1;
 
-  j = Proc_Connect_Ptr[ei[pg->imtrx]->ielem];
+  j = goma_ctx->mesh.proc_connect_ptr[ei[pg->imtrx]->ielem];
   if (pd->gv[MESH_DISPLACEMENT1] && (DeformingMesh || DeformingMeshShell)) {
     for (p = 0; p < dim; p++) {
       var = MESH_DISPLACEMENT1 + p;
       for (i = 0; i < ei[pd->mi[var]]->num_local_nodes; i++) {
         idof = ei[pd->mi[var]]->ln_to_dof[var][i];
-        index = Proc_Elem_Connect[j + i];
+        index = goma_ctx->mesh.proc_elem_connect[j + i];
         if (idof != -1)
-          xnode[p][i] = Coor[p][index] + *esp->d[p][idof];
+          xnode[p][i] = goma_ctx->mesh.coor[p][index] + *esp->d[p][idof];
       }
     }
   } else {
     for (p = 0; p < dim; p++) {
       for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        index = Proc_Elem_Connect[j + i];
-        xnode[p][i] = Coor[p][index];
+        index = goma_ctx->mesh.proc_elem_connect[j + i];
+        xnode[p][i] = goma_ctx->mesh.coor[p][index];
       }
     }
   }
@@ -1308,7 +1308,7 @@ surface_determinant_and_normal(
     fv->snormal[1] = signID * tmp;
 
     for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-      inode = Proc_Elem_Connect[iconnect_ptr + i];
+      inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
       ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][i];
       if (ldof >= 0) {
         if (Dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
@@ -1465,7 +1465,7 @@ surface_determinant_and_normal(
       for (a = 0; a < dim; a++) {
         for (i = 0; i < num_nodes_on_side; i++) {
           id = local_elem_node_id[i];
-          inode = Proc_Elem_Connect[iconnect_ptr + id];
+          inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
           if (Dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
             phi_i = map_bf->phi[ldof];
@@ -1515,7 +1515,7 @@ surface_determinant_and_normal(
     if (af->Assemble_Jacobian && DeformingMesh) {
       for (i = 0; i < num_nodes_on_side; i++) {
         id = (int)local_elem_node_id[i];
-        inode = Proc_Elem_Connect[iconnect_ptr + id];
+        inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
         ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
         if (Dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           phi_i = map_bf->phi[ldof];
@@ -1562,7 +1562,7 @@ surface_determinant_and_normal(
     if (af->Assemble_Jacobian && DeformingMesh) {
       for (i = 0; i < num_nodes_on_side; i++) {
         id = (int)local_elem_node_id[i];
-        inode = Proc_Elem_Connect[iconnect_ptr + id];
+        inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
         ldof = ei[pd->mi[MESH_DISPLACEMENT1]]->ln_to_dof[ShapeVar][id];
         if (Dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           phi_i = map_bf->phi[ldof];
@@ -1681,7 +1681,7 @@ void edge_determinant_and_vectors(
       if (af->Assemble_Jacobian && DeformingMesh) {
         for (i = 0; i < num_nodes_on_edge; i++) {
           id = (int)edge_elem_node_id[i];
-          inode = Proc_Elem_Connect[iconnect_ptr + id];
+          inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
           ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
           if (Dolphin[upd->matrix_index[R_MESH1]][inode][MESH_DISPLACEMENT1] > 0) {
             phi_i = bf[ShapeVar]->phi[ldof];
@@ -1759,7 +1759,7 @@ void edge_determinant_and_vectors(
     if (af->Assemble_Jacobian && DeformingMesh) {
       for (i = 0; i < num_nodes_on_edge; i++) {
         id = (int)edge_elem_node_id[i];
-        inode = Proc_Elem_Connect[iconnect_ptr + id];
+        inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
         ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
         for (p = 0; p < dim; p++) {
           if (Dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1 + p] > 0) {
@@ -1783,19 +1783,22 @@ void edge_determinant_and_vectors(
 
     for (i = 0; i < num_nodes_on_edge; i++) {
       id = (int)edge_elem_node_id[i];
-      inode = Proc_Elem_Connect[iconnect_ptr + id];
+      inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[upd->matrix_index[pd->ShapeVar]]->ln_to_dof[ShapeVar][id];
       if (DeformingMesh) {
         if (Dolphin[upd->matrix_index[R_MESH1]][inode][MESH_DISPLACEMENT1] > 0) {
-          dxdalpha += bf[ShapeVar]->dphidxi[ldof][i_basis] * (Coor[0][inode] + *esp->d[0][ldof]);
-          dydalpha += bf[ShapeVar]->dphidxi[ldof][i_basis] * (Coor[1][inode] + *esp->d[1][ldof]);
-          dzdalpha += bf[ShapeVar]->dphidxi[ldof][i_basis] * (Coor[2][inode] + *esp->d[2][ldof]);
+          dxdalpha += bf[ShapeVar]->dphidxi[ldof][i_basis] *
+                      (goma_ctx->mesh.coor[0][inode] + *esp->d[0][ldof]);
+          dydalpha += bf[ShapeVar]->dphidxi[ldof][i_basis] *
+                      (goma_ctx->mesh.coor[1][inode] + *esp->d[1][ldof]);
+          dzdalpha += bf[ShapeVar]->dphidxi[ldof][i_basis] *
+                      (goma_ctx->mesh.coor[2][inode] + *esp->d[2][ldof]);
         }
       } /*end of Baby_Dolphin[pg->imtrx] */
       else {
-        dxdalpha += bf[ShapeVar]->dphidxi[ldof][i_basis] * Coor[0][inode];
-        dydalpha += bf[ShapeVar]->dphidxi[ldof][i_basis] * Coor[1][inode];
-        dzdalpha += bf[ShapeVar]->dphidxi[ldof][i_basis] * Coor[2][inode];
+        dxdalpha += bf[ShapeVar]->dphidxi[ldof][i_basis] * goma_ctx->mesh.coor[0][inode];
+        dydalpha += bf[ShapeVar]->dphidxi[ldof][i_basis] * goma_ctx->mesh.coor[1][inode];
+        dzdalpha += bf[ShapeVar]->dphidxi[ldof][i_basis] * goma_ctx->mesh.coor[2][inode];
       }
     }
 
@@ -1993,7 +1996,7 @@ void edge_determinant_and_vectors(
     if (af->Assemble_Jacobian && DeformingMesh) {
       for (i = 0; i < num_nodes_on_edge; i++) {
         id = (int)edge_elem_node_id[i];
-        inode = Proc_Elem_Connect[iconnect_ptr + id];
+        inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
         ldof = ei[upd->matrix_index[pd->ShapeVar]]->ln_to_dof[ShapeVar][id];
         if (Dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           phi_i = bf[ShapeVar]->phi[ldof];
@@ -2120,7 +2123,7 @@ void edge_determinant_and_vectors(
     if (af->Assemble_Jacobian && DeformingMesh) {
       for (i = 0; i < num_nodes_on_edge; i++) {
         id = (int)edge_elem_node_id[i];
-        inode = Proc_Elem_Connect[iconnect_ptr + id];
+        inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
         ldof = ei[pg->imtrx]->ln_to_dof[pd->ShapeVar][id];
         for (p = 0; p < dim; p++) {
           if (Dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1 + p] > 0) {
@@ -2295,19 +2298,19 @@ void get_supg_stuff(dbl *supg_term,
    * Find the local coodinates of the nodes in the current element
    * -> Can this be pushed to a more generic place ?
    */
-  j = Proc_Connect_Ptr[ei[pg->imtrx]->ielem];
+  j = goma_ctx->mesh.proc_connect_ptr[ei[pg->imtrx]->ielem];
   for (p = 0; p < dim; p++) {
     if (DeformingMesh) {
       var = MESH_DISPLACEMENT1 + p;
       for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
         idof = ei[pg->imtrx]->ln_to_dof[var][i];
-        index = Proc_Elem_Connect[j + i];
-        xnode[p][i] = Coor[p][index] + *esp->d[p][idof];
+        index = goma_ctx->mesh.proc_elem_connect[j + i];
+        xnode[p][i] = goma_ctx->mesh.coor[p][index] + *esp->d[p][idof];
       }
     } else {
       for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        index = Proc_Elem_Connect[j + i];
-        xnode[p][i] = Coor[p][index];
+        index = goma_ctx->mesh.proc_elem_connect[j + i];
+        xnode[p][i] = goma_ctx->mesh.coor[p][index];
       }
     }
   }

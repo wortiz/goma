@@ -231,19 +231,21 @@ int beer_belly(void) {
       for (k = 0; k < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; k++) {
         node = ei[upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
 
-        index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
+        index = goma_ctx->mesh.proc_elem_connect
+                    [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
 
-        fv->x[i] += (Coor[i][index] + *esp->d[i][k]) * bf[R_MESH1]->phi[k];
+        fv->x[i] += (goma_ctx->mesh.coor[i][index] + *esp->d[i][k]) * bf[R_MESH1]->phi[k];
 
-        fv_old->x[i] += (Coor[i][index] + *esp_old->d[i][k]) * bf[R_MESH1]->phi[k];
+        fv_old->x[i] += (goma_ctx->mesh.coor[i][index] + *esp_old->d[i][k]) * bf[R_MESH1]->phi[k];
       }
     } else {
       for (k = 0; k < mdof; k++) {
         node = MapBf->interpolation == I_N1 ? k : ei[imtrx]->dof_list[ShapeVar][k];
 
-        index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[imtrx]->ielem] + node];
+        index = goma_ctx->mesh
+                    .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[imtrx]->ielem] + node];
 
-        fv->x[i] += Coor[i][index] * MapBf->phi[k];
+        fv->x[i] += goma_ctx->mesh.coor[i][index] * MapBf->phi[k];
 
         fv_old->x[i] = fv->x[i];
       }
@@ -261,15 +263,19 @@ int beer_belly(void) {
         for (k = 0; k < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; k++) {
           node = ei[upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
 
-          index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
+          index =
+              goma_ctx->mesh.proc_elem_connect
+                  [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
 
-          MapBf->J[i][j] += (Coor[j][index] + *esp->d[j][k]) * bf[R_MESH1]->dphidxi[k][i];
+          MapBf->J[i][j] +=
+              (goma_ctx->mesh.coor[j][index] + *esp->d[j][k]) * bf[R_MESH1]->dphidxi[k][i];
         }
       } else {
         for (k = 0; k < mdof; k++) {
           node = MapBf->interpolation == I_N1 ? k : ei[imtrx]->dof_list[ShapeVar][k];
-          index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[imtrx]->ielem] + node];
-          MapBf->J[i][j] += Coor[j][index] * bf[ShapeVar]->dphidxi[k][i];
+          index = goma_ctx->mesh
+                      .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[imtrx]->ielem] + node];
+          MapBf->J[i][j] += goma_ctx->mesh.coor[j][index] * bf[ShapeVar]->dphidxi[k][i];
         }
       }
     }
@@ -702,7 +708,7 @@ void calc_surf_tangent(const int ielem,                /* current element number
     }
     for (i = 0; i < num_nodes_on_side; i++) {
       id = (int)local_elem_node_id[i];
-      inode = Proc_Elem_Connect[iconnect_ptr + id];
+      inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][id];
 
       if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
@@ -758,7 +764,7 @@ void calc_surf_tangent(const int ielem,                /* current element number
     }
     for (i = 0; i < num_nodes_on_side; i++) {
       id = (int)local_elem_node_id[i];
-      inode = Proc_Elem_Connect[iconnect_ptr + id];
+      inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][id];
       if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
         for (j = 0; j < ielem_surf_dim + 1; j++) {
@@ -919,19 +925,19 @@ void calc_tangent_along_basis(struct Rotation_Vectors *tangent,
   tangent->d_vector_n = num_nodes_on_side;
   for (i = 0; i < tangent->d_vector_n; i++) {
     id = (int)local_elem_node_id[i];
-    inode = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + id];
+    inode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + id];
     tangent->d_vector_J[i] = inode;
     ldof = ei[pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][id];
     if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
       if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
         for (p = 0; p < dim; p++) {
-          tangent->vector[p] +=
-              bf[ShapeVar]->dphidxi[ldof][i_basis] * (Coor[p][inode] + *esp->d[p][ldof]);
+          tangent->vector[p] += bf[ShapeVar]->dphidxi[ldof][i_basis] *
+                                (goma_ctx->mesh.coor[p][inode] + *esp->d[p][ldof]);
         }
       }
     } else {
       for (p = 0; p < dim; p++) {
-        tangent->vector[p] += bf[ShapeVar]->dphidxi[ldof][i_basis] * Coor[p][inode];
+        tangent->vector[p] += bf[ShapeVar]->dphidxi[ldof][i_basis] * goma_ctx->mesh.coor[p][inode];
       }
     }
   }
@@ -939,7 +945,7 @@ void calc_tangent_along_basis(struct Rotation_Vectors *tangent,
   if (af->Assemble_Jacobian && pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
     for (i = 0; i < tangent->d_vector_n; i++) {
       id = (int)local_elem_node_id[i];
-      inode = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + id];
+      inode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
       if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
         if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
@@ -1265,18 +1271,19 @@ void calc_unseeded_edge_tangents(struct Rotation_Vectors *tangent,
   /* calculate unit vector in parametric direction of local coord param_dir */
   for (j = 0; j < num_nodes_on_edge; j++) {
     j_id = (int)edge_elem_node_id[j];
-    inode = Proc_Elem_Connect[iconnect_ptr + j_id];
+    inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + j_id];
     ldof = ei[pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][j_id];
     if (DeformingMesh) {
       if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
         for (p = 0; p < dim; p++) {
-          tangent->vector[p] +=
-              sign * bf[ShapeVar]->dphidxi[ldof][param_dir] * (Coor[p][inode] + *esp->d[p][ldof]);
+          tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir] *
+                                (goma_ctx->mesh.coor[p][inode] + *esp->d[p][ldof]);
         }
       }
     } else {
       for (p = 0; p < dim; p++) {
-        tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir] * Coor[p][inode];
+        tangent->vector[p] +=
+            sign * bf[ShapeVar]->dphidxi[ldof][param_dir] * goma_ctx->mesh.coor[p][inode];
       }
     }
   }
@@ -1285,7 +1292,7 @@ void calc_unseeded_edge_tangents(struct Rotation_Vectors *tangent,
     tangent->d_vector_n = num_nodes_on_edge;
     for (j = 0; j < num_nodes_on_edge; j++) {
       j_id = (int)edge_elem_node_id[j];
-      inode = Proc_Elem_Connect[iconnect_ptr + j_id];
+      inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + j_id];
       tangent->d_vector_J[j] = inode;
       ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][j_id];
       if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
@@ -1447,19 +1454,20 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
   int param_dir_tet = 0;
   for (j = 0; j < num_nodes_on_edge; j++) {
     j_id = (int)edge_elem_node_id[j];
-    inode = Proc_Elem_Connect[iconnect_ptr + j_id];
+    inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + j_id];
     ldof = ei[pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][j_id];
     if (id_edge == 1 || id_edge == 3 || id_edge == 4) {
       if (DeformingMesh) {
         if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
           for (p = 0; p < dim; p++) {
-            tangent->vector[p] +=
-                sign * bf[ShapeVar]->dphidxi[ldof][param_dir] * (Coor[p][inode] + *esp->d[p][ldof]);
+            tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir] *
+                                  (goma_ctx->mesh.coor[p][inode] + *esp->d[p][ldof]);
           }
         }
       } else {
         for (p = 0; p < dim; p++) {
-          tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir] * Coor[p][inode];
+          tangent->vector[p] +=
+              sign * bf[ShapeVar]->dphidxi[ldof][param_dir] * goma_ctx->mesh.coor[p][inode];
         }
       }
     } else if (id_edge == 2) {
@@ -1475,12 +1483,13 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
 
           for (p = 0; p < dim; p++) {
             tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] *
-                                  (Coor[p][inode] + *esp->d[p][ldof]);
+                                  (goma_ctx->mesh.coor[p][inode] + *esp->d[p][ldof]);
           }
         }
       } else {
         for (p = 0; p < dim; p++) {
-          tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] * Coor[p][inode];
+          tangent->vector[p] +=
+              sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] * goma_ctx->mesh.coor[p][inode];
         }
       }
     } else if (id_edge == 6) {
@@ -1496,12 +1505,13 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
 
           for (p = 0; p < dim; p++) {
             tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] *
-                                  (Coor[p][inode] + *esp->d[p][ldof]);
+                                  (goma_ctx->mesh.coor[p][inode] + *esp->d[p][ldof]);
           }
         }
       } else {
         for (p = 0; p < dim; p++) {
-          tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] * Coor[p][inode];
+          tangent->vector[p] +=
+              sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] * goma_ctx->mesh.coor[p][inode];
         }
       }
     } else if (id_edge == 5) {
@@ -1517,12 +1527,13 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
 
           for (p = 0; p < dim; p++) {
             tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] *
-                                  (Coor[p][inode] + *esp->d[p][ldof]);
+                                  (goma_ctx->mesh.coor[p][inode] + *esp->d[p][ldof]);
           }
         }
       } else {
         for (p = 0; p < dim; p++) {
-          tangent->vector[p] += sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] * Coor[p][inode];
+          tangent->vector[p] +=
+              sign * bf[ShapeVar]->dphidxi[ldof][param_dir_tet] * goma_ctx->mesh.coor[p][inode];
         }
       }
     } else {
@@ -1534,7 +1545,7 @@ void calc_unseeded_edge_tangents_TET(struct Rotation_Vectors *tangent,
     tangent->d_vector_n = num_nodes_on_edge;
     for (j = 0; j < num_nodes_on_edge; j++) {
       j_id = (int)edge_elem_node_id[j];
-      inode = Proc_Elem_Connect[iconnect_ptr + j_id];
+      inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + j_id];
       tangent->d_vector_J[j] = inode;
       ldof = ei[pd->mi[ShapeVar]]->ln_to_dof[ShapeVar][j_id];
       if (num_varType_at_node(inode, MESH_DISPLACEMENT1)) {
@@ -2914,11 +2925,11 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
                                            * external nodes that are in the
                                            * universe of this processor */
 
-  if (Num_Dim == 1) {
+  if (goma_ctx->mesh.num_dim == 1) {
     max_neigh_elem = 2;
-  } else if (Num_Dim == 2) {
+  } else if (goma_ctx->mesh.num_dim == 2) {
     max_neigh_elem = MAX_SUR_ELEM_2D; /* 20 deg angles give 18 elems... */
-  } else if (Num_Dim == 3) {
+  } else if (goma_ctx->mesh.num_dim == 3) {
     max_neigh_elem = MAX_SUR_ELEM_3D; /* 20 deg solid angle gives 60 elems */
   }
 
@@ -3129,7 +3140,7 @@ static int find_problem_graph_fill(int *ija[],         /* column pointer array *
    * Allocate arrays and initialize...
    * start allocating ija to a small estimate - reallocate later
    */
-  nz_temp = num_fill_unknowns * Max_NP_Elem;
+  nz_temp = num_fill_unknowns * goma_ctx->mesh.max_np_elem;
   *ija = alloc_int_1(nz_temp, -1);
   nsur_elem = alloc_int_1(itotal_nodes, 0);
   isur_elem = alloc_int_2(itotal_nodes, max_neigh_elem, -1);
@@ -3141,9 +3152,9 @@ static int find_problem_graph_fill(int *ija[],         /* column pointer array *
    * contain each node in nsur_elem[]...
    */
 
-  for (ielem = 0; ielem < Num_Internal_Elems; ielem++) {
+  for (ielem = 0; ielem < goma_ctx->mesh.num_internal_elems; ielem++) {
     for (j = 0; j < elem_info(NNODES, Elem_Type(exo, ielem)); j++) {
-      inode = Proc_Elem_Connect[Proc_Connect_Ptr[ielem] + j];
+      inode = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ielem] + j];
       if (inode < itotal_nodes) {
         /*
          * internal or border node -> fill
@@ -3198,7 +3209,7 @@ static int find_problem_graph_fill(int *ija[],         /* column pointer array *
                 icol_index != irow_index) {
               if (nz_ptr + 1 == nz_temp) {
                 /* reallocate ija larger!! */
-                nz_temp += num_fill_unknowns * Max_NP_Elem;
+                nz_temp += num_fill_unknowns * goma_ctx->mesh.max_np_elem;
 
                 *ija = (int *)realloc((void *)*ija, nz_temp * sizeof(int));
                 if (*ija == NULL)
@@ -3892,79 +3903,87 @@ double newshape(const double xi[],       /* local coordinates    */
       case PSI:          /* shape function */
         switch (Inode) { /* select specific shape function */
         case 0:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
-              Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
             value = 0.25 * (1. - s) * (1. - t);
           } else {
             value = 0.25 * ((1. - s) * s * (1. - t) * t + (1 - s * s) * (1 - t * t));
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE !=
+                1) {
               value += 0.25 * (1. - s * s) * (t - 1.) * t;
             }
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE !=
+                1) {
               value += 0.25 * (1. - t * t) * (s - 1.) * s;
             }
           }
           break;
         case 1:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
-              Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
             value = 0.25 * (1. + s) * (1. - t);
           } else {
             value = 0.25 * ((1. + s) * s * (t - 1) * t + (1 - s * s) * (1 - t * t));
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE !=
+                1) {
               value += 0.25 * (1. - s * s) * (t - 1.) * t;
             }
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE !=
+                1) {
               value += 0.25 * (1. - t * t) * (s + 1.) * s;
             }
           }
           break;
         case 2:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1 &&
-              Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
             value = 0.25 * (1. + s) * (1. + t);
           } else {
             value = 0.25 * ((1. + s) * s * (t + 1) * t + (1 - s * s) * (1 - t * t));
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE !=
+                1) {
               value += 0.25 * (1. - s * s) * (t + 1.) * t;
             }
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE !=
+                1) {
               value += 0.25 * (1. - t * t) * (s + 1.) * s;
             }
           }
           break;
         case 3:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1 &&
-              Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
             value = 0.25 * (1. - s) * (1. + t);
           } else {
             value = 0.25 * ((s - 1) * s * (t + 1) * t + (1 - s * s) * (1 - t * t));
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE !=
+                1) {
               value += 0.25 * (1. - s * s) * (t + 1.) * t;
             }
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE !=
+                1) {
               value += 0.25 * (1. - t * t) * (s - 1.) * s;
             }
           }
           break;
           /* can only get to these cases on external boundaries */
         case 4:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - s * s) * (t - 1.) * t;
           break;
         case 5:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - t * t) * (s + 1.) * s;
           break;
         case 6:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - s * s) * (t + 1.) * t;
           break;
         case 7:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - t * t) * (s - 1.) * s;
           break;
@@ -3974,79 +3993,87 @@ double newshape(const double xi[],       /* local coordinates    */
       case DPSI_S:       /* partial of shape fn w.r.t. s */
         switch (Inode) { /* select specific shape function */
         case 0:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
-              Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
             value = -0.25 * (1. - t);
           } else {
             value = 0.25 * ((1. - 2 * s) * (1. - t) * t - 2 * s * (1 - t * t));
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE !=
+                1) {
               value -= 0.5 * s * (t - 1.) * t;
             }
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE !=
+                1) {
               value += 0.25 * (1. - t * t) * (2. * s - 1.);
             }
           }
           break;
         case 1:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
-              Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
             value = 0.25 * (1. - t);
           } else {
             value = 0.25 * ((1. + 2 * s) * (t - 1) * t - 2 * s * (1 - t * t));
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE !=
+                1) {
               value -= 0.5 * s * (t - 1.) * t;
             }
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE !=
+                1) {
               value += 0.25 * (1. - t * t) * (2 * s + 1.);
             }
           }
           break;
         case 2:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1 &&
-              Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
             value = 0.25 * (1. + t);
           } else {
             value = 0.25 * ((1. + 2 * s) * (t + 1) * t - 2 * s * (1 - t * t));
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE !=
+                1) {
               value -= 0.5 * s * (t + 1.) * t;
             }
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE !=
+                1) {
               value += 0.25 * (1. - t * t) * (2 * s + 1.);
             }
           }
           break;
         case 3:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1 &&
-              Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
             value = -0.25 * (1. + t);
           } else {
             value = 0.25 * ((2 * s - 1) * (t + 1) * t - 2 * s * (1 - t * t));
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE !=
+                1) {
               value -= 0.5 * s * (t + 1.) * t;
             }
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE !=
+                1) {
               value += 0.25 * (1. - t * t) * (2 * s - 1.);
             }
           }
           break;
           /* can only get to these cases on external boundaries */
         case 4:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = -s * (t - 1.) * t;
           break;
         case 5:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - t * t) * (2 * s + 1.);
           break;
         case 6:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = -s * (t + 1.) * t;
           break;
         case 7:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - t * t) * (2 * s - 1.);
           break;
@@ -4056,79 +4083,87 @@ double newshape(const double xi[],       /* local coordinates    */
       case DPSI_T:       /* partial of shape fn w.r.t. t */
         switch (Inode) { /* select specific shape function */
         case 0:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
-              Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
             value = -0.25 * (1. - s);
           } else {
             value = 0.25 * ((1. - s) * s * (1. - 2 * t) - (1 - s * s) * 2 * t);
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE !=
+                1) {
               value += 0.25 * (1. - s * s) * (2 * t - 1.);
             }
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE !=
+                1) {
               value -= 0.5 * t * (s - 1.) * s;
             }
           }
           break;
         case 1:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
-              Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
             value = -0.25 * (1. + s);
           } else {
             value = 0.25 * ((1. + s) * s * (2 * t - 1) - (1 - s * s) * 2 * t);
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE !=
+                1) {
               value += 0.25 * (1. - s * s) * (2 * t - 1.);
             }
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE !=
+                1) {
               value -= 0.5 * t * (s + 1.) * s;
             }
           }
           break;
         case 2:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1 &&
-              Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
             value = 0.25 * (1. + s);
           } else {
             value = 0.25 * ((1. + s) * s * (2 * t + 1) - (1 - s * s) * 2 * t);
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE !=
+                1) {
               value += 0.25 * (1. - s * s) * (2 * t + 1.);
             }
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE !=
+                1) {
               value -= 0.5 * t * (s + 1.) * s;
             }
           }
           break;
         case 3:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1 &&
-              Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1 &&
+              Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
             value = 0.25 * (1. - s);
           } else {
             value = 0.25 * ((s - 1) * s * (2 * t + 1) - (1 - s * s) * 2 * t);
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE !=
+                1) {
               value += 0.25 * (1. - s * s) * (2 * t + 1.);
             }
-            if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1) {
+            if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE !=
+                1) {
               value -= 0.5 * t * (s - 1.) * s;
             }
           }
           break;
           /* can only get to these cases on external boundaries */
         case 4:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 4]]->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - s * s) * (2 * t - 1.);
           break;
         case 5:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 5]]->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = -t * (s + 1.) * s;
           break;
         case 6:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 6]]->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = 0.5 * (1. - s * s) * (2 * t + 1.);
           break;
         case 7:
-          if (Nodes[Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1)
+          if (Nodes[goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 7]]->EDGE != 1)
             GOMA_EH(GOMA_ERROR, "Subparametric node not on edge ");
           value = -t * (s - 1.) * s;
           break;
@@ -4971,32 +5006,40 @@ void vector_shape_function(Dpi *dpi,
       case PSI:
         switch (ledof) {
         case 0: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * (1 - t) / 4.;
           phi_e[1] = sign * 0;
           phi_e[2] = 0;
         } break;
         case 1: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0;
           phi_e[1] = sign * (1 + s) / 4.;
           phi_e[2] = 0;
         } break;
         case 2: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * -(1 + t) / 4.;
           phi_e[1] = sign * 0;
           phi_e[2] = 0;
         } break;
         case 3: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0;
           phi_e[1] = sign * -(1 - s) / 4.;
@@ -5010,32 +5053,40 @@ void vector_shape_function(Dpi *dpi,
       case CURL_PSI:
         switch (ledof) {
         case 0: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0.;
           curl_e[1] = 0;
           curl_e[2] = sign * 0.25;
         } break;
         case 1: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0.;
           curl_e[1] = 0;
           curl_e[2] = sign * 0.25;
         } break;
         case 2: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0.;
           curl_e[1] = 0;
           curl_e[2] = sign * 0.25;
         } break;
         case 3: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0.;
           curl_e[1] = 0;
@@ -5061,24 +5112,30 @@ void vector_shape_function(Dpi *dpi,
       case PSI:
         switch (ledof) {
         case 0: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * (-t);
           phi_e[1] = sign * s;
           phi_e[2] = 0;
         } break;
         case 1: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * t;
           phi_e[1] = sign * (1 - s);
           phi_e[2] = 0;
         } break;
         case 2: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * (1 - t);
           phi_e[1] = sign * (s);
@@ -5092,24 +5149,30 @@ void vector_shape_function(Dpi *dpi,
       case CURL_PSI:
         switch (ledof) {
         case 0: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0.;
           curl_e[1] = 0;
           curl_e[2] = sign * 2.0;
         } break;
         case 1: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0.;
           curl_e[1] = 0;
           curl_e[2] = sign * 2.0;
         } break;
         case 2: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0.;
           curl_e[1] = 0;
@@ -5135,48 +5198,60 @@ void vector_shape_function(Dpi *dpi,
       case PSI:
         switch (ledof) {
         case 0: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * (1 - t - u);
           phi_e[1] = sign * s;
           phi_e[2] = sign * s;
         } break;
         case 1: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * (-t);
           phi_e[1] = sign * s;
           phi_e[2] = 0;
         } break;
         case 2: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * t;
           phi_e[1] = sign * (1 - s - u);
           phi_e[2] = sign * t;
         } break;
         case 3: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * u;
           phi_e[1] = sign * u;
           phi_e[2] = sign * (1 - s - t);
         } break;
         case 4: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * (-u);
           phi_e[1] = 0;
           phi_e[2] = sign * (s);
         } break;
         case 5: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = 0;
           phi_e[1] = sign * (-u);
@@ -5190,48 +5265,60 @@ void vector_shape_function(Dpi *dpi,
       case CURL_PSI:
         switch (ledof) {
         case 0: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0.;
           curl_e[1] = sign * -2.;
           curl_e[2] = sign * 2.;
         } break;
         case 1: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0;
           curl_e[1] = 0;
           curl_e[2] = sign * 2.;
         } break;
         case 2: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 2.;
           curl_e[1] = 0;
           curl_e[2] = sign * -2.;
         } break;
         case 3: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * -2.;
           curl_e[1] = sign * 2.;
           curl_e[2] = 0;
         } break;
         case 4: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0.;
           curl_e[1] = sign * -2.;
           curl_e[2] = 0.;
         } break;
         case 5: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 2.;
           curl_e[1] = 0;
@@ -5257,96 +5344,120 @@ void vector_shape_function(Dpi *dpi,
       case PSI:
         switch (ledof) {
         case 0: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0.25 * (1 - t) * (1 - u);
           phi_e[1] = sign * 0;
           phi_e[2] = sign * 0;
         } break;
         case 1: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0;
           phi_e[1] = sign * 0.25 * (1 + s) * (1 - u);
           phi_e[2] = sign * 0;
         } break;
         case 2: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0.25 * -(1 + t) * (1 - u);
           phi_e[1] = sign * 0;
           phi_e[2] = sign * 0;
         } break;
         case 3: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0;
           phi_e[1] = sign * 0.25 * -(1 - s) * (1 - u);
           phi_e[2] = sign * 0;
         } break;
         case 4: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 4]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 4]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0;
           phi_e[1] = sign * 0;
           phi_e[2] = sign * 0.25 * (1 - t) * (1 - s);
         } break;
         case 5: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 5]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 5]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0;
           phi_e[1] = sign * 0;
           phi_e[2] = sign * 0.25 * (1 - t) * (1 + s);
         } break;
         case 6: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 6]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0;
           phi_e[1] = sign * 0;
           phi_e[2] = sign * 0.25 * (1 + t) * (1 + s);
         } break;
         case 7: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 7]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 7]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0;
           phi_e[1] = sign * 0;
           phi_e[2] = sign * 0.25 * (1 + t) * (1 - s);
         } break;
         case 8: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 4]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 5]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 4]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 5]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0.25 * (1 - t) * (1 + u);
           phi_e[1] = sign * 0;
           phi_e[2] = sign * 0;
         } break;
         case 9: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 5]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 5]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 6]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0;
           phi_e[1] = sign * 0.25 * (1 + s) * (1 + u);
           phi_e[2] = sign * 0;
         } break;
         case 10: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 7]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 6]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 7]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0.25 * -(1 + t) * (1 + u);
           phi_e[1] = sign * 0;
           phi_e[2] = sign * 0;
         } break;
         case 11: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 7]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 4]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 7]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 4]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0;
           phi_e[1] = sign * 0.25 * -(1 - s) * (1 + u);
@@ -5360,96 +5471,120 @@ void vector_shape_function(Dpi *dpi,
       case CURL_PSI:
         switch (ledof) {
         case 0: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0;
           curl_e[1] = sign * 0.25 * (t - 1);
           curl_e[2] = sign * 0.25 * (1 - u);
         } break;
         case 1: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (1 + s);
           curl_e[1] = 0;
           curl_e[2] = sign * 0.25 * (1 - u);
         } break;
         case 2: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0;
           curl_e[1] = sign * 0.25 * (1 + t);
           curl_e[2] = sign * 0.25 * (1 - u);
         } break;
         case 3: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (s - 1);
           curl_e[1] = 0;
           curl_e[2] = sign * 0.25 * (1 - u);
         } break;
         case 4: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 4]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 0]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 4]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (s - 1);
           curl_e[1] = sign * 0.25 * (1 - t);
           curl_e[2] = 0.;
         } break;
         case 5: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 5]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 1]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 5]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (-1 - s);
           curl_e[1] = sign * 0.25 * (t - 1);
           curl_e[2] = 0.;
         } break;
         case 6: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 2]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 6]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (1 + s);
           curl_e[1] = sign * 0.25 * (-1 - t);
           curl_e[2] = 0.;
         } break;
         case 7: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 7]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 3]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 7]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (1 - s);
           curl_e[1] = sign * 0.25 * (1 + t);
           curl_e[2] = 0.;
         } break;
         case 8: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 4]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 5]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 4]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 5]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0.;
           curl_e[1] = sign * 0.25 * (1 - t);
           curl_e[2] = sign * 0.25 * (1 + u);
         } break;
         case 9: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 5]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 5]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 6]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (-1 - s);
           curl_e[1] = 0.;
           curl_e[2] = sign * 0.25 * (1 + u);
         } break;
         case 10: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 7]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 6]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 7]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = 0.;
           curl_e[1] = sign * 0.25 * (-1 - t);
           curl_e[2] = sign * 0.25 * (1 + u);
         } break;
         case 11: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 7]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 4]];
+          int gnn_1 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 7]];
+          int gnn_2 =
+              dpi->node_index_global[goma_ctx->mesh.proc_elem_connect[ei->iconnect_ptr + 4]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (1 - s);
           curl_e[1] = 0.;
@@ -5501,7 +5636,7 @@ goma_error zero_strong_resid_side(struct Local_Element_Contributions *lec,
       /* Find the local element node number for the current node */
       int id = (int)elem_side_bc->local_elem_node_id[i];
 
-      int I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + id];
+      int I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + id];
       if (goma_automatic_rotations.automatic_rotations && (bc->desc->rotate != NO_ROT)) {
         dbl xi[DIM];
         int ielem_type = ei[pg->imtrx]->ielem_type;

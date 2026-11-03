@@ -330,7 +330,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
 
           /* New way: jump down to fluid */
           fluid_mesh_elem_id = jump_down_to_fluid(exo, bc_input_id, x, xi_2);
-          iconn_ptr = Proc_Connect_Ptr[fluid_mesh_elem_id];
+          iconn_ptr = goma_ctx->mesh.proc_connect_ptr[fluid_mesh_elem_id];
 
           /* Save the fluid domain variables */
           for (aa = 0; aa < ielem_dim; aa++) {
@@ -380,7 +380,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
 
           /* New way: jump down to fluid */
           fluid_mesh_elem_id = jump_down_to_fluid(exo, bc_input_id, x, xi_2);
-          iconn_ptr = Proc_Connect_Ptr[fluid_mesh_elem_id];
+          iconn_ptr = goma_ctx->mesh.proc_connect_ptr[fluid_mesh_elem_id];
 
           /* Save the fluid domain variables */
           for (aa = 0; aa < ielem_dim; aa++) {
@@ -438,7 +438,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
 
           /* New way: jump_down_to_fluid */
           fluid_mesh_elem_id = jump_down_to_fluid(exo, bc_input_id, x, xi_2);
-          iconn_ptr = Proc_Connect_Ptr[fluid_mesh_elem_id];
+          iconn_ptr = goma_ctx->mesh.proc_connect_ptr[fluid_mesh_elem_id];
 
           /* This call just evaluated fv->v for us. Let us store it
              so we don't lose it going back to the base state */
@@ -498,7 +498,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
 
               /* New way: jump_down_to_fluid */
               fluid_mesh_elem_id = jump_down_to_fluid(exo, bc_input_id, x, xi_2);
-              iconn_ptr = Proc_Connect_Ptr[fluid_mesh_elem_id];
+              iconn_ptr = goma_ctx->mesh.proc_connect_ptr[fluid_mesh_elem_id];
               ioffset = first_overlap_ac(fluid_mesh_elem_id, -1);
 
               /* this could be dangerous.
@@ -555,7 +555,7 @@ int apply_contact_bc(double x[],              /* Solution vector for the current
           /* Find the processor node number given the
            * local element node number,  'i'
            */
-          I = Proc_Elem_Connect[iconnect_ptr + id];
+          I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
 
           /*
            * If BC is capillarity, convert the node-based cfunc to func
@@ -2375,7 +2375,7 @@ int lookup_active_dof(int var, int j, int eptr)
 
   /* Get unknown index */
   node = ei[pg->imtrx]->dof_list[var][j];
-  index = Proc_Elem_Connect[eptr + node];
+  index = goma_ctx->mesh.proc_elem_connect[eptr + node];
   /* DRN: XFEM is duped by Index_Solution, use gun_list */
   /*
     nu = Index_Solution(index, var, 0, 0, -1, pg->imtrx);

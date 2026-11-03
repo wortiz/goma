@@ -292,7 +292,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
    *   Store the pointer to the beginning of this element's
    *   connectivity list
    */
-  ei_ptr->iconnect_ptr = Proc_Connect_Ptr[elem];
+  ei_ptr->iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[elem];
   ei_ptr->num_local_nodes = elem_info(NNODES, ei_ptr->ielem_type);
   ei_ptr->num_sides = shape2sides(ei_ptr->ielem_shape);
 
@@ -381,7 +381,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
       iLv_start = iLvdesc;
       iLv_found = 0;
       for (ln = 0; ln < nnodes; ln++) {
-        gnn = Proc_Elem_Connect[ei_ptr->iconnect_ptr + ln];
+        gnn = goma_ctx->mesh.proc_elem_connect[ei_ptr->iconnect_ptr + ln];
         ni = Nodes[gnn];
         nv = ni->Nodal_Vars_Info[imtrx];
         for (i_vd = 0; i_vd < nv->Num_Var_Desc_Per_Type[v]; i_vd++) {
@@ -477,7 +477,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
          * Fill in the local offset array
          */
         for (ln = 0; ln < nnodes; ln++) {
-          gnn = Proc_Elem_Connect[ei_ptr->iconnect_ptr + ln];
+          gnn = goma_ctx->mesh.proc_elem_connect[ei_ptr->iconnect_ptr + ln];
           ni = Nodes[gnn];
           nv = ni->Nodal_Vars_Info[imtrx];
           ei_ptr->Lvdesc_Lnn_to_Offset[i][ln] =
@@ -515,7 +515,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
         /*
          * For this local node "ln" what is the global node number, "gnn"?
          */
-        gnn = Proc_Elem_Connect[ei_ptr->iconnect_ptr + ln];
+        gnn = goma_ctx->mesh.proc_elem_connect[ei_ptr->iconnect_ptr + ln];
 
         /*
          * store pointers to the Node Info structure and the Node_Vars
@@ -909,7 +909,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
          *   Store the pointer to the beginning of this element's
          *   connectivity list
          */
-        iconnect_ptr_Parent = Proc_Connect_Ptr[elem_Parent];
+        iconnect_ptr_Parent = goma_ctx->mesh.proc_connect_ptr[elem_Parent];
         num_local_nodes_Parent = elem_info(NNODES, n_ielem_type_Parent);
         // ei_ptr->num_sides	      = shape2sides(ei_ptr->ielem_shape);
 
@@ -920,7 +920,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
               /*
                * For this local node "ln" what is the global node number, "gnn"?
                */
-              gnn_Parent = Proc_Elem_Connect[iconnect_ptr_Parent + ln];
+              gnn_Parent = goma_ctx->mesh.proc_elem_connect[iconnect_ptr_Parent + ln];
 
               ni = Nodes[gnn_Parent];
               nv = ni->Nodal_Vars_Info[imtrx];
@@ -990,7 +990,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
          *   Store the pointer to the beginning of this element's
          *   connectivity list
          */
-        iconnect_ptr_Parent = Proc_Connect_Ptr[elem_Parent];
+        iconnect_ptr_Parent = goma_ctx->mesh.proc_connect_ptr[elem_Parent];
         num_local_nodes_Parent = elem_info(NNODES, n_ielem_type_Parent);
         // ei_ptr->num_sides	      = shape2sides(ei_ptr->ielem_shape);
 
@@ -1001,7 +1001,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
               /*
                * For this local node "ln" what is the global node number, "gnn"?
                */
-              gnn = Proc_Elem_Connect[iconnect_ptr_Parent + ln];
+              gnn = goma_ctx->mesh.proc_elem_connect[iconnect_ptr_Parent + ln];
 
               ni = Nodes[gnn];
               nv = ni->Nodal_Vars_Info[imtrx];
@@ -2014,7 +2014,7 @@ int load_elem_dofptr(const int ielem,
       if (efv->i[k] != I_TABLE) {
         dofs = ei[pg->imtrx]->dof_ext[k];
         for (i = 0; i < dofs; i++) {
-          ie = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+          ie = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
           evp->external_field[k][i] = efv->ext_fld_ndl_val[k] + ie;
         }
       }
@@ -2030,12 +2030,12 @@ int load_elem_dofptr(const int ielem,
     for (k = 0; k < exo->num_dim; k++) {
       dofs = ei[pg->imtrx]->dof[MESH_DISPLACEMENT1 + k];
       for (i = 0; i < dofs; i++) {
-        ie = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+        ie = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
         evp->initial_displacements[k][i] = efv->init_displacement_ndl_val[k] + ie;
       }
       dofs = ei[pg->imtrx]->dof[SOLID_DISPLACEMENT1 + k];
       for (i = 0; i < dofs; i++) {
-        ie = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+        ie = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
         evp->initial_displacements[k + DIM][i] = efv->init_displacement_ndl_val[k + DIM] + ie;
       }
     }

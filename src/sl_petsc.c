@@ -101,7 +101,7 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
 
       int eqn = PRESSURE;
       for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+        int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
         int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
         if (ldof_i >= 0 && ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
                             goma_ctx->num_proc == 1)) {
@@ -115,7 +115,7 @@ static goma_error get_pressure_velocity_is(PetscMatrixData *matrix_data,
       for (int var = eqn; var <= VELOCITY3; var++) {
         if (upd->vp[pg->imtrx][var] >= 0) {
           for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-            int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+            int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
             int ldof_i = ei[upd->matrix_index[var]]->ln_to_dof[var][i];
             if (ldof_i >= 0 && ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
                                 goma_ctx->num_proc == 1)) {
@@ -267,7 +267,7 @@ goma_error count_pressure_nodes(PetscMatrixData *matrix_data,
 
       int eqn = PRESSURE;
       for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+        int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
         int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
         if (ldof_i >= 0 && ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
                             goma_ctx->num_proc == 1)) {
@@ -355,10 +355,10 @@ static goma_error initialize_petsc_pressure_matrix(PetscMatrixData *matrix_data,
 
       int eqn = PRESSURE;
       for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+        int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
         int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
         for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-          int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+          int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
           int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
           if (ldof_i >= 0 && ldof_j >= 0 &&
               ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
@@ -479,10 +479,10 @@ static goma_error set_pcd_matrices(PetscMatrixData *matrix_data,
 
         int eqn = PRESSURE;
         for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+          int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
           int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
           for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-            int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+            int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
             int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
             if (ldof_i >= 0 && ldof_j >= 0 &&
                 ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
@@ -752,10 +752,10 @@ static goma_error set_petsc_pressure_matrix(PetscMatrixData *matrix_data,
         double invmu = (1.0 / mu);
         int eqn = PRESSURE;
         for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+          int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
           int ldof_i = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][i];
           for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-            int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+            int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
             int ldof_j = ei[upd->matrix_index[eqn]]->ln_to_dof[eqn][j];
             if (ldof_i >= 0 && ldof_j >= 0 &&
                 ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
@@ -839,9 +839,9 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
       int eqn = pd->ProjectionVar;
       if (bf[eqn]->interpolation == I_N1) {
         for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+          int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
           for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-            int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+            int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
             if (gnn_i < num_rows) {
               if (gnn_j >= num_rows) {
                 o_nnz[gnn_i] += 1;
@@ -854,10 +854,10 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
 
       } else {
         for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+          int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
           int ldof_i = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][i];
           for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-            int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+            int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
             int ldof_j = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][j];
             if (ldof_i >= 0 && ldof_j >= 0 &&
                 ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
@@ -951,9 +951,9 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
         int eqn = pd->ProjectionVar;
         if (bf[eqn]->interpolation == I_N1) {
           for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-            int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+            int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
             for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-              int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+              int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
               dbl mm_contrib = bf[eqn]->phi[i] * bf[eqn]->phi[j] * fv->wt * bf[eqn]->detJ;
               PetscInt global_row = matrix_data->local_to_global[gnn_i];
               PetscInt global_col = matrix_data->local_to_global[gnn_j];
@@ -964,10 +964,10 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
           }
         } else {
           for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-            int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+            int gnn_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
             int ldof_i = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][i];
             for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-              int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+              int gnn_j = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
               int ldof_j = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][j];
               if (ldof_i >= 0 && ldof_j >= 0 &&
                   ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) ||
@@ -1109,7 +1109,8 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
   }
   free(dblColGIDs);
 
-  int total_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+  int total_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                    goma_ctx->mesh.num_external_nodes;
 
   PetscInt irow_index = 0;
 

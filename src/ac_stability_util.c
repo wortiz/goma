@@ -901,13 +901,13 @@ int anneal_mesh_LSA(double x[], Exo_DB *exo, double **saved_xyz, double **saved_
    */
 
   if (dim > 0) {
-    dcopy1(num_nodes, Coor[0], saved_xyz[0]);
+    dcopy1(num_nodes, goma_ctx->mesh.coor[0], saved_xyz[0]);
   }
   if (dim > 1) {
-    dcopy1(num_nodes, Coor[1], saved_xyz[1]);
+    dcopy1(num_nodes, goma_ctx->mesh.coor[1], saved_xyz[1]);
   }
   if (dim > 2) {
-    dcopy1(num_nodes, Coor[2], saved_xyz[2]);
+    dcopy1(num_nodes, goma_ctx->mesh.coor[2], saved_xyz[2]);
   }
 
   /* Displace the coordinates and save the displacement fields*/

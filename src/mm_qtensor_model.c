@@ -894,10 +894,12 @@ int assemble_vorticity_direction(void) {
       memset(dd, 0, sizeof(double) * DIM * MDE);
       for (j = 0; j < dofs; j++) {
         node = ei[pg->imtrx]->dof_list[R_MESH1][j];
-        index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[pg->imtrx]->ielem] + node];
+        index =
+            goma_ctx->mesh
+                .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[pg->imtrx]->ielem] + node];
         for (a = 0; a < dim; a++) {
           dd[a][j] = *esp->d[a][j];
-          xcoor[a][j] = Coor[a][index];
+          xcoor[a][j] = goma_ctx->mesh.coor[a][index];
         }
       }
       for (b = 0; b < dim; b++) {

@@ -545,22 +545,22 @@ int assemble_surface_charge(double time_value, /* Time */
   if (ei[pg->imtrx]->deforming_mesh) {
     for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
       node = ei[pg->imtrx]->dof_list[R_MESH1][i];
-      index = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
+      index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
       // HKM dx_dxi[i] is exactly the same thing as J[0][i], which is calculated in beer_belly()
       // HKM   thinking that this is all a duplicate of beer_belly functionality
-      dx_dxi[0] += (Coor[0][index] + *esp->d[0][i]) * d_phi_dxi[i];
-      dx_dxi[1] += (Coor[1][index] + *esp->d[1][i]) * d_phi_dxi[i];
-      xs[0] += (Coor[0][index] + *esp->d[0][i]) * bf[eqn]->phi[i];
-      xs[1] += (Coor[1][index] + *esp->d[1][i]) * bf[eqn]->phi[i];
+      dx_dxi[0] += (goma_ctx->mesh.coor[0][index] + *esp->d[0][i]) * d_phi_dxi[i];
+      dx_dxi[1] += (goma_ctx->mesh.coor[1][index] + *esp->d[1][i]) * d_phi_dxi[i];
+      xs[0] += (goma_ctx->mesh.coor[0][index] + *esp->d[0][i]) * bf[eqn]->phi[i];
+      xs[1] += (goma_ctx->mesh.coor[1][index] + *esp->d[1][i]) * bf[eqn]->phi[i];
     }
   } else {
     for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
       node = ei[pg->imtrx]->dof_list[eqn][i];
-      index = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
-      dx_dxi[0] += Coor[0][index] * d_phi_dxi[i];
-      dx_dxi[1] += Coor[1][index] * d_phi_dxi[i];
-      xs[0] += Coor[0][index] * bf[eqn]->phi[i];
-      xs[1] += Coor[1][index] * bf[eqn]->phi[i];
+      index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
+      dx_dxi[0] += goma_ctx->mesh.coor[0][index] * d_phi_dxi[i];
+      dx_dxi[1] += goma_ctx->mesh.coor[1][index] * d_phi_dxi[i];
+      xs[0] += goma_ctx->mesh.coor[0][index] * bf[eqn]->phi[i];
+      xs[1] += goma_ctx->mesh.coor[1][index] * bf[eqn]->phi[i];
     }
   }
 
@@ -905,10 +905,10 @@ int assemble_shell_structure(double time_value, /* Time */
   d_sh_x_dxi = d_sh_y_dxi = 0.;
   for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
     node = ei[pg->imtrx]->dof_list[R_MESH1][i];
-    index = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
+    index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
 
-    d_sh_x_dxi += (Coor[0][index] + *esp->d[0][i]) * d_phi_dxi[i];
-    d_sh_y_dxi += (Coor[1][index] + *esp->d[1][i]) * d_phi_dxi[i];
+    d_sh_x_dxi += (goma_ctx->mesh.coor[0][index] + *esp->d[0][i]) * d_phi_dxi[i];
+    d_sh_y_dxi += (goma_ctx->mesh.coor[1][index] + *esp->d[1][i]) * d_phi_dxi[i];
   }
 
   det_J_sh = sqrt(d_sh_x_dxi * d_sh_x_dxi + d_sh_y_dxi * d_sh_y_dxi);
@@ -1698,10 +1698,10 @@ int assemble_shell_coordinates(double time_value, /* Time */
   d_sh_x_dxi = d_sh_y_dxi = 0.;
   for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
     node = ei[pg->imtrx]->dof_list[R_MESH1][i];
-    index = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
+    index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
 
-    d_sh_x_dxi += (Coor[0][index] + *esp->d[0][i]) * d_phi_dxi[i];
-    d_sh_y_dxi += (Coor[1][index] + *esp->d[1][i]) * d_phi_dxi[i];
+    d_sh_x_dxi += (goma_ctx->mesh.coor[0][index] + *esp->d[0][i]) * d_phi_dxi[i];
+    d_sh_y_dxi += (goma_ctx->mesh.coor[1][index] + *esp->d[1][i]) * d_phi_dxi[i];
   }
 
   det_J_sh = sqrt(d_sh_x_dxi * d_sh_x_dxi + d_sh_y_dxi * d_sh_y_dxi);
@@ -1952,10 +1952,10 @@ int assemble_shell_web_coordinates(double time_value, /* Time */
   d_sh_x_dxi = d_sh_y_dxi = 0.;
   for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
     node = ei[pg->imtrx]->dof_list[R_MESH1][i];
-    index = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
+    index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
 
-    d_sh_x_dxi += (Coor[0][index] + *esp->d[0][i]) * d_phi_dxi[i];
-    d_sh_y_dxi += (Coor[1][index] + *esp->d[1][i]) * d_phi_dxi[i];
+    d_sh_x_dxi += (goma_ctx->mesh.coor[0][index] + *esp->d[0][i]) * d_phi_dxi[i];
+    d_sh_y_dxi += (goma_ctx->mesh.coor[1][index] + *esp->d[1][i]) * d_phi_dxi[i];
   }
 
   det_J_sh = sqrt(d_sh_x_dxi * d_sh_x_dxi + d_sh_y_dxi * d_sh_y_dxi);
@@ -3396,7 +3396,7 @@ void apply_surface_viscosity(double cfunc[MDE][DIM],
     // Find the local node number of the node on the correct side
     id = (int)elem_side_bc->local_elem_node_id[i];
     // Find the global node number of the node
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
     // Find the local degree of freedom of the first velocity unknown on that node
     ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
     if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
@@ -3419,7 +3419,7 @@ void apply_surface_viscosity(double cfunc[MDE][DIM],
     // Find the local node number of the node on the correct side
     id = (int)elem_side_bc->local_elem_node_id[i];
     // Find the global node number of the node
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
     // Find the local degree of freedom of the first velocity unknown on that node
     ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
     if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
@@ -3436,7 +3436,7 @@ void apply_surface_viscosity(double cfunc[MDE][DIM],
     // Find the local node number of the node on the correct side
     id = (int)elem_side_bc->local_elem_node_id[i];
     // Find the global node number of the node
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
     // Find the local degree of freedom of the first velocity unknown on that node
     ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
     if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
@@ -3454,7 +3454,7 @@ void apply_surface_viscosity(double cfunc[MDE][DIM],
     // Find the local node number of the node on the correct side
     id = (int)elem_side_bc->local_elem_node_id[i];
     // Find the global node number of the node
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
     // Find the local degree of freedom of the first velocity unknown on that node
     ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
     if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
@@ -3477,7 +3477,7 @@ void apply_surface_viscosity(double cfunc[MDE][DIM],
     // Find the local node number of the node on the correct side
     id = (int)elem_side_bc->local_elem_node_id[i];
     // Find the global node number of the node
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
     // Find the local degree of freedom of the first velocity unknown on that node
     ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
     if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
@@ -3495,7 +3495,7 @@ void apply_surface_viscosity(double cfunc[MDE][DIM],
     eqn = VELOCITY1;
     for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
       id = (int)elem_side_bc->local_elem_node_id[i];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
       if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
 
@@ -3579,7 +3579,7 @@ void apply_surface_viscosity(double cfunc[MDE][DIM],
 
     for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
       id = (int)elem_side_bc->local_elem_node_id[i];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
       if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
 
@@ -3650,7 +3650,7 @@ void apply_surface_viscosity(double cfunc[MDE][DIM],
     /* (surf_dilat_visc + surf_shear_visc) * 2 * fv->curv * fv->snormal[a] * fv->div_s_v; */
     for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
       id = (int)elem_side_bc->local_elem_node_id[i];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
       if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
 
@@ -3705,7 +3705,7 @@ void apply_surface_viscosity(double cfunc[MDE][DIM],
       // Find the local node number of the node on the correct side
       id = (int)elem_side_bc->local_elem_node_id[i];
       // Find the global node number of the node
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       // Find the local degree of freedom of the first velocity unknown on that node
       ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
       for (b = 0; b < pd->Num_Dim; b++) {
@@ -9638,18 +9638,18 @@ int assemble_film_1D(double time,    /* present time value */
   if (pd->e[pg->imtrx][R_MESH1]) {
     for (i = 0; i < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; i++) {
       node = ei[pg->imtrx]->dof_list[R_MESH1][i];
-      index = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
+      index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
 
-      dx_dxi[0] += (Coor[0][index] + *esp->d[0][i]) * dphi_dxi[i];
-      dx_dxi[1] += (Coor[1][index] + *esp->d[1][i]) * dphi_dxi[i];
+      dx_dxi[0] += (goma_ctx->mesh.coor[0][index] + *esp->d[0][i]) * dphi_dxi[i];
+      dx_dxi[1] += (goma_ctx->mesh.coor[1][index] + *esp->d[1][i]) * dphi_dxi[i];
     }
   } else {
     for (i = 0; i < ei[pg->imtrx]->dof[SHELL_FILMP]; i++) {
       node = ei[pg->imtrx]->dof_list[R_SHELL_FILMP][i];
-      index = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
+      index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
 
-      dx_dxi[0] += Coor[0][index] * dphi_dxi[i];
-      dx_dxi[1] += Coor[1][index] * dphi_dxi[i];
+      dx_dxi[0] += goma_ctx->mesh.coor[0][index] * dphi_dxi[i];
+      dx_dxi[1] += goma_ctx->mesh.coor[1][index] * dphi_dxi[i];
     }
   }
 

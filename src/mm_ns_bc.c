@@ -203,8 +203,8 @@ void apply_SES(double func[MAX_PDIM],
 
   ldof = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 
-  XN = Coor[0][inode] + *esp->d[0][ldof];
-  YN = Coor[1][inode] + *esp->d[1][ldof];
+  XN = goma_ctx->mesh.coor[0][inode] + *esp->d[0][ldof];
+  YN = goma_ctx->mesh.coor[1][inode] + *esp->d[1][ldof];
 
   memset(dY_dX_dmesh, 0, sizeof(double) * MDE * DIM);
 
@@ -243,12 +243,12 @@ void apply_SES(double func[MAX_PDIM],
 
   for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
     local_id = (int)elem_side_bc->local_elem_node_id[i];
-    I = Proc_Elem_Connect[iconnect_ptr + local_id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + local_id];
     ldof = ei[pg->imtrx]->ln_to_first_dof[eqn][local_id];
 
     if (ldof >= 0) {
-      dX_dxi += (Coor[0][I] + *esp->d[0][ldof]) * bf[eqn]->dphidxi[ldof][i_basis];
-      dY_dxi += (Coor[1][I] + *esp->d[1][ldof]) * bf[eqn]->dphidxi[ldof][i_basis];
+      dX_dxi += (goma_ctx->mesh.coor[0][I] + *esp->d[0][ldof]) * bf[eqn]->dphidxi[ldof][i_basis];
+      dY_dxi += (goma_ctx->mesh.coor[1][I] + *esp->d[1][ldof]) * bf[eqn]->dphidxi[ldof][i_basis];
     }
   }
 
@@ -2044,7 +2044,7 @@ void fvelo_tangential_bc(double func[],
        * this save us Jacobian entries in uncharted sections of the
        * A matrix
        */
-      xdcl[icount] = (Coor[icount][dcl_node]);
+      xdcl[icount] = (goma_ctx->mesh.coor[icount][dcl_node]);
     }
     dist = 0.;
     /* calculate distance from dcl to current Gauss point */
@@ -2216,17 +2216,17 @@ void fvelo_tangential_bc(double func[],
         for (i = 0; i < n_dof[SHELL_BDYVELO]; i++) {
           kdir = dof_map[i];
           node = ei[pg->imtrx]->dof_list[R_MESH1][kdir];
-          index = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
-          dx_dxi[0] += (Coor[0][index] + *esp->d[0][kdir]) * d_phi_dxi[i];
-          dx_dxi[1] += (Coor[1][index] + *esp->d[1][kdir]) * d_phi_dxi[i];
+          index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
+          dx_dxi[0] += (goma_ctx->mesh.coor[0][index] + *esp->d[0][kdir]) * d_phi_dxi[i];
+          dx_dxi[1] += (goma_ctx->mesh.coor[1][index] + *esp->d[1][kdir]) * d_phi_dxi[i];
         }
       } else {
         for (i = 0; i < n_dof[SHELL_BDYVELO]; i++) {
           kdir = dof_map[i];
           node = ei[pg->imtrx]->dof_list[R_MESH1][kdir];
-          index = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
-          dx_dxi[0] += Coor[0][index] * d_phi_dxi[i];
-          dx_dxi[1] += Coor[1][index] * d_phi_dxi[i];
+          index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
+          dx_dxi[0] += goma_ctx->mesh.coor[0][index] * d_phi_dxi[i];
+          dx_dxi[1] += goma_ctx->mesh.coor[1][index] * d_phi_dxi[i];
         }
       }
       sign = (dx_dxi[0] * fv->stangent[0][0] + dx_dxi[1] * fv->stangent[0][1]) > 0 ? 1 : -1;
@@ -2516,7 +2516,7 @@ void fvelo_tangential_solid_bc(double func[],
 
     for (icount = 0; icount < pd->Num_Dim; icount++) {
       disp = x[Index_Solution(dcl_node, MESH_DISPLACEMENT1 + icount, 0, 0, -1, pg->imtrx)];
-      xdcl[icount] = (Coor[icount][dcl_node] + disp);
+      xdcl[icount] = (goma_ctx->mesh.coor[icount][dcl_node] + disp);
     }
 
     dist = 0.;
@@ -2524,7 +2524,8 @@ void fvelo_tangential_solid_bc(double func[],
       /*UNDEFORMED* dist +=
        * (xsurf[icount]-Coor[icount][dcl_node])*(xsurf[icount]-Coor[icount][dcl_node]); */
       /*DEFORMED* dist += (fv->x[icount]-xdcl[icount])*(fv->x[icount]-xdcl[icount]); */
-      dist += (xsurf[icount] - Coor[icount][dcl_node]) * (xsurf[icount] - Coor[icount][dcl_node]);
+      dist += (xsurf[icount] - goma_ctx->mesh.coor[icount][dcl_node]) *
+              (xsurf[icount] - goma_ctx->mesh.coor[icount][dcl_node]);
     }
     dist = sqrt(dist);
   }
@@ -3731,7 +3732,7 @@ int exchange_fvelo_slip_bc_info(int ibc /* Index into BC_Types for VELO_SLIP_BC 
     int node = abs(BC_Types[ibc].BC_Data_Int[0]);
     /* find coordinate position of reference node */
     for (i = 0; i < pd->Num_Dim; i++) {
-      node_coord[i] = Coor[i][node];
+      node_coord[i] = goma_ctx->mesh.coor[i][node];
     }
   }
 
@@ -4237,7 +4238,7 @@ check_for_contact( Exo_DB *e,
 
   while ( e->ss_id[k] != ssid ) k++;
 
-  for( i=0; i< Proc_SS_Node_Count[k]; i++)
+  for( i=0; i< goma_ctx->mesh.proc_ss_node_count[k]; i++)
     {
       I = e->ss_node_list[k][i];
       ie = Index_Solution(I,R_FILL, 0, 0, -2, pg->imtrx);
@@ -4247,7 +4248,7 @@ check_for_contact( Exo_DB *e,
 
 	  for( p=0; p<pd->Num_Dim; p++)
 	    {
-	      distance +=  pow( xl[p] - Coor[p][I], 2.0);
+	      distance +=  pow( xl[p] - goma_ctx->mesh.coor[p][I], 2.0);
 	    }
 
 	  if ( pow(distance, 0.5) <= 2.0*ls->Length_Scale )
@@ -4482,7 +4483,7 @@ void elec_surf_stress(double cfunc[MDE][DIM],
   if (af->Assemble_Residual) {
     for (inode = 0; inode < (int)elem_side_bc->num_nodes_on_side; inode++) {
       id = (int)elem_side_bc->local_elem_node_id[inode];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 
       /* Dolphin[node][variable] = dof */
@@ -4515,7 +4516,7 @@ void elec_surf_stress(double cfunc[MDE][DIM],
 
   for (inode = 0; inode < elem_side_bc->num_nodes_on_side; inode++) {
     id = elem_side_bc->local_elem_node_id[inode];
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
     ldof = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 
     /* if(ldof >= 0) */
@@ -4659,14 +4660,14 @@ void sheet_tension(double cfunc[MDE][DIM],
 
   for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
     id = (int)elem_side_bc->local_elem_node_id[i];
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
     ldof = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 
     /* Grab nodal sh_tens values if needed */
 
     if (ldof >= 0) {
-      dX_dxi += (Coor[0][I] + *esp->d[0][ldof]) * bf[eqn]->dphidxi[ldof][i_basis];
-      dY_dxi += (Coor[1][I] + *esp->d[1][ldof]) * bf[eqn]->dphidxi[ldof][i_basis];
+      dX_dxi += (goma_ctx->mesh.coor[0][I] + *esp->d[0][ldof]) * bf[eqn]->dphidxi[ldof][i_basis];
+      dY_dxi += (goma_ctx->mesh.coor[1][I] + *esp->d[1][ldof]) * bf[eqn]->dphidxi[ldof][i_basis];
     }
   }
 
@@ -4676,7 +4677,7 @@ void sheet_tension(double cfunc[MDE][DIM],
       id = (int)elem_side_bc->local_elem_node_id[i];
       ldof = ei[pg->imtrx]->ln_to_first_dof[R_SHELL_TENSION][id];
       ldofm = ei[pg->imtrx]->ln_to_first_dof[R_MESH1][id];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       phi_shell[i] = bf[R_MESH1]->phi[ldofm];
       dphidxi_shell[i] = bf[R_MESH1]->dphidxi[ldofm][i_basis];
 
@@ -4851,7 +4852,7 @@ void sheet_tension(double cfunc[MDE][DIM],
 
           for (k = 0; k < (int)elem_side_bc->num_nodes_on_side; k++) {
             id = (int)elem_side_bc->local_elem_node_id[k];
-            I = Proc_Elem_Connect[iconnect_ptr + id];
+            I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
             j = ei[pg->imtrx]->ln_to_first_dof[R_SHELL_TENSION][id];
 
             /*  d_cfunc[ldof][0][var][j] = -bf[var]->phi[j] * dY_dS* sign *
@@ -4986,7 +4987,7 @@ void fn_dot_T(double cfunc[MDE][DIM],
   if (af->Assemble_Jacobian) {
     for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
       id = (int)elem_side_bc->local_elem_node_id[i];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 
       /* Calculate the residual contribution from surface gradient of basis function */
@@ -5089,7 +5090,7 @@ void fn_dot_T(double cfunc[MDE][DIM],
   if (pd->v[pg->imtrx][eqn]) {
     for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
       id = (int)elem_side_bc->local_elem_node_id[i];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 
       /* Calculate the residual contribution from surface gradient of basis function */
@@ -5184,7 +5185,7 @@ void apply_repulsion(double cfunc[MDE][DIM],
   if (af->Assemble_Jacobian) {
     for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
       id = (int)elem_side_bc->local_elem_node_id[i];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
       if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
 
@@ -5214,7 +5215,7 @@ void apply_repulsion(double cfunc[MDE][DIM],
   eqn = VELOCITY1;
   for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
     id = (int)elem_side_bc->local_elem_node_id[i];
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
     ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
     if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
 
@@ -5338,13 +5339,13 @@ void apply_repulsion_roll(double cfunc[MDE][DIM],
   /* DCL exclusion zone  */
   if (dcl_node != -1) {
     nsp = match_nsid(dcl_node);
-    k = Proc_NS_List[Proc_NS_Pointers[nsp]];
-    for (j = 0; j < Proc_NS_Count[nsp]; j++) {
-      k = Proc_NS_List[Proc_NS_Pointers[nsp] + j];
+    k = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp]];
+    for (j = 0; j < goma_ctx->mesh.proc_ns_count[nsp]; j++) {
+      k = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp] + j];
       i = Index_Solution(k, MESH_DISPLACEMENT1, 0, 0, -1, pg->imtrx);
       GOMA_EH(i, "Could not resolve index_solution.");
       for (a = 0; a < dim; a++) {
-        point[a] = Coor[a][k] + x[i + a];
+        point[a] = goma_ctx->mesh.coor[a][k] + x[i + a];
       }
     }
     dcl_dist = sqrt(SQUARE(coord[0] - point[0]) + SQUARE(coord[1] - point[1]) +
@@ -5416,7 +5417,7 @@ void apply_repulsion_roll(double cfunc[MDE][DIM],
   if (af->Assemble_Jacobian) {
     for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
       id = (int)elem_side_bc->local_elem_node_id[i];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
       if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
 
@@ -5479,7 +5480,7 @@ void apply_repulsion_roll(double cfunc[MDE][DIM],
   eqn = VELOCITY1;
   for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
     id = (int)elem_side_bc->local_elem_node_id[i];
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
     ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
     if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
 
@@ -5599,7 +5600,7 @@ void apply_repulsion_user(double cfunc[MDE][DIM],
   if (af->Assemble_Jacobian) {
     for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
       id = (int)elem_side_bc->local_elem_node_id[i];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
       if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
 
@@ -5658,7 +5659,7 @@ void apply_repulsion_user(double cfunc[MDE][DIM],
   eqn = VELOCITY1;
   for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
     id = (int)elem_side_bc->local_elem_node_id[i];
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
     ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
     if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
 
@@ -5761,13 +5762,13 @@ void apply_repulsion_table(double cfunc[MDE][DIM],
   d_dist[2] = 0.;
   if (dcl_node != -1) {
     nsp = match_nsid(dcl_node);
-    k = Proc_NS_List[Proc_NS_Pointers[nsp]];
-    for (j = 0; j < Proc_NS_Count[nsp]; j++) {
-      k = Proc_NS_List[Proc_NS_Pointers[nsp] + j];
+    k = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp]];
+    for (j = 0; j < goma_ctx->mesh.proc_ns_count[nsp]; j++) {
+      k = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nsp] + j];
       i = Index_Solution(k, MESH_DISPLACEMENT1, 0, 0, -1, pg->imtrx);
       GOMA_EH(i, "Could not resolve index_solution.");
       for (a = 0; a < dim; a++) {
-        point[a] = Coor[a][k] + x[i + a];
+        point[a] = goma_ctx->mesh.coor[a][k] + x[i + a];
       }
     }
     dcl_dist = sqrt(SQUARE(coord[0] - point[0]) + SQUARE(coord[1] - point[1]) +
@@ -5826,7 +5827,7 @@ void apply_repulsion_table(double cfunc[MDE][DIM],
   if (af->Assemble_Jacobian) {
     for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
       id = (int)elem_side_bc->local_elem_node_id[i];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
       if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
 
@@ -5890,7 +5891,7 @@ void apply_repulsion_table(double cfunc[MDE][DIM],
   eqn = VELOCITY1;
   for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
     id = (int)elem_side_bc->local_elem_node_id[i];
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
     ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
     if (Dolphin[pg->imtrx][I][VELOCITY1] > 0) {
 
@@ -5989,7 +5990,7 @@ void apply_vapor_recoil(double cfunc[MDE][DIM],
   if (af->Assemble_Jacobian) {
     for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
       id = (int)elem_side_bc->local_elem_node_id[i];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 
       /* Calculate the residual contribution from surface gradient of basis function */
@@ -6030,7 +6031,7 @@ void apply_vapor_recoil(double cfunc[MDE][DIM],
   if (pd->v[pg->imtrx][eqn]) {
     for (i = 0; i < (int)elem_side_bc->num_nodes_on_side; i++) {
       id = (int)elem_side_bc->local_elem_node_id[i];
-      I = Proc_Elem_Connect[iconnect_ptr + id];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
       ldof = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 
       /* Calculate the residual contribution */
@@ -10222,7 +10223,7 @@ void fapply_moving_CA(double *func,
    * trick of dotting the free surface velocity into the free surface normal
    * to find out if the contact line is advancing (+) or receding (-) */
   v_rel = 0.;
-  for (p = 0; p < Num_Dim; p++) {
+  for (p = 0; p < goma_ctx->mesh.num_dim; p++) {
     v_rel += (x_dot[p] - vwall[p]) * fsnormal[p];
   }
   ca = (stat_ca + (advancing_ca - stat_ca) * tanh(scaling * v_rel)) * M_PIE / 180.;
@@ -14883,7 +14884,7 @@ double calculate_laser_flux(const double p[],
     /* find the x location of 1001 */
     node_1 = psid2nn(ns_id1);
     GOMA_EH(node_1, "Could not find the nsid needed for keyhole calculation.");
-    initial_pos1 = Coor[0][node_1];
+    initial_pos1 = goma_ctx->mesh.coor[0][node_1];
     idx1 = Index_Solution(node_1, MESH_DISPLACEMENT1, 0, 0, -2, pg->imtrx);
     delta_pos1 = x[idx1];
     actual_pos1 = (initial_pos1 + delta_pos1);

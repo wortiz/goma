@@ -187,11 +187,11 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
     zsum = 0.0;
     for (ilnode = 0; ilnode < exo->eb_num_nodes_per_elem[ipix_blkid]; ilnode++) {
       // ignode = connectivity[ielem][ilnode] - 1;
-      ignode = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
-      xsum += Coor[0][ignode];
-      ysum += Coor[1][ignode];
+      ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+      xsum += goma_ctx->mesh.coor[0][ignode];
+      ysum += goma_ctx->mesh.coor[1][ignode];
       if (pd->Num_Dim == 3)
-        zsum += Coor[2][ignode];
+        zsum += goma_ctx->mesh.coor[2][ignode];
     }
 
     elmctrs[ielem][0] = xsum / (double)exo->eb_num_nodes_per_elem[ipix_blkid];
@@ -274,9 +274,9 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
 
     for (ilnode = 0; ilnode < exo->eb_num_nodes_per_elem[ipix_blkid]; ilnode++) {
       // ignode = connectivity[ielem][ilnode] - 1;
-      ignode = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+      ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
       for (j = 0; j < pd->Num_Dim; j++) {
-        nodecoor[ilnode][j] = Coor[j][ignode];
+        nodecoor[ilnode][j] = goma_ctx->mesh.coor[j][ignode];
       }
     }
 
@@ -330,7 +330,7 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
     ielem_shape = type2shape(ei[pg->imtrx]->ielem_type);
 
     for (ilnode = 0; ilnode < exo->eb_num_nodes_per_elem[ipix_blkid]; ilnode++) {
-      ignode = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+      ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
       i_map[icount] = i;
       j_map[icount] = ignode;
       // Note hardwired to be Q1 now. But this should come from input deck
@@ -371,7 +371,7 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
   for (ielem = e_start; ielem < e_end; ielem++) {
     load_ei(ielem, exo, 0, pg->imtrx);
     for (ilnode = 0; ilnode < exo->eb_num_nodes_per_elem[ipix_blkid]; ilnode++) {
-      ignode = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
+      ignode = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ilnode];
       // printf(" node = %d, val = %f \n", i+1, x_fit[i]);
       nodal_var_vals[ignode] = (float)x_fit[ignode];
     } // End of loop over all of the nodes (i)

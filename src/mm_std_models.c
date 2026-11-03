@@ -2760,7 +2760,7 @@ int V_mesh_sfs_model(dbl *param,      /* User parameters (u_v_mesh_sfs) */
       X[a] = fv->x0[a]; /*we only care about
                           the stress-free st.*/
     } else {
-      X[a] = Coor[a][gnn];
+      X[a] = goma_ctx->mesh.coor[a][gnn];
     }
     X_0[a] = param[1 + a]; /*the first param entry
                              is the rotation rate */
@@ -7447,10 +7447,10 @@ static void cal_current_density(double x[],           /* global nodal solution v
   PHI1e_acc = x[idx_PHI1e_acc];
   PHI1w_ccc = x[idx_PHI1w_ccc];
   PHI1e_ccc = x[idx_PHI1e_ccc];
-  xw_acc = Coor[0][nodew_acc];
-  xe_acc = Coor[0][nodee_acc];
-  xw_ccc = Coor[0][nodew_ccc];
-  xe_ccc = Coor[0][nodee_ccc];
+  xw_acc = goma_ctx->mesh.coor[0][nodew_acc];
+  xe_acc = goma_ctx->mesh.coor[0][nodee_acc];
+  xw_ccc = goma_ctx->mesh.coor[0][nodew_ccc];
+  xe_ccc = goma_ctx->mesh.coor[0][nodee_ccc];
 
   i_acc = -sigma_anode * ((PHI1e_acc - PHI1w_acc) / (xe_acc - xw_acc));
   i_ccc = -sigma_cathode * ((PHI1e_ccc - PHI1w_ccc) / (xe_ccc - xw_ccc));

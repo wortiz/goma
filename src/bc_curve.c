@@ -221,8 +221,8 @@ int apply_integrated_curve_bc(
 
     if ((bc_input_id = (int)elem_edge_bc->BC_input_id[0]) != -1) {
 
-      if ((ss_index = in_list(BC_Types[bc_input_id].BC_ID, 0, Proc_Num_Side_Sets, ss_to_blks[0])) ==
-          -1) {
+      if ((ss_index = in_list(BC_Types[bc_input_id].BC_ID, 0, goma_ctx->mesh.proc_num_side_sets,
+                              ss_to_blks[0])) == -1) {
         GOMA_EH(GOMA_ERROR, "Cannot match side set id with that in ss_to_blks array");
       }
 
@@ -429,7 +429,7 @@ int apply_integrated_curve_bc(
           id = (int)elem_edge_bc->edge_elem_node_id[i];
 
           /* Find the local node number given the local element node number,  'i'     */
-          I = Proc_Elem_Connect[iconnect_ptr + id];
+          I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
 
           /* add function into residual equations here may a vector of functions */
 
@@ -644,7 +644,7 @@ int apply_point_colloc_edge_bc(
      * number,  'id'
      * I is the global node number of this node !!
      */
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
 
     /*
      * Check to see if the current local node number is owned by the

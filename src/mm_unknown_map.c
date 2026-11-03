@@ -241,7 +241,8 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
    * Calculate the total number of nodes on this processor
    */
 
-  total_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+  total_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                goma_ctx->mesh.num_external_nodes;
 
   /*
    *  Allocate memory for the variable mask array of structures and
@@ -362,7 +363,7 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
        * connectivity matrix, index. Index will be used to find the value
        * of the processor node number.
        */
-      index = Proc_Connect_Ptr[e];
+      index = goma_ctx->mesh.proc_connect_ptr[e];
 
       /*
        *  Loop over the local element nodes in the current element
@@ -375,7 +376,7 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
          *  connectivity array, Proc_Elem_Connect[].
          *  (note: i may or may not be owned by this processor)
          */
-        i = Proc_Elem_Connect[index++];
+        i = goma_ctx->mesh.proc_elem_connect[index++];
 
         /*
          * For each kind of variable type in the problem, depending on its
@@ -514,7 +515,8 @@ void print_vars_at_nodes(void)
   /*
    * Calculate the total number of nodes on this processor
    */
-  total_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+  total_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                goma_ctx->mesh.num_external_nodes;
 
   maxLength = -1;
   for (i = 0; i < total_nodes; i++) {
@@ -542,9 +544,9 @@ void print_vars_at_nodes(void)
         printf("    ");
       }
       printf("|");
-      if (i < Num_Internal_Nodes) {
+      if (i < goma_ctx->mesh.num_internal_nodes) {
         printf(" internal ");
-      } else if (i < Num_Internal_Nodes + Num_Border_Nodes) {
+      } else if (i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes) {
         printf(" border   ");
       } else {
         printf(" ext(%3d) ", node_ptr->Proc);
@@ -775,7 +777,8 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
   /*
    * Calculate the total number of nodes on this processor
    */
-  total_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+  total_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                goma_ctx->mesh.num_external_nodes;
 
   /*
    * Again loop through all of the nodes, this time figuring out how many
@@ -852,7 +855,7 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    */
   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
     num_internal_dofs[imtrx] = 0;
-    for (i = 0; i < Num_Internal_Nodes; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_internal_nodes; i++) {
       nv = Nodes[i]->Nodal_Vars_Info[imtrx];
       num_internal_dofs[imtrx] += nv->Num_Unknowns;
     }
@@ -863,7 +866,8 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    */
   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
     num_boundary_dofs[imtrx] = 0;
-    for (i = Num_Internal_Nodes; i < Num_Internal_Nodes + Num_Border_Nodes; i++) {
+    for (i = goma_ctx->mesh.num_internal_nodes;
+         i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes; i++) {
       nv = Nodes[i]->Nodal_Vars_Info[imtrx];
       num_boundary_dofs[imtrx] += nv->Num_Unknowns;
     }
@@ -875,8 +879,10 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
    */
   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
     num_external_dofs[imtrx] = 0;
-    for (i = Num_Internal_Nodes + Num_Border_Nodes;
-         i < Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes; i++) {
+    for (i = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes;
+         i < goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
+                 goma_ctx->mesh.num_external_nodes;
+         i++) {
       nv = Nodes[i]->Nodal_Vars_Info[imtrx];
       num_external_dofs[imtrx] += nv->Num_Unknowns;
     }
@@ -1032,15 +1038,17 @@ void set_unknown_map(Exo_DB *exo, Dpi *dpi)
        * Load up the coordinates of the node into a handy label
        * to help find errant dofs...
        */
-      switch (Num_Dim) {
+      switch (goma_ctx->mesh.num_dim) {
       case 1:
-        sprintf(position_label, "x=%-10.6g", Coor[0][i]);
+        sprintf(position_label, "x=%-10.6g", goma_ctx->mesh.coor[0][i]);
         break;
       case 2:
-        sprintf(position_label, "x=%-10.6g y=%-10.6g", Coor[0][i], Coor[1][i]);
+        sprintf(position_label, "x=%-10.6g y=%-10.6g", goma_ctx->mesh.coor[0][i],
+                goma_ctx->mesh.coor[1][i]);
         break;
       case 3:
-        sprintf(position_label, "x=%-9.6g y=%-9.6g z=%-9.6g", Coor[0][i], Coor[1][i], Coor[2][i]);
+        sprintf(position_label, "x=%-9.6g y=%-9.6g z=%-9.6g", goma_ctx->mesh.coor[0][i],
+                goma_ctx->mesh.coor[1][i], goma_ctx->mesh.coor[2][i]);
         break;
       }
 
@@ -5728,16 +5736,17 @@ void dofname40(const int unknown, char *str)
     len += strlen(str);
     str += strlen(str);
   }
-  switch (Num_Dim) {
+  switch (goma_ctx->mesh.num_dim) {
   case 1:
-    sprintf(position_label, " (x=%.3g)", Coor[0][inode]);
+    sprintf(position_label, " (x=%.3g)", goma_ctx->mesh.coor[0][inode]);
     break;
   case 2:
-    sprintf(position_label, " (x=%.3g y=%.3g)", Coor[0][inode], Coor[1][inode]);
+    sprintf(position_label, " (x=%.3g y=%.3g)", goma_ctx->mesh.coor[0][inode],
+            goma_ctx->mesh.coor[1][inode]);
     break;
   case 3:
-    sprintf(position_label, " (x=%.3g y=%.3g z=%.3g)", Coor[0][inode], Coor[1][inode],
-            Coor[2][inode]);
+    sprintf(position_label, " (x=%.3g y=%.3g z=%.3g)", goma_ctx->mesh.coor[0][inode],
+            goma_ctx->mesh.coor[1][inode], goma_ctx->mesh.coor[2][inode]);
     break;
   }
   if (len < 39) {

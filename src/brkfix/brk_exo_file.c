@@ -4305,12 +4305,12 @@ int brk_exo_file(int num_pieces, char *Brk_File, char *Exo_File) {
     free_exo_ev(mono);
   }
 
-  free(Proc_SS_Node_Count);
+  free(goma_ctx->mesh.proc_ss_node_count);
   free(Proc_SS_Node_Pointers);
   free(mono->eb_elem_itype);
 
-  free(Coor);
-  Coor = NULL;
+  free(goma_ctx->mesh.coor);
+  goma_ctx->mesh.coor = NULL;
   free(Matilda);
   Matilda = NULL;
 

@@ -2271,9 +2271,9 @@ static void create_element_particle_info_maps(void) {
                 fill_hex_side_indices(side_id, indices);
 
               /* I want global node id's, not node numbers here! */
-              elem_ptr_start = Proc_Connect_Ptr[elem_id];
+              elem_ptr_start = goma_ctx->mesh.proc_connect_ptr[elem_id];
               for (node_id = 0; node_id < nodes_per_side; node_id++) {
-                local_node_id = Proc_Elem_Connect[elem_ptr_start + indices[node_id]];
+                local_node_id = goma_ctx->mesh.proc_elem_connect[elem_ptr_start + indices[node_id]];
                 global_node_id = DPI_ptr->node_index_global[local_node_id];
                 msg[node_id + 1] = global_node_id;
               }
@@ -2383,7 +2383,7 @@ static void create_element_particle_info_maps(void) {
           for (elem_id = 0; elem_id < static_exo->num_elems && !match_found; elem_id++) {
             if (DPI_ptr->elem_owner[elem_id] != goma_ctx->proc_id)
               continue;
-            elem_ptr_start = Proc_Connect_Ptr[elem_id];
+            elem_ptr_start = goma_ctx->mesh.proc_connect_ptr[elem_id];
             for (side_id = 0; side_id < sides_per_element && !match_found; side_id++) {
               /* If the element on the other side is owned by us, skip this side. */
               neighbor_elem_id =
@@ -2398,7 +2398,7 @@ static void create_element_particle_info_maps(void) {
                 fill_hex_side_indices(side_id, indices);
 
               for (node_id = 0; node_id < nodes_per_side; node_id++) {
-                local_node_id = Proc_Elem_Connect[elem_ptr_start + indices[node_id]];
+                local_node_id = goma_ctx->mesh.proc_elem_connect[elem_ptr_start + indices[node_id]];
                 global_node_id = DPI_ptr->node_index_global[local_node_id];
                 node_compares[node_id] = global_node_id;
               }
@@ -2741,19 +2741,19 @@ static void load_element_node_coordinates(const int elem_id) {
     return;
   load_element_information(elem_id);
 
-  i = Proc_Connect_Ptr[elem_id];
+  i = goma_ctx->mesh.proc_connect_ptr[elem_id];
   for (j = 0; j < mdim; j++) {
     if (pd->e[pg->imtrx][R_MESH1]) {
       var = MESH_DISPLACEMENT1 + j;
       for (k = 0; k < nodes_per_element; k++) {
         idof = ei[pg->imtrx]->ln_to_dof[var][k];
-        node_index = Proc_Elem_Connect[i + k];
-        node_coord[k][j] = Coor[j][node_index] + *esp->d[j][idof];
+        node_index = goma_ctx->mesh.proc_elem_connect[i + k];
+        node_coord[k][j] = goma_ctx->mesh.coor[j][node_index] + *esp->d[j][idof];
       }
     } else
       for (k = 0; k < nodes_per_element; k++) {
-        node_index = Proc_Elem_Connect[i + k];
-        node_coord[k][j] = Coor[j][node_index];
+        node_index = goma_ctx->mesh.proc_elem_connect[i + k];
+        node_coord[k][j] = goma_ctx->mesh.coor[j][node_index];
       }
   }
   last_elements_nodes_loaded = elem_id;

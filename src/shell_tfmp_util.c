@@ -727,10 +727,10 @@ void dpos_dcsi(double dxw_dcsi[], double d_dxw_dcsi_dmesh[][DIM][MDE]) {
   d_sh_x_dxi = d_sh_y_dxi = 0.;
   for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
     node = ei[pg->imtrx]->dof_list[eqn][i];
-    index = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
+    index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
 
-    d_sh_x_dxi += (Coor[0][index] + displacement[0][i]) * d_phi_dxi[i];
-    d_sh_y_dxi += (Coor[1][index] + displacement[1][i]) * d_phi_dxi[i];
+    d_sh_x_dxi += (goma_ctx->mesh.coor[0][index] + displacement[0][i]) * d_phi_dxi[i];
+    d_sh_y_dxi += (goma_ctx->mesh.coor[1][index] + displacement[1][i]) * d_phi_dxi[i];
   }
   dxw_dcsi[0] = d_sh_x_dxi;
   dxw_dcsi[1] = d_sh_y_dxi;
@@ -789,10 +789,10 @@ void detJ_2d_bar(double *det_J, double d_det_J_dmesh[][MDE]) {
   d_sh_x_dxi = d_sh_y_dxi = 0.;
   for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
     node = ei[pg->imtrx]->dof_list[eqn][i];
-    index = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
+    index = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
 
-    d_sh_x_dxi += (Coor[0][index] + displacement[0][i]) * d_phi_dxi[i];
-    d_sh_y_dxi += (Coor[1][index] + displacement[1][i]) * d_phi_dxi[i];
+    d_sh_x_dxi += (goma_ctx->mesh.coor[0][index] + displacement[0][i]) * d_phi_dxi[i];
+    d_sh_y_dxi += (goma_ctx->mesh.coor[1][index] + displacement[1][i]) * d_phi_dxi[i];
   }
 
   *det_J = sqrt(d_sh_x_dxi * d_sh_x_dxi + d_sh_y_dxi * d_sh_y_dxi);
@@ -855,8 +855,10 @@ void load_gap_model(GAP_STRUCT *gap) {
       memset(dgradII_x_dmesh, 0.0, sizeof(double) * DIM * DIM * MDE);
       for (int i = 0; i < ei[pg->imtrx]->dof[var]; i++) {
         int node = ei[pg->imtrx]->dof_list[R_MESH1][i];
-        int index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[pg->imtrx]->ielem] + node];
-        csigrad[0] += (Coor[0][index] + *esp->d[0][i]) * bf[var]->dphidxi[i][0];
+        int index =
+            goma_ctx->mesh
+                .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[pg->imtrx]->ielem] + node];
+        csigrad[0] += (goma_ctx->mesh.coor[0][index] + *esp->d[0][i]) * bf[var]->dphidxi[i][0];
       }
 
       grad[0] = csigrad[0] / det_J;

@@ -384,7 +384,7 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
       num_local_nodes = elem_info(NNODES, ielem_type);
       /* number of local  basis functions */
 
-      iconnect_ptr = Proc_Connect_Ptr[ielem];
+      iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[ielem];
       /* find ptr to beginning of this element's */
       /* connectivity list */
       ktype = k;
@@ -399,7 +399,7 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
        */
 
       for (i = 0; i < num_local_nodes; i++) {
-        I = Proc_Elem_Connect[iconnect_ptr + i];
+        I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         if (Num_Var_In_Type[pg->imtrx][var_no]) {
           index = Index_Solution(I, var_no, ktype, 0, mn, pg->imtrx);
           if (index != -1) {
@@ -440,7 +440,7 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
           (ielem_type == S_BIQUAD_QUAD || ielem_type == BIQUAD_QUAD)) {
         /* now interpolate Q1 variables onto 9-node mesh if needed */
         for (i = 4; i < 8; i++) {
-          I = Proc_Elem_Connect[iconnect_ptr + i];
+          I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
           /*
            * Double check to insure there really are no dofs here.
            */
@@ -450,11 +450,11 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
              * cf. PATRAN local numbering scheme for element.
              */
             ileft = i - 4;
-            Ileft = Proc_Elem_Connect[iconnect_ptr + ileft];
+            Ileft = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ileft];
             iright = i - 3;
             if (iright == 4)
               iright = 0;
-            Iright = Proc_Elem_Connect[iconnect_ptr + iright];
+            Iright = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + iright];
             nodal_vec[I] = 0.5 * (sol_vec[Index_Solution(Ileft, var_no, ktype, 0, mn, pg->imtrx)] +
                                   sol_vec[Index_Solution(Iright, var_no, ktype, 0, mn, pg->imtrx)]);
             var = var_no + 24;
@@ -472,11 +472,11 @@ void sum_total_stress(double sol_vec[], int var_no, int k, double nodal_vec[], E
              *  put centroid in center
              *  but only if there are no dofs here
              */
-            I = Proc_Elem_Connect[iconnect_ptr + 8];
+            I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + 8];
             nodal_vec[I] = 0.;
             if (Index_Solution(I, var_no, ktype, 0, mn, pg->imtrx) == -1) {
               for (ileft = 0; ileft < 4; ileft++) {
-                Ileft = Proc_Elem_Connect[iconnect_ptr + ileft];
+                Ileft = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ileft];
                 nodal_vec[I] +=
                     0.25 * sol_vec[Index_Solution(Ileft, var_no, ktype, 0, mn, pg->imtrx)];
                 var = var_no + 24;
@@ -560,7 +560,7 @@ void extract_nodal_vec(double sol_vec[],
    * Initialize the output vector to zero. Thus, we don't have to
    * visit each node to get a valid result
    */
-  init_vec_value(nodal_vec, 0.0, Num_Node);
+  init_vec_value(nodal_vec, 0.0, goma_ctx->mesh.num_node);
   /*
    * Loop backwards through the element blocks
    */
@@ -698,7 +698,7 @@ void extract_nodal_eb_vec(double sol_vec[],
      *  find ptr to beginning of this element's connectivity list
      *
      */
-    iconnect_ptr = Proc_Connect_Ptr[ielem];
+    iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[ielem];
 
     /*
      * First, place the known nodal variable values for this
@@ -712,7 +712,7 @@ void extract_nodal_eb_vec(double sol_vec[],
      */
 
     for (i = 0; i < num_local_nodes; i++) {
-      I = Proc_Elem_Connect[iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
       iDof = 0;
       /*
        * HKM -> Special compatibility section
@@ -775,7 +775,7 @@ void extract_nodal_eb_vec(double sol_vec[],
     if (midside) {
       /* now interpolate Q1 variables onto 9-node mesh if needed */
       for (i = 4; i < 8; i++) {
-        I = Proc_Elem_Connect[iconnect_ptr + i];
+        I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         /*
          * Double check to insure there really are no dofs here.
          */
@@ -785,11 +785,11 @@ void extract_nodal_eb_vec(double sol_vec[],
            * cf. PATRAN local numbering scheme for element.
            */
           ileft = i - 4;
-          Ileft = Proc_Elem_Connect[iconnect_ptr + ileft];
+          Ileft = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ileft];
           iright = i - 3;
           if (iright == 4)
             iright = 0;
-          Iright = Proc_Elem_Connect[iconnect_ptr + iright];
+          Iright = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + iright];
           nodal_vec[I] = 0.5 * (nodal_vec[Ileft] + nodal_vec[Iright]);
         }
       }
@@ -797,14 +797,14 @@ void extract_nodal_eb_vec(double sol_vec[],
        *  Only interpolate centroid in  BIQUAD_QUAD
        */
       if (ielem_type == BIQUAD_QUAD) {
-        I = Proc_Elem_Connect[iconnect_ptr + 8];
+        I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + 8];
         nodal_vec[I] = 0.0;
         if ((Index_Solution(I, var_no, ktype, 0, matIndex, pg->imtrx) == -1) ||
             /* for P0 jumps, overwrite jump with interpolant */
             (pd->i[pg->imtrx][var_no] == I_Q1_HV || pd->i[pg->imtrx][var_no] == I_Q1_HG ||
              pd->i[pg->imtrx][var_no] == I_Q1_HVG)) {
           for (ileft = 0; ileft < 4; ileft++) {
-            Ileft = Proc_Elem_Connect[iconnect_ptr + ileft];
+            Ileft = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ileft];
             nodal_vec[I] += 0.25 * nodal_vec[Ileft];
           }
         }
@@ -871,7 +871,7 @@ void extract_elem_vec(const double sol_vec[],
 
       ielem_type = Elem_Type(exo, ielem); /* func defd in el_geom.h */
       num_local_nodes = elem_info(NNODES, ielem_type);
-      iconnect_ptr = Proc_Connect_Ptr[ielem]; /* find ptr to beginning */
+      iconnect_ptr = goma_ctx->mesh.proc_connect_ptr[ielem]; /* find ptr to beginning */
       /* of this element's */
       /* connectivity list */
       var = var_no;
@@ -888,7 +888,7 @@ void extract_elem_vec(const double sol_vec[],
       if (ielem_type == BIQUAD_QUAD || ielem_type == TRIQUAD_HEX || ielem_type == C_BILINEAR_QUAD ||
           ielem_type == C_TRILINEAR_HEX) {
         for (i = 0; i < num_local_nodes; i++) {
-          I = Proc_Elem_Connect[iconnect_ptr + i];
+          I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
           /* NOTE: here, the element variables (such as PRESSURE) are being
              extracted from the solution vector coming off of the hanging
              interior nodes, or a given specified node for such a quantity.
@@ -912,7 +912,7 @@ void extract_elem_vec(const double sol_vec[],
         }
       } else {
         int i = 0;
-        I = Proc_Elem_Connect[iconnect_ptr + i];
+        I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         /* NOTE: here, the element variables (such as PRESSURE) are being
            extracted from the solution vector coming off of the hanging
            interior nodes, or a given specified node for such a quantity.
@@ -990,7 +990,7 @@ int get_new_coord(double *new_coord[DIM], double *x, const Exo_DB *exo) {
 
   for (p = 0; p < dim; p++) {
     new_coord[p] = (double *)calloc(num_nodes, sizeof(double));
-    dcopy1(num_nodes, Coor[p], new_coord[p]);
+    dcopy1(num_nodes, goma_ctx->mesh.coor[p], new_coord[p]);
   }
 
   for (p = 0; p < upd->Num_Mat; p++)

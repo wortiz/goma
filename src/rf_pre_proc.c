@@ -46,7 +46,8 @@ void pre_process(Exo_DB *exo)
 
   build_elem_type_list(exo);
 
-  alloc_First_Elem_BC(&First_Elem_Side_BC_Array, &First_Elem_Edge_BC_Array, Num_Internal_Elems);
+  alloc_First_Elem_BC(&First_Elem_Side_BC_Array, &First_Elem_Edge_BC_Array,
+                      goma_ctx->mesh.num_internal_elems);
 
   return;
 } /* END of routine pre_process  */

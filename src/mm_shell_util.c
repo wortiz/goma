@@ -717,10 +717,10 @@ int find_stu_from_xyz(const int elem, const double xg[DIM], double xi[DIM], cons
       ;
       for (i = 0; i < dofs; i++) {
         node = ei[pg->imtrx]->dof_list[dof_list_index][i];
-        index = Proc_Elem_Connect[Proc_Connect_Ptr[elem] + node];
-        x[j] += Coor[j][index] * bf[var]->phi[i];
+        index = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[elem] + node];
+        x[j] += goma_ctx->mesh.coor[j][index] * bf[var]->phi[i];
         for (k = 0; k < pd->Num_Dim; k++) {
-          dxstu[j][k] += Coor[j][index] * bf[var]->dphidxi[i][k];
+          dxstu[j][k] += goma_ctx->mesh.coor[j][index] * bf[var]->dphidxi[i][k];
         }
       }
     }
@@ -882,9 +882,9 @@ int bulk_side_id_and_stu(const int bulk_elem,
   int bulk_dim, shell_dim, nbulk = 0, nshell = 0, nmatch;
   int iH = -1, iL = -1, s_first = 0, bulk_n1, bulk_n2;
   int bulk_type = Elem_Type(exo, bulk_elem);
-  int bulk_eptr = Proc_Connect_Ptr[bulk_elem];
+  int bulk_eptr = goma_ctx->mesh.proc_connect_ptr[bulk_elem];
   int shell_type = Elem_Type(exo, shell_elem);
-  int shell_eptr = Proc_Connect_Ptr[shell_elem];
+  int shell_eptr = goma_ctx->mesh.proc_connect_ptr[shell_elem];
 
   /* Initialize */
   nno = 0;
@@ -935,10 +935,10 @@ int bulk_side_id_and_stu(const int bulk_elem,
   /* Create node lists */
   for (i = 0; i < nbulk; i++) {
     matches[i] = -1;
-    bulk_nodes[i] = Proc_Elem_Connect[bulk_eptr + i];
+    bulk_nodes[i] = goma_ctx->mesh.proc_elem_connect[bulk_eptr + i];
   }
   for (i = 0; i < nshell; i++) {
-    shell_nodes[i] = Proc_Elem_Connect[shell_eptr + i];
+    shell_nodes[i] = goma_ctx->mesh.proc_elem_connect[shell_eptr + i];
   }
 
   /* Find indices of bulk nodes shared with the shell element */
@@ -1479,8 +1479,8 @@ int find_stu_on_shell(const int bulk_elem,
  */
 {
   int err = 0;
-  int bulk_eptr = Proc_Connect_Ptr[bulk_elem];
-  int shell_eptr = Proc_Connect_Ptr[shell_elem];
+  int bulk_eptr = goma_ctx->mesh.proc_connect_ptr[bulk_elem];
+  int shell_eptr = goma_ctx->mesh.proc_connect_ptr[shell_elem];
   int bulk_type = Elem_Type(exo, bulk_elem);
   int shell_type = Elem_Type(exo, shell_elem);
 
@@ -1492,33 +1492,41 @@ int find_stu_on_shell(const int bulk_elem,
     xi2[1] = xi2[2] = 0.0;
     switch (id_side) {
     case 1:
-      if (Proc_Elem_Connect[bulk_eptr + 0] == Proc_Elem_Connect[shell_eptr])
+      if (goma_ctx->mesh.proc_elem_connect[bulk_eptr + 0] ==
+          goma_ctx->mesh.proc_elem_connect[shell_eptr])
         xi2[0] = s;
-      else if (Proc_Elem_Connect[bulk_eptr + 1] == Proc_Elem_Connect[shell_eptr])
+      else if (goma_ctx->mesh.proc_elem_connect[bulk_eptr + 1] ==
+               goma_ctx->mesh.proc_elem_connect[shell_eptr])
         xi2[0] = -s;
       else
         GOMA_EH(GOMA_ERROR, "Error in find_stu_on_shell");
       break;
     case 2:
-      if (Proc_Elem_Connect[bulk_eptr + 1] == Proc_Elem_Connect[shell_eptr])
+      if (goma_ctx->mesh.proc_elem_connect[bulk_eptr + 1] ==
+          goma_ctx->mesh.proc_elem_connect[shell_eptr])
         xi2[0] = t;
-      else if (Proc_Elem_Connect[bulk_eptr + 2] == Proc_Elem_Connect[shell_eptr])
+      else if (goma_ctx->mesh.proc_elem_connect[bulk_eptr + 2] ==
+               goma_ctx->mesh.proc_elem_connect[shell_eptr])
         xi2[0] = -t;
       else
         GOMA_EH(GOMA_ERROR, "Error in find_stu_on_shell");
       break;
     case 3:
-      if (Proc_Elem_Connect[bulk_eptr + 2] == Proc_Elem_Connect[shell_eptr])
+      if (goma_ctx->mesh.proc_elem_connect[bulk_eptr + 2] ==
+          goma_ctx->mesh.proc_elem_connect[shell_eptr])
         xi2[0] = -s;
-      else if (Proc_Elem_Connect[bulk_eptr + 3] == Proc_Elem_Connect[shell_eptr])
+      else if (goma_ctx->mesh.proc_elem_connect[bulk_eptr + 3] ==
+               goma_ctx->mesh.proc_elem_connect[shell_eptr])
         xi2[0] = s;
       else
         GOMA_EH(GOMA_ERROR, "Error in find_stu_on_shell");
       break;
     case 4:
-      if (Proc_Elem_Connect[bulk_eptr + 3] == Proc_Elem_Connect[shell_eptr])
+      if (goma_ctx->mesh.proc_elem_connect[bulk_eptr + 3] ==
+          goma_ctx->mesh.proc_elem_connect[shell_eptr])
         xi2[0] = -t;
-      else if (Proc_Elem_Connect[bulk_eptr + 0] == Proc_Elem_Connect[shell_eptr])
+      else if (goma_ctx->mesh.proc_elem_connect[bulk_eptr + 0] ==
+               goma_ctx->mesh.proc_elem_connect[shell_eptr])
         xi2[0] = t;
       else
         GOMA_EH(GOMA_ERROR, "Error in find_stu_on_shell");
@@ -1735,8 +1743,9 @@ int shell_normal_div_s(dbl *div_s_nv, dbl d_div_s_nv_dnv[DIM][MDE], dbl d_div_s_
   for (j = 0; j < pdim; j++) {
     for (k = 0; k < dofs; k++) {
       node = ei[pg->imtrx]->dof_list[eqn][k];
-      index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[pg->imtrx]->ielem] + node];
-      local_x[j][k] = Coor[j][index] + *esp->d[j][k];
+      index = goma_ctx->mesh
+                  .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[pg->imtrx]->ielem] + node];
+      local_x[j][k] = goma_ctx->mesh.coor[j][index] + *esp->d[j][k];
       sJ[j] += local_x[j][k] * bf[eqn]->dphidxi[k][0];
     }
     // sJsum += sJ[j] * sJ[j];
@@ -2026,7 +2035,7 @@ void shell_determinant_and_normal(
     for (p = 0; p < ielem_surf_dim; p++) {
       for (a = 0; a < pd->Num_Dim; a++) {
         for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          inode = Proc_Elem_Connect[iconnect_ptr + i];
+          inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
           ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][i];
           if (Dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
             phi_i = map_bf->phi[ldof];
@@ -2066,7 +2075,7 @@ void shell_determinant_and_normal(
     /* Calculate sensitivity w.r.t. mesh, if applicable */
     if (af->Assemble_Jacobian && DeformingMesh) {
       for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        inode = Proc_Elem_Connect[iconnect_ptr + i];
+        inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][i];
         if (Dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           phi_i = map_bf->phi[ldof];
@@ -2124,7 +2133,7 @@ void shell_determinant_and_normal(
     /* Calculate sensitivity w.r.t. mesh, if applicable */
     if (af->Assemble_Jacobian && DeformingMesh) {
       for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        inode = Proc_Elem_Connect[iconnect_ptr + i];
+        inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][i];
         if (Dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           phi_i = map_bf->phi[ldof];
@@ -3217,8 +3226,10 @@ void lubrication_shell_initialize(int *n_dof,        // Degrees of freedom
         Jlocal[i][j] = 0.0;
         for (k = 0; k < mdof; k++) {
           node = ei[pg->imtrx]->dof_list[ShapeVar][k];
-          index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[pg->imtrx]->ielem] + node];
-          Jlocal[i][j] += Coor[j][index] * bf[ShapeVar]->dphidxi[k][i];
+          index =
+              goma_ctx->mesh
+                  .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[pg->imtrx]->ielem] + node];
+          Jlocal[i][j] += goma_ctx->mesh.coor[j][index] * bf[ShapeVar]->dphidxi[k][i];
         }
         Jlocal[2][j] = (j + 1) * 1.0;
       }
@@ -3341,8 +3352,10 @@ void lubrication_shell_initialize(int *n_dof,        // Degrees of freedom
         Jlocal[i][j] = 0.0;
         for (k = 0; k < mdof; k++) {
           node = ei[pg->imtrx]->dof_list[ShapeVar][k];
-          index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[pg->imtrx]->ielem] + node];
-          Jlocal[i][j] += Coor[j][index] * bf[ShapeVar]->dphidxi[k][i];
+          index =
+              goma_ctx->mesh
+                  .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[pg->imtrx]->ielem] + node];
+          Jlocal[i][j] += goma_ctx->mesh.coor[j][index] * bf[ShapeVar]->dphidxi[k][i];
         }
         Jlocal[2][j] = (j + 1) * 1.0;
       }

@@ -79,7 +79,7 @@ int setup_pd(void) {
   CoordinateSystem = pd_glob[0]->CoordinateSystem;
 
   for (mn = 0; mn < upd->Num_Mat; mn++) {
-    pd_glob[mn]->Num_Dim = Num_Dim;                 /* from "el_geom.h" */
+    pd_glob[mn]->Num_Dim = goma_ctx->mesh.num_dim;  /* from "el_geom.h" */
     pd_glob[mn]->TimeIntegration = TimeIntegration; /* from "rf_fem.h" */
     if (pd_glob[mn]->CoordinateSystem != CoordinateSystem)
       GOMA_EH(GOMA_ERROR, "Not all materials have the same coordinate system!");
@@ -87,14 +87,14 @@ int setup_pd(void) {
 
   if (CoordinateSystem == CYLINDRICAL) {
     VIM = 3;
-    WIM = Num_Dim;
+    WIM = goma_ctx->mesh.num_dim;
   } else if (CoordinateSystem == SWIRLING || CoordinateSystem == PROJECTED_CARTESIAN ||
              CoordinateSystem == CARTESIAN_2pt5D) {
     VIM = 3;
     WIM = 3;
   } else {
-    VIM = Num_Dim;
-    WIM = Num_Dim;
+    VIM = goma_ctx->mesh.num_dim;
+    WIM = goma_ctx->mesh.num_dim;
   }
   if (pd_glob[0]->Num_Dim == 3 &&
       (CoordinateSystem == CYLINDRICAL || CoordinateSystem == SWIRLING ||
@@ -361,7 +361,7 @@ int setup_pd(void) {
       }
 
       if (pd_glob[mn]->e[imtrx][R_MOMENTUM3]) {
-        if (CoordinateSystem == CARTESIAN && Num_Dim == 2)
+        if (CoordinateSystem == CARTESIAN && goma_ctx->mesh.num_dim == 2)
           GOMA_EH(GOMA_ERROR, "You have 3 velocity components, but only a 2D CARTESIAN mesh.\nDid "
                               "you mean to use the PROJECTED_CARTESIAN coordinate system?");
       }

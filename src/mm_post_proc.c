@@ -2224,13 +2224,14 @@ static int calc_standard_fields(double **post_proc_vect,
   if (PP_FLUID_STRESS != -1 && Num_Var_In_Type[pg->imtrx][R_MOMENTUM1]) {
     dbl Pi[DIM][DIM];
     fluid_stress(Pi, NULL);
-    for (a = 0; a < Num_Dim; a++) {
-      for (b = 0; b < Num_Dim; b++) {
-        local_post[PP_FLUID_STRESS + a * Num_Dim + b] = Pi[a][b] + fv->P * delta(a, b);
-        local_lumped[PP_FLUID_STRESS + a * Num_Dim + b] = 1.;
+    for (a = 0; a < goma_ctx->mesh.num_dim; a++) {
+      for (b = 0; b < goma_ctx->mesh.num_dim; b++) {
+        local_post[PP_FLUID_STRESS + a * goma_ctx->mesh.num_dim + b] =
+            Pi[a][b] + fv->P * delta(a, b);
+        local_lumped[PP_FLUID_STRESS + a * goma_ctx->mesh.num_dim + b] = 1.;
       }
     }
-    if (Num_Dim == 2 && VIM == 3) {
+    if (goma_ctx->mesh.num_dim == 2 && VIM == 3) {
       local_post[PP_FLUID_STRESS + 4] = Pi[2][2] + fv->P * delta(a, b);
       local_lumped[PP_FLUID_STRESS + 4] = 1.;
     }
@@ -2610,26 +2611,26 @@ static int calc_standard_fields(double **post_proc_vect,
 
     mu = viscosity(gn, gamma, NULL);
     // printf("%lf", mu);
-    for (a = 0; a < Num_Dim; a++) {
-      for (b = 0; b < Num_Dim; b++) {
-        local_post[VISCOUS_STRESS + a * Num_Dim + b] = mu * gamma[a][b];
-        local_lumped[VISCOUS_STRESS + a * Num_Dim + b] = 1.;
+    for (a = 0; a < goma_ctx->mesh.num_dim; a++) {
+      for (b = 0; b < goma_ctx->mesh.num_dim; b++) {
+        local_post[VISCOUS_STRESS + a * goma_ctx->mesh.num_dim + b] = mu * gamma[a][b];
+        local_lumped[VISCOUS_STRESS + a * goma_ctx->mesh.num_dim + b] = 1.;
       }
     }
-    if (Num_Dim == 2 && VIM == 3) {
+    if (goma_ctx->mesh.num_dim == 2 && VIM == 3) {
       local_post[VISCOUS_STRESS + 4] = mu * gamma[2][2];
       local_lumped[VISCOUS_STRESS + 4] = 1.;
     }
   }
 
   if (PP_VELOCITY_GRADIENTS != -1 && pd->e[pg->imtrx][R_MOMENTUM1]) {
-    for (a = 0; a < Num_Dim; a++) {
-      for (b = 0; b < Num_Dim; b++) {
-        local_post[PP_VELOCITY_GRADIENTS + a * Num_Dim + b] = fv->grad_v[a][b];
-        local_lumped[PP_VELOCITY_GRADIENTS + a * Num_Dim + b] = 1.;
+    for (a = 0; a < goma_ctx->mesh.num_dim; a++) {
+      for (b = 0; b < goma_ctx->mesh.num_dim; b++) {
+        local_post[PP_VELOCITY_GRADIENTS + a * goma_ctx->mesh.num_dim + b] = fv->grad_v[a][b];
+        local_lumped[PP_VELOCITY_GRADIENTS + a * goma_ctx->mesh.num_dim + b] = 1.;
       }
     }
-    if (Num_Dim == 2 && VIM == 3) {
+    if (goma_ctx->mesh.num_dim == 2 && VIM == 3) {
       local_post[PP_VELOCITY_GRADIENTS + 4] = fv->grad_v[2][2];
       local_lumped[PP_VELOCITY_GRADIENTS + 4] = 1.;
     }
@@ -2677,7 +2678,7 @@ static int calc_standard_fields(double **post_proc_vect,
 
     dbl viscousVonMisesStress = 0.0;
 
-    if (Num_Dim < 3) {
+    if (goma_ctx->mesh.num_dim < 3) {
       dbl stress_xx = mu * (fv->grad_v[0][0] + fv->grad_v[0][0]);
       dbl stress_xy = mu * (fv->grad_v[0][1] + fv->grad_v[1][0]);
       dbl stress_yy = mu * (fv->grad_v[1][1] + fv->grad_v[1][1]);
@@ -2685,7 +2686,7 @@ static int calc_standard_fields(double **post_proc_vect,
       viscousVonMisesStress = sqrt(pow(stress_xx, 2) + pow(stress_yy, 2) + 3 * pow(stress_xy, 2) -
                                    stress_xx * stress_yy);
 
-    } else if (Num_Dim > 2) {
+    } else if (goma_ctx->mesh.num_dim > 2) {
       dbl stress_xx = mu * (fv->grad_v[0][0] + fv->grad_v[0][0]);
       dbl stress_yy = mu * (fv->grad_v[1][1] + fv->grad_v[1][1]);
       dbl stress_zz = mu * (fv->grad_v[2][2] + fv->grad_v[2][2]);
@@ -3777,7 +3778,7 @@ static int calc_standard_fields(double **post_proc_vect,
    * below is deemed to be sufficient.
    */
   for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-    I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+    I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
     /*
      *  check to make sure that unknowns are defined at this node,
      *  otherwise don't add anything to this node
@@ -3902,7 +3903,7 @@ void post_process_average(double x[],            /* Solution vector for the curr
     int node;
     for (node = 0; node < ei[pg->imtrx]->num_local_nodes; node++) {
 
-      int global_node = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + node];
+      int global_node = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + node];
 
       find_nodal_stu(node, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
 
@@ -4476,7 +4477,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
    * if available. If it is not available, then calculate one
    */
   if (goma_ctx->num_proc == 1) {
-    listel = alloc_int_1(Num_Internal_Elems, 0);
+    listel = alloc_int_1(goma_ctx->mesh.num_internal_elems, 0);
     cpu_word_size = sizeof(dbl);
     io_word_size = 0;
     mesh_exoid = ex_open(goma_ctx->exo_file, EX_READ, &cpu_word_size, &io_word_size, &version);
@@ -4498,7 +4499,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
      * calculating a connected stream function field variable where a
      * connected mesh exists.
      */
-    for (i = 0; i < Num_Internal_Elems; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_internal_elems; i++) {
       listel[i]--;
     }
     if ((err = check_elem_order(listel, exo)) != 0) {
@@ -4507,7 +4508,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
     /*
      * Convert the mapping to 1 to Num_Internal_Elems basis
      */
-    for (i = 0; i < Num_Internal_Elems; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_internal_elems; i++) {
       listel[i]++;
     }
   }
@@ -4542,7 +4543,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   }
   if (PRESSURE_CONT != -1 && (Num_Var_In_Type[pg->imtrx][R_MOMENTUM1] || check)) {
     /* PRS Cludge for remeshing guys */
-    pressure_elem_vect = (double *)smalloc(Num_Internal_Elems * sizeof(double));
+    pressure_elem_vect = (double *)smalloc(goma_ctx->mesh.num_internal_elems * sizeof(double));
   }
 
   if (goma_ctx->num_proc == 1) {
@@ -4999,7 +5000,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
              * (only one) to apply
              */
             iapply = 0;
-            if ((ss_index = in_list(ss_ids[iss], 0, Proc_Num_Side_Sets, ss_to_blks[0])) == -1) {
+            if ((ss_index = in_list(ss_ids[iss], 0, goma_ctx->mesh.proc_num_side_sets,
+                                    ss_to_blks[0])) == -1) {
               GOMA_EH(GOMA_ERROR, "Cannot match side SSID to ss_to_blks[].");
             }
 
@@ -5213,7 +5215,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
               for (i = 0; i < ei[pg->imtrx]->ielem_dim; i++) {
                 var = MASS_FRACTION;
                 for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                  I = Proc_Elem_Connect[Proc_Connect_Ptr[iel] + j];
+                  I = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[iel] + j];
                   /* add in contribution from diffusion */
                   vel[i][j] =
                       post_proc_vect[DIFFUSION_VECTORS + w * ei[pg->imtrx]->ielem_dim + i][I];
@@ -5223,7 +5225,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
                   /* use convection velocity for lagrangian
                      mesh motion */
                   {
-                    I = Proc_Elem_Connect[Proc_Connect_Ptr[iel] + j];
+                    I = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[iel] + j];
                     if (TimeIntegration != STEADY) {
                       printf("\n Need to update Lagrangian convection velocities for transient \n");
                       vel[i][j] += post_proc_vect[LAGRANGE_CONVECTION + i][I] * (*esp->c[w][j]);
@@ -5249,14 +5251,14 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
             for (i = 0; i < ei[pg->imtrx]->ielem_dim; i++) {
               var = TEMPERATURE;
               for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                I = Proc_Elem_Connect[Proc_Connect_Ptr[iel] + j];
+                I = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[iel] + j];
                 vel[i][j] = post_proc_vect[CONDUCTION_VECTORS + i][I];
                 if ((check == 1) && Num_Var_In_Type[pg->imtrx][VELOCITY1]) {
                   vel[i][j] += *esp->v[i][j] * (*esp->T[j]);
                 } else if (check == 2)
                 /* use convection velocity for lagrangian mesh motion */
                 {
-                  I = Proc_Elem_Connect[Proc_Connect_Ptr[iel] + j];
+                  I = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[iel] + j];
                   if (TimeIntegration != STEADY) {
                     printf("\n Need to update Lagrangian convection velocities for transient \n");
                     vel[i][j] += post_proc_vect[LAGRANGE_CONVECTION + i][I] * (*esp->T[j]);
@@ -5793,7 +5795,7 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   }
   if (PRESSURE_CONT != -1 && (Num_Var_In_Type[pg->imtrx][VELOCITY1] || check)) {
     /*PRS cludge for remeshing guys */
-    for (I = 0; I < Num_Internal_Elems; I++) {
+    for (I = 0; I < goma_ctx->mesh.num_internal_elems; I++) {
       pressure_elem_vect[I] = (dbl)I;
     }
 
@@ -6593,7 +6595,7 @@ static int calc_zz_error_vel(double x[], /* Solution vector                     
 
         for (j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
           /* also convert from node number to dof number */
-          global_node_num = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+          global_node_num = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
           max_x += exo->x_coord[global_node_num];
           max_y += exo->y_coord[global_node_num];
           if (exo->num_dim > 2)
@@ -6876,7 +6878,7 @@ static int abs_error_at_elem(int i_elem,
           for (j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
             /* also convert from node number to dof number */
             phi_i = bf[eqn]->phi[ei[pg->imtrx]->ln_to_dof[eqn][j]];
-            global_node_num = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+            global_node_num = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
             sum_tau += phi_i * tau_nodal_lsp[a][b][global_node_num];
           }
           tau_gp_lsp[a][b][i] = sum_tau;
@@ -7161,11 +7163,11 @@ static int fill_lhs_lspatch(double *i_node_coords,
     for (j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
       /* also convert from node number to dof number */
       phi_i = bf[eqn]->phi[ei[pg->imtrx]->ln_to_dof[eqn][j]];
-      local_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
-      sumx += phi_i * Coor[0][local_i];
-      sumy += phi_i * Coor[1][local_i];
+      local_i = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + j];
+      sumx += phi_i * goma_ctx->mesh.coor[0][local_i];
+      sumy += phi_i * goma_ctx->mesh.coor[1][local_i];
       if (ei[pg->imtrx]->ielem_dim > 2) {
-        sumz += phi_i * Coor[2][local_i];
+        sumz += phi_i * goma_ctx->mesh.coor[2][local_i];
       }
     }
     xgp_loc[i] = sumx - i_node_coords[0];
@@ -7493,32 +7495,32 @@ static int calc_stream_fcn(double x[], /* soln vector */
    */
   if (DeformingMesh) {
     for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-      I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
       if (Index_Solution(I, MESH_DISPLACEMENT1, 0, 0, -2, pg->imtrx) != -1) {
-        xx[i] = Coor[0][I] + *esp->d[0][ei[pg->imtrx]->ln_to_dof[R_MESH1][i]];
-        yy[i] = Coor[1][I] + *esp->d[1][ei[pg->imtrx]->ln_to_dof[R_MESH2][i]];
+        xx[i] = goma_ctx->mesh.coor[0][I] + *esp->d[0][ei[pg->imtrx]->ln_to_dof[R_MESH1][i]];
+        yy[i] = goma_ctx->mesh.coor[1][I] + *esp->d[1][ei[pg->imtrx]->ln_to_dof[R_MESH2][i]];
       } else { /* elements are subparametric */
         if (i < 8) {
           /* make node lie halfway between adjacent nodes */
           ileft = i - 4;
-          Ileft = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + ileft];
+          Ileft = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ileft];
           iright = i - 3;
           if (iright == 4)
             iright = 0;
-          Iright = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + iright];
-          xx[i] = Coor[0][I] +
+          Iright = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + iright];
+          xx[i] = goma_ctx->mesh.coor[0][I] +
                   0.5 * (x[Index_Solution(Ileft, MESH_DISPLACEMENT1, 0, 0, -2, pg->imtrx)] +
                          x[Index_Solution(Iright, MESH_DISPLACEMENT1, 0, 0, -2, pg->imtrx)]);
-          yy[i] = Coor[1][I] +
+          yy[i] = goma_ctx->mesh.coor[1][I] +
                   0.5 * (x[Index_Solution(Ileft, MESH_DISPLACEMENT2, 0, 0, -2, pg->imtrx)] +
                          x[Index_Solution(Iright, MESH_DISPLACEMENT2, 0, 0, -2, pg->imtrx)]);
         } else {
           /* put centroid in center */
-          I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + 8];
-          xx[i] = Coor[0][I];
-          yy[i] = Coor[1][I];
+          I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + 8];
+          xx[i] = goma_ctx->mesh.coor[0][I];
+          yy[i] = goma_ctx->mesh.coor[1][I];
           for (ileft = 0; ileft < 4; ileft++) {
-            Ileft = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + ileft];
+            Ileft = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ileft];
             xx[i] += 0.25 * x[Index_Solution(Ileft, MESH_DISPLACEMENT1, 0, 0, -2, pg->imtrx)];
             yy[i] += 0.25 * x[Index_Solution(Ileft, MESH_DISPLACEMENT2, 0, 0, -2, pg->imtrx)];
           }
@@ -7527,9 +7529,9 @@ static int calc_stream_fcn(double x[], /* soln vector */
     }
   } else {
     for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-      I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
-      xx[i] = Coor[0][I];
-      yy[i] = Coor[1][I];
+      I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
+      xx[i] = goma_ctx->mesh.coor[0][I];
+      yy[i] = goma_ctx->mesh.coor[1][I];
     }
   }
 
@@ -7638,7 +7640,7 @@ static int midsid(double stream_fcn_vect[], /* Soln vector for current proc */
   int ielem;
   double stream_fcn[9];
 
-  for (ielem = 0; ielem < Num_Internal_Elems; ielem++) {
+  for (ielem = 0; ielem < goma_ctx->mesh.num_internal_elems; ielem++) {
 
     ei[pg->imtrx]->iconnect_ptr = exo->elem_ptr[ielem];
 
@@ -7728,7 +7730,7 @@ static int correct_stream_fcn(int *kount, /* a counter for element connectivity 
       stream_fcn[i + 1] = stream_fcn[i] + del_stream_fcn[i];
     }
     for (i = 0; i < ei[pg->imtrx]->num_sides; i++) {
-      I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
       stream_fcn_vect[I] += stream_fcn[i];
       listnd[I] += 1;
     }
@@ -7740,7 +7742,7 @@ static int correct_stream_fcn(int *kount, /* a counter for element connectivity 
 
     nprvel = iel - 1;
     for (i = 0; i < ei[pg->imtrx]->num_sides; i++) {
-      I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+      I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
       nstart = i;
       for (nel = 0; nel < nprvel + 1; nel++) {
         kel = nprvel - nel;
@@ -7751,7 +7753,7 @@ static int correct_stream_fcn(int *kount, /* a counter for element connectivity 
            must be of the same type */
 
         for (j = 0; j < ei[pg->imtrx]->num_sides; j++) {
-          J = Proc_Elem_Connect[Proc_Connect_Ptr[nnel] + j];
+          J = goma_ctx->mesh.proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[nnel] + j];
           if (J == I && listnd[I] > 0)
             goto found;
         }
@@ -7770,7 +7772,7 @@ static int correct_stream_fcn(int *kount, /* a counter for element connectivity 
     /* add to global vector */
 
     for (ii = 0; ii < ei[pg->imtrx]->num_sides; ii++) {
-      I = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + ii];
+      I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + ii];
       stream_fcn_vect[I] += stream_fcn[ii];
       listnd[I] += 1;
     }
@@ -9637,7 +9639,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
    */
 
   if (STREAM != -1 && Num_Var_In_Type[pg->imtrx][VELOCITY1]) {
-    if (Num_Dim == 3) {
+    if (goma_ctx->mesh.num_dim == 3) {
       GOMA_WH(-1, "Cant do stream function in 3D");
       STREAM = -1;
     } else {
@@ -10268,7 +10270,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
     DIELECTROPHORETIC_FIELD = index_post;
-    for (i = 0; i < Num_Dim; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "DF%d", i);
       sprintf(ds, "Dielectrophoretic force field component %d", i);
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -10298,7 +10300,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
     ENORMSQ_FIELD = index_post;
-    for (i = 0; i < Num_Dim; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "GENS%d", i);
       sprintf(ds, "grad(|E|^2) field component %d", i);
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -10332,7 +10334,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     if (upd->Max_Num_Species_Eqn == 0)
       DIFFUSION_VECTORS = -1;
     for (w = 0; w < upd->Max_Num_Species_Eqn; w++) {
-      for (i = 0; i < Num_Dim; i++) {
+      for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
         sprintf(species_name, "Y%dDIF%c", w, dir_ch[i]);
         sprintf(species_desc, "Diffusion of %d in %c direction", w, dir_ch[i]);
         set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
@@ -10361,7 +10363,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
   if (DIFFUSION_VECTORS_POR_LIQ_GPHASE != -1) {
     DIFFUSION_VECTORS_POR_LIQ_GPHASE = index_post;
-    for (i = 0; i < Num_Dim; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(species_name, "YDIF_liq_gphase_%d", i);
       sprintf(species_desc, "Diffusion of liq in gas phase in %d direction", i);
       set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
@@ -10371,7 +10373,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
   if (DIFFUSION_VECTORS_POR_AIR_GPHASE != -1) {
     DIFFUSION_VECTORS_POR_AIR_GPHASE = index_post;
-    for (i = 0; i < Num_Dim; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(species_name, "YDIF_air_gphase_%d", i);
       sprintf(species_desc, "Diffusion of air in gas phase in %d direction", i);
       set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
@@ -10384,7 +10386,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     if (FLUXLINES == 2) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
-    if (Num_Dim == 3) {
+    if (goma_ctx->mesh.num_dim == 3) {
       GOMA_WH(-1, "Cant do flux function in 3D");
       FLUXLINES = -1;
     } else if (TimeIntegration != STEADY) {
@@ -10420,7 +10422,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index++;
     index_post++;
     /* Z Component */
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       sprintf(nm, "TCONDZ");
       sprintf(ds, "Conduction in Z direction");
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -10450,7 +10452,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index++;
     index_post++;
     /* Z Component */
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       sprintf(nm, "POYNTZ");
       sprintf(ds, "Poynting in Z direction");
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -10477,7 +10479,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index++;
     index_post++;
     /* Z Component */
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       sprintf(nm, "ORZ");
       sprintf(ds, "Orientation in Z direction");
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -10521,7 +10523,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index++;
     index_post++;
     /* Z Component */
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       sprintf(nm, "EZ");
       sprintf(ds, "Z-component of the electric field");
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -10545,7 +10547,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
 
   if (ENERGY_FLUXLINES != -1 && Num_Var_In_Type[pg->imtrx][R_ENERGY]) {
-    if (Num_Dim == 3) {
+    if (goma_ctx->mesh.num_dim == 3) {
       GOMA_WH(-1, "Cant do flux function in 3D");
       ENERGY_FLUXLINES = -1;
     } else if (TimeIntegration != STEADY) {
@@ -10581,7 +10583,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     set_nv_tkud(rd, index, 0, 0, -2, "T12", "[1]", "Mesh shear stress xy", FALSE);
     index++;
     index_post++;
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       set_nv_tkud(rd, index, 0, 0, -2, "T13", "[1]", "Mesh shear stress xz", FALSE);
       index++;
       index_post++;
@@ -10609,7 +10611,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     set_nv_tkud(rd, index, 0, 0, -2, "T12_RS", "[1]", "Real_solid shear stress xy", FALSE);
     index++;
     index_post++;
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       set_nv_tkud(rd, index, 0, 0, -2, "T13_RS", "[1]", "Real_solid shear stress xz", FALSE);
       index++;
       index_post++;
@@ -10636,7 +10638,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     set_nv_tkud(rd, index, 0, 0, -2, "E12", "[1]", "Mesh shear strain xy", FALSE);
     index++;
     index_post++;
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       set_nv_tkud(rd, index, 0, 0, -2, "E13", "[1]", "Mesh shear strain xz", FALSE);
       index++;
       index_post++;
@@ -10667,7 +10669,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     set_nv_tkud(rd, index, 0, 0, -2, "FVP21", "[1]", "Viscoplastic deformation gradient yx", FALSE);
     index++;
     index_post++;
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       set_nv_tkud(rd, index, 0, 0, -2, "FVP13", "[1]", "Viscoplastic deformation gradient xz",
                   FALSE);
       index++;
@@ -10701,7 +10703,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       set_nv_tkud(rd, index, 0, 0, -2, "TVP21", "[1]", "EVP shear stress yx", FALSE);
       index++;
       index_post++;
-      if (Num_Dim > 2) {
+      if (goma_ctx->mesh.num_dim > 2) {
         set_nv_tkud(rd, index, 0, 0, -2, "TVP13", "[1]", "EVP shear stress xz", FALSE);
         index++;
         index_post++;
@@ -10730,7 +10732,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
     LAGRANGE_CONVECTION = index_post;
-    for (i = 0; i < Num_Dim; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "VL%d", i);
       sprintf(ds, "Lagrangian Convection in %d direction", i);
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -10745,13 +10747,13 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     }
     SURFACE_VECTORS = index_post;
 
-    for (i = 0; i < Num_Dim; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "N%d", i);
       sprintf(ds, "Normal Vector in %d direction", i);
-      if (Num_Dim == 2) {
+      if (goma_ctx->mesh.num_dim == 2) {
         sprintf(nm1, "T%d", i);
         sprintf(ds1, "Tangent Vector in %d direction", i);
-      } else if (Num_Dim == 3) {
+      } else if (goma_ctx->mesh.num_dim == 3) {
         sprintf(nm1, "TA%d", i);
         sprintf(ds1, "1st Tangent Vector in %d direction", i);
         sprintf(nm2, "TB%d", i);
@@ -10759,17 +10761,18 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       }
 
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
-      if (Num_Dim == 2) {
-        set_nv_tkud(rd, index + Num_Dim, 0, 0, -2, nm1, "[1]", ds1, FALSE);
-      } else if (Num_Dim == 3) {
-        set_nv_tkud(rd, index + Num_Dim, 0, 0, -2, nm1, "[1]", ds1, FALSE);
-        set_nv_tkud(rd, index + Num_Dim + Num_Dim, 0, 0, -2, nm2, "[1]", ds2, FALSE);
+      if (goma_ctx->mesh.num_dim == 2) {
+        set_nv_tkud(rd, index + goma_ctx->mesh.num_dim, 0, 0, -2, nm1, "[1]", ds1, FALSE);
+      } else if (goma_ctx->mesh.num_dim == 3) {
+        set_nv_tkud(rd, index + goma_ctx->mesh.num_dim, 0, 0, -2, nm1, "[1]", ds1, FALSE);
+        set_nv_tkud(rd, index + goma_ctx->mesh.num_dim + goma_ctx->mesh.num_dim, 0, 0, -2, nm2,
+                    "[1]", ds2, FALSE);
       }
       index++;
       index_post++;
     }
-    index += Num_Dim * (Num_Dim - 1);
-    index_post += Num_Dim * (Num_Dim - 1);
+    index += goma_ctx->mesh.num_dim * (goma_ctx->mesh.num_dim - 1);
+    index_post += goma_ctx->mesh.num_dim * (goma_ctx->mesh.num_dim - 1);
   }
 
   if (SHELL_NORMALS != -1 &&
@@ -10792,7 +10795,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     index++;
     index_post++;
     /* Z Component */
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       sprintf(nm, "SH_NZ");
       sprintf(ds, "Z-component of Shell Normal Vector");
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -10856,7 +10859,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
 
   if (VISCOUS_STRESS != -1 && Num_Var_In_Type[pg->imtrx][R_MOMENTUM1]) {
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       VISCOUS_STRESS = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "VS11", "[1]", "Viscous stress xx", FALSE);
       index++;
@@ -10924,7 +10927,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
 
   if (PP_FLUID_STRESS != -1 && Num_Var_In_Type[pg->imtrx][R_MOMENTUM1]) {
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       PP_FLUID_STRESS = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "FS11", "[1]", "Viscous stress xx", FALSE);
       index++;
@@ -10992,7 +10995,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
 
   if (PP_VELOCITY_GRADIENTS != -1 && Num_Var_In_Type[pg->imtrx][R_MOMENTUM1]) {
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       PP_VELOCITY_GRADIENTS = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "GRADV11", "[1]", "Velocity gradient xx", FALSE);
       index++;
@@ -11275,7 +11278,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
     DARCY_VELOCITY_GAS = index_post;
-    for (i = 0; i < Num_Dim; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "Darcy_Vel_g_%d", i);
       sprintf(ds, "Gas Phase Darcy Velocity in the %d direction", i);
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -11289,7 +11292,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
     DARCY_VELOCITY_LIQ = index_post;
-    for (i = 0; i < Num_Dim; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "Darcy_Vel_l_%d", i);
       sprintf(ds, "Liquid Phase Darcy Velocity in the %d direction", i);
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -11339,7 +11342,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
     }
     POROUS_SUPGVELOCITY = index_post;
-    for (i = 0; i < Num_Dim; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_dim; i++) {
       sprintf(nm, "U_supg_porous_%d", i);
       sprintf(ds, "Porous SUPG Velocity in the %d direction", i);
       set_nv_tkud(rd, index, 0, 0, -2, nm, "[1]", ds, FALSE);
@@ -11373,7 +11376,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
    */
   if (CURL_V != -1 && Num_Var_In_Type[pg->imtrx][R_MOMENTUM1]) {
     if (pd->CoordinateSystem == SWIRLING || pd->CoordinateSystem == PROJECTED_CARTESIAN ||
-        pd->CoordinateSystem == CARTESIAN_2pt5D || Num_Dim == 3) {
+        pd->CoordinateSystem == CARTESIAN_2pt5D || goma_ctx->mesh.num_dim == 3) {
       if (CURL_V == 2) {
         GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
       }
@@ -11387,7 +11390,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       set_nv_tkud(rd, index, 0, 0, -2, "VORTZ", "[1]", "z-component of vorticity", FALSE);
       index++;
       index_post++;
-    } else if (Num_Dim == 2) {
+    } else if (goma_ctx->mesh.num_dim == 2) {
       set_nv_tkud(rd, index, 0, 0, -2, "VORT", "[1]", "Vorticity (scalar)", FALSE);
       index++;
       if (CURL_V == 2) {
@@ -11418,7 +11421,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
    */
   if (LAMB_VECTOR != -1 && Num_Var_In_Type[pg->imtrx][R_MOMENTUM1]) {
     if (pd->CoordinateSystem == SWIRLING || pd->CoordinateSystem == PROJECTED_CARTESIAN ||
-        pd->CoordinateSystem == CARTESIAN_2pt5D || Num_Dim == 3) {
+        pd->CoordinateSystem == CARTESIAN_2pt5D || goma_ctx->mesh.num_dim == 3) {
       if (LAMB_VECTOR == 2) {
         GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
       }
@@ -11432,7 +11435,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
       set_nv_tkud(rd, index, 0, 0, -2, "LAMBZ", "[1]", "z-component of Lamb", FALSE);
       index++;
       index_post++;
-    } else if (Num_Dim == 2) {
+    } else if (goma_ctx->mesh.num_dim == 2) {
       LAMB_VECTOR = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "LAMBX", "[1]", "x-component of Lamb", FALSE);
       index++;
@@ -11450,7 +11453,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
    */
   if (HELICITY != -1 && Num_Var_In_Type[pg->imtrx][R_MOMENTUM1]) {
     if (pd->CoordinateSystem == SWIRLING || pd->CoordinateSystem == PROJECTED_CARTESIAN ||
-        pd->CoordinateSystem == CARTESIAN_2pt5D || Num_Dim == 3) {
+        pd->CoordinateSystem == CARTESIAN_2pt5D || goma_ctx->mesh.num_dim == 3) {
       if (HELICITY == 2) {
         GOMA_EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
       }
@@ -12116,7 +12119,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     set_nv_tkud(rd, index, 0, 0, -2, "RMY", "[1]", "y-component of NS eqns", FALSE);
     index++;
     index_post++;
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       set_nv_tkud(rd, index, 0, 0, -2, "RMZ", "[1]", "z-component of NS eqns", FALSE);
       index++;
       index_post++;
@@ -12134,7 +12137,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
     set_nv_tkud(rd, index, 0, 0, -2, "RDY", "[1]", "y-component of mesh eqns", FALSE);
     index++;
     index_post++;
-    if (Num_Dim > 2) {
+    if (goma_ctx->mesh.num_dim > 2) {
       set_nv_tkud(rd, index, 0, 0, -2, "RDZ", "[1]", "z-component of mesh eqns", FALSE);
       index++;
       index_post++;
@@ -12839,7 +12842,7 @@ int count_nodes_on_SS(const int ss_id,  /* SS id of Primary Side Set */
 
   num_nodes_on_side = 0;
   for (j = 0; j < num_local_nodes; j++) {
-    J = Proc_Elem_Connect[iconnect_ptr + j];
+    J = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + j];
     if (in_list(ss_id, 0, MAX_SS_PER_NODE, SS_list[J]) != -1) {
       if (ss_id2 == -1 || in_list(ss_id2, 0, MAX_SS_PER_NODE, SS_list[J]) != -1) {
         if (ss_id3 == -1 || in_list(ss_id3, 0, MAX_SS_PER_NODE, SS_list[J]) != -1) {
@@ -12891,7 +12894,7 @@ int elem_order_for_nodal_connect(int *listel, const Exo_DB *exo)
   num_local_nodes = elem_info(NNODES, ielem_type);
   iconnect_ptr = exo->elem_ptr[iel];
   for (ln = 0; ln < num_local_nodes; ln++) {
-    J = Proc_Elem_Connect[iconnect_ptr + ln];
+    J = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ln];
     used_node[J]++;
   }
   used_elem[iel] = 1;
@@ -12917,7 +12920,7 @@ int elem_order_for_nodal_connect(int *listel, const Exo_DB *exo)
         num_local_nodes = elem_info(NNODES, ielem_type);
         iconnect_ptr = exo->elem_ptr[ielem];
         for (ln = 0; ln < num_local_nodes; ln++) {
-          J = Proc_Elem_Connect[iconnect_ptr + ln];
+          J = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ln];
           if (used_node[J]) {
             elem_found = TRUE;
             iel = ielem;
@@ -12946,7 +12949,7 @@ int elem_order_for_nodal_connect(int *listel, const Exo_DB *exo)
       num_local_nodes = elem_info(NNODES, ielem_type);
       iconnect_ptr = exo->elem_ptr[iel];
       for (ln = 0; ln < num_local_nodes; ln++) {
-        J = Proc_Elem_Connect[iconnect_ptr + ln];
+        J = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ln];
         used_node[J]++;
       }
       used_elem[iel] = 1;
@@ -13002,7 +13005,7 @@ int check_elem_order(const int *listel, const Exo_DB *exo)
   num_local_nodes = elem_info(NNODES, ielem_type);
   iconnect_ptr = exo->elem_ptr[iel];
   for (ln = 0; ln < num_local_nodes; ln++) {
-    J = Proc_Elem_Connect[iconnect_ptr + ln];
+    J = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ln];
     used_node[J]++;
   }
   used_elem[iel] = 1;
@@ -13017,7 +13020,7 @@ int check_elem_order(const int *listel, const Exo_DB *exo)
     num_local_nodes = elem_info(NNODES, ielem_type);
     iconnect_ptr = exo->elem_ptr[iel];
     for (ln = 0; ln < num_local_nodes; ln++) {
-      J = Proc_Elem_Connect[iconnect_ptr + ln];
+      J = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + ln];
       if (used_node[J])
         elem_OK = TRUE;
       used_node[J]++;

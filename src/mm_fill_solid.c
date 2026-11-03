@@ -1578,9 +1578,9 @@ void force_n_dot_f_spring_bc(double func[DIM],
 
   node_1 = psid2nn(ns_id1);
   GOMA_EH(node_1, "Could not find the nsid needed for calculation");
-  initial_xpos1 = Coor[0][node_1];
-  initial_ypos1 = Coor[1][node_1];
-  initial_zpos1 = Coor[2][node_1];
+  initial_xpos1 = goma_ctx->mesh.coor[0][node_1];
+  initial_ypos1 = goma_ctx->mesh.coor[1][node_1];
+  initial_zpos1 = goma_ctx->mesh.coor[2][node_1];
   idx1 = Index_Solution(node_1, MESH_DISPLACEMENT1, 0, 0, -2);
   idy1 = Index_Solution(node_1, MESH_DISPLACEMENT2, 0, 0, -2);
   idz1 = Index_Solution(node_1, MESH_DISPLACEMENT3, 0, 0, -2);
@@ -3924,7 +3924,7 @@ int get_evp_stress_tensor(double TT[DIM][DIM],
 
   /* Update TT, and F_vp */
   if (evpl_glob[0]->update_flag == 1) {
-    for (i = 0; i < Num_Elem; i++) {
+    for (i = 0; i < goma_ctx->mesh.num_elem; i++) {
       for (j = 0; j < ip_total; j++) {
         for (p = 0; p < DIM; p++)
           for (q = 0; q < DIM; q++) {
@@ -4741,12 +4741,12 @@ int load_elastic_properties(struct Elastic_Constitutive *elcp,
      */
 
     nnn = -1;
-    for (ins = 0; ins < Proc_Num_Node_Sets; ins++) {
+    for (ins = 0; ins < goma_ctx->mesh.proc_num_node_sets; ins++) {
 
       /* Check for a match between the ID of the current node set and the node set
          ID specified in the input file - continue if a match is found */
 
-      if (Proc_NS_Ids[ins] == (int)elc_ptr->u_mu[0])
+      if (goma_ctx->mesh.proc_ns_ids[ins] == (int)elc_ptr->u_mu[0])
         nnn = ins;
     }
 
@@ -4754,13 +4754,14 @@ int load_elastic_properties(struct Elastic_Constitutive *elcp,
       if (goma_ctx->num_proc == 1)
         GOMA_EH(GOMA_ERROR, "Cannot find NS number on Lame MU CONTACT_LINE model");
     } else {
-      if (Proc_NS_Count[nnn] != 1) {
+      if (goma_ctx->mesh.proc_ns_count[nnn] != 1) {
         if (goma_ctx->num_proc == 1)
           GOMA_EH(GOMA_ERROR, "Illegal NS number on Lame MU CONTACT_LINE model");
       } else {
-        inode = Proc_NS_List[Proc_NS_Pointers[nnn]];
+        inode = goma_ctx->mesh.proc_ns_list[goma_ctx->mesh.proc_ns_pointers[nnn]];
 
-        dist = pow((pow(fv->x0[0] - Coor[0][inode], 2.0) + pow(fv->x0[1] - Coor[1][inode], 2.0)),
+        dist = pow((pow(fv->x0[0] - goma_ctx->mesh.coor[0][inode], 2.0) +
+                    pow(fv->x0[1] - goma_ctx->mesh.coor[1][inode], 2.0)),
                    0.5) /
                elc_ptr->u_mu[3];
         *mu = elc_ptr->lame_mu = elc_ptr->u_mu[1] + 0.1 / (pow(dist, 3.0) + 0.1 / elc_ptr->u_mu[2]);

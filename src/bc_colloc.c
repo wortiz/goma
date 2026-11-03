@@ -155,7 +155,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
      * number,  'id'
      * I is the global node number of this node !!
      */
-    I = Proc_Elem_Connect[iconnect_ptr + id];
+    I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
 
     /*
      * Check to see if the current local node number is owned by the

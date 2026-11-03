@@ -478,7 +478,7 @@ int evp_tensor_alloc(Exo_DB *exo) {
   for (mn = 0; mn < upd->Num_Mat; mn++) {
     /*Don't bother with allocation if we are not solving an EVP model */
     if (evpl_glob[mn]->ConstitutiveEquation == EVP_HYPER) {
-      pd_glob[mn]->Num_Dim = Num_Dim; /* from "el_geom.h" */
+      pd_glob[mn]->Num_Dim = goma_ctx->mesh.num_dim; /* from "el_geom.h" */
       ielem0 = exo->eb_ptr[mn];
       ielem_type = Elem_Type(exo, ielem0);     /* element type */
       ip_total = elem_info(NQUAD, ielem_type); /* number of */
@@ -1538,7 +1538,7 @@ int bf_init(Exo_DB *exo)
    * function...
    */
 
-  for (ebi = 0; ebi < Proc_Num_Elem_Blk; ebi++) {
+  for (ebi = 0; ebi < goma_ctx->mesh.proc_num_elem_blk; ebi++) {
     m = Matilda[ebi];
     if (m >= 0 && exo->eb_num_elems[ebi] > 0) {
       /* These are needed to check for matching element shapes */
