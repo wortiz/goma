@@ -73,7 +73,11 @@ int ad_assemble_continuity_vans(dbl time_value, /* current time */
 void ad_mms_vans_uv_bc(
                        double *func,
                        double d_func[], /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
-                       int var);
+                       int var, int id);
+void ad_mms_vans_p_bc(
+                       double *func,
+                       double d_func[], /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
+                       int var, int id);
 #ifdef __cplusplus
 }
 #endif

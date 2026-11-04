@@ -2505,9 +2505,13 @@ Revised:         Summer 1998, SY Tam (UNM)
     if (pde[R_MOMENTUM1]) {
       if (upd->vans_model > 0) {
 #ifdef GOMA_ENABLE_SACADO
-          err = ad_assemble_momentum_vans(time_value, theta, delta_t, h_elem_avg, &pg_data, xi,
-                                               exo);
-          GOMA_EH(err, "ad_assemble_momentum_vans");
+         if (upd->AutoDiff) {
+                   err = ad_assemble_momentum_vans(time_value, theta, delta_t, h_elem_avg, &pg_data, xi,
+                                                        exo);
+                   GOMA_EH(err, "ad_assemble_momentum_vans");
+         } else {
+           GOMA_EH(GOMA_ERROR, "AutoDiff is required for VANS");
+         }
 #else
           GOMA_EH(GOMA_ERROR, "VANS ad momentum routine requires SACADO");
 #endif

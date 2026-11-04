@@ -589,9 +589,10 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   /*
    * Calculate the dilational viscosity, if necessary
    */
-  if (mp->DilationalViscosityModel != DILVISCM_KAPPAWIPESMU) {
-    GOMA_EH(GOMA_ERROR, "Dilational viscosity not enabled AD fluid stress");
-  }
+   ADType div_v;
+   for (int i = 0; i < VIM; i++) {
+    div_v += ad_fv->grad_v[i][i];
+   }
 
   /*
    * Viscoelastic Stress contributions
@@ -603,7 +604,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
 
   for (int a = 0; a < VIM; a++) {
     for (int b = 0; b < VIM; b++) {
-      Pi[a][b] = -ad_fv->P * (double)delta(a, b) + mu * gamma[a][b];
+      Pi[a][b] = -ad_fv->P * (double)delta(a, b) + mu * gamma[a][b] - 2.0/3.0 * div_v * ((double) delta(a,b));
     }
   }
 
@@ -700,6 +701,12 @@ int ad_momentum_source_term(ADType f[DIM], /* Body force. */
            (1.0 / 8.0) * rho * sin(x + y) - 1.0 / 8.0 * rho * sin(x + 3 * y) +
            (1.0 / 4.0) * rho * cos(2 * x - 2 * y) - 1.0 / 4.0 * rho * cos(2 * x + 2 * y);
     f[2] = 0;
+    f[0] = M_PI*(-6.0*M_PI*mu*pow(sin(M_PI*x), 3)*pow(sin(M_PI*y), 2)*cos(M_PI*y) + 0.5*M_PI*mu*pow(sin(M_PI*x), 3)*cos(M_PI*y) - 8.0*M_PI*mu*pow(sin(M_PI*x), 2)*sin(M_PI*y)*cos(M_PI*y) + 2.5*M_PI*mu*sin(M_PI*x)*pow(
+sin(M_PI*y), 2)*cos(M_PI*y) + 2.0*M_PI*mu*sin(M_PI*y)*cos(M_PI*y) + 1.0*rho*pow(sin(M_PI*x), 4)*pow(sin(M_PI*y), 3)*cos(M_PI*x) + 2.0*rho*pow(sin(M_PI*x), 3)*pow(sin(M_PI*y), 2)*cos(M_PI*x) + 0.5*sin(M_PI*x)*pow(
+sin(M_PI*y), 2)*cos(M_PI*x) + 0.5*sin(M_PI*y)*cos(M_PI*x));
+f[1] = M_PI*(6.0*M_PI*mu*pow(sin(M_PI*x), 2)*pow(sin(M_PI*y), 3)*cos(M_PI*x) - 2.5*M_PI*mu*pow(sin(M_PI*x), 2)*sin(M_PI*y)*cos(M_PI*x) + 8.0*M_PI*mu*sin(M_PI*x)*pow(sin(M_PI*y), 2)*cos(M_PI*x) - 2.0*M_PI*mu*sin(M
+_PI*x)*cos(M_PI*x) - 0.5*M_PI*mu*pow(sin(M_PI*y), 3)*cos(M_PI*x) + 1.0*rho*pow(sin(M_PI*x), 3)*pow(sin(M_PI*y), 4)*cos(M_PI*y) + 2.0*rho*pow(sin(M_PI*x), 2)*pow(sin(M_PI*y), 3)*cos(M_PI*y) + 0.5*pow(sin(M_PI*x),
+2)*sin(M_PI*y)*cos(M_PI*y) + 0.5*sin(M_PI*x)*cos(M_PI*y));
   } else {
     GOMA_EH(GOMA_ERROR, "Unknown Navier-Stokes Source Model for AD");
   }
@@ -2218,7 +2225,7 @@ extern "C" int ad_assemble_momentum_vans(dbl time,       /* current time */
           ADType source = 0.0;
           if (source_on) {
             source += f[a];
-            source *= wt_func * d_area * ad_fv->void_fraction;
+            source *= wt_func * d_area;
             source *= source_etm;
           }
 
@@ -2508,7 +2515,8 @@ extern "C" int ad_assemble_continuity_vans(dbl time_value, /* current time */
 extern "C" void ad_mms_vans_uv_bc(
                        double *func,
                        double d_func[], /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
-                       int var)
+                       int var,
+                      int id)
 {
   ADType x = ad_fv->x[0];
   ADType y = ad_fv->x[1];
@@ -2531,7 +2539,32 @@ extern "C" void ad_mms_vans_uv_bc(
   *func = val.val();
 
   for (int var = V_FIRST; var < V_LAST; var++) {
-    d_func[var] = val.dx(ad_fv->offset[var]);
+    d_func[var] = val.dx(ad_fv->offset[var]+id);
+  }
+} 
+
+extern "C" void ad_mms_vans_p_bc(
+                       double *func,
+                       double d_func[], /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
+                       int var,
+                      int id)
+{
+  ADType x = ad_fv->x[0];
+  ADType y = ad_fv->x[1];
+  ADType val;
+  switch (var) {
+    case PRESSURE:
+      val = cos(x)*sin(y);
+    break;
+    default:
+    GOMA_EH(GOMA_ERROR, "Unknown var in ad_mms_vans_p_bc");
+  }
+
+  val -= ad_fv->P;
+  *func = val.val();
+
+  for (int var = V_FIRST; var < V_LAST; var++) {
+    d_func[var] = val.dx(ad_fv->offset[var]+id);
   }
 } 
 #endif // GOMA_ENABLE_SACADO

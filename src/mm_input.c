@@ -7173,6 +7173,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     upd->AutoDiff = -1;
     (void)read_string(ifp, input, '\n');
+    strip(input);
     if (strcmp(input, "no") == 0) {
       upd->AutoDiff = 0;
     } else if (strcmp(input, "yes") == 0) {

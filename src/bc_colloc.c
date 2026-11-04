@@ -472,7 +472,12 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             case MMS_VANS_X_BC:
             case MMS_VANS_Y_BC:
                 var_flag = BC_Types[bc_input_id].desc->equation;
-                ad_mms_vans_uv_bc(&func, d_func, var_flag);
+                ad_mms_vans_uv_bc(&func, d_func, var_flag, id);
+		break;
+            case MMS_VANS_P_BC:
+                var_flag = BC_Types[bc_input_id].desc->equation;
+                ad_mms_vans_p_bc(&func, d_func, var_flag, id);
+		break;
 
             case U_PARABOLA_BC:
             case V_PARABOLA_BC:
