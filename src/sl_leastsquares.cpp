@@ -113,14 +113,11 @@ void trilinos_solve_ls(double *bf_mat_,
   }
   (*A).Multiply(transA, f_rhs, A_T_f);
 
-  /* Assemble linear problem */
-  // if (NewMatrix) Epetra_LinearProblem Problem(&A_T_A, &x, &A_T_f);
-  if (NewMatrix) {
-    Problem.SetOperator(&A_T_A);
-    Problem.SetLHS(&x);
-    Problem.SetRHS(&A_T_f);
-    Problem.CheckInput();
-  }
+  /* Assemble linear problem: A_T_A, x and A_T_f are rebuilt on every call */
+  Problem.SetOperator(&A_T_A);
+  Problem.SetLHS(&x);
+  Problem.SetRHS(&A_T_f);
+  Problem.CheckInput();
 
   AztecOO Solver(Problem);
   /* Set aztec params to default */
