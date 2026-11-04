@@ -104,6 +104,9 @@ typedef struct p_t {
 EXTERN void
 initialize_particles(const Exo_DB *, dbl *const, dbl *const, dbl *const, dbl *const, dbl *const);
 
+/* Free the particle tracker state (goma_ctx->particles.tracker), closing its output files. */
+EXTERN void particle_tracker_release(void);
+
 EXTERN int compute_particles(const Exo_DB *,
                              dbl *const,
                              dbl *const,

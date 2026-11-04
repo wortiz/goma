@@ -3018,7 +3018,8 @@ void ark_landing(void) {
      */
 
     if (goma_ctx->bc.bc_types[i].index_dad == -1) {
-      goma_ctx->bc.bc_types[i].desc = &BC_Desc[goma_ctx->bc.bc_types[i].BC_Desc_index];
+      goma_ctx->bc.bc_types[i].desc =
+          (struct BC_descriptions *)&BC_Desc[goma_ctx->bc.bc_types[i].BC_Desc_index];
     } else {
       goma_ctx->bc.bc_types[i].desc = NULL;
     }
@@ -3092,7 +3093,7 @@ void ark_landing(void) {
     for (j = 0; j < CDIM; j++) {
       index = goma_ctx->bc.rot_types[i].BC_desc_index[j];
       if (index > -1) {
-        goma_ctx->bc.rot_types[i].BC_desc[j] = &BC_Desc[index];
+        goma_ctx->bc.rot_types[i].BC_desc[j] = (struct BC_descriptions *)&BC_Desc[index];
       } else {
         goma_ctx->bc.rot_types[i].BC_desc[j] = NULL;
       }

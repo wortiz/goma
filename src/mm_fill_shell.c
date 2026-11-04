@@ -268,8 +268,6 @@ static char rcsid[] = "$Id: mm_fill_shell.c,v 5.62 2010-07-30 21:14:52 prschun E
  *
  */
 
-int ShellElementParentElementCoverageForVariable[MAX_VARIABLE_TYPES] = {MAX_VARIABLE_TYPES * 0};
-
 /*****************************************************************************
  *									     *
  *               PLACE EQUATIONS FOR SHELL ELEMENTS HERE.                    *

@@ -114,7 +114,6 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
   dbl cauchy_green_old[DIM][DIM];
   dbl cauchy_green_dot[DIM][DIM];
   dbl d_cauchy_green_dot_dx[DIM][DIM][DIM][MDE]; /* sensitivity */
-  static int is_initialized = FALSE;
   int transient_run = pd->TimeIntegration != STEADY;
 
   struct Basis_Functions *bfv;
@@ -146,7 +145,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
     memset(ddet2d_dx, 0, sizeof(double) * DIM * MDE);
     memset(d_grad_d_dot, 0, sizeof(double) * DIM * DIM * DIM * MDE);
 
-    if (!is_initialized) {
+    if (!goma_ctx->fill.belly_flop_initialized) {
       memset(fv->d_volume_change_dx, 0, sizeof(double) * DIM * MDE);
       memset(fv->d_volume_strain_dx, 0, sizeof(double) * DIM * MDE);
       memset(fv->d_volume_change_dp, 0, sizeof(double) * MDE);
@@ -155,7 +154,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
       memset(fv->d_strain_dp, 0, sizeof(double) * DIM * DIM * MDE);
       memset(fv->d_deform_grad_dx, 0, sizeof(double) * DIM * DIM * DIM * MDE);
       memset(d_invdeform_grad_dx, 0, sizeof(double) * DIM * DIM * DIM * MDE);
-      is_initialized = TRUE;
+      goma_ctx->fill.belly_flop_initialized = TRUE;
     }
   }
 

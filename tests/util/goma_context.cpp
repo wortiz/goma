@@ -186,3 +186,40 @@ TEST_CASE("goma context release calls the problem release hook", "[util][goma_co
   REQUIRE(problem_release_calls == 1);
   goma_context_destroy(ctx);
 }
+
+TEST_CASE("goma context release resets fill state and closes its log", "[util][goma_context]") {
+  GomaContext *ctx = goma_context_create();
+  REQUIRE(ctx->fill.ca_boundary_num_ss == -1);
+  REQUIRE(ctx->fill.dofptr_elem_blk_id == -123);
+
+  ctx->fill.ls_simplemass_mass_set = 1;
+  ctx->fill.ls_simplemass_mass = 2.5;
+  ctx->fill.ca_boundary_num_ss = 3;
+  ctx->fill.elem_ptrs_initialized = 1;
+  ctx->fill.ls_surf_log = tmpfile();
+  REQUIRE(ctx->fill.ls_surf_log != nullptr);
+
+  goma_context_release(ctx);
+  REQUIRE(ctx->fill.ls_surf_log == nullptr);
+  REQUIRE(ctx->fill.ls_simplemass_mass_set == 0);
+  REQUIRE(ctx->fill.ls_simplemass_mass == 0.0);
+  REQUIRE(ctx->fill.ca_boundary_num_ss == -1);
+  REQUIRE(ctx->fill.elem_ptrs_initialized == 0);
+  goma_context_destroy(ctx);
+}
+
+TEST_CASE("goma context release closes echo files", "[util][goma_context]") {
+  GomaContext *ctx = goma_context_create();
+  ctx->echo.files[0] = tmpfile();
+  ctx->echo.names[0] = static_cast<char *>(malloc(8));
+  std::strcpy(ctx->echo.names[0], "echo");
+  ctx->echo.num_files = 1;
+  ctx->echo.off = 1;
+
+  goma_context_release(ctx);
+  REQUIRE(ctx->echo.num_files == 0);
+  REQUIRE(ctx->echo.files[0] == nullptr);
+  REQUIRE(ctx->echo.names[0] == nullptr);
+  REQUIRE(ctx->echo.off == 0);
+  goma_context_destroy(ctx);
+}

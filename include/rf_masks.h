@@ -73,7 +73,7 @@
       */
 
 /*
- * Inter_Mask is Defined in mm_unknown_map.c
+ * The mask lives in the Goma context: goma_ctx->problem.inter_mask.
  */
 
 #endif

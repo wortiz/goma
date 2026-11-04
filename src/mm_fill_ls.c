@@ -2362,8 +2362,7 @@ static int Hrenorm_simplemass(Exo_DB *exo,
   double *F, *F_, *R, *b;
   double M;
   int global_ls_unkns = num_ls_unkns;
-  static double M0;
-  static int M0_set = 0;
+  /* reference mass kept in goma_ctx->fill between renormalizations */
 #ifdef PARALLEL
 
   double interface_size = 0;
@@ -2384,15 +2383,15 @@ static int Hrenorm_simplemass(Exo_DB *exo,
   dalloc(num_ls_unkns, R);
   dalloc(num_ls_unkns, b);
 
-  if ((!M0_set) && (goma_ctx->fem.ls->Mass_Value >= 0.0)) {
+  if ((!goma_ctx->fill.ls_simplemass_mass_set) && (goma_ctx->fem.ls->Mass_Value >= 0.0)) {
     if (goma_ctx->fem.ls->Mass_Value > 0) {
-      M0 = goma_ctx->fem.ls->Mass_Value;
+      goma_ctx->fill.ls_simplemass_mass = goma_ctx->fem.ls->Mass_Value;
     } else {
-      M0 = find_LS_mass(exo, dpi, NULL, dC, x, num_total_unkns);
-      M0_set = 1;
+      goma_ctx->fill.ls_simplemass_mass = find_LS_mass(exo, dpi, NULL, dC, x, num_total_unkns);
+      goma_ctx->fill.ls_simplemass_mass_set = 1;
     }
-  } else if (!M0_set) {
-    M0 = find_LS_mass(exo, dpi, NULL, dC, x, num_total_unkns);
+  } else if (!goma_ctx->fill.ls_simplemass_mass_set) {
+    goma_ctx->fill.ls_simplemass_mass = find_LS_mass(exo, dpi, NULL, dC, x, num_total_unkns);
   }
 
   surf_based_initialization(x, NULL, NULL, exo, num_total_nodes, list, time, 0., 0.);
@@ -2401,9 +2400,9 @@ static int Hrenorm_simplemass(Exo_DB *exo,
 #endif
 
   max_its = 20;
-  Mold = M0;
+  Mold = goma_ctx->fill.ls_simplemass_mass;
   M = find_LS_mass(exo, dpi, NULL, dC, x, num_total_unkns);
-  DPRINTF(stdout, "\n\t\t Mass old %g, Mass new %g: \t", M0, M);
+  DPRINTF(stdout, "\n\t\t Mass old %g, Mass new %g: \t", goma_ctx->fill.ls_simplemass_mass, M);
 
   for (i = 0; i < max_its; i++) {
     if (fabs(M - Mold) < 1e-7) {
@@ -2429,7 +2428,7 @@ static int Hrenorm_simplemass(Exo_DB *exo,
     exchange_dof(cx, dpi, x, goma_ctx->fem.pg->imtrx);
 #endif
 
-    Mold = M0;
+    Mold = goma_ctx->fill.ls_simplemass_mass;
     M = find_LS_mass(exo, dpi, NULL, dC, x, num_total_unkns);
 
     DPRINTF(stdout, "\n\t\t iter %d, Additive value: %f, new mass %g \n\t\t", i, c, M);
@@ -2462,8 +2461,7 @@ static int Hrenorm_smolianksi_only(Exo_DB *exo,
   double *F, *F_, *R, *b;
   double M;
   int global_ls_unkns = num_ls_unkns;
-  static double M0;
-  static int M0_set = 0;
+  /* reference mass kept in goma_ctx->fill between renormalizations */
 #ifdef PARALLEL
 
   double interface_size = 0;
@@ -2484,24 +2482,24 @@ static int Hrenorm_smolianksi_only(Exo_DB *exo,
   dalloc(num_ls_unkns, R);
   dalloc(num_ls_unkns, b);
 
-  if ((!M0_set) && (goma_ctx->fem.ls->Mass_Value >= 0.0)) {
+  if ((!goma_ctx->fill.ls_smolianski_mass_set) && (goma_ctx->fem.ls->Mass_Value >= 0.0)) {
     if (goma_ctx->fem.ls->Mass_Value > 0) {
-      M0 = goma_ctx->fem.ls->Mass_Value;
+      goma_ctx->fill.ls_smolianski_mass = goma_ctx->fem.ls->Mass_Value;
     } else {
-      M0 = find_LS_mass(exo, dpi, NULL, dC, x, num_total_unkns);
-      M0_set = 1;
+      goma_ctx->fill.ls_smolianski_mass = find_LS_mass(exo, dpi, NULL, dC, x, num_total_unkns);
+      goma_ctx->fill.ls_smolianski_mass_set = 1;
     }
-  } else if (!M0_set) {
-    M0 = find_LS_mass(exo, dpi, NULL, dC, x, num_total_unkns);
+  } else if (!goma_ctx->fill.ls_smolianski_mass_set) {
+    goma_ctx->fill.ls_smolianski_mass = find_LS_mass(exo, dpi, NULL, dC, x, num_total_unkns);
   }
 #ifdef PARALLEL
   exchange_dof(cx, dpi, x, goma_ctx->fem.pg->imtrx);
 #endif
 
   max_its = 20;
-  Mold = M0;
+  Mold = goma_ctx->fill.ls_smolianski_mass;
   M = find_LS_mass(exo, dpi, NULL, dC, x, num_total_unkns);
-  DPRINTF(stdout, "\n\t\t Mass old %g, Mass new %g: \t", M0, M);
+  DPRINTF(stdout, "\n\t\t Mass old %g, Mass new %g: \t", goma_ctx->fill.ls_smolianski_mass, M);
 
   for (i = 0; i < max_its; i++) {
     if (fabs(M - Mold) < 1e-7) {
@@ -2527,7 +2525,7 @@ static int Hrenorm_smolianksi_only(Exo_DB *exo,
     exchange_dof(cx, dpi, x, goma_ctx->fem.pg->imtrx);
 #endif
 
-    Mold = M0;
+    Mold = goma_ctx->fill.ls_smolianski_mass;
     M = find_LS_mass(exo, dpi, NULL, dC, x, num_total_unkns);
 
     DPRINTF(stdout, "\n\t\t iter %d, Additive value: %f, new mass %g \n\t\t", i, c, M);
@@ -3051,7 +3049,6 @@ int print_ls_interface(
 void print_surf_list(struct LS_Surf_List *list, double time) {
   int i = 0;
   FILE *f;
-  static FILE *g = NULL;
   struct LS_Surf *surf = list->start;
   int j, level;
   char filename1[80], filename2[80], err_msg[MAX_CHAR_ERR_MSG];
@@ -3074,8 +3071,8 @@ void print_surf_list(struct LS_Surf_List *list, double time) {
     GOMA_EH(GOMA_ERROR, err_msg);
   }
 
-  if (g == NULL) {
-    if ((g = fopen(filename2, "w")) == NULL) {
+  if (goma_ctx->fill.ls_surf_log == NULL) {
+    if ((goma_ctx->fill.ls_surf_log = fopen(filename2, "w")) == NULL) {
       sprintf(err_msg, "Error opening %s\n", filename2);
       GOMA_EH(GOMA_ERROR, err_msg);
     }
@@ -3094,7 +3091,7 @@ void print_surf_list(struct LS_Surf_List *list, double time) {
     /* add tabs to indicate surface hierarchy */
     for (j = 0; j < level; j++) {
       fprintf(f, "\t");
-      fprintf(g, "\t");
+      fprintf(goma_ctx->fill.ls_surf_log, "\t");
     }
 
     switch (surf->type) {
@@ -3103,8 +3100,8 @@ void print_surf_list(struct LS_Surf_List *list, double time) {
 #ifdef LS_SURFPOINT_FILE
       struct LS_Surf_Point_Data *s = (struct LS_Surf_Point_Data *)surf->data;
       fprintf(f, "POINT %d\t %f\t %f\t %f\t %d\n", i, s->x[0], s->x[1], s->x[2], s->inflection);
-      fprintf(g, "POINT %f\t %d\t %f\t %f\t %f\t %d\n", time, i, s->x[0], s->x[1], s->x[2],
-              s->inflection);
+      fprintf(goma_ctx->fill.ls_surf_log, "POINT %f\t %d\t %f\t %f\t %f\t %d\n", time, i, s->x[0],
+              s->x[1], s->x[2], s->inflection);
       if ((goma_ctx->fem.pd->Num_Dim != 3) && (fabs(s->x[2]) > 1.e-8)) {
         printf("huh?\n");
       }
@@ -3117,7 +3114,8 @@ void print_surf_list(struct LS_Surf_List *list, double time) {
       struct LS_Surf_Plane_Data *s = (struct LS_Surf_Plane_Data *)surf->data;
 
       fprintf(f, "PLANE %d\t %f\t %f\t %f\t %f\n", i, s->n[0], s->n[1], s->n[2], s->d);
-      fprintf(g, "PLANE %f\t %d\t %f\t %f\t %f\t %f\n", time, i, s->n[0], s->n[1], s->n[2], s->d);
+      fprintf(goma_ctx->fill.ls_surf_log, "PLANE %f\t %d\t %f\t %f\t %f\t %f\n", time, i, s->n[0],
+              s->n[1], s->n[2], s->d);
 
     }
 
@@ -3128,8 +3126,8 @@ void print_surf_list(struct LS_Surf_List *list, double time) {
 
       fprintf(f, "CICLE/SPHERE %d\t %f\t %f\t %f\t %f\n", i, s->center[0], s->center[1],
               s->center[2], s->r);
-      fprintf(g, "CICLE/SPHERE %f\t %d\t %f\t %f\t %f\t %f\n", time, i, s->center[0], s->center[1],
-              s->center[2], s->r);
+      fprintf(goma_ctx->fill.ls_surf_log, "CICLE/SPHERE %f\t %d\t %f\t %f\t %f\t %f\n", time, i,
+              s->center[0], s->center[1], s->center[2], s->r);
     }
 
     break;
@@ -3139,8 +3137,8 @@ void print_surf_list(struct LS_Surf_List *list, double time) {
 
       fprintf(f, "ELLIPSOID %d\t %f\t %f\t %f\t %f\t %f\t %f\n", i, s->center[0], s->center[1],
               s->center[2], s->r[0], s->r[1], s->r[2]);
-      fprintf(g, "ELLIPSOID %f\t %d\t %f\t %f\t %f\t %f\t %f\t %f\n", time, i, s->center[0],
-              s->center[1], s->center[2], s->r[0], s->r[1], s->r[2]);
+      fprintf(goma_ctx->fill.ls_surf_log, "ELLIPSOID %f\t %d\t %f\t %f\t %f\t %f\t %f\t %f\n", time,
+              i, s->center[0], s->center[1], s->center[2], s->r[0], s->r[1], s->r[2]);
     }
 
     break;
@@ -3149,7 +3147,7 @@ void print_surf_list(struct LS_Surf_List *list, double time) {
       struct LS_Surf_Facet_Data *s = (struct LS_Surf_Facet_Data *)surf->data;
 
       fprintf(f, "FACET %d\t %d\n", i, s->num_points);
-      fprintf(g, "FACET %f\t %d\t %d\t\n", time, i, s->num_points);
+      fprintf(goma_ctx->fill.ls_surf_log, "FACET %f\t %d\t %d\t\n", time, i, s->num_points);
     }
 
     break;
@@ -3158,21 +3156,22 @@ void print_surf_list(struct LS_Surf_List *list, double time) {
       struct LS_Surf_SS_Data *s = (struct LS_Surf_SS_Data *)surf->data;
 
       fprintf(f, "SS %d\t %d\n", i, s->ss_id);
-      fprintf(g, "SS %f\t %d\t %d\n", time, i, s->ss_id);
+      fprintf(goma_ctx->fill.ls_surf_log, "SS %f\t %d\t %d\n", time, i, s->ss_id);
     } break;
 
     case LS_SURF_NS: {
       struct LS_Surf_NS_Data *s = (struct LS_Surf_NS_Data *)surf->data;
 
       fprintf(f, "NS %d\t %d\t %d\n", i, s->ns_id, s->PosEB_id);
-      fprintf(g, "NS %f\t %d\t %d\t %d\n", time, i, s->ns_id, s->PosEB_id);
+      fprintf(goma_ctx->fill.ls_surf_log, "NS %f\t %d\t %d\t %d\n", time, i, s->ns_id, s->PosEB_id);
     } break;
 
     case LS_SURF_ISOSURFACE: {
       struct LS_Surf_Iso_Data *s = (struct LS_Surf_Iso_Data *)surf->data;
 
       fprintf(f, "Isosurface %d\t %d\t %f\n", i, s->isovar, s->isoval);
-      fprintf(g, "Isosurface %f\t %d\t %d\t %f\n", time, i, s->isovar, s->isoval);
+      fprintf(goma_ctx->fill.ls_surf_log, "Isosurface %f\t %d\t %d\t %f\n", time, i, s->isovar,
+              s->isoval);
     }
 
     break;
@@ -3713,34 +3712,32 @@ static int point_on_ca_boundary(int I, Exo_DB *exo)
  * be treated as inflection points in the zero level set
  */
 {
-  static int num_ss_on_ca_boundary = -1;
-  static int iss_on_ca_boundary[20];
   int inflection;
   int ibc, ica, i, J;
   int iss = 0;
 
   /* first time here, make list of side sets with CA boundary conditions */
-  if (num_ss_on_ca_boundary == -1) {
-    num_ss_on_ca_boundary = 0;
+  if (goma_ctx->fill.ca_boundary_num_ss == -1) {
+    goma_ctx->fill.ca_boundary_num_ss = 0;
     for (ibc = 0; ibc < goma_ctx->problem.num_bc; ibc++) {
       if (goma_ctx->bc.bc_types[ibc].BC_Name == FILL_CA_BC) {
         if ((iss = in_list(goma_ctx->bc.bc_types[ibc].BC_ID, 0, exo->num_side_sets, exo->ss_id)) ==
             -1) {
           GOMA_EH(GOMA_ERROR, "Cannot locate SS index in point_on_ca_boundary");
         }
-        if (num_ss_on_ca_boundary >= 20)
+        if (goma_ctx->fill.ca_boundary_num_ss >= 20)
           GOMA_EH(GOMA_ERROR, "Need to increase array for ss_on_ca_boundary[] in "
                               "point_on_ca_boundary");
-        iss_on_ca_boundary[num_ss_on_ca_boundary] = iss;
-        num_ss_on_ca_boundary++;
+        goma_ctx->fill.ca_boundary_ss[goma_ctx->fill.ca_boundary_num_ss] = iss;
+        goma_ctx->fill.ca_boundary_num_ss++;
       }
     }
   }
 
   inflection = FALSE; /* innocent till proven guilty */
 
-  for (ica = 0; ica < num_ss_on_ca_boundary; ica++) {
-    iss = iss_on_ca_boundary[ica];
+  for (ica = 0; ica < goma_ctx->fill.ca_boundary_num_ss; ica++) {
+    iss = goma_ctx->fill.ca_boundary_ss[ica];
 
     for (i = 0; i < goma_ctx->mesh.proc_ss_node_count[iss]; i++) {
       J = exo->ss_node_list[iss][i];
@@ -8907,9 +8904,8 @@ void subelement_mesh_output(double x[], Exo_DB *exo) {
   int iside;
   char filename[256];
   char *description = "Subelement decomposition";
-  static int count = 0;
 
-  sprintf(filename, "subelements.%.5d.exoII", count);
+  sprintf(filename, "subelements.%.5d.exoII", goma_ctx->fill.subelement_output_calls);
 
   /* first step is to gather subelement information into a single list */
   get_subelement_descriptions(x, exo, &list);
@@ -9047,7 +9043,7 @@ void subelement_mesh_output(double x[], Exo_DB *exo) {
   safe_free(vconn);
   safe_free(sconn);
 
-  count++;
+  goma_ctx->fill.subelement_output_calls++;
 
   return;
 }

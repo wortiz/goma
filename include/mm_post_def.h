@@ -148,10 +148,10 @@ struct Post_Processing_Flux_Names {
 
 typedef struct Post_Processing_Flux_Names FLUX_NAME_STRUCT;
 
-extern FLUX_NAME_STRUCT pp_flux_names[];
-extern int Num_Flux_Names;
+extern const FLUX_NAME_STRUCT pp_flux_names[];
+extern const int Num_Flux_Names;
 
-struct Post_Processing_Flux_Names pp_flux_names[51] = {
+const struct Post_Processing_Flux_Names pp_flux_names[51] = {
     {"FORCE_NORMAL", FORCE_NORMAL},
     {"FORCE_TANGENT1", FORCE_TANGENT1},
     {"FORCE_TANGENT2", FORCE_TANGENT2},
@@ -205,7 +205,7 @@ struct Post_Processing_Flux_Names pp_flux_names[51] = {
     {"SCATTERING_CROSS_SECTION", SCATTERING_CROSS_SECTION},
 };
 
-int Num_Flux_Names = sizeof(pp_flux_names) / sizeof(struct Post_Processing_Flux_Names);
+const int Num_Flux_Names = sizeof(pp_flux_names) / sizeof(struct Post_Processing_Flux_Names);
 
 struct Post_Processing_Volume_Names {
   char *name;
@@ -214,65 +214,65 @@ struct Post_Processing_Volume_Names {
 
 typedef struct Post_Processing_Volume_Names VOL_NAME_STRUCT;
 
-extern VOL_NAME_STRUCT pp_vol_names[];
-extern int Num_Vol_Names;
+extern const VOL_NAME_STRUCT pp_vol_names[];
+extern const int Num_Vol_Names;
 
-VOL_NAME_STRUCT pp_vol_names[] = {{"VOLUME", I_VOLUME},
-                                  {"LUB_LOAD", I_LUB_LOAD},
-                                  {"DISSIPATION", I_DISSIP},
-                                  {"JOULE", I_JOULE},
-                                  {"SPECIES_MASS", I_SPECIES_MASS},
-                                  {"TOTAL_MASS", I_TOTAL_MASS},
-                                  {"HEAT_ENERGY", I_HEAT_ENERGY},
-                                  {"MOMENTUMX", I_MOMX},
-                                  {"MOMENTUMY", I_MOMY},
-                                  {"MOMENTUMZ", I_MOMZ},
-                                  {"STRESS_TRACE", I_TRACE},
-                                  {"POSITIVE_FILL", I_POS_FILL},
-                                  {"NEGATIVE_FILL", I_NEG_FILL},
-                                  {"NEGATIVE_VX", I_NEG_VX},
-                                  {"NEGATIVE_VY", I_NEG_VY},
-                                  {"NEGATIVE_VZ", I_NEG_VZ},
-                                  {"POSITIVE_VX", I_POS_VX},
-                                  {"POSITIVE_VY", I_POS_VY},
-                                  {"POSITIVE_VZ", I_POS_VZ},
-                                  {"NEGATIVE_CENTER_X", I_NEG_CENTER_X},
-                                  {"NEGATIVE_CENTER_Y", I_NEG_CENTER_Y},
-                                  {"NEGATIVE_CENTER_Z", I_NEG_CENTER_Z},
-                                  {"POSITIVE_CENTER_X", I_POS_CENTER_X},
-                                  {"POSITIVE_CENTER_Y", I_POS_CENTER_Y},
-                                  {"POSITIVE_CENTER_Z", I_POS_CENTER_Z},
-                                  {"LS_ARC", I_LS_ARC_LENGTH},
-                                  {"II_GAMMA_DOT", I_RATE_OF_DEF_II},
-                                  {"POROUS_LIQ_INVENTORY", I_POROUS_LIQUID_INV},
-                                  {"POROUS_LIQ_INVENTORY_2", I_POROUS_LIQUID_INV_2},
-                                  {"POROUS_LIQ_INVENTORY_3", I_POROUS_LIQUID_INV_3},
-                                  {"SPEED_SQUARED", I_SPEED},
-                                  {"SURFACE_SPECIES", I_SURF_SPECIES},
-                                  {"ELECTRIC_LOAD_X", I_ELOADX},
-                                  {"ELECTRIC_LOAD_Y", I_ELOADY},
-                                  {"ELECTRIC_LOAD_Z", I_ELOADZ},
-                                  {"SURFACE_TEMPERATURE", I_SURF_TEMP},
-                                  {"VOL_PLANE", I_VOLUME_PLANE},
-                                  {"POS_PLANE_FILL", I_POS_VOLPLANE},
-                                  {"NEG_PLANE_FILL", I_NEG_VOLPLANE},
-                                  {"SPECIES_SOURCE", I_SPECIES_SOURCE},
-                                  {"KINETIC_ENERGY", I_KINETIC_ENERGY},
-                                  {"SHELL_VOLUME", I_SHELL_VOLUME},
-                                  {"TFMP_FORCE", I_TFMP_FORCE},
-                                  {"MASS", I_MASS},
-                                  {"MASS_NEGATIVE_FILL", I_MASS_NEGATIVE_FILL},
-                                  {"MASS_POSITIVE_FILL", I_MASS_POSITIVE_FILL},
-                                  {"VORTICITY", I_VORTICITY},
-                                  {"GIESEKUS", I_GIESEKUS},
-                                  {"LAMB_MAG", I_LAMB_MAG},
-                                  {"HELICITY", I_HELICITY},
-                                  {"Q_FCN", I_Q_FCN},
-                                  {"ABSORPTION_CROSS_SECTION", I_EM_ABSORB_CROSS_SECTION},
-                                  {"HEAT_ENERGY_NEG", I_HEAT_ENERGY_NEG},
-                                  {"HEAT_ENERGY_POS", I_HEAT_ENERGY_POS}};
+const VOL_NAME_STRUCT pp_vol_names[] = {{"VOLUME", I_VOLUME},
+                                        {"LUB_LOAD", I_LUB_LOAD},
+                                        {"DISSIPATION", I_DISSIP},
+                                        {"JOULE", I_JOULE},
+                                        {"SPECIES_MASS", I_SPECIES_MASS},
+                                        {"TOTAL_MASS", I_TOTAL_MASS},
+                                        {"HEAT_ENERGY", I_HEAT_ENERGY},
+                                        {"MOMENTUMX", I_MOMX},
+                                        {"MOMENTUMY", I_MOMY},
+                                        {"MOMENTUMZ", I_MOMZ},
+                                        {"STRESS_TRACE", I_TRACE},
+                                        {"POSITIVE_FILL", I_POS_FILL},
+                                        {"NEGATIVE_FILL", I_NEG_FILL},
+                                        {"NEGATIVE_VX", I_NEG_VX},
+                                        {"NEGATIVE_VY", I_NEG_VY},
+                                        {"NEGATIVE_VZ", I_NEG_VZ},
+                                        {"POSITIVE_VX", I_POS_VX},
+                                        {"POSITIVE_VY", I_POS_VY},
+                                        {"POSITIVE_VZ", I_POS_VZ},
+                                        {"NEGATIVE_CENTER_X", I_NEG_CENTER_X},
+                                        {"NEGATIVE_CENTER_Y", I_NEG_CENTER_Y},
+                                        {"NEGATIVE_CENTER_Z", I_NEG_CENTER_Z},
+                                        {"POSITIVE_CENTER_X", I_POS_CENTER_X},
+                                        {"POSITIVE_CENTER_Y", I_POS_CENTER_Y},
+                                        {"POSITIVE_CENTER_Z", I_POS_CENTER_Z},
+                                        {"LS_ARC", I_LS_ARC_LENGTH},
+                                        {"II_GAMMA_DOT", I_RATE_OF_DEF_II},
+                                        {"POROUS_LIQ_INVENTORY", I_POROUS_LIQUID_INV},
+                                        {"POROUS_LIQ_INVENTORY_2", I_POROUS_LIQUID_INV_2},
+                                        {"POROUS_LIQ_INVENTORY_3", I_POROUS_LIQUID_INV_3},
+                                        {"SPEED_SQUARED", I_SPEED},
+                                        {"SURFACE_SPECIES", I_SURF_SPECIES},
+                                        {"ELECTRIC_LOAD_X", I_ELOADX},
+                                        {"ELECTRIC_LOAD_Y", I_ELOADY},
+                                        {"ELECTRIC_LOAD_Z", I_ELOADZ},
+                                        {"SURFACE_TEMPERATURE", I_SURF_TEMP},
+                                        {"VOL_PLANE", I_VOLUME_PLANE},
+                                        {"POS_PLANE_FILL", I_POS_VOLPLANE},
+                                        {"NEG_PLANE_FILL", I_NEG_VOLPLANE},
+                                        {"SPECIES_SOURCE", I_SPECIES_SOURCE},
+                                        {"KINETIC_ENERGY", I_KINETIC_ENERGY},
+                                        {"SHELL_VOLUME", I_SHELL_VOLUME},
+                                        {"TFMP_FORCE", I_TFMP_FORCE},
+                                        {"MASS", I_MASS},
+                                        {"MASS_NEGATIVE_FILL", I_MASS_NEGATIVE_FILL},
+                                        {"MASS_POSITIVE_FILL", I_MASS_POSITIVE_FILL},
+                                        {"VORTICITY", I_VORTICITY},
+                                        {"GIESEKUS", I_GIESEKUS},
+                                        {"LAMB_MAG", I_LAMB_MAG},
+                                        {"HELICITY", I_HELICITY},
+                                        {"Q_FCN", I_Q_FCN},
+                                        {"ABSORPTION_CROSS_SECTION", I_EM_ABSORB_CROSS_SECTION},
+                                        {"HEAT_ENERGY_NEG", I_HEAT_ENERGY_NEG},
+                                        {"HEAT_ENERGY_POS", I_HEAT_ENERGY_POS}};
 
-int Num_Vol_Names = sizeof(pp_vol_names) / sizeof(VOL_NAME_STRUCT);
+const int Num_Vol_Names = sizeof(pp_vol_names) / sizeof(VOL_NAME_STRUCT);
 
 #define PP_GLOBAL_START                        0
 #define PP_GLOBAL_LS_INTERFACE_PRINT           0
@@ -286,10 +286,10 @@ struct Post_Processing_Global_Names {
 
 typedef struct Post_Processing_Global_Names GLOBAL_NAME_STRUCT;
 
-extern GLOBAL_NAME_STRUCT pp_global_names[];
+extern const GLOBAL_NAME_STRUCT pp_global_names[];
 extern int Num_Global_Names;
 
-struct Post_Processing_Global_Names pp_global_names[PP_GLOBAL_COUNT] = {
+const struct Post_Processing_Global_Names pp_global_names[PP_GLOBAL_COUNT] = {
     {"LEVEL_SET_INTERFACE_PRINT", PP_GLOBAL_LS_INTERFACE_PRINT},
     {"LEVEL_SET_INTERFACE_PRINT_ALL_TIMES", PP_GLOBAL_LS_INTERFACE_PRINT_ALL_TIMES}};
 

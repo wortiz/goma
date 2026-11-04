@@ -60,45 +60,100 @@
 /* GOMA include files */
 #define GOMA_AC_PARTICLES_C
 
-/* Global variables that reside entirely within this file. */
-static particle_t *particles_to_do, *particles_to_send;
-static particle_t **element_particle_list_head;
-static particle_t **backup_element_particle_list_head;
-static int num_particles;
-static int last_element_loaded;
-static int velo_interp;
-static int last_elements_nodes_loaded;
-static int last_elements_fv_loaded;
-static dbl last_fvs_xi_loaded[DIM];
-static my_fv_old_t *my_fv_old;
+/*
+ * Particle tracker state, kept per context (goma_ctx->particles.tracker) and
+ * freed by particle_tracker_release().
+ */
+struct Particle_Tracker {
+  particle_t *particles_to_do, *particles_to_send;
+  particle_t **element_particle_list_head;
+  particle_t **backup_element_particle_list_head;
+  int num_particles;
+  int last_element_loaded;
+  int velo_interp;
+  int last_elements_nodes_loaded;
+  int last_elements_fv_loaded;
+  dbl last_fvs_xi_loaded[DIM];
+  my_fv_old_t *my_fv_old;
 
-static int max_newton_iterations, max_particle_iterations;
-static dbl total_accum_ust, output_accum_ust, particle_accum_ust;
-#ifdef PARALLEL
-static int total_num_particle_ghosts;
-static dbl communication_accum_ust;
-#endif
+  int max_newton_iterations, max_particle_iterations;
+  dbl total_accum_ust, output_accum_ust, particle_accum_ust;
+  int total_num_particle_ghosts;
+  dbl communication_accum_ust;
 
-static int nodes_per_element;
-static int sides_per_element;
-static dbl **node_coord;
+  int nodes_per_element;
+  int sides_per_element;
+  dbl **node_coord;
 
-static const Exo_DB *static_exo;
-static dbl *static_x;
-static dbl *static_x_old;
-static dbl *static_xdot;
-static dbl *static_xdot_old;
-static dbl *static_resid_vector;
+  const Exo_DB *static_exo;
+  dbl *static_x;
+  dbl *static_x_old;
+  dbl *static_xdot;
+  dbl *static_xdot_old;
+  dbl *static_resid_vector;
 
-static dbl my_volume;
-static dbl *el_volume;
-static FILE **pa_fp;
-static FILE *pa_full_fp;
+  dbl my_volume;
+  dbl *el_volume;
+  FILE **pa_fp;
+  FILE *pa_full_fp;
 
-static int pdim; /* particle dimension (coordinate, velocities, etc.) */
-static int mdim; /* mesh dimension */
+  int pdim; /* particle dimension (coordinate, velocities, etc.) */
+  int mdim; /* mesh dimension */
 
-static int Num_Impermeable_PBCs; /* Number of IMPERMEABLE particle boundary conditions. */
+  int Num_Impermeable_PBCs; /* Number of IMPERMEABLE particle boundary conditions. */
+};
+
+static struct Particle_Tracker *particle_tracker(void) {
+  if (goma_ctx->particles.tracker == NULL) {
+    goma_ctx->particles.tracker = calloc(1, sizeof(struct Particle_Tracker));
+  }
+  return goma_ctx->particles.tracker;
+}
+
+static void free_particle_list(particle_t *p) {
+  while (p != NULL) {
+    particle_t *next = p->next;
+    free(p);
+    p = next;
+  }
+}
+
+void particle_tracker_release(void) {
+  struct Particle_Tracker *t = goma_ctx->particles.tracker;
+  if (t == NULL) {
+    return;
+  }
+  if (t->element_particle_list_head != NULL && t->static_exo != NULL) {
+    for (int e = 0; e < t->static_exo->num_elems; e++) {
+      free_particle_list(t->element_particle_list_head[e]);
+    }
+  }
+  free(t->element_particle_list_head);
+  free(t->backup_element_particle_list_head); /* heads of the lists freed above */
+  free_particle_list(t->particles_to_do);
+  free_particle_list(t->particles_to_send);
+  if (t->node_coord != NULL) {
+    for (int i = 0; i < t->nodes_per_element; i++) {
+      free(t->node_coord[i]);
+    }
+  }
+  free(t->node_coord);
+  free(t->el_volume);
+  free(t->my_fv_old);
+  if (t->pa_fp != NULL) {
+    for (int i = 0; i < goma_ctx->particles.number_sample_types; i++) {
+      if (t->pa_fp[i] != NULL) {
+        fclose(t->pa_fp[i]);
+      }
+    }
+  }
+  free(t->pa_fp);
+  if (t->pa_full_fp != NULL) {
+    fclose(t->pa_full_fp);
+  }
+  free(t);
+  goma_ctx->particles.tracker = NULL;
+}
 
 /* Function Prototypes */
 static void find_exit_wound(
@@ -195,6 +250,7 @@ void initialize_particles(const Exo_DB *exo,
                           dbl *const xdot,
                           dbl *const xdot_old,
                           dbl *const resid_vector) {
+  struct Particle_Tracker *trk = particle_tracker();
   dbl r, total_volume = 0.0;
   int rejection, rejection_count, creation_count;
   int i, j, el_index_begin, el_index_end, num_els, elem_id;
@@ -217,51 +273,52 @@ void initialize_particles(const Exo_DB *exo,
 
   /* Allocate one of these.  I like the -> references instead of the
    * . references... */
-  my_fv_old = (my_fv_old_t *)malloc(sizeof(my_fv_old_t));
+  trk->my_fv_old = (my_fv_old_t *)malloc(sizeof(my_fv_old_t));
 
   /* Set these at the two entries into particle stuff so I don't have
    * to pass them around EVERYWHERE. */
-  static_exo = exo;
-  static_x = x;
-  static_x_old = x_old;
-  static_xdot = xdot;
-  static_xdot_old = xdot_old;
-  static_resid_vector = resid_vector;
+  trk->static_exo = exo;
+  trk->static_x = x;
+  trk->static_x_old = x_old;
+  trk->static_xdot = xdot;
+  trk->static_xdot_old = xdot_old;
+  trk->static_resid_vector = resid_vector;
 
   /* Get the appropriate dimension for the coordinate, velocity loops... */
-  pdim = goma_ctx->fem.pd_glob[0]->Num_Dim;
+  trk->pdim = goma_ctx->fem.pd_glob[0]->Num_Dim;
   if (goma_ctx->fem.pd_glob[0]->CoordinateSystem == SWIRLING ||
       goma_ctx->fem.pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN ||
       goma_ctx->fem.pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D)
-    pdim = pdim + 1;
+    trk->pdim = trk->pdim + 1;
 
   /* Get mesh dimension */
-  mdim = static_exo->num_dim;
+  trk->mdim = trk->static_exo->num_dim;
 
   if (goma_ctx->fem.pd_glob[0]->e[goma_ctx->fem.pg->imtrx][R_MESH1])
     GOMA_EH(GOMA_ERROR, "Cannot couple particles and deformable mesh, yet.");
-  if (mdim == 2) {
-    if (static_exo->eb_elem_itype[0] != BIQUAD_QUAD &&
-        static_exo->eb_elem_itype[0] != BILINEAR_QUAD)
+  if (trk->mdim == 2) {
+    if (trk->static_exo->eb_elem_itype[0] != BIQUAD_QUAD &&
+        trk->static_exo->eb_elem_itype[0] != BILINEAR_QUAD)
       GOMA_EH(GOMA_ERROR, "Can only have 9-node and 4-node quadrilateral elements in 2D.");
-    sides_per_element = 4;
+    trk->sides_per_element = 4;
   } else /* static_exo->num_dim == mdim == 3 */
   {
-    if (static_exo->eb_elem_itype[0] != TRIQUAD_HEX &&
-        static_exo->eb_elem_itype[0] != TRILINEAR_HEX)
+    if (trk->static_exo->eb_elem_itype[0] != TRIQUAD_HEX &&
+        trk->static_exo->eb_elem_itype[0] != TRILINEAR_HEX)
       GOMA_EH(GOMA_ERROR, "Can only handly 27-node and 8-node hex elements in 3D.");
-    sides_per_element = 6;
+    trk->sides_per_element = 6;
   }
 
-  nodes_per_element = elem_info(NNODES, static_exo->eb_elem_itype[0]);
-  node_coord = (dbl **)malloc(nodes_per_element * sizeof(dbl *));
-  for (i = 0; i < nodes_per_element; i++)
-    node_coord[i] = (dbl *)malloc(DIM * sizeof(dbl));
+  trk->nodes_per_element = elem_info(NNODES, trk->static_exo->eb_elem_itype[0]);
+  trk->node_coord = (dbl **)malloc(trk->nodes_per_element * sizeof(dbl *));
+  for (i = 0; i < trk->nodes_per_element; i++)
+    trk->node_coord[i] = (dbl *)malloc(DIM * sizeof(dbl));
 
-  element_particle_list_head = (particle_t **)malloc(static_exo->num_elems * sizeof(particle_t *));
-  backup_element_particle_list_head =
-      (particle_t **)malloc(static_exo->num_elems * sizeof(particle_t *));
-  particles_to_send = NULL;
+  trk->element_particle_list_head =
+      (particle_t **)malloc(trk->static_exo->num_elems * sizeof(particle_t *));
+  trk->backup_element_particle_list_head =
+      (particle_t **)malloc(trk->static_exo->num_elems * sizeof(particle_t *));
+  trk->particles_to_send = NULL;
 
   DPRINTF(stdout, "  elements: ");
   fflush(stdout);
@@ -269,22 +326,22 @@ void initialize_particles(const Exo_DB *exo,
    * might not always use it.  There are too many use cases (some
    * delayed) that complicate this... */
   goma_particles_release_element_info(&goma_ctx->particles);
-  goma_ctx->particles.element_info =
-      (element_particle_info_t *)malloc(static_exo->num_elems * sizeof(element_particle_info_t));
-  goma_ctx->particles.num_element_info = static_exo->num_elems;
-  for (i = 0; i < static_exo->num_elems; i++) {
+  goma_ctx->particles.element_info = (element_particle_info_t *)malloc(
+      trk->static_exo->num_elems * sizeof(element_particle_info_t));
+  goma_ctx->particles.num_element_info = trk->static_exo->num_elems;
+  for (i = 0; i < trk->static_exo->num_elems; i++) {
     goma_ctx->particles.element_info[i].PBC_side_id =
-        (int *)malloc(sides_per_element * sizeof(int));
+        (int *)malloc(trk->sides_per_element * sizeof(int));
 #ifdef PARALLEL
     goma_ctx->particles.element_info[i].owner_local_element_id =
-        (int *)calloc((unsigned)sides_per_element, sizeof(int));
+        (int *)calloc((unsigned)trk->sides_per_element, sizeof(int));
     goma_ctx->particles.element_info[i].num_ghost_target_elems =
         0; /* number of times each particle needs to be ghosted. */
     goma_ctx->particles.element_info[i].ghost_proc = NULL; /* what proc do they ghost to? */
     goma_ctx->particles.element_info[i].ghost_local_elem_id =
         NULL; /* what's the local element id there? */
 #endif
-    for (j = 0; j < sides_per_element; j++) {
+    for (j = 0; j < trk->sides_per_element; j++) {
       goma_ctx->particles.element_info[i].PBC_side_id[j] = -1;
 #ifdef PARALLEL
       goma_ctx->particles.element_info[i].owner_local_element_id[j] = -1;
@@ -296,8 +353,8 @@ void initialize_particles(const Exo_DB *exo,
     else
       goma_ctx->particles.element_info[i].source_term = NULL;
     goma_ctx->particles.element_info[i].list_PBC_IMPERMEABLE = NULL;
-    element_particle_list_head[i] = NULL;
-    backup_element_particle_list_head[i] = NULL;
+    trk->element_particle_list_head[i] = NULL;
+    trk->backup_element_particle_list_head[i] = NULL;
   }
   get_time(time_of_day);
   DPRINTF(stdout, "done at %s\n", time_of_day);
@@ -307,70 +364,72 @@ void initialize_particles(const Exo_DB *exo,
   fflush(stdout);
   /* Open the output file for full output/restart if we've selected one. */
   if (goma_ctx->particles.full_output_stride) {
-    if (!(pa_full_fp = fopen(construct_filename(goma_ctx->particles.full_output_filename), "w")))
+    if (!(trk->pa_full_fp =
+              fopen(construct_filename(goma_ctx->particles.full_output_filename), "w")))
       GOMA_EH(GOMA_ERROR, "Could not open Particle_Full_Output_Filename for zeroing.");
     DPRINTF(stdout, "%s, ", goma_ctx->particles.full_output_filename);
     fflush(stdout);
   } else
-    pa_full_fp = NULL;
+    trk->pa_full_fp = NULL;
 
   if (goma_ctx->particles.number_sample_types) {
-    pa_fp = (FILE **)array_alloc(1, goma_ctx->particles.number_sample_types, sizeof(FILE *));
+    trk->pa_fp = (FILE **)array_alloc(1, goma_ctx->particles.number_sample_types, sizeof(FILE *));
     for (i = 0; i < goma_ctx->particles.number_sample_types; i++) {
-      if (!(pa_fp[i] = fopen(construct_filename(goma_ctx->particles.filename_template[i]), "w")))
+      if (!(trk->pa_fp[i] =
+                fopen(construct_filename(goma_ctx->particles.filename_template[i]), "w")))
         GOMA_EH(GOMA_ERROR, "Could not open a particle file for zeroing.");
       DPRINTF(stdout, "%s, ", goma_ctx->particles.filename_template[i]);
       fflush(stdout);
       goma_ctx->particles.number_samples_existing[i] = 0;
       if (goma_ctx->particles.output_format == TECPLOT) {
-        fprintf(pa_fp[i], "TITLE = \"Goma Particles\"\n");
+        fprintf(trk->pa_fp[i], "TITLE = \"Goma Particles\"\n");
 #ifdef PARALLEL
-        if (pdim == 2)
-          fprintf(pa_fp[i], "VARIABLES = \"X\", \"Y\", \"PROCID\", \"TIME\"");
+        if (trk->pdim == 2)
+          fprintf(trk->pa_fp[i], "VARIABLES = \"X\", \"Y\", \"PROCID\", \"TIME\"");
         else
-          fprintf(pa_fp[i], "VARIABLES = \"X\", \"Y\", \"Z\", \"PROCID\", \"TIME\"");
+          fprintf(trk->pa_fp[i], "VARIABLES = \"X\", \"Y\", \"Z\", \"PROCID\", \"TIME\"");
 #else
-        if (pdim == 2)
-          fprintf(pa_fp[i], "VARIABLES = \"X\", \"Y\", \"TIME\"");
+        if (trk->pdim == 2)
+          fprintf(trk->pa_fp[i], "VARIABLES = \"X\", \"Y\", \"TIME\"");
         else
-          fprintf(pa_fp[i], "VARIABLES = \"X\", \"Y\", \"Z\", \"TIME\"");
+          fprintf(trk->pa_fp[i], "VARIABLES = \"X\", \"Y\", \"Z\", \"TIME\"");
 #endif
         for (j = 0; j < goma_ctx->particles.number_output_variables[i]; j++)
-          fprintf(pa_fp[i], ", \"%s\"", goma_ctx->particles.output_variables[i][j]);
-        fprintf(pa_fp[i], "\n");
+          fprintf(trk->pa_fp[i], ", \"%s\"", goma_ctx->particles.output_variables[i][j]);
+        fprintf(trk->pa_fp[i], "\n");
       }
     }
   } else
-    pa_fp = NULL;
+    trk->pa_fp = NULL;
   if (goma_ctx->particles.output_format == TECPLOT && goma_ctx->particles.number > 0)
     output_TECPLOT_zone_info(0.0, 0, 1);
   get_time(time_of_day);
   DPRINTF(stdout, "done at %s\n", time_of_day);
   fflush(stdout);
 
-  last_element_loaded = -1;
-  last_elements_nodes_loaded = -1;
-  last_elements_fv_loaded = -1;
+  trk->last_element_loaded = -1;
+  trk->last_elements_nodes_loaded = -1;
+  trk->last_elements_fv_loaded = -1;
   for (i = 0; i < DIM; i++)
-    last_fvs_xi_loaded[i] = -1.0e+10;
+    trk->last_fvs_xi_loaded[i] = -1.0e+10;
 
-  num_particles = 0;
+  trk->num_particles = 0;
 
   DPRINTF(stdout, "  volumes: ");
   fflush(stdout);
   /* Position initial particles. */
   if (goma_ctx->particles.number > 0) {
-    el_index_begin = static_exo->eb_ptr[0];
-    el_index_end = static_exo->eb_ptr[static_exo->num_elem_blocks];
+    el_index_begin = trk->static_exo->eb_ptr[0];
+    el_index_end = trk->static_exo->eb_ptr[trk->static_exo->num_elem_blocks];
     num_els = el_index_end - el_index_begin;
-    el_volume = (dbl *)malloc(num_els * sizeof(dbl));
+    trk->el_volume = (dbl *)malloc(num_els * sizeof(dbl));
 
     /* First get total element "volume" */
-    total_volume = my_volume = fill_element_volumes(el_index_begin, el_index_end);
+    total_volume = trk->my_volume = fill_element_volumes(el_index_begin, el_index_end);
 #ifdef PARALLEL
     proc_volume = (dbl *)calloc((unsigned)goma_ctx->num_proc, sizeof(dbl));
     proc_volume_local = (dbl *)calloc((unsigned)goma_ctx->num_proc, sizeof(dbl));
-    proc_volume_local[goma_ctx->proc_id] = my_volume;
+    proc_volume_local[goma_ctx->proc_id] = trk->my_volume;
     MPI_Reduce(proc_volume_local, proc_volume, goma_ctx->num_proc, MPI_DOUBLE, MPI_SUM, 0,
                MPI_COMM_WORLD);
 
@@ -418,8 +477,8 @@ void initialize_particles(const Exo_DB *exo,
    * particles per computational particle) x (mass per real particle).
    * Note that in this situation # particles = # elements. */
   if (goma_ctx->particles.number == -1) {
-    el_index_begin = static_exo->eb_ptr[0];
-    el_index_end = static_exo->eb_ptr[static_exo->num_elem_blocks];
+    el_index_begin = trk->static_exo->eb_ptr[0];
+    el_index_end = trk->static_exo->eb_ptr[trk->static_exo->num_elem_blocks];
     num_els = el_index_end - el_index_begin;
     for (elem_id = el_index_begin; elem_id < el_index_end; elem_id++) {
 #ifdef PARALLEL
@@ -432,10 +491,10 @@ void initialize_particles(const Exo_DB *exo,
        * of the element as long as the element is non-concave. */
       load_element_node_coordinates(elem_id);
       zero_a_particle(&p);
-      for (i = 0; i < mdim; i++) {
-        for (j = 0; j < nodes_per_element; j++)
-          p.x[i] += node_coord[j][i];
-        p.x[i] /= (dbl)nodes_per_element;
+      for (i = 0; i < trk->mdim; i++) {
+        for (j = 0; j < trk->nodes_per_element; j++)
+          p.x[i] += trk->node_coord[j][i];
+        p.x[i] /= (dbl)trk->nodes_per_element;
       }
 
       initialize_and_create_new_particle(&p, elem_id);
@@ -576,7 +635,7 @@ void initialize_particles(const Exo_DB *exo,
   fflush(stdout);
   couple_to_continuum();
 #ifdef PARALLEL
-  DPRINTF(stdout, "%d ghosts, ", total_num_particle_ghosts);
+  DPRINTF(stdout, "%d ghosts, ", trk->total_num_particle_ghosts);
 #endif
   get_time(time_of_day);
   DPRINTF(stdout, "done at %s\n", time_of_day);
@@ -614,6 +673,7 @@ static void find_exit_wound(const int elem_id,
                             const dbl xi[DIM],
                             const int stack_count,
                             const int tolerance_level) {
+  struct Particle_Tracker *trk = particle_tracker();
   dbl xi_tmp[DIM], x_intersect[DIM], first_xi_tmp[DIM], second_xi_tmp[DIM] = {0.0, 0.0, 0.0};
   dbl coeff[6];
   /* dbl len; */
@@ -633,7 +693,7 @@ static void find_exit_wound(const int elem_id,
   /* Not necessary except for debugging. */
   load_element_node_coordinates(elem_id);
 
-  if (mdim == 2) {
+  if (trk->mdim == 2) {
     /* For 2D, these are always 0.0. */
     xi_tmp[2] = x_intersect[2] = 0.0;
     memcpy(xi_tmp, xi, 2 * sizeof(dbl));
@@ -1204,18 +1264,19 @@ static void find_exit_wound(const int elem_id,
      * particle's element, and recalculate xi according to that
      * element.  If we're still out-of-element, then hit the next
      * part. */
-    p->owning_elem_id = static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + exit_id1];
+    p->owning_elem_id =
+        trk->static_exo->elem_elem_list[trk->static_exo->elem_elem_pntr[elem_id] + exit_id1];
 
     if (p->owning_elem_id == -1) {
       fprintf(stderr, "\nelem_id = %d, global_elem_id = %d\n", elem_id,
               goma_ctx->dpi->elem_index_global[elem_id]);
       fprintf(stderr, "elem_elem_list for this element is: %d %d %d %d %d %d\n",
-              static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + 0],
-              static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + 1],
-              static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + 2],
-              static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + 3],
-              static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + 4],
-              static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + 5]);
+              trk->static_exo->elem_elem_list[trk->static_exo->elem_elem_pntr[elem_id] + 0],
+              trk->static_exo->elem_elem_list[trk->static_exo->elem_elem_pntr[elem_id] + 1],
+              trk->static_exo->elem_elem_list[trk->static_exo->elem_elem_pntr[elem_id] + 2],
+              trk->static_exo->elem_elem_list[trk->static_exo->elem_elem_pntr[elem_id] + 3],
+              trk->static_exo->elem_elem_list[trk->static_exo->elem_elem_pntr[elem_id] + 4],
+              trk->static_exo->elem_elem_list[trk->static_exo->elem_elem_pntr[elem_id] + 5]);
       dump3(EXIT, p, "elem_id = %d, exit_id1 = %d\nEnded up in element -1!", elem_id, exit_id1);
     }
 
@@ -1247,8 +1308,8 @@ static void find_exit_wound(const int elem_id,
      * "corner clippings" if I like.  Just something to keep in
      * mind... */
     if (fabs(xi_tmp[0]) > 1.0 || fabs(xi_tmp[1]) > 1.0 || fabs(xi_tmp[2]) > 1.0) {
-      last_element_loaded = -1;
-      last_elements_fv_loaded = -1;
+      trk->last_element_loaded = -1;
+      trk->last_elements_fv_loaded = -1;
       find_exit_wound(p->owning_elem_id, p, x_start, x_end, xi_tmp, stack_count + 1, 0);
       /*
         find_exit_wound(p->owning_elem_id, p, x_intersect, x_end, xi_tmp);
@@ -1299,6 +1360,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
                       const dbl goma_dt,         /* time step size */
                       const int n)               /* time step number */
 {
+  struct Particle_Tracker *trk = particle_tracker();
   double start_ust, temp_ust, global_start_time;
   particle_t *p, *p_tmp;
   int i, el_index;
@@ -1313,12 +1375,12 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
   MPI_Status mpi_status;
 #endif
 
-  total_accum_ust = 0.0;
-  particle_accum_ust = 0.0;
-  output_accum_ust = 0.0;
+  trk->total_accum_ust = 0.0;
+  trk->particle_accum_ust = 0.0;
+  trk->output_accum_ust = 0.0;
 #ifdef PARALLEL
   local_particle_transfers = 0;
-  communication_accum_ust = 0.0;
+  trk->communication_accum_ust = 0.0;
   num_to_send = 0;
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -1326,33 +1388,33 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
 
   /* Set these at the two entries into particle stuff so I don't have
    * to pass them around EVERYWHERE. */
-  static_exo = exo;
-  static_x = x;
-  static_x_old = x_old;
-  static_xdot = xdot;
-  static_xdot_old = xdot_old;
-  static_resid_vector = resid_vector;
+  trk->static_exo = exo;
+  trk->static_x = x;
+  trk->static_x_old = x_old;
+  trk->static_xdot = xdot;
+  trk->static_xdot_old = xdot_old;
+  trk->static_resid_vector = resid_vector;
 
   if (goma_ctx->particles.output_format == TECPLOT)
     output_TECPLOT_zone_info(global_end_time, n, 0);
-  output_accum_ust = MAX(ust() - start_ust, 0.0);
+  trk->output_accum_ust = MAX(ust() - start_ust, 0.0);
 
   /* Initialize where we most recently looked up values. */
-  last_element_loaded = -1;
-  last_elements_nodes_loaded = -1;
-  last_elements_fv_loaded = -1;
+  trk->last_element_loaded = -1;
+  trk->last_elements_nodes_loaded = -1;
+  trk->last_elements_fv_loaded = -1;
   for (i = 0; i < DIM; i++)
-    last_fvs_xi_loaded[i] = 1.0e+10;
+    trk->last_fvs_xi_loaded[i] = 1.0e+10;
 
   /* Model-specific initializations. */
   if (goma_ctx->particles.model == SWIMMER_EXPLICIT ||
       goma_ctx->particles.model == SWIMMER_IMPLICIT)
-    for (i = 0; i < static_exo->num_elems; i++)
+    for (i = 0; i < trk->static_exo->num_elems; i++)
       memset(goma_ctx->particles.element_info[i].source_term, 0, MDE * sizeof(dbl));
 
   global_start_time = global_end_time - goma_dt;
-  max_particle_iterations = 0;
-  max_newton_iterations = 0;
+  trk->max_particle_iterations = 0;
+  trk->max_newton_iterations = 0;
 #ifdef PARALLEL
   local_num_to_send = 0;
 #endif
@@ -1362,7 +1424,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
   generate_source_particles(global_end_time, goma_dt, global_start_time);
 
   /* First move all the particles that we already have. */
-  for (el_index = 0; el_index < static_exo->num_elems; el_index++) {
+  for (el_index = 0; el_index < trk->static_exo->num_elems; el_index++) {
 #ifdef PARALLEL
     /* This shouldn't affect anything unless I was holding on to
      * ghosted particles somehow... */
@@ -1370,7 +1432,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
       continue;
 #endif
 
-    p = element_particle_list_head[el_index];
+    p = trk->element_particle_list_head[el_index];
 
     while (p) {
       if (get_element_xi_newton(el_index, p->x, p->xi) == -1)
@@ -1394,7 +1456,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
       {
         remove_from_element_particle_list(p, el_index);
         add_to_send_list(p);
-        num_particles--;
+        trk->num_particles--;
 #ifdef PARALLEL
         local_num_to_send++;
 #endif
@@ -1404,7 +1466,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
         */
       } else if (p->state == DEAD) /* Delete me */
       {
-        num_particles--;
+        trk->num_particles--;
         remove_from_element_particle_list(p, el_index);
         free(p); /* Bye bye */
         fprintf(stderr, "REMOVING A PARTICLE\n");
@@ -1414,7 +1476,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
         /* This particle won't get redone because it's p->time is used. */
         remove_from_element_particle_list(p, el_index);
         create_a_particle(p, p->owning_elem_id);
-        num_particles--; /* This isn't really a new particle... */
+        trk->num_particles--; /* This isn't really a new particle... */
       }
 
       if (p->state == ACTIVE) {
@@ -1461,8 +1523,8 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
       for (i = 0; i < goma_ctx->num_proc; i++) {
         if (i == goma_ctx->proc_id) /* I'm the sender! */
         {
-          p = particles_to_send;
-          particles_to_send = NULL;
+          p = trk->particles_to_send;
+          trk->particles_to_send = NULL;
           while (p) {
             p_tmp = p->next;
             /*
@@ -1546,8 +1608,8 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
 
       /* Now we move the new particles. */
       local_num_to_send = 0;
-      p = particles_to_do;
-      particles_to_do = NULL;
+      p = trk->particles_to_do;
+      trk->particles_to_do = NULL;
       while (p) {
         /*
           fprintf(stderr, "Proc %d is moving a particle.\n", ProcID); fflush(stderr);
@@ -1630,58 +1692,60 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  total_accum_ust = ust() - start_ust;
-  particle_accum_ust = total_accum_ust - output_accum_ust;
+  trk->total_accum_ust = ust() - start_ust;
+  trk->particle_accum_ust = trk->total_accum_ust - trk->output_accum_ust;
 #ifdef PARALLEL
-  particle_accum_ust -= communication_accum_ust;
-  local_num_particles = num_particles;
-  num_particles = 0;
+  trk->particle_accum_ust -= trk->communication_accum_ust;
+  local_num_particles = trk->num_particles;
+  trk->num_particles = 0;
   particle_transfers = 0;
-  local_max_particle_iterations = max_particle_iterations;
+  local_max_particle_iterations = trk->max_particle_iterations;
   /* OK to collect even if we ignore it... */
-  local_max_newton_iterations = max_newton_iterations;
-  local_particle_accum_ust = particle_accum_ust;
-  local_output_accum_ust = output_accum_ust;
+  local_max_newton_iterations = trk->max_newton_iterations;
+  local_particle_accum_ust = trk->particle_accum_ust;
+  local_output_accum_ust = trk->output_accum_ust;
   temp_ust = ust();
-  MPI_Reduce(&local_num_particles, &num_particles, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&local_max_particle_iterations, &max_particle_iterations, 1, MPI_INT, MPI_MAX, 0,
+  MPI_Reduce(&local_num_particles, &trk->num_particles, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&local_max_particle_iterations, &trk->max_particle_iterations, 1, MPI_INT, MPI_MAX, 0,
              MPI_COMM_WORLD);
-  MPI_Reduce(&local_max_newton_iterations, &max_newton_iterations, 1, MPI_INT, MPI_MAX, 0,
+  MPI_Reduce(&local_max_newton_iterations, &trk->max_newton_iterations, 1, MPI_INT, MPI_MAX, 0,
              MPI_COMM_WORLD);
   MPI_Reduce(&local_particle_transfers, &particle_transfers, 1, MPI_INT, MPI_SUM, 0,
              MPI_COMM_WORLD);
-  MPI_Reduce(&local_particle_accum_ust, &particle_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0,
+  MPI_Reduce(&local_particle_accum_ust, &trk->particle_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0,
              MPI_COMM_WORLD);
-  MPI_Reduce(&local_output_accum_ust, &output_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-  communication_accum_ust += MAX((dbl)ust() - (dbl)temp_ust, 0.0);
-  local_communication_accum_ust = communication_accum_ust;
-  MPI_Reduce(&local_communication_accum_ust, &communication_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0,
+  MPI_Reduce(&local_output_accum_ust, &trk->output_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0,
              MPI_COMM_WORLD);
+  trk->communication_accum_ust += MAX((dbl)ust() - (dbl)temp_ust, 0.0);
+  local_communication_accum_ust = trk->communication_accum_ust;
+  MPI_Reduce(&local_communication_accum_ust, &trk->communication_accum_ust, 1, MPI_DOUBLE, MPI_MAX,
+             0, MPI_COMM_WORLD);
   local_total_accum_ust = ust() - start_ust;
-  MPI_Reduce(&local_total_accum_ust, &total_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&local_total_accum_ust, &trk->total_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0,
+             MPI_COMM_WORLD);
 #endif
 
-  DPRINTF(stderr, "           Number of particles = %d\n", num_particles);
-  DPRINTF(stderr, "       Max particle time steps = %d\n", max_particle_iterations);
+  DPRINTF(stderr, "           Number of particles = %d\n", trk->num_particles);
+  DPRINTF(stderr, "       Max particle time steps = %d\n", trk->max_particle_iterations);
   if (goma_ctx->particles.model == INERTIAL_TRACER_IMPLICIT ||
       goma_ctx->particles.model == SWIMMER_IMPLICIT ||
       goma_ctx->particles.model == TRACER_IMPLICIT ||
       goma_ctx->particles.model == CHARGED_TRACER_IMPLICIT ||
       goma_ctx->particles.model == DIELECTROPHORETIC_TRACER_IMPLICIT)
-    DPRINTF(stderr, "Max particle Newton iterations = %d\n", max_newton_iterations);
+    DPRINTF(stderr, "Max particle Newton iterations = %d\n", trk->max_newton_iterations);
 #ifdef PARALLEL
   DPRINTF(stderr, "            Particle transfers = %d\n", particle_transfers);
-  DPRINTF(stderr, "               Particle ghosts = %d\n", total_num_particle_ghosts);
-  DPRINTF(stderr, "            Communication time = %g seconds\n", communication_accum_ust);
+  DPRINTF(stderr, "               Particle ghosts = %d\n", trk->total_num_particle_ghosts);
+  DPRINTF(stderr, "            Communication time = %g seconds\n", trk->communication_accum_ust);
 #endif
-  DPRINTF(stderr, "                 Particle time = %g seconds\n", particle_accum_ust);
-  DPRINTF(stderr, "                   Output time = %g seconds\n", output_accum_ust);
-  DPRINTF(stderr, "                    Total time = %g seconds\n", total_accum_ust);
+  DPRINTF(stderr, "                 Particle time = %g seconds\n", trk->particle_accum_ust);
+  DPRINTF(stderr, "                   Output time = %g seconds\n", trk->output_accum_ust);
+  DPRINTF(stderr, "                    Total time = %g seconds\n", trk->total_accum_ust);
 
   for (i = 0; i < goma_ctx->particles.number_sample_types; i++)
-    fflush(pa_fp[i]);
+    fflush(trk->pa_fp[i]);
   if (goma_ctx->particles.full_output_stride)
-    fflush(pa_full_fp);
+    fflush(trk->pa_full_fp);
 
   return 0;
 }
@@ -1691,6 +1755,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
  * internally).
  */
 static dbl fill_element_volumes(const int e_begin, const int e_end) {
+  struct Particle_Tracker *trk = particle_tracker();
   int i, ip, ip_total;
   dbl this_volume, total_volume, wt, det, xi[DIM];
 
@@ -1700,7 +1765,7 @@ static dbl fill_element_volumes(const int e_begin, const int e_end) {
   for (i = e_begin; i < e_end; i++) {
 #ifdef PARALLEL
     if (goma_ctx->dpi->elem_owner[i] != goma_ctx->proc_id) {
-      el_volume[i] = 0.0;
+      trk->el_volume[i] = 0.0;
       continue;
     }
 #endif
@@ -1727,7 +1792,7 @@ static dbl fill_element_volumes(const int e_begin, const int e_end) {
 
       this_volume += det * wt;
     }
-    el_volume[i] = this_volume;
+    trk->el_volume[i] = this_volume;
     total_volume += this_volume;
   }
   return total_volume;
@@ -1738,26 +1803,27 @@ static dbl fill_element_volumes(const int e_begin, const int e_end) {
  * once, so who cares?  It uses a rejection sampling method.
  */
 static int position_particle_uniformly(const int elem_id, particle_t *p) {
+  struct Particle_Tracker *trk = particle_tracker();
   int i, j, done, counter;
   dbl min_x[DIM], max_x[DIM];
 
   memset(min_x, 0, DIM * sizeof(dbl));
   memset(max_x, 0, DIM * sizeof(dbl));
   load_element_node_coordinates(elem_id);
-  for (i = 0; i < mdim; i++) {
-    min_x[i] = node_coord[0][i];
-    max_x[i] = node_coord[0][i];
+  for (i = 0; i < trk->mdim; i++) {
+    min_x[i] = trk->node_coord[0][i];
+    max_x[i] = trk->node_coord[0][i];
   }
-  for (i = 1; i < nodes_per_element; i++)
-    for (j = 0; j < mdim; j++) {
-      min_x[j] = MIN(min_x[j], node_coord[i][j]);
-      max_x[j] = MAX(max_x[j], node_coord[i][j]);
+  for (i = 1; i < trk->nodes_per_element; i++)
+    for (j = 0; j < trk->mdim; j++) {
+      min_x[j] = MIN(min_x[j], trk->node_coord[i][j]);
+      max_x[j] = MAX(max_x[j], trk->node_coord[i][j]);
     }
 
   done = 0;
   counter = 0;
   while (!done) {
-    for (i = 0; i < mdim; i++)
+    for (i = 0; i < trk->mdim; i++)
       p->x[i] = min_x[i] + drand48() * (max_x[i] - min_x[i]);
 
     if (get_element_xi_newton(elem_id, p->x, p->xi) == -1) {
@@ -1773,7 +1839,7 @@ static int position_particle_uniformly(const int elem_id, particle_t *p) {
     }
 
     done = 1;
-    for (i = 0; i < mdim; i++)
+    for (i = 0; i < trk->mdim; i++)
       if (fabs(p->xi[i]) >= 1.0)
         done = 0;
     counter++;
@@ -1831,6 +1897,7 @@ static void get_boundary_xi_newton(const dbl *const coeff,
                                    dbl *xi_tmp,
                                    const int fixed_index,
                                    const dbl error_tolerance) {
+  struct Particle_Tracker *trk = particle_tracker();
   dbl update;
   dbl f_initial = 0.0, f, dfdxi1 = 0.0, t = 0.0, xi_norm = 0.0, f_scale = 0.0;
   dbl resid_initial = 0.0, resid_scale = 0.0;
@@ -1842,7 +1909,7 @@ static void get_boundary_xi_newton(const dbl *const coeff,
   si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, goma_ctx->problem.num_interpolations,
                goma_ctx->problem.unique_interpolations);
   map_bf = goma_ctx->fem.bfd[si];
-  if (mdim == 2) {
+  if (trk->mdim == 2) {
     index1 = 1 - fixed_index;
   } else {
     index1 = (fixed_index + 1) % 3;
@@ -1850,7 +1917,7 @@ static void get_boundary_xi_newton(const dbl *const coeff,
 
   load_field_variables_at_xi(elem_id, xi_tmp);
 
-  if (mdim == 2) {
+  if (trk->mdim == 2) {
     f = coeff[0] * goma_ctx->fem.fv->x[0] + coeff[1] * goma_ctx->fem.fv->x[1] + coeff[2];
     f_initial = fabs(f);
     f_scale = f_initial;
@@ -2004,26 +2071,27 @@ static void get_boundary_xi_newton(const dbl *const coeff,
  * last fields filled.
  */
 static particle_t *obtain_particle_space(const int elem_id) {
+  struct Particle_Tracker *trk = particle_tracker();
   particle_t *p;
   char s[128];
 
-  if (!element_particle_list_head[elem_id]) {
-    element_particle_list_head[elem_id] = (particle_t *)malloc(sizeof(particle_t));
-    if (!element_particle_list_head[elem_id]) {
+  if (!trk->element_particle_list_head[elem_id]) {
+    trk->element_particle_list_head[elem_id] = (particle_t *)malloc(sizeof(particle_t));
+    if (!trk->element_particle_list_head[elem_id]) {
       sprintf(s, "Could not allocate %ld bytes of space for particle.\n", sizeof(particle_t));
       GOMA_EH(GOMA_ERROR, s);
     }
-    p = element_particle_list_head[elem_id];
+    p = trk->element_particle_list_head[elem_id];
     p->last = NULL;
     p->next = NULL;
   } else {
     p = (particle_t *)malloc(sizeof(particle_t));
     if (!p)
       GOMA_EH(GOMA_ERROR, "Could not allocate space for particle.");
-    p->next = element_particle_list_head[elem_id];
+    p->next = trk->element_particle_list_head[elem_id];
     p->last = NULL;
-    element_particle_list_head[elem_id]->last = p;
-    element_particle_list_head[elem_id] = p;
+    trk->element_particle_list_head[elem_id]->last = p;
+    trk->element_particle_list_head[elem_id] = p;
   }
   p->owning_elem_id = elem_id;
 
@@ -2037,6 +2105,7 @@ static particle_t *obtain_particle_space(const int elem_id) {
  * PBC_IMPERMEABLE's, too...
  */
 static particle_t *create_a_particle(particle_t *seed_p, const int elem_id) {
+  struct Particle_Tracker *trk = particle_tracker();
   particle_t *p, *p_last_keep, *p_next_keep;
   int i;
 
@@ -2059,12 +2128,12 @@ static particle_t *create_a_particle(particle_t *seed_p, const int elem_id) {
    * the rejection sampling method to handle this.  Leaving it here
    * "just in case". */
   if (goma_ctx->particles.move_domain == BRICK)
-    for (i = 0; i < pdim; i++) {
+    for (i = 0; i < trk->pdim; i++) {
       p->x[i] = MAX(p->x[i], goma_ctx->particles.move_domain_reals[2 * i]);
       p->x[i] = MIN(p->x[i], goma_ctx->particles.move_domain_reals[2 * i + 1]);
     }
 
-  num_particles++;
+  trk->num_particles++;
   return p;
 }
 
@@ -2085,11 +2154,12 @@ static particle_t *create_a_particle(particle_t *seed_p, const int elem_id) {
  * enforced particle bounds.
  */
 static int rejection_sample_a_particle(void) {
+  struct Particle_Tracker *trk = particle_tracker();
   particle_t p;
   int i, el_index, rejection, num_element_samples;
   dbl r, current_volume;
 
-  r = drand48() * my_volume;
+  r = drand48() * trk->my_volume;
 
   /* This method of selecting an element to introduce a particle is
    * very sensitive to the DPI_ptr->elem_owner[i] array.  el_volume[i]
@@ -2098,7 +2168,7 @@ static int rejection_sample_a_particle(void) {
   el_index = 0;
   current_volume = 0.0;
   while (current_volume < r)
-    current_volume += el_volume[el_index++];
+    current_volume += trk->el_volume[el_index++];
   el_index--;
 
   /* return value is currently ignored... */
@@ -2109,7 +2179,7 @@ static int rejection_sample_a_particle(void) {
   else {
     rejection = 0;
     if (goma_ctx->particles.creation_domain == BRICK) {
-      for (i = 0; i < pdim; i++)
+      for (i = 0; i < trk->pdim; i++)
         if (p.x[i] < goma_ctx->particles.creation_domain_reals[2 * i] ||
             p.x[i] > goma_ctx->particles.creation_domain_reals[2 * i + 1])
           rejection = 1;
@@ -2128,6 +2198,7 @@ static int rejection_sample_a_particle(void) {
  * and call the create_a_particle function to place it in the element
  * lists.  The particle's p.x value must be filled in and correct.  */
 static void initialize_and_create_new_particle(particle_t *p, const int elem_id) {
+  struct Particle_Tracker *trk = particle_tracker();
   memcpy(p->x_old, p->x, DIM * sizeof(dbl));
   memset(p->xi, 0, DIM * sizeof(dbl));
   if (get_element_xi_newton(elem_id, p->x, p->xi) == -1)
@@ -2153,7 +2224,7 @@ static void initialize_and_create_new_particle(particle_t *p, const int elem_id)
   case SWIMMER_IMPLICIT:
   case SWIMMER_EXPLICIT:
     p->theta = p->theta_old = drand48() * 2.0 * M_PIE; /* theta=pi => pointing up! */
-    if (pdim == 3)
+    if (trk->pdim == 3)
       p->phi = p->phi_old = 0.0;
     memcpy(p->v, goma_ctx->fem.fv->v, DIM * sizeof(dbl));
     break;
@@ -2174,6 +2245,7 @@ static void initialize_and_create_new_particle(particle_t *p, const int elem_id)
  * actual domain boundary.
  */
 static void create_element_particle_info_maps(void) {
+  struct Particle_Tracker *trk = particle_tracker();
   int i, j;
   int SS_id, PBC_id, elem_id, side_id;
 #ifdef PARALLEL
@@ -2195,9 +2267,9 @@ static void create_element_particle_info_maps(void) {
 #endif
 
   /* Assuming that you will not apply more than one PBC to a sideset! */
-  for (i = 0; i < static_exo->num_side_sets; i++) {
+  for (i = 0; i < trk->static_exo->num_side_sets; i++) {
     /* Get this sidesets name (id) */
-    SS_id = static_exo->ss_id[i];
+    SS_id = trk->static_exo->ss_id[i];
 
     /* Is that one we're using?  If so, save the PBC index
      * corresponding to it. */
@@ -2208,9 +2280,9 @@ static void create_element_particle_info_maps(void) {
     if (PBC_id == -1)
       continue;
 
-    for (j = 0; j < static_exo->ss_num_sides[i]; j++) {
-      elem_id = static_exo->ss_elem_list[static_exo->ss_elem_index[i] + j];
-      side_id = static_exo->ss_side_list[static_exo->ss_elem_index[i] + j];
+    for (j = 0; j < trk->static_exo->ss_num_sides[i]; j++) {
+      elem_id = trk->static_exo->ss_elem_list[trk->static_exo->ss_elem_index[i] + j];
+      side_id = trk->static_exo->ss_side_list[trk->static_exo->ss_elem_index[i] + j];
       /* To get 0-based side id's */
       side_id--;
       /*
@@ -2238,7 +2310,7 @@ static void create_element_particle_info_maps(void) {
   if (goma_ctx->num_proc == 1)
     return; /* Nothing to do, right? */
 
-  nodes_per_side = (mdim == 2 ? 2 : 4);
+  nodes_per_side = (trk->mdim == 2 ? 2 : 4);
   msg_size = nodes_per_side + 1; /* num side nodes + 1 */
   msg = (int *)calloc((unsigned)msg_size, sizeof(int));
   msg_tag = 0;
@@ -2256,7 +2328,7 @@ static void create_element_particle_info_maps(void) {
           GOMA_EH(GOMA_ERROR, "Could not open map_creation.txt");
       }
 
-      for (elem_id = 0; elem_id < static_exo->num_elems; elem_id++) {
+      for (elem_id = 0; elem_id < trk->static_exo->num_elems; elem_id++) {
         global_elem_id = goma_ctx->dpi->elem_index_global[elem_id];
 
         /* If we're a ghosted element, broadcast so someone
@@ -2276,14 +2348,14 @@ static void create_element_particle_info_maps(void) {
         /* Otherwise we're looking for matched global node ids
          * on unmatched surfaces. */
         else
-          for (side_id = 0; side_id < sides_per_element; side_id++) {
+          for (side_id = 0; side_id < trk->sides_per_element; side_id++) {
             neighbor_elem_id =
-                static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + side_id];
+                trk->static_exo->elem_elem_list[trk->static_exo->elem_elem_pntr[elem_id] + side_id];
             if (goma_ctx->particles.element_info[elem_id].PBC_side_id[side_id] == -1 &&
                 (neighbor_elem_id == -1 ||
                  goma_ctx->dpi->elem_owner[neighbor_elem_id] != goma_ctx->proc_id)) {
               msg[0] = global_elem_id;
-              if (mdim == 2) {
+              if (trk->mdim == 2) {
                 indices[0] = side_id;
                 indices[1] = (side_id + 1) % 4;
               } else
@@ -2369,8 +2441,8 @@ static void create_element_particle_info_maps(void) {
             fprintf(fp2, "\tLooking for ghosting elem %4d ... ", global_elem_id);
             fflush(fp2);
           }
-          elem_id =
-              in_list(global_elem_id, 0, static_exo->num_elems, goma_ctx->dpi->elem_index_global);
+          elem_id = in_list(global_elem_id, 0, trk->static_exo->num_elems,
+                            goma_ctx->dpi->elem_index_global);
           if (elem_id > -1 && goma_ctx->dpi->elem_owner[elem_id] == goma_ctx->proc_id) {
             ghost_id = goma_ctx->particles.element_info[elem_id].num_ghost_target_elems++;
             goma_ctx->particles.element_info[elem_id].ghost_proc = (int *)realloc(
@@ -2401,18 +2473,19 @@ static void create_element_particle_info_maps(void) {
             fflush(fp2);
           }
           match_found = 0;
-          for (elem_id = 0; elem_id < static_exo->num_elems && !match_found; elem_id++) {
+          for (elem_id = 0; elem_id < trk->static_exo->num_elems && !match_found; elem_id++) {
             if (goma_ctx->dpi->elem_owner[elem_id] != goma_ctx->proc_id)
               continue;
             elem_ptr_start = goma_ctx->mesh.proc_connect_ptr[elem_id];
-            for (side_id = 0; side_id < sides_per_element && !match_found; side_id++) {
+            for (side_id = 0; side_id < trk->sides_per_element && !match_found; side_id++) {
               /* If the element on the other side is owned by us, skip this side. */
               neighbor_elem_id =
-                  static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + side_id];
+                  trk->static_exo
+                      ->elem_elem_list[trk->static_exo->elem_elem_pntr[elem_id] + side_id];
               if (goma_ctx->dpi->elem_owner[neighbor_elem_id] == goma_ctx->proc_id)
                 continue;
 
-              if (mdim == 2) {
+              if (trk->mdim == 2) {
                 indices[0] = side_id;
                 indices[1] = (side_id + 1) % 4;
               } else
@@ -2491,6 +2564,7 @@ static void create_element_particle_info_maps(void) {
  * surface on its way out of the domain.  The intersection was already
  * determined earlier. */
 static void handle_surface_interaction(particle_t *p, dbl *x, dbl *xi, int PBC_id) {
+  struct Particle_Tracker *trk = particle_tracker();
   int i;
   PBC_t *PBC;
   FILE *fp;
@@ -2515,7 +2589,7 @@ static void handle_surface_interaction(particle_t *p, dbl *x, dbl *xi, int PBC_i
     fprintf(stderr, "Proc %d killed particle (2)\n", ProcID); fflush(stderr);
     */
     fp = fopen(construct_filename(PBC->string_data), "a");
-    for (i = 0; i < pdim; i++)
+    for (i = 0; i < trk->pdim; i++)
       fprintf(fp, "%g ", x[i]);
     fprintf(fp, "\n");
     fclose(fp);
@@ -2536,6 +2610,7 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
                                       const dbl dt, /* time step size */
                                       const dbl creation_time) /* time when particle was created. */
 {
+  struct Particle_Tracker *trk = particle_tracker();
   PBC_t *PBC;
   particle_t p;
   int SS_id, elem_id, side_id, ip_id;
@@ -2547,12 +2622,12 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
     PBC = &(goma_ctx->particles.pbcs[i]);
     if (PBC->type == PBC_SOURCE || PBC->type == PBC_FREESTREAM_SOURCE) {
       SS_id = PBC->SS_id;
-      for (j = 0; j < static_exo->num_side_sets; j++)
-        if (SS_id == static_exo->ss_id[j]) {
-          for (k = 0; k < static_exo->ss_num_sides[j]; k++) {
+      for (j = 0; j < trk->static_exo->num_side_sets; j++)
+        if (SS_id == trk->static_exo->ss_id[j]) {
+          for (k = 0; k < trk->static_exo->ss_num_sides[j]; k++) {
 
-            elem_id = static_exo->ss_elem_list[static_exo->ss_elem_index[j] + k];
-            side_id = static_exo->ss_side_list[static_exo->ss_elem_index[j] + k];
+            elem_id = trk->static_exo->ss_elem_list[trk->static_exo->ss_elem_index[j] + k];
+            side_id = trk->static_exo->ss_side_list[trk->static_exo->ss_elem_index[j] + k];
             side_id--; /* make it 0-based */
 
 #ifdef PARALLEL
@@ -2569,15 +2644,15 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
                       "Cannot apply volumetric source particles on this coordinate system.");
 
             load_element_information(elem_id);
-            num_nodes_on_side =
-                static_exo->ss_node_side_index[j][k + 1] - static_exo->ss_node_side_index[j][k];
+            num_nodes_on_side = trk->static_exo->ss_node_side_index[j][k + 1] -
+                                trk->static_exo->ss_node_side_index[j][k];
             local_ss_node_list =
-                &(static_exo->ss_node_list[j][static_exo->ss_node_side_index[j][k]]);
+                &(trk->static_exo->ss_node_list[j][trk->static_exo->ss_node_side_index[j][k]]);
             for (m = 0; m < num_nodes_on_side; m++) {
               if ((local_elem_node_id[m] = in_list(
-                       local_ss_node_list[m], 0, nodes_per_element,
-                       &(static_exo->elem_node_list[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
-                                                        ->iconnect_ptr]))) == -1)
+                       local_ss_node_list[m], 0, trk->nodes_per_element,
+                       &(trk->static_exo->elem_node_list[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
+                                                             ->iconnect_ptr]))) == -1)
                 GOMA_EH(GOMA_ERROR, "Bad id_local_elem_coord lookup");
             }
 
@@ -2603,7 +2678,7 @@ static void generate_source_particles(const dbl tt, /* parameter to vary time in
                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim - 1, side_id + 1,
                   num_nodes_on_side, local_elem_node_id);
-              for (m = 0; m < mdim; m++)
+              for (m = 0; m < trk->mdim; m++)
                 inflow_volume += -(goma_ctx->fem.fv->v[m] * goma_ctx->fem.fv->snormal[m]) * wt *
                                  goma_ctx->fem.fv->sdet; /* Normal is outward pointing. */
             }
@@ -2685,12 +2760,13 @@ static void zero_a_particle(particle_t *p) {
  * routine.  It's job currently is just to initialize a file to log
  * particle intersection locations. */
 static void initialize_surface_interactions(void) {
+  struct Particle_Tracker *trk = particle_tracker();
   PBC_t *PBC;
   FILE *fp;
   int i;
   char err_msg[128];
 
-  Num_Impermeable_PBCs = 0;
+  trk->Num_Impermeable_PBCs = 0;
   for (i = 0; i < goma_ctx->particles.num_pbcs; i++) {
     PBC = &(goma_ctx->particles.pbcs[i]);
     switch (PBC->type) {
@@ -2731,29 +2807,31 @@ static void initialize_surface_interactions(void) {
 /* See comment above.  The static global variables associated with
  * this routine are last_element_loaded and velo_interp. */
 static void load_element_information(const int elem_id) {
+  struct Particle_Tracker *trk = particle_tracker();
   int err;
   int i;
 
-  if (last_element_loaded == elem_id)
+  if (trk->last_element_loaded == elem_id)
     return;
-  err = load_elem_dofptr(elem_id, static_exo, static_x, static_x_old, static_xdot, static_xdot_old,
-                         0);
+  err = load_elem_dofptr(elem_id, trk->static_exo, trk->static_x, trk->static_x_old,
+                         trk->static_xdot, trk->static_xdot_old, 0);
   GOMA_EH(err, "Error from load_elem_dof_ptr()");
 
   /* Not sure if this call is necessary ... I don't know exactly what
    * element information I use laster on. */
   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem = elem_id;
-  load_ei(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, static_exo, 0, goma_ctx->fem.pg->imtrx);
+  load_ei(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, trk->static_exo, 0,
+          goma_ctx->fem.pg->imtrx);
 
-  velo_interp = -1;
+  trk->velo_interp = -1;
   for (i = 0; i < goma_ctx->problem.num_basis_functions; i++)
     if (goma_ctx->fem.pd_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]
             ->i[goma_ctx->fem.pg->imtrx][VELOCITY1] == goma_ctx->fem.bfd[i]->interpolation)
-      velo_interp = i;
-  if (velo_interp == -1)
+      trk->velo_interp = i;
+  if (trk->velo_interp == -1)
     GOMA_EH(GOMA_ERROR, "Could not find velocity interpolation function.");
 
-  last_element_loaded = elem_id;
+  trk->last_element_loaded = elem_id;
 }
 
 /* See comment above.  This routine loads the corner point coordinates
@@ -2761,29 +2839,30 @@ static void load_element_information(const int elem_id) {
  * with this routine are last_elements_nodes_loaded and
  * node_coord[][]. */
 static void load_element_node_coordinates(const int elem_id) {
+  struct Particle_Tracker *trk = particle_tracker();
   int i, j, k;
   int idof, node_index, var;
 
-  if (elem_id == last_elements_nodes_loaded)
+  if (elem_id == trk->last_elements_nodes_loaded)
     return;
   load_element_information(elem_id);
 
   i = goma_ctx->mesh.proc_connect_ptr[elem_id];
-  for (j = 0; j < mdim; j++) {
+  for (j = 0; j < trk->mdim; j++) {
     if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_MESH1]) {
       var = MESH_DISPLACEMENT1 + j;
-      for (k = 0; k < nodes_per_element; k++) {
+      for (k = 0; k < trk->nodes_per_element; k++) {
         idof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[var][k];
         node_index = goma_ctx->mesh.proc_elem_connect[i + k];
-        node_coord[k][j] = goma_ctx->mesh.coor[j][node_index] + *goma_ctx->fem.esp->d[j][idof];
+        trk->node_coord[k][j] = goma_ctx->mesh.coor[j][node_index] + *goma_ctx->fem.esp->d[j][idof];
       }
     } else
-      for (k = 0; k < nodes_per_element; k++) {
+      for (k = 0; k < trk->nodes_per_element; k++) {
         node_index = goma_ctx->mesh.proc_elem_connect[i + k];
-        node_coord[k][j] = goma_ctx->mesh.coor[j][node_index];
+        trk->node_coord[k][j] = goma_ctx->mesh.coor[j][node_index];
       }
   }
-  last_elements_nodes_loaded = elem_id;
+  trk->last_elements_nodes_loaded = elem_id;
 }
 
 /* This routine filles an array of node indices for a particular side
@@ -2842,6 +2921,7 @@ static void fill_hex_side_indices(const int side_id, int indices[4]) {
  * big pain to do this for actual curved elements, etc...
  */
 static void select_random_side_location(const int elem_id, const int side_id, dbl *x, dbl *xi) {
+  struct Particle_Tracker *trk = particle_tracker();
   int i, j, indices[4];
   dbl r, r2, x_edge[2][DIM];
 
@@ -2852,21 +2932,21 @@ static void select_random_side_location(const int elem_id, const int side_id, db
 
   load_element_node_coordinates(elem_id);
 
-  if (mdim == 2) {
+  if (trk->mdim == 2) {
     r = drand48();
-    for (i = 0; i < mdim; i++) {
-      x[i] = node_coord[side_id][i];
-      x[i] += r * (node_coord[(side_id + 1) % 4][i] - x[i]);
+    for (i = 0; i < trk->mdim; i++) {
+      x[i] = trk->node_coord[side_id][i];
+      x[i] += r * (trk->node_coord[(side_id + 1) % 4][i] - x[i]);
     }
   } else {
     fill_hex_side_indices(side_id, indices);
     r = drand48();
     r2 = drand48();
     for (j = 0; j < DIM; j++) {
-      x_edge[0][j] = node_coord[indices[0]][j];
-      x_edge[1][j] = node_coord[indices[2]][j];
-      x_edge[0][j] += r * (node_coord[indices[1]][j] - x_edge[0][j]);
-      x_edge[1][j] += (1.0 - r) * (node_coord[indices[3]][j] - x_edge[1][j]);
+      x_edge[0][j] = trk->node_coord[indices[0]][j];
+      x_edge[1][j] = trk->node_coord[indices[2]][j];
+      x_edge[0][j] += r * (trk->node_coord[indices[1]][j] - x_edge[0][j]);
+      x_edge[1][j] += (1.0 - r) * (trk->node_coord[indices[3]][j] - x_edge[1][j]);
       x[j] = x_edge[0][j];
       x[j] += r2 * (x_edge[1][j] - x[j]);
     }
@@ -2887,6 +2967,7 @@ static void select_random_side_location(const int elem_id, const int side_id, db
  * should modify any random selection routines to account for changes
  * in radii.  I haven't done this, yet. */
 static dbl get_side_area(const int elem_id, const int side_id) {
+  struct Particle_Tracker *trk = particle_tracker();
   int i, indices[4];
   dbl d1[DIM], d2[DIM], dcross[DIM], dnorm;
 
@@ -2896,14 +2977,15 @@ static dbl get_side_area(const int elem_id, const int side_id) {
   }
 
   load_element_node_coordinates(elem_id);
-  if (mdim == 2)
-    return my_distance(&(node_coord[side_id][0]), &(node_coord[(side_id + 1) % 4][0]), mdim);
+  if (trk->mdim == 2)
+    return my_distance(&(trk->node_coord[side_id][0]), &(trk->node_coord[(side_id + 1) % 4][0]),
+                       trk->mdim);
   else {
     fill_hex_side_indices(side_id, indices);
     /* Get diagonals... */
     for (i = 0; i < 3; i++) {
-      d1[i] = node_coord[indices[2]][i] - node_coord[indices[0]][i];
-      d2[i] = node_coord[indices[3]][i] - node_coord[indices[1]][i];
+      d1[i] = trk->node_coord[indices[2]][i] - trk->node_coord[indices[0]][i];
+      d2[i] = trk->node_coord[indices[3]][i] - trk->node_coord[indices[1]][i];
     }
     cross_really_simple_vectors(d1, d2, dcross);
     dnorm = nnorm(DIM, dcross);
@@ -2926,17 +3008,18 @@ static dbl get_side_area(const int elem_id, const int side_id) {
  * Particle_Model to determine which field variables we really need to
  * load... */
 static void load_field_variables_at_xi(const int elem_id, dbl *const xi) {
+  struct Particle_Tracker *trk = particle_tracker();
   int err;
   int i, xis_equal;
 
   xis_equal = 1;
-  for (i = 0; i < mdim; i++)
-    if (xi[i] != last_fvs_xi_loaded[i])
+  for (i = 0; i < trk->mdim; i++)
+    if (xi[i] != trk->last_fvs_xi_loaded[i])
       xis_equal = 0;
-  if (last_elements_fv_loaded == elem_id && xis_equal)
+  if (trk->last_elements_fv_loaded == elem_id && xis_equal)
     return;
 
-  if (last_elements_fv_loaded != elem_id)
+  if (trk->last_elements_fv_loaded != elem_id)
     load_element_information(elem_id);
 
   err = load_basis_functions(xi, goma_ctx->fem.bfd);
@@ -2964,9 +3047,9 @@ static void load_field_variables_at_xi(const int elem_id, dbl *const xi) {
   err = load_fv_grads();
   GOMA_EH(err, "Error from load_fv_grads()");
 
-  last_elements_fv_loaded = elem_id;
-  for (i = 0; i < mdim; i++)
-    last_fvs_xi_loaded[i] = xi[i];
+  trk->last_elements_fv_loaded = elem_id;
+  for (i = 0; i < trk->mdim; i++)
+    trk->last_fvs_xi_loaded[i] = xi[i];
 }
 
 /* This routine finds the element coordinates (xi) for a specified
@@ -2979,6 +3062,7 @@ static void load_field_variables_at_xi(const int elem_id, dbl *const xi) {
  * printed), otherwise 0 is returned.
  */
 static int get_element_xi_newton(const int elem_id, const dbl *const x, dbl *xi) {
+  struct Particle_Tracker *trk = particle_tracker();
   dbl update[DIM], resid[DIM], resid_norm, xi_norm;
   dbl termination_residual;
   const dbl tol = 1.0e-12;
@@ -2991,11 +3075,11 @@ static int get_element_xi_newton(const int elem_id, const dbl *const x, dbl *xi)
 
   load_field_variables_at_xi(elem_id, xi);
   memset(resid, 0, DIM * sizeof(dbl));
-  for (i = 0; i < mdim; i++)
+  for (i = 0; i < trk->mdim; i++)
     resid[i] = goma_ctx->fem.fv->x[i] - x[i];
-  resid_norm = nnorm(mdim, resid);
+  resid_norm = nnorm(trk->mdim, resid);
 
-  xi_norm = nnorm(mdim, xi);
+  xi_norm = nnorm(trk->mdim, xi);
   termination_residual = MAX(tol, tol * xi_norm * xi_norm);
 
   /*
@@ -3011,21 +3095,21 @@ resid[1], resid[2]); fflush(stderr);
   iter = 0;
   while (resid_norm > termination_residual && iter < 100) {
     memset(update, 0, DIM * sizeof(dbl));
-    for (i = 0; i < mdim; i++)
-      for (j = 0; j < mdim; j++)
+    for (i = 0; i < trk->mdim; i++)
+      for (j = 0; j < trk->mdim; j++)
         update[i] += map_bf->B[j][i] * resid[j];
 
-    for (i = 0; i < mdim; i++)
+    for (i = 0; i < trk->mdim; i++)
       xi[i] -= update[i];
 
     load_field_variables_at_xi(elem_id, xi);
-    for (i = 0; i < mdim; i++)
+    for (i = 0; i < trk->mdim; i++)
       resid[i] = goma_ctx->fem.fv->x[i] - x[i];
-    resid_norm = nnorm(mdim, resid);
+    resid_norm = nnorm(trk->mdim, resid);
 
     /* If we're looking at a particle that's definitely out of this
      * element, account for the noise in locating it... */
-    xi_norm = nnorm(mdim, xi);
+    xi_norm = nnorm(trk->mdim, xi);
     termination_residual = MAX(tol, tol * xi_norm * xi_norm);
     iter++;
     /*
@@ -3065,26 +3149,27 @@ resid[1], resid[2]); fflush(stderr);
  * basis.
  */
 static dbl get_element_minimum_side_length(const int elem_id) {
+  struct Particle_Tracker *trk = particle_tracker();
   int edge_id;
   dbl len = 1.0e+10;
 
   load_element_node_coordinates(elem_id);
-  if (mdim == 2) {
+  if (trk->mdim == 2) {
     for (edge_id = 0; edge_id < 4; edge_id++)
       len = MIN(len, get_side_area(elem_id, edge_id));
   } else {
-    len = MIN(len, my_distance(&(node_coord[0][0]), &(node_coord[1][0]), mdim));
-    len = MIN(len, my_distance(&(node_coord[0][0]), &(node_coord[3][0]), mdim));
-    len = MIN(len, my_distance(&(node_coord[0][0]), &(node_coord[4][0]), mdim));
-    len = MIN(len, my_distance(&(node_coord[1][0]), &(node_coord[2][0]), mdim));
-    len = MIN(len, my_distance(&(node_coord[1][0]), &(node_coord[5][0]), mdim));
-    len = MIN(len, my_distance(&(node_coord[2][0]), &(node_coord[3][0]), mdim));
-    len = MIN(len, my_distance(&(node_coord[2][0]), &(node_coord[6][0]), mdim));
-    len = MIN(len, my_distance(&(node_coord[3][0]), &(node_coord[7][0]), mdim));
-    len = MIN(len, my_distance(&(node_coord[4][0]), &(node_coord[5][0]), mdim));
-    len = MIN(len, my_distance(&(node_coord[4][0]), &(node_coord[7][0]), mdim));
-    len = MIN(len, my_distance(&(node_coord[5][0]), &(node_coord[6][0]), mdim));
-    len = MIN(len, my_distance(&(node_coord[6][0]), &(node_coord[7][0]), mdim));
+    len = MIN(len, my_distance(&(trk->node_coord[0][0]), &(trk->node_coord[1][0]), trk->mdim));
+    len = MIN(len, my_distance(&(trk->node_coord[0][0]), &(trk->node_coord[3][0]), trk->mdim));
+    len = MIN(len, my_distance(&(trk->node_coord[0][0]), &(trk->node_coord[4][0]), trk->mdim));
+    len = MIN(len, my_distance(&(trk->node_coord[1][0]), &(trk->node_coord[2][0]), trk->mdim));
+    len = MIN(len, my_distance(&(trk->node_coord[1][0]), &(trk->node_coord[5][0]), trk->mdim));
+    len = MIN(len, my_distance(&(trk->node_coord[2][0]), &(trk->node_coord[3][0]), trk->mdim));
+    len = MIN(len, my_distance(&(trk->node_coord[2][0]), &(trk->node_coord[6][0]), trk->mdim));
+    len = MIN(len, my_distance(&(trk->node_coord[3][0]), &(trk->node_coord[7][0]), trk->mdim));
+    len = MIN(len, my_distance(&(trk->node_coord[4][0]), &(trk->node_coord[5][0]), trk->mdim));
+    len = MIN(len, my_distance(&(trk->node_coord[4][0]), &(trk->node_coord[7][0]), trk->mdim));
+    len = MIN(len, my_distance(&(trk->node_coord[5][0]), &(trk->node_coord[6][0]), trk->mdim));
+    len = MIN(len, my_distance(&(trk->node_coord[6][0]), &(trk->node_coord[7][0]), trk->mdim));
   }
   return len;
 }
@@ -3105,6 +3190,7 @@ static dbl get_element_minimum_side_length(const int elem_id) {
  */
 static void
 output_TECPLOT_zone_info(const dbl end_time, const int goma_time_step, const int force) {
+  struct Particle_Tracker *trk = particle_tracker();
   int i, particles_exist;
 
   /* This isn't exactly right, but we cannot predict if we'll have
@@ -3112,12 +3198,12 @@ output_TECPLOT_zone_info(const dbl end_time, const int goma_time_step, const int
    * always have them, or always *not* have them.
    */
 #ifdef PARALLEL
-  particles_exist = num_particles > 0;
+  particles_exist = trk->num_particles > 0;
   /*
   particles_exist = local_num_particles > 0;
   */
 #else
-  particles_exist = num_particles;
+  particles_exist = trk->num_particles;
 #endif
 
   if (!goma_ctx->particles.number_sample_types)
@@ -3130,7 +3216,7 @@ output_TECPLOT_zone_info(const dbl end_time, const int goma_time_step, const int
        (!((goma_time_step + 1) % goma_ctx->particles.output_stride))) ||
       (goma_ctx->problem.time_integration == STEADY && goma_ctx->particles.output_time_step > 0.0))
     for (i = 0; i < goma_ctx->particles.number_sample_types; i++)
-      fprintf(pa_fp[i], "ZONE T=\"%g\"\n", end_time);
+      fprintf(trk->pa_fp[i], "ZONE T=\"%g\"\n", end_time);
 }
 
 /* This routine handles quite a lot.  There are two basic kinds of
@@ -3155,6 +3241,7 @@ static void output_a_particle(particle_t *const p,
                               const int goma_time_step,
                               const int last_step,
                               const int force_output) {
+  struct Particle_Tracker *trk = particle_tracker();
   int i, output_sample_number;
   int output_n, start_n, end_n;
   int strided_output, last_goma_step;
@@ -3167,15 +3254,15 @@ static void output_a_particle(particle_t *const p,
     if ((!((goma_time_step + 1) % goma_ctx->particles.output_stride) || force_output) &&
         last_step) {
       if ((output_sample_number = p->output_sample_number) != -1) {
-        for (i = 0; i < pdim; i++)
-          fprintf(pa_fp[output_sample_number], " %12g ", p->x_old[i]);
-        fprintf(pa_fp[output_sample_number], " %12g", particle_time);
+        for (i = 0; i < trk->pdim; i++)
+          fprintf(trk->pa_fp[output_sample_number], " %12g ", p->x_old[i]);
+        fprintf(trk->pa_fp[output_sample_number], " %12g", particle_time);
         for (i = 0; i < goma_ctx->particles.number_output_variables[output_sample_number]; i++)
-          fprintf(pa_fp[output_sample_number], " %12g", p->real_data[i]);
+          fprintf(trk->pa_fp[output_sample_number], " %12g", p->real_data[i]);
 #ifdef PARALLEL
-        fprintf(pa_fp[output_sample_number], " %d", p->owning_proc_id);
+        fprintf(trk->pa_fp[output_sample_number], " %d", p->owning_proc_id);
 #endif
-        fprintf(pa_fp[output_sample_number], "\n");
+        fprintf(trk->pa_fp[output_sample_number], "\n");
       }
     }
   } else if ((output_sample_number = p->output_sample_number) != -1 || force_output) {
@@ -3195,21 +3282,21 @@ static void output_a_particle(particle_t *const p,
         output_time = (output_n + 1) * goma_ctx->particles.output_time_step;
         time_fraction = (output_time - last_particle_time) / (particle_time - last_particle_time);
       }
-      for (i = 0; i < pdim; i++)
+      for (i = 0; i < trk->pdim; i++)
         x_time[i] = (1.0 - time_fraction) * p->x_old[i] + time_fraction * p->x[i];
       if (output_sample_number != -1) {
-        for (i = 0; i < pdim; i++)
-          fprintf(pa_fp[output_sample_number], " %12g", x_time[i]);
-        fprintf(pa_fp[output_sample_number], " %12g", output_time);
+        for (i = 0; i < trk->pdim; i++)
+          fprintf(trk->pa_fp[output_sample_number], " %12g", x_time[i]);
+        fprintf(trk->pa_fp[output_sample_number], " %12g", output_time);
         for (i = 0; i < goma_ctx->particles.number_output_variables[output_sample_number]; i++) {
           real_data_time =
               (1.0 - time_fraction) * p->real_data_old[i] + time_fraction * p->real_data[i];
-          fprintf(pa_fp[output_sample_number], " %12g", real_data_time);
+          fprintf(trk->pa_fp[output_sample_number], " %12g", real_data_time);
         }
 #ifdef PARALLEL
-        fprintf(pa_fp[output_sample_number], " %d", p->owning_proc_id);
+        fprintf(trk->pa_fp[output_sample_number], " %d", p->owning_proc_id);
 #endif
-        fprintf(pa_fp[output_sample_number], "\n");
+        fprintf(trk->pa_fp[output_sample_number], "\n");
       }
     }
   }
@@ -3231,20 +3318,20 @@ static void output_a_particle(particle_t *const p,
     */
 
     if ((strided_output && last_step) || (last_goma_step && last_step) || force_output) {
-      for (i = 0; i < pdim; i++)
-        fprintf(pa_full_fp, " %12g", p->x[i]);
-      fprintf(pa_full_fp, " %12g", particle_time);
+      for (i = 0; i < trk->pdim; i++)
+        fprintf(trk->pa_full_fp, " %12g", p->x[i]);
+      fprintf(trk->pa_full_fp, " %12g", particle_time);
       if (goma_ctx->particles.model == SWIMMER_EXPLICIT ||
           goma_ctx->particles.model == SWIMMER_IMPLICIT) {
-        fprintf(pa_full_fp, " %g", p->theta);
-        if (pdim == 3)
-          fprintf(pa_full_fp, " %g", p->phi);
+        fprintf(trk->pa_full_fp, " %g", p->theta);
+        if (trk->pdim == 3)
+          fprintf(trk->pa_full_fp, " %g", p->phi);
       }
-      fprintf(pa_full_fp, " %d", p->owning_elem_id);
+      fprintf(trk->pa_full_fp, " %d", p->owning_elem_id);
 #ifdef PARALLEL
-      fprintf(pa_full_fp, " %d", p->owning_proc_id);
+      fprintf(trk->pa_full_fp, " %d", p->owning_proc_id);
 #endif
-      fprintf(pa_full_fp, "\n");
+      fprintf(trk->pa_full_fp, "\n");
     }
   }
 }
@@ -3291,6 +3378,7 @@ static void store_particle_data(particle_t *const p) {
  * for determining this timestep size is entirely model dependent.
  * You better know what you're doing here... */
 static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
+  struct Particle_Tracker *trk = particle_tracker();
   dbl dt = 0, tmp_dt = 0, particle_speed, fluid_speed, max_speed, min_side_length, mass, volume;
   /*  dbl fluid_mass; */
   dbl stokes_force_coeff, coulombic_force_coeff, gravity_force_coeff;
@@ -3306,9 +3394,9 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
 
   /* Get the index into acceleration vectors for gravity. */
   if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN)
-    gravity_index = 2 * pdim - 1; /* y or z depending on 2D or 3D */
+    gravity_index = 2 * trk->pdim - 1; /* y or z depending on 2D or 3D */
   else
-    gravity_index = pdim; /* z in (z,r) */
+    gravity_index = trk->pdim; /* z in (z,r) */
 
   min_side_length = get_element_minimum_side_length(p->owning_elem_id);
   particle_speed = nnorm(DIM, p->v);
@@ -3340,9 +3428,9 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
     stokes_force_coeff = 6.0 * M_PIE * goma_ctx->fem.mp->viscosity * goma_ctx->particles.radius;
     gravity_force_coeff = goma_ctx->particles.model_data[1];
 
-    for (i = 0; i < pdim; i++)
+    for (i = 0; i < trk->pdim; i++)
       vel_rel[i] = goma_ctx->fem.fv->v[i] - p->v[i];
-    vel_diff = nnorm(pdim, vel_rel);
+    vel_diff = nnorm(trk->pdim, vel_rel);
     Re_p = goma_ctx->particles.density * vel_diff * 2.0 * goma_ctx->particles.radius /
            goma_ctx->fem.mp->density;
     if (Re_p <= 0.1)
@@ -3362,13 +3450,13 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
 
     /* Get the acceleration values and from that adjust timestep if necessary.  We assume that the
        fluid velocity doesn't change appreciably over the timestep for CFL purposes. */
-    for (i = 0; i < pdim; i++)
+    for (i = 0; i < trk->pdim; i++)
       forces[i] = stokes_force_coeff * (goma_ctx->fem.fv->v[i] - p->v[i]) -
                   goma_ctx->fem.fv->grad_P[i] * volume;
     forces[gravity_index] += gravity_force_coeff * mass;
 
     max_force = fabs(forces[0]);
-    for (i = 1; i < pdim; i++)
+    for (i = 1; i < trk->pdim; i++)
       if (fabs(forces[i]) > max_force)
         max_force = fabs(forces[i]);
 
@@ -3436,7 +3524,7 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
     /* Check for large forces due to fluid/particle velocity differences. */
     /* This needs to be modified to use old values of v and V, too. */
     max_force = 0.0;
-    for (i = 0; i < pdim; i++) {
+    for (i = 0; i < trk->pdim; i++) {
       force = fabs(stokes_force_coeff / mass * (goma_ctx->fem.fv->v[i] - p->v[i]) +
                    coulombic_force_coeff / mass * goma_ctx->fem.fv->grad_V[i]);
       max_force = MAX(max_force, force);
@@ -3500,7 +3588,7 @@ static dbl compute_particle_dt(particle_t *const p, const dbl max_dt) {
     /* Check for large forces due to fluid/particle velocity differences. */
     /* This needs to be modified to use old values of v and V, too. */
     max_force = 0.0;
-    for (i = 0; i < pdim; i++) {
+    for (i = 0; i < trk->pdim; i++) {
       force = fabs(stokes_force_coeff / mass * (goma_ctx->fem.fv->v[i] - p->v[i]) +
                    dielectrophoretic_force_coeff / mass * 2.0 * goma_ctx->fem.fv->Enorm *
                        goma_ctx->fem.fv->grad_Enorm[i]);
@@ -3550,6 +3638,7 @@ static int move_particle(particle_t *const p,
                          dbl *max_particle_dt,
                          dbl global_start_time,
                          dbl global_time_step) {
+  struct Particle_Tracker *trk = particle_tracker();
   int i, j, return_value = -1;
   int gravity_index;
   dbl ext_velocity[DIM];   /* Additional velocity applied to particle. */
@@ -3595,9 +3684,9 @@ static int move_particle(particle_t *const p,
 
   /* Get the index into Newton RHS's for gravity. */
   if (goma_ctx->fem.pd->CoordinateSystem == CARTESIAN)
-    gravity_index = 2 * pdim - 1; /* y or z depending on 2D or 3D */
+    gravity_index = 2 * trk->pdim - 1; /* y or z depending on 2D or 3D */
   else
-    gravity_index = pdim; /* z in (z,r) */
+    gravity_index = trk->pdim; /* z in (z,r) */
 
   switch (goma_ctx->particles.model) {
   case TRACER_EXPLICIT:
@@ -3626,7 +3715,7 @@ static int move_particle(particle_t *const p,
       sin(p->theta_old) / beta);
       */
 
-      if (mdim == 2) {
+      if (trk->mdim == 2) {
         /* For 2D, only one angle, theta.  theta = pi is up. */
         p->theta_old = p->theta;
         p->theta += particle_dt * (980.0 * goma_ctx->particles.radius * 0.05 * mass *
@@ -3662,10 +3751,10 @@ static int move_particle(particle_t *const p,
     for (i = 0; i < DIM; i++)
       total_velocity[i] += ext_velocity[i];
 
-    if (Num_Impermeable_PBCs)
+    if (trk->Num_Impermeable_PBCs)
       enforce_impermeable_PBCs(p, total_velocity, particle_dt);
 
-    for (i = 0; i < pdim; i++) {
+    for (i = 0; i < trk->pdim; i++) {
       p->x[i] += total_velocity[i] * particle_dt;
       p->v[i] = total_velocity[i];
     }
@@ -3676,8 +3765,8 @@ static int move_particle(particle_t *const p,
   case CHARGED_TRACER_EXPLICIT: /* This is *always* INERTIAL!! */
     /* Get the current grad_V value. */
     fill_my_fv_old();
-    for (i = 0; i < pdim; i++)
-      current_grad_V[i] = (1.0 - time_fraction) * (my_fv_old->grad_V[i]) +
+    for (i = 0; i < trk->pdim; i++)
+      current_grad_V[i] = (1.0 - time_fraction) * (trk->my_fv_old->grad_V[i]) +
                           time_fraction * (goma_ctx->fem.fv->grad_V[i]);
 
     /* Fill the coefficients. */
@@ -3689,7 +3778,7 @@ static int move_particle(particle_t *const p,
           p->v[i] + particle_dt * (stokes_force_coeff / mass * (current_v[i] - p->v[i]) +
                                    coulombic_force_coeff / mass * current_grad_V[i]);
 
-    if (Num_Impermeable_PBCs)
+    if (trk->Num_Impermeable_PBCs)
       enforce_impermeable_PBCs(p, total_velocity, particle_dt);
 
     for (i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
@@ -3703,21 +3792,21 @@ static int move_particle(particle_t *const p,
   case CHARGED_TRACER_IMPLICIT:
     /* Get the current grad_V value. */
     fill_my_fv_old();
-    for (i = 0; i < pdim; i++)
-      current_grad_V[i] = (1.0 - time_fraction) * (my_fv_old->grad_V[i]) +
+    for (i = 0; i < trk->pdim; i++)
+      current_grad_V[i] = (1.0 - time_fraction) * (trk->my_fv_old->grad_V[i]) +
                           time_fraction * (goma_ctx->fem.fv->grad_V[i]);
 
     /* These need to match the same values used in compute_particle_dt(). */
     stokes_force_coeff = 6.0 * M_PIE * goma_ctx->fem.mp->viscosity * goma_ctx->particles.radius;
     coulombic_force_coeff = -goma_ctx->particles.model_data[1];
 
-    for (i = 0; i < pdim; i++) {
+    for (i = 0; i < trk->pdim; i++) {
       b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
-      b[pdim + i] = p->v[i] - p->v_old[i] -
-                    particle_dt * (stokes_force_coeff / mass * (current_v[i] - p->v[i]) +
-                                   coulombic_force_coeff / mass * current_grad_V[i]);
+      b[trk->pdim + i] = p->v[i] - p->v_old[i] -
+                         particle_dt * (stokes_force_coeff / mass * (current_v[i] - p->v[i]) +
+                                        coulombic_force_coeff / mass * current_grad_V[i]);
     }
-    b_norm = nnorm(2 * pdim, b);
+    b_norm = nnorm(2 * trk->pdim, b);
 
     /*
     b[0] = p->x[0] - p->x_old[0] - particle_dt * p->v[0];
@@ -3744,12 +3833,12 @@ static int move_particle(particle_t *const p,
        * but if there are problems, then replace the fv->grad_v
        * values with current_grad_v values...
        */
-      for (i = 0; i < pdim; i++) {
+      for (i = 0; i < trk->pdim; i++) {
         J[i][i] = 1.0;
-        J[i][pdim + i] = -particle_dt;
-        J[pdim + i][pdim + i] = 1.0 + particle_dt * stokes_force_coeff / mass;
-        for (j = 0; j < pdim; j++)
-          J[pdim + i][j] =
+        J[i][trk->pdim + i] = -particle_dt;
+        J[trk->pdim + i][trk->pdim + i] = 1.0 + particle_dt * stokes_force_coeff / mass;
+        for (j = 0; j < trk->pdim; j++)
+          J[trk->pdim + i][j] =
               -particle_dt * stokes_force_coeff / mass * goma_ctx->fem.fv->grad_v[j][i];
       }
 
@@ -3761,26 +3850,26 @@ static int move_particle(particle_t *const p,
                 J[i][0], J[i][1], J[i][2], J[i][3], b[i]);
       */
 
-      solve_NxN_system(&J[0][0], b, x_sol, 2 * pdim, 6);
+      solve_NxN_system(&J[0][0], b, x_sol, 2 * trk->pdim, 6);
 
       /*
       fprintf(stderr, "update = (%g,%g,%g,%g)\n",
               -x_sol[0], -x_sol[1], -x_sol[2], -x_sol[3]);
       */
 
-      update_norm = nnorm(2 * pdim, x_sol);
+      update_norm = nnorm(2 * trk->pdim, x_sol);
       /* include min_side_length, too? */
-      relax_factor = 1.0 - (update_norm / (update_norm + nnorm(pdim, p->v)));
+      relax_factor = 1.0 - (update_norm / (update_norm + nnorm(trk->pdim, p->v)));
       if (relax_factor < 0.1 && relax_factor != 0.0)
         fprintf(stderr, "NEWTON Relax factor = %g\n", relax_factor);
       if (relax_factor == 0.0)
         relax_factor = 1.0;
 
-      for (i = 0; i < 2 * pdim; i++)
+      for (i = 0; i < 2 * trk->pdim; i++)
         x_sol[i] *= relax_factor;
-      for (i = 0; i < pdim; i++) {
+      for (i = 0; i < trk->pdim; i++) {
         p->x[i] -= x_sol[i];
-        p->v[i] -= x_sol[pdim + i];
+        p->v[i] -= x_sol[trk->pdim + i];
       }
 
       if (get_element_xi_newton(p->owning_elem_id, p->x, p->xi) == -1)
@@ -3793,21 +3882,21 @@ static int move_particle(particle_t *const p,
       */
 
       load_field_variables_at_xi(p->owning_elem_id, p->xi);
-      for (i = 0; i < pdim; i++)
+      for (i = 0; i < trk->pdim; i++)
         current_v[i] = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->v[i]) +
                        time_fraction * (goma_ctx->fem.fv->v[i]);
       fill_my_fv_old();
-      for (i = 0; i < pdim; i++)
-        current_grad_V[i] = (1.0 - time_fraction) * (my_fv_old->grad_V[i]) +
+      for (i = 0; i < trk->pdim; i++)
+        current_grad_V[i] = (1.0 - time_fraction) * (trk->my_fv_old->grad_V[i]) +
                             time_fraction * (goma_ctx->fem.fv->grad_V[i]);
 
-      for (i = 0; i < pdim; i++) {
+      for (i = 0; i < trk->pdim; i++) {
         b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
-        b[pdim + i] = p->v[i] - p->v_old[i] -
-                      particle_dt * (stokes_force_coeff / mass * (current_v[i] - p->v[i]) +
-                                     coulombic_force_coeff / mass * current_grad_V[i]);
+        b[trk->pdim + i] = p->v[i] - p->v_old[i] -
+                           particle_dt * (stokes_force_coeff / mass * (current_v[i] - p->v[i]) +
+                                          coulombic_force_coeff / mass * current_grad_V[i]);
       }
-      b_norm = nnorm(2 * pdim, b);
+      b_norm = nnorm(2 * trk->pdim, b);
 
       newton_iterations++;
     }
@@ -3832,8 +3921,8 @@ static int move_particle(particle_t *const p,
     fill_my_fv_old();
     current_Enorm = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->Enorm) +
                     time_fraction * (goma_ctx->fem.fv->Enorm);
-    for (i = 0; i < pdim; i++)
-      current_grad_Enorm[i] = (1.0 - time_fraction) * (my_fv_old->grad_Enorm[i]) +
+    for (i = 0; i < trk->pdim; i++)
+      current_grad_Enorm[i] = (1.0 - time_fraction) * (trk->my_fv_old->grad_Enorm[i]) +
                               time_fraction * (goma_ctx->fem.fv->grad_Enorm[i]);
 
     /* These need to match the same values used in compute_particle_dt(). */
@@ -3852,12 +3941,12 @@ static int move_particle(particle_t *const p,
         goma_ctx->particles.radius * goma_ctx->particles.model_data[2] * CM_fact *
         goma_ctx->particles.model_data[6] * goma_ctx->particles.model_data[6];
 
-    for (i = 0; i < pdim; i++) {
+    for (i = 0; i < trk->pdim; i++) {
       b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
-      b[pdim + i] = mass * (p->v[i] - p->v_old[i]) -
-                    particle_dt * (stokes_force_coeff * (current_v[i] - p->v[i]) +
-                                   dielectrophoretic_force_coeff * 2.0 * current_Enorm *
-                                       current_grad_Enorm[i]);
+      b[trk->pdim + i] = mass * (p->v[i] - p->v_old[i]) -
+                         particle_dt * (stokes_force_coeff * (current_v[i] - p->v[i]) +
+                                        dielectrophoretic_force_coeff * 2.0 * current_Enorm *
+                                            current_grad_Enorm[i]);
 
       /*
         fprintf(stderr, "b[%d] = %g * (%g) - %g * ( %g * (%g) + %g * %g * %g)\n",
@@ -3892,14 +3981,15 @@ static int move_particle(particle_t *const p,
        * but if there are problems, then replace the fv->grad_v
        * values with current_grad_v values...
        */
-      for (i = 0; i < pdim; i++) {
+      for (i = 0; i < trk->pdim; i++) {
         J[i][i] = 1.0;
-        J[i][pdim + i] = -particle_dt;
-        J[pdim + i][pdim + i] = mass + particle_dt * stokes_force_coeff;
-        for (j = 0; j < pdim; j++)
-          J[pdim + i][j] = -particle_dt * (stokes_force_coeff * goma_ctx->fem.fv->grad_v[j][i] +
-                                           dielectrophoretic_force_coeff * 2.0 *
-                                               current_grad_Enorm[j] * current_grad_Enorm[i]);
+        J[i][trk->pdim + i] = -particle_dt;
+        J[trk->pdim + i][trk->pdim + i] = mass + particle_dt * stokes_force_coeff;
+        for (j = 0; j < trk->pdim; j++)
+          J[trk->pdim + i][j] =
+              -particle_dt *
+              (stokes_force_coeff * goma_ctx->fem.fv->grad_v[j][i] +
+               dielectrophoretic_force_coeff * 2.0 * current_grad_Enorm[j] * current_grad_Enorm[i]);
       }
       /*
       fprintf(stderr, "Going into solver, J=\n");
@@ -3911,9 +4001,9 @@ static int move_particle(particle_t *const p,
         fprintf(stderr, "%12g\n", b[i]);
       */
 
-      solve_NxN_system(&J[0][0], b, x_sol, 2 * pdim, 6);
+      solve_NxN_system(&J[0][0], b, x_sol, 2 * trk->pdim, 6);
 
-      update_norm = nnorm(2 * pdim, x_sol);
+      update_norm = nnorm(2 * trk->pdim, x_sol);
       /* include min_side_length, too? */
       /* This doesn't work quite right when p->v -> 0, perhaps faster than update_norm... */
 
@@ -3931,7 +4021,7 @@ static int move_particle(particle_t *const p,
               x_sol[0], x_sol[1], x_sol[2], x_sol[3], x_sol[4], x_sol[5]);
       */
 
-      for (i = 0; i < 2 * pdim; i++)
+      for (i = 0; i < 2 * trk->pdim; i++)
         x_sol[i] *= relax_factor;
 
       /*
@@ -3939,9 +4029,9 @@ static int move_particle(particle_t *const p,
               x_sol[0], x_sol[1], x_sol[2], x_sol[3], x_sol[4], x_sol[5]);
       */
 
-      for (i = 0; i < pdim; i++) {
+      for (i = 0; i < trk->pdim; i++) {
         p->x[i] -= x_sol[i];
-        p->v[i] -= x_sol[pdim + i];
+        p->v[i] -= x_sol[trk->pdim + i];
       }
 
       /*
@@ -3958,29 +4048,29 @@ static int move_particle(particle_t *const p,
       */
 
       load_field_variables_at_xi(p->owning_elem_id, p->xi);
-      for (i = 0; i < pdim; i++)
+      for (i = 0; i < trk->pdim; i++)
         current_v[i] = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->v[i]) +
                        time_fraction * (goma_ctx->fem.fv->v[i]);
       current_Enorm = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->Enorm) +
                       time_fraction * (goma_ctx->fem.fv->Enorm);
       fill_my_fv_old();
-      for (i = 0; i < pdim; i++)
-        current_grad_Enorm[i] = (1.0 - time_fraction) * (my_fv_old->grad_Enorm[i]) +
+      for (i = 0; i < trk->pdim; i++)
+        current_grad_Enorm[i] = (1.0 - time_fraction) * (trk->my_fv_old->grad_Enorm[i]) +
                                 time_fraction * (goma_ctx->fem.fv->grad_Enorm[i]);
 
-      for (i = 0; i < pdim; i++) {
+      for (i = 0; i < trk->pdim; i++) {
         b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
-        b[pdim + i] = mass * (p->v[i] - p->v_old[i]) -
-                      particle_dt * (stokes_force_coeff * (current_v[i] - p->v[i]) +
-                                     dielectrophoretic_force_coeff * 2.0 * current_Enorm *
-                                         current_grad_Enorm[i]);
+        b[trk->pdim + i] = mass * (p->v[i] - p->v_old[i]) -
+                           particle_dt * (stokes_force_coeff * (current_v[i] - p->v[i]) +
+                                          dielectrophoretic_force_coeff * 2.0 * current_Enorm *
+                                              current_grad_Enorm[i]);
         /*
         fprintf(stderr, "b[%d] = %g * (%g) - %g * ( %g * (%g) + %g * %g * %g\n",
                 i, mass, p->v[i]-p->v_old[i], particle_dt, stokes_force_coeff, current_v[i] -
         p->v[i], dielectrophoretic_force_coeff*2.0, current_Enorm, current_grad_Enorm[i]);
         */
       }
-      b_norm = nnorm(2 * pdim, b);
+      b_norm = nnorm(2 * trk->pdim, b);
 
       newton_iterations++;
     }
@@ -4032,12 +4122,12 @@ static int move_particle(particle_t *const p,
 
         xi_max_n = xi_max_np1;
 
-        for (i = 0; i < pdim; i++) {
+        for (i = 0; i < trk->pdim; i++) {
           b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
-          b[pdim + i] = mass * (p->v[i] - p->v_old[i]) -
-                        particle_dt * (stokes_force_coeff * (current_v[i] - p->v[i]) +
-                                       dielectrophoretic_force_coeff * 2.0 * current_Enorm *
-                                           current_grad_Enorm[i]);
+          b[trk->pdim + i] = mass * (p->v[i] - p->v_old[i]) -
+                             particle_dt * (stokes_force_coeff * (current_v[i] - p->v[i]) +
+                                            dielectrophoretic_force_coeff * 2.0 * current_Enorm *
+                                                current_grad_Enorm[i]);
           /*
           fprintf(stderr, "XI_MAX b[%d] = %g * (%g) - %g * ( %g * (%g) + %g * %g * %g)\n",
                   i, mass, p->v[i]-p->v_old[i], particle_dt, stokes_force_coeff, current_v[i] -
@@ -4045,14 +4135,15 @@ static int move_particle(particle_t *const p,
           */
         }
         memset(J, 0, 36 * sizeof(dbl));
-        for (i = 0; i < pdim; i++) {
+        for (i = 0; i < trk->pdim; i++) {
           J[i][i] = 1.0;
-          J[i][pdim + i] = -particle_dt;
-          J[pdim + i][pdim + i] = mass + particle_dt * stokes_force_coeff;
-          for (j = 0; j < pdim; j++)
-            J[pdim + i][j] = -particle_dt * (stokes_force_coeff * goma_ctx->fem.fv->grad_v[j][i] +
-                                             dielectrophoretic_force_coeff * 2.0 *
-                                                 current_grad_Enorm[j] * current_grad_Enorm[i]);
+          J[i][trk->pdim + i] = -particle_dt;
+          J[trk->pdim + i][trk->pdim + i] = mass + particle_dt * stokes_force_coeff;
+          for (j = 0; j < trk->pdim; j++)
+            J[trk->pdim + i][j] =
+                -particle_dt * (stokes_force_coeff * goma_ctx->fem.fv->grad_v[j][i] +
+                                dielectrophoretic_force_coeff * 2.0 * current_grad_Enorm[j] *
+                                    current_grad_Enorm[i]);
         }
         /*
         fprintf(stderr, "XI_MAX Going into solver, J=\n");
@@ -4063,9 +4154,9 @@ static int move_particle(particle_t *const p,
         for(i = 0; i < 6; i++)
           fprintf(stderr, "XI_MAX %12g\n", b[i]);
         */
-        solve_NxN_system(&J[0][0], b, x_sol, 2 * pdim, 6);
+        solve_NxN_system(&J[0][0], b, x_sol, 2 * trk->pdim, 6);
 
-        update_norm = nnorm(2 * pdim, x_sol);
+        update_norm = nnorm(2 * trk->pdim, x_sol);
 
         /* include min_side_length, too? */
         /* This doesn't work quite right when p->v -> 0, perhaps faster than update_norm... */
@@ -4083,7 +4174,7 @@ static int move_particle(particle_t *const p,
           x_sol[0], x_sol[1], x_sol[2], x_sol[3], x_sol[4], x_sol[5]);
         */
 
-        for (i = 0; i < 2 * pdim; i++)
+        for (i = 0; i < 2 * trk->pdim; i++)
           x_sol[i] *= relax_factor;
 
         /*
@@ -4091,9 +4182,9 @@ static int move_particle(particle_t *const p,
                         x_sol[0], x_sol[1], x_sol[2], x_sol[3], x_sol[4], x_sol[5]);
         */
 
-        for (i = 0; i < pdim; i++) {
+        for (i = 0; i < trk->pdim; i++) {
           p->x[i] -= x_sol[i];
-          p->v[i] -= x_sol[pdim + i];
+          p->v[i] -= x_sol[trk->pdim + i];
         }
 
         /*
@@ -4110,29 +4201,29 @@ static int move_particle(particle_t *const p,
         */
 
         load_field_variables_at_xi(p->owning_elem_id, p->xi);
-        for (i = 0; i < pdim; i++)
+        for (i = 0; i < trk->pdim; i++)
           current_v[i] = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->v[i]) +
                          time_fraction * (goma_ctx->fem.fv->v[i]);
         current_Enorm = (1.0 - time_fraction) * (goma_ctx->fem.fv_old->Enorm) +
                         time_fraction * (goma_ctx->fem.fv->Enorm);
         fill_my_fv_old();
-        for (i = 0; i < pdim; i++)
-          current_grad_Enorm[i] = (1.0 - time_fraction) * (my_fv_old->grad_Enorm[i]) +
+        for (i = 0; i < trk->pdim; i++)
+          current_grad_Enorm[i] = (1.0 - time_fraction) * (trk->my_fv_old->grad_Enorm[i]) +
                                   time_fraction * (goma_ctx->fem.fv->grad_Enorm[i]);
 
-        for (i = 0; i < pdim; i++) {
+        for (i = 0; i < trk->pdim; i++) {
           b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
-          b[pdim + i] = mass * (p->v[i] - p->v_old[i]) -
-                        particle_dt * (stokes_force_coeff * (current_v[i] - p->v[i]) +
-                                       dielectrophoretic_force_coeff * 2.0 * current_Enorm *
-                                           current_grad_Enorm[i]);
+          b[trk->pdim + i] = mass * (p->v[i] - p->v_old[i]) -
+                             particle_dt * (stokes_force_coeff * (current_v[i] - p->v[i]) +
+                                            dielectrophoretic_force_coeff * 2.0 * current_Enorm *
+                                                current_grad_Enorm[i]);
           /*
           fprintf(stderr, "XI_MAX b[%d] = %g * (%g) - %g * ( %g * (%g) + %g * %g * %g\n",
                   i, mass, p->v[i]-p->v_old[i], particle_dt, stokes_force_coeff, current_v[i] -
           p->v[i], dielectrophoretic_force_coeff*2.0, current_Enorm, current_grad_Enorm[i]);
           */
         }
-        b_norm = nnorm(2 * pdim, b);
+        b_norm = nnorm(2 * trk->pdim, b);
 
         newton_iterations_2++;
       }
@@ -4161,7 +4252,7 @@ static int move_particle(particle_t *const p,
           p->v[i] + particle_dt * stokes_force_coeff / mass * (current_v[i] - p->v[i]);
     }
 
-    if (Num_Impermeable_PBCs)
+    if (trk->Num_Impermeable_PBCs)
       enforce_impermeable_PBCs(p, total_velocity, particle_dt);
 
     for (i = 0; i < goma_ctx->fem.pd->Num_Dim; i++) {
@@ -4238,9 +4329,9 @@ static int move_particle(particle_t *const p,
     stokes_force_coeff = 6.0 * M_PIE * goma_ctx->fem.mp->viscosity * goma_ctx->particles.radius;
     gravity_force_coeff = goma_ctx->particles.model_data[1];
 
-    for (i = 0; i < pdim; i++)
+    for (i = 0; i < trk->pdim; i++)
       vel_rel[i] = goma_ctx->fem.fv->v[i] - p->v[i];
-    vel_diff = nnorm(pdim, vel_rel);
+    vel_diff = nnorm(trk->pdim, vel_rel);
     Re_p = goma_ctx->particles.density * vel_diff * 2.0 * goma_ctx->particles.radius /
            goma_ctx->fem.mp->density;
     if (Re_p <= 0.1)
@@ -4278,16 +4369,16 @@ static int move_particle(particle_t *const p,
        Note that the interesting cases happen when grad(p) is not parallel to (0,1).
     */
 
-    for (i = 0; i < pdim; i++) {
+    for (i = 0; i < trk->pdim; i++) {
       b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
-      b[pdim + i] = p->v[i] - p->v_old[i] -
-                    particle_dt / mass *
-                        (stokes_force_coeff * (current_v[i] - p->v[i]) +
-                         -goma_ctx->fem.fv->grad_P[i] * volume);
+      b[trk->pdim + i] = p->v[i] - p->v_old[i] -
+                         particle_dt / mass *
+                             (stokes_force_coeff * (current_v[i] - p->v[i]) +
+                              -goma_ctx->fem.fv->grad_P[i] * volume);
     }
     b[gravity_index] -= particle_dt * gravity_force_coeff;
 
-    b_norm = nnorm(2 * pdim, b);
+    b_norm = nnorm(2 * trk->pdim, b);
 
     update_norm = 1.0e+10;
     newton_iterations = 0;
@@ -4295,32 +4386,32 @@ static int move_particle(particle_t *const p,
       memset(J, 0, 36 * sizeof(dbl));
       /* See comments about fv->grad_v on
        * CHARGED_TRACER_IMPLICIT. */
-      for (i = 0; i < pdim; i++) {
+      for (i = 0; i < trk->pdim; i++) {
         J[i][i] = 1.0;
-        J[i][pdim + i] = -particle_dt;
-        J[pdim + i][pdim + i] = 1.0 + particle_dt * stokes_force_coeff / mass;
-        for (j = 0; j < pdim; j++)
-          J[pdim + i][j] =
+        J[i][trk->pdim + i] = -particle_dt;
+        J[trk->pdim + i][trk->pdim + i] = 1.0 + particle_dt * stokes_force_coeff / mass;
+        for (j = 0; j < trk->pdim; j++)
+          J[trk->pdim + i][j] =
               -particle_dt * stokes_force_coeff / mass * goma_ctx->fem.fv->grad_v[j][i];
       }
 
-      solve_NxN_system(&J[0][0], b, x_sol, 2 * pdim, 6);
+      solve_NxN_system(&J[0][0], b, x_sol, 2 * trk->pdim, 6);
 
-      update_norm = nnorm(2 * pdim, x_sol);
+      update_norm = nnorm(2 * trk->pdim, x_sol);
 
       /* include min_side_length, too? */
-      relax_factor = 1.0 - (update_norm / (update_norm + nnorm(pdim, p->v)));
-      if (nnorm(pdim, p->v) <= 1.0e-8)
+      relax_factor = 1.0 - (update_norm / (update_norm + nnorm(trk->pdim, p->v)));
+      if (nnorm(trk->pdim, p->v) <= 1.0e-8)
         relax_factor = 1.0;
       if (relax_factor < 0.1 && relax_factor != 0.0)
         fprintf(stderr, "NEWTON Relax factor = %g\n", relax_factor);
 
-      for (i = 0; i < 2 * pdim; i++)
+      for (i = 0; i < 2 * trk->pdim; i++)
         x_sol[i] *= relax_factor;
 
-      for (i = 0; i < pdim; i++) {
+      for (i = 0; i < trk->pdim; i++) {
         p->x[i] -= x_sol[i];
-        p->v[i] -= x_sol[pdim + i];
+        p->v[i] -= x_sol[trk->pdim + i];
       }
 
       if (get_element_xi_newton(p->owning_elem_id, p->x, p->xi) == -1)
@@ -4341,20 +4432,20 @@ static int move_particle(particle_t *const p,
 
       load_field_variables_at_xi(p->owning_elem_id, p->xi);
 
-      for (i = 0; i < pdim; i++)
+      for (i = 0; i < trk->pdim; i++)
         current_v[i] = (1.0 - time_fraction) * goma_ctx->fem.fv_old->v[i] +
                        time_fraction * goma_ctx->fem.fv->v[i];
 
-      for (i = 0; i < pdim; i++) {
+      for (i = 0; i < trk->pdim; i++) {
         b[i] = p->x[i] - p->x_old[i] - particle_dt * p->v[i];
-        b[pdim + i] = p->v[i] - p->v_old[i] -
-                      particle_dt / mass *
-                          (stokes_force_coeff * (current_v[i] - p->v[i]) +
-                           -goma_ctx->fem.fv->grad_P[i] * volume);
+        b[trk->pdim + i] = p->v[i] - p->v_old[i] -
+                           particle_dt / mass *
+                               (stokes_force_coeff * (current_v[i] - p->v[i]) +
+                                -goma_ctx->fem.fv->grad_P[i] * volume);
       }
       b[gravity_index] -= particle_dt * gravity_force_coeff;
 
-      b_norm = nnorm(2 * pdim, b);
+      b_norm = nnorm(2 * trk->pdim, b);
 
       newton_iterations++;
     }
@@ -4395,7 +4486,7 @@ static int move_particle(particle_t *const p,
   }
 
   if (goma_ctx->particles.move_domain == BRICK)
-    for (i = 0; i < pdim; i++) {
+    for (i = 0; i < trk->pdim; i++) {
       p->x[i] = MAX(p->x[i], goma_ctx->particles.move_domain_reals[2 * i]);
       p->x[i] = MIN(p->x[i], goma_ctx->particles.move_domain_reals[2 * i + 1]);
     }
@@ -4483,6 +4574,7 @@ static dbl drand_truncated_normal(const dbl mean, const dbl stddev) {
  */
 static void dump_fcn(
     const char *const file_name, const int line_number, const int exit_too, particle_t *p, ...) {
+  struct Particle_Tracker *trk = particle_tracker();
   va_list args;
   char *fmt, state_string[80];
   int i;
@@ -4527,15 +4619,15 @@ static void dump_fcn(
           state_string, p->owning_elem_id, p->output_sample_number);
 
   fprintf(stderr, "\nStatic information\n------------------\n");
-  fprintf(stderr, "  last_element_loaded = %d\n", last_element_loaded);
-  fprintf(stderr, "  last_elements_nodes_loaded = %d\n", last_elements_nodes_loaded);
+  fprintf(stderr, "  last_element_loaded = %d\n", trk->last_element_loaded);
+  fprintf(stderr, "  last_elements_nodes_loaded = %d\n", trk->last_elements_nodes_loaded);
   fprintf(stderr, "  node coordinates =\n");
-  for (i = 0; i < nodes_per_element; i++)
-    fprintf(stderr, "    [%d] = (%g,%g,%g)\n", i, node_coord[i][0], node_coord[i][1],
-            node_coord[i][2]);
-  fprintf(stderr, "  last_elements_fv_loaded = %d\n", last_elements_fv_loaded);
-  fprintf(stderr, "  last_fvs_xi_loaded = (%g,%g,%g)\n", last_fvs_xi_loaded[0],
-          last_fvs_xi_loaded[1], last_fvs_xi_loaded[2]);
+  for (i = 0; i < trk->nodes_per_element; i++)
+    fprintf(stderr, "    [%d] = (%g,%g,%g)\n", i, trk->node_coord[i][0], trk->node_coord[i][1],
+            trk->node_coord[i][2]);
+  fprintf(stderr, "  last_elements_fv_loaded = %d\n", trk->last_elements_fv_loaded);
+  fprintf(stderr, "  last_fvs_xi_loaded = (%g,%g,%g)\n", trk->last_fvs_xi_loaded[0],
+          trk->last_fvs_xi_loaded[1], trk->last_fvs_xi_loaded[2]);
 
   va_start(args, p);
   fmt = (char *)va_arg(args, char *);
@@ -4564,14 +4656,15 @@ static void dump_fcn(
  * assumes the proper element has already been loaded.
  */
 static void fill_my_fv_old(void) {
+  struct Particle_Tracker *trk = particle_tracker();
   int i, j, dofs;
 
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VOLTAGE]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VOLTAGE];
     for (i = 0; i < goma_ctx->problem.vim; i++) {
-      my_fv_old->grad_V[i] = 0.0;
+      trk->my_fv_old->grad_V[i] = 0.0;
       for (j = 0; j < dofs; j++)
-        my_fv_old->grad_V[i] +=
+        trk->my_fv_old->grad_V[i] +=
             *goma_ctx->fem.esp_old->V[j] * goma_ctx->fem.bf[VOLTAGE]->grad_phi[j][i];
     }
   }
@@ -4579,9 +4672,9 @@ static void fill_my_fv_old(void) {
   if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][ENORM]) {
     dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ENORM];
     for (i = 0; i < goma_ctx->problem.vim; i++) {
-      my_fv_old->grad_Enorm[i] = 0.0;
+      trk->my_fv_old->grad_Enorm[i] = 0.0;
       for (j = 0; j < dofs; j++)
-        my_fv_old->grad_Enorm[i] +=
+        trk->my_fv_old->grad_Enorm[i] +=
             *goma_ctx->fem.esp_old->Enorm[j] * goma_ctx->fem.bf[ENORM]->grad_phi[j][i];
     }
   }
@@ -4603,6 +4696,7 @@ static void advance_a_particle(particle_t *p,
                                const dbl global_start_time,
                                const dbl global_end_time,
                                const int n) {
+  struct Particle_Tracker *trk = particle_tracker();
   dbl particle_dt, output_start_ust;
   int newton_iterations, particle_iterations;
   /*  int original_owning_elem_id; */
@@ -4610,7 +4704,7 @@ static void advance_a_particle(particle_t *p,
 
   load_element_information(p->owning_elem_id);
 
-  max_newton_iterations = 0;
+  trk->max_newton_iterations = 0;
   particle_iterations = 0;
 
   done = 0;
@@ -4645,7 +4739,7 @@ static void advance_a_particle(particle_t *p,
     fprintf(stderr, "NEW XI = (%g,%g,%g)\n", p->xi[0], p->xi[1], p->xi[2]);
     */
 
-    max_newton_iterations = MAX(max_newton_iterations, newton_iterations);
+    trk->max_newton_iterations = MAX(trk->max_newton_iterations, newton_iterations);
 
     /* Update the element coordinates and owning elements for this particle */
     memcpy(p->xi_old, p->xi, DIM * sizeof(dbl));
@@ -4685,7 +4779,7 @@ static void advance_a_particle(particle_t *p,
         output_a_particle(p, p->time_old, p->time, n, 1, 0);
     } else
       output_a_particle(p, p->time_old, p->time, n, (int)(p->time == global_end_time), 0);
-    output_accum_ust += MAX(ust() - output_start_ust, 0.0);
+    trk->output_accum_ust += MAX(ust() - output_start_ust, 0.0);
 
     /*
     if(p->state == ACTIVE &&
@@ -4714,14 +4808,15 @@ static void advance_a_particle(particle_t *p,
     particle_iterations++;
   }
 
-  max_particle_iterations = MAX(max_particle_iterations, particle_iterations);
+  trk->max_particle_iterations = MAX(trk->max_particle_iterations, particle_iterations);
 }
 
 /* This routine removes a particle from the element_particle_list_head
  * headed list.  It fixes the pointers to keep things consistent. */
 static void remove_from_element_particle_list(particle_t *p, const int elem_id) {
+  struct Particle_Tracker *trk = particle_tracker();
   if (!(p->last)) /* If I'm the head */
-    element_particle_list_head[elem_id] = p->next;
+    trk->element_particle_list_head[elem_id] = p->next;
   else /* Fix my previous neighbor */
     p->last->next = p->next;
 
@@ -4732,15 +4827,16 @@ static void remove_from_element_particle_list(particle_t *p, const int elem_id) 
 /* This routine moves a particle to the outgoing send list.  Once it
  * is actually sent its space will be free()'ed. */
 static void add_to_send_list(particle_t *p) {
+  struct Particle_Tracker *trk = particle_tracker();
 
-  if (!particles_to_send) {
-    particles_to_send = p;
+  if (!trk->particles_to_send) {
+    trk->particles_to_send = p;
     p->last = NULL;
     p->next = NULL;
   } else {
-    particles_to_send->last = p;
-    p->next = particles_to_send;
-    particles_to_send = p;
+    trk->particles_to_send->last = p;
+    p->next = trk->particles_to_send;
+    trk->particles_to_send = p;
     p->last = NULL;
   }
 }
@@ -4748,13 +4844,14 @@ static void add_to_send_list(particle_t *p) {
 /* This routine moves a particle to the incoming list.  Space needs to
  * be allocated, too. */
 static void add_to_do_list(particle_t *p) {
+  struct Particle_Tracker *trk = particle_tracker();
   particle_t *p_recv;
 
-  if (!particles_to_do) {
-    particles_to_do = (particle_t *)malloc(sizeof(particle_t));
-    if (!particles_to_do)
+  if (!trk->particles_to_do) {
+    trk->particles_to_do = (particle_t *)malloc(sizeof(particle_t));
+    if (!trk->particles_to_do)
       GOMA_EH(GOMA_ERROR, "Could not malloc particle space.");
-    p_recv = particles_to_do;
+    p_recv = trk->particles_to_do;
     memcpy(p_recv, p, sizeof(particle_t));
     p_recv->last = NULL;
     p_recv->next = NULL;
@@ -4763,9 +4860,9 @@ static void add_to_do_list(particle_t *p) {
     if (!p_recv)
       GOMA_EH(GOMA_ERROR, "Could not malloc particle space.");
     memcpy(p_recv, p, sizeof(particle_t));
-    particles_to_do->last = p_recv;
-    p_recv->next = particles_to_do;
-    particles_to_do = p_recv;
+    trk->particles_to_do->last = p_recv;
+    p_recv->next = trk->particles_to_do;
+    trk->particles_to_do = p_recv;
     p_recv->last = NULL;
   }
   p_recv->state = ACTIVE;
@@ -4776,6 +4873,7 @@ static void add_to_do_list(particle_t *p) {
  * presence.  It assumes that all particles contribute (irresepective
  * of possible p->state settings). */
 static void couple_to_continuum(void) {
+  struct Particle_Tracker *trk = particle_tracker();
   dbl source_mass = 0.0, total_particles = 0.0;
   int source_eqn = -1;
   int i, j;
@@ -4806,7 +4904,7 @@ static void couple_to_continuum(void) {
     num_ghost_particles_to_recv = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
     ghost_particles_to_send =
         (particle_t **)calloc((unsigned)goma_ctx->num_proc, sizeof(particle_t *));
-    num_particles_in_elem = (int *)calloc((unsigned)(static_exo->num_elems), sizeof(int));
+    num_particles_in_elem = (int *)calloc((unsigned)(trk->static_exo->num_elems), sizeof(int));
     num_ghost_particles_copied = (int *)calloc((unsigned)goma_ctx->num_proc, sizeof(int));
 
     /* I should introduce a level of indirection into
@@ -4815,14 +4913,14 @@ static void couple_to_continuum(void) {
 
     /* First count the number of particles currently in each of the
      * to-be-ghosted elements. */
-    for (i = 0; i < static_exo->num_elems; i++)
+    for (i = 0; i < trk->static_exo->num_elems; i++)
       if (goma_ctx->particles.element_info[i].num_ghost_target_elems)
-        for (p = element_particle_list_head[i]; p; p = p->next)
+        for (p = trk->element_particle_list_head[i]; p; p = p->next)
           num_particles_in_elem[i]++;
 
     /* Now count the number of particles going to each of the other
      * processors. */
-    for (i = 0; i < static_exo->num_elems; i++)
+    for (i = 0; i < trk->static_exo->num_elems; i++)
       for (j = 0; j < goma_ctx->particles.element_info[i].num_ghost_target_elems; j++)
         num_ghost_particles_to_send[goma_ctx->particles.element_info[i].ghost_proc[j]] +=
             num_particles_in_elem[i];
@@ -4839,9 +4937,9 @@ static void couple_to_continuum(void) {
 
     /* Now memcpy the particle info into the send buffer.  Set the
      * owning element id, too! */
-    for (i = 0; i < static_exo->num_elems; i++)
+    for (i = 0; i < trk->static_exo->num_elems; i++)
       if (goma_ctx->particles.element_info[i].num_ghost_target_elems)
-        for (p = element_particle_list_head[i]; p; p = p->next)
+        for (p = trk->element_particle_list_head[i]; p; p = p->next)
           for (j = 0; j < goma_ctx->particles.element_info[i].num_ghost_target_elems; j++) {
             recipient_proc = goma_ctx->particles.element_info[i].ghost_proc[j];
             recipient_local_elem_id = goma_ctx->particles.element_info[i].ghost_local_elem_id[j];
@@ -4864,11 +4962,11 @@ static void couple_to_continuum(void) {
                      num_ghost_particles_to_send[j] * sizeof(particle_t), MPI_BYTE, j, 0,
                      MPI_COMM_WORLD);
 
-        communication_accum_ust += MAX(ust() - temp_ust, 0.0);
+        trk->communication_accum_ust += MAX(ust() - temp_ust, 0.0);
       } else {
         temp_ust = ust();
         MPI_Bcast(num_ghost_particles_to_recv, goma_ctx->num_proc, MPI_INT, i, MPI_COMM_WORLD);
-        communication_accum_ust += MAX(ust() - temp_ust, 0.0);
+        trk->communication_accum_ust += MAX(ust() - temp_ust, 0.0);
         if (num_ghost_particles_to_recv[goma_ctx->proc_id]) {
           ghost_particles_to_recv = (particle_t *)calloc(
               (unsigned)num_ghost_particles_to_recv[goma_ctx->proc_id], sizeof(particle_t));
@@ -4876,12 +4974,13 @@ static void couple_to_continuum(void) {
           MPI_Recv(ghost_particles_to_recv,
                    num_ghost_particles_to_recv[goma_ctx->proc_id] * sizeof(particle_t), MPI_BYTE, i,
                    0, MPI_COMM_WORLD, &mpi_status);
-          communication_accum_ust += MAX(ust() - temp_ust, 0.0);
+          trk->communication_accum_ust += MAX(ust() - temp_ust, 0.0);
           for (j = 0; j < num_ghost_particles_to_recv[goma_ctx->proc_id]; j++) {
             ghost_particles_to_recv[j].state = GHOST;
             p = create_a_particle(&ghost_particles_to_recv[j],
                                   ghost_particles_to_recv[j].owning_elem_id);
-            num_particles--; /* Don't count these as new particles, they are counted as ghosts. */
+            trk->num_particles--; /* Don't count these as new particles, they are counted as ghosts.
+                                   */
           }
           free(ghost_particles_to_recv);
         }
@@ -4890,15 +4989,15 @@ static void couple_to_continuum(void) {
     }
   }
 
-  total_num_particle_ghosts = 0;
-  MPI_Reduce(&local_num_particle_ghosts, &total_num_particle_ghosts, 1, MPI_INT, MPI_SUM, 0,
+  trk->total_num_particle_ghosts = 0;
+  MPI_Reduce(&local_num_particle_ghosts, &trk->total_num_particle_ghosts, 1, MPI_INT, MPI_SUM, 0,
              MPI_COMM_WORLD);
 #endif
 
   /* Model-specific initializations. */
   if (goma_ctx->particles.model == SWIMMER_EXPLICIT ||
       goma_ctx->particles.model == SWIMMER_IMPLICIT) {
-    source_eqn = R_MOMENTUM1 + pdim - 1;
+    source_eqn = R_MOMENTUM1 + trk->pdim - 1;
     if (goma_ctx->fem.mp->DensityModel != CONSTANT)
       GOMA_EH(GOMA_ERROR,
               "Sorry, only handling CONSTANT density models right now.  Check back later.");
@@ -4907,8 +5006,8 @@ static void couple_to_continuum(void) {
                   goma_ctx->particles.radius * goma_ctx->particles.ratio;
   }
 
-  for (i = 0; i < static_exo->num_elems; i++) {
-    for (p = element_particle_list_head[i]; p; p = p->next) {
+  for (i = 0; i < trk->static_exo->num_elems; i++) {
+    for (p = trk->element_particle_list_head[i]; p; p = p->next) {
       if (goma_ctx->particles.model == SWIMMER_EXPLICIT ||
           goma_ctx->particles.model == SWIMMER_IMPLICIT) {
         load_field_variables_at_xi(i, p->xi);
@@ -4943,8 +5042,8 @@ static void couple_to_continuum(void) {
   if (use_ghost_particles) {
     /* Currently there is no need to keep the ghost particles around,
      * but there might be one day... */
-    for (i = 0; i < static_exo->num_elems; i++) {
-      p = element_particle_list_head[i];
+    for (i = 0; i < trk->static_exo->num_elems; i++) {
+      p = trk->element_particle_list_head[i];
       while (p) {
         p_tmp = p->next;
         if (p->state == GHOST) {
@@ -4976,6 +5075,7 @@ static void couple_to_continuum(void) {
  * leaving it in here in case it is useful later...
  */
 static void test_map_integrity(void) {
+  struct Particle_Tracker *trk = particle_tracker();
   int elem_id, neighbor_elem_id, neighbor_elem_proc_id, face_id, PBC_id, proc_id;
   FILE *fp;
 
@@ -4986,7 +5086,7 @@ static void test_map_integrity(void) {
         fp = fopen("map.txt", "w");
       else
         fp = fopen("map.txt", "a");
-      for (elem_id = 0; elem_id < static_exo->num_elems; elem_id++) {
+      for (elem_id = 0; elem_id < trk->static_exo->num_elems; elem_id++) {
         if (goma_ctx->dpi->elem_owner[elem_id] != goma_ctx->proc_id) {
           fprintf(fp, "Proc %2d Elem %4d(%3d) <not owned>\n", goma_ctx->proc_id,
                   goma_ctx->dpi->elem_index_global[elem_id], elem_id);
@@ -4994,7 +5094,7 @@ static void test_map_integrity(void) {
         } else
           fprintf(fp, "Proc %2d Elem %4d(%3d)\n", goma_ctx->proc_id,
                   goma_ctx->dpi->elem_index_global[elem_id], elem_id);
-        for (face_id = 0; face_id < sides_per_element; face_id++) {
+        for (face_id = 0; face_id < trk->sides_per_element; face_id++) {
           PBC_id = goma_ctx->particles.element_info[elem_id].PBC_side_id[face_id];
           fprintf(fp, "\t\tFace %d PBC=%2d ", face_id, PBC_id);
           if (PBC_id >= 0)
@@ -5002,7 +5102,8 @@ static void test_map_integrity(void) {
           else {
             if (PBC_id == -1) {
               neighbor_elem_id =
-                  static_exo->elem_elem_list[static_exo->elem_elem_pntr[elem_id] + face_id];
+                  trk->static_exo
+                      ->elem_elem_list[trk->static_exo->elem_elem_pntr[elem_id] + face_id];
               if (neighbor_elem_id == -1)
                 fprintf(fp, "missing local neighbor            FAIL\n");
               else
@@ -5038,6 +5139,7 @@ static void test_map_integrity(void) {
  * file, so if your output file contains multiple output times you
  * will want to used a modified version. */
 static void load_restart_file(void) {
+  struct Particle_Tracker *trk = particle_tracker();
   int i;
   particle_t p, *p_ptr;
   char garbage[255];
@@ -5051,7 +5153,7 @@ static void load_restart_file(void) {
   zero_a_particle(&p);
   while (!feof(fp)) {
     char *fgetserr;
-    for (i = 0; i < pdim; i++)
+    for (i = 0; i < trk->pdim; i++)
       if (fscanf(fp, "%lf ", &p.x[i]) != 1)
         continue; /* probable EOF */
     if (fscanf(fp, "%lf %d", &p.time, &p.owning_elem_id) != 2)
@@ -5063,7 +5165,7 @@ static void load_restart_file(void) {
     if (get_element_xi_newton(p.owning_elem_id, p.x, p.xi) == -1)
       GOMA_EH(GOMA_ERROR, "Could not place particle from restart.");
     load_field_variables_at_xi(p.owning_elem_id, p.xi);
-    for (i = 0; i < pdim; i++)
+    for (i = 0; i < trk->pdim; i++)
       if (fabs(goma_ctx->fem.fv->x[i] - p.x[i]) > 1.0e-6)
         GOMA_EH(GOMA_ERROR, "Did not match particle location on restart.");
     p_ptr = create_a_particle(&p, p.owning_elem_id);

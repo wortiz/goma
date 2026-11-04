@@ -190,7 +190,6 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
 
   int MFdofSVNE0, j_vdesc;
   int n_eb, n_mn, mn_retn;
-  static int first_time = TRUE;
   int not_matched, iLv_found, i_vd, i_vdesc, iLv_start, lvdesc;
   VARIABLE_DESCRIPTION_STRUCT *vd0;
   NODAL_VARS_STRUCT *nv;
@@ -316,8 +315,8 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
    *  HKM -> Later, we need to figure out whether we can completely
    *         cut this section.
    */
-  if (first_time) {
-    first_time = FALSE;
+  if (!goma_ctx->fill.elem_ptrs_initialized) {
+    goma_ctx->fill.elem_ptrs_initialized = TRUE;
     for (v = V_FIRST; v < V_LAST; v++) {
       ei_ptr->Num_Lvdesc_Per_Var_Type[v] = 0;
       ei_ptr->Lvdesc_First_Var_Type[v] = -1;

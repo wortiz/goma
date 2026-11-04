@@ -1204,8 +1204,8 @@ struct BC_descriptions {
  *  BC_Desc: This is an array of initialized BC_descriptions structures
  *  initialized in the mm_names.h file
  */
-extern struct BC_descriptions BC_Desc[];
-extern int Num_BC_Names;
+extern const struct BC_descriptions BC_Desc[];
+extern const int Num_BC_Names;
 /*
  *  num_new_BC_Desc: This is an array of BC_Descriptions read in
  *                   from the input deck.
@@ -1225,16 +1225,16 @@ struct Equation_Names {
 };
 typedef struct Equation_Names EQUATION_NAMES_STRUCT;
 
-extern EQUATION_NAMES_STRUCT EQ_Name[];
-extern EQUATION_NAMES_STRUCT Var_Name[];
-extern EQUATION_NAMES_STRUCT Post_Var_Name[];
-extern EQUATION_NAMES_STRUCT Exo_Var_Names[];
-extern EQUATION_NAMES_STRUCT Var_Units[];
-extern int Num_EQ_Names;
-extern int Num_Var_Names;
-extern int Num_Post_Var_Names;
-extern int Num_Exo_Var_Names;
-extern int Num_Var_Units;
+extern const EQUATION_NAMES_STRUCT EQ_Name[];
+extern const EQUATION_NAMES_STRUCT Var_Name[];
+extern const EQUATION_NAMES_STRUCT Post_Var_Name[];
+extern const EQUATION_NAMES_STRUCT Exo_Var_Names[];
+extern const EQUATION_NAMES_STRUCT Var_Units[];
+extern const int Num_EQ_Names;
+extern const int Num_Var_Names;
+extern const int Num_Post_Var_Names;
+extern const int Num_Exo_Var_Names;
+extern const int Num_Var_Units;
 
 struct Data_Table {
 
@@ -1333,6 +1333,8 @@ struct Boundary_Condition {
                    * that it does not yet exist
                    */
   double *u_BC;
+  /* the read-only BC_Desc[] entry, or a writable copy in new_bc_desc[] once the
+   * input needs to change it (alloc_BC_description()); only write after copying */
   struct BC_descriptions *desc;
   int BC_Desc_index; /* transportable thru pseudo structure  */
   int index_dad;     /*

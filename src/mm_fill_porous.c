@@ -1060,10 +1060,7 @@ int load_porous_properties(void)
   int siz;
   int MTV; /* maximum number of variables types plus species unknowns */
 
-  static int is_initialized = FALSE; /* This static flag is set TRUE after the first pass through.
-                                      * This is to reduce the tremendous overhead associated with
-                                      * unnecessarily reinializing the mp, pmt, pmv structures
-                                      */
+  /* goma_ctx->fill.porous_initialized is set TRUE after the first pass through. */
 
   if (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS)
     return 0; /* shouldn't get here */
@@ -1094,7 +1091,7 @@ int load_porous_properties(void)
   /*
    * Collect and Store the porosity into the materials property structure
    */
-  if (!is_initialized) {
+  if (!goma_ctx->fill.porous_initialized) {
     siz = MTV * sizeof(double);
     memset(goma_ctx->fem.mp->d_porosity, 0, siz);
   }
@@ -1136,7 +1133,7 @@ int load_porous_properties(void)
   /*
    * Calculate permeability
    */
-  if (!is_initialized) {
+  if (!goma_ctx->fill.porous_initialized) {
     siz = MTV * sizeof(double);
     memset(goma_ctx->fem.mp->d_permeability, 0, siz);
   }
@@ -1288,7 +1285,7 @@ int load_porous_properties(void)
    */
 
   /* initialize the saturation derivatives */
-  if (!is_initialized) {
+  if (!goma_ctx->fill.porous_initialized) {
     siz = MTV * sizeof(double);
     memset(goma_ctx->fem.mp->d_saturation, 0, siz);
     memset(goma_ctx->fem.mp_old->d_saturation, 0, siz);
@@ -1312,7 +1309,7 @@ int load_porous_properties(void)
 
   if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][R_POR_ENERGY]) {
 
-    if (!is_initialized) {
+    if (!goma_ctx->fill.porous_initialized) {
       siz = 3 * MTV * sizeof(double);
       memset(goma_ctx->fem.pmv->d_enthalpy, 0, siz);
       memset(goma_ctx->fem.pmv_old->d_enthalpy, 0, siz);
@@ -1331,7 +1328,7 @@ int load_porous_properties(void)
   /*
    * initialize the liquid & gas phase concentration derivatives
    */
-  if (!is_initialized) {
+  if (!goma_ctx->fill.porous_initialized) {
     /* this section really should be masked by some if( pd->v[pg->imtrx][ var ] ).  But which one ?.
      * I cannot tell */
     siz = MAX_PMV * sizeof(double);
@@ -1438,7 +1435,7 @@ int load_porous_properties(void)
   }
 
   /* initialize the bulk mass concentration derivatives */
-  if (!is_initialized) {
+  if (!goma_ctx->fill.porous_initialized) {
     siz = MAX_PMV * sizeof(double);
     memset(goma_ctx->fem.pmv->bulk_density, 0, siz);
     memset(goma_ctx->fem.pmv_old->bulk_density, 0, siz);
@@ -1460,7 +1457,7 @@ int load_porous_properties(void)
 
   /* initialize the relative permeabilities derivatives */
 
-  if (!is_initialized) {
+  if (!goma_ctx->fill.porous_initialized) {
     siz = MTV * sizeof(double);
     memset(goma_ctx->fem.mp->d_rel_liq_perm, 0, siz);
     memset(goma_ctx->fem.mp->d_rel_gas_perm, 0, siz);
@@ -1522,7 +1519,7 @@ int load_porous_properties(void)
     goma_ctx->fem.stab->Grid_Peclet_Number[POR_LIQ_PRES] =
         get_supg_terms_porous(goma_ctx->fem.stab->hsquared, goma_ctx->fem.stab->hhv);
   }
-  is_initialized = TRUE;
+  goma_ctx->fill.porous_initialized = TRUE;
   return 0;
 } /*    end load_porous_properties  */
 /**************************************************************************/

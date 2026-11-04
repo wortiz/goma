@@ -975,8 +975,6 @@ int calc_pspg(dbl pspg[DIM],
   dbl d_tau_p_dmesh[DIM][DIM][DIM][MDE];
   dbl d_tau_p_dp[DIM][DIM][MDE];
 
-  static int is_initialized = FALSE;
-
   dim = pd->Num_Dim;
 
   /* initialize */
@@ -988,7 +986,7 @@ int calc_pspg(dbl pspg[DIM],
     d_mu = NULL;
     d_rho = NULL;
     df = NULL;
-  } else if (!is_initialized) {
+  } else if (!goma_ctx->fill.pspg_initialized) {
 
     memset(d_pspg->v, 0, sizeof(dbl) * DIM * DIM * MDE);
     memset(d_pspg->X, 0, sizeof(dbl) * DIM * DIM * MDE);
@@ -1237,7 +1235,7 @@ int calc_pspg(dbl pspg[DIM],
     }
   }
 
-  if (!is_initialized) {
+  if (!goma_ctx->fill.pspg_initialized) {
     memset(tau_p, 0, sizeof(dbl) * DIM * DIM);
     memset(d_tau_p_dv, 0, sizeof(dbl) * DIM * DIM * DIM * MDE);
     memset(d_tau_p_dvd, 0, sizeof(dbl) * DIM * DIM * DIM * MDE);
@@ -1618,7 +1616,7 @@ int calc_pspg(dbl pspg[DIM],
       }
     }
   }
-  is_initialized = TRUE;
+  goma_ctx->fill.pspg_initialized = TRUE;
   return 0;
 }
 
@@ -1633,7 +1631,6 @@ int calc_cont_gls(dbl *cont_gls,
   int eqn;
   int var, dim, b, j, p;
   int advection_on = 0;
-  static int is_initialized = FALSE;
 
   // Density terms
   dbl rho;
@@ -1659,7 +1656,7 @@ int calc_cont_gls(dbl *cont_gls,
 
   if (d_cont_gls == NULL) {
     d_rho = NULL;
-  } else if (!is_initialized) {
+  } else if (!goma_ctx->fill.cont_gls_initialized) {
     memset(d_cont_gls->v, 0, sizeof(dbl) * DIM * MDE);
     memset(d_cont_gls->X, 0, sizeof(dbl) * DIM * MDE);
   }
@@ -1786,6 +1783,6 @@ int calc_cont_gls(dbl *cont_gls,
     }
   }
 
-  is_initialized = TRUE;
+  goma_ctx->fill.cont_gls_initialized = TRUE;
   return 0;
 }

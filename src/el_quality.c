@@ -108,7 +108,6 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
 {
   double mavg = 0.0, tavg = 0.0, quality = 0.0;
   double qmin = 999.9, wt_sum = 0.0, wt_min = 0.0;
-  static int first_call = TRUE;
 
   /* Quick exit if no metrics were specified */
   if (goma_ctx->problem.n_eqm == 0)
@@ -128,7 +127,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
     if (goma_ctx->fem.eqm->eq_jac < qmin)
       qmin = goma_ctx->fem.eqm->eq_jac;
   }
-  if (goma_ctx->fem.eqm->do_vol && !first_call) {
+  if (goma_ctx->fem.eqm->do_vol && goma_ctx->fill.element_quality_called) {
     mavg = volume_metric(proc_config);
     DPRINTF(stderr, "               Volume change    %8g         %8g\n", mavg,
             goma_ctx->fem.eqm->eq_vol);
@@ -185,7 +184,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
   }
 
   /* Check quality against tolerance and return */
-  first_call = FALSE;
+  goma_ctx->fill.element_quality_called = TRUE;
   if (quality < goma_ctx->fem.eqm->eq_tol) {
     DPRINTF(stderr, "Element quality below tolerance of %g\n", goma_ctx->fem.eqm->eq_tol);
     DPRINTF(stderr, "\tREMESHING IS REQUIRED!\n");

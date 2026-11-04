@@ -58,8 +58,6 @@
 #include "sl_amesos_interface.h"
 #include "wr_exo.h"
 
-int first_time_fopen = TRUE;
-
 /*** Begin program *************************************************************/
 int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
 
@@ -157,11 +155,11 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
      been done This is the file we will write out the new fields too for future use as fields
   */
 
-  if (first_time_fopen) {
+  if (!goma_ctx->fill.pixel_mesh_written) {
     one_base(exo, goma_ctx->num_proc);
     wr_mesh_exo(exo, outfile, 0);
     zero_base(exo);
-    first_time_fopen = FALSE;
+    goma_ctx->fill.pixel_mesh_written = TRUE;
   }
 
   /* Now open it again and write to it.  */

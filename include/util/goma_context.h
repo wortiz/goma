@@ -16,6 +16,7 @@
 #define GOMA_UTIL_GOMA_CONTEXT_H
 
 #include <mpi.h>
+#include <stdio.h>
 
 #include "ac_particles_types.h"
 #include "el_elm.h"      /* DIM */
@@ -117,9 +118,11 @@ typedef struct GomaParticles {
   PBC_t *pbcs;  /* particle boundary condition structures */
 
   element_particle_info_t *element_info; /* per-element particle data, num_element_info long */
+  struct Particle_Tracker *tracker;      /* particle lists, files and timers (ac_particles.c) */
   int num_element_info;
 } GomaParticles;
 
+struct Particle_Tracker;
 struct Solve_Problem_State;
 struct UMF_Linear_Solver_System;
 
@@ -848,6 +851,45 @@ typedef struct GomaPost {
  * A single instance is owned by goma_context.c and reachable through
  * goma_ctx, which is never NULL.
  */
+/*
+ * State that assembly, level set and output routines keep between calls
+ * (first-call flags, reference values, open log files). goma_context_release()
+ * closes the files and puts these back to their defaults.
+ */
+typedef struct GomaFillState {
+  /* level set (mm_fill_ls.c) */
+  double ls_simplemass_mass; /* reference level set mass, Hrenorm_simplemass() */
+  int ls_simplemass_mass_set;
+  double ls_smolianski_mass; /* reference level set mass, Hrenorm_smolianksi_only() */
+  int ls_smolianski_mass_set;
+  FILE *ls_surf_log;           /* level_set_all.dat, print_surf_list() */
+  int ca_boundary_num_ss;      /* contact-angle sidesets found, -1 before the search */
+  int ca_boundary_ss[20];      /* their ids, point_on_ca_boundary() */
+  int subelement_output_calls; /* subelements.NNNNN.exoII files written */
+
+  /* assembly first-call flags */
+  int elem_ptrs_initialized; /* element index arrays reset once, mm_fill_ptrs.c */
+  int porous_initialized;    /* load_porosity() (mm_fill_porous.c) */
+  int dofptr_initialized;    /* mm_fill_util.c, for dofptr_elem_blk_id */
+  int dofptr_elem_blk_id;
+  int belly_flop_initialized;  /* mm_fill_solid.c */
+  int pspg_initialized;        /* calc_pspg() */
+  int cont_gls_initialized;    /* calc_cont_gls() */
+  int mesh_derivs_initialized; /* load_fv_mesh_derivs() */
+  int element_quality_called;  /* element_quality() has run once */
+  int truth_table_calls;       /* create_truth_table*() calls that printed their warnings */
+  int pixel_mesh_written;      /* rd_pixel_image.c copied the mesh for mapped fields */
+  int pixel2_mesh_written;     /* rd_pixel_image2.c copied the mesh for mapped fields */
+} GomaFillState;
+
+/* Echo files of the input deck kept open by handle_echo_string() (mm_input.c). */
+typedef struct GomaEcho {
+  FILE *files[FOPEN_MAX];
+  char *names[FOPEN_MAX]; /* file name of each open echo file */
+  int num_files;
+  int off; /* NOECHO was requested */
+} GomaEcho;
+
 typedef struct GomaContext {
   /* Parallel machine description and MPI communication bookkeeping */
   int num_proc;                       /* Total number of processors */
@@ -924,6 +966,8 @@ typedef struct GomaContext {
   GomaProblem problem;     /* problem setup, continuation parameters and unknown maps */
   GomaBC bc;               /* boundary conditions, rotations and data tables */
   GomaPost post;           /* post-processing requests and variable flags */
+  GomaFillState fill;      /* state assembly and output routines keep between calls */
+  GomaEcho echo;           /* input deck echo files */
 
   /*
    * Frees what the solver library allocated through this context: the input
@@ -973,6 +1017,10 @@ void goma_context_destroy(GomaContext *ctx);
 
 /* Free memory owned by the mesh / particle portions of a context. */
 void goma_mesh_release(GomaMesh *mesh);
+/* Close the files in fill and put it back to its defaults. */
+void goma_fill_release(GomaFillState *fill);
+/* Close the echo files and forget them. */
+void goma_echo_release(GomaEcho *echo);
 void goma_particles_release(GomaParticles *particles);
 void goma_particles_release_element_info(GomaParticles *particles);
 

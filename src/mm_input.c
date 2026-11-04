@@ -15198,15 +15198,14 @@ setup_table_AC(char *filename, struct Data_Table *table, char *var_name, char *i
 /*   end of setup_table_AC	*/
 
 FILE *handle_echo_string(char *echo_string, char *echo_file_name) {
-  static FILE *echo_file_ptr[FOPEN_MAX];
-  static char *open_files[FOPEN_MAX];
-  static int num_open_files = 0;
-  static int echo_off = FALSE;
+  /* open echo files are kept in the context until closed or released */
+  FILE **echo_file_ptr = goma_ctx->echo.files;
+  char **open_files = goma_ctx->echo.names;
 
   int i = 0, len = 0;
   if ((len = strlen(echo_string)) == 0)
     return NULL;
-  if (echo_off == TRUE)
+  if (goma_ctx->echo.off == TRUE)
     return NULL;
   if (len > MAX_CHAR_IN_INPUT) {
     DPRINTF(stderr, "Error: size of input card \n >>%s<< \n\t has exceeded MAX_CHAR_IN_INPUT",
@@ -15218,11 +15217,11 @@ FILE *handle_echo_string(char *echo_string, char *echo_file_name) {
   return (NULL);
 #else
 
-  while ((i < num_open_files) && (strcmp(open_files[i], echo_file_name) != 0))
+  while ((i < goma_ctx->echo.num_files) && (strcmp(open_files[i], echo_file_name) != 0))
     i++;
 
   if (strcmp(echo_string, "OPEN") == 0) {
-    if (i < num_open_files) {
+    if (i < goma_ctx->echo.num_files) {
       fprintf(stderr, "Echo file %s already opened\n", echo_file_name);
       exit(-1);
     }
@@ -15231,12 +15230,12 @@ FILE *handle_echo_string(char *echo_string, char *echo_file_name) {
       exit(-1);
     }
     open_files[i] = alloc_copy_string(echo_file_name);
-    num_open_files++;
+    goma_ctx->echo.num_files++;
     return (echo_file_ptr[i]);
   } else if (strcmp(echo_string, "NOECHO") == 0) {
-    echo_off = TRUE;
+    goma_ctx->echo.off = TRUE;
     return (NULL);
-  } else if (i == num_open_files) {
+  } else if (i == goma_ctx->echo.num_files) {
     fprintf(stderr, "Echo file %s was never opened.\n", echo_file_name);
     return (NULL);
     /* exit(-1); */
@@ -15247,14 +15246,14 @@ FILE *handle_echo_string(char *echo_string, char *echo_file_name) {
     fclose(echo_file_ptr[i]);
     safer_free((void **)&(open_files[i]));
 
-    while (i + 1 < num_open_files) {
+    while (i + 1 < goma_ctx->echo.num_files) {
       echo_file_ptr[i] = echo_file_ptr[i + 1];
       open_files[i] = open_files[i + 1];
       i++;
     }
 
     echo_file_ptr[i] = NULL;
-    num_open_files--;
+    goma_ctx->echo.num_files--;
   } else {
     DPRINTF(echo_file_ptr[i], "%s\n", echo_string);
   }

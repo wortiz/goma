@@ -100,9 +100,6 @@
 #include "user_post.h"
 #include "wr_exo.h"
 
-static int error_presence_key[3]; /* Truth key (dim 3) as to which error
-                                   * measure elem sizes are being done */
-
 /*
  * The post-processing variable flags (STREAM, DENSITY, ...) and the
  * pp_fluxes/pp_data/... request lists now live in goma_ctx->post (GomaPost in
@@ -7929,6 +7926,8 @@ nextelement:
  */
 
 void rd_post_process_specs(FILE *ifp, char *input) {
+  int error_presence_key[3]; /* Truth key (dim 3) as to which error
+                              * measure elem sizes are being done */
   static const char yo[] = "rd_post_process_specs";
 
   int iread; /* status flag from look_for_optional */

@@ -61,9 +61,9 @@
 #include "std.h"
 #include "wr_side_data.h"
 
-char err_msg[MAX_CHAR_IN_INPUT];
+static char err_msg[MAX_CHAR_IN_INPUT];
 
-FILE *uf; /* file pointer for this user data */
+static FILE *uf; /* file pointer for this user data */
 
 int ns_data_print(pp_Data *p,
                   double x[],

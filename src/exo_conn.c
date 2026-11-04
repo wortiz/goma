@@ -113,9 +113,9 @@ static int int_intersect(int *,     /* a - first integer list	        (in) */
  * 3D: 1:(x=-1), 2:(x=1), 3:(y=-1), 4:(y=1), 5:(z=-1), 6:(z=1)
  */
 
-int ID_Side_Quad[4] = {3, 2, 4, 1};
+const int ID_Side_Quad[4] = {3, 2, 4, 1};
 
-int ID_Side_Hex[6] = {3, 2, 4, 1, 5, 6};
+const int ID_Side_Hex[6] = {3, 2, 4, 1, 5, 6};
 
 Spfrtn sr;
 

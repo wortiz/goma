@@ -30,6 +30,7 @@
 
 #include <stdlib.h>
 
+#include "ac_particles.h"
 #include "bc/rotate_coordinates.h"
 #include "exo_struct.h"
 #include "mm_as.h"
@@ -722,6 +723,7 @@ static void solver_state_release(GomaContext *ctx) {
 void goma_problem_release(GomaContext *ctx) {
   /* solution history and solver data kept between solve_problem() calls */
   solve_problem_release();
+  particle_tracker_release();
 
   /* factorizations the direct solvers keep between calls */
   sl_umf_release();

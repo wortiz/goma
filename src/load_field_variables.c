@@ -4039,7 +4039,6 @@ int load_fv_mesh_derivs(int okToZero)
 
   struct Basis_Functions *bfm, *bfv; /* For mesh variables. */
 
-  static int is_initialized = FALSE;
   int VIMis3;
 
   status = 0;
@@ -4130,7 +4129,8 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
 #endif
-  } else if (upd->vp[pg->imtrx][TEMPERATURE] != -1 && !is_initialized && okToZero) {
+  } else if (upd->vp[pg->imtrx][TEMPERATURE] != -1 && !goma_ctx->fill.mesh_derivs_initialized &&
+             okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
     memset(&(fv->d_grad_T_dmesh[0][0][0]), 0, siz);
   }
@@ -4155,7 +4155,7 @@ int load_fv_mesh_derivs(int okToZero)
         }
       }
 
-    } else if (upd->vp[pg->imtrx][v] != -1 && !is_initialized && okToZero) {
+    } else if (upd->vp[pg->imtrx][v] != -1 && !goma_ctx->fill.mesh_derivs_initialized && okToZero) {
       siz = sizeof(double) * DIM * DIM * MDE;
       memset(&(fv->d_grad_moment_dmesh[mom][0][0][0]), 0, siz);
     }
@@ -4211,7 +4211,8 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
 #endif
-  } else if (upd->vp[pg->imtrx][VOLTAGE] != -1 && !is_initialized && okToZero) {
+  } else if (upd->vp[pg->imtrx][VOLTAGE] != -1 && !goma_ctx->fill.mesh_derivs_initialized &&
+             okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
     memset(&(fv->d_grad_V_dmesh[0][0][0]), 0, siz);
   }

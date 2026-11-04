@@ -112,7 +112,7 @@ change the zeros to 1 under the appropriate var value. */
 
 /*0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,*/
 
-struct BC_descriptions BC_Desc[] = {
+const struct BC_descriptions BC_Desc[] = {
 
     {"DX",
      "DX_BC",
@@ -7377,7 +7377,7 @@ struct BC_descriptions BC_Desc[] = {
    vel1, vel2, vel3, temp, conc, mesh1, mesh2, mesh3, surf, press, stress tensor, velocity gradient
  */
 
-int Num_BC_Names = sizeof(BC_Desc) / sizeof(struct BC_descriptions);
+const int Num_BC_Names = sizeof(BC_Desc) / sizeof(struct BC_descriptions);
 
 /*
  * EQ_Name []
@@ -7399,7 +7399,7 @@ int Num_BC_Names = sizeof(BC_Desc) / sizeof(struct BC_descriptions);
  *   problem.
  */
 
-struct Equation_Names EQ_Name[] = {
+const struct Equation_Names EQ_Name[] = {
     {"R_MOMENTUM1", "VX", R_MOMENTUM1}, /* 0 */
     {"R_MOMENTUM2", "VY", R_MOMENTUM2},
     {"R_MOMENTUM3", "VZ", R_MOMENTUM3},
@@ -7697,12 +7697,12 @@ struct Equation_Names EQ_Name[] = {
     {"R_SOLID_TANG1", "ST1", R_SOLID_TANG1},
     {"R_SOLID_TANG2", "ST2", R_SOLID_TANG2} /* 238 */
 };
-int Num_EQ_Names = sizeof(EQ_Name) / sizeof(struct Equation_Names);
+const int Num_EQ_Names = sizeof(EQ_Name) / sizeof(struct Equation_Names);
 
 /* structure to control input of variable names
  * using values in rf_fem_const.h */
 
-struct Equation_Names Var_Name[] = {
+const struct Equation_Names Var_Name[] = {
     {"VELOCITY1", "VX", VELOCITY1}, /* 0 */
     {"VELOCITY2", "VY", VELOCITY2},
     {"VELOCITY3", "VZ", VELOCITY3},
@@ -7975,9 +7975,9 @@ struct Equation_Names Var_Name[] = {
     {"SOLID_POSITION3", "Z_RS", SOLID_POSITION3} /* 234 */
 };
 
-int Num_Var_Names = sizeof(Var_Name) / sizeof(struct Equation_Names);
+const int Num_Var_Names = sizeof(Var_Name) / sizeof(struct Equation_Names);
 
-struct Equation_Names Exo_Var_Names[] = {
+const struct Equation_Names Exo_Var_Names[] = {
     {"Velocity, x component", "VX", VELOCITY1},
     {"Velocity, y component", "VY", VELOCITY2},
     {"Velocity, z component", "VZ", VELOCITY3},
@@ -8225,8 +8225,8 @@ struct Equation_Names Exo_Var_Names[] = {
     {"Film Height", "FILM_HEIGHT", FILM_HEIGHT},
 };
 
-int Num_Exo_Var_Names = sizeof(Exo_Var_Names) / sizeof(struct Equation_Names);
-struct Equation_Names Post_Var_Name[] = {
+const int Num_Exo_Var_Names = sizeof(Exo_Var_Names) / sizeof(struct Equation_Names);
+const struct Equation_Names Post_Var_Name[] = {
     {"STREAM", "stream", -1},
     {"STREAM_NORMAL_STRESS", "STREAM_NORMAL_STRESS", -1},
     {"STREAM_SHEAR_STRESS", "STREAM_SHEAR_STRESS", -1},
@@ -8284,9 +8284,9 @@ struct Equation_Names Post_Var_Name[] = {
     {"WALL_DISTANCE", "WALL_DISTANCE", -1},
 };
 
-int Num_Post_Var_Names = sizeof(Post_Var_Name) / sizeof(struct Equation_Names);
+const int Num_Post_Var_Names = sizeof(Post_Var_Name) / sizeof(struct Equation_Names);
 
-struct Equation_Names Var_Units[] = {
+const struct Equation_Names Var_Units[] = {
     {"Velocity, x component", "[1]", VELOCITY1},
     {"Velocity, y component", "[1]", VELOCITY2},
     {"Velocity, z component", "[1]", VELOCITY3},
@@ -8536,7 +8536,7 @@ struct Equation_Names Var_Units[] = {
 
 };
 
-int Num_Var_Units = sizeof(Var_Units) / sizeof(struct Equation_Names);
+const int Num_Var_Units = sizeof(Var_Units) / sizeof(struct Equation_Names);
 
 /* The dynamically allocated BC descriptions and data tables now live in goma_ctx->bc. */
 

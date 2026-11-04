@@ -157,8 +157,8 @@ struct Chebyshev_Polynomial {
 
 typedef struct Chebyshev_Polynomial CHEV_POLY_STRUCT;
 
-extern CHEV_POLY_STRUCT chevpoly[];
-struct Chebyshev_Polynomial chevpoly[3] = {
+extern const CHEV_POLY_STRUCT chevpoly[];
+const struct Chebyshev_Polynomial chevpoly[3] = {
     {3,
      {0.866025403784438646763723170753, 0, -0.866025403784438646763723170753},
      {1, 1, 1, 0.866025403784438646763723170753, 0, -0.866025403784438646763723170753, 0.5, -1.,

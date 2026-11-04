@@ -143,12 +143,6 @@
  */
 
 /*
- * Definitions of variables which are declared in
- * rf_mask.h
- */
-int Inter_Mask[MAX_NUM_MATRICES][MAX_VARIABLE_TYPES][MAX_VARIABLE_TYPES] = {{{0}}};
-
-/*
  * Prototypes declarations of static functions defined in this file.
  */
 static void set_interaction_masks(Exo_DB *);

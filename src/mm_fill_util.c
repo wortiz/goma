@@ -156,9 +156,6 @@ int beer_belly(void) {
   dbl f, g, sum;
   int imtrx = upd->matrix_index[pd->ShapeVar];
 
-  static int is_initialized = FALSE;
-  static int elem_blk_id_save = -123;
-
   dim = ei[imtrx]->ielem_dim;
   pdim = pd->Num_Dim;
   int elem_type = ei[imtrx]->ielem_type;
@@ -196,8 +193,8 @@ int beer_belly(void) {
    * initialize appropriate arrays...
    */
 
-  if (ei[imtrx]->elem_blk_id != elem_blk_id_save) {
-    is_initialized = FALSE;
+  if (ei[imtrx]->elem_blk_id != goma_ctx->fill.dofptr_elem_blk_id) {
+    goma_ctx->fill.dofptr_initialized = FALSE;
   }
 
   for (t = 0; t < goma_ctx->problem.num_basis_functions; t++) {
@@ -206,7 +203,7 @@ int beer_belly(void) {
     memset(&(goma_ctx->fem.bfd[t]->J[0][0]), 0, v_length);
     memset(&(goma_ctx->fem.bfd[t]->B[0][0]), 0, v_length);
 
-    if (DeformingMesh && !is_initialized) {
+    if (DeformingMesh && !goma_ctx->fill.dofptr_initialized) {
       v_length = DIM * MDE * sizeof(double);
       memset(&(goma_ctx->fem.bfd[t]->d_det_J_dm[0][0]), 0, v_length);
 
@@ -216,9 +213,9 @@ int beer_belly(void) {
     }
   }
 
-  if (!is_initialized) {
-    is_initialized = TRUE;
-    elem_blk_id_save = ei[imtrx]->elem_blk_id;
+  if (!goma_ctx->fill.dofptr_initialized) {
+    goma_ctx->fill.dofptr_initialized = TRUE;
+    goma_ctx->fill.dofptr_elem_blk_id = ei[imtrx]->elem_blk_id;
   }
 
   /*

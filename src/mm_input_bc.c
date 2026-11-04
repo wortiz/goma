@@ -188,7 +188,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
     for (k = 0; k < Num_BC_Names; k++) {
       if (!strcmp(ts, BC_Desc[k].name1) || !strcmp(ts, BC_Desc[k].name2)) {
         goma_ctx->bc.bc_types[ibc].BC_Name = BC_Desc[k].BC_Name;
-        goma_ctx->bc.bc_types[ibc].desc = &BC_Desc[k];
+        goma_ctx->bc.bc_types[ibc].desc = (struct BC_descriptions *)&BC_Desc[k];
         goma_ctx->bc.bc_types[ibc].BC_Desc_index = k;
       }
     }
@@ -3703,7 +3703,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
           for (k = 0; k < Num_BC_Names; k++) {
             if (!strcmp(ts, BC_Desc[k].name1) || !strcmp(ts, BC_Desc[k].name2)) {
               rot->BC_Type[p] = BC_Desc[k].BC_Name;
-              rot->BC_desc[p] = &BC_Desc[k];
+              rot->BC_desc[p] = (struct BC_descriptions *)&BC_Desc[k];
               rot->BC_desc_index[p] = k;
             }
           }

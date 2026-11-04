@@ -150,8 +150,8 @@ typedef enum type_elem {
 #define DIM MAX_PDIM
 #endif
 
-extern int ID_Side_Quad[]; /* defined in exo_conn.c */
+extern const int ID_Side_Quad[]; /* defined in exo_conn.c */
 
-extern int ID_Side_Hex[]; /* defined in exo_conn.c */
+extern const int ID_Side_Hex[]; /* defined in exo_conn.c */
 
 #endif

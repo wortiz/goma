@@ -61,8 +61,6 @@
 
 #define INDEX3D(i, j, k, sizes) (i * sizes[1] * sizes[2] + j * sizes[2] + k)
 
-int first_time_fopen2 = TRUE;
-
 static double bi_interp(double xg,
                         double yg,
                         double min_x,
@@ -185,7 +183,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   /* Replicate current input exodus database to prepare for mapped fields, unless it has already
      been done This is the file we will write out the new fields to for future use as fields */
 
-  if (first_time_fopen2) {
+  if (!goma_ctx->fill.pixel2_mesh_written) {
     one_base(exo, goma_ctx->num_proc);
     wr_mesh_exo(exo, exooutfilename, 0);
     zero_base(exo);
@@ -220,7 +218,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
     err = ex_put_variable_names(exoout, EX_NODAL, num_nod_vars, nod_var_names);
     err = ex_put_time(exoout, time_step, &time_value);
     safe_free(nod_var_names);
-    first_time_fopen2 = FALSE;
+    goma_ctx->fill.pixel2_mesh_written = TRUE;
   } else {
     exoout = ex_open(exooutfilename, EX_WRITE, &CPU_word_size, &IO_word_size, &exoversion);
     GOMA_EH(exoout, "ex_open in rd_pixel_image2.c");

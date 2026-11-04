@@ -34,6 +34,7 @@
       .particles = {.xi_boundary_tolerances = {XI_BOUNDARY_TOLERANCE0, XI_BOUNDARY_TOLERANCE1, \
                                                XI_BOUNDARY_TOLERANCE2}},                       \
       .post = {GOMA_POST_DEFAULTS},                                                            \
+      .fill = {.ca_boundary_num_ss = -1, .dofptr_elem_blk_id = -123},                          \
       .problem = {.lsa_3d_of_2d_wave_number = -1.0},                                           \
       .solver = {.first_linear_solve = 1,                                                      \
                  .stratimikos_tpetra_param_echo = {1},                                         \
@@ -151,6 +152,23 @@ void goma_particles_release(GomaParticles *particles) {
   goma_particles_release_element_info(particles);
 }
 
+void goma_fill_release(GomaFillState *fill) {
+  if (fill->ls_surf_log != NULL) {
+    fclose(fill->ls_surf_log);
+  }
+  *fill = goma_context_defaults.fill;
+}
+
+void goma_echo_release(GomaEcho *echo) {
+  for (int i = 0; i < echo->num_files; i++) {
+    if (echo->files[i] != NULL) {
+      fclose(echo->files[i]);
+    }
+    free(echo->names[i]);
+  }
+  memset(echo, 0, sizeof(*echo));
+}
+
 void goma_context_release(GomaContext *ctx) {
   if (ctx->release_problem != NULL) {
     /* the solver library reaches its data through goma_ctx */
@@ -181,6 +199,8 @@ void goma_context_release(GomaContext *ctx) {
   ctx->spec_source_lumped_mass = NULL;
 
   memset(&ctx->fem, 0, sizeof(ctx->fem));
+  goma_fill_release(&ctx->fill);
+  goma_echo_release(&ctx->echo);
   goma_mesh_release(&ctx->mesh);
   goma_particles_release(&ctx->particles);
 }
