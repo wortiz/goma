@@ -284,7 +284,7 @@ int setup_pd(void) {
                    (ce == R_SHELL_FILMH) || (ce == R_SHELL_PARTC) || (ce == R_SHELL_ENERGY) ||
                    (ce == R_EDDY_NU) || (ce == R_TURB_K) || (ce == R_TURB_OMEGA) ||
                    (ce == R_FILM_HEIGHT) || (ce == R_MOMENT0) || (ce == R_MOMENT1) ||
-                   (ce == R_MOMENT2) || (ce == R_MOMENT3)) {
+                   (ce == R_MOMENT2) || (ce == R_MOMENT3) || (ce == VOID_FRACTION)) {
           if (pd_glob[mn]->etm[imtrx][ce][(LOG2_MASS)] != 0.) {
             pd_glob[mn]->e[imtrx][ce] |= T_MASS;
           }

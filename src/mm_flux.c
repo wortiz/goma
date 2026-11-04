@@ -7452,6 +7452,15 @@ static int load_fv_sens(void) {
     }
   }
 
+    v = VOID_FRACTION;
+  fv_sens->void_fraction = 0.;
+  if (pd->v[pg->imtrx][v]) {
+    dofs = ei[pg->imtrx]->dof[v];
+    for (i = 0; i < dofs; i++) {
+      fv_sens->void_fraction += *esp_old->void_fraction[i] * bf[v]->phi[i];
+    }
+  }
+
   /*
    * Acoustic Pressure
    */

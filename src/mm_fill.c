@@ -2503,7 +2503,15 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_MOMENTUM1]) {
-      if (pd->gv[FILM_HEIGHT]) {
+      if (upd->vans_model > 0) {
+#ifdef GOMA_ENABLE_SACADO
+          err = ad_assemble_momentum_vans(time_value, theta, delta_t, h_elem_avg, &pg_data, xi,
+                                               exo);
+          GOMA_EH(err, "ad_assemble_momentum_film_cast");
+#else
+          GOMA_EH(GOMA_ERROR, "FILM_HEIGHT ad momentum routine requires SACADO");
+#endif
+      } else if (pd->gv[FILM_HEIGHT]) {
         if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
           err = ad_assemble_momentum_film_cast(time_value, theta, delta_t, h_elem_avg, &pg_data, xi,

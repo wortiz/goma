@@ -574,6 +574,7 @@ struct Element_Variable_Pointers {
   dbl *turb_k[MDE];      /* Eddy viscosity for turbulent flow */
   dbl *turb_omega[MDE];  /* Eddy viscosity for turbulent flow */
   dbl *film_height[MDE]; /* Film height for casting flow */
+  dbl *void_fraction[MDE];
 };
 
 /*___________________________________________________________________________*/
@@ -704,6 +705,7 @@ struct Element_Stiffness_Pointers {
   dbl **turb_k;      /* Eddy viscosity for turbulent flow */
   dbl **turb_omega;  /* Eddy viscosity for turbulent flow */
   dbl **film_height; /* Film height for film casting flow */
+  dbl **void_fraction;
 
   /*
    * These are for debugging purposes...
@@ -923,6 +925,7 @@ struct Uniform_Problem_Description {
   int strong_bc_replace;
   dbl strong_penalty;
   int AutoDiff;
+  int vans_model;
   int disable_pspg_tau_sensitivities;
   int pspg_lagged_tau;
   int disable_supg_tau_sensitivities;
@@ -1766,6 +1769,7 @@ struct Field_Variables {
   dbl turb_k;      /* Eddy viscosity for turbulent flow */
   dbl turb_omega;  /* Eddy viscosity for turbulent flow */
   dbl film_height; /* Film height for film casting flow */
+  dbl void_fraction;
 
   dbl wall_distance;               /* Distance to nearest wall */
   dbl multi_contact_line_distance; /* Distance to multi contact line points */
@@ -1821,6 +1825,7 @@ struct Field_Variables {
   dbl grad_turb_k[DIM];        /* Gradient of Eddy viscosity */
   dbl grad_turb_omega[DIM];    /* Gradient of Eddy viscosity */
   dbl grad_film_height[DIM];   /* Gradient of film height */
+  dbl grad_void_fraction[DIM];
   dbl grad_wall_distance[DIM]; /* Distance to nearest wall */
 
   /*
@@ -2164,6 +2169,7 @@ struct Diet_Field_Variables {
   dbl turb_k;     /* Eddy viscosity for turbulent flow */
   dbl turb_omega; /* Eddy viscosity for turbulent flow */
   dbl film_height;
+  dbl void_fraction;
 
   dbl grad_em_er[DIM][DIM]; /* EM wave Fields */
   dbl grad_em_ei[DIM][DIM]; /* EM wave Fields */

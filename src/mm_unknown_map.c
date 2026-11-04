@@ -1596,6 +1596,9 @@ static void set_interaction_masks(Exo_DB *exo)
         v = FILM_HEIGHT;
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
+        v = VOID_FRACTION;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
 
         break;
       case R_FILM_HEIGHT:
@@ -1618,6 +1621,11 @@ static void set_interaction_masks(Exo_DB *exo)
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
+        break;
+      case R_VOID_FRACTION:
+        v = VOID_FRACTION;
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
@@ -2544,6 +2552,9 @@ static void set_interaction_masks(Exo_DB *exo)
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         break;
+        v = VOID_FRACTION;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
 
       case R_STRESS11:
       case R_STRESS12:

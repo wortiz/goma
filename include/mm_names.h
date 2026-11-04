@@ -7370,6 +7370,21 @@ struct BC_descriptions BC_Desc[] = {
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
      SINGLE_PHASE,
      DVI_SINGLE_PHASE_DB},
+    {"R_VOID_FRACTION",
+     "VOID_FRACTION",
+     DIRICHLET,
+     VOID_FRACTION_BC,
+     R_VOID_FRACTION,
+     SCALAR,
+     NO_ROT,
+     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+     SINGLE_PHASE,
+     DVI_SINGLE_PHASE_DB},
 
 };
 
@@ -7646,6 +7661,7 @@ struct Equation_Names EQ_Name[] = {
     {"R_TURB_K", "TURB_K", R_TURB_K},
     {"R_TURB_OMEGA", "TURB_OMEGA", R_TURB_OMEGA},
     {"R_FILM_HEIGHT", "FILM_HEIGHT", R_FILM_HEIGHT},
+    {"R_VOID_FRACTION", "VOID_FRACTION", R_VOID_FRACTION},
 
     /*
      *  Note -> these entries must remain until we get rid
@@ -7949,6 +7965,7 @@ struct Equation_Names Var_Name[] = {
     {"TURB_K", "TURB_K", TURB_K},                // 215
     {"TURB_OMEGA", "TURB_OMEGA", TURB_OMEGA},    // 216
     {"FILM_HEIGHT", "FILM_HEIGHT", FILM_HEIGHT}, // 217
+    {"VOID_FRACTION", "VOID_FRACTION", VOID_FRACTION}, // 218
 
     {"MESH_POSITION1", "X", MESH_POSITION1},
     {"MESH_POSITION2", "Y", MESH_POSITION2}, /* 218 */
@@ -8223,6 +8240,7 @@ struct Equation_Names Exo_Var_Names[] = {
     {"Turbulent K", "TURB_K", TURB_K},
     {"Turbulent OMEGA", "TURB_OMEGA", TURB_OMEGA},
     {"Film Height", "FILM_HEIGHT", FILM_HEIGHT},
+    {"Void Fraction", "VOID_FRACTION", VOID_FRACTION},
 };
 
 int Num_Exo_Var_Names = sizeof(Exo_Var_Names) / sizeof(struct Equation_Names);
@@ -8533,6 +8551,7 @@ struct Equation_Names Var_Units[] = {
     {"TURB_K", "[1]", TURB_K},
     {"TURB_OMEGA", "[1]", TURB_OMEGA},
     {"Film Height", "[1]", FILM_HEIGHT},
+    {"Void Fraction", "[1]", VOID_FRACTION},
 
 };
 

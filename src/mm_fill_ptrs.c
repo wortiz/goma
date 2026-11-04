@@ -1879,6 +1879,11 @@ int load_elem_dofptr(const int ielem,
     load_varType_Interpolation_ptrs(eqn, esp->film_height, esp_old->film_height,
                                     esp_dot->film_height);
   }
+  eqn = R_VOID_FRACTION;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->void_fraction, esp_old->void_fraction,
+                                    esp_dot->void_fraction);
+  }
 
   eqn = R_STRESS11;
   if (upd->ep[pg->imtrx][eqn] >= 0) {
@@ -2793,6 +2798,12 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
     if (upd->ep[imtrx][eqn] >= 0) {
       load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->film_height, esp_old->film_height,
                                           esp_dot->film_height);
+    }
+
+    eqn = R_VOID_FRACTION;
+    if (upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->void_fraction, esp_old->void_fraction,
+                                          esp_dot->void_fraction);
     }
 
     eqn = R_STRESS11;

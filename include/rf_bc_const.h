@@ -917,6 +917,7 @@
 #define TURB_K_BC      966666667
 #define TURB_OMEGA_BC  966666668
 #define FILM_HEIGHT_BC 966666669
+#define VOID_FRACTION_BC 966666670
 
 /* Structural Shells */
 #define SH_K_BC             970000000

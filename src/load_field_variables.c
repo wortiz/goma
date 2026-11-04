@@ -863,6 +863,14 @@ int load_fv(void)
     stateVector[TURB_OMEGA] = fv->turb_omega;
   }
 
+  if (pdgv[VOID_FRACTION]) {
+    v = VOID_FRACTION;
+    scalar_fv_fill(esp->void_fraction, esp_dot->void_fraction, esp_old->void_fraction, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->void_fraction), &(fv_dot->void_fraction),
+                   &(fv_old->void_fraction));
+    stateVector[VOID_FRACTION] = fv->void_fraction;
+  }
+
   if (pdgv[LIGHT_INTP]) {
     v = LIGHT_INTP;
     scalar_fv_fill(esp->poynt[0], esp_dot->poynt[0], esp_old->poynt[0], bf[v]->phi,

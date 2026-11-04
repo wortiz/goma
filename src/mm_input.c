@@ -7177,7 +7177,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
     } else if (strcmp(input, "yes") == 0) {
       upd->AutoDiff = 1;
     }
-    if (upd->SegregatedSubcycles < 1) {
+    if (upd->AutoDiff < 1) {
       GOMA_EH(GOMA_ERROR, "Use AutoDiff Assembly should equal yes or no, instead found %s", input);
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Use AutoDiff Assembly", input);
@@ -7186,6 +7186,28 @@ void rd_solver_specs(FILE *ifp, char *input) {
     upd->AutoDiff = 0;
     ECHO("(Use AutoDiff Assembly = no) (default)", echo_file);
   }
+
+  upd->vans_model = 0;
+  iread = look_for_optional(ifp, "Use VANS Model", input, '=');
+  if (iread == 1) {
+    upd->vans_model = -1;
+    if (strcmp(input, "A") == 0) {
+      upd->vans_model = 1;
+    } else if (strcmp(input, "B") == 0) {
+      upd->vans_model = 2;
+    } else if (strcmp(input, "no") == 0) {
+      upd->vans_model = 0;
+    }
+    if (upd->vans_model < 0) {
+      GOMA_EH(GOMA_ERROR, "Use VANS Model should be A, B, or no, instead found %s", input);
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Use VANS Model", input);
+    ECHO(echo_string, echo_file);
+  } else {
+    upd->vans_model = 0;
+    ECHO("(Use VANS Model = no) (default)", echo_file);
+  }
+
 
   /*IGBRK*/
   iread = look_for_optional(ifp, "Linear Stability", input, '=');
@@ -8909,6 +8931,8 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         ce = set_eqn(R_TURB_OMEGA, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "film_height")) {
         ce = set_eqn(R_FILM_HEIGHT, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "void_fraction")) {
+        ce = set_eqn(R_VOID_FRACTION, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "shell_diff_flux")) {
         ce = set_eqn(R_SHELL_DIFF_FLUX, mtrx_index0, pd_ptr);
         pd_ptr->Do_Surf_Geometry = 1;
@@ -9416,6 +9440,8 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         cv = set_var(TURB_OMEGA, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "FILM_HEIGHT")) {
         cv = set_var(FILM_HEIGHT, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "VOID_FRACTION")) {
+        cv = set_var(VOID_FRACTION, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "APR")) {
         cv = set_var(ACOUS_PREAL, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "API")) {
@@ -10246,6 +10272,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
       case R_TURB_K:
       case R_TURB_OMEGA:
       case R_FILM_HEIGHT:
+      case R_VOID_FRACTION:
 
         if (fscanf(ifp, "%lf %lf %lf %lf %lf", &(pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_ADVECTION)]),

@@ -643,6 +643,35 @@ extern "C" void fill_ad_field_variables() {
       }
     }
   }
+  if (pd->gv[VOID_FRACTION]) {
+    ad_fv->void_fraction = 0;
+    ad_fv->void_fraction_dot = 0;
+    for (int i = 0; i < ei[upd->matrix_index[VOID_FRACTION]]->dof[VOID_FRACTION]; i++) {
+      ad_fv->void_fraction +=
+          ADType(num_ad_variables, ad_fv->offset[VOID_FRACTION] + i, *esp->void_fraction[i]) *
+          bf[VOID_FRACTION]->phi[i];
+
+      if (pd->TimeIntegration != STEADY) {
+        ADType ednudot =
+            ADType(num_ad_variables, ad_fv->offset[VOID_FRACTION] + i, *esp_dot->void_fraction[i]);
+        ednudot.fastAccessDx(ad_fv->offset[VOID_FRACTION] + i) =
+            (1. + 2. * tran->current_theta) / tran->delta_t;
+        ad_fv->void_fraction_dot += ednudot * bf[VOID_FRACTION]->phi[i];
+      } else {
+        ad_fv->void_fraction_dot = 0;
+      }
+    }
+
+    for (int q = 0; q < pd->Num_Dim; q++) {
+      ad_fv->grad_void_fraction[q] = 0;
+
+      for (int i = 0; i < ei[upd->matrix_index[VOID_FRACTION]]->dof[VOID_FRACTION]; i++) {
+        ad_fv->grad_void_fraction[q] +=
+            ADType(num_ad_variables, ad_fv->offset[VOID_FRACTION] + i, *esp->void_fraction[i]) *
+            ad_fv->basis[VOID_FRACTION].grad_phi[i][q];
+      }
+    }
+  }
 
   if (pd->gv[PRESSURE]) {
     ad_fv->P = 0;
