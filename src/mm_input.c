@@ -15250,6 +15250,7 @@ FILE *handle_echo_string(char *echo_string, char *echo_file_name) {
     while (i + 1 < num_open_files) {
       echo_file_ptr[i] = echo_file_ptr[i + 1];
       open_files[i] = open_files[i + 1];
+      i++;
     }
 
     echo_file_ptr[i] = NULL;
