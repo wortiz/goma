@@ -8581,6 +8581,14 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     mat_ptr->momentum_source[1] = a1;
     mat_ptr->momentum_source[2] = a2;
     SPF_DBL_VEC(endofstring(es), 3, mat_ptr->momentum_source);
+  } else if (!strcmp(model_name, "MMS_VANS_A")) {
+    MomentumSourceModel = MMS_VANS_MODEL_A;
+    model_read = 1;
+    mat_ptr->MomentumSourceModel = MomentumSourceModel;
+    mat_ptr->momentum_source[0] = 0;
+    mat_ptr->momentum_source[1] = 0;
+    mat_ptr->momentum_source[2] = 0;
+    SPF_DBL_VEC(endofstring(es), 3, mat_ptr->momentum_source);
   } else if (!strcmp(model_name, "VARIABLE_DENSITY_NO_GAS")) {
     MomentumSourceModel = VARIABLE_DENSITY_NO_GAS;
     model_read = 1;

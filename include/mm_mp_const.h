@@ -94,6 +94,7 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 #define VARIABLE_DENSITY_NO_GAS 26 /* Drying of Polymeric Film */
 #define HS_FILM_CAST            27
 #define HS_FILM_CAST_VISC_DISS  28
+#define MMS_VANS_MODEL_A        29
 
 /* MMH */
 /* #define  SUSPENSION_PM xxx Defiend below. */

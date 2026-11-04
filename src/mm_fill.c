@@ -2507,9 +2507,9 @@ Revised:         Summer 1998, SY Tam (UNM)
 #ifdef GOMA_ENABLE_SACADO
           err = ad_assemble_momentum_vans(time_value, theta, delta_t, h_elem_avg, &pg_data, xi,
                                                exo);
-          GOMA_EH(err, "ad_assemble_momentum_film_cast");
+          GOMA_EH(err, "ad_assemble_momentum_vans");
 #else
-          GOMA_EH(GOMA_ERROR, "FILM_HEIGHT ad momentum routine requires SACADO");
+          GOMA_EH(GOMA_ERROR, "VANS ad momentum routine requires SACADO");
 #endif
       } else if (pd->gv[FILM_HEIGHT]) {
         if (upd->AutoDiff) {
@@ -2735,7 +2735,14 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (neg_elem_volume)
           return -1;
       } else {
-        if (upd->AutoDiff) {
+      if (upd->vans_model > 0) {
+#ifdef GOMA_ENABLE_SACADO
+          err = ad_assemble_continuity_vans(time_value, theta, delta_t, &pg_data);
+          GOMA_EH(err, "ad_assemble_continuity_vans");
+#else
+          GOMA_EH(GOMA_ERROR, "VANS ad momentum routine requires SACADO");
+#endif
+          } else if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
           err = ad_assemble_continuity(time_value, theta, delta_t, &pg_data);
 #else

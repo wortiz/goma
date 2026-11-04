@@ -7172,6 +7172,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
   iread = look_for_optional(ifp, "Use AutoDiff Assembly", input, '=');
   if (iread == 1) {
     upd->AutoDiff = -1;
+    (void)read_string(ifp, input, '\n');
     if (strcmp(input, "no") == 0) {
       upd->AutoDiff = 0;
     } else if (strcmp(input, "yes") == 0) {
@@ -7191,6 +7192,8 @@ void rd_solver_specs(FILE *ifp, char *input) {
   iread = look_for_optional(ifp, "Use VANS Model", input, '=');
   if (iread == 1) {
     upd->vans_model = -1;
+    (void)read_string(ifp, input, '\n');
+    strip(input);
     if (strcmp(input, "A") == 0) {
       upd->vans_model = 1;
     } else if (strcmp(input, "B") == 0) {

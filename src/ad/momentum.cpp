@@ -12,6 +12,8 @@
 * See LICENSE file.                                                       *
 \************************************************************************/
 
+#include "ad/structs.h"
+#include <cstddef>
 #define GOMA_AD_MOMENTUM_CPP
 #ifdef GOMA_ENABLE_SACADO
 
@@ -675,6 +677,29 @@ int ad_momentum_source_term(ADType f[DIM], /* Body force. */
     } else {
       GOMA_EH(GOMA_ERROR, "Unknown density model for variable density");
     }
+  } else if (mp->MomentumSourceModel == MMS_VANS_MODEL_A) {
+    ADType x = ad_fv->x[0];
+    ADType y = ad_fv->x[1];
+
+    ADType rho = density(NULL, tran->time_value);
+
+    ADType gamma[DIM][DIM];
+    for (int a = 0; a < VIM; a++) {
+      for (int b = 0; b < VIM; b++) {
+        gamma[a][b] = ad_fv->grad_v[a][b] + ad_fv->grad_v[b][a];
+      }
+    }
+
+    ADType mu = ad_viscosity(gn, gamma);
+
+    f[0] = (rho * pow(sin(x), 2) * cos(x) + (2 * mu * cos(y) - rho * sin(y)) * pow(sin(x), 2) -
+            (2 * mu * cos(y) - rho * sin(y)) * pow(cos(x), 2)) *
+           sin(y);
+    f[1] = (1.0 / 2.0) * mu * sin(2 * x - 2 * y) + (1.0 / 2.0) * mu * sin(2 * x + 2 * y) -
+           1.0 / 8.0 * rho * sin(x - 3 * y) + (1.0 / 8.0) * rho * sin(x - y) +
+           (1.0 / 8.0) * rho * sin(x + y) - 1.0 / 8.0 * rho * sin(x + 3 * y) +
+           (1.0 / 4.0) * rho * cos(2 * x - 2 * y) - 1.0 / 4.0 * rho * cos(2 * x + 2 * y);
+    f[2] = 0;
   } else {
     GOMA_EH(GOMA_ERROR, "Unknown Navier-Stokes Source Model for AD");
   }
@@ -1928,4 +1953,585 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
   return 0;
 }
 
+extern "C" int ad_assemble_momentum_vans(dbl time,       /* current time */
+                              dbl tt,         /* parameter to vary time integration from
+                                                 explicit (tt = 1) to implicit (tt = 0) */
+                              dbl dt,         /* current time step size */
+                              dbl h_elem_avg, /* average global element size for PSPG*/
+                              const PG_DATA *pg_data,
+                              double xi[DIM], /* Local stu coordinates */
+                              const Exo_DB *exo) {
+
+  int dim;
+  int i, p, q, a;
+
+  int ledof, eqn, ii, peqn;
+
+  int *pde = pd->e[pg->imtrx];
+  int *pdv = pd->v[pg->imtrx];
+
+  int status;
+  struct Basis_Functions *bfm;
+
+  dbl h3; /* Volume element (scale factors). */
+
+  /* field variables */
+
+  dbl rho; /* Density. */
+
+  ADType f[DIM]; /* Body force. */
+
+  ADType d_area;
+
+  /*
+   *
+   * Note how carefully we avoid refering to d(phi[i])/dx[j] and refer instead
+   * to the j-th component of grad_phi[j][i] so that this vector can be loaded
+   * up with components that may be different in non Cartesian coordinate
+   * systems.
+   *
+   * We will, however, insist on *orthogonal* coordinate systems, even if we
+   * might permit them to be curvilinear.
+   *
+   * Assume all components of velocity are interpolated with the same kind
+   * of basis function.
+   */
+
+  /*
+   * Galerkin weighting functions for i-th and a-th momentum residuals
+   * and some of their derivatives...
+   */
+  dbl phi_i;
+  /*
+   * Interpolation functions for variables and some of their derivatives.
+   */
+
+  ADType Pi[DIM][DIM];
+
+  dbl wt;
+
+  int transient_run = pd->TimeIntegration != STEADY;
+  int mass_on;
+  int advection_on = 0;
+  int source_on = 0;
+  int diffusion_on = 0;
+
+  dbl mass_etm, advection_etm, diffusion_etm, source_etm;
+
+  double *R;
+
+  /*
+   * Petrov-Galerkin weighting functions for i-th residuals
+   * and some of their derivatives...
+   */
+
+  int *n_dof = NULL;
+
+  status = 0;
+
+  /*
+   * Unpack variables from structures for local convenience...
+   */
+
+  eqn = R_MOMENTUM1;
+
+  /*
+   * Bail out fast if there's nothing to do...
+   */
+  if (!pd->e[pg->imtrx][eqn]) {
+    return (status);
+  }
+
+  dim = pd->Num_Dim;
+
+  wt = fv->wt;
+
+  h3 = fv->h3; /* Differential volume element (scales). */
+
+  d_area = ad_fv->detJ * wt * h3;
+
+  dbl supg = 0.;
+
+  if (mp->Mwt_funcModel == GALERKIN) {
+    supg = 0.;
+  } else if (mp->Mwt_funcModel == SUPG || mp->Mwt_funcModel == SUPG_GP ||
+             mp->Mwt_funcModel == SUPG_SHAKIB) {
+    supg = mp->Mwt_func;
+  }
+
+  /*** Density ***/
+  rho = density(NULL, time);
+
+  ADType tau;
+  if (supg != 0.) {
+    ad_only_tau_momentum_shakib(tau, dim, dt, FALSE);
+  }
+  /* end Petrov-Galerkin addition */
+
+  /*
+   * Material property constants, etc. Any variations for this
+   * Gauss point were evaluated in load_material_properties().
+   */
+
+  if (pd->e[pg->imtrx][eqn] & T_POROUS_BRINK) {
+    GOMA_EH(GOMA_ERROR, "Porous Brinkmann term not enabled for autodiff momentum");
+  }
+
+  /*   eqn = R_MOMENTUM1; */
+  /*
+   * Field variables...
+   */
+
+  /*
+   * Calculate the momentum stress tensor at the current gauss point
+   */
+  ad_fluid_stress(Pi);
+
+  ad_momentum_source_term(f, time);
+
+  /*
+   * Residuals_________________________________________________________________
+   */
+  std::vector<std::vector<ADType>> resid(WIM);
+  for (a = 0; a < WIM; a++) {
+    resid[a].resize(ei[pg->imtrx]->dof[eqn + a]);
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn + a]; i++) {
+      resid[a][i] = 0;
+    }
+  }
+
+  if (af->Assemble_Residual) {
+    /*
+     * Assemble each component "a" of the momentum equation...
+     */
+    for (a = 0; a < WIM; a++) {
+      eqn = R_MOMENTUM1 + a;
+      peqn = upd->ep[pg->imtrx][eqn];
+      bfm = bf[eqn];
+
+      mass_on = pde[eqn] & T_MASS;
+      advection_on = pde[eqn] & T_ADVECTION;
+      diffusion_on = pde[eqn] & T_DIFFUSION;
+      source_on = pde[eqn] & T_SOURCE;
+
+      mass_etm = pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+      advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+      diffusion_etm = pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+
+      /*
+       * In the element, there will be contributions to this many equations
+       * based on the number of degrees of freedom...
+       */
+
+      R = &(lec->R[LEC_R_INDEX(peqn, 0)]);
+
+      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+          /*
+           *  Here is where we figure out whether the row is to placed in
+           *  the normal spot (e.g., ii = i), or whether a boundary condition
+           *  require that the volumetric contribution be stuck in another
+           *  ldof pertaining to the same variable type.
+           */
+          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+          phi_i = bf[eqn]->phi[i];
+          /* only use Petrov Galerkin on advective term - if required */
+          ADType wt_func = phi_i;
+
+          /* add Petrov-Galerkin terms as necessary */
+          ADType wt_func_supg = phi_i;
+          if (supg != 0.) {
+            for (p = 0; p < dim; p++) {
+              wt_func += supg * tau * ad_fv->v[p] * bfm->grad_phi[i][p];
+            }
+          }
+
+          /* this is an optimization for xfem */
+          if (xfem != NULL) {
+            GOMA_EH(GOMA_ERROR, "xfem not configured for AD Momentum");
+          }
+
+          ADType mass = 0.;
+          if (transient_run) {
+            if (mass_on) {
+              mass = ad_fv->v_dot[a] * rho;
+              mass *= -wt_func * d_area * ad_fv->void_fraction;
+              mass *= mass_etm;
+            }
+          }
+
+          ADType advection = 0.;
+          if (advection_on) {
+#ifdef DO_NO_UNROLL
+            for (p = 0; p < WIM; p++) {
+              advection += (v[p] - x_dot[p]) * grad_v[p][a];
+            }
+#else
+            advection += (ad_fv->v[0] - ad_fv->x_dot[0]) * ad_fv->grad_v[0][a];
+            advection += (ad_fv->v[1] - ad_fv->x_dot[1]) * ad_fv->grad_v[1][a];
+            if (WIM == 3)
+              advection += (ad_fv->v[2] - ad_fv->x_dot[2]) * ad_fv->grad_v[2][a];
+#endif
+
+            advection *= rho;
+            advection *= -wt_func * d_area * ad_fv->void_fraction;
+            advection *= advection_etm;
+          }
+
+          ADType diffusion = 0.;
+          if (diffusion_on) {
+            for (p = 0; p < VIM; p++) {
+              for (q = 0; q < VIM; q++) {
+                diffusion += ad_fv->basis[eqn].grad_phi_e[i][a][p][q] * Pi[q][p];
+              }
+            }
+            diffusion *= -d_area * ad_fv->void_fraction;
+            diffusion *= diffusion_etm;
+          }
+
+          ADType graddiv = 0;
+          if (0) {
+            ADType gamma[DIM][DIM];
+            for (int i = 0; i < DIM; i++) {
+              for (int j = 0; j < DIM; j++) {
+                gamma[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
+              }
+            }
+            ADType mu = ad_viscosity(gn, gamma);
+            ADType div_grad_phi = 0;
+            ADType div_v = 0;
+            for (int w = 0; w < dim; w++) {
+              div_grad_phi += ad_fv->basis[eqn].grad_phi_e[i][a][w][w] *
+                              ad_fv->basis[eqn].grad_phi_e[i][a][w][w];
+              div_v += ad_fv->grad_v[w][w] * ad_fv->grad_v[w][w];
+            }
+            graddiv = (2.0 / 3.0) * mu * div_grad_phi * mu * div_v;
+            graddiv *= -d_area * h3 * wt;
+          }
+
+          /*
+           * Source term...
+           */
+          ADType source = 0.0;
+          if (source_on) {
+            source += f[a];
+            source *= wt_func * d_area * ad_fv->void_fraction;
+            source *= source_etm;
+          }
+
+          /*
+           * Add contributions to this residual (globally into Resid, and
+           * locally into an accumulator)
+           */
+
+          /*lec->R[LEC_R_INDEX(peqn,ii)] += mass + advection + porous + diffusion + source;*/
+          R[ii] += mass.val() + advection.val() + diffusion.val() + source.val() + graddiv.val();
+          resid[a][ii] += mass + advection + diffusion + source + graddiv;
+          // if (ei[pg->imtrx]->ielem == 418) {
+          //   printf("diff = %.15f\n", diffusion.val());
+          // }
+        } /*end if (active_dofs) */
+      } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
+    }
+  }
+
+  /*
+   * Jacobian terms...
+   */
+
+  if (af->Assemble_Jacobian) {
+    for (a = 0; a < WIM; a++) {
+      eqn = R_MOMENTUM1 + a;
+      peqn = upd->ep[pg->imtrx][eqn];
+
+      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+        ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+          for (int var = V_FIRST; var < V_LAST; var++) {
+
+            /* Sensitivity w.r.t. velocity */
+            if (pdv[var]) {
+              int pvar = upd->vp[pg->imtrx][var];
+
+              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += resid[a][ii].dx(ad_fv->offset[var] + j);
+
+              } /* End of loop over j */
+            } /* End of if the variale is active */
+          }
+
+        } /* end of if(active_dofs) */
+      } /* End of loop over i */
+    } /* End of if assemble Jacobian */
+  }
+  safe_free((void *)n_dof);
+  return (status);
+}
+extern "C" int ad_assemble_continuity_vans(dbl time_value, /* current time */
+                                dbl tt,         /* parameter to vary time integration from
+                                                   explicit (tt = 1) to implicit (tt = 0)    */
+                                dbl dt,         /* current time step size                    */
+                                const PG_DATA *pg_data) {
+  int a;
+
+  int eqn;
+  int peqn, pvar;
+
+  int i, j;
+  int status, err;
+
+  dbl time = 0.0; /*  RSL 6/6/02  */
+
+  ADType det_J;
+  dbl h3;
+  dbl wt;
+  ADType d_area;
+
+  /*
+   * Galerkin weighting functions...
+   */
+
+  dbl phi_i;
+
+  /*
+   * Variables for Pressure Stabilization Petrov-Galerkin...
+   */
+  int meqn;
+  int v_s[MAX_MODES][DIM][DIM];
+
+  int *pdv = pd->v[pg->imtrx];
+
+  ADType pspg[DIM];
+
+  struct Species_Conservation_Terms s_terms;
+  int w0 = 0;
+
+  /* For particle momentum model.
+   */
+  int advection_on = 0;
+  int ion_reactions_on = 0, electrode_kinetics_on = 0;
+  int lagrangian_mesh_motion = 0, total_ale_on = 0;
+  int hydromassflux_on = 0, suspensionsource_on = 0;
+  int total_ale_and_velo_off = 0;
+
+  dbl advection_etm;
+
+  status = 0;
+
+  /*
+   * Unpack variables from structures for local convenience...
+   */
+
+  eqn = R_PRESSURE;
+  peqn = upd->ep[pg->imtrx][eqn];
+
+  ADType div_v = 0;
+
+  for (a = 0; a < VIM; a++) {
+    div_v += ad_fv->grad_v[a][a];
+  }
+
+  /*
+   * Bail out fast if there's nothing to do...
+   */
+
+  if (!pd->e[pg->imtrx][eqn]) {
+    return (status);
+  }
+
+  if (pd->gv[POLYMER_STRESS11]) {
+    err = stress_eqn_pointer(v_s);
+  }
+
+  wt = fv->wt;
+  det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
+  h3 = fv->h3;         /* Differential volume element (scales). */
+
+  d_area = wt * det_J * h3;
+
+  /*
+   * Get the deformation gradients and tensors if needed
+   */
+
+  lagrangian_mesh_motion = (cr->MeshMotion == LAGRANGIAN || cr->MeshMotion == DYNAMIC_LAGRANGIAN);
+  electrode_kinetics_on = (mp->SpeciesSourceModel[0] == ELECTRODE_KINETICS);
+  ion_reactions_on = (mp->SpeciesSourceModel[0] == ION_REACTIONS);
+  total_ale_on = (cr->MeshMotion == TOTAL_ALE);
+  hydromassflux_on = (cr->MassFluxModel == HYDRODYNAMIC);
+  suspensionsource_on = (mp->MomentumSourceModel == SUSPENSION);
+
+  if (lagrangian_mesh_motion && pd->gv[R_MESH1]) {
+    err = belly_flop(elc->lame_mu);
+    GOMA_EH(err, "error in belly flop");
+    if (err == 2)
+      return (err);
+  }
+
+  if (total_ale_on && !pd->gv[VELOCITY1]) {
+    total_ale_and_velo_off = 1;
+  }
+
+  if (total_ale_and_velo_off && pd->gv[R_SOLID1]) {
+    err = belly_flop_rs(elc_rs->lame_mu);
+    GOMA_EH(err, "error in belly flop for real solid");
+    if (err == 2)
+      return (err);
+  }
+
+  if (PSPG) {
+    ad_calc_pspg(pspg, time_value, tt, dt, pg_data);
+  }
+
+  if (mp->MomentumSourceModel == SUSPENSION_PM || electrode_kinetics_on) /*  RSL 7/25/00  */
+  {
+    err = get_continuous_species_terms(&s_terms, 0.0, tt, dt, pg_data->hsquared);
+    GOMA_EH(err, "problem in getting the species terms");
+  }
+
+  if (ion_reactions_on) /*  RSL 3/19/01 and 6/6/02  */
+  {
+    zero_structure(&s_terms, sizeof(struct Species_Conservation_Terms), 1);
+    err = get_continuous_species_terms(&s_terms, time, tt, dt, pg_data->hsquared);
+    GOMA_EH(err, "problem in getting the species terms");
+  }
+
+  if ((hydromassflux_on) && (mp->DensityModel == SUSPENSION) && (suspensionsource_on)) {
+    /*
+     * Compute hydrodynamic/sedimentation flux and sensitivities.
+     */
+
+    w0 =
+        (int)mp->u_density[0]; /* This is the species number that is transported HYDRODYNAMICally */
+
+    hydro_flux(&s_terms, w0, tt, dt, pg_data->hsquared);
+  }
+
+  advection_on = pd->e[pg->imtrx][eqn] & T_ADVECTION;
+
+  advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+
+  dbl ls_disable_pspg = 1;
+
+  std::vector<ADType> resid(ei[pg->imtrx]->dof[eqn]);
+  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    resid[i] = 0;
+  }
+  if (af->Assemble_Residual) {
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+
+      phi_i = bf[eqn]->phi[i];
+
+      /*
+       *  Mass Terms: drhodt terms (usually though problem dependent)
+       */
+
+      ADType mass = 0.0;
+      mass = ad_fv->void_fraction_dot;
+      mass *= phi_i * d_area;
+
+      /*
+       *  Advection:
+       *    This term refers to the standard del dot v .
+       *
+       *    int (phi_i div_v d_omega)
+       *
+       *   Note density is not multiplied into this term normally
+       */
+      ADType advection = 0.0;
+      if (advection_on) {
+        if (pd->gv[VELOCITY1]) /* then must be solving fluid mechanics in this material */
+        {
+
+          /*
+           * Standard incompressibility constraint means we have
+           * a solenoidal velocity field
+           */
+
+          advection = div_v * ad_fv->void_fraction;
+          for (int b = 0; b < pd->Num_Dim; b++) {
+            advection += ad_fv->v[b] * ad_fv->grad_void_fraction[b];
+          }
+
+          advection *= phi_i * d_area;
+          advection *= advection_etm;
+        }
+      }
+
+      ADType pressure_stabilization = 0.0;
+      if (PSPG) {
+        for (a = 0; a < WIM; a++) {
+          meqn = R_MOMENTUM1 + a;
+          if (pd->gv[meqn]) {
+            pressure_stabilization += ad_fv->basis[eqn].grad_phi[i][a] * pspg[a];
+          }
+        }
+        pressure_stabilization *= d_area * ls_disable_pspg;
+      }
+
+      /*
+       *  Add up the individual contributions and sum them into the local element
+       *  contribution for the total continuity equation for the ith local unknown
+       */
+      lec->R[LEC_R_INDEX(peqn, i)] += advection.val() + pressure_stabilization.val();
+      resid[i] = advection + pressure_stabilization;
+    }
+  }
+  if (af->Assemble_Jacobian) {
+    eqn = PRESSURE;
+    peqn = upd->ep[pg->imtrx][eqn];
+
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+
+      /* Sensitivity w.r.t. velocity */
+      for (int var = V_FIRST; var < V_LAST; var++) {
+        if (pdv[var]) {
+          pvar = upd->vp[pg->imtrx][var];
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
+          } /* End of loop over j */
+        } /* End of if the variale is active */
+      }
+
+    } /* End of loop over i */
+  } /* End of if assemble Jacobian */
+  return 0;
+}
+
+extern "C" void ad_mms_vans_uv_bc(
+                       double *func,
+                       double d_func[], /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
+                       int var)
+{
+  ADType x = ad_fv->x[0];
+  ADType y = ad_fv->x[1];
+  ADType val;
+  int var_i = 0;
+  switch (var) {
+    case VELOCITY1:
+      var_i = 0;
+      val = sin(x)*cos(y);
+    break;
+    case VELOCITY2:
+      var_i = 1;
+      val = -cos(x)*sin(y);
+    break;
+    default:
+    GOMA_EH(GOMA_ERROR, "Unknown var in ad_mms_vans_uv_bc");
+  }
+
+  val -= ad_fv->v[var_i];
+  *func = val.val();
+
+  for (int var = V_FIRST; var < V_LAST; var++) {
+    d_func[var] = val.dx(ad_fv->offset[var]);
+  }
+} 
 #endif // GOMA_ENABLE_SACADO

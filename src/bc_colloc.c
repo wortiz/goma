@@ -29,6 +29,7 @@
 #include "ac_stability.h"
 #include "ac_stability_util.h"
 #include "ad/turbulence.h"
+#include "ad/momentum.h"
 #include "bc/rotate_coordinates.h"
 #include "bc_colloc.h"
 #include "bc_integ.h"
@@ -467,6 +468,11 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               fvelocity_profile(var_flag, ielem_dim, BC_Types[bc_input_id].BC_Name, &func, d_func,
                                 BC_Types[bc_input_id].u_BC, time_intermediate);
               break;
+
+            case MMS_VANS_X_BC:
+            case MMS_VANS_Y_BC:
+                var_flag = BC_Types[bc_input_id].desc->equation;
+                ad_mms_vans_uv_bc(&func, d_func, var_flag);
 
             case U_PARABOLA_BC:
             case V_PARABOLA_BC:

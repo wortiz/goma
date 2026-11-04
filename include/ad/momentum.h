@@ -56,7 +56,24 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
 dbl ad_viscosity_wrap(struct Generalized_Newtonian *gn_local);
 int ad_assemble_film_height_grad_v(void);
+int ad_assemble_momentum_vans(dbl time,       /* current time */
+                         dbl tt,         /* parameter to vary time integration from
+                                            explicit (tt = 1) to implicit (tt = 0) */
+                         dbl dt,         /* current time step size */
+                         dbl h_elem_avg, /* average global element size for PSPG*/
+                         const PG_DATA *pg_data,
+                         double xi[DIM], /* Local stu coordinates */
+                         const Exo_DB *exo);
+int ad_assemble_continuity_vans(dbl time_value, /* current time */
+                           dbl tt,         /* parameter to vary time integration from
+                                              explicit (tt = 1) to implicit (tt = 0)    */
+                           dbl dt,         /* current time step size                    */
+                           const PG_DATA *pg_data);
 
+void ad_mms_vans_uv_bc(
+                       double *func,
+                       double d_func[], /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
+                       int var);
 #ifdef __cplusplus
 }
 #endif
