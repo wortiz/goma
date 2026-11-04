@@ -38,6 +38,7 @@
 
 #include "mpi.h"
 #include "sl_amesos_interface.h"
+#include "util/goma_context.h"
 
 #ifdef EPETRA_MPI
 #define AZ_MPI
@@ -80,21 +81,21 @@ void trilinos_solve_ls(double *bf_mat_,
   double params[AZ_PARAMS_SIZE];
 
   /* Define internal variables */
-  static int FirstRun = 1;
-  static int err;
-  static std::string Pkg_Name;
-  static Epetra_CrsMatrix *A;
-  static Epetra_LinearProblem Problem;
+  int err;
+  Epetra_LinearProblem Problem;
   bool transA = true;
   bool notransA = false;
 
-  /* Convert to Epetra format */
+  /* The matrix is kept in the context between calls until NewMatrix asks for a new one */
   if (NewMatrix) {
-    if (!FirstRun)
-      delete A;
-    A = (Epetra_CrsMatrix *)construct_Epetra_CrsMatrix_ls(txt_num_pts, nnz_per_row, num_cols);
-    bf_mat_to_Epetra(bf_mat_, j_map_, A, txt_num_pts, nnz_per_row, num_cols);
+    trilinos_solve_ls_release();
+    goma_ctx->solver.least_squares_matrix =
+        construct_Epetra_CrsMatrix_ls(txt_num_pts, nnz_per_row, num_cols);
+    bf_mat_to_Epetra(bf_mat_, j_map_,
+                     static_cast<Epetra_CrsMatrix *>(goma_ctx->solver.least_squares_matrix),
+                     txt_num_pts, nnz_per_row, num_cols);
   }
+  Epetra_CrsMatrix *A = static_cast<Epetra_CrsMatrix *>(goma_ctx->solver.least_squares_matrix);
 
   const Epetra_Map &map = (*A).RowMatrixRowMap();
   const Epetra_Map &Colmap = (*A).RowMatrixColMap();
@@ -139,9 +140,11 @@ void trilinos_solve_ls(double *bf_mat_,
   for (int i = 0; i < num_cols; i++) {
     x_[i] = x[i];
   }
+}
 
-  /* Cleanup problem */
-  FirstRun = 0;
+void trilinos_solve_ls_release(void) {
+  delete static_cast<Epetra_CrsMatrix *>(goma_ctx->solver.least_squares_matrix);
+  goma_ctx->solver.least_squares_matrix = nullptr;
 }
 
 static void bf_mat_to_Epetra(
@@ -154,7 +157,7 @@ static void bf_mat_to_Epetra(
   Epetra_SerialComm comm;
 #endif
 
-  static int newmatrix = 1;
+  const int newmatrix = 1;
 
   int NumMyRows = txt_num_pts;
   int NumMyCols = n_cols;

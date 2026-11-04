@@ -70,6 +70,7 @@
 #include "linalg/sparse_matrix.h"
 
 #include "sl_stratimikos_interface.h"
+#include "util/goma_context.h"
 
 extern "C" {
 #include <sl_util_structs.h>
@@ -181,7 +182,6 @@ int stratimikos_solve_tpetra(struct GomaLinearSolverData *ams,
   auto *tpetra_data = static_cast<TpetraSparseMatrix *>(matrix->data);
   bool success = true;
   bool verbose = true;
-  static bool param_echo[MAX_NUM_MATRICES] = {true};
 
   if (ams->SolverData == NULL) {
     ams->SolverData = new Stratimikos_Solver_Data();
@@ -232,8 +232,8 @@ int stratimikos_solve_tpetra(struct GomaLinearSolverData *ams,
     }
 
     stratimikos_solve_setup(solver_data->A, solver_data, stratimikos_file[imtrx],
-                            param_echo[imtrx]);
-    param_echo[imtrx] = false;
+                            goma_ctx->solver.stratimikos_tpetra_param_echo[imtrx]);
+    goma_ctx->solver.stratimikos_tpetra_param_echo[imtrx] = false;
 
     Thyra::SolveStatus<double> status =
         Thyra::solve<double>(*(solver_data->solver), Thyra::NOTRANS, *b, x.ptr());
@@ -287,7 +287,6 @@ int stratimikos_solve(struct GomaLinearSolverData *ams,
   using Teuchos::RCP;
   bool success = true;
   bool verbose = true;
-  static bool param_echo[MAX_NUM_MATRICES] = {false};
 
   GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
   EpetraSparseMatrix *epetra_matrix = static_cast<EpetraSparseMatrix *>(matrix->data);
@@ -325,8 +324,8 @@ int stratimikos_solve(struct GomaLinearSolverData *ams,
     }
 
     stratimikos_solve_setup(solver_data->A, solver_data, stratimikos_file[imtrx],
-                            param_echo[imtrx]);
-    param_echo[imtrx] = true;
+                            goma_ctx->solver.stratimikos_param_echo[imtrx]);
+    goma_ctx->solver.stratimikos_param_echo[imtrx] = true;
 
     Thyra::SolveStatus<double> status =
         Thyra::solve<double>(*(solver_data->solver), Thyra::NOTRANS, *b, x.ptr());

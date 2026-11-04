@@ -27,6 +27,7 @@
 
 #include "rf_allo.h"
 #include "sl_aux.h"
+#include "util/goma_context.h"
 
 #define TINY 1.0e-20
 
@@ -70,7 +71,7 @@
 
 int lu_decomp_backsub_driver(
     double **coeff_matrix, double *rhs_vector, int *indx, int sys_size, int lu_dcmp_flag) {
-  static double d_parity = 1.0; /* row exchange parity from lu_decomp() */
+  double d_parity = 1.0; /* row exchange parity from lu_decomp(), not used further */
   double *d = &d_parity;
 
   if (lu_dcmp_flag == 1) {
@@ -113,24 +114,23 @@ int lu_decomp_backsub_driver(
    Randy R. Lober 9/98.
 */
 
-/* vv stores the implicit scaling of each row; grown as needed by lu_decomp() */
-static double *vv = NULL;
-static int n_max = 0;
-
+/* The row scaling vector is kept in goma_ctx->solver and grown as needed. */
 void lu_decomp_release(void) {
-  safer_free((void **)&vv);
-  n_max = 0;
+  safer_free((void **)&goma_ctx->solver.lu_decomp_scaling);
+  goma_ctx->solver.lu_decomp_scaling_len = 0;
 }
 
 int lu_decomp(double **a, const int n, int *indx, double *d) {
   int i, imax = -1, j, k;
   double big, dum, sum, temp;
 
-  if (n > n_max) {
-    safer_free((void **)&vv);
-    vv = alloc_dbl_1(n, DBL_NOINIT);
-    n_max = n;
+  if (n > goma_ctx->solver.lu_decomp_scaling_len) {
+    safer_free((void **)&goma_ctx->solver.lu_decomp_scaling);
+    goma_ctx->solver.lu_decomp_scaling = alloc_dbl_1(n, DBL_NOINIT);
+    goma_ctx->solver.lu_decomp_scaling_len = n;
   }
+  /* vv stores the implicit scaling of each row */
+  double *vv = goma_ctx->solver.lu_decomp_scaling;
 
   *d = 1.0;                 /* No row interchanges yet */
   for (i = 0; i < n; i++) { /* loop over rows to get the implicit scaling info */

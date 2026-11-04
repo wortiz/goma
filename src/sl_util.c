@@ -80,8 +80,6 @@
 #include "mm_eh.h" /* Error handler. */
 #include "sl_util_structs.h"
 
-static int Num_Calls = 0;
-
 /*
  * Initialize one or more Aztec matrix systems.
  *
@@ -128,7 +126,7 @@ void sl_init(unsigned int option_mask, /* option flag */
 
   Do_Jacobian = (option_mask & 1);
 
-  if (Num_Calls >= goma_ctx->fem.upd->Total_Num_Matrices) {
+  if (goma_ctx->solver.sl_init_calls >= goma_ctx->fem.upd->Total_Num_Matrices) {
     GOMA_EH(GOMA_ERROR, "Calls should match the number of matrices");
   } else {
     /* One of these blocks for each matrix system to be solved. */
@@ -312,7 +310,7 @@ void sl_init(unsigned int option_mask, /* option flag */
 #endif /* MATRIX_DUMP */
     }
   }
-  Num_Calls++;
+  goma_ctx->solver.sl_init_calls++;
 } /* END of routine sl_init */
 /******************************************************************************/
 

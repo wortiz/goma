@@ -41,6 +41,7 @@
 #include <rpc/xdr.h>
 
 #include "mm_as.h"
+#include "util/goma_context.h"
 
 /*********************** R O U T I N E S  I N   T H I S   F I L E *************
  *
@@ -163,7 +164,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
  *****************************************************************************/
 {
   char *yo = "matrix_dump_msr ERROR:";
-  static int index = 0; /* Static variable containing the file
+  /* goma_ctx->solver.matrix_dump_*_index holds the file
                            index. This routine will dump out files
                            starting with matrix.000, matrix.001, etc.
                            into the current directory. Overwriting
@@ -240,17 +241,17 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
    *   Increment the static index variable. Next time, the matrix
    *   file will have a different name.
    */
-  index++;
+  goma_ctx->solver.matrix_dump_msr_index++;
 
   /*
    *   Decide on whether to dump out the matrix
    */
   ams->Number_Jac_Dump = 1;
   if (ams->Number_Jac_Dump >= 0) {
-    if (ams->Number_Jac_Dump < index)
+    if (ams->Number_Jac_Dump < goma_ctx->solver.matrix_dump_msr_index)
       return;
   } else {
-    if ((index + ams->Number_Jac_Dump) != 0)
+    if ((goma_ctx->solver.matrix_dump_msr_index + ams->Number_Jac_Dump) != 0)
       return;
   }
 
@@ -267,7 +268,7 @@ void matrix_dump_msr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
    *  If an error occurs, bomb out of the program.
    */
 
-  sprintf(fname, "matrix.%03d", index);
+  sprintf(fname, "matrix.%03d", goma_ctx->solver.matrix_dump_msr_index);
   if (goma_ctx->proc_id == 0) {
 
     /*
@@ -767,12 +768,12 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
  *****************************************************************************/
 {
   char yo[] = "matrix_dump_vbr ERROR:";
-  static int index = 0; /* Static variable containing the file
+  /* goma_ctx->solver.matrix_dump_*_index holds the file
                            index. This routine will dump out files
                            starting with matrix.000, matrix.001, etc.
                            into the current directory. Overwriting
                            of old files is allowed to occur.         */
-  char fname[80];       /* Name of the serial file                   */
+  char fname[80]; /* Name of the serial file                   */
   char *stringPtr;
   int file_version = 1;
   FILE *fptr; /* File pointer for opening up the serial
@@ -837,16 +838,16 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
    *   Increment the static index variable. Next time, the matrix
    *   file will have a different name.
    */
-  index++;
+  goma_ctx->solver.matrix_dump_vbr_index++;
 
   /*
    *   Decide on whether to dump out the matrix
    */
   if (ams->Number_Jac_Dump >= 0) {
-    if (ams->Number_Jac_Dump < index)
+    if (ams->Number_Jac_Dump < goma_ctx->solver.matrix_dump_vbr_index)
       return;
   } else {
-    if ((index + ams->Number_Jac_Dump) != 0)
+    if ((goma_ctx->solver.matrix_dump_vbr_index + ams->Number_Jac_Dump) != 0)
       return;
   }
 
@@ -867,7 +868,7 @@ void matrix_dump_vbr(struct Aztec_Linear_Solver_System *ams, Exo_DB *exo, Dpi *d
    *  If an error occurs, bomb out of the program.
    */
 
-  sprintf(fname, "matrix.%03d", index);
+  sprintf(fname, "matrix.%03d", goma_ctx->solver.matrix_dump_vbr_index);
   if (goma_ctx->proc_id == 0) {
 
     /*

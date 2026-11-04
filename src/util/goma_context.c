@@ -35,6 +35,13 @@
                                                XI_BOUNDARY_TOLERANCE2}},                       \
       .post = {GOMA_POST_DEFAULTS},                                                            \
       .problem = {.lsa_3d_of_2d_wave_number = -1.0},                                           \
+      .solver = {.first_linear_solve = 1,                                                      \
+                 .stratimikos_tpetra_param_echo = {1},                                         \
+                 .loca_stab_first_linear_solve = 1,                                            \
+                 .loca_stab_umf_id = -1,                                                       \
+                 .loca_sv_init = 1,                                                            \
+                 .loca_eig_old_step = -1,                                                      \
+                 .loca_eig_nprint = -1},                                                       \
   }
 
 /* Post-processing variable flags are off (-1) by default. */

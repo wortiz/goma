@@ -120,6 +120,7 @@ typedef struct GomaParticles {
   int num_element_info;
 } GomaParticles;
 
+struct Solve_Problem_State;
 struct UMF_Linear_Solver_System;
 
 #ifndef String_line_is_defined
@@ -229,9 +230,60 @@ typedef struct GomaSolver {
   int visc_sens_copy;
   int visc_sens_factor;
 
+  /*
+   * Solver state kept between calls. Each package allocates its own entries
+   * and frees them in its release routine, called from goma_problem_release().
+   */
   /* UMFPACK systems created by SL_UMF() (sl_umf.c), UMF_MAX_SYSTEMS long once allocated */
   struct UMF_Linear_Solver_System *umf_systems;
   int umf_num_systems; /* slots handed out so far; ids are not reused */
+
+  /* SPARSE matrix factored by lu() (sl_lu.c), reused while the matrix index is unchanged */
+  void *sparse_matrix;     /* the spCreate() matrix */
+  void *sparse_elements;   /* spREAL ** element table for refilling it */
+  int sparse_factored;     /* sparse_matrix has been ordered and factored */
+  int sparse_matrix_imtrx; /* matrix index sparse_matrix belongs to */
+  int sparse_calls;        /* lu() calls, for MATRIX_STATISTICS */
+
+  /* row scaling work space of lu_decomp() (sl_aux.c) */
+  double *lu_decomp_scaling;
+  int lu_decomp_scaling_len;
+
+  /* Trilinos solvers: amesos_solve() matrices and factorizations (struct Amesos_State in
+   * sl_amesos_interface.cpp) and the trilinos_solve_ls() matrix (sl_leastsquares.cpp) */
+  void *amesos;
+  void *least_squares_matrix;
+
+  /* nonlinear solver (mm_sol_nonlinear.c) */
+  int first_linear_solve;    /* the next linear solve must set up the matrix */
+  int nl_prev_matrix;        /* matrix index of the previous Newton solve */
+  int nl_dofs_hidden;        /* external dofs are hidden from the linear solver */
+  int nl_umf_system_id;      /* UMFPACK system of the Newton solve */
+  int nl_factor_flag;        /* UMFPACK factorization option of the Newton solve */
+  int eggroll_umf_system_id; /* UMFPACK system of the eggroll eigensolver */
+
+  /* LOCA continuation interface (ac_loca_interface.c) */
+  int loca_first_linear_solve; /* linear_solver_conwrap() */
+  int loca_factor_flag;
+  int loca_stab_first_linear_solve; /* shifted_linear_solver_conwrap() */
+  int loca_stab_umf_id;
+  int loca_stab_factor_flag;
+  int loca_sv_init;    /* calc_scale_vec_conwrap() must allocate its arrays */
+  int loca_step_print; /* solution_output_conwrap() output counters */
+  int loca_n_print;
+  int loca_eig_old_step; /* eigenvector_output_conwrap() output counters */
+  int loca_eig_nprint;
+
+  /* call counters and once-only flags */
+  int sl_init_calls;     /* sl_init() calls (sl_util.c) */
+  int matrix_dump_calls; /* matrix_dump() files written (sl_matrix_util.c) */
+  int matrix_dump_msr_index;
+  int matrix_dump_vbr_index;
+  int stratimikos_tpetra_param_echo[MAX_NUM_MATRICES]; /* echo the solver parameters */
+  int stratimikos_param_echo[MAX_NUM_MATRICES];
+
+  /* solve_problem() state kept between calls (rf_solve.c) */
+  struct Solve_Problem_State *solve_state;
 } GomaSolver;
 
 /* FEM data structures referenced from GomaFem; defined in mm_as_structs.h / mm_mp_structs.h */

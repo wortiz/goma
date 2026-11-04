@@ -57,6 +57,9 @@ EXTERN void solve_problem(Exo_DB *, /* exo - ptr to finite element mesh database
                           Dpi *,    /* dpi - ptr to distributed processing info */
                           dbl *);   /* te_out - return actual end time */
 
+/* Free the solve_problem() state kept between calls (goma_ctx->solver.solve_state). */
+EXTERN void solve_problem_release(void);
+
 EXTERN int anneal_mesh             /* rf_solve.c */
     (double[],                     /* x - solution vector */
      int,                          /* tev - number elem results */

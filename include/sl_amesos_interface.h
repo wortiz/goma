@@ -45,6 +45,9 @@ EXTERN void trilinos_solve_ls(double *bf_mat_,
                               int nnz_per_row,
                               int num_cols,
                               int NewMatrix);
+
+/* Free the matrix trilinos_solve_ls() keeps between calls. */
+EXTERN void trilinos_solve_ls_release(void);
 #endif
 
 EXTERN void *construct_Epetra_CrsMatrix(struct GomaLinearSolverData *);

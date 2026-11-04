@@ -22,6 +22,7 @@
 #include "mm_as_structs.h"
 #include "rf_fem_const.h"
 #include "sl_lu.h"
+#include "util/goma_context.h"
 
 #define GOMA_SL_LU_C
 
@@ -34,24 +35,20 @@
 
 /* #define DUMP_CMSR_MATRIX */
 
-int first_time = TRUE;
-
-static int call = 0;
-
-/* The factored matrix and its element table, kept between calls */
-static char *matrix = NULL;
-static spREAL **element = NULL;
-static int prev_matrix = 0;
-
+/*
+ * The factored matrix and its element table are kept in goma_ctx->solver
+ * between calls and reused while the matrix index is unchanged.
+ */
 void lu_release(void) {
-  if (first_time == FALSE && matrix != NULL) {
-    spDestroy(matrix);
+  GomaSolver *sv = &goma_ctx->solver;
+  if (sv->sparse_matrix != NULL) {
+    spDestroy(sv->sparse_matrix);
   }
-  matrix = NULL;
-  free(element);
-  element = NULL;
-  first_time = TRUE;
-  prev_matrix = 0;
+  sv->sparse_matrix = NULL;
+  free(sv->sparse_elements);
+  sv->sparse_elements = NULL;
+  sv->sparse_factored = FALSE;
+  sv->sparse_matrix_imtrx = 0;
 }
 
 void lu(const int N,
@@ -67,14 +64,15 @@ void lu(const int N,
 #ifdef MATRIX_STATISTICS
   spREAL norm;
 #endif
+  GomaSolver *sv = &goma_ctx->solver;
 
-  if (goma_ctx->fem.pg->imtrx != prev_matrix) {
+  if (goma_ctx->fem.pg->imtrx != sv->sparse_matrix_imtrx) {
     int imtrx = goma_ctx->fem.pg->imtrx;
     lu_release();
-    prev_matrix = imtrx;
+    sv->sparse_matrix_imtrx = imtrx;
   }
 
-  call++;
+  sv->sparse_calls++;
 
   /* allocate rhs and copy */
 
@@ -86,17 +84,19 @@ void lu(const int N,
   /* factor matrix if values have changed since last call */
   if (factor_flag <= 2) {
 
-    if (first_time == TRUE && factor_flag == 1) {
+    if (!sv->sparse_factored && factor_flag == 1) {
       /* N = order of real matrix */
       type = 0;
-      if (matrix != NULL) { /* a matrix created but never factored */
-        spDestroy(matrix);
+      if (sv->sparse_matrix != NULL) { /* a matrix created but never factored */
+        spDestroy(sv->sparse_matrix);
       }
-      matrix = spCreate(N + NExt, type, &error);
+      sv->sparse_matrix = spCreate(N + NExt, type, &error);
 
-      free(element);
-      element = (spREAL **)malloc((M + NExt + 2) * sizeof(spREAL *));
+      free(sv->sparse_elements);
+      sv->sparse_elements = malloc((M + NExt + 2) * sizeof(spREAL *));
     }
+    char *matrix = sv->sparse_matrix;
+    spREAL **element = sv->sparse_elements;
 
     /* n = 1 produce graph of matrix, n = 2 fill matrix */
     for (n = 1; n <= 2; n++) { /* define and fill */
@@ -145,11 +145,11 @@ void lu(const int N,
 #ifdef MATRIX_STATISTICS
     norm = spNorm(matrix);
 #endif
-    if (first_time == TRUE && factor_flag == 1) {
+    if (!sv->sparse_factored && factor_flag == 1) {
 
       /*         spFileMatrix(matrix,"matrix_file","channel",0,1,1); */
       error = spOrderAndFactor(matrix, b, (spREAL)-1, (spREAL)0, (int)1);
-      first_time = FALSE;
+      sv->sparse_factored = TRUE;
 
     } else {
 
@@ -160,11 +160,11 @@ void lu(const int N,
 
   /* solve lu factored system */
 
-  spSolve(matrix, b, x - 1);
+  spSolve(sv->sparse_matrix, b, x - 1);
 
 #ifdef MATRIX_STATISTICS
-  if (call == 4) {
-    lustat(N, M, a, ija, x, norm, matrix);
+  if (sv->sparse_calls == 4) {
+    lustat(N, M, a, ija, x, norm, sv->sparse_matrix);
   }
 #endif
 

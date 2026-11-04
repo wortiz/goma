@@ -105,7 +105,6 @@ void print_msr_matrix(int n, int *ija, double *a, double *x)
  *
  *************************************************************************/
 {
-  static int num_call = 0;
   int i, row, col;
   char filename[80];
   FILE *of;
@@ -119,7 +118,8 @@ void print_msr_matrix(int n, int *ija, double *a, double *x)
   if (n < 1) {
     GOMA_EH(GOMA_ERROR, "Bad matrix order.");
   }
-  sprintf(filename, "A%d_of_%d.%d", goma_ctx->proc_id + 1, goma_ctx->num_proc, num_call);
+  sprintf(filename, "A%d_of_%d.%d", goma_ctx->proc_id + 1, goma_ctx->num_proc,
+          goma_ctx->solver.matrix_dump_calls);
   of = fopen(filename, "w");
 
   /*   fprintf(of, "# row col value \n");*/
@@ -184,7 +184,7 @@ void print_msr_matrix(int n, int *ija, double *a, double *x)
 #endif
     }
   }
-  num_call++;
+  goma_ctx->solver.matrix_dump_calls++;
   fclose(of);
   return;
 }

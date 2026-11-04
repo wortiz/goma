@@ -103,10 +103,9 @@
  */
 
 /*
- * This variable is used for more than one linear solver package.
+ * goma_ctx->solver.first_linear_solve is used for more than one linear solver
+ * package: the next linear solve must set up (analyze/factor) the matrix.
  */
-
-static int first_linear_solver_call = TRUE;
 
 /*
  * Default: do not attempt to use Harwell MA28 linear solver. Kundert's is
@@ -638,14 +637,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                             double **x_sens_p, /*  solution sensitivities */
                             void *con_ptr) {
 
-  static int prev_matrix = 0;
-
   double *a = ams->val;  /* nonzero values of a CMSR matrix */
   int *ija = ams->bindx; /* column pointer array into matrix "a"*/
 
   int *ija_save = ams->belfry; /* to hide external row/eqns from Aztec */
-
-  static int dofs_hidden = FALSE; /* boolean indicating when dofs are hidden */
 
   int i, j, k;
 
@@ -731,23 +726,24 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   char dofname_ry[80];
   char dofname_y[80];
 
-  static int UMF_system_id; /* Used to uniquely identify the
-                             * "regular" system to solve from the
-                             * other UMF systems. */
-  static int Factor_Flag;   /* Legend::
+  /*
+   * goma_ctx->solver.nl_umf_system_id uniquely identifies the "regular"
+   * UMF system to solve from the other UMF systems.
+   * goma_ctx->solver.nl_factor_flag:
+                     * Legend::
                      * --------
                      * 1 -- this is the first LU,
                      * 2 -- >1st LU, similar matrix structure,
                      * 3 -- new rhs, use already factored LU
-  
+
                      UMFPACK USAGE:
-  
+
                      0   : LOAD MATRIX AND ANALYSIS/DECOMPOSITION
                            AND BACK SUBSTITUTION
                      1   : LOAD MATRIX AND DECOMPOSITION USING PAST ANALYSIS
                            AND BACK SUBSTITUTION
                      > 2 : BACK SUBSTITUTION ONLY
-  
+
                      */
 
   int matr_form = 0; /* 1: MSR FORMAT MATRIX FOR UMFPACK DRIVER */
@@ -843,9 +839,9 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   int num_mat, imat, mat_index, b;
   bool solve_skipped = false;
 
-  if (goma_ctx->fem.pg->imtrx != prev_matrix) {
-    first_linear_solver_call = TRUE;
-    prev_matrix = goma_ctx->fem.pg->imtrx;
+  if (goma_ctx->fem.pg->imtrx != goma_ctx->solver.nl_prev_matrix) {
+    goma_ctx->solver.first_linear_solve = TRUE;
+    goma_ctx->solver.nl_prev_matrix = goma_ctx->fem.pg->imtrx;
   }
 
   /*
@@ -959,7 +955,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
    */
 
   if (con_ptr != NULL)
-    UMF_system_id = goma_ctx->solver.loca_umf_id;
+    goma_ctx->solver.nl_umf_system_id = goma_ctx->solver.loca_umf_id;
 
   if (goma_ctx->solver.time_jacobian_reformation_stride > 1) {
     if (nt == *time_step_reform || nt == 0) {
@@ -1154,12 +1150,12 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      * If doing continuation in parallel, restore external matrix rows here.
      */
     if (goma_ctx->num_proc > 1 && strcmp(goma_ctx->solver.matrix_format, "msr") == 0 &&
-        dofs_hidden) {
+        goma_ctx->solver.nl_dofs_hidden) {
       show_external(goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx],
                     (goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx] -
                      goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx]),
                     ija, ija_save, a);
-      dofs_hidden = FALSE;
+      goma_ctx->solver.nl_dofs_hidden = FALSE;
     }
 
     /* For Overlap AC algorithm, reset kinematic AC residuals here */
@@ -1533,7 +1529,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     if (goma_ctx->num_proc > 1 && strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
       hide_external(goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx],
                     goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], ija, ija_save, a);
-      dofs_hidden = TRUE;
+      goma_ctx->solver.nl_dofs_hidden = TRUE;
     }
 
 #ifdef DEBUG_JACOBIAN
@@ -1655,34 +1651,35 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         GOMA_EH(GOMA_ERROR, "ERROR: umfpack solver needs msr matrix format");
 
       if (!Norm_below_tolerance || !Rate_above_tolerance)
-        Factor_Flag = 1;
+        goma_ctx->solver.nl_factor_flag = 1;
       else
-        Factor_Flag = 3;
+        goma_ctx->solver.nl_factor_flag = 3;
 
-      if (first_linear_solver_call) {
-        Factor_Flag = 0;
-        UMF_system_id = -1;
+      if (goma_ctx->solver.first_linear_solve) {
+        goma_ctx->solver.nl_factor_flag = 0;
+        goma_ctx->solver.nl_umf_system_id = -1;
       }
 
       /* Force refactorization if UMFPACK2F */
       if (goma_ctx->solver.linear_solver == UMFPACK2F) {
-        Factor_Flag = 0;
+        goma_ctx->solver.nl_factor_flag = 0;
       }
       matr_form = 1;
 
-      UMF_system_id =
-          SL_UMF(UMF_system_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
+      goma_ctx->solver.nl_umf_system_id =
+          SL_UMF(goma_ctx->solver.nl_umf_system_id, &goma_ctx->solver.first_linear_solve,
+                 &goma_ctx->solver.nl_factor_flag, &matr_form,
                  &goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx], &goma_ctx->solver.nzeros,
                  &ija[0], &ija[0], &a[0], &resid_vector[0], &delta_x[0]);
 
-      first_linear_solver_call = FALSE;
+      goma_ctx->solver.first_linear_solve = FALSE;
 
       if (!Norm_below_tolerance || !Rate_above_tolerance)
-        Factor_Flag = 1;
+        goma_ctx->solver.nl_factor_flag = 1;
       else
-        Factor_Flag = 3;
+        goma_ctx->solver.nl_factor_flag = 3;
 
-      goma_ctx->solver.loca_umf_id = UMF_system_id;
+      goma_ctx->solver.loca_umf_id = goma_ctx->solver.nl_umf_system_id;
       strcpy(stringer, " 1 ");
       break;
 
@@ -1694,13 +1691,13 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       if (!Norm_below_tolerance || !Rate_above_tolerance) {
         lu(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
            goma_ctx->problem.num_ext_unknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros, a,
-           ija, delta_x, (first_linear_solver_call ? 1 : 2));
-        first_linear_solver_call = FALSE;
+           ija, delta_x, (goma_ctx->solver.first_linear_solve ? 1 : 2));
+        goma_ctx->solver.first_linear_solve = FALSE;
       } else {
         lu(goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
            goma_ctx->problem.num_ext_unknowns[goma_ctx->fem.pg->imtrx], goma_ctx->solver.nzeros, a,
            ija, delta_x, 3);
-        first_linear_solver_call = FALSE;
+        goma_ctx->solver.first_linear_solve = FALSE;
       }
       /*
        * Note that sl_lu has static variables to keep track of
@@ -1716,7 +1713,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
        * solve_problem() in rf_solve.c, not here in the
        * midst of the Newton iteration.
        */
-      if (first_linear_solver_call) {
+      if (goma_ctx->solver.first_linear_solve) {
         ams->options[AZ_pre_calc] = AZ_calc;
       } else {
         if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "calc") == 0) {
@@ -1768,7 +1765,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                  ams->rpntr, ams->cpntr, ams->bpntr, ams->val, ams->data_org, ams->status,
                  ams->proc_config);
 
-        first_linear_solver_call = FALSE;
+        goma_ctx->solver.first_linear_solve = FALSE;
 
         if (goma_ctx->debug_flag > 0) {
           dump_aztec_status(ams->status);
@@ -1955,19 +1952,20 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
            * is what was previously done before I consolidated
            * UMFPACK2 and UMFPACK2F. */
           if (goma_ctx->solver.linear_solver == UMFPACK2F)
-            Factor_Flag = 0;
+            goma_ctx->solver.nl_factor_flag = 0;
           else
-            Factor_Flag = 3;
+            goma_ctx->solver.nl_factor_flag = 3;
 
-          if (first_linear_solver_call)
+          if (goma_ctx->solver.first_linear_solve)
             GOMA_EH(GOMA_ERROR, "Solving for AC's BEFORE a regular solve");
 
 #ifdef DEBUG_SL_UMF
           printf("%s: entering SL_UMF for augmenting conditions solve\n", yo);
           fflush(stdout);
 #endif /* DEBUG_SL_UMF */
-          UMF_system_id =
-              SL_UMF(UMF_system_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
+          goma_ctx->solver.nl_umf_system_id =
+              SL_UMF(goma_ctx->solver.nl_umf_system_id, &goma_ctx->solver.first_linear_solve,
+                     &goma_ctx->solver.nl_factor_flag, &matr_form,
                      &goma_ctx->problem.num_unknowns[goma_ctx->fem.pg->imtrx],
                      &goma_ctx->solver.nzeros, &ija[0], &ija[0], &a[0], &bAC[iAC][0], &wAC[iAC][0]);
 #ifdef DEBUG_SL_UMF
@@ -1977,7 +1975,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
           /*  */
           strcpy(stringer_AC, " 1 ");
-          goma_ctx->solver.loca_umf_id = UMF_system_id;
+          goma_ctx->solver.loca_umf_id = goma_ctx->solver.nl_umf_system_id;
           break;
 
         case SPARSE13a:
@@ -2902,7 +2900,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                       (goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx] -
                        goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx]),
                       ija, ija_save, a);
-        dofs_hidden = FALSE;
+        goma_ctx->solver.nl_dofs_hidden = FALSE;
       }
     }
 
@@ -3093,12 +3091,12 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       err = soln_sens(
           param_val, x, xdot, delta_t, exo, dpi, cx, res_p, numProcUnknowns, ija, a, x_old, x_older,
           xdot_old, x_update, delta_t, theta, time_value, num_total_nodes, res_m, 3, matr_form,
-          resid_vector_sens, x_sens, x_sens_p, scale, ams, first_linear_solver_call,
+          resid_vector_sens, x_sens, x_sens_p, scale, ams, goma_ctx->solver.first_linear_solve,
           Norm_below_tolerance, Rate_above_tolerance, goma_ctx->post.pp_fluxes_sens[i]->vector_id,
           goma_ctx->post.pp_fluxes_sens[i]->sens_type, goma_ctx->post.pp_fluxes_sens[i]->sens_id,
           goma_ctx->post.pp_fluxes_sens[i]->sens_flt, goma_ctx->post.pp_fluxes_sens[i]->sens_flt2,
           &mf_resolve, ncod, bc, &smallpiv, &singpiv, &iautopiv, &iscale, &scaling_max, &h_elem_avg,
-          &U_norm, UMF_system_id, sens_caller);
+          &U_norm, goma_ctx->solver.nl_umf_system_id, sens_caller);
       sens_vec_ct++;
     }
   }
@@ -3126,13 +3124,13 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       err = soln_sens(
           param_val, x, xdot, delta_s, exo, dpi, cx, res_p, numProcUnknowns, ija, a, x_old, x_older,
           xdot_old, x_update, delta_t, theta, time_value, num_total_nodes, res_m, 3, matr_form,
-          resid_vector_sens, x_sens, x_sens_p, scale, ams, first_linear_solver_call,
+          resid_vector_sens, x_sens, x_sens_p, scale, ams, goma_ctx->solver.first_linear_solve,
           Norm_below_tolerance, Rate_above_tolerance, goma_ctx->post.pp_data_sens[i]->vector_id,
           goma_ctx->post.pp_data_sens[i]->sens_type, goma_ctx->post.pp_data_sens[i]->sens_id,
           goma_ctx->post.pp_data_sens[i]->sens_flt, goma_ctx->post.pp_data_sens[i]->sens_flt2,
           &mf_resolve, /* frontal solver variables */
           ncod, bc, &smallpiv, &singpiv, &iautopiv, &iscale, &scaling_max, &h_elem_avg, &U_norm,
-          UMF_system_id, sens_caller);
+          goma_ctx->solver.nl_umf_system_id, sens_caller);
 
       sens_vec_ct++;
     }
@@ -3187,34 +3185,34 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
         strcat(sens_caller, "First Order Continuation");
 
-        err = soln_sens(lambda,  /* parameter */
-                        x,       /* soln vector */
-                        xdot,    /* dxdt */
-                        delta_s, /* step */
-                        exo, dpi, cx, res_p, numProcUnknowns, ija, a, x_old, x_older, xdot_old,
-                        x_update, delta_t, theta, time_value, num_total_nodes, res_m, 3, matr_form,
-                        resid_vector_sens, x_sens, x_sens_p, scale, ams, first_linear_solver_call,
-                        Norm_below_tolerance, Rate_above_tolerance, -1, 1, 0, 0, 0,
-                        &mf_resolve, /* frontal solver variables */
-                        ncod, bc, &smallpiv, &singpiv, &iautopiv, &iscale, &scaling_max,
-                        &h_elem_avg, &U_norm, UMF_system_id, sens_caller);
+        err = soln_sens(
+            lambda,  /* parameter */
+            x,       /* soln vector */
+            xdot,    /* dxdt */
+            delta_s, /* step */
+            exo, dpi, cx, res_p, numProcUnknowns, ija, a, x_old, x_older, xdot_old, x_update,
+            delta_t, theta, time_value, num_total_nodes, res_m, 3, matr_form, resid_vector_sens,
+            x_sens, x_sens_p, scale, ams, goma_ctx->solver.first_linear_solve, Norm_below_tolerance,
+            Rate_above_tolerance, -1, 1, 0, 0, 0, &mf_resolve, /* frontal solver variables */
+            ncod, bc, &smallpiv, &singpiv, &iautopiv, &iscale, &scaling_max, &h_elem_avg, &U_norm,
+            goma_ctx->solver.nl_umf_system_id, sens_caller);
       }
       break;
     case HUN_FIRST:
 
       strcat(sens_caller, "First Order Hunting Continuation ");
 
-      err = soln_sens(lambda,  /* parameter */
-                      x,       /* soln vector */
-                      xdot,    /* dxdt */
-                      delta_s, /* step */
-                      exo, dpi, cx, res_p, numProcUnknowns, ija, a, x_old, x_older, xdot_old,
-                      x_update, delta_t, theta, time_value, num_total_nodes, res_m, 3, matr_form,
-                      resid_vector_sens, x_sens, x_sens_p, scale, ams, first_linear_solver_call,
-                      Norm_below_tolerance, Rate_above_tolerance, -1, 1, 0, 0, 0,
-                      &mf_resolve, /* frontal solver variables */
-                      ncod, bc, &smallpiv, &singpiv, &iautopiv, &iscale, &scaling_max, &h_elem_avg,
-                      &U_norm, UMF_system_id, sens_caller);
+      err = soln_sens(
+          lambda,  /* parameter */
+          x,       /* soln vector */
+          xdot,    /* dxdt */
+          delta_s, /* step */
+          exo, dpi, cx, res_p, numProcUnknowns, ija, a, x_old, x_older, xdot_old, x_update, delta_t,
+          theta, time_value, num_total_nodes, res_m, 3, matr_form, resid_vector_sens, x_sens,
+          x_sens_p, scale, ams, goma_ctx->solver.first_linear_solve, Norm_below_tolerance,
+          Rate_above_tolerance, -1, 1, 0, 0, 0, &mf_resolve, /* frontal solver variables */
+          ncod, bc, &smallpiv, &singpiv, &iautopiv, &iscale, &scaling_max, &h_elem_avg, &U_norm,
+          goma_ctx->solver.nl_umf_system_id, sens_caller);
       break;
     }
 
@@ -3229,7 +3227,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   if (goma_ctx->solver.linear_solver == AZTEC)
     ams->status[AZ_its] = total_ls_its;
 #endif
-  goma_ctx->solver.loca_umf_id = UMF_system_id;
+  goma_ctx->solver.loca_umf_id = goma_ctx->solver.nl_umf_system_id;
 
   /*
    * If using LOCA, there may be another resolve after exiting the
@@ -3239,12 +3237,12 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
 free_and_clear:
   if (goma_ctx->num_proc > 1 && strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
-    if (goma_ctx->problem.continuation != LOCA && dofs_hidden) {
+    if (goma_ctx->problem.continuation != LOCA && goma_ctx->solver.nl_dofs_hidden) {
       show_external(goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx],
                     (goma_ctx->problem.num_universe_dofs[goma_ctx->fem.pg->imtrx] -
                      goma_ctx->problem.num_external_dofs[goma_ctx->fem.pg->imtrx]),
                     ija, ija_save, a);
-      dofs_hidden = FALSE;
+      goma_ctx->solver.nl_dofs_hidden = FALSE;
     }
   }
 

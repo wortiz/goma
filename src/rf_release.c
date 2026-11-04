@@ -44,6 +44,7 @@
 #include "rf_bc_const.h"
 #include "rf_element_storage_const.h"
 #include "rf_node_const.h"
+#include "rf_solve.h"
 #include "rf_vars_const.h"
 #include "sl_amesos_interface.h"
 #include "sl_aux.h"
@@ -684,13 +685,51 @@ void fem_input_release(GomaContext *ctx) {
 
 /****************************************************************************/
 
+/*
+ * Solver state kept between calls goes back to its defaults, so a released
+ * context starts its next solve like a new one.
+ */
+static void solver_state_release(GomaContext *ctx) {
+  GomaSolver *sv = &ctx->solver;
+  sv->first_linear_solve = TRUE;
+  sv->nl_prev_matrix = 0;
+  sv->nl_dofs_hidden = FALSE;
+  sv->nl_umf_system_id = 0;
+  sv->loca_umf_id = 0;
+  sv->nl_factor_flag = 0;
+  sv->eggroll_umf_system_id = 0;
+  sv->loca_first_linear_solve = FALSE;
+  sv->loca_factor_flag = 0;
+  sv->loca_stab_first_linear_solve = TRUE;
+  sv->loca_stab_umf_id = -1;
+  sv->loca_stab_factor_flag = 0;
+  sv->loca_sv_init = TRUE;
+  sv->loca_step_print = 0;
+  sv->loca_n_print = 0;
+  sv->loca_eig_old_step = -1;
+  sv->loca_eig_nprint = -1;
+  sv->sl_init_calls = 0;
+  sv->matrix_dump_calls = 0;
+  sv->matrix_dump_msr_index = 0;
+  sv->matrix_dump_vbr_index = 0;
+  sv->sparse_calls = 0;
+  for (int i = 0; i < MAX_NUM_MATRICES; i++) {
+    sv->stratimikos_tpetra_param_echo[i] = (i == 0);
+    sv->stratimikos_param_echo[i] = FALSE;
+  }
+}
+
 void goma_problem_release(GomaContext *ctx) {
+  /* solution history and solver data kept between solve_problem() calls */
+  solve_problem_release();
+
   /* factorizations the direct solvers keep between calls */
   sl_umf_release();
   lu_release();
   lu_decomp_release();
 #if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
   amesos_release();
+  trilinos_solve_ls_release();
 #endif
 #if defined(GOMA_ENABLE_PETSC) && !(PETSC_USE_COMPLEX)
   if (ctx->fem.upd != NULL) {
@@ -724,4 +763,5 @@ void goma_problem_release(GomaContext *ctx) {
   }
 
   fem_structures_free(&ctx->fem);
+  solver_state_release(ctx);
 }

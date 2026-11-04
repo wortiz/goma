@@ -63,30 +63,36 @@
 #include "linalg/sparse_matrix.h"
 #include "linalg/sparse_matrix_epetra.h"
 #include "sl_util_structs.h"
+#include "util/goma_context.h"
 
 static void GomaMsr2EpetraCsr(struct GomaLinearSolverData *ams, Epetra_CrsMatrix *A, int newmatrix);
 
 /*
- * Matrices and factorizations kept between amesos_solve() calls. A[imtrx] is
- * owned (built here from MSR data) unless it was borrowed from a
- * GomaSparseMatrix.
+ * Matrices and factorizations kept between amesos_solve() calls, per context
+ * (goma_ctx->solver.amesos). A[imtrx] is owned (built here from MSR data)
+ * unless it was borrowed from a GomaSparseMatrix.
  */
-static std::string Pkg_Name;
-static Epetra_CrsMatrix *A[MAX_NUM_MATRICES]{nullptr};
-static bool A_owned[MAX_NUM_MATRICES]{false};
-static Epetra_LinearProblem Problem[MAX_NUM_MATRICES];
-static Amesos_BaseSolver *A_Base[MAX_NUM_MATRICES] = {nullptr};
+struct Amesos_State {
+  std::string Pkg_Name;
+  Epetra_CrsMatrix *A[MAX_NUM_MATRICES]{nullptr};
+  bool A_owned[MAX_NUM_MATRICES]{false};
+  Epetra_LinearProblem Problem[MAX_NUM_MATRICES];
+  Amesos_BaseSolver *A_Base[MAX_NUM_MATRICES]{nullptr};
+};
 
 void amesos_release(void) {
-  for (int imtrx = 0; imtrx < MAX_NUM_MATRICES; imtrx++) {
-    delete A_Base[imtrx];
-    A_Base[imtrx] = nullptr;
-    if (A_owned[imtrx]) {
-      delete A[imtrx];
-    }
-    A[imtrx] = nullptr;
-    A_owned[imtrx] = false;
+  Amesos_State *state = static_cast<Amesos_State *>(goma_ctx->solver.amesos);
+  if (state == nullptr) {
+    return;
   }
+  for (int imtrx = 0; imtrx < MAX_NUM_MATRICES; imtrx++) {
+    delete state->A_Base[imtrx]; /* references A[imtrx], so first */
+    if (state->A_owned[imtrx]) {
+      delete state->A[imtrx];
+    }
+  }
+  delete state;
+  goma_ctx->solver.amesos = nullptr;
 }
 
 void amesos_solve(char *choice,
@@ -103,6 +109,15 @@ void amesos_solve(char *choice,
   Epetra_SerialComm comm;
 #endif
   Amesos A_Factory;
+  if (goma_ctx->solver.amesos == nullptr) {
+    goma_ctx->solver.amesos = new Amesos_State;
+  }
+  Amesos_State *state = static_cast<Amesos_State *>(goma_ctx->solver.amesos);
+  std::string &Pkg_Name = state->Pkg_Name;
+  Epetra_CrsMatrix **A = state->A;
+  bool *A_owned = state->A_owned;
+  Epetra_LinearProblem *Problem = state->Problem;
+  Amesos_BaseSolver **A_Base = state->A_Base;
 
   /* Convert to Epetra format */
   if (ams->GomaMatrixData == NULL) {

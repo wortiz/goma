@@ -205,14 +205,14 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
    * Variables
    */
 
-  static double **x = NULL; /* solution vector                   */
+  double **x = NULL; /* solution vector                   */
 
-  static double **x_old = NULL;      /* old solution vector               */
-  static double **x_older = NULL;    /* older solution vector             */
-  static double **x_oldest = NULL;   /* oldest solution vector saved      */
-  static double **xdot = NULL;       /* current time derivative of soln   */
-  static double **xdot_old = NULL;   /* old time derivative of soln       */
-  static double **xdot_older = NULL; /* old time derivative of soln       */
+  double **x_old = NULL;      /* old solution vector               */
+  double **x_older = NULL;    /* older solution vector             */
+  double **x_oldest = NULL;   /* oldest solution vector saved      */
+  double **xdot = NULL;       /* current time derivative of soln   */
+  double **xdot_old = NULL;   /* old time derivative of soln       */
+  double **xdot_older = NULL; /* old time derivative of soln       */
   double **x_previous = NULL;
 
   double **x_pred = NULL;
@@ -226,7 +226,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
   int *node_to_fill = NULL;
 
-  static struct GomaLinearSolverData **ams;
+  struct GomaLinearSolverData **ams = NULL;
   /*
    * Variables for time integration
    */
@@ -234,7 +234,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   double timeValueReadTrans = 0.0;
   double time_print, i_print;
   double theta = 0.0, time = 0;
-  static double time1 = 0.0; /* Current time that the simulation is trying  to
+  double time1 = 0.0; /* Current time that the simulation is trying  to
                                 find the solution for */
   double delta_t_new = 0, delta_t = 0, delta_t_old = 0, delta_t_older = 0, delta_t_oldest = 0;
   char tspstring[MAX_FNL];
@@ -243,7 +243,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   int last_renorm_nt;   /* time step at which last renorm occured   */
   int time_step_reform; /* counter for jacobian reformation stride  */
   int converged = TRUE; /* success or failure of Newton iteration   */
-  static int nprint = 0;
+  int nprint = 0;
   int step_fix = 0;
   int const_delta_t, const_delta_ts, step_print;
   int success_dt;
@@ -254,9 +254,9 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
    */
   int good_mesh;
   int error, err = 0;
-  static double **gvec = NULL;
-  static double ****gvec_elem = NULL;
-  static struct Results_Description **rd;
+  double **gvec = NULL;
+  double ****gvec_elem = NULL;
+  struct Results_Description **rd = NULL;
 
   double *gv = NULL; /* Global variable values for ExoII database */
   int *tnv;          /* total number of nodal variables and kinds */
@@ -300,7 +300,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   double time2 = 0.0;
   struct Extended_Shape_Fcn_Basics **matrix_xfem = NULL;
   goma_ctx->fem.tran->solid_inertia = 0;
-  static int callnum = 1; /* solve_problem_segregated call counter */
+  /* each call is a complete solve; there is no per-call state to keep */
+  const int callnum = 1;
 
   static const char yo[] = "solve_problem_segregated"; /* So my name is in a string.        */
 
