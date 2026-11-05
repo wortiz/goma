@@ -1017,15 +1017,7 @@ void surf_based_initialization(double *x,
 
 /***************************************************************************************/
 /***************************************************************************************/
-
-static void free_surf(struct LS_Surf *surf) {
-  if (surf->subsurf_list)
-    free_surf_list(&(surf->subsurf_list));
-
-  safe_free(surf->data);
-  safe_free(surf->closest_point);
-  safe_free(surf);
-}
+static void free_surf(struct LS_Surf *surf);
 
 void free_surf_list(struct LS_Surf_List **list_p) {
   struct LS_Surf_List *list;
@@ -1050,7 +1042,8 @@ static void free_surf(struct LS_Surf *surf) {
   if (surf == NULL) {
     return;
   }
-  free_surf_list(&surf->subsurf_list);
+  if (surf->subsurf_list)
+    free_surf_list(&surf->subsurf_list);
   safer_free((void **)&surf->data);
   safer_free((void **)&surf->closest_point);
   safe_free(surf);
