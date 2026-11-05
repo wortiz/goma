@@ -966,10 +966,6 @@ int main(int argc, char **argv)
     GOMA_WH(unlerr, "Unlink problem with front scratch file");
   }
 
-#if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
-  amesos_free_solvers();
-#endif
-
 #ifdef PARALLEL
   total_time = (MPI_Wtime() - time_start) / 60.;
   DPRINTF(stdout, "\nProc 0 runtime: %10.2f Minutes.\n\n", total_time);

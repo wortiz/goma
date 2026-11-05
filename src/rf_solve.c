@@ -80,6 +80,7 @@
 #include "rf_solve_segregated.h"
 #include "rf_solver.h"
 #include "rf_util.h"
+#include "sl_amesos_interface.h"
 #include "sl_auxutil.h"
 #include "sl_matrix_util.h"
 #include "sl_petsc.h"
@@ -2709,6 +2710,10 @@ free_and_clear:
   }
 
   if (last_call) {
+#if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
+    /* Amesos solvers reference the matrix as their operator, free them first */
+    amesos_free_solvers();
+#endif
     GomaSparseMatrix goma_matrix = ams[JAC]->GomaMatrixData;
     GomaSparseMatrix_Destroy(&goma_matrix);
 #ifdef GOMA_ENABLE_PETSC

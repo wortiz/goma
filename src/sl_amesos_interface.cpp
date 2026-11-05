@@ -157,8 +157,10 @@ void amesos_solve(char *choice,
     }
 
     /* Create Amesos base package */
-    if (A_Base[imtrx] != nullptr)
+    if (A_Base[imtrx] != nullptr) {
       delete A_Base[imtrx];
+      A_Base[imtrx] = nullptr;
+    }
 
     A_Base[imtrx] = A_Factory.Create(Pkg_Name.c_str(), Problem[imtrx]);
     if (A_Base[imtrx] == 0) {
