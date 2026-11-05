@@ -589,10 +589,17 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   /*
    * Calculate the dilational viscosity, if necessary
    */
-   ADType div_v;
-   for (int i = 0; i < VIM; i++) {
-    div_v += ad_fv->grad_v[i][i];
-   }
+  ADType dilational = 0.;
+  if (upd->vans_model > 0) {
+    /* VANS: velocity is not solenoidal, include -(2/3) mu (div v) I */
+    ADType div_v = 0.;
+    for (int i = 0; i < VIM; i++) {
+      div_v += ad_fv->grad_v[i][i];
+    }
+    dilational = -(2.0 / 3.0) * mu * div_v;
+  } else if (mp->DilationalViscosityModel != DILVISCM_KAPPAWIPESMU) {
+    GOMA_EH(GOMA_ERROR, "Dilational viscosity not enabled AD fluid stress");
+  }
 
   /*
    * Viscoelastic Stress contributions
@@ -604,7 +611,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
 
   for (int a = 0; a < VIM; a++) {
     for (int b = 0; b < VIM; b++) {
-      Pi[a][b] = -ad_fv->P * (double)delta(a, b) + mu * gamma[a][b] - 2.0/3.0 * div_v * ((double) delta(a,b));
+      Pi[a][b] = (-ad_fv->P + dilational) * (double)delta(a, b) + mu * gamma[a][b];
     }
   }
 
@@ -678,7 +685,19 @@ int ad_momentum_source_term(ADType f[DIM], /* Body force. */
     } else {
       GOMA_EH(GOMA_ERROR, "Unknown density model for variable density");
     }
-  } else if (mp->MomentumSourceModel == MMS_VANS_MODEL_A) {
+  } else if (mp->MomentumSourceModel == MMS_VANS_MODEL_A ||
+             mp->MomentumSourceModel == MMS_VANS_MODEL_B) {
+    /*
+     * Manufactured-solution forcing for VANS, generated with example_vans/mms_vans.py:
+     *   u   = (-2 sin^2(pi x) sin(pi y) cos(pi y), 2 sin(pi x) cos(pi x) sin^2(pi y))
+     *   p   = sin(pi x) sin(pi y)
+     *   eps = 1/2 + 1/4 sin(pi x) sin(pi y)
+     */
+    const int model_a = mp->MomentumSourceModel == MMS_VANS_MODEL_A;
+    if ((model_a && upd->vans_model != 1) || (!model_a && upd->vans_model != 2)) {
+      GOMA_EH(GOMA_ERROR, "MMS_VANS_%s Navier-Stokes Source requires Use VANS Model = %s",
+              model_a ? "A" : "B", model_a ? "A" : "B");
+    }
     ADType x = ad_fv->x[0];
     ADType y = ad_fv->x[1];
 
@@ -693,20 +712,44 @@ int ad_momentum_source_term(ADType f[DIM], /* Body force. */
 
     ADType mu = ad_viscosity(gn, gamma);
 
-    f[0] = (rho * pow(sin(x), 2) * cos(x) + (2 * mu * cos(y) - rho * sin(y)) * pow(sin(x), 2) -
-            (2 * mu * cos(y) - rho * sin(y)) * pow(cos(x), 2)) *
-           sin(y);
-    f[1] = (1.0 / 2.0) * mu * sin(2 * x - 2 * y) + (1.0 / 2.0) * mu * sin(2 * x + 2 * y) -
-           1.0 / 8.0 * rho * sin(x - 3 * y) + (1.0 / 8.0) * rho * sin(x - y) +
-           (1.0 / 8.0) * rho * sin(x + y) - 1.0 / 8.0 * rho * sin(x + 3 * y) +
-           (1.0 / 4.0) * rho * cos(2 * x - 2 * y) - 1.0 / 4.0 * rho * cos(2 * x + 2 * y);
+    if (model_a) {
+      f[0] =
+          M_PI * (-6.0 * M_PI * mu * pow(sin(M_PI * x), 3) * pow(sin(M_PI * y), 2) * cos(M_PI * y) +
+                  0.5 * M_PI * mu * pow(sin(M_PI * x), 3) * cos(M_PI * y) -
+                  8.0 * M_PI * mu * pow(sin(M_PI * x), 2) * sin(M_PI * y) * cos(M_PI * y) +
+                  2.5 * M_PI * mu * sin(M_PI * x) * pow(sin(M_PI * y), 2) * cos(M_PI * y) +
+                  2.0 * M_PI * mu * sin(M_PI * y) * cos(M_PI * y) +
+                  1.0 * rho * pow(sin(M_PI * x), 4) * pow(sin(M_PI * y), 3) * cos(M_PI * x) +
+                  2.0 * rho * pow(sin(M_PI * x), 3) * pow(sin(M_PI * y), 2) * cos(M_PI * x) +
+                  0.5 * sin(M_PI * x) * pow(sin(M_PI * y), 2) * cos(M_PI * x) +
+                  0.5 * sin(M_PI * y) * cos(M_PI * x));
+      f[1] =
+          M_PI * (6.0 * M_PI * mu * pow(sin(M_PI * x), 2) * pow(sin(M_PI * y), 3) * cos(M_PI * x) -
+                  2.5 * M_PI * mu * pow(sin(M_PI * x), 2) * sin(M_PI * y) * cos(M_PI * x) +
+                  8.0 * M_PI * mu * sin(M_PI * x) * pow(sin(M_PI * y), 2) * cos(M_PI * x) -
+                  2.0 * M_PI * mu * sin(M_PI * x) * cos(M_PI * x) -
+                  0.5 * M_PI * mu * pow(sin(M_PI * y), 3) * cos(M_PI * x) +
+                  1.0 * rho * pow(sin(M_PI * x), 3) * pow(sin(M_PI * y), 4) * cos(M_PI * y) +
+                  2.0 * rho * pow(sin(M_PI * x), 2) * pow(sin(M_PI * y), 3) * cos(M_PI * y) +
+                  0.5 * pow(sin(M_PI * x), 2) * sin(M_PI * y) * cos(M_PI * y) +
+                  0.5 * sin(M_PI * x) * cos(M_PI * y));
+    } else {
+      f[0] = M_PI *
+             (-16.0 * M_PI * mu * pow(sin(M_PI * x), 2) * cos(M_PI * y) +
+              4.0 * M_PI * mu * cos(M_PI * y) +
+              1.0 * rho * pow(sin(M_PI * x), 4) * pow(sin(M_PI * y), 2) * cos(M_PI * x) +
+              2.0 * rho * pow(sin(M_PI * x), 3) * sin(M_PI * y) * cos(M_PI * x) +
+              1.0 * cos(M_PI * x)) *
+             sin(M_PI * y);
+      f[1] = M_PI *
+             (16.0 * M_PI * mu * pow(sin(M_PI * y), 2) * cos(M_PI * x) -
+              4.0 * M_PI * mu * cos(M_PI * x) +
+              1.0 * rho * pow(sin(M_PI * x), 2) * pow(sin(M_PI * y), 4) * cos(M_PI * y) +
+              2.0 * rho * sin(M_PI * x) * pow(sin(M_PI * y), 3) * cos(M_PI * y) +
+              1.0 * cos(M_PI * y)) *
+             sin(M_PI * x);
+    }
     f[2] = 0;
-    f[0] = M_PI*(-6.0*M_PI*mu*pow(sin(M_PI*x), 3)*pow(sin(M_PI*y), 2)*cos(M_PI*y) + 0.5*M_PI*mu*pow(sin(M_PI*x), 3)*cos(M_PI*y) - 8.0*M_PI*mu*pow(sin(M_PI*x), 2)*sin(M_PI*y)*cos(M_PI*y) + 2.5*M_PI*mu*sin(M_PI*x)*pow(
-sin(M_PI*y), 2)*cos(M_PI*y) + 2.0*M_PI*mu*sin(M_PI*y)*cos(M_PI*y) + 1.0*rho*pow(sin(M_PI*x), 4)*pow(sin(M_PI*y), 3)*cos(M_PI*x) + 2.0*rho*pow(sin(M_PI*x), 3)*pow(sin(M_PI*y), 2)*cos(M_PI*x) + 0.5*sin(M_PI*x)*pow(
-sin(M_PI*y), 2)*cos(M_PI*x) + 0.5*sin(M_PI*y)*cos(M_PI*x));
-f[1] = M_PI*(6.0*M_PI*mu*pow(sin(M_PI*x), 2)*pow(sin(M_PI*y), 3)*cos(M_PI*x) - 2.5*M_PI*mu*pow(sin(M_PI*x), 2)*sin(M_PI*y)*cos(M_PI*x) + 8.0*M_PI*mu*sin(M_PI*x)*pow(sin(M_PI*y), 2)*cos(M_PI*x) - 2.0*M_PI*mu*sin(M
-_PI*x)*cos(M_PI*x) - 0.5*M_PI*mu*pow(sin(M_PI*y), 3)*cos(M_PI*x) + 1.0*rho*pow(sin(M_PI*x), 3)*pow(sin(M_PI*y), 4)*cos(M_PI*y) + 2.0*rho*pow(sin(M_PI*x), 2)*pow(sin(M_PI*y), 3)*cos(M_PI*y) + 0.5*pow(sin(M_PI*x),
-2)*sin(M_PI*y)*cos(M_PI*y) + 0.5*sin(M_PI*x)*cos(M_PI*y));
   } else {
     GOMA_EH(GOMA_ERROR, "Unknown Navier-Stokes Source Model for AD");
   }
@@ -1961,13 +2004,13 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
 }
 
 extern "C" int ad_assemble_momentum_vans(dbl time,       /* current time */
-                              dbl tt,         /* parameter to vary time integration from
-                                                 explicit (tt = 1) to implicit (tt = 0) */
-                              dbl dt,         /* current time step size */
-                              dbl h_elem_avg, /* average global element size for PSPG*/
-                              const PG_DATA *pg_data,
-                              double xi[DIM], /* Local stu coordinates */
-                              const Exo_DB *exo) {
+                                         dbl tt,         /* parameter to vary time integration from
+                                                            explicit (tt = 1) to implicit (tt = 0) */
+                                         dbl dt,         /* current time step size */
+                                         dbl h_elem_avg, /* average global element size for PSPG*/
+                                         const PG_DATA *pg_data,
+                                         double xi[DIM], /* Local stu coordinates */
+                                         const Exo_DB *exo) {
 
   int dim;
   int i, p, q, a;
@@ -2095,6 +2138,11 @@ extern "C" int ad_assemble_momentum_vans(dbl time,       /* current time */
   ad_fluid_stress(Pi);
 
   ad_momentum_source_term(f, time);
+  const int mms_source =
+      (mp->MomentumSourceModel == MMS_VANS_MODEL_A || mp->MomentumSourceModel == MMS_VANS_MODEL_B);
+
+  /* stress weighting: Model A uses div(eps T), Model B uses div(T) */
+  ADType eps_stress = (upd->vans_model == 1) ? ad_fv->void_fraction : ADType(1.0);
 
   /*
    * Residuals_________________________________________________________________
@@ -2145,11 +2193,9 @@ extern "C" int ad_assemble_momentum_vans(dbl time,       /* current time */
           ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           phi_i = bf[eqn]->phi[i];
-          /* only use Petrov Galerkin on advective term - if required */
+          /* SUPG weighting is applied to mass, advection and source terms (not diffusion),
+           * matching the standard momentum assembly */
           ADType wt_func = phi_i;
-
-          /* add Petrov-Galerkin terms as necessary */
-          ADType wt_func_supg = phi_i;
           if (supg != 0.) {
             for (p = 0; p < dim; p++) {
               wt_func += supg * tau * ad_fv->v[p] * bfm->grad_phi[i][p];
@@ -2195,28 +2241,9 @@ extern "C" int ad_assemble_momentum_vans(dbl time,       /* current time */
                 diffusion += ad_fv->basis[eqn].grad_phi_e[i][a][p][q] * Pi[q][p];
               }
             }
-            diffusion *= -d_area * ad_fv->void_fraction;
+            /* Model A: div(eps T), Model B: div(T) */
+            diffusion *= -d_area * eps_stress;
             diffusion *= diffusion_etm;
-          }
-
-          ADType graddiv = 0;
-          if (0) {
-            ADType gamma[DIM][DIM];
-            for (int i = 0; i < DIM; i++) {
-              for (int j = 0; j < DIM; j++) {
-                gamma[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
-              }
-            }
-            ADType mu = ad_viscosity(gn, gamma);
-            ADType div_grad_phi = 0;
-            ADType div_v = 0;
-            for (int w = 0; w < dim; w++) {
-              div_grad_phi += ad_fv->basis[eqn].grad_phi_e[i][a][w][w] *
-                              ad_fv->basis[eqn].grad_phi_e[i][a][w][w];
-              div_v += ad_fv->grad_v[w][w] * ad_fv->grad_v[w][w];
-            }
-            graddiv = (2.0 / 3.0) * mu * div_grad_phi * mu * div_v;
-            graddiv *= -d_area * h3 * wt;
           }
 
           /*
@@ -2224,7 +2251,8 @@ extern "C" int ad_assemble_momentum_vans(dbl time,       /* current time */
            */
           ADType source = 0.0;
           if (source_on) {
-            source += f[a];
+            /* MMS forcing is the complete source; physical body forces are eps-weighted */
+            source += mms_source ? f[a] : f[a] * ad_fv->void_fraction;
             source *= wt_func * d_area;
             source *= source_etm;
           }
@@ -2235,11 +2263,8 @@ extern "C" int ad_assemble_momentum_vans(dbl time,       /* current time */
            */
 
           /*lec->R[LEC_R_INDEX(peqn,ii)] += mass + advection + porous + diffusion + source;*/
-          R[ii] += mass.val() + advection.val() + diffusion.val() + source.val() + graddiv.val();
-          resid[a][ii] += mass + advection + diffusion + source + graddiv;
-          // if (ei[pg->imtrx]->ielem == 418) {
-          //   printf("diff = %.15f\n", diffusion.val());
-          // }
+          R[ii] += mass.val() + advection.val() + diffusion.val() + source.val();
+          resid[a][ii] += mass + advection + diffusion + source;
         } /*end if (active_dofs) */
       } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
     }
@@ -2283,10 +2308,10 @@ extern "C" int ad_assemble_momentum_vans(dbl time,       /* current time */
   return (status);
 }
 extern "C" int ad_assemble_continuity_vans(dbl time_value, /* current time */
-                                dbl tt,         /* parameter to vary time integration from
-                                                   explicit (tt = 1) to implicit (tt = 0)    */
-                                dbl dt,         /* current time step size                    */
-                                const PG_DATA *pg_data) {
+                                           dbl tt, /* parameter to vary time integration from
+                                                      explicit (tt = 1) to implicit (tt = 0)    */
+                                           dbl dt, /* current time step size                    */
+                                           const PG_DATA *pg_data) {
   int a;
 
   int eqn;
@@ -2394,8 +2419,11 @@ extern "C" int ad_assemble_continuity_vans(dbl time_value, /* current time */
   }
 
   if (PSPG) {
+    /* ad_calc_pspg uses the standard (non volume-averaged) momentum residual */
+    GOMA_EH(GOMA_ERROR, "PSPG is not supported for VANS continuity");
     ad_calc_pspg(pspg, time_value, tt, dt, pg_data);
   }
+  const int transient_run = pd->TimeIntegration != STEADY;
 
   if (mp->MomentumSourceModel == SUSPENSION_PM || electrode_kinetics_on) /*  RSL 7/25/00  */
   {
@@ -2441,8 +2469,10 @@ extern "C" int ad_assemble_continuity_vans(dbl time_value, /* current time */
        */
 
       ADType mass = 0.0;
-      mass = ad_fv->void_fraction_dot;
-      mass *= phi_i * d_area;
+      if (transient_run) {
+        mass = ad_fv->void_fraction_dot;
+        mass *= phi_i * d_area;
+      }
 
       /*
        *  Advection:
@@ -2487,8 +2517,8 @@ extern "C" int ad_assemble_continuity_vans(dbl time_value, /* current time */
        *  Add up the individual contributions and sum them into the local element
        *  contribution for the total continuity equation for the ith local unknown
        */
-      lec->R[LEC_R_INDEX(peqn, i)] += advection.val() + pressure_stabilization.val();
-      resid[i] = advection + pressure_stabilization;
+      lec->R[LEC_R_INDEX(peqn, i)] += mass.val() + advection.val() + pressure_stabilization.val();
+      resid[i] = mass + advection + pressure_stabilization;
     }
   }
   if (af->Assemble_Jacobian) {
@@ -2512,59 +2542,56 @@ extern "C" int ad_assemble_continuity_vans(dbl time_value, /* current time */
   return 0;
 }
 
-extern "C" void ad_mms_vans_uv_bc(
-                       double *func,
-                       double d_func[], /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
-                       int var,
-                      int id)
-{
+/* Dirichlet values for the VANS manufactured solution, see ad_momentum_source_term */
+extern "C" void ad_mms_vans_uv_bc(double *func,
+                                  double d_func[], /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
+                                  int var,
+                                  int id) {
   ADType x = ad_fv->x[0];
   ADType y = ad_fv->x[1];
   ADType val;
   int var_i = 0;
   switch (var) {
-    case VELOCITY1:
-      var_i = 0;
-      val = sin(x)*cos(y);
+  case VELOCITY1:
+    var_i = 0;
+    val = -2.0 * pow(sin(M_PI * x), 2) * sin(M_PI * y) * cos(M_PI * y);
     break;
-    case VELOCITY2:
-      var_i = 1;
-      val = -cos(x)*sin(y);
+  case VELOCITY2:
+    var_i = 1;
+    val = 2.0 * sin(M_PI * x) * cos(M_PI * x) * pow(sin(M_PI * y), 2);
     break;
-    default:
+  default:
     GOMA_EH(GOMA_ERROR, "Unknown var in ad_mms_vans_uv_bc");
   }
 
   val -= ad_fv->v[var_i];
   *func = val.val();
 
-  for (int var = V_FIRST; var < V_LAST; var++) {
-    d_func[var] = val.dx(ad_fv->offset[var]+id);
+  for (int v = V_FIRST; v < V_LAST; v++) {
+    d_func[v] = val.dx(ad_fv->offset[v] + id);
   }
-} 
+}
 
-extern "C" void ad_mms_vans_p_bc(
-                       double *func,
-                       double d_func[], /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
-                       int var,
-                      int id)
-{
+extern "C" void ad_mms_vans_p_bc(double *func,
+                                 double d_func[], /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
+                                 int var,
+                                 int id) {
   ADType x = ad_fv->x[0];
   ADType y = ad_fv->x[1];
   ADType val;
   switch (var) {
-    case PRESSURE:
-      val = cos(x)*sin(y);
+  case PRESSURE:
+    val = sin(M_PI * x) * sin(M_PI * y);
     break;
-    default:
+  default:
     GOMA_EH(GOMA_ERROR, "Unknown var in ad_mms_vans_p_bc");
   }
 
   val -= ad_fv->P;
   *func = val.val();
 
-  for (int var = V_FIRST; var < V_LAST; var++) {
-    d_func[var] = val.dx(ad_fv->offset[var]+id);
+  for (int v = V_FIRST; v < V_LAST; v++) {
+    d_func[v] = val.dx(ad_fv->offset[v] + id);
   }
-} 
+}
 #endif // GOMA_ENABLE_SACADO

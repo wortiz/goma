@@ -7179,7 +7179,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
     } else if (strcmp(input, "yes") == 0) {
       upd->AutoDiff = 1;
     }
-    if (upd->AutoDiff < 1) {
+    if (upd->AutoDiff < 0) {
       GOMA_EH(GOMA_ERROR, "Use AutoDiff Assembly should equal yes or no, instead found %s", input);
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Use AutoDiff Assembly", input);
@@ -7211,7 +7211,6 @@ void rd_solver_specs(FILE *ifp, char *input) {
     upd->vans_model = 0;
     ECHO("(Use VANS Model = no) (default)", echo_file);
   }
-
 
   /*IGBRK*/
   iread = look_for_optional(ifp, "Linear Stability", input, '=');
