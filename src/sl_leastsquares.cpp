@@ -64,8 +64,7 @@ void trilinos_solve_ls(double *bf_mat_,
                        double *Atranspose_f_,
                        int txt_num_pts,
                        int nnz_per_row,
-                       int num_cols,
-                       int NewMatrix) {
+                       int num_cols) {
 
   /* Initialize MPI communications */
 #ifdef EPETRA_MPI
@@ -80,21 +79,15 @@ void trilinos_solve_ls(double *bf_mat_,
   double params[AZ_PARAMS_SIZE];
 
   /* Define internal variables */
-  static int FirstRun = 1;
-  static int err;
-  static std::string Pkg_Name;
-  static Epetra_CrsMatrix *A;
-  static Epetra_LinearProblem Problem;
+  int err;
+  Epetra_LinearProblem Problem;
   bool transA = true;
   bool notransA = false;
 
   /* Convert to Epetra format */
-  if (NewMatrix) {
-    if (!FirstRun)
-      delete A;
-    A = (Epetra_CrsMatrix *)construct_Epetra_CrsMatrix_ls(txt_num_pts, nnz_per_row, num_cols);
-    bf_mat_to_Epetra(bf_mat_, j_map_, A, txt_num_pts, nnz_per_row, num_cols);
-  }
+  Epetra_CrsMatrix *A =
+      (Epetra_CrsMatrix *)construct_Epetra_CrsMatrix_ls(txt_num_pts, nnz_per_row, num_cols);
+  bf_mat_to_Epetra(bf_mat_, j_map_, A, txt_num_pts, nnz_per_row, num_cols);
 
   const Epetra_Map &map = (*A).RowMatrixRowMap();
   const Epetra_Map &Colmap = (*A).RowMatrixColMap();
@@ -114,13 +107,10 @@ void trilinos_solve_ls(double *bf_mat_,
   (*A).Multiply(transA, f_rhs, A_T_f);
 
   /* Assemble linear problem */
-  // if (NewMatrix) Epetra_LinearProblem Problem(&A_T_A, &x, &A_T_f);
-  if (NewMatrix) {
-    Problem.SetOperator(&A_T_A);
-    Problem.SetLHS(&x);
-    Problem.SetRHS(&A_T_f);
-    Problem.CheckInput();
-  }
+  Problem.SetOperator(&A_T_A);
+  Problem.SetLHS(&x);
+  Problem.SetRHS(&A_T_f);
+  Problem.CheckInput();
 
   AztecOO Solver(Problem);
   /* Set aztec params to default */
@@ -143,8 +133,7 @@ void trilinos_solve_ls(double *bf_mat_,
     x_[i] = x[i];
   }
 
-  /* Cleanup problem */
-  FirstRun = 0;
+  delete A;
 }
 
 static void bf_mat_to_Epetra(

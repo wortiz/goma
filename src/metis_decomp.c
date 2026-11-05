@@ -989,6 +989,7 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
         free(proc_node_values);
         free(monolith_elem_values);
         free(proc_elem_values);
+        free(local_to_global);
         free(eb_num_elems);
         for (int i = 0; i < monolith->num_elem_blocks; i++) {
           free(eb_local_to_global[i]);

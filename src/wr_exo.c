@@ -50,8 +50,6 @@
 #include <time.h>
 #include <unistd.h> /* for getuid() */
 
-static int has_been_called = 0;
-
 #include "el_elm.h"
 #include "el_elm_info.h"
 #include "exo_struct.h"
@@ -874,6 +872,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
   i = 0;
   free(exo->elem_var_tab);
   exo->elem_var_tab = alloc_int_1((exo->num_elem_blocks * rd->nev), 0);
+  free(exo->truth_table_existance_key);
   exo->truth_table_existance_key = (int *)smalloc((V_LAST - V_FIRST) * sizeof(int));
 
   for (i = 0; i < V_LAST - V_FIRST; i++) {
@@ -1024,7 +1023,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
               ev_indx++;
               /* malloc the entry for this block by number of elems for this block
                  but - only if the variable exists for this block! (by the truth table) */
-              if (has_been_called == 0) {
+              if (gvec_elem[eb_indx][ev_indx - 1] == NULL) {
                 /* NOTE: this final array dim is only to be malloc'd once; when a user
                    is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                    and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1042,7 +1041,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
                 /* malloc the entry for this block by number of elems for this block
                    but - only if the variable exists for this block! (by the truth table) */
 
-                if (has_been_called == 0) {
+                if (gvec_elem[eb_indx][ev_indx - 1] == NULL) {
                   /* NOTE: this final array dim is only to be malloc'd once; when a user
                      is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                      and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1070,7 +1069,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
              but - only if the variable exists for this block! (by the truth table) */
-          if (has_been_called == 0) {
+          if (gvec_elem[eb_indx][ev_indx - 1] == NULL) {
             /* NOTE: this final array dim is only to be malloc'd once; when a user
                is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1082,7 +1081,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
             ev_indx++;
             /* malloc the entry for this block by number of elems for this block
                but - only if the variable exists for this block! (by the truth table) */
-            if (has_been_called == 0) {
+            if (gvec_elem[eb_indx][ev_indx - 1] == NULL) {
               /* NOTE: this final array dim is only to be malloc'd once; when a user
                  is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                  and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1097,7 +1096,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
              but - only if the variable exists for this block! (by the truth table) */
-          if (has_been_called == 0) {
+          if (gvec_elem[eb_indx][ev_indx - 1] == NULL) {
             /* NOTE: this final array dim is only to be malloc'd once; when a user
                is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1109,7 +1108,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
             ev_indx++;
             /* malloc the entry for this block by number of elems for this block
                but - only if the variable exists for this block! (by the truth table) */
-            if (has_been_called == 0) {
+            if (gvec_elem[eb_indx][ev_indx - 1] == NULL) {
               /* NOTE: this final array dim is only to be malloc'd once; when a user
                  is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                  and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1132,7 +1131,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
              but - only if the variable exists for this block! (by the truth table) */
-          if (has_been_called == 0) {
+          if (gvec_elem[eb_indx][ev_indx - 1] == NULL) {
             /* NOTE: this final array dim is only to be malloc'd once; when a user
                is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1144,13 +1143,12 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
             ev_indx++;
             /* malloc the entry for this block by number of elems for this block
                but - only if the variable exists for this block! (by the truth table) */
-            if (has_been_called == 0) {
+            if (gvec_elem[eb_indx][ev_indx - 1] == NULL) {
               /* NOTE: this final array dim is only to be malloc'd once; when a user
                  is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                  and hence create_truth_table, which would realloc this dim of gvec_elem.
                  this test will prevent that. - RRL */
               asdv(&gvec_elem[eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
-              has_been_called++;
             }
           }
         }
@@ -1165,17 +1163,17 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
            */
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
-          if (has_been_called == 0) {
+          if (gvec_elem[eb_indx][ev_indx - 1] == NULL) {
             asdv(&gvec_elem[eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
           }
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
-          if (has_been_called == 0) {
+          if (gvec_elem[eb_indx][ev_indx - 1] == NULL) {
             asdv(&gvec_elem[eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
           }
           exo->elem_var_tab[i++] = 1;
           ev_indx++;
-          if (has_been_called == 0) {
+          if (gvec_elem[eb_indx][ev_indx - 1] == NULL) {
             asdv(&gvec_elem[eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
           }
         }
@@ -1212,6 +1210,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
   i = 0;
   free(exo->elem_var_tab);
   exo->elem_var_tab = (int *)smalloc((exo->num_elem_blocks * total_nev) * sizeof(int));
+  free(exo->truth_table_existance_key);
   exo->truth_table_existance_key = (int *)smalloc((V_LAST - V_FIRST) * sizeof(int));
 
   for (i = 0; i < V_LAST - V_FIRST; i++) {
@@ -1359,7 +1358,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
             ev_indx++;
             /* malloc the entry for this block by number of elems for this block
                but - only if the variable exists for this block! (by the truth table) */
-            if (has_been_called == 0) {
+            if (gvec_elem[pg->imtrx][eb_indx][ev_indx - 1] == NULL) {
               /* NOTE: this final array dim is only to be malloc'd once; when a user
                  is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                  and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1376,7 +1375,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
               /* malloc the entry for this block by number of elems for this block
                  but - only if the variable exists for this block! (by the truth table) */
 
-              if (has_been_called == 0) {
+              if (gvec_elem[pg->imtrx][eb_indx][ev_indx - 1] == NULL) {
                 /* NOTE: this final array dim is only to be malloc'd once; when a user
                    is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                    and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1402,7 +1401,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
         ev_indx++;
         /* malloc the entry for this block by number of elems for this block
            but - only if the variable exists for this block! (by the truth table) */
-        if (has_been_called == 0) {
+        if (gvec_elem[pg->imtrx][eb_indx][ev_indx - 1] == NULL) {
           /* NOTE: this final array dim is only to be malloc'd once; when a user
              is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
              and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1414,7 +1413,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
              but - only if the variable exists for this block! (by the truth table) */
-          if (has_been_called == 0) {
+          if (gvec_elem[pg->imtrx][eb_indx][ev_indx - 1] == NULL) {
             /* NOTE: this final array dim is only to be malloc'd once; when a user
                is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1429,7 +1428,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
         ev_indx++;
         /* malloc the entry for this block by number of elems for this block
            but - only if the variable exists for this block! (by the truth table) */
-        if (has_been_called == 0) {
+        if (gvec_elem[pg->imtrx][eb_indx][ev_indx - 1] == NULL) {
           /* NOTE: this final array dim is only to be malloc'd once; when a user
              is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
              and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1441,7 +1440,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
              but - only if the variable exists for this block! (by the truth table) */
-          if (has_been_called == 0) {
+          if (gvec_elem[pg->imtrx][eb_indx][ev_indx - 1] == NULL) {
             /* NOTE: this final array dim is only to be malloc'd once; when a user
                is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1463,7 +1462,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
         ev_indx++;
         /* malloc the entry for this block by number of elems for this block
            but - only if the variable exists for this block! (by the truth table) */
-        if (has_been_called == 0) {
+        if (gvec_elem[pg->imtrx][eb_indx][ev_indx - 1] == NULL) {
           /* NOTE: this final array dim is only to be malloc'd once; when a user
              is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
              and hence create_truth_table, which would realloc this dim of gvec_elem.
@@ -1475,13 +1474,12 @@ void create_truth_table_segregated(struct Results_Description **rd,
           ev_indx++;
           /* malloc the entry for this block by number of elems for this block
              but - only if the variable exists for this block! (by the truth table) */
-          if (has_been_called == 0) {
+          if (gvec_elem[pg->imtrx][eb_indx][ev_indx - 1] == NULL) {
             /* NOTE: this final array dim is only to be malloc'd once; when a user
                is annealing the mesh, anneal mesh calls wr_result_prelim_exo again,
                and hence create_truth_table, which would realloc this dim of gvec_elem.
                this test will prevent that. - RRL */
             asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
-            has_been_called++;
           }
         }
       }
@@ -1496,17 +1494,17 @@ void create_truth_table_segregated(struct Results_Description **rd,
          */
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
-        if (has_been_called == 0) {
+        if (gvec_elem[pg->imtrx][eb_indx][ev_indx - 1] == NULL) {
           asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
         }
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
-        if (has_been_called == 0) {
+        if (gvec_elem[pg->imtrx][eb_indx][ev_indx - 1] == NULL) {
           asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
         }
         exo->elem_var_tab[i++] = 1;
         ev_indx++;
-        if (has_been_called == 0) {
+        if (gvec_elem[pg->imtrx][eb_indx][ev_indx - 1] == NULL) {
           asdv(&gvec_elem[pg->imtrx][eb_indx][ev_indx - 1], exo->eb_num_elems[eb_indx]);
         }
       }

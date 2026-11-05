@@ -346,7 +346,7 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
   int num_blk_nodes = exo->eb_num_nodes_per_elem[ipix_blkid] * exo->eb_num_elems[ipix_blkid];
 
   trilinos_solve_ls(bf_mat, j_map, f_rhs, x_fit, Atranspose_f_rhs, txt_num_pts,
-                    exo->eb_num_nodes_per_elem[ipix_blkid], num_blk_nodes, 1);
+                    exo->eb_num_nodes_per_elem[ipix_blkid], num_blk_nodes);
 #else
   GOMA_EH(GOMA_ERROR, "Not built with Aztec/Amesos support, cannot use rd_image_to_mesh");
 #endif
@@ -461,8 +461,21 @@ int rd_image_to_mesh(int N_ext, Exo_DB *exo) {
   /* Now you can clean things up */
   err = ex_close(exoin);
 
+  for (i = 0; i < pixsize[0]; i++) {
+    for (j = 0; j < pixsize[1]; j++) {
+      safe_free(pixdata[i][j]);
+    }
+    safe_free(pixdata[i]);
+  }
   safe_free(pixdata);
+  for (ielem = 0; ielem < exo->num_elems; ielem++) {
+    safe_free(elmctrs[ielem]);
+  }
   safe_free(elmctrs);
+  for (i = 0; i < txt_num_pts; i++) {
+    safe_free(xyz_data[i]);
+    safe_free(xi_data[i]);
+  }
   safe_free(xyz_data);
   safe_free(f_data);
   safe_free(ElemID_data);

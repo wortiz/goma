@@ -1804,6 +1804,7 @@ void init_exo_struct(Exo_DB *x) {
 
   x->base_mesh = NULL;
   x->elem_var_tab = NULL;
+  x->truth_table_existance_key = NULL;
   /*
    * Let this value indicate that the structure in memory is not currently
    * attached to any open netCDF file. Once open, this will become >-1.

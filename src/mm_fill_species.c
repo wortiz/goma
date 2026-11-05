@@ -7947,6 +7947,7 @@ void compute_leak_velocity(double *vnorm,
     } /* end of if Assemble Jacobian */
   }
   *vnorm = vnormal;
+  propertyJac_destroy(&densityJac);
 }
 /*****************************************************************************/
 /*****************************************************************************/

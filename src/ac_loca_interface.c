@@ -1165,14 +1165,15 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   for (i = 0; i < MAX_NUMBER_MATLS; i++) {
     for (n = 0; n < MAX_MODES; n++) {
       safer_free((void **)&(ve_glob[i][n]->gn));
+      safer_free((void **)&(ve_glob[i][n]->time_const_st));
       safer_free((void **)&(ve_glob[i][n]));
     }
     safer_free((void **)&(vn_glob[i]));
   }
 
   safer_free((void **)&gvec_elem);
-  safer_free((void **)&Local_Offset);
-  safer_free((void **)&Dolphin);
+  free_local_nodal_vars();
+  safer_free((void **)&ija_attic);
 
   safer_free((void **)&passdown.sv_index);
   safer_free((void **)&passdown.sv_count);
@@ -3024,17 +3025,6 @@ void solution_output_conwrap(int num_soln_flag,
     step_print += cont->print_freq;
   }
 
-  /*
-   * Allocate the saved coordinate and displacement fields.
-   */
-  saved_xyz = (double **)calloc(passdown.exo->num_dim, sizeof(double *));
-  saved_displacement = (double **)calloc(passdown.exo->num_dim, sizeof(double *));
-
-  for (p = 0; p < passdown.exo->num_dim; p++) {
-    saved_xyz[p] = (double *)calloc(passdown.exo->num_nodes, sizeof(double));
-    saved_displacement[p] = (double *)calloc(passdown.exo->num_nodes, sizeof(double));
-  }
-
   if (i_print) {
     error = write_ascii_soln(x, passdown.resid_vector, NumUnknowns[pg->imtrx], passdown.x_AC, nAC,
                              param1, passdown.file);
@@ -3072,6 +3062,20 @@ void solution_output_conwrap(int num_soln_flag,
 #ifdef GOMA_ENABLE_ARPACK
 
   /* Decide if eigenvalues will be calculated on this step */
+  if (con->eigen_info.Num_Eigenvalues < 1)
+    return;
+
+  /*
+   * Allocate the saved coordinate and displacement fields.
+   */
+  saved_xyz = (double **)calloc(passdown.exo->num_dim, sizeof(double *));
+  saved_displacement = (double **)calloc(passdown.exo->num_dim, sizeof(double *));
+
+  for (p = 0; p < passdown.exo->num_dim; p++) {
+    saved_xyz[p] = (double *)calloc(passdown.exo->num_nodes, sizeof(double));
+    saved_displacement[p] = (double *)calloc(passdown.exo->num_nodes, sizeof(double));
+  }
+
   i_print = FALSE;
   if (freq > 0 && nt % freq == 0)
     i_print = TRUE;
@@ -3121,7 +3125,6 @@ void solution_output_conwrap(int num_soln_flag,
     /* Now reset LSA_flag */
     passdown.LSA_flag = FALSE;
   }
-#endif
 
   /*
    * Free up memories
@@ -3133,6 +3136,7 @@ void solution_output_conwrap(int num_soln_flag,
   }
   safer_free((void **)&saved_xyz);
   safer_free((void **)&saved_displacement);
+#endif
 }
 /*****************************************************************************/
 /*****************************************************************************/

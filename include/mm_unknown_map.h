@@ -35,6 +35,8 @@ extern void setup_external_nodal_vars(Exo_DB *, /* exo - ptr to FE EXODUS II dat
                                       Dpi *,    /* dpi - ptr to parallel info                */
                                       Comm_Ex **);
 
+extern void free_local_nodal_vars(void);
+
 extern int find_MaxUnknownNode(void);
 
 extern void print_vars_at_nodes(void);

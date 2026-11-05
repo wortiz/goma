@@ -304,6 +304,9 @@ void free_nodes(void)
     free(node_ptr->First_Unknown);
     free(node_ptr->Nodal_Vars_Info);
     free(node_ptr->DBC);
+    if (node_ptr->Resid_Wksp) {
+      nodal_resid_wksp_destroy(&(node_ptr->Resid_Wksp));
+    }
   }
   /*
    *  free_umi_list(&(node_ptr->Element_List));

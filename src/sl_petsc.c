@@ -1819,6 +1819,39 @@ goma_error goma_petsc_free_matrix(struct GomaLinearSolverData *ams) {
   CHKERRQ(err);
   err = KSPDestroy(&matrix_data->ksp);
   CHKERRQ(err);
+  err = MatDestroy(&matrix_data->SchurS);
+  CHKERRQ(err);
+
+  /* The shell PC inside ksp refers to these, so they go after it */
+  if (matrix_data->pcd_data != NULL) {
+    PetscPCDData *pcd_data = matrix_data->pcd_data;
+    err = KSPDestroy(&pcd_data->ksp_Ap);
+    CHKERRQ(err);
+    err = KSPDestroy(&pcd_data->ksp_Mp);
+    CHKERRQ(err);
+    err = KSPDestroy(&pcd_data->ksp_Mp_mu);
+    CHKERRQ(err);
+    err = MatDestroy(&pcd_data->Ap);
+    CHKERRQ(err);
+    err = MatDestroy(&pcd_data->Mp);
+    CHKERRQ(err);
+    err = MatDestroy(&pcd_data->Mp_mu);
+    CHKERRQ(err);
+    err = MatDestroy(&pcd_data->Fp);
+    CHKERRQ(err);
+    err = PetscFree(matrix_data->pcd_data);
+    CHKERRQ(err);
+  }
+
+  err = PetscFree(matrix_data->pcd_ss_remove);
+  CHKERRQ(err);
+  err = PetscFree(matrix_data->pcd_ns_remove);
+  CHKERRQ(err);
+
+  free(matrix_data->local_to_global);
+  free(matrix_data->schur_s_local_to_global);
+  free(matrix_data);
+  ams->PetscMatrixData = NULL;
 
   return GOMA_SUCCESS;
 }

@@ -69,14 +69,6 @@ template <> struct std::hash<shared_elem> {
 };
 
 goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
-  MPI_Datatype shared_elem_mpi;
-  MPI_Type_contiguous(sizeof(shared_elem), MPI_BYTE, &shared_elem_mpi);
-  MPI_Type_commit(&shared_elem_mpi);
-
-  MPI_Datatype shared_node_mpi;
-  MPI_Type_contiguous(sizeof(shared_node), MPI_BYTE, &shared_node_mpi);
-  MPI_Type_commit(&shared_node_mpi);
-
   // setup num_nodes_per_elem
   std::vector<int> eb_num_nodes_per_elem(exo->num_elem_blocks);
   std::fill(eb_num_nodes_per_elem.begin(), eb_num_nodes_per_elem.end(), 0);

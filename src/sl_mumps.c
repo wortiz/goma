@@ -12,6 +12,7 @@
 #include "sl_util_structs.h"
 #include "std.h"
 #include <mpi.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 #define JOB_END                     -2
@@ -45,12 +46,17 @@ struct MUMPS_data {
   int *colgids;
   int *row_offsets;
   int *row_counts;
+  bool initialized;
 };
 
 void free_solver_data(struct GomaLinearSolverData *data) {
   if (data->SolverData != NULL) {
     struct MUMPS_data *mumps_data = (struct MUMPS_data *)data->SolverData;
     if (mumps_data != NULL) {
+      if (mumps_data->initialized) {
+        mumps_data->mumps.job = JOB_END;
+        dmumps_c(&mumps_data->mumps);
+      }
       free(mumps_data->irhs_loc);
       free(mumps_data->irn);
       free(mumps_data->jcn);
@@ -264,6 +270,7 @@ static goma_error mumps_initial_setup(struct GomaLinearSolverData *data, dbl *x,
     free_solver_data(data);
     return err;
   }
+  mumps_data->initialized = true;
 
   mumps_set_matrix_structure(data, mumps);
 

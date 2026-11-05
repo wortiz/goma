@@ -3077,7 +3077,9 @@ void rd_levelset_specs(FILE *ifp, char *input) {
 #endif
       }
 
-      lsi = alloc_struct_1(struct Level_Set_Interface, 1);
+      if (lsi == NULL) {
+        lsi = alloc_struct_1(struct Level_Set_Interface, 1);
+      }
 
       ECHO("\n***Phase Function Section***\n", echo_file);
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of phase functions",

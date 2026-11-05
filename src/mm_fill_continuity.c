@@ -3074,5 +3074,7 @@ int assemble_PPPS_generalized(Exo_DB *exo)
     }
   }
 
+  safe_free(A);
+
   return (1);
 }

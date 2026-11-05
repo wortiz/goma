@@ -4460,6 +4460,7 @@ int Generalized_FV_Diffusivity(int species_no) /* current species number*/
   }
   mp->diffusivity[species_no] = 0.;
 
+  propertyJac_destroy(&densityJac);
   return (0);
 
 } /* End of Generalized_FV_Diffusivity */

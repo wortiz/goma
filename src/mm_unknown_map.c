@@ -496,6 +496,26 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
 /****************************************************************************/
 /****************************************************************************/
 
+void free_local_nodal_vars(void)
+
+/*
+ * Free the Dolphin and Local_Offset maps built by setup_local_nodal_vars().
+ */
+{
+  int total_nodes = Num_Internal_Nodes + Num_Border_Nodes + Num_External_Nodes;
+
+  for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (int i = 0; i < total_nodes; i++) {
+      free(Local_Offset[imtrx][i]);
+      free(Dolphin[imtrx][i]);
+    }
+    free(Local_Offset[imtrx]);
+    free(Dolphin[imtrx]);
+  }
+  safer_free((void **)&Local_Offset);
+  safer_free((void **)&Dolphin);
+}
+
 void print_vars_at_nodes(void)
 
 /************************************************************************

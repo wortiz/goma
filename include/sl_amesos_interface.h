@@ -30,6 +30,7 @@
 /* Use this version when Amesos is linked in through Trilinos */
 #ifdef TRILINOS
 EXTERN void amesos_solve(char *, struct GomaLinearSolverData *, double *, double *, int, int);
+EXTERN void amesos_free_solvers(void);
 EXTERN int amesos_solve_epetra(
     char *choice, struct GomaLinearSolverData *ams, double *x_, double *resid_vector, int imtrx);
 
@@ -40,8 +41,7 @@ EXTERN void trilinos_solve_ls(double *bf_mat_,
                               double *Atranspose_f_,
                               int txt_num_pts,
                               int nnz_per_row,
-                              int num_cols,
-                              int NewMatrix);
+                              int num_cols);
 #endif
 
 EXTERN void *construct_Epetra_CrsMatrix(struct GomaLinearSolverData *);

@@ -444,6 +444,7 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
     AZ_MATRIX *Amat = AZ_matrix_create(ams->data_org[AZ_N_internal] + ams->data_org[AZ_N_border]);
     AZ_set_MSR(Amat, ams->bindx, ams->val, ams->data_org, 0, NULL, AZ_LOCAL);
     AZ_MSR_matvec_mult(delta_x, w, Amat, ams->proc_config);
+    AZ_matrix_destroy(&Amat);
   } else if (strcmp(Matrix_Format, "tpetra") == 0) {
     GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
     matrix->matrix_vector_mult(matrix, delta_x, w);

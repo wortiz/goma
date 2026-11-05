@@ -65,6 +65,16 @@
 #include "sl_util_structs.h"
 
 static void GomaMsr2EpetraCsr(struct GomaLinearSolverData *ams, Epetra_CrsMatrix *A, int newmatrix);
+
+static Amesos_BaseSolver *A_Base[MAX_NUM_MATRICES] = {nullptr};
+
+void amesos_free_solvers(void) {
+  for (int imtrx = 0; imtrx < MAX_NUM_MATRICES; imtrx++) {
+    delete A_Base[imtrx];
+    A_Base[imtrx] = nullptr;
+  }
+}
+
 void amesos_solve(char *choice,
                   struct GomaLinearSolverData *ams,
                   double *x_,
@@ -82,7 +92,6 @@ void amesos_solve(char *choice,
   static std::string Pkg_Name;
   static Epetra_CrsMatrix *A[MAX_NUM_MATRICES]{nullptr};
   static Epetra_LinearProblem Problem[MAX_NUM_MATRICES];
-  static Amesos_BaseSolver *A_Base[MAX_NUM_MATRICES] = {nullptr};
   Amesos A_Factory;
 
   /* Convert to Epetra format */

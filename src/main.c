@@ -76,6 +76,7 @@ extern void handle_ieee(void);
 #include "rf_solve_segregated.h"
 #include "rf_solver.h"
 #include "rf_solver_const.h"
+#include "sl_amesos_interface.h"
 #include "std.h"
 #include "wr_dpi.h"
 #include "wr_exo.h"
@@ -964,6 +965,10 @@ int main(int argc, char **argv)
     unlerr = unlink(front_scratch_directory);
     GOMA_WH(unlerr, "Unlink problem with front scratch file");
   }
+
+#if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
+  amesos_free_solvers();
+#endif
 
 #ifdef PARALLEL
   total_time = (MPI_Wtime() - time_start) / 60.;

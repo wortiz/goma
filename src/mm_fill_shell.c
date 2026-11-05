@@ -2630,6 +2630,7 @@ int assemble_shell_geometry(double time_value, /* Time */
 
   /* Clean up */
   safe_free((void *)n_dof);
+  safe_free((void *)dof_map);
 
   return (0);
 } /* assemble_shell_geometry() */

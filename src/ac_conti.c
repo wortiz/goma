@@ -51,6 +51,7 @@
 #include "mm_post_def.h"
 #include "mm_post_proc.h"
 #include "mm_sol_nonlinear.h"
+#include "mm_unknown_map.h"
 #include "mpi.h"
 #include "rf_allo.h"
 #include "rf_bc.h"
@@ -1306,6 +1307,7 @@ free_and_clear:
   for (i = 0; i < MAX_NUMBER_MATLS; i++) {
     for (n = 0; n < MAX_MODES; n++) {
       safer_free((void **)&(ve_glob[i][n]->gn));
+      safer_free((void **)&(ve_glob[i][n]->time_const_st));
       safer_free((void **)&(ve_glob[i][n]));
     }
     safer_free((void **)&(vn_glob[i]));
@@ -1333,15 +1335,8 @@ free_and_clear:
     safer_free((void **)&cpcc);
 
   safer_free((void **)&rd);
-  for (int i = 0; i < num_total_nodes; i++) {
-    free(Local_Offset[0][i]);
-    free(Dolphin[0][i]);
-  }
-  free(Dolphin[0]);
-  free(Local_Offset[0]);
-
-  safer_free((void **)&Local_Offset);
-  safer_free((void **)&Dolphin);
+  free_local_nodal_vars();
+  safer_free((void **)&ija_attic);
 
   safer_free((void **)&ija_attic);
   safer_free((void **)&pg->matrices);
