@@ -275,6 +275,7 @@ static double jacobian_metric(Exo_DB *exo, double *x, int *proc_config) {
   }
   eqavg = eqsum / els;
   eqm->eq_jac = eqmin;
+  safer_free((void **)&xy);
   return eqavg;
 } /* End of function jacobian_metric */
 

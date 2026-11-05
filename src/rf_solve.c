@@ -2998,6 +2998,7 @@ int anneal_mesh(double x[],
 
   if (!displacement_somewhere) {
     GOMA_WH(-1, "Attempt to anneal w/ no active displacement eqn anywhere!");
+    safer_free((void **)&x_file);
     return (0);
   }
 
@@ -3128,6 +3129,12 @@ int anneal_mesh(double x[],
 
   if ((tev + tev_post) != 0) {
     gvec_elem = (double ***)array_alloc(2, exo->num_elem_blocks, tev + tev_post, sizeof(double *));
+    /* create_truth_table() fills in the slots that are still NULL */
+    for (i = 0; i < exo->num_elem_blocks; i++) {
+      for (j = 0; j < tev + tev_post; j++) {
+        gvec_elem[i][j] = NULL;
+      }
+    }
   } else {
     gvec_elem = NULL;
   }
@@ -3199,6 +3206,13 @@ int anneal_mesh(double x[],
   safer_free((void **)&nodal_result_vector);
   safer_free((void **)&x_file);
   safer_free((void **)&moved);
+  if (gvec_elem != NULL) {
+    for (i = 0; i < exo->num_elem_blocks; i++) {
+      for (j = 0; j < tev + tev_post; j++) {
+        safer_free((void **)&(gvec_elem[i][j]));
+      }
+    }
+  }
   safer_free((void **)&gvec_elem);
 
   return (0);

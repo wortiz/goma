@@ -2610,6 +2610,7 @@ free_and_clear:
     free(xdot_old[pg->imtrx]);
     free(xdot_older[pg->imtrx]);
     free(x_pred[pg->imtrx]);
+    free(x_prev[pg->imtrx]);
     free(delta_x[pg->imtrx]);
     free(x_previous[pg->imtrx]);
     free(x_update[pg->imtrx]);
@@ -2623,6 +2624,7 @@ free_and_clear:
   free(xdot_old);
   free(xdot_older);
   free(x_pred);
+  free(x_prev);
   free(delta_x);
   free(x_previous);
   free(x_update);

@@ -1399,21 +1399,8 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
         /* This particle won't get redone because it's p->time is used. */
         remove_from_element_particle_list(p, el_index);
         create_a_particle(p, p->owning_elem_id);
+        free(p);
         num_particles--; /* This isn't really a new particle... */
-      }
-
-      if (p->state == ACTIVE) {
-        /*
-        output_start_ust = ust();
-        if(TimeIntegration == STEADY)
-          {
-            if(p->time == global_end_time)
-              output_a_particle(p, p->time_old, p->time, n, 1, 0);
-          }
-        else
-          output_a_particle(p, p->time_old, p->time, n, (int)(p->time == global_end_time), 0);
-        output_accum_ust += max(ust() - output_start_ust, 0.0);
-        */
       }
 
       p = p_tmp;
@@ -4887,6 +4874,7 @@ static void couple_to_continuum(void) {
     free(num_ghost_particles_to_recv);
     free(num_ghost_particles_copied);
     free(ghost_particles_to_send);
+    free(num_particles_in_elem);
   }
 #endif
 }
