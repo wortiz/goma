@@ -96,6 +96,8 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 #define HS_FILM_CAST_VISC_DISS  28
 #define MMS_VANS_MODEL_A        29
 #define MMS_VANS_MODEL_B        30
+#define MMS_VANS2_MODEL_A       31 /* VANS MMS with div(u) != 0 */
+#define MMS_VANS2_MODEL_B       32
 
 /* MMH */
 /* #define  SUSPENSION_PM xxx Defiend below. */

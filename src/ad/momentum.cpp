@@ -627,6 +627,218 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
     GOMA_EH(-1, "BINGHAM_MIXED not enabled for AD fluid stress");
   }
 }
+/*
+ * VANS method of manufactured solutions (MMS) helpers.
+ *
+ * Forcing terms are generated with example_vans/mms_vans.py (Model A: div(eps T),
+ * Model B: div(T)) on the domain [-1,1]^2 where u = 0 and p = 0 on the boundary.
+ *
+ * Case 1 (MMS_VANS_A/B): div(u) = 0 and u.grad(eps) = 0
+ *   u   = (-2 sin^2(pi x) sin(pi y) cos(pi y), 2 sin(pi x) cos(pi x) sin^2(pi y))
+ *   p   = sin(pi x) sin(pi y)
+ *   eps = 1/2 + 1/4 sin(pi x) sin(pi y)
+ *
+ * Case 2 (MMS_VANS2_A/B): div(eps u) = 0 but div(u) != 0, exercising the dilational
+ * stress and the u.grad(eps) continuity term
+ *   u   = (-2 sin^2(pi x) sin(pi y) cos(pi y), 2 sin(pi x) cos(pi x) sin^2(pi y)) / eps
+ *   p   = sin(pi x) sin(pi y)
+ *   eps = 1/2 + 1/4 sin(pi x / 2) sin(pi y / 2)
+ */
+static int ad_mms_vans_case(int model) {
+  switch (model) {
+  case MMS_VANS_MODEL_A:
+  case MMS_VANS_MODEL_B:
+    return 1;
+  case MMS_VANS2_MODEL_A:
+  case MMS_VANS2_MODEL_B:
+    return 2;
+  default:
+    return 0;
+  }
+}
+
+static int ad_mms_vans_is_model_a(int model) {
+  return model == MMS_VANS_MODEL_A || model == MMS_VANS2_MODEL_A;
+}
+
+static ADType ad_mms_vans_eps(int mms_case, const ADType &x, const ADType &y) {
+  if (mms_case == 1) {
+    return 0.5 + 0.25 * sin(M_PI * x) * sin(M_PI * y);
+  }
+  return 0.5 + 0.25 * sin(M_PI * x / 2.0) * sin(M_PI * y / 2.0);
+}
+
+/* exact velocity and pressure for the VANS manufactured solutions */
+static void
+ad_mms_vans_exact(int mms_case, const ADType &x, const ADType &y, ADType u[2], ADType &p) {
+  u[0] = -2.0 * pow(sin(M_PI * x), 2) * sin(M_PI * y) * cos(M_PI * y);
+  u[1] = 2.0 * sin(M_PI * x) * cos(M_PI * x) * pow(sin(M_PI * y), 2);
+  if (mms_case == 2) {
+    ADType eps = ad_mms_vans_eps(mms_case, x, y);
+    u[0] /= eps;
+    u[1] /= eps;
+  }
+  p = sin(M_PI * x) * sin(M_PI * y);
+}
+
+static void ad_mms_vans1_forcing(const ADType &x,
+                                 const ADType &y,
+                                 const ADType &rho,
+                                 const ADType &mu,
+                                 int model_a,
+                                 ADType f[DIM]) {
+  if (model_a) {
+    f[0] =
+        M_PI * (-6.0 * M_PI * mu * pow(sin(M_PI * x), 3) * pow(sin(M_PI * y), 2) * cos(M_PI * y) +
+                0.5 * M_PI * mu * pow(sin(M_PI * x), 3) * cos(M_PI * y) -
+                8.0 * M_PI * mu * pow(sin(M_PI * x), 2) * sin(M_PI * y) * cos(M_PI * y) +
+                2.5 * M_PI * mu * sin(M_PI * x) * pow(sin(M_PI * y), 2) * cos(M_PI * y) +
+                2.0 * M_PI * mu * sin(M_PI * y) * cos(M_PI * y) +
+                1.0 * rho * pow(sin(M_PI * x), 4) * pow(sin(M_PI * y), 3) * cos(M_PI * x) +
+                2.0 * rho * pow(sin(M_PI * x), 3) * pow(sin(M_PI * y), 2) * cos(M_PI * x) +
+                0.5 * sin(M_PI * x) * pow(sin(M_PI * y), 2) * cos(M_PI * x) +
+                0.5 * sin(M_PI * y) * cos(M_PI * x));
+    f[1] = M_PI * (6.0 * M_PI * mu * pow(sin(M_PI * x), 2) * pow(sin(M_PI * y), 3) * cos(M_PI * x) -
+                   2.5 * M_PI * mu * pow(sin(M_PI * x), 2) * sin(M_PI * y) * cos(M_PI * x) +
+                   8.0 * M_PI * mu * sin(M_PI * x) * pow(sin(M_PI * y), 2) * cos(M_PI * x) -
+                   2.0 * M_PI * mu * sin(M_PI * x) * cos(M_PI * x) -
+                   0.5 * M_PI * mu * pow(sin(M_PI * y), 3) * cos(M_PI * x) +
+                   1.0 * rho * pow(sin(M_PI * x), 3) * pow(sin(M_PI * y), 4) * cos(M_PI * y) +
+                   2.0 * rho * pow(sin(M_PI * x), 2) * pow(sin(M_PI * y), 3) * cos(M_PI * y) +
+                   0.5 * pow(sin(M_PI * x), 2) * sin(M_PI * y) * cos(M_PI * y) +
+                   0.5 * sin(M_PI * x) * cos(M_PI * y));
+  } else {
+    f[0] =
+        M_PI *
+        (-16.0 * M_PI * mu * pow(sin(M_PI * x), 2) * cos(M_PI * y) +
+         4.0 * M_PI * mu * cos(M_PI * y) +
+         1.0 * rho * pow(sin(M_PI * x), 4) * pow(sin(M_PI * y), 2) * cos(M_PI * x) +
+         2.0 * rho * pow(sin(M_PI * x), 3) * sin(M_PI * y) * cos(M_PI * x) + 1.0 * cos(M_PI * x)) *
+        sin(M_PI * y);
+    f[1] =
+        M_PI *
+        (16.0 * M_PI * mu * pow(sin(M_PI * y), 2) * cos(M_PI * x) -
+         4.0 * M_PI * mu * cos(M_PI * x) +
+         1.0 * rho * pow(sin(M_PI * x), 2) * pow(sin(M_PI * y), 4) * cos(M_PI * y) +
+         2.0 * rho * sin(M_PI * x) * pow(sin(M_PI * y), 3) * cos(M_PI * y) + 1.0 * cos(M_PI * y)) *
+        sin(M_PI * x);
+  }
+}
+
+static void ad_mms_vans2_forcing(const ADType &x,
+                                 const ADType &y,
+                                 const ADType &rho,
+                                 const ADType &mu,
+                                 int model_a,
+                                 ADType f[DIM]) {
+  const ADType t0 = M_PI * y;
+  const ADType t1 = cos(t0);
+  const ADType t2 = pow(t1, 2);
+  const ADType t3 = M_PI * x;
+  const ADType t4 = cos(t3);
+  const ADType t5 = 4 * t4;
+  const ADType t6 = sin(t3);
+  const ADType t7 = (1.0 / 2.0) * t0;
+  const ADType t8 = sin(t7);
+  const ADType t9 = (1.0 / 2.0) * t3;
+  const ADType t10 = cos(t9);
+  const ADType t11 = sin(t9);
+  const ADType t12 = t11 * t8;
+  const ADType t13 = t12 + 2;
+  const ADType t14 = 1.0 / t13;
+  const ADType t15 = -t10 * t14 * t6 * t8 + t5;
+  const ADType t16 = -t15;
+  const ADType t17 = sin(t0);
+  const ADType t18 = pow(t17, 2);
+  const ADType t19 = 2 * t18;
+  const ADType t20 = 2 * t2;
+  const ADType t21 = t1 * t17;
+  const ADType t22 = cos(t7);
+  const ADType t23 = t11 * t22;
+  const ADType t24 = t14 * t23;
+  const ADType t25 = t21 * t24;
+  const ADType t26 = t4 * (t19 - t20 + t25);
+  const ADType t27 = 8 * t18;
+  const ADType t28 = rho * t14;
+  const ADType t29 = t27 * t28 * pow(t6, 3);
+  const ADType t30 = pow(t6, 2);
+  const ADType t31 = t20 * t30;
+  const ADType t32 = pow(t4, 2);
+  const ADType t33 = t19 * t32;
+  const ADType t34 = t10 * t8;
+  const ADType t35 = t14 * t6;
+  const ADType t36 = t34 * t35 * t4;
+  const ADType t37 = M_PI * mu;
+  const ADType t38 = (1.0 / 2.0) * t37;
+  const ADType t39 = t38 * (t18 * t36 - t25 * t30 + t31 - t33);
+  const ADType t40 = t14 * t37;
+  const ADType t41 = t1 * t40;
+  const ADType t42 = t17 * t4;
+  const ADType t43 = pow(t13, -2);
+  const ADType t44 = t37 * t43;
+  const ADType t45 = 8 * t44 * (t1 * t10 * t6 * t8 - t23 * t42) + 3;
+  const ADType t46 = t34 * t6;
+  const ADType t47 = 8 * t30;
+  const ADType t48 = 8 * t32;
+  const ADType t49 = t24 * t30;
+  const ADType t50 = t12 * t30;
+  const ADType t51 = t14 * t50;
+  const ADType t52 = t10 * t22;
+  const ADType t53 = t1 * t6;
+  const ADType t54 = 2 * t30;
+  const ADType t55 = t43 * t54;
+  const ADType t56 = pow(t11, 2) * pow(t22, 2);
+  const ADType t57 = t4 * t6;
+  const ADType t58 = t19 * t43;
+  const ADType t59 = t57 * t58;
+  const ADType t60 = -t12 * t52 * t59 + t14 * t17 * t34 * t5 * t53 + t18 * t35 * t4 * t52 +
+                     t19 * t49 - 4 * t2 * t49 - t21 * t47 - t21 * t48 + t21 * t51 +
+                     t21 * t55 * t56 + t24 * t33;
+  const ADType t61 = pow(t10, 2) * pow(t8, 2);
+  const ADType t62 = -8 * t10 * t14 * t4 * t6 * t8 - 8 * t30 + t48 + t51 + t55 * t61;
+  const ADType t63 = 2 * t32;
+  const ADType t64 = t17 * t23;
+  const ADType t65 = -4 * t1 * t10 * t4 * t6 * t8 + t1 * t14 * t54 * t61 + t1 * t50 -
+                     2 * t10 * t11 * t14 * t17 * t22 * t4 * t6 * t8 - 2 * t11 * t17 * t22 * t30 +
+                     t42 * t52 * t6 + t63 * t64;
+  const ADType t66 = 4 * t44;
+  const ADType t67 = (1.0 / 12.0) * t13;
+  const ADType t68 = 4 * t1;
+  const ADType t69 = t14 * t64;
+  const ADType t70 = t68 - t69;
+  const ADType t71 = pow(t17, 3) * t28 * t47 * (t1 * (t36 + t54 - t63) + t32 * t70);
+  const ADType t72 = t14 * t34;
+  const ADType t73 = t4 * t40;
+  const ADType t74 = 8 * t2;
+  const ADType t75 = t12 * t18;
+  const ADType t76 = t4 * t75;
+  const ADType t77 = t21 * t52;
+  const ADType t78 = -t12 * t55 * t77 + t14 * t30 * t77 - 4 * t18 * t32 * t72 + t19 * t30 * t72 -
+                     t27 * t57 + t31 * t72 + t35 * t76 + t5 * t53 * t69 - t57 * t74 + t59 * t61;
+  const ADType t79 = t14 * t75 - 8 * t25 - t27 + t56 * t58 + t74;
+  const ADType t80 = t17 * t52 * t53;
+  const ADType t81 = -2 * t12 * t14 * t80 + t14 * t19 * t4 * t56 - t19 * t46 + t20 * t46 -
+                     t21 * t23 * t5 + t76 + t80;
+  const ADType t82 = (4.0 / 3.0) * t44;
+  const ADType t83 = 2 * t40;
+  const ADType fA0 = M_PI * ((1.0 / 24.0) * t17 * t46 * (-24 * t16 * t41 + t45) +
+                             t17 * t67 * (3 * t4 + 12 * t41 * t62 - t65 * t66) + t24 * t39 -
+                             t29 * (t16 * t2 - t26) + t38 * t60);
+  const ADType fA1 =
+      M_PI * (-t38 * t78 + t39 * t72 + (1.0 / 24.0) * t6 * t64 * (t45 - 24 * t70 * t73) +
+              t6 * t67 * (3 * t1 + t66 * t81 - 12 * t73 * t79) + t71);
+  const ADType fB0 =
+      M_PI * (t17 * t40 * t62 * t68 - t17 * t65 * t82 + t29 * (t15 * t2 + t26) + t42 + t60 * t83);
+  const ADType fB1 = M_PI * (-t35 * t37 * t5 * t79 + t53 + t6 * t81 * t82 + t71 - t78 * t83);
+  if (model_a) {
+    f[0] = fA0;
+    f[1] = fA1;
+  } else {
+    f[0] = fB0;
+    f[1] = fB1;
+  }
+}
+
 /******************************************************************************
  * momentum_source_term(): Computes the body force term for the momentum balance.
  *
@@ -685,18 +897,12 @@ int ad_momentum_source_term(ADType f[DIM], /* Body force. */
     } else {
       GOMA_EH(GOMA_ERROR, "Unknown density model for variable density");
     }
-  } else if (mp->MomentumSourceModel == MMS_VANS_MODEL_A ||
-             mp->MomentumSourceModel == MMS_VANS_MODEL_B) {
-    /*
-     * Manufactured-solution forcing for VANS, generated with example_vans/mms_vans.py:
-     *   u   = (-2 sin^2(pi x) sin(pi y) cos(pi y), 2 sin(pi x) cos(pi x) sin^2(pi y))
-     *   p   = sin(pi x) sin(pi y)
-     *   eps = 1/2 + 1/4 sin(pi x) sin(pi y)
-     */
-    const int model_a = mp->MomentumSourceModel == MMS_VANS_MODEL_A;
+  } else if (ad_mms_vans_case(mp->MomentumSourceModel) > 0) {
+    const int mms_case = ad_mms_vans_case(mp->MomentumSourceModel);
+    const int model_a = ad_mms_vans_is_model_a(mp->MomentumSourceModel);
     if ((model_a && upd->vans_model != 1) || (!model_a && upd->vans_model != 2)) {
-      GOMA_EH(GOMA_ERROR, "MMS_VANS_%s Navier-Stokes Source requires Use VANS Model = %s",
-              model_a ? "A" : "B", model_a ? "A" : "B");
+      GOMA_EH(GOMA_ERROR, "MMS_VANS%s_%s Navier-Stokes Source requires Use VANS Model = %s",
+              mms_case == 2 ? "2" : "", model_a ? "A" : "B", model_a ? "A" : "B");
     }
     ADType x = ad_fv->x[0];
     ADType y = ad_fv->x[1];
@@ -712,42 +918,10 @@ int ad_momentum_source_term(ADType f[DIM], /* Body force. */
 
     ADType mu = ad_viscosity(gn, gamma);
 
-    if (model_a) {
-      f[0] =
-          M_PI * (-6.0 * M_PI * mu * pow(sin(M_PI * x), 3) * pow(sin(M_PI * y), 2) * cos(M_PI * y) +
-                  0.5 * M_PI * mu * pow(sin(M_PI * x), 3) * cos(M_PI * y) -
-                  8.0 * M_PI * mu * pow(sin(M_PI * x), 2) * sin(M_PI * y) * cos(M_PI * y) +
-                  2.5 * M_PI * mu * sin(M_PI * x) * pow(sin(M_PI * y), 2) * cos(M_PI * y) +
-                  2.0 * M_PI * mu * sin(M_PI * y) * cos(M_PI * y) +
-                  1.0 * rho * pow(sin(M_PI * x), 4) * pow(sin(M_PI * y), 3) * cos(M_PI * x) +
-                  2.0 * rho * pow(sin(M_PI * x), 3) * pow(sin(M_PI * y), 2) * cos(M_PI * x) +
-                  0.5 * sin(M_PI * x) * pow(sin(M_PI * y), 2) * cos(M_PI * x) +
-                  0.5 * sin(M_PI * y) * cos(M_PI * x));
-      f[1] =
-          M_PI * (6.0 * M_PI * mu * pow(sin(M_PI * x), 2) * pow(sin(M_PI * y), 3) * cos(M_PI * x) -
-                  2.5 * M_PI * mu * pow(sin(M_PI * x), 2) * sin(M_PI * y) * cos(M_PI * x) +
-                  8.0 * M_PI * mu * sin(M_PI * x) * pow(sin(M_PI * y), 2) * cos(M_PI * x) -
-                  2.0 * M_PI * mu * sin(M_PI * x) * cos(M_PI * x) -
-                  0.5 * M_PI * mu * pow(sin(M_PI * y), 3) * cos(M_PI * x) +
-                  1.0 * rho * pow(sin(M_PI * x), 3) * pow(sin(M_PI * y), 4) * cos(M_PI * y) +
-                  2.0 * rho * pow(sin(M_PI * x), 2) * pow(sin(M_PI * y), 3) * cos(M_PI * y) +
-                  0.5 * pow(sin(M_PI * x), 2) * sin(M_PI * y) * cos(M_PI * y) +
-                  0.5 * sin(M_PI * x) * cos(M_PI * y));
+    if (mms_case == 1) {
+      ad_mms_vans1_forcing(x, y, rho, mu, model_a, f);
     } else {
-      f[0] = M_PI *
-             (-16.0 * M_PI * mu * pow(sin(M_PI * x), 2) * cos(M_PI * y) +
-              4.0 * M_PI * mu * cos(M_PI * y) +
-              1.0 * rho * pow(sin(M_PI * x), 4) * pow(sin(M_PI * y), 2) * cos(M_PI * x) +
-              2.0 * rho * pow(sin(M_PI * x), 3) * sin(M_PI * y) * cos(M_PI * x) +
-              1.0 * cos(M_PI * x)) *
-             sin(M_PI * y);
-      f[1] = M_PI *
-             (16.0 * M_PI * mu * pow(sin(M_PI * y), 2) * cos(M_PI * x) -
-              4.0 * M_PI * mu * cos(M_PI * x) +
-              1.0 * rho * pow(sin(M_PI * x), 2) * pow(sin(M_PI * y), 4) * cos(M_PI * y) +
-              2.0 * rho * sin(M_PI * x) * pow(sin(M_PI * y), 3) * cos(M_PI * y) +
-              1.0 * cos(M_PI * y)) *
-             sin(M_PI * x);
+      ad_mms_vans2_forcing(x, y, rho, mu, model_a, f);
     }
     f[2] = 0;
   } else {
@@ -2138,8 +2312,7 @@ extern "C" int ad_assemble_momentum_vans(dbl time,       /* current time */
   ad_fluid_stress(Pi);
 
   ad_momentum_source_term(f, time);
-  const int mms_source =
-      (mp->MomentumSourceModel == MMS_VANS_MODEL_A || mp->MomentumSourceModel == MMS_VANS_MODEL_B);
+  const int mms_source = ad_mms_vans_case(mp->MomentumSourceModel) > 0;
 
   /* stress weighting: Model A uses div(eps T), Model B uses div(T) */
   ADType eps_stress = (upd->vans_model == 1) ? ad_fv->void_fraction : ADType(1.0);
@@ -2542,29 +2715,30 @@ extern "C" int ad_assemble_continuity_vans(dbl time_value, /* current time */
   return 0;
 }
 
-/* Dirichlet values for the VANS manufactured solution, see ad_momentum_source_term */
+/* Dirichlet values for the VANS manufactured solutions, see ad_mms_vans_exact */
 extern "C" void ad_mms_vans_uv_bc(double *func,
                                   double d_func[], /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
                                   int var,
                                   int id) {
-  ADType x = ad_fv->x[0];
-  ADType y = ad_fv->x[1];
-  ADType val;
+  const int mms_case = ad_mms_vans_case(mp->MomentumSourceModel);
+  if (mms_case == 0) {
+    GOMA_EH(GOMA_ERROR, "MMS_VANS_X/Y BC requires an MMS_VANS Navier-Stokes Source");
+  }
   int var_i = 0;
   switch (var) {
   case VELOCITY1:
     var_i = 0;
-    val = -2.0 * pow(sin(M_PI * x), 2) * sin(M_PI * y) * cos(M_PI * y);
     break;
   case VELOCITY2:
     var_i = 1;
-    val = 2.0 * sin(M_PI * x) * cos(M_PI * x) * pow(sin(M_PI * y), 2);
     break;
   default:
     GOMA_EH(GOMA_ERROR, "Unknown var in ad_mms_vans_uv_bc");
   }
 
-  val -= ad_fv->v[var_i];
+  ADType u[2], p;
+  ad_mms_vans_exact(mms_case, ad_fv->x[0], ad_fv->x[1], u, p);
+  ADType val = u[var_i] - ad_fv->v[var_i];
   *func = val.val();
 
   for (int v = V_FIRST; v < V_LAST; v++) {
@@ -2576,22 +2750,22 @@ extern "C" void ad_mms_vans_p_bc(double *func,
                                  double d_func[], /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
                                  int var,
                                  int id) {
-  ADType x = ad_fv->x[0];
-  ADType y = ad_fv->x[1];
-  ADType val;
-  switch (var) {
-  case PRESSURE:
-    val = sin(M_PI * x) * sin(M_PI * y);
-    break;
-  default:
+  const int mms_case = ad_mms_vans_case(mp->MomentumSourceModel);
+  if (mms_case == 0) {
+    GOMA_EH(GOMA_ERROR, "MMS_VANS_P BC requires an MMS_VANS Navier-Stokes Source");
+  }
+  if (var != PRESSURE) {
     GOMA_EH(GOMA_ERROR, "Unknown var in ad_mms_vans_p_bc");
   }
 
-  val -= ad_fv->P;
+  ADType u[2], p;
+  ad_mms_vans_exact(mms_case, ad_fv->x[0], ad_fv->x[1], u, p);
+  ADType val = p - ad_fv->P;
   *func = val.val();
 
   for (int v = V_FIRST; v < V_LAST; v++) {
     d_func[v] = val.dx(ad_fv->offset[v] + id);
   }
 }
+
 #endif // GOMA_ENABLE_SACADO
