@@ -630,7 +630,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
 /*
  * VANS method of manufactured solutions (MMS) helpers.
  *
- * Forcing terms are generated with example_vans/mms_vans.py (Model A: div(eps T),
+ * Forcing terms are generated with scripts/mms_vans.py (Model A: eps*div(T),
  * Model B: div(T)) on the domain [-1,1]^2 where u = 0 and p = 0 on the boundary.
  *
  * Case 1 (MMS_VANS_A/B): div(u) = 0 and u.grad(eps) = 0
