@@ -411,6 +411,7 @@ if(ENABLE_LAMMPS)
     # settings the coupler requires
     set(BUILD_MPI ON CACHE BOOL "Build MPI version" FORCE)
     set(PKG_GRANULAR ON CACHE BOOL "Build GRANULAR package" FORCE)
+    set(PKG_EXTRA-DUMP ON CACHE BOOL "Build EXTRA-DUMP package" FORCE)
     set(LAMMPS_SIZES smallbig CACHE STRING "LAMMPS integer sizes" FORCE)
     # Build LAMMPS as a static library without its unit tests. These option names are shared
     # with Goma, so override them with normal variables only for the LAMMPS subproject.
