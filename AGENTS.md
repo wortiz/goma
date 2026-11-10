@@ -18,9 +18,9 @@ When using the TPL installer, source its generated `config.sh` before
 configuring Goma.
 
 - `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=ON`: configure the solver and Catch2 tests.
-- `cmake --build build -j 2`: compile the configured targets.
+- `cmake --build build -j 8`: compile the configured targets.
 - `./build/goma -v`: verify the executable and inspect enabled features.
-- `ctest --test-dir build --output-on-failure -j 2`: run unit tests.
+- `ctest --test-dir build --output-on-failure -j 8`: run unit tests.
 - `CLANG_FORMAT=clang-format-21 scripts/run-clang-format.sh`: format C/C++ sources, headers, and tests in place; inspect the resulting diff.
 - `uv sync --locked`, then `uv run make -C docs github SPHINXOPTS="-W --keep-going -n"`: install documentation dependencies and build with strict checks.
 
