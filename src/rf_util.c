@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "bc_contact.h"
+#include "cfd_dem_coupling.h"
 #include "dp_comm.h"
 #include "dp_types.h"
 #include "dpi.h"
@@ -1947,6 +1948,12 @@ void init_vec(
        *           calling program instead of being read in from a file.
        *           This task is handled elsewhere for these cases.
        */
+      /* CFD-DEM coupler fields start at zero and are filled by cfd_dem_coupling.c */
+      else if (cfd_dem_is_coupler_field(efv->file_nm[w])) {
+        if (efv->ext_fld_ndl_val[w] == NULL)
+          efv->ext_fld_ndl_val[w] = alloc_dbl_1(exo->num_nodes, 0.0);
+      }
+
       else if (strcmp(efv->file_nm[w], "IMPORT") != 0 &&
                strcmp(efv->file_nm[w], "IMPORT_EV") != 0) {
         if (!efv->ipix[w]) {

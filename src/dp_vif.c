@@ -40,6 +40,7 @@
 
 #include "ac_particles.h"
 #include "ac_stability_util.h"
+#include "cfd_dem_coupling.h"
 #include "dp_types.h"
 #include "dp_utils.h"
 #include "dp_vif.h"
@@ -1044,6 +1045,18 @@ void noahs_ark(void) {
   ddd_add_member(n, &(upd->solver_info->cntl_user_set), 7, MPI_INT);
 
   ddd_add_member(n, &upd->n_mesh_corrections, 1, MPI_INT);
+  ddd_add_member(n, &upd->vans_model, 1, MPI_INT);
+
+  /* CFD-DEM coupling specifications */
+  ddd_add_member(n, &cfd_dem->enabled, 1, MPI_INT);
+  ddd_add_member(n, cfd_dem->lammps_input, MAX_FNL, MPI_CHAR);
+  ddd_add_member(n, &cfd_dem->dem_max_dt, 1, MPI_DOUBLE);
+  ddd_add_member(n, &cfd_dem->drag_model, 1, MPI_INT);
+  ddd_add_member(n, &cfd_dem->coupling_mode, 1, MPI_INT);
+  ddd_add_member(n, cfd_dem->fix_id, CFD_DEM_NAME_LEN, MPI_CHAR);
+  ddd_add_member(n, &cfd_dem->eps_min, 1, MPI_DOUBLE);
+  ddd_add_member(n, &cfd_dem->depth_2d, 1, MPI_DOUBLE);
+  ddd_add_member(n, cfd_dem->drag_field_names, DIM * CFD_DEM_NAME_LEN, MPI_CHAR);
 
   for (i = 0; i < upd->Num_Mat; i++) {
     int imtrx;

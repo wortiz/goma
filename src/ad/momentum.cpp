@@ -25,6 +25,7 @@
 extern "C" {
 
 /* GOMA include files */
+#include "cfd_dem_coupling.h"
 #include "density.h"
 #include "el_elm.h"
 #include "exo_struct.h"
@@ -2426,6 +2427,10 @@ extern "C" int ad_assemble_momentum_vans(dbl time,       /* current time */
           if (source_on) {
             /* MMS forcing is the complete source; physical body forces are eps-weighted */
             source += mms_source ? f[a] : f[a] * ad_fv->void_fraction;
+            /* CFD-DEM: particle reaction force per unit volume (-F_pf), not eps weighted */
+            if (cfd_dem->enabled && cfd_dem->drag_field_index[a] >= 0) {
+              source += fv->external_field[cfd_dem->drag_field_index[a]];
+            }
             source *= wt_func * d_area;
             source *= source_etm;
           }

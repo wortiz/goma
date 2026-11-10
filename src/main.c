@@ -44,6 +44,7 @@ extern void handle_ieee(void);
 #include "ac_conti.h"
 #include "ac_hunt.h"
 #include "ac_stability_util.h"
+#include "cfd_dem_coupling.h"
 #include "decomp_interface.h"
 #include "dp_types.h"
 #include "dp_utils.h"
@@ -585,7 +586,7 @@ int main(int argc, char **argv)
 
     if (efv->Num_external_field != 0) {
       for (i = 0; i < efv->Num_external_field; i++) {
-        if (efv->ipix[i] == 1 || efv->ipix[i] == 2)
+        if (efv->ipix[i] == 1 || efv->ipix[i] == 2 || cfd_dem_is_coupler_field(efv->file_nm[i]))
           continue;
         filenames[n_files] = malloc(sizeof(char) * MAX_FNL);
         memcpy(filenames[n_files], efv->file_nm[i], MAX_FNL);
@@ -716,7 +717,8 @@ int main(int argc, char **argv)
 
     if (efv->Num_external_field != 0) {
       for (i = 0; i < efv->Num_external_field; i++) {
-        multiname(efv->file_nm[i], ProcID, Num_Proc);
+        if (!cfd_dem_is_coupler_field(efv->file_nm[i]))
+          multiname(efv->file_nm[i], ProcID, Num_Proc);
       }
     }
   }
@@ -866,7 +868,12 @@ int main(int argc, char **argv)
       if (Debug_Flag) {
         P0PRINTF("%s: solve_problem...TRANSIENT superceded Continuation...\n", yo);
       }
-      solve_problem(EXO_ptr, DPI_ptr, NULL);
+      if (cfd_dem->enabled) {
+        P0PRINTF("%s: solve_problem_cfd_dem (Goma VANS <-> LAMMPS DEM)...\n", yo);
+        solve_problem_cfd_dem(EXO_ptr, DPI_ptr);
+      } else {
+        solve_problem(EXO_ptr, DPI_ptr, NULL);
+      }
     }
 
     switch (Continuation) {

@@ -387,6 +387,70 @@ if (ENABLE_MUMPS)
   endif()
 endif()
 
+# LAMMPS (CFD-DEM coupling). Uses an installed LAMMPS (built with BUILD_SHARED_LIBS=on,
+# BUILD_MPI=on, PKG_GRANULAR=on) if find_package finds one, otherwise optionally downloads
+# and builds LAMMPS as part of this build with FetchContent.
+option(ENABLE_LAMMPS "ENABLE_LAMMPS" ON)
+option(ENABLE_LAMMPS_FETCHCONTENT
+       "Download and build LAMMPS with FetchContent if ENABLE_LAMMPS and LAMMPS is not found" ON)
+set(GOMA_LAMMPS_GIT_REPOSITORY
+    "https://github.com/lammps/lammps.git"
+    CACHE STRING "LAMMPS git repository used by FetchContent")
+set(GOMA_LAMMPS_GIT_TAG
+    "stable_30Sep2026_update1"
+    CACHE STRING "LAMMPS git tag used by FetchContent")
+if(ENABLE_LAMMPS)
+  find_package(LAMMPS QUIET)
+  if(LAMMPS_FOUND)
+    message(STATUS "Using LAMMPS ${LAMMPS_VERSION} for CFD-DEM coupling")
+  elseif(ENABLE_LAMMPS_FETCHCONTENT)
+    message(
+      STATUS
+        "LAMMPS not found, fetching ${GOMA_LAMMPS_GIT_REPOSITORY} at ${GOMA_LAMMPS_GIT_TAG}")
+    include(FetchContent)
+    # settings the coupler requires
+    set(BUILD_MPI ON CACHE BOOL "Build MPI version" FORCE)
+    set(PKG_GRANULAR ON CACHE BOOL "Build GRANULAR package" FORCE)
+    set(LAMMPS_SIZES smallbig CACHE STRING "LAMMPS integer sizes" FORCE)
+    # Build LAMMPS as a static library without its unit tests. These option names are shared
+    # with Goma, so override them with normal variables only for the LAMMPS subproject.
+    # Goma sets CMAKE_<LANG>_COMPILER as normal variables after enabling its languages; a
+    # subproject's project() would see that as a compiler change and wipe the cache, so hide
+    # them to build LAMMPS with the same (cached) compilers as Goma.
+    set(GOMA_LAMMPS_OVERRIDES BUILD_SHARED_LIBS ENABLE_TESTING CMAKE_C_COMPILER
+                              CMAKE_CXX_COMPILER CMAKE_Fortran_COMPILER)
+    foreach(_opt ${GOMA_LAMMPS_OVERRIDES})
+      if(DEFINED ${_opt})
+        set(GOMA_SAVED_${_opt} ${${_opt}})
+      endif()
+      unset(${_opt})
+    endforeach()
+    set(BUILD_SHARED_LIBS OFF)
+    set(ENABLE_TESTING OFF)
+    FetchContent_Declare(
+      lammps
+      GIT_REPOSITORY ${GOMA_LAMMPS_GIT_REPOSITORY}
+      GIT_TAG ${GOMA_LAMMPS_GIT_TAG}
+      GIT_SHALLOW TRUE
+      SOURCE_SUBDIR cmake)
+    FetchContent_MakeAvailable(lammps)
+    foreach(_opt ${GOMA_LAMMPS_OVERRIDES})
+      unset(${_opt}) # reveals the cache value, if any
+      if(DEFINED GOMA_SAVED_${_opt})
+        set(${_opt} ${GOMA_SAVED_${_opt}})
+        unset(GOMA_SAVED_${_opt})
+      endif()
+    endforeach()
+    message(STATUS "Using LAMMPS ${GOMA_LAMMPS_GIT_TAG} (FetchContent) for CFD-DEM coupling")
+  else()
+    message(
+      FATAL_ERROR
+        "ENABLE_LAMMPS=ON but LAMMPS was not found; set LAMMPS_DIR or ENABLE_LAMMPS_FETCHCONTENT=ON")
+  endif()
+  set(GOMA_TPL_LIBRARIES ${GOMA_TPL_LIBRARIES} LAMMPS::lammps)
+  list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_LAMMPS LAMMPS_LIB_MPI)
+endif()
+
 # UMFPACK in trilinos
 list(FIND Trilinos_TPL_LIST UMFPACK trilinos_package_index)
 option(ENABLE_UMFPACK "ENABLE_UMFPACK" ON)
@@ -523,6 +587,7 @@ set(GOMA_INCLUDES
     include/bc/rotate.h
     include/bc_special.h
     include/bc_surfacedomain.h
+    include/cfd_dem_coupling.h
     include/decomp_interface.h
     include/density.h
     include/dp_comm.h
@@ -693,6 +758,7 @@ set(GOMA_SOURCES
     src/bc/rotate.c
     src/bc_special.c
     src/bc_surfacedomain.c
+    src/cfd_dem_coupling.c
     src/decomp_interface.c
     src/density.c
     src/dp_comm.c
@@ -797,6 +863,7 @@ set(GOMA_SOURCES
     src/rf_setup_problem.c
     src/rf_shape.c
     src/rf_solve.c
+    src/rf_solve_cfd_dem.c
     src/rf_solve_segregated.c
     src/rf_util.c
     src/rf_vars.c
@@ -863,12 +930,12 @@ set(GOMA_USER_SOURCES
 set(GOMA_UTIL_INCLUDES
     include/bc/rotate_util.h include/mm_eh.h include/util/goma_normal.h
     include/util/aprepro_helper.h
-    include/util/distance_helpers.h)
+    include/util/distance_helpers.h include/cfd_dem_util.h)
 
 set(GOMA_UTIL_SOURCES
     src/bc/rotate_util.c src/util/goma_normal.c src/mm_eh.c
     src/util/aprepro_helper.cpp
-    src/util/distance_helpers.cpp)
+    src/util/distance_helpers.cpp src/cfd_dem_util.c)
 
 set(GDS_INCLUDES include/gds/gds_vector.h)
 

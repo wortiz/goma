@@ -29,6 +29,7 @@
 
 #include "ac_particles.h"
 #include "ac_stability_util.h"
+#include "cfd_dem_coupling.h"
 #include "el_elm.h"
 #include "el_elm_info.h"
 #include "mm_as.h"
@@ -228,6 +229,8 @@ void read_input_file(struct Command_line_command **clc, int nclc) {
       rd_hunt_specs(ifp, input);
 
       rd_solver_specs(ifp, input);
+
+      rd_cfd_dem_specs(ifp, input);
 
       rd_ac_specs(ifp, input);
 
@@ -3411,6 +3414,139 @@ void rd_turbulent_specs(FILE *ifp, char *input) {
   } else {
     upd->turbulent_info->omega_inf = 0.0;
   }
+}
+
+/*
+ * rd_cfd_dem_specs -- optional CFD-DEM (Goma VANS <-> LAMMPS DEM) coupling cards.
+ * Must be called after rd_timeint_specs and rd_solver_specs (validates against both).
+ */
+void rd_cfd_dem_specs(FILE *ifp, char *input) {
+  char echo_string[MAX_CHAR_ECHO_INPUT] = "\0";
+  char *echo_file = Echo_Input_File;
+
+  if (look_for_optional(ifp, "CFD-DEM Coupling", input, '=') != 1)
+    return;
+
+  if (fscanf(ifp, "%s", input) != 1)
+    GOMA_EH(GOMA_ERROR, "Error reading CFD-DEM Coupling");
+  strip(input);
+  stringup(input);
+  if (strcmp(input, "YES") == 0 || strcmp(input, "ON") == 0) {
+    cfd_dem->enabled = TRUE;
+  } else if (strcmp(input, "NO") == 0 || strcmp(input, "OFF") == 0) {
+    cfd_dem->enabled = FALSE;
+  } else {
+    GOMA_EH(GOMA_ERROR, "CFD-DEM Coupling = yes | no, found %s", input);
+  }
+
+  ECHO("\n***CFD-DEM Coupling Specifications***\n", echo_file);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "CFD-DEM Coupling", input);
+  ECHO(echo_string, echo_file);
+
+  if (!cfd_dem->enabled)
+    return;
+
+  if (look_for_optional(ifp, "LAMMPS Input File", input, '=') != 1)
+    GOMA_EH(GOMA_ERROR, "CFD-DEM Coupling requires \"LAMMPS Input File = <file>\"");
+  if (fscanf(ifp, "%s", cfd_dem->lammps_input) != 1)
+    GOMA_EH(GOMA_ERROR, "Error reading LAMMPS Input File");
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "LAMMPS Input File",
+           cfd_dem->lammps_input);
+  ECHO(echo_string, echo_file);
+
+  if (look_for_optional(ifp, "DEM Max Timestep", input, '=') == 1) {
+    if (fscanf(ifp, "%lf", &cfd_dem->dem_max_dt) != 1 || cfd_dem->dem_max_dt <= 0.0)
+      GOMA_EH(GOMA_ERROR, "Error reading DEM Max Timestep, expected a positive value");
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.6g", "DEM Max Timestep",
+             cfd_dem->dem_max_dt);
+  } else {
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "DEM Max Timestep",
+             "(none: one DEM step per goma step) (default)");
+  }
+  ECHO(echo_string, echo_file);
+
+  if (look_for_optional(ifp, "DEM Drag Model", input, '=') == 1) {
+    if (fscanf(ifp, "%s", input) != 1)
+      GOMA_EH(GOMA_ERROR, "Error reading DEM Drag Model");
+    stringup(input);
+    if (strcmp(input, "DI_FELICE") == 0) {
+      cfd_dem->drag_model = CFD_DEM_DRAG_DI_FELICE;
+    } else if (strcmp(input, "STOKES") == 0) {
+      cfd_dem->drag_model = CFD_DEM_DRAG_STOKES;
+    } else {
+      GOMA_EH(GOMA_ERROR, "DEM Drag Model = DI_FELICE | STOKES, found %s", input);
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "DEM Drag Model", input);
+  } else {
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "DEM Drag Model", "DI_FELICE (default)");
+  }
+  ECHO(echo_string, echo_file);
+
+  if (look_for_optional(ifp, "DEM Coupling Mode", input, '=') == 1) {
+    if (fscanf(ifp, "%s", input) != 1)
+      GOMA_EH(GOMA_ERROR, "Error reading DEM Coupling Mode");
+    stringup(input);
+    if (strcmp(input, "VOID_FRACTION") == 0) {
+      cfd_dem->coupling_mode = CFD_DEM_COUPLE_VOID_FRACTION;
+    } else if (strcmp(input, "ONE_WAY") == 0) {
+      cfd_dem->coupling_mode = CFD_DEM_COUPLE_ONE_WAY;
+    } else if (strcmp(input, "TWO_WAY") == 0) {
+      cfd_dem->coupling_mode = CFD_DEM_COUPLE_TWO_WAY;
+    } else {
+      GOMA_EH(GOMA_ERROR, "DEM Coupling Mode = VOID_FRACTION | ONE_WAY | TWO_WAY, found %s",
+              input);
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "DEM Coupling Mode", input);
+  } else {
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "DEM Coupling Mode", "TWO_WAY (default)");
+  }
+  ECHO(echo_string, echo_file);
+
+  if (look_for_optional(ifp, "DEM Fix External ID", input, '=') == 1) {
+    if (fscanf(ifp, "%63s", cfd_dem->fix_id) != 1)
+      GOMA_EH(GOMA_ERROR, "Error reading DEM Fix External ID");
+  }
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "DEM Fix External ID", cfd_dem->fix_id);
+  ECHO(echo_string, echo_file);
+
+  if (look_for_optional(ifp, "DEM Minimum Void Fraction", input, '=') == 1) {
+    if (fscanf(ifp, "%lf", &cfd_dem->eps_min) != 1 || cfd_dem->eps_min <= 0.0 ||
+        cfd_dem->eps_min > 1.0)
+      GOMA_EH(GOMA_ERROR, "Error reading DEM Minimum Void Fraction, expected (0,1]");
+  }
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.6g", "DEM Minimum Void Fraction",
+           cfd_dem->eps_min);
+  ECHO(echo_string, echo_file);
+
+  if (look_for_optional(ifp, "DEM 2D Depth", input, '=') == 1) {
+    if (fscanf(ifp, "%lf", &cfd_dem->depth_2d) != 1 || cfd_dem->depth_2d <= 0.0)
+      GOMA_EH(GOMA_ERROR, "Error reading DEM 2D Depth, expected a positive value");
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.6g", "DEM 2D Depth", cfd_dem->depth_2d);
+    ECHO(echo_string, echo_file);
+  }
+
+  if (look_for_optional(ifp, "DEM Drag Field Names", input, '=') == 1) {
+    char line[MAX_CHAR_IN_INPUT];
+    char names[DIM][CFD_DEM_NAME_LEN];
+    if (fgets(line, sizeof(line), ifp) == NULL)
+      GOMA_EH(GOMA_ERROR, "Error reading DEM Drag Field Names");
+    int n = sscanf(line, "%63s %63s %63s", names[0], names[1], names[2]);
+    if (n < 2)
+      GOMA_EH(GOMA_ERROR, "DEM Drag Field Names needs at least two names (x, y [, z])");
+    for (int k = 0; k < n; k++)
+      memcpy(cfd_dem->drag_field_names[k], names[k], CFD_DEM_NAME_LEN);
+  }
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s %s %s", "DEM Drag Field Names",
+           cfd_dem->drag_field_names[0], cfd_dem->drag_field_names[1],
+           cfd_dem->drag_field_names[2]);
+  ECHO(echo_string, echo_file);
+
+  if (TimeIntegration != TRANSIENT)
+    GOMA_EH(GOMA_ERROR, "CFD-DEM Coupling requires Time integration = transient");
+  if (upd->vans_model <= 0)
+    GOMA_EH(GOMA_ERROR, "CFD-DEM Coupling requires Use VANS Model = A | B");
+  if (upd->Total_Num_Matrices > 1)
+    GOMA_EH(GOMA_ERROR, "CFD-DEM Coupling does not support segregated (multi-matrix) solves");
 }
 /*
  * rd_elem_quality_specs -- read input file for element quality specifications
@@ -14249,6 +14385,12 @@ void echo_compiler_settings(void) {
   fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_OMEGA_H", "yes");
 #else
   fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_OMEGA_H", "no");
+#endif
+
+#ifdef GOMA_ENABLE_LAMMPS
+  fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_LAMMPS", "yes");
+#else
+  fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_LAMMPS", "no");
 #endif
 
 #ifdef GOMA_ENABLE_STRATIMIKOS

@@ -384,13 +384,16 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
    */
 
   apply_pressure_datum = FALSE; /* standard default to begin... */
+  int datum_elem_local = -1;
 
   if (PRESSURE_DATUM == 1) {
     if (pressure_datum_element < 0 || pressure_datum_element >= dpi->num_elems_global) {
       log_err("Specified pressure datum element %d out of range.", pressure_datum_element);
     }
 
-    local_elem = in_list(pressure_datum_element, 0, dpi->num_elems, dpi->elem_index_global);
+    /* dpi->num_elems is not set for decomposed (ghosted) meshes; elem_index_global has
+     * exo->num_elems entries in both serial and parallel */
+    local_elem = in_list(pressure_datum_element, 0, exo->num_elems, dpi->elem_index_global);
 
     /*
      * Still need to check whether the element is actually owned by
@@ -404,19 +407,17 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
     if (local_elem > -1) {
       if (dpi->elem_owner[local_elem] == ProcID) {
         apply_pressure_datum = TRUE;
-
         /*
-         * Reset so the index of the pressure datum element is local
-         * instead of global.
+         * Use the local index below, but keep the global pressure_datum_element:
+         * this routine is called many times and must look the element up again.
          */
-
-        pressure_datum_element = local_elem;
+        datum_elem_local = local_elem;
       }
     }
   }
 
   if (apply_pressure_datum) {
-    iconnect_ptr = Proc_Connect_Ptr[pressure_datum_element];
+    iconnect_ptr = Proc_Connect_Ptr[datum_elem_local];
     /*
      * determine the node at which to apply the pressure datum
      * it is always applied to the first pressure unknown in the designated
@@ -426,9 +427,9 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
      *        so that PRESSURE DATUM could be treated the same as
      *        all of the other boundary conditions.
      */
-    num_nodes = elem_info(NNODES, Elem_Type(exo, pressure_datum_element));
+    num_nodes = elem_info(NNODES, Elem_Type(exo, datum_elem_local));
     datum_set = 1;
-    mn = find_mat_number(pressure_datum_element, exo);
+    mn = find_mat_number(datum_elem_local, exo);
     for (n = 0; n < num_nodes; n++) {
       inode = Proc_Elem_Connect[iconnect_ptr + n];
       node = Nodes[inode];
@@ -445,9 +446,9 @@ void find_and_set_Dirichlet(double x[],    /* solution vector at this processor 
         x[ie] = pressure_datum_value;
         xdot[ie] = 0.0;
         log_msg("Setting pressure datum");
-        log_msg("        pressure datum element (local)  = %d", pressure_datum_element);
+        log_msg("        pressure datum element (local)  = %d", datum_elem_local);
         log_msg("        pressure datum element (global) = %d",
-                dpi->elem_index_global[pressure_datum_element]);
+                dpi->elem_index_global[datum_elem_local]);
         log_msg("        pressure datum node (local)     = %d", inode);
         log_msg("        pressure datum node (global)    = %d", dpi->node_index_global[inode]);
         log_msg("        pressure datum dof (local)      = %d", ie);
