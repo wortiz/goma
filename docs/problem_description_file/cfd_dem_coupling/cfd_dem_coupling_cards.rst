@@ -93,7 +93,8 @@ The cards may appear anywhere in the input file; by convention they are placed i
 
 The void fraction unknown must be pinned with ``BC = FIX NS <all nodes> VOID_FRACTION 0``;
 the coupler overwrites the ``VOID_FRACTION`` degrees of freedom (and their time derivative)
-before every *Goma* step.
+before every *Goma* step. Both backward Euler and the trapezoid rule (``Time step parameter``)
+may be used.
 
 ------------
 Examples
@@ -126,6 +127,17 @@ particles at :math:`t^n`. When the step is accepted, the converged fluid is samp
 particle, LAMMPS is advanced to :math:`t^{n+1}`, and the void fraction and reaction are
 rebuilt from the new particle state. A rejected *Goma* step does not touch LAMMPS, so
 nothing has to be rolled back. The void fraction therefore lags by one step.
+
+*Void fraction rate.* The void fraction is not integrated by *Goma*; it changes only when
+LAMMPS advances. Its time derivative, which enters the VANS continuity equation, is the change
+over the last DEM interval,
+
+.. math::
+
+   \dot\epsilon = \frac{\epsilon^{n} - \epsilon^{n-1}}{t^{n} - t^{n-1}},
+
+held fixed for every try of the next *Goma* step. It does not depend on the step size being
+tried or on the time integrator, so retried (smaller) steps see the same rate.
 
 *Drag sub-stepping.* At the start of each coupling interval the drag is linearized as
 :math:`\mathbf{F}_d = \beta(\mathbf{u}_f - \mathbf{v})` with :math:`\beta` and the fluid

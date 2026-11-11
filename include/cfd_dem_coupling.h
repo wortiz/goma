@@ -82,9 +82,9 @@ void solve_problem_cfd_dem(Exo_DB *exo, Dpi *dpi);
 
 /* Coupler lifecycle, implemented in cfd_dem_coupling.c (require GOMA_ENABLE_LAMMPS). */
 int cfd_dem_init(Exo_DB *exo, Dpi *dpi, double *x, double time);
-/* Write void fraction into x (and a consistent xdot) at the VOID_FRACTION dofs. */
-int cfd_dem_apply_void_fraction(
-    double *x, double *x_old, double *xdot, double *xdot_old, double delta_t, double theta);
+/* Write the void fraction into x at the VOID_FRACTION dofs, and into xdot its rate of change
+ * over the last DEM interval (independent of the goma step size and time integrator). */
+int cfd_dem_apply_void_fraction(double *x, double *xdot);
 /* After an accepted goma step: drag -> LAMMPS run -> regather -> rebuild eps and source. */
 int cfd_dem_advance(double *x,
                     double *x_old,

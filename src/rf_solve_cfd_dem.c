@@ -21,7 +21,8 @@
  *   init_vec -> cfd_dem_init (LAMMPS setup, eps^0 from particles) -> x_old = x
  *   loop:
  *     predict x^{n+1}
- *     cfd_dem_apply_void_fraction  (eps DOFs <- particles at t^n, consistent xdot)
+ *     cfd_dem_apply_void_fraction  (eps DOFs <- particles at t^n, xdot <- d eps/dt over the
+ *                                   last DEM interval)
  *     solve_nonlinear_problem, time_step_control
  *     accepted -> write output, cfd_dem_advance (drag -> LAMMPS run to t^{n+1}
  *                 -> eps^{n+1}, fluid reaction field), shift history
@@ -383,11 +384,11 @@ void solve_problem_cfd_dem(Exo_DB *exo, /* ptr to the finite element mesh databa
 
   /*
    * Start LAMMPS and replace the initial void fraction with the particle-based one.
-   * xdot = 0 initially, consistent with x_old = x below.
+   * Its rate is 0 until LAMMPS has advanced once, consistent with x_old = x below.
    */
   err = cfd_dem_init(exo, dpi, x, time);
   GOMA_EH(err, "cfd_dem_init");
-  err = cfd_dem_apply_void_fraction(x, x, xdot, xdot_old, 0.0, 0.0);
+  err = cfd_dem_apply_void_fraction(x, xdot);
   GOMA_EH(err, "cfd_dem_apply_void_fraction");
   exchange_dof(cx[0], dpi, x, 0);
 
@@ -484,8 +485,8 @@ void solve_problem_cfd_dem(Exo_DB *exo, /* ptr to the finite element mesh databa
 
     find_and_set_Dirichlet(x, xdot, exo, dpi);
 
-    /* particle void fraction into the (FIX'd) VOID_FRACTION dofs, with consistent xdot */
-    err = cfd_dem_apply_void_fraction(x, x_old, xdot, xdot_old, delta_t, theta);
+    /* particle void fraction into the (FIX'd) VOID_FRACTION dofs, xdot = its DEM-interval rate */
+    err = cfd_dem_apply_void_fraction(x, xdot);
     GOMA_EH(err, "cfd_dem_apply_void_fraction");
 
     exchange_dof(cx[0], dpi, x, 0);

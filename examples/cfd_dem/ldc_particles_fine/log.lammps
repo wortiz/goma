@@ -1,0 +1,1473 @@
+LAMMPS (30 Sep 2026 - Update 1)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread.
+  using 1 OpenMP thread(s) per MPI task
+# LAMMPS side of the CFD-DEM lid driven cavity (read by Goma through "LAMMPS Input File").
+#
+# 2D granular disks in the unit square, same coordinates as the Goma mesh.
+# Do NOT define the fix external here: Goma creates "fix cfd_drag all external pf/callback 1 1"
+# and sets the timestep and runs LAMMPS itself (n_sub = ceil(goma dt / DEM Max Timestep)).
+
+units           si
+dimension       2
+atom_style      sphere
+atom_modify     map array
+boundary        f f p
+newton          off
+comm_modify     vel yes
+
+region          box block 0.0 1.0 0.0 1.0 -0.5 0.5
+create_box      1 box
+Created orthogonal box = (0 0 -0.5) to (1 1 0.5)
+  4 by 2 by 1 MPI processor grid
+
+# 73 x 73 square lattice, spacing 0.0125, sites at 0.05 ... 0.95 (5329 disks)
+lattice         sq 0.0125
+Lattice spacing in x,y,z = 0.0125 0.0125 0.0125
+region          cloud block 0.049 0.951 0.049 0.951 -0.5 0.5 units box
+create_atoms    1 region cloud
+Created 5329 atoms
+  using lattice units in orthogonal box = (0 0 -0.5) to (1 1 0.5)
+  create_atoms CPU = 0.000 seconds
+
+# disks: d = 0.003 (mesh h = 0.01 is ~3.3 d), areal density 2.5 (fluid density is 1)
+# solid area fraction 4.5 %, about the same as the coarse case
+set             type 1 diameter 0.003
+Setting atom values ...
+  5329 settings made for diameter
+set             type 1 density/disc 2.5
+Setting atom values ...
+  5329 settings made for density/disc
+velocity        all set 0.0 0.0 0.0
+
+# spring-dashpot contacts. Not scaled down with particle mass: on the fine mesh the
+# -V_p grad p force near the lid corners pushes disks through soft walls (kn = 8 lost a disk
+# at t = 0.32). kn = 500 gives a collision time ~6e-4, resolved by the 2.5e-5 DEM step
+# ("DEM Max Timestep" in input), with overlaps of a few percent of d.
+pair_style      gran/hooke/history 500.0 NULL 5.0 NULL 0.5 0
+pair_coeff      * *
+neighbor        0.001 bin
+neigh_modify    delay 0
+
+fix             wallx all wall/gran hooke/history 500.0 NULL 5.0 NULL 0.5 0 xplane 0.0 1.0
+fix             wally all wall/gran hooke/history 500.0 NULL 5.0 NULL 0.5 0 yplane 0.0 1.0
+fix             integrate all nve/sphere disc
+fix             twod all enforce2d
+
+compute         ke all ke
+thermo_style    custom step time atoms c_ke
+thermo          4000
+
+dump            parts all custom 2000 dump.particles id x y vx vy radius
+dump_modify     parts sort id time yes
+fix cfd_drag all external pf/callback 1 1
+reset_timestep 0 time 0
+timestep 2.5000000000000001e-05
+run 40 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Neighbor list info ...
+  update: every = 1 steps, delay = 0 steps, check = yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 0.004
+  ghost atom cutoff = 0.004
+  binsize = 0.002, bins = 500 500 1
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair gran/hooke/history, perpetual
+      attributes: half, newton off, size, history
+      pair build: half/size/bin/atomonly/newtoff
+      stencil: full/bin/2d
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 11.26 | 11.26 | 11.27 Mbytes
+   Step          Time         Atoms         c_ke     
+         0   0                   5329   0            
+        40   0.001               5329   2.9648232e-07
+Loop time of 0.00117726 on 8 procs for 40 steps with 5329 atoms
+
+run 40 pre no post no
+   Step          Time         Atoms         c_ke     
+        40   0.001               5329   2.9648232e-07
+        80   0.002               5329   5.7851426e-07
+Loop time of 0.00120413 on 8 procs for 40 steps with 5329 atoms
+
+run 40 pre no post no
+   Step          Time         Atoms         c_ke     
+        80   0.002               5329   5.7851426e-07
+       120   0.003               5329   8.880926e-07 
+Loop time of 0.00120748 on 8 procs for 40 steps with 5329 atoms
+
+run 40 pre no post no
+   Step          Time         Atoms         c_ke     
+       120   0.003               5329   8.880926e-07 
+       160   0.004               5329   1.2266864e-06
+Loop time of 0.0012022 on 8 procs for 40 steps with 5329 atoms
+
+timestep 2.497726434369789e-05
+run 50 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.59 | 12.6 | 12.61 Mbytes
+   Step          Time         Atoms         c_ke     
+       160   0.004               5329   1.2266864e-06
+       210   0.0052488632        5329   1.6626182e-06
+Loop time of 0.00149589 on 8 procs for 50 steps with 5329 atoms
+
+run 75 pre no post no
+   Step          Time         Atoms         c_ke     
+       210   0.0052488632        5329   1.6626182e-06
+       285   0.007122158         5329   2.4008772e-06
+Loop time of 0.00233122 on 8 procs for 75 steps with 5329 atoms
+
+timestep 2.4893548353747284e-05
+run 86 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.59 | 12.6 | 12.61 Mbytes
+   Step          Time         Atoms         c_ke     
+       285   0.007122158         5329   2.4008772e-06
+       371   0.0092630032        5329   3.294733e-06 
+Loop time of 0.00251328 on 8 procs for 86 steps with 5329 atoms
+
+timestep 2.492853961497665e-05
+run 112 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.59 | 12.6 | 12.61 Mbytes
+   Step          Time         Atoms         c_ke     
+       371   0.0092630032        5329   3.294733e-06 
+       483   0.012055            5329   4.678103e-06 
+Loop time of 0.0032759 on 8 procs for 112 steps with 5329 atoms
+
+timestep 2.4878592741290151e-05
+run 149 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.59 | 12.6 | 12.61 Mbytes
+   Step          Time         Atoms         c_ke     
+       483   0.012055            5329   4.678103e-06 
+       632   0.01576191          5329   6.6794592e-06
+Loop time of 0.00435709 on 8 procs for 149 steps with 5329 atoms
+
+timestep 2.4955009860132233e-05
+run 202 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.59 | 12.6 | 12.61 Mbytes
+   Step          Time         Atoms         c_ke     
+       632   0.01576191          5329   6.6794592e-06
+       834   0.020802822         5329   1.0041255e-05
+Loop time of 0.00590118 on 8 procs for 202 steps with 5329 atoms
+
+timestep 2.499315186567974e-05
+run 264 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.59 | 12.6 | 12.61 Mbytes
+   Step          Time         Atoms         c_ke     
+       834   0.020802822         5329   1.0041255e-05
+      1098   0.027401014         5329   1.4916063e-05
+Loop time of 0.00786556 on 8 procs for 264 steps with 5329 atoms
+
+timestep 2.4934154049747119e-05
+run 339 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.59 | 12.6 | 12.61 Mbytes
+   Step          Time         Atoms         c_ke     
+      1098   0.027401014         5329   1.4916063e-05
+      1437   0.035853692         5329   2.2608619e-05
+Loop time of 0.00991874 on 8 procs for 339 steps with 5329 atoms
+
+timestep 2.4993964075571659e-05
+run 431 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.59 | 12.6 | 12.61 Mbytes
+   Step          Time         Atoms         c_ke     
+      1437   0.035853692         5329   2.2608619e-05
+      1868   0.046626091         5329   3.312968e-05 
+Loop time of 0.0126799 on 8 procs for 431 steps with 5329 atoms
+
+timestep 2.4969709062982179e-05
+run 552 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.59 | 12.6 | 12.61 Mbytes
+   Step          Time         Atoms         c_ke     
+      1868   0.046626091         5329   3.312968e-05 
+      2420   0.06040937          5329   4.9374067e-05
+Loop time of 0.0170677 on 8 procs for 552 steps with 5329 atoms
+
+timestep 2.4984088294227737e-05
+run 708 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.59 | 12.6 | 12.61 Mbytes
+   Step          Time         Atoms         c_ke     
+      2420   0.06040937          5329   4.9374067e-05
+      3128   0.078098105         5329   7.1481855e-05
+Loop time of 0.021393 on 8 procs for 708 steps with 5329 atoms
+
+timestep 2.5000000000000005e-05
+run 800 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.59 | 12.6 | 12.61 Mbytes
+   Step          Time         Atoms         c_ke     
+      3128   0.078098105         5329   7.1481855e-05
+      3928   0.098098105         5329   0.00010111997
+Loop time of 0.0254925 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+      3928   0.098098105         5329   0.00010111997
+      4000   0.099898105         5329   0.00010398422
+      4728   0.1180981           5329   0.00013111758
+Loop time of 0.0263263 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+      4728   0.1180981           5329   0.00013111758
+      5528   0.1380981           5329   0.00016376459
+Loop time of 0.0255981 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+      5528   0.1380981           5329   0.00016376459
+      6328   0.1580981           5329   0.0001956097 
+Loop time of 0.0266599 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+      6328   0.1580981           5329   0.0001956097 
+      7128   0.1780981           5329   0.0002299657 
+Loop time of 0.0292522 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+      7128   0.1780981           5329   0.0002299657 
+      7928   0.1980981           5329   0.00026214093
+Loop time of 0.0256975 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+      7928   0.1980981           5329   0.00026214093
+      8000   0.1998981           5329   0.00026544152
+      8728   0.2180981           5329   0.00029547944
+Loop time of 0.026492 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+      8728   0.2180981           5329   0.00029547944
+      9528   0.2380981           5329   0.00032656298
+Loop time of 0.0257422 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+      9528   0.2380981           5329   0.00032656298
+     10328   0.2580981           5329   0.00035855784
+Loop time of 0.0265118 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     10328   0.2580981           5329   0.00035855784
+     11128   0.2780981           5329   0.0003930211 
+Loop time of 0.0260113 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     11128   0.2780981           5329   0.0003930211 
+     11928   0.2980981           5329   0.00042114234
+Loop time of 0.0259971 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     11928   0.2980981           5329   0.00042114234
+     12000   0.2998981           5329   0.00042445144
+     12728   0.3180981           5329   0.00045630741
+Loop time of 0.0270651 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     12728   0.3180981           5329   0.00045630741
+     13528   0.3380981           5329   0.00048684558
+Loop time of 0.0270896 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     13528   0.3380981           5329   0.00048684558
+     14328   0.3580981           5329   0.00051274368
+Loop time of 0.0272141 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     14328   0.3580981           5329   0.00051274368
+     15128   0.3780981           5329   0.00054352032
+Loop time of 0.0263734 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     15128   0.3780981           5329   0.00054352032
+     15928   0.3980981           5329   0.00057617382
+Loop time of 0.0276683 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     15928   0.3980981           5329   0.00057617382
+     16000   0.3998981           5329   0.0005795731 
+     16728   0.4180981           5329   0.00061513941
+Loop time of 0.0284312 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     16728   0.4180981           5329   0.00061513941
+     17528   0.4380981           5329   0.00064458738
+Loop time of 0.0282735 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     17528   0.4380981           5329   0.00064458738
+     18328   0.4580981           5329   0.00067206837
+Loop time of 0.0290664 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     18328   0.4580981           5329   0.00067206837
+     19128   0.4780981           5329   0.00070301354
+Loop time of 0.0281628 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     19128   0.4780981           5329   0.00070301354
+     19928   0.4980981           5329   0.0007384382 
+Loop time of 0.0286657 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     19928   0.4980981           5329   0.0007384382 
+     20000   0.4998981           5329   0.00073635006
+     20728   0.5180981           5329   0.00076355864
+Loop time of 0.0289027 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     20728   0.5180981           5329   0.00076355864
+     21528   0.5380981           5329   0.00079148667
+Loop time of 0.0281976 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     21528   0.5380981           5329   0.00079148667
+     22328   0.5580981           5329   0.00082525589
+Loop time of 0.0290968 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     22328   0.5580981           5329   0.00082525589
+     23128   0.5780981           5329   0.0008576764 
+Loop time of 0.0284951 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     23128   0.5780981           5329   0.0008576764 
+     23928   0.5980981           5329   0.00088617743
+Loop time of 0.0292131 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     23928   0.5980981           5329   0.00088617743
+     24000   0.5998981           5329   0.00088907932
+     24728   0.6180981           5329   0.00092828218
+Loop time of 0.0294482 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     24728   0.6180981           5329   0.00092828218
+     25528   0.6380981           5329   0.00095816279
+Loop time of 0.0289154 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     25528   0.6380981           5329   0.00095816279
+     26328   0.6580981           5329   0.00099525295
+Loop time of 0.029671 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     26328   0.6580981           5329   0.00099525295
+     27128   0.6780981           5329   0.0010304891 
+Loop time of 0.0290519 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     27128   0.6780981           5329   0.0010304891 
+     27928   0.6980981           5329   0.0010631343 
+Loop time of 0.0295887 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     27928   0.6980981           5329   0.0010631343 
+     28000   0.6998981           5329   0.001065309  
+     28728   0.7180981           5329   0.001094916  
+Loop time of 0.0299894 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     28728   0.7180981           5329   0.001094916  
+     29528   0.7380981           5329   0.0011204443 
+Loop time of 0.0292442 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     29528   0.7380981           5329   0.0011204443 
+     30328   0.7580981           5329   0.0011603033 
+Loop time of 0.0296904 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     30328   0.7580981           5329   0.0011603033 
+     31128   0.7780981           5329   0.0011956719 
+Loop time of 0.0292529 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     31128   0.7780981           5329   0.0011956719 
+     31928   0.7980981           5329   0.0012296138 
+Loop time of 0.0297433 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     31928   0.7980981           5329   0.0012296138 
+     32000   0.7998981           5329   0.0012323635 
+     32728   0.8180981           5329   0.0012542596 
+Loop time of 0.0302117 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     32728   0.8180981           5329   0.0012542596 
+     33528   0.8380981           5329   0.0012802901 
+Loop time of 0.0293407 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     33528   0.8380981           5329   0.0012802901 
+     34328   0.8580981           5329   0.0013177983 
+Loop time of 0.031065 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     34328   0.8580981           5329   0.0013177983 
+     35128   0.8780981           5329   0.0013620371 
+Loop time of 0.0295355 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     35128   0.8780981           5329   0.0013620371 
+     35928   0.8980981           5329   0.0014051746 
+Loop time of 0.0297898 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     35928   0.8980981           5329   0.0014051746 
+     36000   0.8998981           5329   0.0014085254 
+     36728   0.9180981           5329   0.0014450315 
+Loop time of 0.030886 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     36728   0.9180981           5329   0.0014450315 
+     37528   0.9380981           5329   0.0014885858 
+Loop time of 0.0296678 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     37528   0.9380981           5329   0.0014885858 
+     38328   0.9580981           5329   0.001522286  
+Loop time of 0.0304903 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     38328   0.9580981           5329   0.001522286  
+     39128   0.9780981           5329   0.0015771874 
+Loop time of 0.0301439 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     39128   0.9780981           5329   0.0015771874 
+     39928   0.9980981           5329   0.0016190494 
+Loop time of 0.0301595 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     39928   0.9980981           5329   0.0016190494 
+     40000   0.9998981           5329   0.0016240481 
+     40728   1.0180981           5329   0.0016927169 
+Loop time of 0.0308773 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     40728   1.0180981           5329   0.0016927169 
+     41528   1.0380981           5329   0.0017461649 
+Loop time of 0.0304352 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     41528   1.0380981           5329   0.0017461649 
+     42328   1.0580981           5329   0.0017998491 
+Loop time of 0.0309705 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     42328   1.0580981           5329   0.0017998491 
+     43128   1.0780981           5329   0.0018560417 
+Loop time of 0.0301537 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     43128   1.0780981           5329   0.0018560417 
+     43928   1.0980981           5329   0.0018799742 
+Loop time of 0.0305673 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     43928   1.0980981           5329   0.0018799742 
+     44000   1.0998981           5329   0.0018787246 
+     44728   1.1180981           5329   0.0018947434 
+Loop time of 0.0309031 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     44728   1.1180981           5329   0.0018947434 
+     45528   1.1380981           5329   0.0019417106 
+Loop time of 0.0302729 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     45528   1.1380981           5329   0.0019417106 
+     46328   1.1580981           5329   0.0019770359 
+Loop time of 0.0309451 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     46328   1.1580981           5329   0.0019770359 
+     47128   1.1780981           5329   0.0020413556 
+Loop time of 0.0302952 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     47128   1.1780981           5329   0.0020413556 
+     47928   1.1980981           5329   0.0020396521 
+Loop time of 0.0302542 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     47928   1.1980981           5329   0.0020396521 
+     48000   1.1998981           5329   0.0020399739 
+     48728   1.2180981           5329   0.0020931437 
+Loop time of 0.0310106 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     48728   1.2180981           5329   0.0020931437 
+     49528   1.2380981           5329   0.0021906167 
+Loop time of 0.0303842 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     49528   1.2380981           5329   0.0021906167 
+     50328   1.2580981           5329   0.0022613207 
+Loop time of 0.0309279 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     50328   1.2580981           5329   0.0022613207 
+     51128   1.2780981           5329   0.0022961404 
+Loop time of 0.0302332 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     51128   1.2780981           5329   0.0022961404 
+     51928   1.2980981           5329   0.0023070833 
+Loop time of 0.0306071 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     51928   1.2980981           5329   0.0023070833 
+     52000   1.2998981           5329   0.0023060591 
+     52728   1.3180981           5329   0.0023678195 
+Loop time of 0.0314711 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     52728   1.3180981           5329   0.0023678195 
+     53528   1.3380981           5329   0.0023871716 
+Loop time of 0.0315887 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     53528   1.3380981           5329   0.0023871716 
+     54328   1.3580981           5329   0.0024225774 
+Loop time of 0.031217 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     54328   1.3580981           5329   0.0024225774 
+     55128   1.3780981           5329   0.0024200224 
+Loop time of 0.0306769 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     55128   1.3780981           5329   0.0024200224 
+     55928   1.3980981           5329   0.0024759641 
+Loop time of 0.0309068 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     55928   1.3980981           5329   0.0024759641 
+     56000   1.3998981           5329   0.0024776234 
+     56728   1.4180981           5329   0.0025651042 
+Loop time of 0.0315791 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     56728   1.4180981           5329   0.0025651042 
+     57528   1.4380981           5329   0.002701889  
+Loop time of 0.0313937 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     57528   1.4380981           5329   0.002701889  
+     58328   1.4580981           5329   0.0026894635 
+Loop time of 0.0316075 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     58328   1.4580981           5329   0.0026894635 
+     59128   1.4780981           5329   0.0026276049 
+Loop time of 0.0309044 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     59128   1.4780981           5329   0.0026276049 
+     59928   1.4980981           5329   0.0026141312 
+Loop time of 0.030804 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     59928   1.4980981           5329   0.0026141312 
+     60000   1.4998981           5329   0.0026023616 
+     60728   1.5180981           5329   0.0025635248 
+Loop time of 0.0311253 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     60728   1.5180981           5329   0.0025635248 
+     61528   1.5380981           5329   0.002601129  
+Loop time of 0.0312571 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     61528   1.5380981           5329   0.002601129  
+     62328   1.5580981           5329   0.0025553912 
+Loop time of 0.0330202 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     62328   1.5580981           5329   0.0025553912 
+     63128   1.5780981           5329   0.002578642  
+Loop time of 0.0305726 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     63128   1.5780981           5329   0.002578642  
+     63928   1.5980981           5329   0.0026159046 
+Loop time of 0.0310791 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     63928   1.5980981           5329   0.0026159046 
+     64000   1.5998981           5329   0.002605511  
+     64728   1.6180981           5329   0.0026110689 
+Loop time of 0.0316765 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     64728   1.6180981           5329   0.0026110689 
+     65528   1.6380981           5329   0.0025939543 
+Loop time of 0.0308073 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     65528   1.6380981           5329   0.0025939543 
+     66328   1.6580981           5329   0.0026407475 
+Loop time of 0.0313193 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     66328   1.6580981           5329   0.0026407475 
+     67128   1.6780981           5329   0.0026713114 
+Loop time of 0.0304755 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     67128   1.6780981           5329   0.0026713114 
+     67928   1.6980981           5329   0.0027551669 
+Loop time of 0.0310514 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     67928   1.6980981           5329   0.0027551669 
+     68000   1.6998981           5329   0.0027359021 
+     68728   1.7180981           5329   0.0027346381 
+Loop time of 0.0322478 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     68728   1.7180981           5329   0.0027346381 
+     69528   1.7380981           5329   0.0026667627 
+Loop time of 0.0309717 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     69528   1.7380981           5329   0.0026667627 
+     70328   1.7580981           5329   0.0027365377 
+Loop time of 0.031002 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     70328   1.7580981           5329   0.0027365377 
+     71128   1.7780981           5329   0.0028372704 
+Loop time of 0.0306809 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     71128   1.7780981           5329   0.0028372704 
+     71928   1.7980981           5329   0.002961565  
+Loop time of 0.0315749 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     71928   1.7980981           5329   0.002961565  
+     72000   1.7998981           5329   0.0029451963 
+     72728   1.8180981           5329   0.002942499  
+Loop time of 0.0323517 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     72728   1.8180981           5329   0.002942499  
+     73528   1.8380981           5329   0.0028706656 
+Loop time of 0.0315408 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     73528   1.8380981           5329   0.0028706656 
+     74328   1.8580981           5329   0.0028775415 
+Loop time of 0.0323772 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     74328   1.8580981           5329   0.0028775415 
+     75128   1.8780981           5329   0.0029453176 
+Loop time of 0.031673 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     75128   1.8780981           5329   0.0029453176 
+     75928   1.8980981           5329   0.0030173412 
+Loop time of 0.0324476 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     75928   1.8980981           5329   0.0030173412 
+     76000   1.8998981           5329   0.0029945431 
+     76728   1.9180981           5329   0.0029921332 
+Loop time of 0.0327016 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     76728   1.9180981           5329   0.0029921332 
+     77528   1.9380981           5329   0.0030488528 
+Loop time of 0.0313239 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     77528   1.9380981           5329   0.0030488528 
+     78328   1.9580981           5329   0.003097187  
+Loop time of 0.0321645 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     78328   1.9580981           5329   0.003097187  
+     79128   1.9780981           5329   0.0032156338 
+Loop time of 0.0314263 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     79128   1.9780981           5329   0.0032156338 
+     79928   1.9980981           5329   0.0032156851 
+Loop time of 0.0315791 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     79928   1.9980981           5329   0.0032156851 
+     80000   1.9998981           5329   0.0032030757 
+     80728   2.0180981           5329   0.0032477621 
+Loop time of 0.0331392 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     80728   2.0180981           5329   0.0032477621 
+     81528   2.0380981           5329   0.0032642894 
+Loop time of 0.0321766 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     81528   2.0380981           5329   0.0032642894 
+     82328   2.0580981           5329   0.0032530777 
+Loop time of 0.0331314 on 8 procs for 800 steps with 5329 atoms
+
+timestep 2.4986911206964501e-05
+run 800 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+     82328   2.0580981           5329   0.0032530777 
+     83128   2.0780876           5329   0.0032941921 
+Loop time of 0.0315382 on 8 procs for 800 steps with 5329 atoms
+
+timestep 2.4979321336031645e-05
+run 800 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+     83128   2.0780876           5329   0.0032941921 
+     83928   2.0980711           5329   0.0032879391 
+Loop time of 0.0314559 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     83928   2.0980711           5329   0.0032879391 
+     84000   2.0998696           5329   0.0032739759 
+     84728   2.1180545           5329   0.0033705132 
+Loop time of 0.0321654 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     84728   2.1180545           5329   0.0033705132 
+     85528   2.138038            5329   0.0035307326 
+Loop time of 0.0314162 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     85528   2.138038            5329   0.0035307326 
+     86328   2.1580215           5329   0.0036691353 
+Loop time of 0.0328754 on 8 procs for 800 steps with 5329 atoms
+
+run 800 pre no post no
+   Step          Time         Atoms         c_ke     
+     86328   2.1580215           5329   0.0036691353 
+     87128   2.1780049           5329   0.003659104  
+Loop time of 0.0325522 on 8 procs for 800 steps with 5329 atoms
+
+timestep 2.4995903297329365e-05
+run 781 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+     87128   2.1780049           5329   0.003659104  
+     87909   2.1975267           5329   0.0037776409 
+Loop time of 0.0321089 on 8 procs for 781 steps with 5329 atoms
+
+timestep 2.4972050709041357e-05
+run 760 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+     87909   2.1975267           5329   0.0037776409 
+     88000   2.1997992           5329   0.0037147709 
+     88669   2.2165055           5329   0.0036227189 
+Loop time of 0.0314107 on 8 procs for 760 steps with 5329 atoms
+
+timestep 2.4975133771857351e-05
+run 744 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+     88669   2.2165055           5329   0.0036227189 
+     89413   2.235087            5329   0.0035741317 
+Loop time of 0.0295264 on 8 procs for 744 steps with 5329 atoms
+
+timestep 2.4982824719236827e-05
+run 736 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+     89413   2.235087            5329   0.0035741317 
+     90149   2.2534743           5329   0.0036761016 
+Loop time of 0.0304268 on 8 procs for 736 steps with 5329 atoms
+
+timestep 2.4970605285766553e-05
+run 732 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+     90149   2.2534743           5329   0.0036761016 
+     90881   2.2717528           5329   0.0037428397 
+Loop time of 0.0290165 on 8 procs for 732 steps with 5329 atoms
+
+run 732 pre no post no
+   Step          Time         Atoms         c_ke     
+     90881   2.2717528           5329   0.0037428397 
+     91613   2.2900313           5329   0.0037704626 
+Loop time of 0.0299267 on 8 procs for 732 steps with 5329 atoms
+
+run 732 pre no post no
+   Step          Time         Atoms         c_ke     
+     91613   2.2900313           5329   0.0037704626 
+     92000   2.2996949           5329   0.0036492473 
+     92345   2.3083098           5329   0.00370235   
+Loop time of 0.0307792 on 8 procs for 732 steps with 5329 atoms
+
+timestep 2.4969097044756075e-05
+run 728 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+     92345   2.3083098           5329   0.00370235   
+     93073   2.3264873           5329   0.0037230704 
+Loop time of 0.0300113 on 8 procs for 728 steps with 5329 atoms
+
+timestep 2.4976815547192224e-05
+run 723 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+     93073   2.3264873           5329   0.0037230704 
+     93796   2.3445455           5329   0.0038221222 
+Loop time of 0.0291672 on 8 procs for 723 steps with 5329 atoms
+
+timestep 2.4992688075780198e-05
+run 721 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+     93796   2.3445455           5329   0.0038221222 
+     94517   2.3625653           5329   0.0039083558 
+Loop time of 0.0300359 on 8 procs for 721 steps with 5329 atoms
+
+timestep 2.4989099985324982e-05
+run 719 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+     94517   2.3625653           5329   0.0039083558 
+     95236   2.3805324           5329   0.0038578197 
+Loop time of 0.0291774 on 8 procs for 719 steps with 5329 atoms
+
+timestep 2.4987153998364502e-05
+run 718 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+     95236   2.3805324           5329   0.0038578197 
+     95954   2.3984732           5329   0.0037619884 
+Loop time of 0.0288365 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+     95954   2.3984732           5329   0.0037619884 
+     96000   2.3996226           5329   0.0037254929 
+     96672   2.416414            5329   0.0037261693 
+Loop time of 0.0298502 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+     96672   2.416414            5329   0.0037261693 
+     97390   2.4343547           5329   0.0037605537 
+Loop time of 0.0296499 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+     97390   2.4343547           5329   0.0037605537 
+     98108   2.4522955           5329   0.0037747478 
+Loop time of 0.0302992 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+     98108   2.4522955           5329   0.0037747478 
+     98826   2.4702363           5329   0.0038662995 
+Loop time of 0.0298695 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+     98826   2.4702363           5329   0.0038662995 
+     99544   2.4881771           5329   0.0039296637 
+Loop time of 0.0294114 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+     99544   2.4881771           5329   0.0039296637 
+    100000   2.4995712           5329   0.0038101241 
+    100262   2.5061179           5329   0.0038503224 
+Loop time of 0.0305472 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+    100262   2.5061179           5329   0.0038503224 
+    100980   2.5240586           5329   0.0039055016 
+Loop time of 0.0292766 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+    100980   2.5240586           5329   0.0039055016 
+    101698   2.5419994           5329   0.0039150029 
+Loop time of 0.029028 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+    101698   2.5419994           5329   0.0039150029 
+    102416   2.5599402           5329   0.0039761065 
+Loop time of 0.0298565 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+    102416   2.5599402           5329   0.0039761065 
+    103134   2.577881            5329   0.0041403161 
+Loop time of 0.0300213 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+    103134   2.577881            5329   0.0041403161 
+    103852   2.5958217           5329   0.0040909352 
+Loop time of 0.0295106 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+    103852   2.5958217           5329   0.0040909352 
+    104000   2.5995198           5329   0.0039925478 
+    104570   2.6137625           5329   0.004065947  
+Loop time of 0.0299126 on 8 procs for 718 steps with 5329 atoms
+
+run 718 pre no post no
+   Step          Time         Atoms         c_ke     
+    104570   2.6137625           5329   0.004065947  
+    105288   2.6317033           5329   0.0040914498 
+Loop time of 0.0285145 on 8 procs for 718 steps with 5329 atoms
+
+timestep 2.496727456002575e-05
+run 716 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+    105288   2.6317033           5329   0.0040914498 
+    106004   2.6495799           5329   0.0043130837 
+Loop time of 0.0289828 on 8 procs for 716 steps with 5329 atoms
+
+timestep 2.4980366597364818e-05
+run 714 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+    106004   2.6495799           5329   0.0043130837 
+    106718   2.6674158           5329   0.0041654632 
+Loop time of 0.0283905 on 8 procs for 714 steps with 5329 atoms
+
+run 714 pre no post no
+   Step          Time         Atoms         c_ke     
+    106718   2.6674158           5329   0.0041654632 
+    107432   2.6852518           5329   0.0042734649 
+Loop time of 0.0289006 on 8 procs for 714 steps with 5329 atoms
+
+run 714 pre no post no
+   Step          Time         Atoms         c_ke     
+    107432   2.6852518           5329   0.0042734649 
+    108000   2.6994407           5329   0.0042116655 
+    108146   2.7030878           5329   0.0042576534 
+Loop time of 0.0298777 on 8 procs for 714 steps with 5329 atoms
+
+run 714 pre no post no
+   Step          Time         Atoms         c_ke     
+    108146   2.7030878           5329   0.0042576534 
+    108860   2.7209238           5329   0.0044803382 
+Loop time of 0.0291495 on 8 procs for 714 steps with 5329 atoms
+
+run 714 pre no post no
+   Step          Time         Atoms         c_ke     
+    108860   2.7209238           5329   0.0044803382 
+    109574   2.7387598           5329   0.00457501   
+Loop time of 0.0290672 on 8 procs for 714 steps with 5329 atoms
+
+timestep 2.4984804880209353e-05
+run 712 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+    109574   2.7387598           5329   0.00457501   
+    110286   2.7565489           5329   0.0046721698 
+Loop time of 0.029189 on 8 procs for 712 steps with 5329 atoms
+
+timestep 2.4970353990102977e-05
+run 700 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+    110286   2.7565489           5329   0.0046721698 
+    110986   2.7740282           5329   0.0046189163 
+Loop time of 0.0279155 on 8 procs for 700 steps with 5329 atoms
+
+timestep 2.4999969150160351e-05
+run 688 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+    110986   2.7740282           5329   0.0046189163 
+    111674   2.7912282           5329   0.004801295  
+Loop time of 0.027505 on 8 procs for 688 steps with 5329 atoms
+
+timestep 2.4982273656079831e-05
+run 684 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+    111674   2.7912282           5329   0.004801295  
+    112000   2.7993724           5329   0.004529239  
+    112358   2.808316            5329   0.0045736497 
+Loop time of 0.0278085 on 8 procs for 684 steps with 5329 atoms
+
+timestep 2.4973576051730364e-05
+run 669 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+    112358   2.808316            5329   0.0045736497 
+    113027   2.8250234           5329   0.0044015954 
+Loop time of 0.0264356 on 8 procs for 669 steps with 5329 atoms
+
+timestep 2.4996379055034312e-05
+run 648 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+    113027   2.8250234           5329   0.0044015954 
+    113675   2.841221            5329   0.0042376712 
+Loop time of 0.0258257 on 8 procs for 648 steps with 5329 atoms
+
+timestep 2.4976709835726947e-05
+run 637 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+    113675   2.841221            5329   0.0042376712 
+    114312   2.8571312           5329   0.0042172585 
+Loop time of 0.025697 on 8 procs for 637 steps with 5329 atoms
+
+timestep 2.4999930702155679e-05
+run 635 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.62 Mbytes
+   Step          Time         Atoms         c_ke     
+    114312   2.8571312           5329   0.0042172585 
+    114947   2.8730061           5329   0.0042877709 
+Loop time of 0.0251633 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    114947   2.8730061           5329   0.0042877709 
+    115582   2.8888811           5329   0.0042831168 
+Loop time of 0.0256377 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    115582   2.8888811           5329   0.0042831168 
+    116000   2.8993311           5329   0.0041632174 
+    116217   2.9047561           5329   0.0043147014 
+Loop time of 0.0261867 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    116217   2.9047561           5329   0.0043147014 
+    116852   2.920631            5329   0.0043443003 
+Loop time of 0.0255314 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    116852   2.920631            5329   0.0043443003 
+    117487   2.936506            5329   0.0043791565 
+Loop time of 0.0261303 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    117487   2.936506            5329   0.0043791565 
+    118122   2.9523809           5329   0.004186891  
+Loop time of 0.0265517 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    118122   2.9523809           5329   0.004186891  
+    118757   2.9682559           5329   0.0041917444 
+Loop time of 0.0256399 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    118757   2.9682559           5329   0.0041917444 
+    119392   2.9841308           5329   0.0041158029 
+Loop time of 0.0263412 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    119392   2.9841308           5329   0.0041158029 
+    120000   2.9993308           5329   0.0039756121 
+    120027   3.0000058           5329   0.0039976483 
+Loop time of 0.0268946 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    120027   3.0000058           5329   0.0039976483 
+    120662   3.0158807           5329   0.0039765946 
+Loop time of 0.0257815 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    120662   3.0158807           5329   0.0039765946 
+    121297   3.0317557           5329   0.0041054209 
+Loop time of 0.0254579 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    121297   3.0317557           5329   0.0041054209 
+    121932   3.0476307           5329   0.0040366326 
+Loop time of 0.0250808 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    121932   3.0476307           5329   0.0040366326 
+    122567   3.0635056           5329   0.003985876  
+Loop time of 0.0259249 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    122567   3.0635056           5329   0.003985876  
+    123202   3.0793806           5329   0.0043029896 
+Loop time of 0.0257425 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    123202   3.0793806           5329   0.0043029896 
+    123837   3.0952555           5329   0.0041628687 
+Loop time of 0.0258032 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    123837   3.0952555           5329   0.0041628687 
+    124000   3.0993305           5329   0.0040101216 
+    124472   3.1111305           5329   0.0042096913 
+Loop time of 0.0274585 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    124472   3.1111305           5329   0.0042096913 
+    125107   3.1270054           5329   0.0042196114 
+Loop time of 0.0259397 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    125107   3.1270054           5329   0.0042196114 
+    125742   3.1428804           5329   0.0042578933 
+Loop time of 0.025777 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    125742   3.1428804           5329   0.0042578933 
+    126377   3.1587554           5329   0.0042552519 
+Loop time of 0.0262439 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    126377   3.1587554           5329   0.0042552519 
+    127012   3.1746303           5329   0.0042998278 
+Loop time of 0.0258528 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    127012   3.1746303           5329   0.0042998278 
+    127647   3.1905053           5329   0.0041420476 
+Loop time of 0.0257708 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    127647   3.1905053           5329   0.0041420476 
+    128000   3.1993302           5329   0.0041181246 
+    128282   3.2063802           5329   0.004447986  
+Loop time of 0.0261275 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    128282   3.2063802           5329   0.004447986  
+    128917   3.2222552           5329   0.004445974  
+Loop time of 0.0262734 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    128917   3.2222552           5329   0.004445974  
+    129552   3.2381301           5329   0.0044622112 
+Loop time of 0.0262364 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    129552   3.2381301           5329   0.0044622112 
+    130187   3.2540051           5329   0.0044785243 
+Loop time of 0.0269603 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    130187   3.2540051           5329   0.0044785243 
+    130822   3.26988             5329   0.0046277171 
+Loop time of 0.0260958 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    130822   3.26988             5329   0.0046277171 
+    131457   3.285755            5329   0.0046984129 
+Loop time of 0.0267868 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    131457   3.285755            5329   0.0046984129 
+    132000   3.29933             5329   0.0044795796 
+    132092   3.30163             5329   0.0045762689 
+Loop time of 0.0275619 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    132092   3.30163             5329   0.0045762689 
+    132727   3.3175049           5329   0.004184468  
+Loop time of 0.0250955 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    132727   3.3175049           5329   0.004184468  
+    133362   3.3333799           5329   0.0045131249 
+Loop time of 0.025183 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    133362   3.3333799           5329   0.0045131249 
+    133997   3.3492548           5329   0.0046753179 
+Loop time of 0.025398 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    133997   3.3492548           5329   0.0046753179 
+    134632   3.3651298           5329   0.0043982109 
+Loop time of 0.02609 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    134632   3.3651298           5329   0.0043982109 
+    135267   3.3810047           5329   0.0042080768 
+Loop time of 0.0255078 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    135267   3.3810047           5329   0.0042080768 
+    135902   3.3968797           5329   0.0043106438 
+Loop time of 0.0260289 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    135902   3.3968797           5329   0.0043106438 
+    136000   3.3993297           5329   0.0041442337 
+    136537   3.4127546           5329   0.0043902703 
+Loop time of 0.0267751 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    136537   3.4127546           5329   0.0043902703 
+    137172   3.4286296           5329   0.0044813269 
+Loop time of 0.026195 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    137172   3.4286296           5329   0.0044813269 
+    137807   3.4445046           5329   0.0047013763 
+Loop time of 0.0390401 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    137807   3.4445046           5329   0.0047013763 
+    138442   3.4603795           5329   0.0047807761 
+Loop time of 0.0271974 on 8 procs for 635 steps with 5329 atoms
+
+run 635 pre no post no
+   Step          Time         Atoms         c_ke     
+    138442   3.4603795           5329   0.0047807761 
+    139077   3.4762545           5329   0.0047739537 
+Loop time of 0.0259054 on 8 procs for 635 steps with 5329 atoms
+
+timestep 2.4994021755240281e-05
+run 633 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.63 Mbytes
+   Step          Time         Atoms         c_ke     
+    139077   3.4762545           5329   0.0047739537 
+    139710   3.4920757           5329   0.0046817623 
+Loop time of 0.0255012 on 8 procs for 633 steps with 5329 atoms
+
+timestep 2.499526835096384e-05
+run 631 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.63 Mbytes
+   Step          Time         Atoms         c_ke     
+    139710   3.4920757           5329   0.0046817623 
+    140000   3.4993243           5329   0.0043345577 
+    140341   3.5078477           5329   0.0045037652 
+Loop time of 0.0261256 on 8 procs for 631 steps with 5329 atoms
+
+run 631 pre no post no
+   Step          Time         Atoms         c_ke     
+    140341   3.5078477           5329   0.0045037652 
+    140972   3.5236197           5329   0.0047890649 
+Loop time of 0.0255283 on 8 procs for 631 steps with 5329 atoms
+
+timestep 2.4986449336207129e-05
+run 631 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.63 Mbytes
+   Step          Time         Atoms         c_ke     
+    140972   3.5236197           5329   0.0047890649 
+    141603   3.5393862           5329   0.004807614  
+Loop time of 0.0259354 on 8 procs for 631 steps with 5329 atoms
+
+timestep 2.4969651607048444e-05
+run 631 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.63 Mbytes
+   Step          Time         Atoms         c_ke     
+    141603   3.5393862           5329   0.004807614  
+    142234   3.555142            5329   0.0050164819 
+Loop time of 0.0266996 on 8 procs for 631 steps with 5329 atoms
+
+timestep 2.49866359894775e-05
+run 629 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.63 Mbytes
+   Step          Time         Atoms         c_ke     
+    142234   3.555142            5329   0.0050164819 
+    142863   3.5708586           5329   0.0051326467 
+Loop time of 0.0257396 on 8 procs for 629 steps with 5329 atoms
+
+timestep 2.4983667869325187e-05
+run 627 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.63 Mbytes
+   Step          Time         Atoms         c_ke     
+    142863   3.5708586           5329   0.0051326467 
+    143490   3.5865234           5329   0.0052570974 
+Loop time of 0.0253445 on 8 procs for 627 steps with 5329 atoms
+
+timestep 2.498843820794401e-05
+run 618 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.63 Mbytes
+   Step          Time         Atoms         c_ke     
+    143490   3.5865234           5329   0.0052570974 
+    144000   3.5992675           5329   0.0052819324 
+    144108   3.6019662           5329   0.0054868133 
+Loop time of 0.026374 on 8 procs for 618 steps with 5329 atoms
+
+timestep 2.4982913219179136e-05
+run 610 pre yes post no
+Generated 0 of 0 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 12.6 | 12.61 | 12.63 Mbytes
+   Step          Time         Atoms         c_ke     
+    144108   3.6019662           5329   0.0054868133 
+    144718   3.6172058           5329   0.0057600957 
+Loop time of 0.0256663 on 8 procs for 610 steps with 5329 atoms
+

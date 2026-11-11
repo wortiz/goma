@@ -1,0 +1,79 @@
+
+---Density
+
+Density = CONSTANT 1
+
+----Solid Constitutive Equation
+
+Solid Constitutive Equation = NONLINEAR
+Lame MU = CONSTANT 1
+Lame LAMBDA = CONSTANT 1
+	(Solid Viscosity = CONSTANT 0)
+	(Solid Dilational Viscosity = CONSTANT 0)
+	(Solid Retardation Time = CONSTANT 0)
+Stress Free Solvent Vol Frac = CONSTANT 0
+	(Solid Thermal Expansion = CONSTANT 0)
+	(Solid Reference Temperature = CONSTANT 0)
+
+---Fluid Constitutive Equation 
+
+Liquid Constitutive Equation = NEWTONIAN
+Viscosity = CONSTANT 0.01
+	(Momentum Weight Function = GALERKIN)
+Polymer Constitutive Equation = NOPOLYMER
+Surface Tension = CONSTANT 0.01
+	(Spalart Allmaras Weight Function = GALERKIN)
+
+----Thermal Properties
+
+Conductivity = CONSTANT 1
+Heat Capacity = CONSTANT 1
+Volume Expansion = CONSTANT 1
+Reference Temperature = CONSTANT 0
+Liquidus Temperature = CONSTANT 1
+Solidus Temperature = CONSTANT 1
+	(Energy Weight Function = GALERKIN)
+	(Energy Divergence Term = off)
+ 1 1e-06 0 0 0
+
+----Electrical Properties
+
+Electrical Conductivity = CONSTANT 0
+	(Electrical Permittivity = CONSTANT 1)
+	(Magnetic Permeability = CONSTANT 1)
+	(Electrical Surface Diffusivity = CONSTANT 0)
+	(Electromagnetic Incident Wave = NONE 0)
+	(Shell User Parameter = CONSTANT 0)
+	(Voltage Formulation = CONDUCTIVITY)
+
+----Acoustic Properties
+
+	(Acoustic Wave Number = CONSTANT 1)
+	(Acoustic Impedance = CONSTANT 1)
+	(Acoustic Absorption = CONSTANT 1)
+	(Acoustic Ksquared Sign = CONSTANT 1)
+	(Refractive Index = CONSTANT 1)
+	(Light Absorption = CONSTANT 1)
+	(Extinction Index = CONSTANT 0)
+
+----Porous Media Properties
+
+Media Type = CONTINUOUS
+	(FlowingLiquid Viscosity = CONSTANT 1)
+	(Inertia Coefficient = CONSTANT 0)
+	(Species Weight Function = GALERKIN)
+	(Species Species Shock Capturing = NONE)
+
+----Volumetric Source Terms
+
+Navier-Stokes Source = CONSTANT 0 -0 0
+Solid Body Source = CONSTANT 0 0 0
+Mass Source = CONSTANT 0
+Heat Source = CONSTANT 0
+Current Source = CONSTANT 0
+
+---Initialization
+
+
+---Special Inputs
+

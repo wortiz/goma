@@ -1,0 +1,44 @@
+# LAMMPS side of the CFD-DEM lid driven cavity (read by Goma through "LAMMPS Input File").
+#
+# 2D granular disks in the unit square, same coordinates as the Goma mesh.
+# Do NOT define the fix external here: Goma creates "fix cfd_drag all external pf/callback 1 1"
+# and sets the timestep and runs LAMMPS itself (n_sub = ceil(goma dt / DEM Max Timestep)).
+
+units           si
+dimension       2
+atom_style      sphere
+atom_modify     map array
+boundary        f f p
+newton          off
+comm_modify     vel yes
+
+region          box block 0.0 1.0 0.0 1.0 -0.5 0.5
+create_box      1 box
+
+# 15 x 15 square lattice, spacing 0.0625, sites at 0.0625 ... 0.9375
+lattice         sq 0.0625
+region          cloud block 0.05 0.95 0.05 0.95 -0.5 0.5 units box
+create_atoms    1 region cloud
+
+# disks: d = 0.015 (mesh h = 0.05 is ~3.3 d), areal density 2.5 (fluid density is 1)
+set             type 1 diameter 0.015
+set             type 1 density/disc 2.5
+velocity        all set 0.0 0.0 0.0
+
+# soft spring-dashpot contacts; collision time ~3e-3 is resolved by the 1e-4 DEM step
+pair_style      gran/hooke/history 200.0 NULL 5.0 NULL 0.5 0
+pair_coeff      * *
+neighbor        0.005 bin
+neigh_modify    delay 0
+
+fix             wallx all wall/gran hooke/history 200.0 NULL 5.0 NULL 0.5 0 xplane 0.0 1.0
+fix             wally all wall/gran hooke/history 200.0 NULL 5.0 NULL 0.5 0 yplane 0.0 1.0
+fix             integrate all nve/sphere disc
+fix             twod all enforce2d
+
+compute         ke all ke
+thermo_style    custom step time atoms c_ke
+thermo          1000
+
+dump            parts all custom 200 dump.particles id x y vx vy radius
+dump_modify     parts sort id time yes

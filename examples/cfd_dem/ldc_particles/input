@@ -1,0 +1,97 @@
+------------------------------------------------------------
+  CFD-DEM lid driven cavity, one-way coupled (Goma VANS + LAMMPS DEM)
+
+  Unit square, lid (node set 3) moves at U = 1, rho = 1, mu = 0.01 -> Re = 100.
+  A 15 x 15 lattice of disks (d = 0.015) in LAMMPS (in.dem) is carried by the flow.
+  ONE_WAY: the fluid sees the particle void fraction, the particles feel drag
+  (and -V_p grad p for VANS model A), the fluid feels no reaction force.
+------------------------------------------------------------
+                 FEM File Specifications
+------------------------------------------------------------
+FEM file                         = ldc_dem.exoII
+Output EXODUS II file            = out.exoII
+GUESS file                       = contin.dat
+SOLN file                        = soln.dat
+Write intermediate results       = no
+------------------------------------------------------------
+                 General Specifications
+------------------------------------------------------------
+Number of processors             = 1
+Output Level                     = 0
+Debug                            = 0
+Initial Guess                    = zero
+------------------------------------------------------------
+                 Time Integration Specifications
+------------------------------------------------------------
+Time integration                 = transient
+$ Goma reads these cards in this order
+delta_t                          = 1.0e-3
+Maximum number of time steps     = 100000
+Maximum time                     = 10.0
+Minimum time step                = 1.0e-6
+Maximum time step                = 2.0e-2
+Time step parameter              = 0.5
+Time step error                  = 0.01  0 1 0 0 0 0 0 0 0 0
+Printing Frequency               = 2
+------------------------------------------------------------
+                 Solver Specifications
+------------------------------------------------------------
+Solution Algorithm               = umf
+Number of Newton Iterations      = 10
+Newton correction factor         = 1
+Normalized Residual Tolerance    = 1.0e-8
+Residual Ratio Tolerance         = 1.0e-6
+Use AutoDiff Assembly            = yes
+Use VANS Model                   = A
+------------------------------------------------------------
+                 CFD-DEM Coupling Specifications
+------------------------------------------------------------
+CFD-DEM Coupling                 = yes
+LAMMPS Input File                = in.dem
+DEM Max Timestep                 = 1.0e-4
+DEM Drag Model                   = DI_FELICE
+DEM Coupling Mode                = ONE_WAY
+DEM Minimum Void Fraction        = 0.35
+------------------------------------------------------------
+                 Boundary Condition Specifications
+------------------------------------------------------------
+Number of BC                     = -1
+$ lid; the walls below overwrite the two top corners with no slip
+BC = U NS 3 1.0
+BC = V NS 3 0.0
+BC = U NS 1 0.0
+BC = V NS 1 0.0
+BC = U NS 2 0.0
+BC = V NS 2 0.0
+BC = U NS 4 0.0
+BC = V NS 4 0.0
+$ the coupler writes the void fraction into these dofs before every step
+BC = FIX NS 100 VOID_FRACTION 0
+END OF BC
+
+PRESSURE DATUM = 0  0.0
+
+------------------------------------------------------------
+                 Problem Description
+------------------------------------------------------------
+Number of Materials = 1
+
+MAT = fluid    1
+
+        Coordinate System             = CARTESIAN
+        Element Mapping               = isoparametric
+        Mesh Motion                   = ARBITRARY
+        Number of bulk species        = 0
+
+        Number of EQ                  = 4
+        EQ = momentum1     Q2  U1             Q2  1. 1. 1. 1. 0. 0.
+        EQ = momentum2     Q2  U2             Q2  1. 1. 1. 1. 0. 0.
+        EQ = continuity    P1  P              P1  1. 0.
+        EQ = void_fraction Q1  VOID_FRACTION  Q1  1. 0. 0. 0. 0.
+$                                                 mass adv bnd dif src porous
+
+------------------------------------------------------------
+                 Post Processing Specifications
+------------------------------------------------------------
+Stream Function                  = yes
+Pressure contours                = yes

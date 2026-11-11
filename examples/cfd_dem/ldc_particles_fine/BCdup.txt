@@ -1,0 +1,35 @@
+
+
+
+BC Duplication list for Processor 7:
+-------- --------- ----------- ----
+
+At global node 201 (proc node 60) (1, 0)
+ R_MOMENTUM1     gets   U               (2) from NS 1
+ R_MOMENTUM2     gets   V               (3) from NS 1
+ R_VOID_FRACTION gets   FIX             (8) from NS 100
+
+BC Duplication list for Processor 4:
+-------- --------- ----------- ----
+
+At global node 40401 (proc node 4974) (1, 1)
+ R_MOMENTUM1     gets   U               (4) from NS 2
+ R_MOMENTUM2     gets   V               (1) from NS 3
+ R_VOID_FRACTION gets   FIX             (8) from NS 100
+
+BC Duplication list for Processor 3:
+-------- --------- ----------- ----
+
+At global node 1 (proc node 1) (0, 0)
+ R_MOMENTUM1     gets   U               (2) from NS 1
+ R_MOMENTUM2     gets   V               (3) from NS 1
+ R_VOID_FRACTION gets   FIX             (8) from NS 100
+
+BC Duplication list for Processor 1:
+-------- --------- ----------- ----
+
+At global node 40201 (proc node 4717) (0, 1)
+ R_MOMENTUM1     gets   U               (6) from NS 4
+ R_MOMENTUM2     gets   V               (1) from NS 3
+ R_VOID_FRACTION gets   FIX             (8) from NS 100
+

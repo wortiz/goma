@@ -1,0 +1,169 @@
+Command line : /home/claude/project/build/goma -i input
+Run Time : Wed Nov 11 04:17:14 2026
+Version : v7.11.0-26-g440e1274
+
+***FEM File Specifications***
+
+FEM file = ldc_dem.exoII
+Output EXODUS II file = out.exoII
+GUESS file = contin.dat
+SOLN file = soln.dat
+Write intermediate results = no
+
+***General Specifications***
+
+Output Level = 0
+Debug = 0
+Print 3D BC Dup = 0
+Initial Guess = zero
+
+***Time Integration Specifications*** 
+
+Time integration = transient
+delta_t = 0.001
+Maximum number of time steps = 100000
+Maximum time = 10
+Minimum time step = 1e-06
+Maximum time step = 0.02
+Time step parameter = 0.5
+Time step error = 0.01 0 1 0 0 0 0 0 0 0 0
+Printing Frequency = 5
+
+***Solver Specifications***
+
+Solution Algorithm = mumps
+ (Matrix storage format = msr) (default)
+ (AztecOO Solver = gmres) (default)
+ (Stratimikos File = stratimikos.xml) (default)
+ (Preconditioner = none) (default)
+ (Matrix subdomain solver = ilut) (default)
+ (Matrix Scaling = none) (default)
+ (Matrix residual norm type = r0) (default)
+ (Matrix output type = none) (default)
+ (Matrix factorization reuse = recalc) (default)
+ (Matrix graph fillin = 0) (default)
+ (Matrix factorization overlap = none) (default)
+ (Matrix overlap type = standard) (default)
+ (Matrix auxiliary vector = resid) (default)
+ (Matrix drop tolerance = 0) (default)
+ (Matrix polynomial order = 3) (default)
+ (Matrix reorder = none) (default)
+ (Matrix factorization save = 0) (default)
+ (Matrix ILUT fill factor = 1) (default)
+ (Matrix RILU relax factor = 1) (default)
+ (Matrix BILU Threshold = 0) (default)
+ (Matrix Relative Threshold = 0) (default)
+ (Matrix Absolute Threshold = 0) (default)
+ (Size of Krylov subspace = 30) (default)
+ (Orthogonalization = classic) (default)
+ (Maximum Linear Solve Iterations = 500) (default)
+ (Amesos Solver Package = KLU) (default)
+ (Amesos2 Solver Package = KLU) (default)
+Number of Newton Iterations = 10
+Newton line search type = FULL_STEP
+Line search minimum damping = 0.050000
+Newton correction factor = 1
+Normalized Residual Tolerance = 1e-08
+Normalized Residual Tolerance = 1e-08
+Residual Ratio Tolerance = 1e-06
+(Pressure Stabilization = NONE) (default)
+(Pressure Stabilization Scaling = 0.0) (default)
+(Pressure Stabilization Disable Tau Sens = no) (default)
+(Pressure Stabilization Lagged Tau = no) (default)
+(SUPG Lagged Tau = no) (default)
+(SUPG Disable Tau Sens = no) (default)
+(PSPG Advection Correction = no) (default)
+(DEVSS Traceless Gradient = no) (default)
+(Continuity Stabilization = None) (default)
+(Number of Segregated Subcycles = 1) (default)
+Use AutoDiff Assembly = yes
+Use VANS Model = A
+
+***CFD-DEM Coupling Specifications***
+
+CFD-DEM Coupling = YES
+LAMMPS Input File = in.dem
+DEM Max Timestep = 2.5e-05
+DEM Drag Model = DI_FELICE
+DEM Coupling Mode = ONE_WAY
+DEM Fix External ID = cfd_drag
+DEM Minimum Void Fraction = 0.35
+DEM Drag Field Names = DEM_FX DEM_FY DEM_FZ
+
+***Boundary Condition Specifications***
+
+Number of BC = 9
+BC = U NS 3 1
+BC = V NS 3 0
+BC = U NS 1 0
+BC = V NS 1 0
+BC = U NS 2 0
+BC = V NS 2 0
+BC = U NS 4 0
+BC = V NS 4 0
+BC = FIX NS 100 VOID_FRACTION 0
+END OF BC
+PRESSURE DATUM = 0 0
+Number of rotation conditions = 0
+
+Problem Description =
+
+Number of Materials = 1
+MAT = fluid 1
+Coordinate System = CARTESIAN
+Element Mapping = isoparametric
+Mesh Motion = ARBITRARY
+Number of bulk species = 0
+Number of viscoelastic modes = 0
+Number of Matrices = 1
+Number of Matrices = 1
+Number of EQ = 4
+		EQ = momentum1	  Q2      U1   Q2	 1 1 1 1 0 0
+		EQ = momentum2	  Q2      U2   Q2	 1 1 1 1 0 0
+		EQ = continuity	  P1       P   P1	 1 0
+		EQ = void_fraction	  Q1 VOID_FRACTION   Q1	 1 0 0 0 0
+
+END OF MAT
+
+
+Post Processing Specifications =
+
+Stream Function = yes
+Pressure contours = yes
+
+END OF PARTICLES
+
+
+---Compiler defines---
+
+MDE                           = 27
+MAX_PROB_VAR                  = 15
+MAX_CONC                      = 4
+MAX_VARIABLE_TYPES            = 219
+MAX_EXTERNAL_FIELD            = 4
+PARALLEL             Num_Proc = 8
+HAVE_MPI_H                    = yes
+USE_CHEMKIN                   = no
+GOMA_ENABLE_UMFPACK           = yes
+GOMA_ENABLE_SPARSE            = yes
+GOMA_HAVE_BLAS                = yes
+GOMA_HAVE_LAPACK              = yes
+GOMA_ENABLE_ARPACK            = yes
+GOMA_ENABLE_PETSC             = yes
+PETSC_USE_COMPLEX             = no
+GOMA_ENABLE_OMEGA_H           = yes
+GOMA_ENABLE_LAMMPS            = yes
+GOMA_ENABLE_STRATIMIKOS       = yes
+GOMA_ENABLE_TEKO              = yes
+GOMA_ENABLE_METIS             = yes
+GOMA_ENABLE_APREPRO_LIB       = yes
+GOMA_ENABLE_SACADO            = yes
+HAVE_PARPACK                  = no
+HAVE_AZTEC                    = yes
+TRILINOS                      = yes
+FP_EXCEPT                     = no
+CHECK_FINITE                  = no
+Pressure Stabilization (PSPG) = no
+Pressure Stabilization (PSPP) = no
+Stabilization Scaling         = 0.000000
+Linear Stability              = no
