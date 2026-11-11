@@ -118,6 +118,8 @@ typedef struct {
   int *is_vertex;      /* 1 for element vertices                        */
   double *node_vol;    /* lumped vertex volume                          */
   double *node_eps;    /* fluid fraction                                */
+  double *node_eps_old; /* fluid fraction before the last DEM interval  */
+  double eps_dt;        /* length of that interval, 0 before the first  */
   double *node_f[DIM]; /* fluid reaction force per volume               */
   int eps_valid;
 
@@ -182,6 +184,7 @@ static void setup_mesh(void) {
   S.is_vertex = calloc(S.num_nodes, sizeof(int));
   S.node_vol = calloc(S.num_nodes, sizeof(double));
   S.node_eps = calloc(S.num_nodes, sizeof(double));
+  S.node_eps_old = calloc(S.num_nodes, sizeof(double));
   for (k = 0; k < DIM; k++)
     S.node_f[k] = calloc(S.num_nodes, sizeof(double));
 
@@ -714,6 +717,8 @@ int cfd_dem_init(Exo_DB *exo, Dpi *dpi, double *x, double time) {
   setup_mesh();
   gather_particles();
   compute_void_fraction();
+  memcpy(S.node_eps_old, S.node_eps, S.num_nodes * sizeof(double));
+  S.eps_dt = 0.0;
   {
     double *zero = calloc(3 * MAX(S.np, 1), sizeof(double));
     compute_reaction_field(zero);
@@ -725,8 +730,18 @@ int cfd_dem_init(Exo_DB *exo, Dpi *dpi, double *x, double time) {
   return 0;
 }
 
-int cfd_dem_apply_void_fraction(
-    double *x, double *x_old, double *xdot, double *xdot_old, double delta_t, double theta) {
+/*
+ * The void fraction is not integrated by goma: it is set from the particles once per accepted
+ * step and held fixed (FIX'd dofs, which Newton leaves alone, xdot included). Its rate is the
+ * change over the DEM interval that produced it,
+ *     xdot = (eps^n - eps^{n-1}) / (t^n - t^{n-1}),
+ * a backward difference independent of the goma step being tried and of the time integrator.
+ * Deriving xdot from the integrator instead (e.g. 2 (eps - eps_old) / dt - xdot_old for the
+ * trapezoid rule) treats the once-per-step jump in eps as happening within the current step:
+ * the rate rings in sign forever under the trapezoid rule and grows as 1/dt when a step is
+ * retried with a smaller dt, which can drive the time step control to collapse.
+ */
+int cfd_dem_apply_void_fraction(double *x, double *xdot) {
   if (!S.eps_valid)
     return -1;
   int written = 0;
@@ -736,9 +751,7 @@ int cfd_dem_apply_void_fraction(
       if (j < 0)
         continue;
       x[j] = S.node_eps[i];
-      /* Newton leaves FIX'd dofs alone, so set xdot consistent with the time integrator */
-      if (delta_t > 0.0)
-        xdot[j] = (1.0 + 2.0 * theta) / delta_t * (x[j] - x_old[j]) - 2.0 * theta * xdot_old[j];
+      xdot[j] = (S.eps_dt > 0.0) ? (S.node_eps[i] - S.node_eps_old[i]) / S.eps_dt : 0.0;
       written++;
     }
   }
@@ -812,6 +825,8 @@ int cfd_dem_advance(double *x,
       for (int k = 0; k < 3; k++)
         fluid_force[3 * p + k] = fluid_force_old[3 * q + k];
   }
+  memcpy(S.node_eps_old, S.node_eps, S.num_nodes * sizeof(double));
+  S.eps_dt = dt;
   compute_void_fraction();
   compute_reaction_field(fluid_force);
 
@@ -837,6 +852,7 @@ void cfd_dem_finalize(void) {
   free(S.is_vertex);
   free(S.node_vol);
   free(S.node_eps);
+  free(S.node_eps_old);
   for (int k = 0; k < DIM; k++)
     free(S.node_f[k]);
   free(S.pid);
@@ -861,9 +877,8 @@ int cfd_dem_init(Exo_DB *exo, Dpi *dpi, double *x, double time) {
   GOMA_EH(GOMA_ERROR, "CFD-DEM coupling requires Goma built with -DENABLE_LAMMPS=ON");
   return -1;
 }
-int cfd_dem_apply_void_fraction(
-    double *x, double *x_old, double *xdot, double *xdot_old, double delta_t, double theta) {
-  (void)x, (void)x_old, (void)xdot, (void)xdot_old, (void)delta_t, (void)theta;
+int cfd_dem_apply_void_fraction(double *x, double *xdot) {
+  (void)x, (void)xdot;
   return -1;
 }
 int cfd_dem_advance(double *x,
