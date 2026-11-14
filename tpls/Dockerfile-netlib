@@ -2,11 +2,18 @@ FROM rockylinux:9
 
 RUN dnf update -y
 RUN dnf install -y git patch gcc-toolset-13 m4 make bzip2 tar zlib-devel openssl-devel pkgconfig python3-devel findutils
+RUN dnf install -y epel-release && dnf install -y ccache
+
+# ccache lives in a build cache mount (podman/buildah), reused across image builds
+ARG CCACHE_MAXSIZE=20G
+# Number of parallel build jobs
+ARG JOBS=2
 
 COPY . /opt/goma
 
-RUN . /opt/rh/gcc-toolset-13/enable && \
- PYTHONUNBUFFERED=1 /opt/goma/install-tpls.py --cc=gcc --cxx=g++ --fc=gfortran --netlib-blas --build-shared --download-dir=/tmp/downloads --install-complex-petsc -j 32 --extract-dir=/tmp/extract /opt/goma-libs
+RUN --mount=type=cache,target=/ccache,id=goma-tpls-ccache \
+    . /opt/rh/gcc-toolset-13/enable && \
+ CCACHE_MAXSIZE=${CCACHE_MAXSIZE} PYTHONUNBUFFERED=1 /opt/goma/install-tpls.py --ccache-dir=/ccache --cc=gcc --cxx=g++ --fc=gfortran --netlib-blas --build-shared --download-dir=/tmp/downloads --install-complex-petsc -j ${JOBS} --extract-dir=/tmp/extract /opt/goma-libs
 
 RUN rm -r /opt/goma
 RUN rm -r /tmp/downloads

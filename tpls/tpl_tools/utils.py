@@ -122,8 +122,8 @@ class PrintAndFileLogger(object):
     def __init__(self, filepath):
         self.file = open(filepath, "a")
 
-    def log(self, *args):
-        print(*args)
+    def log(self, *args, file=None):
+        print(*args, file=file if file is not None else sys.stdout)
         print(*args, file=self.file)
 
     def __del__(self):
@@ -134,8 +134,8 @@ class PrintLogger(object):
     def __init__(self):
         return
 
-    def log(self, *args):
-        print(*args)
+    def log(self, *args, file=None):
+        print(*args, file=file if file is not None else sys.stdout)
 
 
 def check_for_x11(extract_dir, cc):

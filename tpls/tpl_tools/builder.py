@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import tarfile
 import sys
@@ -35,6 +36,10 @@ class Builder(object):
         log_dir=None,
         prebuilt=False,
         skip_ssl_verify=False,
+        enable_cuda=False,
+        cuda_arch=None,
+        enable_ccache=False,
+        ccache_dir=None,
     ):
         self._dependencies = []
         self._configure_options = []
@@ -50,6 +55,10 @@ class Builder(object):
         self._registry = registry
         self.prebuilt = prebuilt
         self.skip_ssl_verify = skip_ssl_verify
+        self.enable_cuda = enable_cuda
+        self.cuda_arch = cuda_arch
+        self.enable_ccache = enable_ccache
+        self.ccache_dir = ccache_dir
         return
 
     def set_dependency(self, dep):
@@ -91,8 +100,44 @@ class Builder(object):
             )
         )
 
+    def setup_ccache(self):
+        """Enable ccache for this package's build environment only.
+
+        CMake packages use CMAKE_<LANG>_COMPILER_LAUNCHER (read from the
+        environment by CMake >= 3.17), other build systems get a masquerade
+        directory of compiler symlinks prepended to PATH, which only applies
+        when compilers are found through PATH (e.g. --cc=gcc, or MPI wrappers
+        calling gcc).
+        """
+        ccache = shutil.which("ccache", path=self.env.get("PATH"))
+        if ccache is None:
+            raise RuntimeError("ccache enabled but ccache not found on PATH")
+        if self.ccache_dir:
+            self.env["CCACHE_DIR"] = self.ccache_dir
+        from tpl_tools.packages import packages
+
+        if isinstance(self._package, packages.CMakePackage):
+            self.env["CMAKE_C_COMPILER_LAUNCHER"] = ccache
+            self.env["CMAKE_CXX_COMPILER_LAUNCHER"] = ccache
+            self.logger.log("ccache enabled for {} via CMake launcher".format(self._package.name))
+            return
+        masq_dir = os.path.join(self._extract_dir, "ccache-bin")
+        mkdir_p(masq_dir)
+        names = {"gcc", "g++", "cc", "c++", "clang", "clang++"}
+        for var in ["CC", "CXX"]:
+            if var in self._registry.get_environment():
+                names.add(os.path.basename(self._registry.get_environment()[var]))
+        for n in names:
+            link = os.path.join(masq_dir, n)
+            if not os.path.lexists(link):
+                os.symlink(ccache, link)
+        self.env["PATH"] = masq_dir + os.pathsep + self.env.get("PATH", "")
+        self.logger.log("ccache enabled for {} via {}".format(self._package.name, masq_dir))
+
     def build(self):
         self._package.set_environment(self)
+        if self.enable_ccache:
+            self.setup_ccache()
         self._package.configure_options(self)
         if hasattr(self._package, "configure"):
             self.logger.log("Configuring {}".format(self._package.name))

@@ -32,6 +32,29 @@ Build with static libraries, shared is set by default:
 
     ./install-tpls.py --build-static /path/to/install
 
+Build Trilinos with CUDA (Kokkos) support, `nvcc` (CUDA >= 12.2) must be on `PATH`.
+Currently only Trilinos is built with CUDA, set `--cuda-arch` to the Kokkos architecture
+of the target GPU (e.g. `AMPERE80`, `AMPERE86`, `ADA89`, `HOPPER90`), otherwise Kokkos
+autodetects the GPU on the build machine:
+
+    ./install-tpls.py --enable-cuda --cuda-arch=AMPERE86 /path/to/install
+
+A container image can be built with podman using `Dockerfile-cuda`:
+
+    podman build -f Dockerfile-cuda --build-arg KOKKOS_CUDA_ARCH=AMPERE86 -t goma-libs-cuda .
+    podman run --rm -it --device nvidia.com/gpu=all goma-libs-cuda
+
+Use ccache to speed up rebuilds (`ccache` must be on `PATH`), `--ccache-dir` sets `CCACHE_DIR`
+and implies `--enable-ccache`. ccache is only used while building, it is not written to `config.sh`:
+
+    ./install-tpls.py --enable-ccache /path/to/install
+    ./install-tpls.py --ccache-dir=/path/to/ccache /path/to/install
+
+The Dockerfiles use ccache with a build cache mount (`id=goma-tpls-ccache`) so rebuilds of the
+images reuse previous compilations, the size can be set with `--build-arg CCACHE_MAXSIZE=20G`.
+
+The number of parallel build jobs in the Dockerfiles can be set with `--build-arg JOBS=16` (default 2).
+
 Reuse downloads:
 
     ./install-tpls.py --download-dir=/path/to/downloads /path/to/install

@@ -38,6 +38,7 @@ default_packages = [
     "petsc_complex",
     "sparse",
     "catch2",
+    "gtest",
 ]
 
 
@@ -142,6 +143,35 @@ if __name__ == "__main__":
     )
     parser.set_defaults(petsc_complex=False)
 
+    parser.add_argument(
+        "--enable-cuda",
+        help="Enable CUDA (via Kokkos) in supported packages, currently only Trilinos. Requires nvcc on PATH",
+        dest="enable_cuda",
+        action="store_true",
+    )
+    parser.set_defaults(enable_cuda=False)
+    parser.add_argument(
+        "--cuda-arch",
+        help="Kokkos CUDA architecture name used with --enable-cuda (e.g. AMPERE80, AMPERE86, ADA89, HOPPER90). "
+        "If not set Kokkos will try to autodetect the GPU on the build machine",
+        dest="cuda_arch",
+        type=str,
+    )
+
+    parser.add_argument(
+        "--enable-ccache",
+        help="Use ccache to compile packages (build environment only, not written to config)",
+        dest="enable_ccache",
+        action="store_true",
+    )
+    parser.set_defaults(enable_ccache=False)
+    parser.add_argument(
+        "--ccache-dir",
+        help="ccache cache directory (sets CCACHE_DIR), implies --enable-ccache. "
+        "Default is ccache's own default or the CCACHE_DIR environment variable",
+        type=pathlib.Path,
+    )
+
     for p in packages:
         pm = importlib.import_module("tpl_tools." + ".".join(["packages", p]))
         pc = pm.Package()
@@ -176,6 +206,44 @@ if __name__ == "__main__":
         )
         packages.remove("parmetis")
         packages.remove("superlu_dist")
+
+    ccache_dir = None
+    if args.ccache_dir:
+        args.enable_ccache = True
+        ccache_dir = os.path.abspath(os.path.expanduser(args.ccache_dir))
+        mkdir_p(ccache_dir)
+    if args.enable_ccache:
+        import shutil
+
+        if shutil.which("ccache") is None:
+            logger.log("--enable-ccache requires ccache on PATH")
+            exit(1)
+        logger.log(
+            "ccache enabled: {} cache dir: {}".format(
+                shutil.which("ccache"),
+                ccache_dir or os.environ.get("CCACHE_DIR", "ccache default"),
+            )
+        )
+
+    if args.cuda_arch and not args.enable_cuda:
+        logger.log("--cuda-arch given without --enable-cuda, ignoring")
+
+    if args.enable_cuda:
+        import shutil
+
+        if shutil.which("nvcc") is None:
+            logger.log(
+                "--enable-cuda requires nvcc on PATH (e.g. /usr/local/cuda/bin)"
+            )
+            exit(1)
+        logger.log("CUDA enabled, using nvcc: {}".format(shutil.which("nvcc")))
+        if args.cuda_arch:
+            args.cuda_arch = args.cuda_arch.upper()
+            logger.log("Kokkos CUDA architecture: {}".format(args.cuda_arch))
+        else:
+            logger.log(
+                "No --cuda-arch given, Kokkos will autodetect the GPU on this machine"
+            )
 
     if args.netlib_blas:
         packages.remove("openblas")
@@ -285,6 +353,10 @@ if __name__ == "__main__":
                 log_dir=log_dir,
                 prebuilt=True,
                 skip_ssl_verify=args.skip_ssl_verify,
+                enable_cuda=args.enable_cuda,
+                cuda_arch=args.cuda_arch,
+                enable_ccache=args.enable_ccache,
+                ccache_dir=ccache_dir,
             )
             if build.check(True):
                 build.logger.log("Package {} found at {}".format(pc.name, package_dir))
@@ -309,6 +381,10 @@ if __name__ == "__main__":
                 args.enable_shared,
                 log_dir=log_dir,
                 skip_ssl_verify=args.skip_ssl_verify,
+                enable_cuda=args.enable_cuda,
+                cuda_arch=args.cuda_arch,
+                enable_ccache=args.enable_ccache,
+                ccache_dir=ccache_dir,
             )
 
             if build.check():

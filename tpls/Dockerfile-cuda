@@ -1,0 +1,47 @@
+# CUDA enabled TPL image, currently only Trilinos (Kokkos) is built with CUDA
+#
+# Build with podman, set the Kokkos arch to match your GPU:
+#   podman build -f Dockerfile-cuda --build-arg KOKKOS_CUDA_ARCH=AMPERE86 -t goma-libs-cuda .
+#
+# Run with GPU access (requires nvidia-container-toolkit CDI setup):
+#   podman run --rm -it --device nvidia.com/gpu=all goma-libs-cuda
+ARG CUDA_VERSION=12.9.1
+FROM docker.io/nvidia/cuda:${CUDA_VERSION}-devel-ubuntu24.04
+
+# Kokkos architecture name: VOLTA70, TURING75, AMPERE80, AMPERE86, ADA89, HOPPER90, BLACKWELL100, ...
+ARG KOKKOS_CUDA_ARCH=AMPERE80
+# Number of parallel build jobs
+ARG JOBS=2
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y git build-essential m4 zlib1g-dev libx11-dev gfortran pkg-config autoconf python3-dev python3-pip vim tmux nano gdb valgrind libssl-dev curl ccache && \
+    apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ccache lives in a build cache mount (podman/buildah), reused across image builds
+ARG CCACHE_MAXSIZE=20G
+
+COPY . /opt/goma
+
+RUN --mount=type=cache,target=/ccache,id=goma-tpls-ccache \
+    CCACHE_MAXSIZE=${CCACHE_MAXSIZE} PYTHONUNBUFFERED=1 /opt/goma/install-tpls.py --ccache-dir=/ccache --cc=gcc --cxx=g++ --fc=gfortran --build-shared \
+      --enable-cuda --cuda-arch=${KOKKOS_CUDA_ARCH} \
+      --download-dir=/tmp/downloads -j ${JOBS} --extract-dir=/tmp/extract /opt/goma-libs && \
+    rm -rf /opt/goma /tmp/downloads /tmp/extract /opt/goma-libs/logs
+
+RUN cp /opt/goma-libs/config.sh /etc/profile.d/goma-libs.sh
+
+RUN { \
+      echo '#!/usr/bin/env bash' \
+      && echo ". /opt/goma-libs/config.sh" \
+      && echo 'exec "$@"'; \
+    } > /entrypoint.sh \
+&& chmod a+x /entrypoint.sh
+
+ENV OMPI_MCA_btl="^vader"
+ENV OMPI_MCA_btl_base_warn_component_unuse="0"
+ENV OMPI_ALLOW_RUN_AS_ROOT=1
+ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+WORKDIR /opt/workdir
+
+ENTRYPOINT [ "/entrypoint.sh" ]
+CMD [ "/bin/bash" ]
