@@ -82,13 +82,19 @@ extern "C" {
 #include "sl_util_structs.h"
 #undef IGNORE_CPP_DEFINE
 #include "adapt/resetup_problem.h"
+#include "base_mesh.h"
+#include "dp_ghost.h"
 #include "el_elm.h"
 #include "el_elm_info.h"
+#include "mm_elem_block_structs.h"
+#include "mm_mp.h"
 #include "mm_unknown_map.h"
 #include "rd_dpi.h"
 #include "rd_exo.h"
 #include "rd_mesh.h"
+#include "rf_fem.h"
 #include "rf_node_const.h"
+#include "rf_solver.h"
 #include "util/goma_normal.h"
 #include "wr_dpi.h"
 #include "wr_exo.h"
@@ -167,6 +173,593 @@ static void setup_names(int nnames, std::vector<char> &storage, std::vector<char
   for (int i = 0; i < nnames; ++i) {
     ptrs[std::size_t(i)] = storage.data() + max_name_length * i;
   }
+}
+
+// Adapted mesh partition for this processor as it would appear in a Nemesis
+// (ExodusII + parallel info) file: node/element numbers are 1-based.
+struct AdaptedMesh {
+  std::string title;
+  int dim = 0;
+  int num_nodes = 0;
+  int num_elems = 0;
+  std::vector<double> coords[3];
+
+  int block_id = 0;
+  std::string elem_type;
+  int nodes_per_elem = 0;
+  std::vector<int> conn;
+
+  std::vector<int> ns_ids;
+  std::vector<std::vector<int>> ns_nodes;
+  std::vector<int> ss_ids;
+  std::vector<std::vector<int>> ss_elems;
+  std::vector<std::vector<int>> ss_sides; // ExodusII side numbers
+
+  // Distributed processing information
+  int num_nodes_global = 0;
+  int num_elems_global = 0;
+  std::vector<int> global_set_ids;
+  std::vector<int> global_ns_node_counts;
+  std::vector<int> global_ss_side_counts;
+  std::vector<int> global_eb_ids;
+  std::vector<int> global_eb_counts;
+  std::vector<int> node_map; // global node ids
+  std::vector<int> elem_map; // global element ids
+  int num_internal_nodes = 0;
+  int num_boundary_nodes = 0;
+  int num_internal_elems = 0;
+  std::vector<int> node_cmap_ids;
+  std::vector<std::vector<int>> node_cmap_nodes;
+  std::vector<std::vector<int>> node_cmap_procs;
+};
+
+static int *alloc_int_copy(const std::vector<int> &v) {
+  int *a = alloc_int_1(static_cast<int>(v.size()), 0);
+  std::copy(v.begin(), v.end(), a);
+  return a;
+}
+
+// NULL for empty arrays, as rd_exo gets from smalloc(0). generate_ghost_elems
+// relies on this for side sets with no sides on this processor.
+static int *alloc_int_copy_or_null(const std::vector<int> &v) {
+  return v.empty() ? NULL : alloc_int_copy(v);
+}
+
+static char *alloc_str_copy(const std::string &s, std::size_t len) {
+  char *a = static_cast<char *>(calloc(std::max(len, s.size() + 1), sizeof(char)));
+  memcpy(a, s.c_str(), s.size());
+  return a;
+}
+
+// 0-based local nodes on each 1-based ExodusII side, matching ex_get_side_set_node_list
+static std::vector<int> exodus_side_nodes(int dim, int side) {
+  static const std::vector<std::vector<int>> tri3 = {{0, 1}, {1, 2}, {2, 0}};
+  static const std::vector<std::vector<int>> tet4 = {{0, 1, 3}, {1, 2, 3}, {0, 3, 2}, {0, 2, 1}};
+  const auto &table = (dim == 3) ? tet4 : tri3;
+  if (side < 1 || side > static_cast<int>(table.size())) {
+    GOMA_EH(GOMA_ERROR, "Omega_h conversion: bad side %d for dim %d", side, dim);
+  }
+  return table[side - 1];
+}
+
+// Fill exo the same way rd_exo(INIT | MESH | RES0) fills it from a file
+// containing the adapted mesh (1-based numbering, zero_base not yet applied)
+static void fill_exo(Exo_DB *x, const AdaptedMesh &m, const char *path) {
+  x->state = EXODB_STATE_GRND;
+  x->path = alloc_str_copy(path, 0);
+  x->node_map_exists = FALSE;
+  x->elem_map_exists = FALSE;
+  x->elem_order_map_exists = (Linear_Solver == FRONT) ? TRUE : FALSE;
+  x->elem_var_tab_exists = FALSE;
+  x->mode = EX_READ;
+  x->comp_wordsize = sizeof(dbl);
+  x->io_wordsize = sizeof(dbl);
+  x->exoid = -1;
+
+  // INIT
+  x->title = alloc_str_copy(m.title, MAX_SLENGTH);
+  x->num_dim = m.dim;
+  x->num_nodes = m.num_nodes;
+  x->num_elems = m.num_elems;
+  x->num_elem_blocks = 1;
+  x->num_node_sets = static_cast<int>(m.ns_ids.size());
+  x->num_side_sets = static_cast<int>(m.ss_ids.size());
+  x->num_qa_rec = 0;
+  x->num_info = 0;
+  x->ns_node_len = 0;
+  for (const auto &ns : m.ns_nodes) {
+    x->ns_node_len += static_cast<int>(ns.size());
+  }
+  x->ns_distfact_len = 0;
+  x->ss_elem_len = 0;
+  for (const auto &ss : m.ss_elems) {
+    x->ss_elem_len += static_cast<int>(ss.size());
+  }
+  x->ss_distfact_len = 0;
+  x->ss_node_len = x->ss_elem_len * m.dim;
+  x->eb_num_props = 1;
+  x->ns_num_props = 1;
+  x->ss_num_props = 1;
+  x->num_times = 0;
+  x->state |= EXODB_STATE_INIT;
+
+  // MESH
+  x->x_coord = NULL;
+  x->y_coord = NULL;
+  x->z_coord = NULL;
+  dbl **coord_ptrs[3] = {&x->x_coord, &x->y_coord, &x->z_coord};
+  for (int d = 0; d < m.dim; d++) {
+    *coord_ptrs[d] = alloc_dbl_1(m.num_nodes, 0.0);
+    std::copy(m.coords[d].begin(), m.coords[d].end(), *coord_ptrs[d]);
+  }
+  // The adapted mesh never carried coordinate names, keep them empty
+  x->coord_names = static_cast<char **>(smalloc(m.dim * sizeof(char *)));
+  for (int d = 0; d < m.dim; d++) {
+    x->coord_names[d] = alloc_str_copy("", MAX_STR_LENGTH + 1);
+  }
+  if (x->elem_order_map_exists && m.num_elems > 0) {
+    x->elem_order_map = alloc_int_1(m.num_elems, 0);
+    std::iota(x->elem_order_map, x->elem_order_map + m.num_elems, 1);
+  }
+  x->elem_eb = alloc_int_1(m.num_elems, 0);
+
+  Element_Blocks = alloc_struct_1(ELEM_BLK_STRUCT, x->num_elem_blocks);
+  x->eb_id = alloc_int_1(1, m.block_id);
+  x->eb_elem_type = static_cast<char **>(smalloc(sizeof(char *)));
+  x->eb_elem_type[0] = alloc_str_copy(m.elem_type, MAX_STR_LENGTH);
+  x->eb_num_elems = alloc_int_1(1, m.num_elems);
+  x->eb_num_nodes_per_elem = alloc_int_1(1, m.nodes_per_elem);
+  x->eb_num_attr = alloc_int_1(1, 0);
+  x->eb_conn = static_cast<int **>(smalloc(sizeof(int *)));
+  x->eb_conn[0] = (m.num_elems > 0) ? alloc_int_copy(m.conn) : NULL;
+  x->eb_attr = static_cast<dbl **>(smalloc(sizeof(dbl *)));
+  x->eb_attr[0] = NULL;
+  x->eb_ptr = alloc_int_1(2, 0);
+  x->eb_ptr[1] = m.num_elems;
+
+  ELEM_BLK_STRUCT *eb_ptr = Element_Blocks;
+  eb_ptr->Elem_Blk_Num = 0;
+  eb_ptr->Elem_Blk_Id = m.block_id;
+  eb_ptr->Elem_Type =
+      (m.num_elems > 0) ? get_type(x->eb_elem_type[0], m.nodes_per_elem, 0) : NULL_ELEM_TYPE;
+  eb_ptr->Num_Nodes_Per_Elem = m.nodes_per_elem;
+  eb_ptr->Num_Attr_Per_Elem = 0;
+  int mindex = map_mat_index(eb_ptr->Elem_Blk_Id);
+  eb_ptr->MatlProp_ptr = (mindex < 0) ? NULL : mp_glob[mindex];
+  eb_ptr->ElemStorage = NULL;
+  eb_ptr->Num_Elems_In_Block = m.num_elems;
+  eb_ptr->IP_total = (m.num_elems > 0) ? elem_info(NQUAD, eb_ptr->Elem_Type) : 0;
+
+  // Node sets
+  if (x->num_node_sets > 0) {
+    x->ns_id = alloc_int_copy(m.ns_ids);
+    x->ns_num_nodes = alloc_int_1(x->num_node_sets, 0);
+    x->ns_num_distfacts = alloc_int_1(x->num_node_sets, 0);
+    x->ns_node_index = alloc_int_1(x->num_node_sets, 0);
+    x->ns_distfact_index = alloc_int_1(x->num_node_sets, 0);
+    if (x->ns_node_len > 0) {
+      x->ns_node_list = alloc_int_1(x->ns_node_len, 0);
+    }
+    int offset = 0;
+    for (int i = 0; i < x->num_node_sets; i++) {
+      x->ns_num_nodes[i] = static_cast<int>(m.ns_nodes[i].size());
+      x->ns_node_index[i] = offset;
+      std::copy(m.ns_nodes[i].begin(), m.ns_nodes[i].end(), x->ns_node_list + offset);
+      offset += x->ns_num_nodes[i];
+    }
+  }
+
+  // Side sets
+  if (x->num_side_sets > 0) {
+    x->ss_id = alloc_int_copy(m.ss_ids);
+    x->ss_num_sides = alloc_int_1(x->num_side_sets, 0);
+    x->ss_num_distfacts = alloc_int_1(x->num_side_sets, 0);
+    x->ss_elem_index = alloc_int_1(x->num_side_sets, 0);
+    x->ss_distfact_index = alloc_int_1(x->num_side_sets, 0);
+    x->ss_node_list = static_cast<int **>(smalloc(x->num_side_sets * sizeof(int *)));
+    x->ss_node_cnt_list = static_cast<int **>(smalloc(x->num_side_sets * sizeof(int *)));
+    x->ss_node_side_index = static_cast<int **>(smalloc(x->num_side_sets * sizeof(int *)));
+    if (x->ss_elem_len > 0) {
+      x->ss_elem_list = alloc_int_1(x->ss_elem_len, 0);
+      x->ss_side_list = alloc_int_1(x->ss_elem_len, 0);
+    }
+    x->ss_node_list_exists = TRUE;
+    int offset = 0;
+    for (int i = 0; i < x->num_side_sets; i++) {
+      int nsides = static_cast<int>(m.ss_elems[i].size());
+      x->ss_num_sides[i] = nsides;
+      x->ss_elem_index[i] = offset;
+      std::copy(m.ss_elems[i].begin(), m.ss_elems[i].end(), x->ss_elem_list + offset);
+      std::copy(m.ss_sides[i].begin(), m.ss_sides[i].end(), x->ss_side_list + offset);
+      offset += nsides;
+
+      std::vector<int> side_nodes;
+      std::vector<int> side_node_counts;
+      for (int j = 0; j < nsides; j++) {
+        int elem = m.ss_elems[i][j] - 1;
+        auto local = exodus_side_nodes(m.dim, m.ss_sides[i][j]);
+        side_node_counts.push_back(static_cast<int>(local.size()));
+        for (auto ln : local) {
+          side_nodes.push_back(m.conn[elem * m.nodes_per_elem + ln]);
+        }
+      }
+      x->ss_node_cnt_list[i] = alloc_int_copy_or_null(side_node_counts);
+      x->ss_node_list[i] = alloc_int_copy_or_null(side_nodes);
+      x->ss_node_side_index[i] = alloc_int_1(nsides + 1, 0);
+      for (int j = 0; j < nsides; j++) {
+        x->ss_node_side_index[i][j + 1] = x->ss_node_side_index[i][j] + x->ss_node_cnt_list[i][j];
+      }
+    }
+  }
+
+  // Properties, ExodusII always reports the "ID" property
+  auto setup_id_prop = [](int num, const int *ids, char ***names, int ***props) {
+    *names = static_cast<char **>(smalloc(sizeof(char *)));
+    (*names)[0] = alloc_str_copy("ID", MAX_STR_LENGTH);
+    *props = static_cast<int **>(smalloc(sizeof(int *)));
+    (*props)[0] = alloc_int_1(num, 0);
+    if (num > 0) {
+      std::copy(ids, ids + num, (*props)[0]);
+    }
+  };
+  setup_id_prop(x->num_node_sets, x->ns_id, &x->ns_prop_name, &x->ns_prop);
+  setup_id_prop(x->num_side_sets, x->ss_id, &x->ss_prop_name, &x->ss_prop);
+  setup_id_prop(x->num_elem_blocks, x->eb_id, &x->eb_prop_name, &x->eb_prop);
+  x->state |= EXODB_STATE_MESH;
+
+  // RES0, the adapted mesh carries no results
+  x->num_glob_vars = 0;
+  x->num_elem_vars = 0;
+  x->num_node_vars = 0;
+  x->state |= EXODB_STATE_RES0;
+}
+
+// Fill dpi the same way rd_dpi() fills it from a Nemesis file containing the
+// adapted mesh, see rd_dpi.c
+static void fill_dpi_parallel(Exo_DB *exo, Dpi *d, const AdaptedMesh &m) {
+  init_dpi_struct(d);
+
+  d->num_nodes_global = m.num_nodes_global;
+  d->num_elems_global = m.num_elems_global;
+  d->num_elem_blocks_global = static_cast<int>(m.global_eb_ids.size());
+  d->num_node_sets_global = static_cast<int>(m.global_set_ids.size());
+  d->num_side_sets_global = static_cast<int>(m.global_set_ids.size());
+
+  d->ns_id_global = alloc_int_copy(m.global_set_ids);
+  d->num_ns_global_node_counts = alloc_int_copy(m.global_ns_node_counts);
+  d->num_ns_global_df_counts = alloc_int_1(d->num_node_sets_global, 0);
+  d->ss_id_global = alloc_int_copy(m.global_set_ids);
+  d->num_ss_global_side_counts = alloc_int_copy(m.global_ss_side_counts);
+  d->num_ss_global_df_counts = alloc_int_1(d->num_side_sets_global, 0);
+  d->global_elem_block_ids = alloc_int_copy(m.global_eb_ids);
+  d->global_elem_block_counts = alloc_int_copy(m.global_eb_counts);
+
+  d->rank = ProcID;
+  d->num_proc = Num_Proc;
+  d->num_proc_in_file = 1;
+  d->ftype = 'p';
+
+  d->node_index_global = alloc_int_copy(m.node_map);
+  d->elem_index_global = alloc_int_copy(m.elem_map);
+  exo->base_mesh->node_map = alloc_int_copy(m.node_map);
+  exo->base_mesh->elem_map = alloc_int_copy(m.elem_map);
+
+  d->num_internal_nodes = m.num_internal_nodes;
+  d->num_boundary_nodes = m.num_boundary_nodes;
+  d->num_external_nodes = 0;
+  d->num_internal_elems = m.num_internal_elems;
+  d->num_border_elems = 0;
+  d->num_node_cmaps = static_cast<int>(m.node_cmap_ids.size());
+  d->num_elem_cmaps = 0;
+
+  d->base_internal_nodes = d->num_internal_nodes;
+  d->base_boundary_nodes = d->num_boundary_nodes;
+  d->base_external_nodes = d->num_external_nodes;
+  d->base_internal_elems = d->num_internal_elems;
+  d->base_border_elems = d->num_border_elems;
+
+  d->proc_node_internal = alloc_int_1(d->num_internal_nodes, 0);
+  std::iota(d->proc_node_internal, d->proc_node_internal + d->num_internal_nodes, 1);
+  if (d->num_boundary_nodes > 0) {
+    d->proc_node_boundary = alloc_int_1(d->num_boundary_nodes, 0);
+    std::iota(d->proc_node_boundary, d->proc_node_boundary + d->num_boundary_nodes,
+              d->num_internal_nodes + 1);
+  }
+
+  d->node_cmap_ids = alloc_int_copy(m.node_cmap_ids);
+  d->node_cmap_node_counts = alloc_int_1(d->num_node_cmaps, 0);
+  d->node_map_node_ids = static_cast<int **>(calloc(d->num_node_cmaps, sizeof(int *)));
+  d->node_map_proc_ids = static_cast<int **>(calloc(d->num_node_cmaps, sizeof(int *)));
+  for (int i = 0; i < d->num_node_cmaps; i++) {
+    d->node_cmap_node_counts[i] = static_cast<int>(m.node_cmap_nodes[i].size());
+    d->node_map_node_ids[i] = alloc_int_copy(m.node_cmap_nodes[i]);
+    d->node_map_proc_ids[i] = alloc_int_copy(m.node_cmap_procs[i]);
+  }
+
+  // Derived information, as in rd_dpi()
+  d->eb_id_global = static_cast<int *>(calloc(d->num_elem_blocks_global, sizeof(int)));
+  std::vector<int> eb_num_nodes_local(d->num_elem_blocks_global, 0);
+  d->eb_num_nodes_per_elem_global =
+      static_cast<int *>(calloc(d->num_elem_blocks_global, sizeof(int)));
+  for (int i = 0; i < exo->num_elem_blocks; i++) {
+    for (int j = 0; j < d->num_elem_blocks_global; j++) {
+      if (d->global_elem_block_ids[j] == exo->eb_id[i]) {
+        eb_num_nodes_local[j] = exo->eb_num_nodes_per_elem[i];
+        d->eb_id_global[i] = d->global_elem_block_ids[j];
+      }
+    }
+  }
+
+  d->ss_index_global = static_cast<int *>(malloc(sizeof(int) * exo->num_side_sets));
+  for (int i = 0; i < exo->num_side_sets; i++) {
+    for (int j = 0; j < d->num_side_sets_global; j++) {
+      if (exo->ss_id[i] == d->ss_id_global[j]) {
+        d->ss_index_global[i] = j;
+      }
+    }
+  }
+
+  std::vector<int> global_ss_internal(d->num_side_sets_global, 0);
+  d->ss_internal_global = NULL;
+  if (d->num_side_sets_global > 0) {
+    int *local_ss_internal = find_ss_internal_boundary(exo);
+    d->ss_internal_global = static_cast<int *>(calloc(d->num_side_sets_global, sizeof(int)));
+    for (int i = 0; i < exo->num_side_sets; i++) {
+      global_ss_internal[d->ss_index_global[i]] = local_ss_internal[i];
+    }
+    free(local_ss_internal);
+
+    int neb = d->num_elem_blocks_global;
+    int nss = d->num_side_sets_global;
+    d->ss_block_index_global = static_cast<int *>(calloc(nss + 1, sizeof(int)));
+    d->ss_block_list_global = static_cast<int *>(calloc(neb * nss, sizeof(int)));
+    std::vector<int> ss_block_count_proc(neb * nss, 0);
+    std::vector<int> ss_block_count_global(neb * nss, 0);
+
+    for (int ss_id = 0; ss_id < exo->num_side_sets; ss_id++) {
+      for (int elem_index = exo->ss_elem_index[ss_id];
+           elem_index < (exo->ss_elem_index[ss_id] + exo->ss_num_sides[ss_id]); elem_index++) {
+        int elem = exo->ss_elem_list[elem_index];
+        int block = find_elemblock_index(elem, exo);
+        if (block == -1) {
+          GOMA_EH(GOMA_ERROR, "Element block not found ss_block_list");
+        }
+        for (int j = 0; j < neb; j++) {
+          if (d->eb_id_global[j] == exo->eb_id[block]) {
+            ss_block_count_proc[ss_id * neb + j] = 1;
+          }
+        }
+      }
+    }
+
+    MPI_Allreduce(ss_block_count_proc.data(), ss_block_count_global.data(), neb * nss, MPI_INT,
+                  MPI_MAX, MPI_COMM_WORLD);
+
+    int ss_block_index = 0;
+    for (int ss_id = 0; ss_id < nss; ss_id++) {
+      int ss_start = ss_block_index;
+      for (int j = 0; j < neb; j++) {
+        if (ss_block_count_global[ss_id * neb + j] > 0) {
+          d->ss_block_list_global[ss_block_index] = j;
+          ss_block_index++;
+        }
+      }
+      d->ss_block_index_global[ss_id] = ss_start;
+      d->ss_block_index_global[ss_id + 1] = ss_block_index;
+    }
+  }
+  d->elem_owner = alloc_int_1(exo->num_elems, ProcID);
+
+  MPI_Allreduce(eb_num_nodes_local.data(), d->eb_num_nodes_per_elem_global,
+                d->num_elem_blocks_global, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(global_ss_internal.data(), d->ss_internal_global, d->num_side_sets_global, MPI_INT,
+                MPI_MAX, MPI_COMM_WORLD);
+
+  d->num_universe_nodes = d->num_internal_nodes + d->num_boundary_nodes + d->num_external_nodes;
+
+  // zero_base maps
+  for (int i = 0; i < exo->base_mesh->num_nodes; i++) {
+    exo->base_mesh->node_map[i]--;
+  }
+  for (int i = 0; i < exo->base_mesh->num_elems; i++) {
+    exo->base_mesh->elem_map[i]--;
+  }
+  zero_dpi(d);
+
+  // setup node owners
+  d->num_neighbors = d->num_node_cmaps;
+  d->neighbor = alloc_int_1(d->num_neighbors, -1);
+  d->node_owner = alloc_int_1(exo->num_nodes, ProcID);
+  d->num_node_recv = alloc_int_1(d->num_neighbors, 0);
+  d->num_node_send = alloc_int_1(d->num_neighbors, 0);
+  for (int i = 0; i < d->num_node_cmaps; i++) {
+    int neighbor = d->node_map_proc_ids[i][0];
+    for (int j = 0; j < d->node_cmap_node_counts[i]; j++) {
+      if (neighbor != d->node_map_proc_ids[i][j]) {
+        GOMA_EH(GOMA_ERROR, "Unexpected proc id in node map proc ids");
+      }
+      if (neighbor < d->node_owner[d->node_map_node_ids[i][j]]) {
+        d->node_owner[d->node_map_node_ids[i][j]] = neighbor;
+        d->num_node_recv[i]++;
+      }
+    }
+    d->neighbor[i] = neighbor;
+  }
+
+  int elem_offset = 0;
+  for (int i = 0; i < exo->num_elem_blocks; i++) {
+    int nnode_per_elem = exo->eb_num_nodes_per_elem[i];
+    for (int j = 0; j < exo->eb_num_elems[i]; j++) {
+      int min_proc = ProcID;
+      for (int k = 0; k < nnode_per_elem; k++) {
+        int proc = d->node_owner[exo->eb_conn[i][j * nnode_per_elem + k]];
+        min_proc = std::min(min_proc, proc);
+      }
+      d->elem_owner[elem_offset] = min_proc;
+      elem_offset++;
+    }
+  }
+
+  goma_error err = generate_ghost_elems(exo, d);
+  GOMA_EH(err, "generate_ghost_elements");
+
+  // Exchange the global ids of the external (ghost) nodes with their owners and
+  // verify the owner has them as border nodes
+  int nn = d->num_neighbors;
+  int offset = d->num_internal_nodes + d->num_boundary_nodes;
+  std::vector<int> num_send_nodes(nn, 0);
+  std::vector<int> num_recv_nodes(nn, 0);
+  std::vector<std::vector<int>> global_send_nodes(nn);
+  std::vector<std::vector<int>> global_recv_nodes(nn);
+  std::vector<MPI_Request> requests(2 * nn);
+
+  for (int i = 0; i < nn; i++) {
+    MPI_Irecv(&num_send_nodes[i], 1, MPI_INT, d->neighbor[i], 206, MPI_COMM_WORLD,
+              &requests[nn + i]);
+  }
+  for (int i = 0; i < nn; i++) {
+    for (int j = 0; j < d->num_external_nodes; j++) {
+      if (d->node_owner[offset + j] == d->neighbor[i]) {
+        num_recv_nodes[i] += 1;
+      }
+    }
+    MPI_Isend(&num_recv_nodes[i], 1, MPI_INT, d->neighbor[i], 206, MPI_COMM_WORLD, &requests[i]);
+  }
+  MPI_Waitall(2 * nn, requests.data(), MPI_STATUSES_IGNORE);
+
+  for (int i = 0; i < nn; i++) {
+    global_send_nodes[i].resize(num_send_nodes[i]);
+    MPI_Irecv(global_send_nodes[i].data(), num_send_nodes[i], MPI_INT, d->neighbor[i], 207,
+              MPI_COMM_WORLD, &requests[nn + i]);
+  }
+  for (int i = 0; i < nn; i++) {
+    for (int j = 0; j < d->num_external_nodes; j++) {
+      if (d->node_owner[offset + j] == d->neighbor[i]) {
+        global_recv_nodes[i].push_back(d->node_index_global[offset + j]);
+      }
+    }
+    MPI_Isend(global_recv_nodes[i].data(), num_recv_nodes[i], MPI_INT, d->neighbor[i], 207,
+              MPI_COMM_WORLD, &requests[i]);
+  }
+  MPI_Waitall(2 * nn, requests.data(), MPI_STATUSES_IGNORE);
+
+  for (int i = 0; i < nn; i++) {
+    for (int j = 0; j < num_send_nodes[i]; j++) {
+      if (in_list(global_send_nodes[i][j], d->num_internal_nodes, offset, d->node_index_global) ==
+          -1) {
+        GOMA_EH(GOMA_ERROR, "Required node to communicate doesn't exist in border nodes");
+      }
+    }
+  }
+
+  // reorder external nodes so they are grouped by neighbor
+  int num_ext = d->num_external_nodes;
+  std::vector<int> new_external_node_order(num_ext, 0);
+  std::vector<int> old_to_new_external_node_order(num_ext, 0);
+  std::vector<int> old_node_owner(d->node_owner + offset, d->node_owner + offset + num_ext);
+  int new_index = 0;
+  for (int j = 0; j < nn; j++) {
+    for (int i = 0; i < num_ext; i++) {
+      if (old_node_owner[i] == d->neighbor[j]) {
+        new_external_node_order[new_index] = i;
+        old_to_new_external_node_order[i] = new_index;
+        new_index++;
+      }
+    }
+  }
+  if (new_index != num_ext) {
+    GOMA_EH(GOMA_ERROR, "incorrect new ordering %d != %d", new_index, num_ext);
+  }
+
+  auto reorder_external = [&](auto *values) {
+    std::vector<std::remove_pointer_t<decltype(values)>> old(values + offset,
+                                                             values + offset + num_ext);
+    for (int i = 0; i < num_ext; i++) {
+      values[offset + i] = old[new_external_node_order[i]];
+    }
+  };
+  reorder_external(d->node_index_global);
+  reorder_external(exo->x_coord);
+  if (exo->num_dim > 1) {
+    reorder_external(exo->y_coord);
+  }
+  if (exo->num_dim > 2) {
+    reorder_external(exo->z_coord);
+  }
+
+  auto renumber = [&](int &node) {
+    if (node >= offset) {
+      node = old_to_new_external_node_order[node - offset] + offset;
+    }
+  };
+  for (int block = 0; block < exo->num_elem_blocks; block++) {
+    int len = exo->eb_num_nodes_per_elem[block] * exo->eb_num_elems[block];
+    for (int i = 0; i < len; i++) {
+      renumber(exo->eb_conn[block][i]);
+    }
+  }
+  for (int j = 0; j < exo->ns_node_len; j++) {
+    renumber(exo->ns_node_list[j]);
+  }
+  for (int ins = 0; ins < exo->num_side_sets; ins++) {
+    for (int lni = 0; lni < exo->ss_node_side_index[ins][exo->ss_num_sides[ins]]; lni++) {
+      renumber(exo->ss_node_list[ins][lni]);
+    }
+  }
+  for (int i = 0; i < num_ext; i++) {
+    d->node_owner[offset + old_to_new_external_node_order[i]] = old_node_owner[i];
+  }
+
+  setup_ghost_to_base(exo, d);
+  d->num_owned_nodes = d->num_internal_nodes + d->num_boundary_nodes;
+  d->num_universe_nodes = d->num_internal_nodes + d->num_boundary_nodes + d->num_external_nodes;
+
+  // The adapted mesh has no goma node set / side set consistency data
+  d->goma_dpi_data = false;
+  d->global_ns_node_len = 0;
+  d->global_ss_elem_len = 0;
+}
+
+// In memory replacement for read_mesh_exoII() (rd_mesh.c) for the adapted mesh
+static void setup_mesh_in_memory(Exo_DB *exo, Dpi *dpi, const AdaptedMesh &m, const char *path) {
+  fill_exo(exo, m, path);
+  zero_base(exo);
+  goma_error error = setup_base_mesh(dpi, exo, Num_Proc);
+  GOMA_EH(error, "setup_base_mesh");
+
+  if (Num_Proc == 1) {
+    uni_dpi(dpi, exo);
+  } else {
+    fill_dpi_parallel(exo, dpi, m);
+  }
+
+  SS_Internal_Boundary = alloc_int_1(exo->num_side_sets, INT_NOINIT);
+  for (int ss_index = 0; ss_index < exo->num_side_sets; ss_index++) {
+    int global_ss_index = dpi->ss_index_global[ss_index];
+    SS_Internal_Boundary[ss_index] = dpi->ss_internal_global[global_ss_index];
+  }
+
+  setup_old_dpi(exo, dpi);
+  setup_old_exo(exo, dpi, Num_Proc);
+
+  int max_nodes =
+      *std::max_element(dpi->eb_num_nodes_per_elem_global,
+                        dpi->eb_num_nodes_per_elem_global + dpi->num_elem_blocks_global);
+  if (max_nodes > MDE) {
+    GOMA_EH(GOMA_ERROR, "The mesh has elements with %d nodes, MDE is %d", max_nodes, MDE);
+  }
+
+  check_sidesets(exo, BC_Types, Num_BC, dpi);
+  check_nodesets(exo, BC_Types, Num_BC, dpi);
+  check_elemblocks(exo, upd->Num_Mat, pd_glob, dpi);
+
+  Matilda = alloc_int_1(exo->num_elem_blocks, 0);
+  setup_matilda(exo, Matilda);
+
+  build_elem_node(exo);
+  build_node_elem(exo);
+  build_elem_elem(exo);
+  build_node_node(exo);
 }
 
 void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool verbose) {
@@ -587,30 +1180,25 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
 void convert_omega_h_to_goma(
     const char *path, Mesh *mesh, Exo_DB *exo, Dpi *dpi, bool verbose, int classify_with) {
 
-  //  Omega_h::exodus::write(std::to_string(ProcID) + "", mesh, true, classify_with);
-  char out_par[MAX_FNL];
-  strncpy(out_par, "tmp_omega_h_mesh.e", MAX_FNL - 1);
-  multiname(out_par, ProcID, Num_Proc);
+  // The adapted partition is collected in m, then used to set up exo and dpi
+  // in the same form read_mesh_exoII() would produce from a Nemesis file
   mesh->set_parting(OMEGA_H_ELEM_BASED);
-  auto comp_ws = int(sizeof(Real));
-  auto io_ws = comp_ws;
-  auto exoid = ex_create(out_par, EX_CLOBBER, &comp_ws, &io_ws);
   std::set<LO> region_set;
   auto dim = mesh->dim();
   auto title = "Omega_h " OMEGA_H_SEMVER " Exodus Output";
+  AdaptedMesh m;
+  m.title = title;
+  m.dim = dim;
 
   auto class_sets = mesh->class_sets;
   // TODO multiblock
   std::set<LO> surface_set;
-  std::set<LO> node_set;
   for (auto &it : class_sets) {
     auto key = it.first;
     auto value = it.second;
     for (size_t i = 0; i < value.size(); i++) {
       if (static_cast<int>(i) < dpi->num_side_sets_global) {
         surface_set.insert(value[i].id);
-      } else {
-        node_set.insert(value[i].id);
       }
     }
   }
@@ -624,9 +1212,6 @@ void convert_omega_h_to_goma(
   auto side_class_dims = mesh->get_array<I8>(dim - 1, "class_dim");
   auto h_side_class_ids = HostRead<LO>(side_class_ids);
   auto h_side_class_dims = HostRead<I8>(side_class_dims);
-  auto nelem_blocks = int(region_set.size());
-  auto nside_sets = (classify_with & exodus::SIDE_SETS) ? int(surface_set_vec.size()) : 0;
-  auto nnode_sets = (classify_with & exodus::NODE_SETS) ? int(node_set.size()) : 0;
 
   auto all_conn = mesh->ask_elem_verts();
   auto deg = element_degree(mesh->family(), dim, VERT);
@@ -793,8 +1378,8 @@ void convert_omega_h_to_goma(
     }
   }
 
-  ex_put_init(exoid, title, dim, global_node.size(), global_elem.size(), nelem_blocks, nnode_sets,
-              nside_sets);
+  m.num_nodes = global_node.size();
+  m.num_elems = global_elem.size();
 
   Few<Write<Real>, 3> coord_blk;
   for (Int i = 0; i < dim; ++i)
@@ -809,7 +1394,8 @@ void convert_omega_h_to_goma(
   HostRead<Real> h_coord_blk[3];
   for (Int i = 0; i < dim; ++i)
     h_coord_blk[i] = HostRead<Real>(coord_blk[i]);
-  CALL(ex_put_coord(exoid, h_coord_blk[0].data(), h_coord_blk[1].data(), h_coord_blk[2].data()));
+  for (Int i = 0; i < dim; ++i)
+    m.coords[i].assign(h_coord_blk[i].data(), h_coord_blk[i].data() + h_coord_blk[i].size());
   auto elems2file_idx = Write<LO>(mesh->nelems());
   auto elem_file_offset = LO(0);
 
@@ -825,11 +1411,10 @@ void convert_omega_h_to_goma(
       std::cout << "element block " << block_id << " has " << nblock_elems << " of type "
                 << type_name << '\n';
     }
-    CALL(ex_put_block(exoid, EX_ELEM_BLOCK, block_id, type_name, global_elem.size(), deg, 0, 0, 0));
-    auto block_conn = read(unmap(block_elems2elem, all_conn, deg));
-    auto block_conn_ex = add_to_each(block_conn, 1);
-    auto h_block_conn = HostRead<LO>(block_conn_ex);
-    CALL(ex_put_conn(exoid, EX_ELEM_BLOCK, block_id, reduced_conn.data(), nullptr, nullptr));
+    m.block_id = block_id;
+    m.elem_type = type_name;
+    m.nodes_per_elem = deg;
+    m.conn = reduced_conn;
     auto f = OMEGA_H_LAMBDA(LO block_elem) {
       elems2file_idx[block_elems2elem[block_elem]] = elem_file_offset + block_elem;
     };
@@ -871,14 +1456,10 @@ void convert_omega_h_to_goma(
             sides2local_new.push_back(side_osh2exo(dim, which_down));
           }
         }
-        auto h_set_sides2elem = HostRead<int>(set_sides2elem);
-        auto h_set_sides2local = HostRead<int>(set_sides2local);
-        CALL(ex_put_set_param(exoid, EX_SIDE_SET, set_id, sides2elem_new.size(), 0));
         sset_global_side.push_back(sides2elem_new.size());
-        if (sides2elem_new.size() > 0) {
-          CALL(ex_put_set(exoid, EX_SIDE_SET, set_id, sides2elem_new.data(),
-                          sides2local_new.data()));
-        }
+        m.ss_ids.push_back(set_id);
+        m.ss_elems.push_back(sides2elem_new);
+        m.ss_sides.push_back(sides2local_new);
       }
       if (classify_with & exodus::NODE_SETS) {
         auto nodes_in_set = mark_down(mesh, dim - 1, VERT, sides_in_set);
@@ -900,53 +1481,8 @@ void convert_omega_h_to_goma(
         if (verbose) {
           std::cout << "node set " << set_id << " has " << nset_nodes << " nodes\n";
         }
-        auto h_set_nodes2node = HostRead<LO>(set_nodes2node_ex);
-        CALL(ex_put_set_param(exoid, EX_NODE_SET, set_id, ns_nodes[set_id_offset].size(), 0));
-        if (ns_nodes[set_id_offset].size() > 0) {
-          CALL(ex_put_set(exoid, EX_NODE_SET, set_id, ns_nodes[set_id_offset].data(), nullptr));
-        }
-      }
-      std::vector<std::string> set_names(surface_set_vec.size());
-      for (auto &pair : mesh->class_sets) {
-        auto &name = pair.first;
-        for (auto &cp : pair.second) {
-          if (cp.dim != I8(dim - 1))
-            continue;
-          std::size_t index = 0;
-          for (auto surface_id : surface_set_vec) {
-            if (surface_id == cp.id) {
-              set_names[index] = name;
-              if (verbose && (classify_with & exodus::NODE_SETS)) {
-                std::cout << "node set " << surface_id << " will be called \"" << name << "\"\n";
-              }
-              if (verbose && (classify_with & exodus::SIDE_SETS)) {
-                std::cout << "side set " << surface_id << " will be called \"" << name << "\"\n";
-              }
-            }
-            ++index;
-          }
-        }
-      }
-      std::vector<char *> set_name_ptrs(surface_set_vec.size(), nullptr);
-      for (std::size_t i = 0; i < set_names.size(); ++i) {
-        if (set_names[i].empty()) {
-          std::stringstream ss;
-          ss << "ss_" << i;
-          set_names[i] = ss.str();
-        }
-        set_name_ptrs[i] = const_cast<char *>(set_names[i].c_str());
-      }
-      if (classify_with & exodus::SIDE_SETS) {
-        CALL(ex_put_names(exoid, EX_SIDE_SET, set_name_ptrs.data()));
-      }
-      for (std::size_t i = 0; i < set_names.size(); ++i) {
-        std::stringstream ss;
-        ss << "ns_" << i;
-        set_names[i] = ss.str();
-        set_name_ptrs[i] = const_cast<char *>(set_names[i].c_str());
-      }
-      if (classify_with & exodus::NODE_SETS) {
-        CALL(ex_put_names(exoid, EX_NODE_SET, set_name_ptrs.data()));
+        m.ns_ids.push_back(set_id);
+        m.ns_nodes.push_back(ns_nodes[set_id_offset]);
       }
     }
 
@@ -992,8 +1528,8 @@ void convert_omega_h_to_goma(
   std::vector<int> elem_map(global_elem.begin(), global_elem.end());
   std::for_each(elem_map.begin(), elem_map.end(), add1);
 
-  ex_put_id_map(exoid, EX_NODE_MAP, node_map.data());
-  ex_put_id_map(exoid, EX_ELEM_MAP, elem_map.data());
+  m.node_map = node_map;
+  m.elem_map = elem_map;
 
   int max_sets = surface_set_vec.size();
   int gmax_sets;
@@ -1014,8 +1550,6 @@ void convert_omega_h_to_goma(
   std::vector<int> global_sets(global_set_uniq.begin(), global_set_uniq.end());
   std::sort(global_sets.begin(), global_sets.end());
   std::vector<int> global_side_counts(global_sets.size());
-  std::vector<int> df_counts(global_sets.size());
-  std::fill(df_counts.begin(), df_counts.end(), 0);
 
   for (size_t setidx = 0; setidx < global_sets.size(); setidx++) {
     auto set = global_sets[setidx];
@@ -1026,56 +1560,29 @@ void convert_omega_h_to_goma(
                     MPI_COMM_WORLD);
     }
   }
-  CALL(ex_put_init_global(exoid, mesh->nglobal_ents(0), mesh->nglobal_ents(mesh->dim()), 1,
-                          global_sets.size(), global_sets.size()));
-
-  CALL(ex_put_ns_param_global(exoid, global_sets.data(), global_node_counts.data(),
-                              df_counts.data()));
-  CALL(ex_put_ss_param_global(exoid, global_sets.data(), global_side_counts.data(),
-                              df_counts.data()));
-
   std::vector<int> eb_id(1);
   eb_id[0] = 1;
   std::vector<int> eb_counts(1);
   eb_counts[0] = mesh->nglobal_ents(mesh->dim());
 
-  CALL(ex_put_eb_info_global(exoid, eb_id.data(), eb_counts.data()));
-  char ftype = 'p';
-  CALL(ex_put_init_info(exoid, Num_Proc, 1, &ftype));
-
-  CALL(ex_put_loadbal_param(exoid, internal_nodes.size(), boundary_nodes_sorted.size(), 0,
-                            global_elem.size(), 0, node_cmap_ids.size(), 0, ProcID));
-
-  std::vector<int> elem_internal(global_elem.size());
-  std::iota(elem_internal.begin(), elem_internal.end(), 1);
-
-  CALL(ex_put_processor_elem_maps(exoid, elem_internal.data(), NULL, ProcID));
-  std::vector<int> node_mesh(global_node.size());
-  std::iota(node_mesh.begin(), node_mesh.end(), 1);
-
-  CALL(ex_put_processor_node_maps(exoid, node_mesh.data(), &node_mesh[internal_nodes.size()], NULL,
-                                  ProcID));
-
-  std::vector<int> cmap_node_counts;
-  cmap_node_counts.reserve(node_cmap_to_neighbor.size());
-  for (auto idx : node_cmap_to_neighbor) {
-    cmap_node_counts.push_back(proc_node_counts[idx]);
+  m.num_nodes_global = mesh->nglobal_ents(0);
+  m.num_elems_global = mesh->nglobal_ents(mesh->dim());
+  m.global_set_ids = global_sets;
+  m.global_ns_node_counts.assign(global_sets.size(), 0);
+  for (size_t i = 0; i < global_sets.size() && i < global_node_counts.size(); i++) {
+    m.global_ns_node_counts[i] = global_node_counts[i];
   }
-
-  CALL(
-      ex_put_cmap_params(exoid, node_cmap_ids.data(), cmap_node_counts.data(), NULL, NULL, ProcID));
-
-  std::vector<int> node_map_proc_ids(proc_node_idx[neighbor_list.size()]);
+  m.global_ss_side_counts = global_side_counts;
+  m.global_eb_ids = eb_id;
+  m.global_eb_counts = eb_counts;
+  m.num_internal_nodes = internal_nodes.size();
+  m.num_boundary_nodes = boundary_nodes_sorted.size();
+  m.num_internal_elems = global_elem.size();
+  m.node_cmap_ids = node_cmap_ids;
   for (auto nidx : node_cmap_to_neighbor) {
-    std::fill(node_map_proc_ids.begin() + proc_node_idx[nidx],
-              node_map_proc_ids.begin() + proc_node_idx[nidx + 1], neighbor_list[nidx]);
+    m.node_cmap_nodes.push_back(proc_node_list[nidx]);
+    m.node_cmap_procs.emplace_back(proc_node_list[nidx].size(), neighbor_list[nidx]);
   }
-  for (auto nidx : node_cmap_to_neighbor) {
-    CALL(ex_put_node_cmap(exoid, neighbor_list[nidx], proc_node_list[nidx].data(),
-                          &node_map_proc_ids[proc_node_idx[nidx]], ProcID));
-  }
-
-  CALL(ex_close(exoid));
 
   for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
     free(idv[imtrx]);
@@ -1142,7 +1649,9 @@ void convert_omega_h_to_goma(
   }
 
   //  const char * tmpfile = "";
-  strncpy(ExoFile, "tmp_omega_h_mesh.e", 127);
+  // The adapted mesh is not read from a file, ExoFile now refers to the
+  // adapted mesh written below
+  strncpy(ExoFile, path, MAX_FNL - 1);
   strncpy(ExoFileOutMono, path, 127);
   strncpy(ExoFileOut, path, 127);
   multiname(ExoFileOut, ProcID, Num_Proc);
@@ -1158,7 +1667,7 @@ void convert_omega_h_to_goma(
   safer_free((void **)&Local_Offset);
   safer_free((void **)&Dolphin);
 
-  read_mesh_exoII(exo, dpi);
+  setup_mesh_in_memory(exo, dpi, m, path);
   one_base(exo, Num_Proc);
   wr_mesh_exo(exo, ExoFileOut, 0);
   zero_base(exo);

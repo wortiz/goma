@@ -860,6 +860,9 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
     exo->ss_node_side_index[ins] = (int *)malloc((exo->ss_num_sides[ins] + 1) * sizeof(int));
     if (exo->ss_num_sides[ins] > 0) {
       exo->ss_node_cnt_list[ins] = (int *)malloc((exo->ss_num_sides[ins]) * sizeof(int));
+    } else {
+      // already freed above, avoid a double free in free_exo
+      exo->ss_node_cnt_list[ins] = NULL;
     }
     for (int j = exo->ss_elem_index[ins]; j < exo->ss_elem_index[ins] + exo->ss_num_sides[ins];
          j++) {
